@@ -33,6 +33,7 @@ jobs:
           if [ "$FILE_VERSION" != "$TAG_VERSION" ]; then
             echo "ERROR: VERSION file ($FILE_VERSION) does not match tag ($TAG_VERSION)"
             exit 1
+          fi
 
       - name: Install dependencies
         run: npm ci
