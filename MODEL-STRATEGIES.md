@@ -9,12 +9,12 @@
 
 | Strategy | Plan required | Cost | Quality | Daily req budget | When to use |
 |---|---|---|---|---|---|
-| `go-max-quality` | GO plan | $ | Best | ~20-30 (K3 tight) | Production — Apollo on GLM-5.2, Atlas on Hy3, Athena+Hephaestus on Kimi K3, others on K2.7 Code |
-| `go-balanced` (default) | GO plan | $ | Great | ~500-1,000 | **Day-to-day 8h/day** — Apollo on GLM-5.2, Atlas on Hy3, specialists on Qwen3.7 Plus / DeepSeek V4 Pro |
-| `go-budget` | GO plan | ¢ | Good | ~1,000+ | Maximum savings — Apollo on GLM-5.2, Atlas on Hy3 (orchestration), all others on DeepSeek V4 Flash |
-| `zen-max-quality` (**Zen**) | **Zen plan** | $$ | Best | **No caps** (pay-as-you-go) | Best quality on Zen — Apollo on GLM-5.2, Atlas on Gemini 3.5 Flash, Athena+Hephaestus on Claude Sonnet 5, others on GPT-5.4, vault on Gemini 3.5 Flash |
-| `zen-balanced` (**Zen**) | **Zen plan** | $ | Great | **No caps** (pay-as-you-go) | Full 128-agent OLYMPUS without a GO plan — Apollo on GLM-5.2, Atlas on Gemini 3.5 Flash, Athena+Hephaestus on Claude Sonnet 5, specialists on Kimi K2.7 Code, vault on MiniMax M2.7. Proprietary APIs, charged per request |
-| `zen-budget` (**Zen**) | **Zen plan** | ¢ | Good | **No caps** (pay-as-you-go) | Lowest cost on Zen — Apollo on GLM-5.2, Atlas on Gemini 3.5 Flash, all others on MiniMax M2.7 |
+| `go-max-quality` | GO plan | $ | Best | ~20-30 (GLM-5.3 tight) | Production — Apollo on GLM-5.3, Atlas on Hy3, Hephaestus/Hermes on Kimi K2.7 Code, Athena/Dionysus/Persephone/Callimachus on GLM-5.3-Flash, Artemis on GLM-5.3, Prometheus on MiniMax M3 |
+| `go-balanced` (default) | GO plan | $ | Great | ~500-1,000 | **Day-to-day 8h/day** — Apollo on GLM-5.3, Atlas on Hy3, Hephaestus/Hermes on Kimi K2.7 Code, Athena/Persephone on Qwen3.7 Plus, Prometheus on MiniMax M3, Dionysus/Callimachus on GLM-5.3-Flash, Artemis on GLM-5.3 |
+| `go-budget` | GO plan | ¢ | Good | ~1,000+ | Maximum savings — Apollo on GLM-5.3, Atlas on Hy3 (orchestration), all others on GLM-5.3-Flash |
+| `zen-max-quality` (**Zen**) | **Zen plan** | $$ | Best | **No caps** (pay-as-you-go) | Best quality on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Sol, Hephaestus/Artemis/Hermes on Claude Sonnet 5, Athena on GPT 5.6 Terra, Dionysus on GPT 5.6 Luna, Persephone on Gemini 3.1 Pro, Prometheus on Grok Build 0.1, Callimachus on Claude Haiku 4.5, vault on GLM-5.3 |
+| `zen-balanced` (**Zen**) | **Zen plan** | $ | Great | **No caps** (pay-as-you-go) | Full 128-agent OLYMPUS without a GO plan — Apollo on GLM-5.3, Atlas on GPT 6 Sol, Hephaestus/Artemis on Claude Sonnet 5, Athena on GPT 5.6 Terra, Dionysus on GPT 5.6 Luna, Hermes on GPT 5.4 Mini, Persephone on Gemini 3.1 Pro, Prometheus on Grok Build 0.1, Callimachus on Claude Haiku 4.5, vault on GLM-5.3-Flash. Proprietary APIs, charged per request |
+| `zen-budget` (**Zen**) | **Zen plan** | ¢ | Good | **No caps** (pay-as-you-go) | Lowest cost on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Luna, all others on GLM-5.3-Flash, Callimachus on Claude Haiku 4.5 |
 | `free-openrouter` (**Free OpenRouter**) | **None** | **Free** | Lower | Unlimited (rate-limited) | The OpenRouter-only split — primary trio on #1, specialists on #2, Callimachus on a fast background model. Refreshes automatically |
 | `free-big-pickle` (**Free Big Pickle**) | **None** | **Free** | Lower | Unlimited (rate-limited) | All 10 gods (Callimachus included) on one free model — the strongest currently live, refreshed automatically |
 | `free-nvidia-build` (**Free Nvidia Build**) | **None** | **Free** | Lower | Unlimited (rate-limited) | NVIDIA Build free endpoints (build.nvidia.com) — Apollo + Atlas on the strongest NVIDIA free model live (Nemotron 3 Ultra 550B, 1M ctx), coding gods on pinned GLM-5.2, other specialists on #2, Callimachus on a fast background model. Refreshes automatically |
@@ -48,7 +48,8 @@ These are dollar-value caps, not request counts. Different models consume the bu
 | MiMo V2.5 | **150,400** | Ultra-cheap bulk tasks | Lowest |
 | DeepSeek V4 Pro | **17,150** | Code generation, backend logic | Low |
 | Qwen3.7 Plus | **21,600** | Reasoning, security, frontend, integration | Low-Medium |
-| GLM-5.2 | **4,300** | Apollo planning & architecture (reserved) | Medium |
+| GLM-5.3 | **1,080** | Apollo + Artemis (sacred, reserved) | Medium |
+| GLM-5.3-Flash | **31,580** | Workhorse — specialists, vault, background | Very low |
 | Kimi K2.7 Code | **6,750** | Specialist coding tasks | Medium |
 | Kimi K3 | **490** | Highest-quality reasoning (Athena, Hephaestus) | High |
 | Grok 4.5 | **600** | Specialized reasoning | High |
@@ -59,11 +60,19 @@ These are dollar-value caps, not request counts. Different models consume the bu
 
 | God | Model | Requests/day | Monthly | % of cap |
 |---|---|---|---|---|
-| Apollo (balanced) | GLM-5.2 | ~20 (planning) | 400 | 9% |
+| Apollo (balanced) | GLM-5.3 | ~20 (planning) | 400 | 37% |
 | Atlas | Hy3 | ~20 (orchestration) | ~400 | Very low |
-| 4 reasoning gods | Qwen3.7 Plus | ~40 each | 800 each | 4% |
-| 2 code gods | DeepSeek V4 Pro | ~40 each | 800 each | 5% |
-| 2 mechanical gods | DeepSeek V4 Flash | ~30 each | 600 each | <1% |
+| 2 reasoning gods | Qwen3.7 Plus | ~40 each | 800 each | 4% |
+| 2 code gods | Kimi K2.7 Code | ~40 each | 800 each | 12% |
+| 1 orchestration god | MiniMax M3 | ~40 | 800 | 5% |
+| 1 security god | GLM-5.3 | ~30 | 600 | 56% |
+| 3 mechanical gods | GLM-5.3-Flash | ~30 each | 600 each | <2% |
+
+> Note: GLM-5.3 cap ($15/mo, $3/5h rolling) is shared between Apollo and
+> Artemis. In sustained 8h/day use both would consume ~93% of the monthly
+> budget. The 80/20 fast-path mitigates this, but if Artemis regularly
+> hits the cap, consider moving Artemis to `glm-5.3-flash` in GO Balanced
+> post-benchmark.
 
 **Total monthly spend:** ~$15-20 (well within the $60 plan). Headroom for spikes.
 
@@ -96,40 +105,40 @@ OLYMPUS now has **10 gods** (9 original + Atlas):
 
 | God | Role | Model (balanced) |
 |-----|------|------------------|
-| Apollo | Planning & architecture | GLM-5.2 |
+| Apollo | Planning & architecture | GLM-5.3 |
 | **Atlas** | Orchestration & dispatch execution | Hy3 |
-| Hephaestus | Backend code | DeepSeek V4 Pro |
+| Hephaestus | Backend code | Kimi K2.7 Code |
 | Athena | Frontend | Qwen3.7 Plus |
-| Hermes | Integrations | Qwen3.7 Plus |
-| Artemis | Security | Qwen3.7 Plus |
-| Dionysus | QA | DeepSeek V4 Pro |
-| Persephone | Database | DeepSeek V4 Pro |
-| Prometheus | DevOps | Qwen3.7 Plus |
-| Callimachus | Vault curation | DeepSeek V4 Flash |
+| Hermes | Integrations | Kimi K2.7 Code |
+| Artemis | Security | GLM-5.3 |
+| Dionysus | QA | GLM-5.3-Flash |
+| Persephone | Database | Qwen3.7 Plus |
+| Prometheus | DevOps | MiniMax M3 |
+| Callimachus | Vault curation | GLM-5.3-Flash |
 
 ## The nine built-in strategies
 
 ### `go-max-quality` — best models, highest cost
 
-Apollo gets GLM-5.2 (sacred — reserved for Apollo alone). The two highest-leverage reasoning gods (Athena + Hephaestus) get Kimi K3 (the best reasoning model on the GO plan, capped at 490 req/month). The remaining specialists get Kimi K2.7 Code (capped at 6,750 req/month). Callimachus uses DeepSeek V4 Flash for background vault curation.
+Apollo gets GLM-5.3 (sacred — shared only with Artemis). Atlas keeps Hy3 (sacred, $12/5h rolling). Hephaestus + Hermes get Kimi K2.7 Code (6,750 req/month). Athena, Dionysus, Persephone and Callimachus get GLM-5.3-Flash ($12/5h rolling, 31,580 req/month). Prometheus gets MiniMax M3. No god runs on the tight-cap flagships (Kimi K3 / Grok 4.7 / GLM-5.3 beyond Apollo+Artemis).
 
-**When to use:** Production work where quality matters more than cost. Watch the K3 cap — when it's exhausted, switch to `go-balanced` (or a Zen strategy — no request caps).
+**When to use:** Production work where quality matters more than cost. Watch the GLM-5.3 cap (1,080 req/month, shared Apollo+Artemis) — when it's exhausted, switch to `go-balanced` (or a Zen strategy — no request caps).
 
 ### `go-balanced` (default) — great models, moderate cost
 
-Apollo gets GLM-5.2. Specialists get DeepSeek V4 Pro (for backend/DB/QA) or Qwen3.7 Plus (for frontend/security/integration/devops). Callimachus uses DeepSeek V4 Flash.
+Apollo gets GLM-5.3. Specialists get Kimi K2.7 Code (backend/integrations), Qwen3.7 Plus (frontend/data), MiniMax M3 (DevOps), GLM-5.3-Flash (QA/vault), and Artemis shares GLM-5.3 for security.
 
 **When to use:** Day-to-day work. This is the right default for 90% of users.
 
 ### `go-budget` — lowest cost on the GO plan
 
-**Apollo stays on GLM-5.2** (sacred — never downgraded). Atlas uses **Hy3** — a model specialized for agent orchestration and search tasks. All other gods are on **DeepSeek V4 Flash** — the cheapest model on the GO plan with 158,150 requests/month per god.
+**Apollo stays on GLM-5.3** (sacred — never downgraded). Atlas uses **Hy3** — a model specialized for agent orchestration and search tasks. All other gods are on **GLM-5.3-Flash** — $12/5h rolling, ~31,580 requests/month per god.
 
 **When to use:** High-volume work where you want maximum throughput and minimum GO plan consumption.
 
 ### `zen-max-quality` — frontier proprietary quality on OpenCode Zen (pay-as-you-go)
 
-The frontier tier on OpenCode Zen, built around **proprietary APIs** — the whole point of Zen vs the GO plan (which runs the open-weight line). Apollo on GLM-5.2 (sacred), Atlas on Gemini 3.5 Flash (fast orchestration tool-calling), Athena + Hephaestus on Claude Sonnet 5 (best-in-class coding), the remaining specialists on GPT-5.4 (frontier reasoning — security, QA, integrations, data, SRE), and Callimachus + vault on Gemini 3.5 Flash. Model ids use the `opencode/<id>` prefix. No request caps — charged per request.
+The frontier tier on OpenCode Zen, built around **proprietary APIs** — the whole point of Zen vs the GO plan (which runs the open-weight line). Apollo on GLM-5.3 (sacred), Atlas on GPT 6 Sol (Hy3 is GO-only), Hephaestus + Artemis + Hermes on Claude Sonnet 5 (best-in-class coding), Athena on GPT 5.6 Terra (frontend), Dionysus on GPT 5.6 Luna (QA), Persephone on Gemini 3.1 Pro (data/schemas), Prometheus on Grok Build 0.1, and Callimachus on Claude Haiku 4.5 (vault on GLM-5.3). Model ids use the `opencode/<id>` prefix. No request caps — charged per request.
 
 **When to use:** You want frontier proprietary quality (Claude + GPT) without a GO plan, and don't mind pay-as-you-go pricing. NOTE: OpenAI/Anthropic requests are retained 30 days per their data policies.
 
@@ -141,13 +150,17 @@ Model IDs use the **`opencode/<model-id>`** prefix — distinct from the GO plan
 
 | God | Zen model | Notes |
 |---|---|---|
-| Apollo | `opencode/glm-5.2` | Sacred — never downgraded. Cheap on Zen ($1.40 / $4.40 per 1M tokens) |
-| Atlas | `opencode/gemini-3.5-flash` | Proprietary orchestration — fast tool-calling ($1.50 / $9.00 per 1M) |
-| Hephaestus / Athena | `opencode/claude-sonnet-5` | Best-in-class proprietary coding ($2.00 / $10.00 per 1M) |
-| Artemis / Dionysus / Hermes / Persephone / Prometheus | `opencode/kimi-k2.7-code` | Proprietary, cost-effective coding ($0.95 / $4.00 per 1M) |
-| Callimachus | `opencode/minimax-m2.7` | Background vault work ($0.30 / $1.20 per 1M) |
+| Apollo | `opencode/glm-5.3` | Sacred — never downgraded ($1.40 / $4.40 per 1M tokens) |
+| Atlas | `opencode/gpt-6-sol` | Orchestration — fast tool-calling ($2.00 / $10.00 per 1M) |
+| Hephaestus / Artemis | `opencode/claude-sonnet-5` | Best-in-class proprietary coding ($2.00 / $10.00 per 1M) |
+| Athena | `opencode/gpt-5.6-terra` | Frontend ($2.00 / $12.00 per 1M) |
+| Dionysus | `opencode/gpt-5.6-luna` | QA — near-free ($0.20 / $1.20 per 1M) |
+| Hermes | `opencode/gpt-5.4-mini` | Integrations ($0.75 / $4.50 per 1M) |
+| Persephone | `opencode/gemini-3.1-pro` | Data / schemas ($2.00 / $12.00 per 1M) |
+| Prometheus | `opencode/grok-build-0.1` | Build ($1.00 / $2.00 per 1M) |
+| Callimachus | `opencode/claude-haiku-4-5` | Background vault work ($1.00 / $5.00 per 1M) |
 
-`small_model` + `vaultLlm` use `opencode/minimax-m2.7`. Demigods inherit their parent god's model with the same overrides as the GO strategies (using `opencode/` ids).
+`small_model` uses `opencode/deepseek-v4-flash`; `vaultLlm` uses `opencode/glm-5.3-flash`. Demigods inherit their parent god's model with the same overrides as the GO strategies (using `opencode/` ids).
 
 **Authorization:** run `olympus opencode`, then `/connect` → select **OpenCode Zen** → paste your API key (from [opencode.ai/zen](https://opencode.ai/zen)). The key is stored in OpenCode's own auth.json under the `opencode` provider (env override: `OPENCODE_API_KEY`) — OLYMPUS detects it automatically and recommends `zen-balanced`.
 
@@ -158,13 +171,14 @@ Model IDs use the **`opencode/<model-id>`** prefix — distinct from the GO plan
 - You want the best-tested models for coding without a flat monthly plan.
 - The free tier's rate limits are too tight for your workflow.
 
+<!-- TODO(post-v0.0.2): refresh Zen pricing + cap table — verified 2026-09-28 -->
 **Pricing:** per-1M-token rates (input/output, verified 2026-07-31): GLM 5.2 $1.40/$4.40 · Gemini 3.5 Flash $1.50/$9.00 · Claude Sonnet 5 $2.00/$10.00 · Kimi K2.7 Code $0.95/$4.00 · GPT-5.4 $2.50/$15.00 · MiniMax M2.7 $0.30/$1.20 · MiniMax M3 $0.30/$1.20 · Qwen3.7 Max $2.50/$7.50 · Grok 4.5 $2/$6 · DeepSeek V4 Flash $0.14/$0.28. See [https://opencode.ai/docs/zen/](https://opencode.ai/docs/zen/) for the current list.
 
 **Privacy:** Zen's providers follow a zero-retention policy with two exceptions that matter for the proprietary lineup — **OpenAI and Anthropic retain requests for 30 days** per their data policies (GPT-5.4, Claude Sonnet 5), and the free-on-Zen trial models (Big Pickle, DeepSeek V4 Flash Free, etc.) may use data during their trial period. Gemini, Kimi, MiniMax, Qwen-Max and the open-weight models are zero-retention.
 
 ### `zen-budget` — lowest cost on OpenCode Zen (pay-as-you-go)
 
-The lowest-cost tier on OpenCode Zen, still on proprietary APIs: Apollo on GLM-5.2 (sacred), Atlas on Gemini 3.5 Flash (orchestration), and every other god on MiniMax M2.7 ($0.30/$1.20 per 1M — the cheapest proprietary class on Zen). Model ids use the `opencode/<id>` prefix.
+The lowest-cost tier on OpenCode Zen, still on proprietary APIs: Apollo on GLM-5.3 (sacred), Atlas on GPT 6 Luna (orchestration), every other god on GLM-5.3-Flash ($0.15/$0.50 per 1M — the cheapest workhorse class on Zen), and Callimachus on Claude Haiku 4.5. Model ids use the `opencode/<id>` prefix.
 
 **When to use:** Maximum throughput on Zen at minimum cost — without leaving the proprietary-API world.
 
@@ -256,13 +270,13 @@ Per-god overrides set in the Settings dialog **do route** for free strategies: a
 
 There are **no automatic model fallbacks** — OLYMPUS never silently downgrades a god's model. When a model's monthly cap is exhausted, you switch strategies:
 
-- **Kimi K3 (Athena, Hephaestus) capped (490 req/month):** switch to `go-balanced` (Qwen3.7 Plus / DeepSeek V4 Pro) or a **Zen** strategy (`zen-max-quality` keeps frontier quality with Claude Sonnet 5 / GPT-5.4; `zen-balanced`/`zen-budget` use Kimi K2.7 Code / MiniMax M2.7 — pay-as-you-go, **no request caps**).
-- **GLM-5.2 (Apollo) capped:** Apollo is sacred and is never downgraded. If GLM-5.2 runs out, Apollo waits for the monthly reset — or switch to a Zen strategy (Apollo stays on `opencode/glm-5.2`, pay-as-you-go) or a free strategy.
+- **Kimi K3 / Grok 4.7 not used in any strategy:** their GO caps ($15/mo → $3/5h rolling) are too tight for multi-god duty. GLM-5.3 is reserved for Apollo + Artemis only. Switch to `go-balanced` for more headroom, or a **Zen** strategy (`zen-max-quality` keeps frontier quality with Claude Sonnet 5 / GPT 6 Sol; `zen-balanced`/`zen-budget` use GPT 5.6 Terra/Luna / GLM-5.3-Flash — pay-as-you-go, **no request caps**).
+- **GLM-5.3 (Apollo/Artemis) capped (1,080 req/month, shared):** Apollo is sacred and is never downgraded. If GLM-5.3 runs out, Apollo waits for the monthly reset — or switch to a Zen strategy (Apollo stays on `opencode/glm-5.3`, pay-as-you-go) or a free strategy. If only Artemis's half is exhausted, move her to `glm-5.3-flash`.
 - **Any GO model capped:** switch to a free strategy in Settings (`free-openrouter`, `free-big-pickle`, `free-nvidia-build`) and keep working at zero cost. When one free provider's rate limit runs out, pick another free strategy and continue.
 
 ## Why no OpenAI/Anthropic direct providers?
 
-OLYMPUS does not wire OpenAI or Anthropic as direct providers — and it doesn't need to. **OpenCode Zen is the gateway to those proprietary APIs**: the ZEN strategies route gods to `opencode/gpt-5.4` and `opencode/claude-sonnet-5` (plus Gemini, Grok, Kimi, MiniMax, Qwen-Max) pay-as-you-go with no request caps, through OpenCode's curated, benchmarked serving. The GO plan covers the open-weight line (GLM, DeepSeek, Qwen, Hy3); the free tier covers zero-cost providers (OpenRouter free, NVIDIA Build). BYO-key OpenAI/Anthropic (via those vendors' own CLIs or direct API keys) is out of scope — OLYMPUS runs on OpenCode providers only.
+OLYMPUS does not wire OpenAI or Anthropic as direct providers — and it doesn't need to. **OpenCode Zen is the gateway to those proprietary APIs**: the ZEN strategies route gods to `opencode/gpt-6-sol` and `opencode/claude-sonnet-5` (plus Gemini, Grok, Kimi, MiniMax, Qwen-Max) pay-as-you-go with no request caps, through OpenCode's curated, benchmarked serving. The GO plan covers the open-weight line (GLM, DeepSeek, Qwen, Hy3); the free tier covers zero-cost providers (OpenRouter free, NVIDIA Build). BYO-key OpenAI/Anthropic (via those vendors' own CLIs or direct API keys) is out of scope — OLYMPUS runs on OpenCode providers only.
 
 The free-tier providers (OpenRouter free, NVIDIA Build free) are different — they let users without any paid plan try OLYMPUS end-to-end. That's the "Always free" promise from the README.
 

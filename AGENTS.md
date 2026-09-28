@@ -8,7 +8,7 @@ Gods are `mode: "primary"` or `mode: "subagent"` agents in `opencode.json`. Apol
 
 | God | Domain | Model (go-balanced) | Role |
 |-----|--------|---------------------|------|
-| **Apollo** | Planning & architecture | `opencode-go/glm-5.2` | The only god who talks to the user. Plans the task DAG, defines acceptance criteria, hands execution to Atlas. |
+| **Apollo** | Planning & architecture | `opencode-go/glm-5.3` | The only god who talks to the user. Plans the task DAG, defines acceptance criteria, hands execution to Atlas. |
 | **Atlas** | Orchestration & execution | `opencode-go/hy3` | The god who executes the plan. Apollo plans, Atlas dispatches. Hy3 is sacred — never downgraded. Excels at agent orchestration with lower token cost. |
 | **Artemis** | Security & auditing | `opencode-go/qwen3.7-plus` | SAST, pentesting, compliance, threat modeling, secrets scanning. |
 | **Athena** | Frontend & design | `opencode-go/qwen3.7-plus` | React/Next.js, accessibility, design systems, UI verification. |
@@ -21,7 +21,7 @@ Gods are `mode: "primary"` or `mode: "subagent"` agents in `opencode.json`. Apol
 
 **Total: 10 gods + 118 demigods = 128 agents.**
 
-Apollo is always on GLM-5.2 in balanced and max-quality strategies (sacred — never downgraded). Atlas is always on Hy3 in all strategies (sacred — never downgraded). In go-budget, Apollo stays on GLM-5.2 and Atlas stays on Hy3 while all other gods drop to DeepSeek V4 Flash. Hy3 excels at agent orchestration — Atlas's domain — and is more cost-effective than alternatives.
+Apollo is always on GLM-5.3 in balanced and max-quality strategies (sacred — never downgraded; GLM-5.3 is shared only with Artemis in the GO strategies). Atlas is always on Hy3 in the GO strategies (sacred — never downgraded; Zen substitutes GPT 6 Sol/Luna because Hy3 is GO-only). In go-budget, Apollo stays on GLM-5.3 and Atlas stays on Hy3 while all other gods drop to GLM-5.3-Flash. Hy3 excels at agent orchestration — Atlas's domain — and is more cost-effective than alternatives.
 
 ---
 

@@ -89,7 +89,7 @@ olympus apply-strategy go-budget
 
 | God | Domain | Model (go-balanced) |
 |-----|--------|---------------------|
-| **Apollo** | Planning & architecture | GLM-5.2 (sacred) |
+| **Apollo** | Planning & architecture | GLM-5.3 (sacred) |
 | **Atlas** | Orchestration & execution | Hy3 (sacred) |
 | **Artemis** | Security / auditing | Qwen3.7 Plus |
 | **Athena** | Frontend / design | Qwen3.7 Plus |
@@ -100,7 +100,7 @@ olympus apply-strategy go-budget
 | **Prometheus** | DevOps / CI-CD / deploy | Qwen3.7 Plus |
 | **Callimachus** | Background vault curator | DeepSeek V4 Flash |
 
-GLM-5.2 is reserved for Apollo alone. The 4,300 req/month GO cap is protected by the 80/20 fast-path.
+GLM-5.3 is reserved for Apollo and Artemis. The 1,080 req/month GO cap is protected by the 80/20 fast-path.
 
 ## Architecture (brief)
 
@@ -134,12 +134,12 @@ GLM-5.2 is reserved for Apollo alone. The 4,300 req/month GO cap is protected by
 
 | Strategy | Apollo | Atlas | Specialists | Callimachus |
 |----------|--------|-------|-------------|-----------|
-| `go-max-quality` | GLM-5.2 | Hy3 | Kimi K3 / K2.7 Code | DeepSeek V4 Flash |
-| `go-balanced` (default) | GLM-5.2 | Hy3 | DeepSeek V4 Pro / Qwen3.7 Plus | DeepSeek V4 Flash |
-| `go-budget` | GLM-5.2 (sacred) | Hy3 | Qwen3.7 Plus / DeepSeek V4 Pro / Flash | DeepSeek V4 Flash |
-| `zen-max-quality` (**Zen**) | GLM-5.2 | Gemini 3.5 Flash | Claude Sonnet 5 / GPT-5.4 | Gemini 3.5 Flash |
-| `zen-balanced` (**Zen**) | GLM-5.2 | Gemini 3.5 Flash | Claude Sonnet 5 / Kimi K2.7 Code | MiniMax M2.7 |
-| `zen-budget` (**Zen**) | GLM-5.2 | Gemini 3.5 Flash | MiniMax M2.7 | MiniMax M2.7 |
+| `go-max-quality` | GLM-5.3 | Hy3 | Kimi K2.7 Code / GLM-5.3-Flash / MiniMax M3 | GLM-5.3-Flash |
+| `go-balanced` (default) | GLM-5.3 | Hy3 | Kimi K2.7 Code / Qwen3.7 Plus / GLM-5.3-Flash / MiniMax M3 | GLM-5.3-Flash |
+| `go-budget` | GLM-5.3 (sacred) | Hy3 | GLM-5.3-Flash | GLM-5.3-Flash |
+| `zen-max-quality` (**Zen**) | GLM-5.3 | GPT 6 Sol | Claude Sonnet 5 / GPT 5.6 Terra / GPT 5.6 Luna / Gemini 3.1 Pro / Grok Build 0.1 | Claude Haiku 4.5 |
+| `zen-balanced` (**Zen**) | GLM-5.3 | GPT 6 Sol | Claude Sonnet 5 / GPT 5.6 Terra / GPT 5.6 Luna / GPT 5.4 Mini / Gemini 3.1 Pro / Grok Build 0.1 | Claude Haiku 4.5 |
+| `zen-budget` (**Zen**) | GLM-5.3 | GPT 6 Luna | GLM-5.3-Flash | Claude Haiku 4.5 |
 | `free-openrouter` (**Free OpenRouter**) | strongest OpenRouter free model live | strongest OpenRouter free model live | second-strongest OpenRouter free model live | Nemotron 3 Nano (fast background) |
 | `free-big-pickle` (**Free Big Pickle**) | one free flagship for all 10 gods | one free flagship for all 10 gods | one free flagship for all 10 gods | **same flagship — included** |
 | `free-nvidia-build` (**Free Nvidia Build**) | strongest NVIDIA free model live (Nemotron 3 Ultra 550B, 1M ctx) | strongest NVIDIA free model live | GLM-5.2 (coding trio) + #2 (specialists) | Nemotron 3 Nano (fast background) |

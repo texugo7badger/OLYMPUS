@@ -164,96 +164,99 @@ function getBigPickleModel() {
 
 const BUILTIN_STRATEGIES = {
   'go-max-quality': {
-    apollo:       'opencode-go/glm-5.2',
+    apollo:       'opencode-go/glm-5.3',
     atlas:        'opencode-go/hy3',
-    artemis:      'opencode-go/kimi-k2.7-code',
-    athena:       'opencode-go/kimi-k3',
-    dionysus:     'opencode-go/kimi-k2.7-code',
-    hephaestus:   'opencode-go/kimi-k3',
+    artemis:      'opencode-go/glm-5.3',
+    athena:       'opencode-go/glm-5.3-flash',
+    dionysus:     'opencode-go/glm-5.3-flash',
+    hephaestus:   'opencode-go/kimi-k2.7-code',
     hermes:       'opencode-go/kimi-k2.7-code',
-    persephone:   'opencode-go/kimi-k2.7-code',
-    prometheus:   'opencode-go/kimi-k2.7-code',
-    callimachus:  'opencode-go/deepseek-v4-flash',
+    persephone:   'opencode-go/glm-5.3-flash',
+    prometheus:   'opencode-go/minimax-m3',
+    callimachus:  'opencode-go/glm-5.3-flash',
   },
   'go-balanced': {
-    apollo:       'opencode-go/glm-5.2',
+    apollo:       'opencode-go/glm-5.3',
     atlas:        'opencode-go/hy3',
-    artemis:      'opencode-go/qwen3.7-plus',
+    artemis:      'opencode-go/glm-5.3',
     athena:       'opencode-go/qwen3.7-plus',
-    dionysus:     'opencode-go/deepseek-v4-pro',
-    hephaestus:   'opencode-go/deepseek-v4-pro',
-    hermes:       'opencode-go/qwen3.7-plus',
-    persephone:   'opencode-go/deepseek-v4-pro',
-    prometheus:   'opencode-go/qwen3.7-plus',
-    callimachus:  'opencode-go/deepseek-v4-flash',
+    dionysus:     'opencode-go/glm-5.3-flash',
+    hephaestus:   'opencode-go/kimi-k2.7-code',
+    hermes:       'opencode-go/kimi-k2.7-code',
+    persephone:   'opencode-go/qwen3.7-plus',
+    prometheus:   'opencode-go/minimax-m3',
+    callimachus:  'opencode-go/glm-5.3-flash',
   },
   'go-budget': {
-    apollo:       'opencode-go/glm-5.2',
+    apollo:       'opencode-go/glm-5.3',
     atlas:        'opencode-go/hy3',
-    artemis:      'opencode-go/deepseek-v4-flash',
-    athena:       'opencode-go/deepseek-v4-flash',
-    dionysus:     'opencode-go/deepseek-v4-flash',
-    hephaestus:   'opencode-go/deepseek-v4-flash',
-    hermes:       'opencode-go/deepseek-v4-flash',
-    persephone:   'opencode-go/deepseek-v4-flash',
-    prometheus:   'opencode-go/deepseek-v4-flash',
-    callimachus:  'opencode-go/deepseek-v4-flash',
+    artemis:      'opencode-go/glm-5.3-flash',
+    athena:       'opencode-go/glm-5.3-flash',
+    dionysus:     'opencode-go/glm-5.3-flash',
+    hephaestus:   'opencode-go/glm-5.3-flash',
+    hermes:       'opencode-go/glm-5.3-flash',
+    persephone:   'opencode-go/glm-5.3-flash',
+    prometheus:   'opencode-go/glm-5.3-flash',
+    callimachus:  'opencode-go/glm-5.3-flash',
   },
   // ZEN Max Quality — frontier proprietary APIs on OpenCode Zen (opencode/<id>).
-  // Apollo stays on GLM-5.2 (sacred); Atlas uses Gemini 3.5 Flash for
-  // orchestration (fast tool-calling); Athena + Hephaestus get Claude Sonnet 5
-  // (best-in-class coding); the remaining specialists get GPT-5.4 (frontier
-  // reasoning); Callimachus + vault use Gemini 3.5 Flash. NOTE: OpenAI/Anthropic
-  // requests are retained 30 days (zero-retention open models are on GO).
+  // Apollo stays on GLM-5.3 (sacred); Atlas uses GPT 6 Sol for orchestration
+  // (Hy3 is GO-only); Hephaestus + Artemis + Hermes get Claude Sonnet 5
+  // (best-in-class coding); Athena GPT 5.6 Terra; Dionysus GPT 5.6 Luna;
+  // Persephone Gemini 3.1 Pro; Prometheus Grok Build 0.1; Callimachus
+  // Claude Haiku 4.5; vault GLM-5.3. NOTE: OpenAI/Anthropic requests are
+  // retained 30 days (zero-retention open models are on GO).
   // Mirrors zen-max-quality in src/lib/model-strategies.ts (check-strategy-sync).
   'zen-max-quality': {
-    apollo:       'opencode/glm-5.2',
-    atlas:        'opencode/gemini-3.5-flash',
-    artemis:      'opencode/gpt-5.4',
-    athena:       'opencode/claude-sonnet-5',
-    dionysus:     'opencode/gpt-5.4',
+    apollo:       'opencode/glm-5.3',
+    atlas:        'opencode/gpt-6-sol',
+    artemis:      'opencode/claude-sonnet-5',
+    athena:       'opencode/gpt-5.6-terra',
+    dionysus:     'opencode/gpt-5.6-luna',
     hephaestus:   'opencode/claude-sonnet-5',
-    hermes:       'opencode/gpt-5.4',
-    persephone:   'opencode/gpt-5.4',
-    prometheus:   'opencode/gpt-5.4',
-    callimachus:  'opencode/gemini-3.5-flash',
+    hermes:       'opencode/claude-sonnet-5',
+    persephone:   'opencode/gemini-3.1-pro',
+    prometheus:   'opencode/grok-build-0.1',
+    callimachus:  'opencode/claude-haiku-4-5',
   },
   // ZEN — full 128-agent OLYMPUS on OpenCode Zen (pay-as-you-go, no request
   // caps) built around proprietary APIs — the whole point of Zen vs the GO
   // plan's open-weight line. Model ids use the opencode/<id> prefix (the Zen
   // provider), distinct from the GO plan's opencode-go/<id>. Apollo stays on
-  // GLM-5.2 (sacred; cheap on Zen at $1.40/$4.40 per 1M). Atlas uses Gemini
-  // 3.5 Flash for orchestration. Athena + Hephaestus get Claude Sonnet 5;
-  // specialists get Kimi K2.7 Code; Callimachus + vault use MiniMax M2.7.
+  // GLM-5.3 (sacred; $1.40/$4.40 per 1M). Atlas uses GPT 6 Sol (Hy3 is
+  // GO-only). Hephaestus + Artemis get Claude Sonnet 5; Athena GPT 5.6 Terra;
+  // Dionysus GPT 5.6 Luna; Hermes GPT 5.4 Mini; Persephone Gemini 3.1 Pro;
+  // Prometheus Grok Build 0.1; Callimachus Claude Haiku 4.5; vault
+  // GLM-5.3-Flash.
   // Mirrors zen-balanced in src/lib/model-strategies.ts (check-strategy-sync).
   'zen-balanced': {
-    apollo:       'opencode/glm-5.2',
-    atlas:        'opencode/gemini-3.5-flash',
-    artemis:      'opencode/kimi-k2.7-code',
-    athena:       'opencode/claude-sonnet-5',
-    dionysus:     'opencode/kimi-k2.7-code',
+    apollo:       'opencode/glm-5.3',
+    atlas:        'opencode/gpt-6-sol',
+    artemis:      'opencode/claude-sonnet-5',
+    athena:       'opencode/gpt-5.6-terra',
+    dionysus:     'opencode/gpt-5.6-luna',
     hephaestus:   'opencode/claude-sonnet-5',
-    hermes:       'opencode/kimi-k2.7-code',
-    persephone:   'opencode/kimi-k2.7-code',
-    prometheus:   'opencode/kimi-k2.7-code',
-    callimachus:  'opencode/minimax-m2.7',
+    hermes:       'opencode/gpt-5.4-mini',
+    persephone:   'opencode/gemini-3.1-pro',
+    prometheus:   'opencode/grok-build-0.1',
+    callimachus:  'opencode/claude-haiku-4-5',
   },
   // ZEN Budget — lowest cost on OpenCode Zen, still proprietary. Apollo stays
-  // on GLM-5.2 (sacred); Atlas uses Gemini 3.5 Flash for orchestration;
-  // everything else drops to MiniMax M2.7 ($0.30/$1.20 per 1M — the cheapest
-  // proprietary class on Zen).
+  // on GLM-5.3 (sacred); Atlas uses GPT 6 Luna for orchestration; everything
+  // else drops to GLM-5.3-Flash ($0.15/$0.50 per 1M — the cheapest workhorse
+  // class on Zen); Callimachus Claude Haiku 4.5.
   // Mirrors zen-budget in src/lib/model-strategies.ts (check-strategy-sync).
   'zen-budget': {
-    apollo:       'opencode/glm-5.2',
-    atlas:        'opencode/gemini-3.5-flash',
-    artemis:      'opencode/minimax-m2.7',
-    athena:       'opencode/minimax-m2.7',
-    dionysus:     'opencode/minimax-m2.7',
-    hephaestus:   'opencode/minimax-m2.7',
-    hermes:       'opencode/minimax-m2.7',
-    persephone:   'opencode/minimax-m2.7',
-    prometheus:   'opencode/minimax-m2.7',
-    callimachus:  'opencode/minimax-m2.7',
+    apollo:       'opencode/glm-5.3',
+    atlas:        'opencode/gpt-6-luna',
+    artemis:      'opencode/glm-5.3-flash',
+    athena:       'opencode/glm-5.3-flash',
+    dionysus:     'opencode/glm-5.3-flash',
+    hephaestus:   'opencode/glm-5.3-flash',
+    hermes:       'opencode/glm-5.3-flash',
+    persephone:   'opencode/glm-5.3-flash',
+    prometheus:   'opencode/glm-5.3-flash',
+    callimachus:  'opencode/claude-haiku-4-5',
   },
   // Free Big Pickle — every god on a single model. Defaults to the
   // strongest free model currently live (refresh file) or the verified
@@ -316,7 +319,7 @@ const BUILTIN_STRATEGIES = {
   },
 };
 
-const SMALL_MODEL_GO = 'opencode-go/deepseek-v4-flash';
+const SMALL_MODEL_GO = 'opencode-go/glm-5.3-flash';
 // Zen (pay-as-you-go) uses the same Flash class for background tasks —
 // opencode/deepseek-v4-flash costs $0.14/$0.28 per 1M tokens on Zen.
 const SMALL_MODEL_ZEN = 'opencode/deepseek-v4-flash';
@@ -386,17 +389,25 @@ const KNOWN_FREE_MODELS = new Set([
     .map(([id]) => id),
 ]);
 const KNOWN_GO_MODELS = new Set([
-  'opencode-go/hy3', 'opencode-go/glm-5.2', 'opencode-go/kimi-k3',
-  'opencode-go/kimi-k2.7-code', 'opencode-go/deepseek-v4-pro',
-  'opencode-go/deepseek-v4-flash', 'opencode-go/qwen3.7-plus',
-  'opencode-go/mimo-v2.5', 'opencode-go/grok-4.5', 'opencode-go/minimax-m3',
+  'opencode-go/hy3', 'opencode-go/glm-5.3', 'opencode-go/glm-5.3-flash',
+  'opencode-go/glm-5.2', 'opencode-go/kimi-k3', 'opencode-go/kimi-k2.7-code',
+  'opencode-go/kimi-k2.6', 'opencode-go/deepseek-v4.1-flash',
+  'opencode-go/deepseek-v4-pro', 'opencode-go/deepseek-v4-flash',
+  'opencode-go/qwen3.8-max', 'opencode-go/qwen3.8-flash',
+  'opencode-go/qwen3.7-plus', 'opencode-go/mimo-v2.6-flash',
+  'opencode-go/mimo-v2.6-pro', 'opencode-go/mimo-v2.5',
+  'opencode-go/grok-4.7', 'opencode-go/grok-4.6', 'opencode-go/grok-4.5',
+  'opencode-go/minimax-m3', 'opencode-go/minimax-m2.7',
+  'opencode-go/gpt-6-luna', 'opencode-go/gpt-5.6-luna',
+  'opencode-go/longcat-2.0',
 ]);
 // Models a user may legitimately pin per-god while on the Zen strategy
 // (opencode/<id> — OpenCode Zen). Mirrors ZEN_MODEL_CLASSES in
 // src/lib/model-strategies.ts (the full live catalog, deprecated models
-// excluded — verified 2026-07-31).
+// excluded — verified 2026-09-28).
 const KNOWN_ZEN_MODELS = new Set([
   // OpenAI (proprietary — 30-day retention).
+  'opencode/gpt-6-astra', 'opencode/gpt-6-sol', 'opencode/gpt-6-luna',
   'opencode/gpt-5.6-sol', 'opencode/gpt-5.6-terra', 'opencode/gpt-5.6-luna',
   'opencode/gpt-5.5', 'opencode/gpt-5.5-pro', 'opencode/gpt-5.4',
   'opencode/gpt-5.4-pro', 'opencode/gpt-5.4-mini', 'opencode/gpt-5.4-nano',
@@ -404,18 +415,24 @@ const KNOWN_ZEN_MODELS = new Set([
   'opencode/gpt-5.2', 'opencode/gpt-5.1', 'opencode/gpt-5',
   'opencode/gpt-5-nano',
   // Anthropic (proprietary — 30-day retention).
-  'opencode/claude-fable-5', 'opencode/claude-opus-5',
+  'opencode/claude-fable-5-1', 'opencode/claude-fable-5',
+  'opencode/claude-opus-5-5', 'opencode/claude-opus-5',
   'opencode/claude-opus-4-8', 'opencode/claude-opus-4-7',
   'opencode/claude-opus-4-6', 'opencode/claude-opus-4-5',
   'opencode/claude-sonnet-5', 'opencode/claude-sonnet-4-6',
   'opencode/claude-sonnet-4-5', 'opencode/claude-haiku-4-5',
   // Google (proprietary).
+  'opencode/gemini-3.8-flash', 'opencode/gemini-3.7-flash',
   'opencode/gemini-3.6-flash', 'opencode/gemini-3.5-flash',
   'opencode/gemini-3.5-flash-lite', 'opencode/gemini-3.1-pro',
   'opencode/gemini-3-flash',
   // xAI (proprietary).
-  'opencode/grok-4.5', 'opencode/grok-build-0.1',
+  'opencode/grok-4.7', 'opencode/grok-4.6', 'opencode/grok-4.5',
+  'opencode/grok-build-0.1',
+  // Meta (proprietary).
+  'opencode/muse-spark-1.3', 'opencode/muse-spark-1.2',
   // Alibaba (proprietary hosted — Qwen-Max/Plus line).
+  'opencode/qwen3.8-max', 'opencode/qwen3.8-flash',
   'opencode/qwen3.7-max', 'opencode/qwen3.7-plus',
   'opencode/qwen3.6-plus', 'opencode/qwen3.5-plus',
   // Moonshot (proprietary).
@@ -423,13 +440,16 @@ const KNOWN_ZEN_MODELS = new Set([
   // MiniMax (proprietary).
   'opencode/minimax-m3', 'opencode/minimax-m2.7',
   // Open-weight models on Zen (also the GO-plan families).
-  'opencode/glm-5.2', 'opencode/glm-5.1',
+  'opencode/glm-5.3-flash', 'opencode/glm-5.3', 'opencode/glm-5.2',
+  'opencode/glm-5.1', 'opencode/deepseek-v4.1-flash',
   'opencode/deepseek-v4-pro', 'opencode/deepseek-v4-flash',
+  'opencode/deepseek-v4-flash-vision-exp',
   // Free-on-Zen trial models.
-  'opencode/big-pickle', 'opencode/deepseek-v4-flash-free',
-  'opencode/mimo-v2.5-free', 'opencode/nemotron-3-ultra-free',
-  'opencode/ling-3.0-flash-free', 'opencode/laguna-s-2.1-free',
-  'opencode/north-mini-code-free',
+  'opencode/big-pickle', 'opencode/space-bunny-free',
+  'opencode/longcat-2.5-preview-free', 'opencode/mimo-v2.6-flash-free',
+  'opencode/mimo-v2.5-free', 'opencode/ling-3.0-flash-fin-free',
+  'opencode/nemotron-3-ultra-free', 'opencode/nemotron-3.5-lightning-free',
+  'opencode/muse-spark-1.3-contributor-free',
 ]);
 
 // --- The 10 canonical Olympus god IDs --------------------------------------
@@ -1088,13 +1108,13 @@ function demigodModel(demigodName, parentGod, parentModel, athenaOnK3, isFreeTie
     return parentModel;
   }
   if (SIMPLE_FLASH_DEMIGODS.has(demigodName)) {
-    return `${prefix}deepseek-v4-flash`;
+    return `${prefix}glm-5.3-flash`;
   }
   if (APOLLO_REASONING_DEMIGODS.has(demigodName)) {
-    return `${prefix}deepseek-v4-pro`;
+    return `${prefix}glm-5.3-flash`;
   }
   if (athenaOnK3 && ATHENA_IMPECCABLE_UPGRADE_DEMIGODS.has(demigodName)) {
-    return `${prefix}kimi-k3`;
+    return `${prefix}glm-5.3-flash`;
   }
   return parentModel;
 }
