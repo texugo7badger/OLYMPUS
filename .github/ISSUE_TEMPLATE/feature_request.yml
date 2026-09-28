@@ -1,0 +1,62 @@
+name: Feature Request
+description: Suggest a new feature or improvement for OLYMPUS
+title: '[Feature]: '
+labels: ['enhancement', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion! Please describe what you'd like to see.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem would this feature solve? Is it related to a frustration or limitation?
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe what you'd like OLYMPUS to do. Be as specific as you can.
+      placeholder: 'I would like OLYMPUS to...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Have you considered other approaches or workarounds?
+      placeholder: 'I tried using... but it doesnt work because...'
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Component
+      description: Which part of OLYMPUS would this affect?
+      options:
+        - Electron app (window, menus, IPC)
+        - Terminal (PTY, xterm, Terminal Bridge)
+        - Editor Bridge (external editor launching)
+        - Agent dispatch (Apollo → gods → demigods)
+        - Symphony protocol
+        - Vault / Brain (instincts, patterns)
+        - Build / installer
+        - IDE extension (VSCode / Zed)
+        - Documentation
+        - New MCP server
+        - New skill
+        - New demigod
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, links, or anything else that helps explain the feature.

@@ -1,0 +1,103 @@
+# Release Drafter — auto-generates release notes from PR labels.
+#
+# On every PR merge to main, a draft release is updated. When a tag is
+# pushed, the release.yml workflow publishes the draft.
+#
+# See: https://github.com/release-drafter/release-drafter
+
+name-template: 'OLYMPUS v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - title: '🚀 New Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'bug'
+      - 'fix'
+      - 'bugfix'
+  - title: '📚 Documentation'
+    labels:
+      - 'documentation'
+      - 'docs'
+  - title: '🔧 Maintenance'
+    labels:
+      - 'maintenance'
+      - 'chore'
+      - 'refactor'
+      - 'dependencies'
+  - title: '🔒 Security'
+    labels:
+      - 'security'
+
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+change-title-escapes: '\<*_&#@'
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  ## Contributors
+  $CONTRIBUTORS
+
+  ---
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+version-resolver:
+  major:
+    labels: ['breaking']
+  minor:
+    labels: ['feature', 'enhancement']
+  patch:
+    labels: ['bug', 'fix', 'bugfix', 'documentation', 'docs', 'maintenance', 'chore', 'refactor', 'dependencies', 'security']
+  default: patch
+
+exclude-labels:
+  - 'skip-changelog'
+  - 'no-release-notes'
+
+autolabeler:
+  - label: 'bug'
+    title:
+      - '/fix/i'
+      - '/bug/i'
+      - '/hotfix/i'
+    branch:
+      - '/fix\/.+/'
+      - '/bugfix\/.+/'
+  - label: 'feature'
+    title:
+      - '/feat/i'
+    branch:
+      - '/feat\/.+/'
+      - '/feature\/.+/'
+  - label: 'documentation'
+    title:
+      - '/docs/i'
+    files:
+      - '*.md'
+    branch:
+      - '/docs\/.+/'
+  - label: 'maintenance'
+    title:
+      - '/chore/i'
+      - '/refactor/i'
+    branch:
+      - '/chore\/.+/'
+      - '/refactor\/.+/'
+  - label: 'dependencies'
+    title:
+      - '/deps/i'
+    branch:
+      - '/deps\/.+/'
+      - '/dependabot\/.+/'
+  - label: 'security'
+    title:
+      - '/security/i'
+      - '/sec/i'
+    branch:
+      - '/security\/.+/'

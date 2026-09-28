@@ -1,0 +1,9 @@
+{
+  "id": "build-resolver-03",
+  "prompt": "Run `npm run electron:compile` and resolve any TypeScript errors that appear. Report the root cause + the fix for each error. If the build succeeds on the first try, report that the build is clean.",
+  "expectedDispatches": ["hephaestus", "build-resolver"],
+  "maxTokens": 20000,
+  "minShortCircuitRate": 0.15,
+  "qualityThreshold": 0.75,
+  "tags": ["backend", "build", "typescript"]
+}

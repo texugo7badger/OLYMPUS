@@ -1,0 +1,31 @@
+{
+  "version": "3.0",
+  "architecture": "vaultbrain",
+  "description": "Documentation-only reference for the VaultBrain unified learning system. v3.0 removes the Claude Code-centric Python CLI and shell hooks (they never fired in OpenCode). The executable logic now lives in the Olympus overlay plugin (.opencode/olympus/) and the vault (~/OLYMPUS-VAULT/).",
+  "capture": {
+    "hook": "tool.execute.after",
+    "feed": "06_Activity_Feed/live.jsonl",
+    "max_latency_ms": 2
+  },
+  "confidence": {
+    "formula": "clamp(0.0, 0.95, success_rate * sqrt(samples) / (1 + sqrt(samples)))",
+    "empirical_cap": 0.95,
+    "short_circuit_threshold": 0.85,
+    "failure_penalty": 0.3,
+    "verification_sampling": 0.1
+  },
+  "stages": [
+    "INTAKE",
+    "CLASSIFY",
+    "EXTRACT",
+    "SCOPE",
+    "LINK",
+    "RECALIBRATE",
+    "PRUNE"
+  ],
+  "legacy_v2_1": {
+    "status": "removed",
+    "reason": "Claude Code-centric; never fired in OpenCode; data lived outside vault",
+    "removed_paths": ["hooks/", "scripts/", "agents/"]
+  }
+}

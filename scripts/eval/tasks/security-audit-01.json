@@ -1,0 +1,9 @@
+{
+  "id": "security-audit-01",
+  "prompt": "Audit this repository for OWASP Top 10 vulnerabilities. Focus on the auth flow, API routes, and any file-system access. Report findings as a markdown checklist with severity + suggested fix for each.",
+  "expectedDispatches": ["artemis", "secrets-scanner", "security-reviewer"],
+  "maxTokens": 15000,
+  "minShortCircuitRate": 0.1,
+  "qualityThreshold": 0.65,
+  "tags": ["security", "audit", "owasp"]
+}

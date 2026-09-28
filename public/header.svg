@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OLYMPUS v0.0.1 - Low-cost. Excellent quality. Always free. GO (open-source), ZEN (proprietary APIs), and FREE tiers.">
+  <!-- Background gradient (dark navy) -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A0E16"/>
+      <stop offset="50%" stop-color="#0E1320"/>
+      <stop offset="100%" stop-color="#0A0E16"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D4A574"/>
+      <stop offset="100%" stop-color="#C4956A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="320" fill="url(#bgGrad)"/>
+
+  <!-- ================================================================== -->
+  <!-- Olympus Logo (Mount Olympus + 10 Gods + Brain lines)               -->
+  <!-- ================================================================== -->
+
+  <!-- Background circle (dark navy, matches workspace bg) -->
+  <circle cx="148" cy="160" r="124" fill="#0A0E16"/>
+
+  <!-- Outer ring (pastel gold, thin) -->
+  <circle cx="148" cy="160" r="112" stroke="#D4A574" stroke-width="1.5" fill="none" opacity="0.4"/>
+
+  <!-- Inner ring (pastel gold, thinner) -->
+  <circle cx="148" cy="160" r="96" stroke="#D4A574" stroke-width="1" fill="none" opacity="0.25"/>
+
+  <!-- Mountain peak (Mount Olympus) — gold gradient -->
+  <path d="M 148 108 L 188 200 L 164 200 L 148 164 L 132 200 L 108 200 Z" fill="url(#goldGrad)"/>
+
+  <!-- Callimachus floating above the peak — vault curator watching over the brain -->
+  <circle cx="148" cy="92" r="3" fill="#9B7BAE"/>
+
+  <!-- Atlas between the mountain's legs — orchestration god at the base of every dispatch -->
+  <circle cx="148" cy="200" r="3" fill="#D4A574"/>
+
+  <!-- 8 god dots in orbit = 8 specialist gods -->
+  <!-- Apollo (top) — planning, GLM-5.2 -->
+  <circle cx="148" cy="56" r="4.5" fill="#D4A574"/>
+  <!-- Hephaestus (top-right) — backend, DeepSeek V4 Pro -->
+  <circle cx="221.6" cy="86.4" r="3.5" fill="#D4A574" opacity="0.85"/>
+  <!-- Athena (right) — frontend, Qwen3.7 Plus -->
+  <circle cx="252" cy="160" r="4" fill="#D4A574"/>
+  <!-- Hermes (bottom-right) — integrations, Qwen3.7 Plus -->
+  <circle cx="221.6" cy="233.6" r="3.5" fill="#D4A574" opacity="0.85"/>
+  <!-- Artemis (bottom) — security, Qwen3.7 Plus -->
+  <circle cx="148" cy="264" r="4" fill="#D4A574"/>
+  <!-- Dionysus (bottom-left) — QA, DeepSeek V4 Pro -->
+  <circle cx="74.4" cy="233.6" r="3.5" fill="#D4A574" opacity="0.85"/>
+  <!-- Persephone (left) — database, DeepSeek V4 Pro -->
+  <circle cx="44" cy="160" r="4" fill="#D4A574"/>
+  <!-- Prometheus (top-left) — DevOps, Qwen3.7 Plus -->
+  <circle cx="74.4" cy="86.4" r="3.5" fill="#D4A574" opacity="0.85"/>
+
+  <!-- Subtle connection lines from center to each god dot (the brain) -->
+  <g stroke="#D4A574" stroke-width="0.5" opacity="0.15">
+    <line x1="148" y1="160" x2="148" y2="56"/>
+    <line x1="148" y1="160" x2="221.6" y2="86.4"/>
+    <line x1="148" y1="160" x2="252" y2="160"/>
+    <line x1="148" y1="160" x2="221.6" y2="233.6"/>
+    <line x1="148" y1="160" x2="148" y2="264"/>
+    <line x1="148" y1="160" x2="74.4" y2="233.6"/>
+    <line x1="148" y1="160" x2="44" y2="160"/>
+    <line x1="148" y1="160" x2="74.4" y2="86.4"/>
+  </g>
+
+  <!-- ================================================================== -->
+  <!-- Text section (right of logo) — v0.0.1 updated stats                -->
+  <!-- ================================================================== -->
+
+  <!-- OLYMPUS text (large, pastel gold, bold serif) -->
+  <text x="330" y="140" font-family="Georgia, 'Times New Roman', serif" font-size="68" font-weight="bold" fill="#D4A574" letter-spacing="4">OLYMPUS</text>
+
+  <!-- Subtitle (smaller, dimmed, monospace) -->
+  <text x="335" y="178" font-family="'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace" font-size="17" fill="#D4A574" opacity="0.7" letter-spacing="2">Low-cost. Excellent quality. Always free.</text>
+
+  <!-- Stats line — updated for v0.0.1 (10 gods, 128 agents, 330 skills, 10 plugins) -->
+  <text x="335" y="212" font-family="'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace" font-size="13" fill="#8B8B8B" letter-spacing="1">v0.0.1  ·  10 gods  ·  118 demigods  ·  330 skills  ·  16 commands  ·  19 MCPs  ·  21 hooks  ·  10 plugins</text>
+
+  <!-- Tagline (italic serif, dimmed) -->
+  <text x="335" y="250" font-family="Georgia, 'Times New Roman', serif" font-size="14" fill="#D4A574" opacity="0.5" font-style="italic">Gods do not talk to each other — they talk through the brain.</text>
+
+  <!-- Decorative line under tagline -->
+  <line x1="335" y1="270" x2="900" y2="270" stroke="#D4A574" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Bottom credits/stack row — vendored sources (8 upstream repos) -->
+  <g font-family="'SF Mono', Monaco, monospace" font-size="11" fill="#D4A574" opacity="0.6">
+    <text x="335" y="293">ECC</text>
+    <text x="370" y="293">·</text>
+    <text x="380" y="293">agency-agents</text>
+    <text x="475" y="293">·</text>
+    <text x="485" y="293">caveman</text>
+    <text x="543" y="293">·</text>
+    <text x="553" y="293">impeccable</text>
+    <text x="628" y="293">·</text>
+    <text x="638" y="293">superpowers</text>
+    <text x="723" y="293">·</text>
+    <text x="733" y="293">OpenCode</text>
+    <text x="798" y="293">·</text>
+    <text x="808" y="293">OpenDesign</text>
+  </g>
+
+  <!-- Bottom right corner accent (small constellation echo) -->
+  <g opacity="0.2">
+    <circle cx="1140" cy="270" r="3" fill="#D4A574"/>
+    <circle cx="1125" cy="285" r="2" fill="#D4A574"/>
+    <circle cx="1155" cy="285" r="2" fill="#D4A574"/>
+    <line x1="1140" y1="270" x2="1125" y2="285" stroke="#D4A574" stroke-width="0.5"/>
+    <line x1="1140" y1="270" x2="1155" y2="285" stroke="#D4A574" stroke-width="0.5"/>
+  </g>
+
+  <!-- Plan badges (top right) — GO (open-source), ZEN (proprietary APIs), FREE (no plan) -->
+  <g transform="translate(1044, 36)">
+    <!-- GO PLAN — gold -->
+    <g>
+      <rect x="0" y="0" width="106" height="24" rx="4" fill="#0E1320" stroke="#D4A574" stroke-width="0.5" opacity="0.85"/>
+      <text x="53" y="16" font-family="'SF Mono', Monaco, monospace" font-size="10" fill="#D4A574" text-anchor="middle" font-weight="bold">GO PLAN</text>
+    </g>
+    <!-- ZEN PLAN — purple (the proprietary-API gateway) -->
+    <g>
+      <rect x="0" y="32" width="106" height="24" rx="4" fill="#0E1320" stroke="#9B7BAE" stroke-width="0.5" opacity="0.85"/>
+      <text x="53" y="48" font-family="'SF Mono', Monaco, monospace" font-size="10" fill="#9B7BAE" text-anchor="middle" font-weight="bold">ZEN PLAN</text>
+    </g>
+    <!-- FREE TIER — green (no plan needed) -->
+    <g>
+      <rect x="0" y="64" width="106" height="24" rx="4" fill="#0E1320" stroke="#7BAE8E" stroke-width="0.5" opacity="0.85"/>
+      <text x="53" y="80" font-family="'SF Mono', Monaco, monospace" font-size="10" fill="#7BAE8E" text-anchor="middle" font-weight="bold">FREE TIER</text>
+    </g>
+  </g>
+</svg>

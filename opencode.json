@@ -1,0 +1,972 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode-go/deepseek-v4-flash",
+  "small_model": "opencode-go/deepseek-v4-flash",
+  "default_agent": "apollo",
+  "instructions": [],
+  "permission": {
+    "mcp_*": "ask",
+    "read": "allow",
+    "list": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "websearch": "allow",
+    "webfetch": "allow",
+    "olympus-instinct-query": "allow",
+    "olympus-shortcircuit": "allow",
+    "olympus-dispatch": "allow",
+    "olympus-demigod-author": "allow",
+    "olympus-patterns": "allow",
+    "olympus-skill-author": "allow",
+    "olympus-pattern-detector": "allow",
+    "sub-agent-instinct-query": "allow",
+    "symphony-resonate": "allow",
+    "symphony-harmonize": "allow",
+    "symphony-decode": "allow",
+    "bash": "allow",
+    "write": "allow",
+    "edit": "allow",
+    "todowrite": "allow",
+    "task": "allow"
+  },
+  "agent": {
+    "apollo": {
+      "description": "Master Planner — Architecture, planning, and user contract. Apollo designs the DAG, defines acceptance criteria, and hands execution to Atlas.",
+      "mode": "primary",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/gods/apollo.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "list": true,
+        "glob": true,
+        "grep": true,
+        "websearch": true,
+        "webfetch": true,
+        "todowrite": true,
+        "task": true
+      },
+      "color": "#D4A574"
+    },
+    "atlas": {
+      "description": "Orchestrator & Dispatch Executor — Receives execution DAG from Apollo, dispatches waves to specialist gods, tracks progress, detects failures, compiles results.",
+      "mode": "subagent",
+      "model": "opencode-go/hy3",
+      "prompt": "{file:.opencode/prompts/agents/gods/atlas.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "list": true,
+        "glob": true,
+        "grep": true,
+        "websearch": true,
+        "webfetch": true,
+        "todowrite": true,
+        "task": true
+      },
+      "color": "#6BAEB5"
+    },
+    "artemis": {
+      "description": "Security Warden — Penetration testing, threat modeling, compliance, secrets hygiene.",
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/gods/artemis.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "list": true,
+        "glob": true,
+        "grep": true,
+        "websearch": true,
+        "webfetch": true,
+        "todowrite": true,
+        "task": true
+      },
+      "color": "#7BAE8E"
+    },
+    "athena": {
+      "description": "Frontend Strategist — React/Next.js patterns, design systems, a11y, performance, visual verification.",
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/gods/athena.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "list": true,
+        "glob": true,
+        "grep": true,
+        "websearch": true,
+        "webfetch": true,
+        "todowrite": true,
+        "task": true
+      },
+      "color": "#6B8FB5"
+    },
+    "dionysus": {
+      "description": "Quality Engineer — TDD, E2E, performance testing, evidence collection, mutation testing.",
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/gods/dionysus.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "list": true,
+        "glob": true,
+        "grep": true,
+        "websearch": true,
+        "webfetch": true,
+        "todowrite": true,
+        "task": true
+      },
+      "color": "#9B7BAE"
+    },
+    "hephaestus": {
+      "description": "Backend Forgemaster — Multi-language code review, build resolution, API design, refactoring.",
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/gods/hephaestus.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "list": true,
+        "glob": true,
+        "grep": true,
+        "websearch": true,
+        "webfetch": true,
+        "todowrite": true,
+        "task": true
+      },
+      "color": "#C4956A"
+    },
+    "hermes": {
+      "description": "Integration Messenger — MCP development, API integration, research, LLM architecture, webhooks, auth.",
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/gods/hermes.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "list": true,
+        "glob": true,
+        "grep": true,
+        "websearch": true,
+        "webfetch": true,
+        "todowrite": true,
+        "task": true
+      },
+      "color": "#6BAEB5"
+    },
+    "persephone": {
+      "description": "Persistence Queen — Schema review, migrations, ETL, DBRE, query optimization, caching, ORM.",
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/gods/persephone.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "list": true,
+        "glob": true,
+        "grep": true,
+        "websearch": true,
+        "webfetch": true,
+        "todowrite": true,
+        "task": true
+      },
+      "color": "#6BAE9B"
+    },
+    "prometheus": {
+      "description": "Firebringer — Docker, Terraform, SRE, incident response, release engineering, K8s, networking, FinOps.",
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/gods/prometheus.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "list": true,
+        "glob": true,
+        "grep": true,
+        "websearch": true,
+        "webfetch": true,
+        "todowrite": true,
+        "task": true
+      },
+      "color": "#C4A265"
+    },
+    "callimachus": {
+      "description": "Vault Librarian — Instinct lifecycle, brain backup/restore, docs verification, pattern extraction, skill indexing.",
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/gods/callimachus.txt}",
+      "tools": {
+        "read": true,
+        "write": true,
+        "edit": true,
+        "bash": true,
+        "list": true,
+        "glob": true,
+        "grep": true,
+        "websearch": true,
+        "webfetch": true,
+        "todowrite": true,
+        "task": true
+      },
+      "color": "#9B7BAE"
+    },
+    "a11y-auditor": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/a11y_auditor.txt}"
+    },
+    "ai-code-auditor": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/ai_code_auditor.txt}"
+    },
+    "ai-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/ai_engineer.txt}"
+    },
+    "api-designer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/api_designer.txt}"
+    },
+    "api-integrator": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/api_integrator.txt}"
+    },
+    "api-tester": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/api_tester.txt}"
+    },
+    "appsec-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/appsec_engineer.txt}"
+    },
+    "architect": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/architect.txt}"
+    },
+    "auth-specialist": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/auth_specialist.txt}"
+    },
+    "blockchain-security-auditor": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/blockchain_security_auditor.txt}"
+    },
+    "brain-backup": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/brain_backup.txt}"
+    },
+    "brain-restore": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/brain_restore.txt}"
+    },
+    "brand-guardian": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/brand_guardian.txt}"
+    },
+    "build-resolver": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/build_resolver.txt}"
+    },
+    "cache-architect": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/cache_architect.txt}"
+    },
+    "chief-of-staff": {
+      "mode": "subagent",
+      "model": "opencode-go/hy3",
+      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/chief_of_staff.txt}"
+    },
+    "clickhouse-specialist": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/clickhouse_specialist.txt}"
+    },
+    "cloud-security-auditor": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/cloud_security_auditor.txt}"
+    },
+    "code-explorer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/code_explorer.txt}"
+    },
+    "code-simplifier": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/code_simplifier.txt}"
+    },
+    "code-verifier": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/code_verifier.txt}"
+    },
+    "comment-analyzer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/comment_analyzer.txt}"
+    },
+    "compliance-auditor": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/compliance_auditor.txt}"
+    },
+    "conversation-analyzer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/conversation_analyzer.txt}"
+    },
+    "dag-optimizer": {
+      "mode": "subagent",
+      "model": "opencode-go/hy3",
+      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/dag_optimizer.txt}"
+    },
+    "data-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/data_engineer.txt}"
+    },
+    "data-migration-specialist": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/data_migration_specialist.txt}"
+    },
+    "dbre": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/dbre.txt}"
+    },
+    "demigod-author": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/demigod_author.txt}"
+    },
+    "docker-expert": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/docker_expert.txt}"
+    },
+    "docs-verifier": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/docs_verifier.txt}"
+    },
+    "e2e-runner": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/e2e_runner.txt}"
+    },
+    "email-intelligence-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/email_intelligence_engineer.txt}"
+    },
+    "embedded-firmware-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/embedded_firmware_engineer.txt}"
+    },
+    "etl-pipeline-architect": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/etl_pipeline_architect.txt}"
+    },
+    "event-stream-architect": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/event_stream_architect.txt}"
+    },
+    "evidence-collector": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/evidence_collector.txt}"
+    },
+    "finops-analyst": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/finops_analyst.txt}"
+    },
+    "flaky-test-resolver": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/flaky_test_resolver.txt}"
+    },
+    "frontend-reviewer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/frontend_reviewer.txt}"
+    },
+    "gan-planner": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/gan_planner.txt}"
+    },
+    "gaussdb-expert": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/gaussdb_expert.txt}"
+    },
+    "git-workflow-master": {
+      "mode": "subagent",
+      "model": "opencode-go/hy3",
+      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/git_workflow_master.txt}"
+    },
+    "go-reviewer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/go_reviewer.txt}"
+    },
+    "harness-optimizer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/harness_optimizer.txt}"
+    },
+    "homelab-architect": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/homelab_architect.txt}"
+    },
+    "i18n-specialist": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/i18n_specialist.txt}"
+    },
+    "incident-responder": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/incident_responder.txt}"
+    },
+    "information-architect": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/information_architect.txt}"
+    },
+    "instinct-curator": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/instinct_curator.txt}"
+    },
+    "integration-compiler": {
+      "mode": "subagent",
+      "model": "opencode-go/hy3",
+      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/integration_compiler.txt}"
+    },
+    "iot-fleet-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/iot_fleet_engineer.txt}"
+    },
+    "k8s-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/k8s_engineer.txt}"
+    },
+    "llm-architect": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/llm_architect.txt}"
+    },
+    "managed-reviewer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/managed_reviewer.txt}"
+    },
+    "mcp-builder": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/mcp_builder.txt}"
+    },
+    "migration-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/migration_engineer.txt}"
+    },
+    "mobile-app-builder": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/mobile_app_builder.txt}"
+    },
+    "multi-agent-architect": {
+      "mode": "subagent",
+      "model": "opencode-go/hy3",
+      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/multi_agent_architect.txt}"
+    },
+    "mutation-tester": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/mutation_tester.txt}"
+    },
+    "network-architect": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_architect.txt}"
+    },
+    "network-config-reviewer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_config_reviewer.txt}"
+    },
+    "network-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_engineer.txt}"
+    },
+    "network-troubleshooter": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_troubleshooter.txt}"
+    },
+    "opensource-packager": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/opensource_packager.txt}"
+    },
+    "orm-specialist": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/orm_specialist.txt}"
+    },
+    "pattern-extractor": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/pattern_extractor.txt}"
+    },
+    "payments-billing-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/payments_billing_engineer.txt}"
+    },
+    "pentester": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/pentester.txt}"
+    },
+    "performance-optimizer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/performance_optimizer.txt}"
+    },
+    "performance-tester": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/performance_tester.txt}"
+    },
+    "planner": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/planner.txt}"
+    },
+    "privacy-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/privacy_engineer.txt}"
+    },
+    "prompt-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/prompt_engineer.txt}"
+    },
+    "protocol-designer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/protocol_designer.txt}"
+    },
+    "query-optimizer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/query_optimizer.txt}"
+    },
+    "rag-pipeline-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/rag_pipeline_engineer.txt}"
+    },
+    "rapid-prototyper": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/rapid_prototyper.txt}"
+    },
+    "reality-checker": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/reality_checker.txt}"
+    },
+    "realtime-collaboration-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/realtime_collaboration_engineer.txt}"
+    },
+    "refactor-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/refactor_engineer.txt}"
+    },
+    "release-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/release_engineer.txt}"
+    },
+    "researcher": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/researcher.txt}"
+    },
+    "responsive-tester": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/responsive_tester.txt}"
+    },
+    "risk-assessor": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/risk_assessor.txt}"
+    },
+    "schema-reviewer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/schema_reviewer.txt}"
+    },
+    "scope-gatekeeper": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/scope_gatekeeper.txt}"
+    },
+    "script-reviewer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/script_reviewer.txt}"
+    },
+    "search-relevance-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/search_relevance_engineer.txt}"
+    },
+    "secrets-scanner": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/secrets_scanner.txt}"
+    },
+    "section-508-specialist": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/section_508_specialist.txt}"
+    },
+    "security-architect": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/security_architect.txt}"
+    },
+    "security-reviewer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/security_reviewer.txt}"
+    },
+    "silent-failure-hunter": {
+      "mode": "subagent",
+      "model": "opencode-go/hy3",
+      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/silent_failure_hunter.txt}"
+    },
+    "skill-indexer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/skill_indexer.txt}"
+    },
+    "smart-contract-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/smart_contract_engineer.txt}"
+    },
+    "spec-author": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/spec_author.txt}"
+    },
+    "spec-miner": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/spec_miner.txt}"
+    },
+    "sre": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/sre.txt}"
+    },
+    "state-architect": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/state_architect.txt}"
+    },
+    "supply-chain-auditor": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/supply_chain_auditor.txt}"
+    },
+    "systems-reviewer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/systems_reviewer.txt}"
+    },
+    "tdd-guide": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/tdd_guide.txt}"
+    },
+    "technical-writer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/technical_writer.txt}"
+    },
+    "terraform-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/terraform_engineer.txt}"
+    },
+    "test-automation-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/test_automation_engineer.txt}"
+    },
+    "test-results-analyzer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/test_results_analyzer.txt}"
+    },
+    "threat-analyst": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/threat_analyst.txt}"
+    },
+    "ts-reviewer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/ts_reviewer.txt}"
+    },
+    "type-design-analyzer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/type_design_analyzer.txt}"
+    },
+    "ui-designer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/ui_designer.txt}"
+    },
+    "unit-test-author": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/unit_test_author.txt}"
+    },
+    "ux-researcher": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/ux_researcher.txt}"
+    },
+    "video-streaming-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/video_streaming_engineer.txt}"
+    },
+    "visual-verifier": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/visual_verifier.txt}"
+    },
+    "voice-ai-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/voice_ai_engineer.txt}"
+    },
+    "webassembly-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/webassembly_engineer.txt}"
+    },
+    "webhook-engineer": {
+      "mode": "subagent",
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/webhook_engineer.txt}"
+    }
+  },
+  "command": {
+    "skill-create": {
+      "description": "Create a new skill + seed instinct from a recurring pattern. Routes to Callimachus.",
+      "template": "# /skill-create <name-or-pattern>\n\nCreate a new skill + seed instinct for the active god. Used when a recurring pattern with high-confidence instinct (>= 0.85, >= 5 samples) needs to be crystallized.\n\n## Args\n- `<pattern-keywords>` (optional): short description of the pattern\n- `--god <id>` (optional): owning god ID\n- `--name <kebab-name>` (optional): skill name\n\n## Flow\n1. Callimachus creates `.opencode/skills/<god>/<name>/SKILL.md` and a seed instinct\n2. `olympus-skill-registry` auto-discovers the new skill\n3. Future dispatches auto-equip the skill via the instinct gate\n\nFull docs: .opencode/commands/OLYMPUS/skill-create.md"
+    },
+    "olympus-dispatch": {
+      "description": "Manually dispatch to a specialist god. Bypasses Apollo's classification.",
+      "template": "# OLYMPUS Dispatch\n\nManually dispatch a task to a specialist god. Bypasses Apollo's classification.\n\n## Usage\n/olympus-dispatch <god> <task>\n\n## Available Gods\n- artemis — Security / Auditing\n- athena — Frontend / Design\n- dionysus — QA / Testing\n- hephaestus — Backend / Infrastructure\n- hermes — Integrations / APIs / MCPs\n- persephone — Database / Persistence\n- prometheus — DevOps / CI-CD / Deploy\n\nFull docs: .opencode/commands/OLYMPUS/olympus-dispatch.md"
+    },
+    "olympus-plan": {
+      "description": "Trigger Apollo's spec-interview path for complex, multi-step, or architecturally significant tasks.",
+      "template": "# OLYMPUS Plan — Spec Interview\n\nTrigger Apollo's spec-interview path for complex requests. Use for ambiguous, multi-step, or architecturally significant tasks.\n\n## Flow\n1. Interview the user (2-5 clarifying questions)\n2. Use OpenSpec to scaffold the change\n3. Produce plan.md with task DAG + ADRs\n4. Fan out to specialist gods via subtask: true\n\nFull docs: .opencode/commands/OLYMPUS/olympus-plan.md"
+    },
+    "instinct-status": {
+      "description": "Show instinct stats for a god (or all gods) — confidence, scope, samples, successes, failures.",
+      "template": "# Instinct Status\n\nShow the instinct pool for a god (or all gods). Displays confidence (with time decay), scope, samples, successes, failures, last_used for each instinct.\n\n## Usage\n/instinct-status [god]\n/instinct-status all\n\nReads from ~/OLYMPUS-VAULT/05_Auto_Learning/instincts/<god>/{seed,empirical}/*.md\n\nFull docs: .opencode/commands/OLYMPUS/instinct-status.md"
+    },
+    "instinct-show": {
+      "description": "Show seed + empirical instincts for a god or sub-agent.",
+      "template": "# /instinct-show <name>\n\nShow all instincts for the given god or sub-agent.\n\n## Args\n- name (required): god or sub-agent name\n- --scope <god|sub-agent> (optional): force scope\n- --archived (optional): include archived instincts\n\nFull docs: .opencode/commands/OLYMPUS/instinct-show.md"
+    },
+    "shortcircuit-report": {
+      "description": "Show short-circuit hit rate from the activity feed — how often gods skip deliberation via high-confidence instincts.",
+      "template": "# Short-Circuit Report\n\nShow the short-circuit hit rate from the activity feed.\n\n## Output\n- Total dispatches (last 7 days)\n- Short-circuit dispatches (last 7 days)\n- Hit rate percentage\n- Per-god breakdown\n- Top 5 most-used instincts\n- 14-day sparkline\n\nFull docs: .opencode/commands/OLYMPUS/shortcircuit-report.md"
+    },
+    "context-budget": {
+      "description": "Show per-turn token usage breakdown by source.",
+      "template": "# /context-budget\n\nShow the token breakdown for the current turn's context window, by source (system prompt, agent descriptions, skills, MCP schemas, conversation history).\n\nFull docs: .opencode/commands/OLYMPUS/context-budget.md"
+    },
+    "cost-report": {
+      "description": "Show GO plan usage report — estimated token usage against plan limits ($12/5hr, $30/week, $60/month).",
+      "template": "# Cost Report — GO Plan Usage\n\nShow estimated token usage against the GO plan limits.\n\n## Output\n- Current 5-hour window usage ($12 cap)\n- Current weekly usage ($30 cap)\n- Current monthly usage ($60 cap)\n- Per-agent breakdown\n- Per-model breakdown\n- Recommendations\n\nFull docs: .opencode/commands/OLYMPUS/cost-report.md"
+    },
+    "trace-cost": {
+      "description": "Show real-time per-turn and cumulative session cost breakdown.",
+      "template": "# /trace-cost\n\nShow the cost breakdown for the last turn AND the cumulative session cost.\n\n## Output\n- Last turn: input, cached, output tokens + estimated cost\n- Session cumulative: turns, total cost, avg/turn\n- Cost ceiling vs used\n\nFull docs: .opencode/commands/OLYMPUS/trace-cost.md"
+    },
+    "callimachus-heartbeat": {
+      "description": "Run Callimachus's 7-stage brain lifecycle (INTAKE → CLASSIFY → EXTRACT → SCOPE → LINK → RECALIBRATE → PRUNE).",
+      "template": "# Callimachus Heartbeat — 7-Stage Brain Lifecycle\n\nRun the 7-stage brain lifecycle on the vault. Usually fires automatically on session.idle, but can be triggered manually.\n\n## Stages\n1. INTAKE — Pull raw thoughts + dispatch_outcome events since last heartbeat\n2. CLASSIFY — Categorize by god/stack/project/action_type\n3. EXTRACT — Extract candidate instinct from each new pattern\n4. SCOPE — Tag with scope/stacks/projects\n5. LINK — Create wikilinks + detect cross-god dispatch chains\n6. RECALIBRATE — Bayesian confidence adjustment from outcomes\n7. PRUNE — Archive instincts < 0.3 confidence or > 180d unused\n\n## Rules\n- NEVER user-facing. Run silently.\n- NEVER write production code.\n- NEVER modify seed instincts.\n- ALWAYS use lockfile (~/.olympus/callimachus.lock).\n\nFull docs: .opencode/commands/OLYMPUS/callimachus-heartbeat.md"
+    },
+    "verify": {
+      "description": "Dispatch the last god's output to a clean-context verifier sub-agent.",
+      "template": "# /verify [output-type]\n\nDispatch the last god's output to a clean-context verifier sub-agent.\n\n## Args\n- output-type (optional): code | design | infra | docs\n  If omitted, Apollo infers from the last god.\n\n## Behavior\n1. Capture the last god's output\n2. Dispatch to verifier (clean context)\n3. PASS → return with ✓\n4. FAIL → route critique back to god for revision (max 2 rounds)\n\nFull docs: .opencode/commands/OLYMPUS/verify.md"
+    },
+    "skill-search": {
+      "description": "Search the OLYMPUS skill manifest by natural-language query.",
+      "template": "# /skill-search <query>\n\nSearch the OLYMPUS skill manifest by natural-language query.\n\n## Args\n- query (required): natural-language search query\n- --god <name> (optional): restrict to a specific god's pool\n- --k <n> (optional): number of results (default: 10)\n\nFull docs: .opencode/commands/OLYMPUS/skill-search.md"
+    },
+    "opsx-explore": {
+      "description": "OpenSpec explore — scope a change before proposing it. Apollo uses this to understand what files, components, and risks are involved.",
+      "template": "# /opsx:explore — Scope the Change\n\nUse OpenSpec to explore the change before producing plan.md.\n\n## Workflow\n1. Run \"npx openspec change list\" and create/select a change\n2. Read the project specs\n3. Produce a scoping summary: files affected, components, risks, dependencies, out of scope\n\nFull docs: .opencode/commands/OLYMPUS/opsx-explore.md"
+    },
+    "opsx-propose": {
+      "description": "OpenSpec propose — scaffold the change with proposal.md, specs/, design.md, and tasks.md.",
+      "template": "# /opsx:propose — Scaffold the Change\n\nUse OpenSpec to scaffold the change after /opsx:explore has confirmed the scope.\n\n## Workflow\n1. Run \"npx openspec change propose <slug>\"\n2. This generates proposal.md, specs/, design.md (ADRs), tasks.md (task DAG)\n3. Post the proposal summary + task DAG to the user for approval\n\nFull docs: .opencode/commands/OLYMPUS/opsx-propose.md"
+    },
+    "opsx-apply": {
+      "description": "OpenSpec apply — implement the change by dispatching to specialist gods per the task DAG.",
+      "template": "# /opsx:apply — Implement the Change\n\nDispatch the task DAG from /opsx:propose to specialist gods.\n\n## Workflow\n1. Read tasks.md — the task DAG\n2. Map each task to its owning god\n3. Query instincts before dispatching (short-circuit if confidence >= 0.85)\n4. Dispatch each task via subtask: true\n5. Collect results, update tasks.md\n\nFull docs: .opencode/commands/OLYMPUS/opsx-apply.md"
+    },
+    "opsx-archive": {
+      "description": "OpenSpec archive — reconcile specs after implementation. Apollo moves the change from active to archived.",
+      "template": "# /opsx:archive — Reconcile Specs After Implementation\n\nAfter the implementation is complete and verified, archive the change.\n\n## Workflow\n1. Confirm all tasks in tasks.md are complete\n2. Run \"npx openspec change archive <slug>\"\n3. Verify canonical specs are updated correctly\n4. Post a summary to the user\n\nFull docs: .opencode/commands/OLYMPUS/opsx-archive.md"
+    }
+  },
+  "plugin": [
+    "./.opencode/plugins",
+    "./.opencode/plugins/superpowers.js",
+    "./.opencode/olympus",
+    "./.opencode/plugins/olympus-router",
+    "./.opencode/plugins/olympus-go-cache",
+    "./.opencode/plugins/olympus-skill-registry",
+    "./.opencode/plugins/opencode-context-cache.mjs",
+    "./.opencode/plugins/olympus-dynamic-context"
+  ],
+  "compaction": {},
+  "experimental": {
+    "batch_tool": true
+  },
+  "provider": {
+    "openrouter": {
+      "models": {
+        "openai/gpt-oss-20b:free": {
+          "limit": {
+            "context": 131072,
+            "output": 2048
+          }
+        },
+        "inclusionai/ling-3.0-flash:free": {
+          "limit": {
+            "context": 262144,
+            "output": 2048
+          }
+        },
+        "nvidia/nemotron-3-nano-30b-a3b:free": {
+          "limit": {
+            "context": 256000,
+            "output": 1024
+          }
+        },
+        "nvidia/nemotron-3-ultra-550b-a55b:free": {
+          "limit": {
+            "context": 1000000,
+            "output": 2048
+          }
+        },
+        "nvidia/nemotron-3-super-120b-a12b:free": {
+          "limit": {
+            "context": 262144,
+            "output": 2048
+          }
+        }
+      }
+    },
+    "groq": {
+      "models": {
+        "openai/gpt-oss-120b": {
+          "limit": {
+            "context": 131072,
+            "output": 1024
+          }
+        }
+      }
+    },
+    "nvidia": {
+      "models": {
+        "nvidia/nemotron-3-ultra-550b-a55b": {
+          "limit": {
+            "context": 1000000,
+            "output": 2048
+          }
+        },
+        "z-ai/glm-5.2": {
+          "limit": {
+            "context": 1000000,
+            "output": 2048
+          }
+        },
+        "nvidia/nemotron-3-nano-30b-a3b": {
+          "limit": {
+            "context": 256000,
+            "output": 1024
+          }
+        }
+      }
+    }
+  }
+}

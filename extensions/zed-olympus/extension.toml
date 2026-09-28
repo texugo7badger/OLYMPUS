@@ -1,0 +1,11 @@
+{
+  "name": "olympus-bridge",
+  "version": "0.0.1",
+  "description": "Embed the live OLYMPUS interactive terminal inside Zed. The terminal is shared with the one running in the OLYMPUS Electron app — type in either, see it in both. Adds slash commands + 'Open in OLYMPUS' action. Only works when OLYMPUS is installed locally.",
+  "authors": ["OLYMPUS Contributors"],
+  "homepage": "https://github.com/texugo7badger/olympus",
+  "repository": "https://github.com/texugo7badger/olympus",
+  "license": "AGPL-3.0-or-later",
+  "categories": ["terminal", "ai"],
+  "keywords": ["olympus", "ai", "agent", "multi-agent", "terminal", "bridge"]
+}

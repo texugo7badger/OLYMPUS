@@ -1,0 +1,9 @@
+{
+  "id": "test-author-04",
+  "prompt": "Write a unit test suite for the editor auto-detection logic in src/lib/editor-bridge.ts. Cover: PATH detection, known-location fallback, the resolveEditor priority order, and the migration from vscodium_workspace to external_editor. Use vitest as the test runner. Report the test file path + a summary of test cases.",
+  "expectedDispatches": ["dionysus", "test-author"],
+  "maxTokens": 18000,
+  "minShortCircuitRate": 0.1,
+  "qualityThreshold": 0.7,
+  "tags": ["qa", "testing", "unit-tests"]
+}

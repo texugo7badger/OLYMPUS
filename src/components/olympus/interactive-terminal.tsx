@@ -1,0 +1,1387 @@
+/**
+ * License: AGPL-3.0-or-later (original OLYMPUS code).
+ */
+
+'use client';
+
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import {
+  Send, Loader2, CornerDownLeft, Sparkles, ChevronRight,
+  Brain, Zap, CheckCircle2, AlertCircle, Users, Sun, Hammer, Bird,
+  Compass, Target, Wine, Flower2, Flame, Square, RefreshCw, Paperclip, type LucideIcon,
+  Landmark, Terminal as TerminalIcon, ImageIcon,
+} from 'lucide-react';
+import { marked } from 'marked';
+import { useOlympus } from '@/lib/olympus-store';
+import { cn } from '@/lib/utils';
+import OlympusTooltip from './olympus-tooltip';
+// ContextIndicator polls /api/olympus/context-usage every 5s and shows
+// a compact "ctx N%" bar. Shows a "new session" button at warning/critical levels.
+import ContextIndicator from './context-indicator';
+// DesignReviewCard renders inline when Athena surfaces design-system candidates
+// for the user to review and select.
+import DesignReviewCard from './design-review-card';
+
+// The OLYMPUS Terminal renders only the Interactive (Apollo) chat.
+// OpenCode Chat is available in the IDE tab's terminal panel via
+// TerminalTabs with allowedKinds=['shell','command'].
+// The opencode one-shot run IPC channel is still registered.
+
+const GOD_COLOR = '#D4A574';
+// Callimachus uses Landmark icon (Library of Alexandria).
+const GOD_ICONS: Record<string, LucideIcon> = {
+  apollo: Sun, hephaestus: Hammer, athena: Bird, hermes: Compass,
+  artemis: Target, dionysus: Wine, persephone: Flower2, prometheus: Flame,
+  callimachus: Landmark,
+};
+const GOD_NAMES: Record<string, string> = {
+  apollo: 'Apollo', hephaestus: 'Hephaestus', athena: 'Athena', hermes: 'Hermes',
+  artemis: 'Artemis', dionysus: 'Dionysus', persephone: 'Persephone', prometheus: 'Prometheus',
+  callimachus: 'Callimachus',
+};
+
+// -------------------------------------------------------------------
+// Markdown rendering for the Interactive Terminal.
+//
+// Apollo's responses frequently contain markdown — plans (.md files),
+// code blocks, bullet lists, **bold** emphasis, headings. We render
+// these through `marked` (already in devDependencies) into HTML and
+// mount them with dangerouslySetInnerHTML. The source content is
+// always Apollo's own output (not arbitrary third-party HTML), and
+// `marked` sanitizes by default (no raw HTML passthrough unless
+// explicitly enabled), so this is safe.
+//
+// The .olympus-markdown CSS class (defined in globals.css) styles
+// headings, code blocks, lists, tables, etc. in the OLYMPUS pastel
+// gold/cyan palette.
+//
+// Configured for terminal context:
+//   - gfm: true     — GitHub Flavored Markdown (tables, strikethrough, task lists)
+//   - breaks: true  — single \n becomes <br> (chat-like line breaks)
+//   - async: false  — marked.parse() returns a string, not a Promise
+// -------------------------------------------------------------------
+marked.setOptions({ gfm: true, breaks: false, async: false });
+
+/** Synchronously render a markdown string to HTML. Falls back to the
+ *  raw text if marked throws (shouldn't happen, but defensive). */
+function renderMarkdown(text: string): string {
+  if (!text) return '';
+  try {
+    return marked.parse(text, { async: false }) as string;
+  } catch {
+    return text;
+  }
+}
+
+/**
+ * Generate a conversation id for the persistent OpenCode session mapping.
+ * The server keeps one warm opencode session per conversationId, so
+ * follow-up messages reuse the same session (no cold start, context
+ * retained). Rotated on "new session" and terminal reset.
+ */
+function makeConversationId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `conv-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
+type MessageType = 'system' | 'user' | 'response' | 'god' | 'question' | 'todo' | 'error' | 'delegation' | 'context_request';
+
+interface ChatMessage {
+  id: string; type: MessageType; text: string; ts: string;
+  god?: string; choices?: string[]; questionId?: string; awaitingAnswer?: boolean;
+  /** Inline image attached to a user message (Task 2 — image upload).
+   *  `imagePath` is a local object URL (URL.createObjectURL) used as the
+   *  <img src>. `imageSavedPath` is the absolute path on disk returned by
+   *  /api/olympus/image-upload — Apollo uses this to find the file. */
+  imagePath?: string;
+  imageFilename?: string;
+  imageSavedPath?: string;
+}
+interface GodActivity { god: string; status: 'idle' | 'thinking' | 'working' | 'delegating' | 'done' | 'error'; task?: string; subAgents?: string[]; ts: string; }
+interface TodoItem { id: string; text: string; done: boolean; god?: string; }
+
+export default function InteractiveTerminal() {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { id: 'sys-1', type: 'system', text: 'Olympus Interactive Terminal - speak directly to Apollo.', ts: new Date().toISOString() },
+    { id: 'sys-2', type: 'system', text: 'Apollo will interview you, classify your task, and delegate to the right gods.', ts: new Date().toISOString() },
+  ]);
+  const [input, setInput] = useState('');
+  const [context, setContext] = useState('');
+  const [showContext, setShowContext] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [awaitingAnswer, setAwaitingAnswer] = useState(false);
+  const [awaitingContext, setAwaitingContext] = useState(false);
+  const [godActivities, setGodActivities] = useState<GodActivity[]>([]);
+  const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [sseConnected, setSseConnected] = useState(false);
+  // Removed the terminalMode toggle. The Olympus
+  // Terminal now renders ONLY the Interactive (Apollo) chat. The OpenCode
+  // Chat pane and the TUI are gone from this surface. (The opencode one-shot
+  // run IPC channel is still registered in the main process for any future
+  // use, and the IDE tab's terminal panel still supports shell + custom
+  // commands via TerminalTabs.)
+
+  // P11.5 + TDZ FIX — track the file tree returned by the upload API so we
+  // can surface it in the next prompt. Each entry is one uploaded file
+  // (archive or single).
+  //
+  // These useState declarations MUST come BEFORE the `submit` useCallback
+  // below, which references `uploadedFileDetails` in its dependency array.
+  // Declaring them after `submit` causes a Temporal Dead Zone (TDZ)
+  // ReferenceError: "can't access lexical declaration 'uploadedFileDetails'
+  // before initialization" because `const` bindings are not hoisted.
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [uploadedFileDetails, setUploadedFileDetails] = useState<Array<{
+    name: string;
+    path: string;
+    size: number;
+    extracted?: boolean;
+    extractError?: string;
+    tree?: string;
+    organized?: { category: string; organizedPath: string }[];
+    indexNote?: string;
+  }>>([]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const contextRef = useRef<HTMLTextAreaElement>(null);
+
+  // AbortController for the in-flight POST to /api/olympus/action. stop(),
+  // resetTerminal() and handleNewSessionStart() abort it — the abort
+  // propagates to req.signal on the server, which cancels the warm opencode
+  // POST (runWarmMessage's postCtrl). Without this, "stop" only reset local
+  // state while the server kept generating for up to 10 minutes.
+  const actionAbortRef = useRef<AbortController | null>(null);
+
+  const pushEvent = useOlympus(s => s.pushEvent);
+  const pushPulse = useOlympus(s => s.pushPulse);
+  const setActiveGod = useOlympus(s => s.setActiveGod);
+  // OpenCode is the only CLI. Hardcode the badge text instead of
+  // reading activeCli from the store (the activeCli state was removed).
+  const activeCli = 'opencode';
+  // Task 2 — image upload: the active project gives us the on-disk path
+  // where reference-images/ lives. If no project is active, the image
+  // icon is disabled with a tooltip explaining why.
+  const activeProject = useOlympus(s => s.activeProject);
+
+  // Persistent OpenCode session: one conversationId per chat conversation.
+  // The server maps it to a warm opencode session (src/lib/opencode-session.ts)
+  // so every message reuses the same session — cold start happens only on
+  // the first message of the app run, not per message.
+  const conversationIdRef = useRef<string>(makeConversationId());
+
+  const addMessage = useCallback((msg: Omit<ChatMessage, 'id' | 'ts'>) => {
+    setMessages(prev => [...prev, { ...msg, id: `msg-${Date.now()}-${Math.random()}`, ts: new Date().toISOString() }]);
+  }, []);
+
+  const updateGodActivity = useCallback((god: string, status: GodActivity['status'], task?: string, subAgents?: string[]) => {
+    setGodActivities(prev => {
+      const existing = prev.find(a => a.god === god);
+      if (existing) return prev.map(a => a.god === god ? { ...a, status, task, subAgents, ts: new Date().toISOString() } : a);
+      return [...prev, { god, status, task, subAgents, ts: new Date().toISOString() }];
+    });
+  }, []);
+
+  const handleServerEvent = useCallback((ev: any) => {
+    pushEvent(ev);
+    if (ev.type === 'ws_connected') return;
+    if (ev.type === 'prompt_received') { addMessage({ type: 'system', text: ev.msg || 'Prompt received by Apollo' }); return; }
+    if (ev.type === 'delegation' && ev.from && ev.to) {
+      addMessage({ type: 'delegation', text: `${GOD_NAMES[ev.from] || ev.from} delegating to ${GOD_NAMES[ev.to] || ev.to}`, god: ev.to });
+      updateGodActivity(ev.to, 'thinking', ev.msg || 'Receiving delegation...');
+      pushPulse(ev.from, ev.to);
+      setActiveGod(ev.to);
+      return;
+    }
+    if (ev.type === 'god_thinking') { updateGodActivity(ev.god, 'thinking', ev.msg || 'Thinking...'); return; }
+    if (ev.type === 'god_working') { updateGodActivity(ev.god, 'working', ev.msg || 'Working...', ev.sub_agents); return; }
+    if (ev.type === 'god_done') { updateGodActivity(ev.god, 'done', ev.msg || 'Done'); return; }
+    if (ev.type === 'question') {
+      addMessage({ type: 'question', text: ev.msg || ev.text || 'Question', god: ev.god || 'apollo', choices: ev.choices, questionId: ev.id, awaitingAnswer: true });
+      setAwaitingAnswer(true);
+      return;
+    }
+    if (ev.type === 'answer_recorded') { setAwaitingAnswer(false); setMessages(prev => prev.map(m => m.questionId === ev.id ? { ...m, awaitingAnswer: false } : m)); return; }
+    if (ev.type === 'context_request') {
+      addMessage({ type: 'context_request', text: ev.msg || 'Anything else?', god: ev.god || 'apollo' });
+      setAwaitingContext(true);
+      setShowContext(true);
+      setTimeout(() => contextRef.current?.focus(), 50);
+      return;
+    }
+    if (ev.type === 'context_recorded' || ev.type === 'context_skipped') { setAwaitingContext(false); setShowContext(false); setContext(''); return; }
+    if (ev.type === 'todo') {
+      setTodos(prev => { if (prev.find(t => t.id === ev.id)) return prev; return [...prev, { id: ev.id, text: ev.text || ev.msg, done: false, god: ev.god }]; });
+      addMessage({ type: 'todo', text: ev.text || ev.msg, god: ev.god });
+      return;
+    }
+    if (ev.type === 'todo_done') { setTodos(prev => prev.map(t => t.id === ev.id ? { ...t, done: true } : t)); return; }
+
+    // Handle opencode --format json event types.
+    // opencode 1.18.3 emits: step_start, text, step_finish, tool.call,
+    // tool.response, error, etc. We surface these as human-readable
+    // messages in the terminal.
+    if (ev.type === 'step_start' || ev.type === 'session.start' || ev.type === 'session_start') {
+      updateGodActivity('apollo', 'thinking', 'Apollo is thinking...');
+      return;
+    }
+    // The 'text' event is the actual response from Apollo.
+    // opencode emits: { type: 'text', part: { type: 'text', text: '...' } }
+    if (ev.type === 'text' || ev.type === 'message' || ev.type === 'message.delta') {
+      let text = '';
+      // opencode 1.18.3 format: { type: 'text', part: { text: '...' } }
+      if (ev.part?.text) {
+        text = ev.part.text;
+      } else if (ev.part?.type === 'text' && ev.part.text) {
+        text = ev.part.text;
+      }
+      // Older format: { parts: [...] } or { content: { parts: [...] } }
+      else {
+        const parts = ev.parts || ev.content?.parts || [];
+        if (Array.isArray(parts)) {
+          for (const p of parts) {
+            if (typeof p === 'string') text += p;
+            else if (p?.type === 'text') text += p.text || '';
+          }
+        } else if (typeof ev.content === 'string') {
+          text = ev.content;
+        } else if (ev.text) {
+          text = ev.text;
+        }
+      }
+      if (text) {
+        addMessage({ type: 'response', text, god: ev.god || 'apollo' });
+        updateGodActivity(ev.god || 'apollo', 'working', 'Responding...');
+      }
+      return;
+    }
+    if (ev.type === 'tool.call' || ev.type === 'tool_call') {
+      const toolName = ev.tool?.name || ev.name || 'tool';
+      const toolInput = ev.tool?.input || ev.input || {};
+      const summary = typeof toolInput === 'string'
+        ? toolInput.slice(0, 100)
+        : Object.entries(toolInput).slice(0, 3).map(([k, v]) => `${k}: ${String(v).slice(0, 50)}`).join(', ');
+      addMessage({ type: 'system', text: `tool: ${toolName}(${summary})` });
+      updateGodActivity(ev.god || 'apollo', 'working', `Using ${toolName}...`);
+      return;
+    }
+    if (ev.type === 'tool.response' || ev.type === 'tool_response') {
+      // Don't surface full tool responses (they can be huge) — just mark the god as working.
+      updateGodActivity(ev.god || 'apollo', 'working', 'Processing tool result...');
+      return;
+    }
+    if (ev.type === 'step_finish') {
+      updateGodActivity('apollo', 'done', 'Step complete');
+      return;
+    }
+    if (ev.type === 'session.end' || ev.type === 'session_end') {
+      // The session's run is over — clear the in-flight state as a safety
+      // net. In normal runs `action_done` follows immediately; in failure
+      // modes (e.g. the free-tier compaction loop) the server may close the
+      // stream without one, leaving "waiting for Apollo..." stuck forever.
+      setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false);
+      updateGodActivity('apollo', 'done', 'Session complete');
+      return;
+    }
+
+    if (ev.type === 'response' || ev.type === 'cli' || ev.type === 'log') {
+      const msg = ev.msg || ev.cli || ev.text || '';
+      if (msg) addMessage({ type: 'response', text: msg, god: ev.god });
+      return;
+    }
+    if (ev.type === 'error') {
+      addMessage({ type: 'error', text: ev.msg || ev.text || 'An error occurred' });
+      updateGodActivity('apollo', 'error');
+      return;
+    }
+    if (ev.type === 'action_start') {
+      // Already handled by the "Routing to Apollo..." message above.
+      return;
+    }
+    if (ev.type === 'action_done') {
+      setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false); updateGodActivity('apollo', 'idle');
+      if (ev.code === 0) addMessage({ type: 'system', text: 'Task completed.' });
+      else addMessage({ type: 'error', text: `Task failed (exit code ${ev.code})` });
+      inputRef.current?.focus();
+      return;
+    }
+    // Unknown event types — log to console for debugging but don't show in UI.
+    // This prevents noise from opencode internal events.
+  }, [pushEvent, pushPulse, setActiveGod, addMessage, updateGodActivity]);
+
+  // SSE-only — no WebSocket. The interactive terminal sends
+  // prompts via POST to /api/olympus/action and receives events via the SSE
+  // stream in the POST response. The global SSE stream (page.tsx) also
+  // delivers activity events. No WS bridge, no reconnection, no "WS
+  // connected" badge — just SSE.
+  useEffect(() => {
+    // Check SSE availability by pinging the health endpoint.
+    // Cache: 'no-store' so the SSE status updates immediately.
+    fetch('/api/olympus/health', { cache: 'no-store' })
+      .then(r => { if (r.ok) setSseConnected(true); else setSseConnected(false); })
+      .catch(() => setSseConnected(false));
+    const iv = setInterval(() => {
+      fetch('/api/olympus/health', { cache: 'no-store' })
+        .then(r => setSseConnected(r.ok))
+        .catch(() => setSseConnected(false));
+    }, 15000);
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, godActivities]);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const submit = useCallback(async (
+    text: string,
+    contextText?: string,
+    /** Optional inline image attached to this user message (Task 2).
+     *  `thumbnailUrl` is a browser object URL used as <img src> for the
+     *  inline preview. `savedPath` is the absolute on-disk path returned
+     *  by /api/olympus/image-upload — Apollo reads the file from there. */
+    image?: { thumbnailUrl: string; savedPath: string; filename: string },
+  ) => {
+    if (!text.trim() || submitting) return;
+
+    // Build the uploaded-files prefix including the file tree for any
+    // extracted archives. This gives Apollo full context: which files were
+    // uploaded, where they live in the vault, and what's inside each archive.
+    // The LLM uses vault.read / vault.list / vault.extract tools (registered
+    // via the native vault subsystem) to inspect them on demand.
+    //
+    // ARCHIVES (.rar, .7z, .tar.gz, .zip): saved as-is, NOT extracted at
+    // upload time. The prefix tells Apollo to use the compress_7z MCP to
+    // extract them. This is more robust than JS archive libraries.
+    const buildUploadPrefix = (): string => {
+      if (uploadedFileDetails.length === 0 && !image) return '';
+      const lines: string[] = ['[Uploaded files:'];
+      for (const f of uploadedFileDetails) {
+        const lower = f.name.toLowerCase();
+        const isArchive = lower.endsWith('.rar') || lower.endsWith('.7z') ||
+          lower.endsWith('.tar') || lower.endsWith('.tar.gz') || lower.endsWith('.tgz') ||
+          lower.endsWith('.zip');
+
+        if (isArchive) {
+          // Archive saved as-is — tell Apollo to extract via bash + 7-Zip
+          const extractDir = f.path.replace(/\.[^.]+$/, '');
+          lines.push(`  - ${f.name} → archive saved at ~/OLYMPUS-VAULT/${f.path} (${f.size} B)`);
+          lines.push(`    **ACTION REQUIRED**: Extract this archive using the bash tool.`);
+          lines.push(`    Run: 7z x "${f.path}" -o"${extractDir}" -y`);
+          lines.push(`    (7-Zip handles .rar, .7z, .tar.gz, .zip. If 7z is not found, try: tar -xf for .tar.gz, or unzip for .zip)`);
+          lines.push(`    After extraction, use vault.list and vault.read to inspect the extracted files.`);
+        } else if (f.extracted && f.tree) {
+          lines.push(`  - ${f.name} → extracted to ${f.path} (vault-relative). Files:`);
+          const treeLines = f.tree.split('\n').slice(0, 80);
+          for (const tl of treeLines) lines.push(`      ${tl}`);
+          if (f.tree.split('\n').length > 80) lines.push('      ... (truncated; use vault.list to see more)');
+          if (f.organized && f.organized.length > 0) {
+            lines.push(`    Organized into vault:`);
+            for (const o of f.organized.slice(0, 20)) lines.push(`      - [${o.category}] ${o.organizedPath}`);
+          }
+          if (f.indexNote) lines.push(`    Index: ${f.indexNote}`);
+        } else {
+          lines.push(`  - ${f.name} → saved at ${f.path} (${f.size} B)`);
+        }
+      }
+      // Task 2 — reference image. Tell Apollo the on-disk path so Athena
+      // can pick it up via the built-in VLM skill.
+      if (image) {
+        lines.push(`  - ${image.filename} → reference image saved at ${image.savedPath}`);
+        lines.push(`    **ACTION**: Use the VLM skill (Athena) to analyze this image at the path above.`);
+      }
+      lines.push(']');
+      if (!image) {
+        lines.push('Use the vault.read tool to inspect any of these paths under ~/OLYMPUS-VAULT/.');
+        lines.push('For archives, extract with bash (7z x) first, then read the extracted files.');
+      } else {
+        lines.push('Read the reference image directly from the absolute path with the VLM skill.');
+      }
+      return lines.join('\n');
+    };
+
+    // SSE-only — always POST, no WS check.
+    setInput(''); setContext(''); setShowContext(false); setSubmitting(true);
+    setTodos([]); setGodActivities([]);
+    addMessage({
+      type: 'user',
+      text: text.trim(),
+      imagePath: image?.thumbnailUrl,
+      imageFilename: image?.filename,
+      imageSavedPath: image?.savedPath,
+    });
+    addMessage({ type: 'system', text: 'Routing to Apollo...' });
+    updateGodActivity('apollo', 'thinking', 'Analyzing prompt...');
+    pushPulse('apollo', 'apollo'); setActiveGod('apollo');
+
+    try {
+      const uploadPrefix = buildUploadPrefix();
+      const fullText = uploadPrefix ? `${text.trim()}\n\n${uploadPrefix}` : text.trim();
+      // Abortable fetch — stop()/resetTerminal() abort this controller so
+      // the server-side warm opencode POST is cancelled too (req.signal).
+      actionAbortRef.current?.abort();
+      const controller = new AbortController();
+      actionAbortRef.current = controller;
+      const res = await fetch('/api/olympus/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'prompt', text: fullText, context: contextText?.trim() || undefined, conversationId: conversationIdRef.current }),
+        signal: controller.signal,
+      });
+      if (!res.body) { addMessage({ type: 'error', text: 'No response stream returned.' }); return; }
+      const reader = res.body.getReader(); const decoder = new TextDecoder(); let buf = '';
+      for (;;) {
+        const { done, value } = await reader.read(); if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n'); buf = parts.pop() || '';
+        for (const part of parts) {
+          const line = part.replace(/^data: /, '').trim(); if (!line) continue;
+          try { handleServerEvent(JSON.parse(line)); } catch {}
+        }
+      }
+    } catch (e: any) {
+      // Ignore intentional aborts (user pressed stop / reset) — the state
+      // was already reset by stop()/resetTerminal(). Only surface real
+      // network/request failures.
+      if (e?.name !== 'AbortError') {
+        addMessage({ type: 'error', text: `Request failed: ${e.message}` });
+      }
+    }
+    finally {
+      if (actionAbortRef.current?.signal.aborted === false) actionAbortRef.current = null;
+      setSubmitting(false); updateGodActivity('apollo', 'idle'); inputRef.current?.focus(); setUploadedFiles([]); setUploadedFileDetails([]);
+    }
+  }, [submitting, addMessage, updateGodActivity, pushEvent, pushPulse, setActiveGod, handleServerEvent, uploadedFileDetails]);
+
+  // DesignReviewCard onSelect handler.
+  // Declared AFTER `submit` to avoid the block-scoped TDZ (submit referenced
+  // before its declaration). Both handlers are consumed by <DesignReviewCard>
+  // further down in the JSX, so being declared here is safe.
+  const handleDesignReviewSelect = useCallback((selection: string, _reviewId: string) => {
+    const message = `I selected "${selection}". Please proceed with this design reference.`;
+    // Auto-submit the selection as a user message
+    submit(message);
+  }, [submit]);
+
+  const handleDesignReviewDismiss = useCallback((_reviewId: string) => {
+    // The user dismissed the card without selecting — no action needed.
+    // The card removes itself from the DOM via its own state.
+  }, []);
+
+  const handleChoice = useCallback((choice: string, context?: string) => {
+    // POST the choice instead of WS.
+    // Task 3 — if the user typed optional context into the inline box below
+    // the choices, fold it into the displayed user message and send it as
+    // the `context` field alongside the answer.
+    const ctxTrim = context?.trim() || '';
+    const displayText = ctxTrim ? `${choice}  (additional context: ${ctxTrim})` : choice;
+    addMessage({ type: 'user', text: displayText });
+    setAwaitingAnswer(false);
+    fetch('/api/olympus/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'answer', text: choice, context: ctxTrim || undefined, conversationId: conversationIdRef.current }),
+    }).catch(() => {});
+  }, [addMessage]);
+
+  const sendContext = useCallback(() => {
+    // POST the context instead of WS.
+    const ctx = context.trim();
+    setAwaitingContext(false); setShowContext(false);
+    if (ctx) addMessage({ type: 'user', text: ctx });
+    setContext('');
+    if (ctx) {
+      fetch('/api/olympus/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'context', text: ctx, conversationId: conversationIdRef.current }),
+      }).catch(() => {});
+    }
+  }, [context, addMessage]);
+
+  const stop = useCallback(() => {
+    // Abort the in-flight POST — the abort propagates to the server's
+    // req.signal, cancelling the warm opencode run (not just local state).
+    actionAbortRef.current?.abort();
+    actionAbortRef.current = null;
+    setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false);
+    updateGodActivity('apollo', 'idle');
+    addMessage({ type: 'system', text: 'Stopped.' });
+  }, [addMessage, updateGodActivity]);
+
+  // Reset terminal with confirmation (clears all messages, TODOs, god activity).
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  // TDZ FIX — `uploadedFiles` and `uploadedFileDetails` useState declarations
+  // MOVED to the top of the component (before this `submit` useCallback).
+  // They were previously declared here, causing a TDZ ReferenceError because
+  // `submit`'s dependency array references `uploadedFileDetails` before its
+  // `const` binding was initialized.
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Task 2 — image upload state + ref. `uploadingImage` drives the spinner
+  // on the image button. `imageInputRef` is the hidden <input type=file>
+  // that we click programmatically.
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const resetTerminal = useCallback(() => {
+    // Abort any in-flight run FIRST — otherwise the old SSE stream keeps
+    // appending events into the freshly-reset message list (the loop the
+    // user saw after resetting while a free-tier run was still generating).
+    actionAbortRef.current?.abort();
+    actionAbortRef.current = null;
+    // Fresh conversation → fresh warm opencode session on the next message.
+    conversationIdRef.current = makeConversationId();
+    setMessages([
+      { id: 'sys-1', type: 'system' as const, text: 'Olympus Interactive Terminal - speak directly to Apollo.', ts: new Date().toISOString() },
+      { id: 'sys-2', type: 'system' as const, text: 'Apollo will interview you, classify your task, and delegate to the right gods.', ts: new Date().toISOString() },
+    ]);
+    setTodos([]);
+    setGodActivities([]);
+    setSubmitting(false);
+    setAwaitingAnswer(false);
+    setAwaitingContext(false);
+    setShowContext(false);
+    setInput('');
+    setContext('');
+    setUploadedFileDetails([]);
+    updateGodActivity('apollo', 'idle');
+    setShowResetConfirm(false);
+    inputRef.current?.focus();
+  }, [updateGodActivity]);
+
+  // File upload handler — sends files to /api/olympus/upload, then appends
+  // the file paths to the uploadedFiles list so they can be included in the
+  // next prompt to Apollo.
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < fileList.length; i++) {
+        formData.append('files', fileList[i]);
+      }
+      const res = await fetch('/api/olympus/upload', { method: 'POST', body: formData });
+      const d = await res.json();
+      if (d.ok && d.files) {
+        const names = d.files.map((f: any) => f.name);
+        setUploadedFiles(prev => [...prev, ...names]);
+        setUploadedFileDetails(prev => [...prev, ...d.files]);
+        // P11.5 — surface extraction status + tree to the user.
+        const summary = d.files.map((f: any) => {
+          if (f.extracted) {
+            const fileCount = f.tree ? (f.tree.match(/\n/g)?.length || 0) : '?';
+            return `${f.name} → extracted (${fileCount} files${f.extractError ? `, ${f.extractError}` : ''})`;
+          }
+          if (f.extractError) return `${f.name} → ${f.extractError}`;
+          // Clean notification — just the filename, no byte count
+          return `${f.name}`;
+        });
+        addMessage({
+          type: 'system',
+          text: `Uploaded ${d.files.length} file(s): ${summary.join(', ')}`,
+        });
+      } else {
+        addMessage({ type: 'error', text: d.error || 'Upload failed' });
+      }
+    } catch (err: any) {
+      addMessage({ type: 'error', text: `Upload failed: ${err.message}` });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, [addMessage]);
+
+  // ------------------------------------------------------------------
+  // Task 2 — Image upload handler.
+  //
+  // When the user picks an image via the hidden <input type=file
+  // accept="image/*">, we:
+  //   1. Validate an active project exists (the image lives in
+  //      <project>/reference-images/).
+  //   2. Create a local object URL for the inline thumbnail preview.
+  //   3. POST the file (multipart) to /api/olympus/image-upload with
+  //      the active project path.
+  //   4. The server saves it to <project>/reference-images/<ts>-<name>.<ext>
+  //      and returns the absolute saved path.
+  //   5. We submit() a prompt to Apollo: "I uploaded a reference image
+  //      at <path> — use it for the design", with the inline thumbnail
+  //      attached to the user message. Apollo can then route the image
+  //      to Athena (built-in VLM skill) for analysis.
+  // ------------------------------------------------------------------
+  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+    // Reset the input immediately so the same file can be re-selected
+    // later (otherwise the onChange won't fire again for the same path).
+    if (imageInputRef.current) imageInputRef.current.value = '';
+
+    const projectPath = activeProject?.path;
+    if (!projectPath) {
+      addMessage({
+        type: 'error',
+        text: 'No active project. Select a project first — reference images are saved to <project>/reference-images/.',
+      });
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      // Process each selected image (usually just one — but loop to handle
+      // multi-select too. Each image becomes its own prompt to Apollo so
+      // Athena gets a clean per-image VLM skill call.)
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        if (!file.type.startsWith('image/')) {
+          addMessage({ type: 'error', text: `${file.name} is not an image — use the paperclip for code files.` });
+          continue;
+        }
+
+        const thumbnailUrl = URL.createObjectURL(file);
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('projectPath', projectPath);
+
+        let savedPath: string | null = null;
+        let savedFilename: string = file.name;
+        try {
+          const res = await fetch('/api/olympus/image-upload', { method: 'POST', body: formData });
+          const d = await res.json();
+          if (d.ok && d.path) {
+            savedPath = d.path;
+            savedFilename = d.filename || file.name;
+          } else {
+            URL.revokeObjectURL(thumbnailUrl);
+            addMessage({ type: 'error', text: d.error || `Image upload failed for ${file.name}` });
+            continue;
+          }
+        } catch (err: any) {
+          URL.revokeObjectURL(thumbnailUrl);
+          addMessage({ type: 'error', text: `Image upload failed: ${err.message}` });
+          continue;
+        }
+
+        // Submit the prompt to Apollo with the inline image attached.
+        // Only the first image kicks off a new submit; subsequent images
+        // would be queued behind `submitting` and could collide, so we
+        // break after the first to keep the UX predictable. (If the user
+        // wants to upload multiple, they can do so one at a time.)
+        //
+        // `savedPath` is non-null here because both failure paths above
+        // `continue`d out of the loop. TS can't see through the
+        // try/catch/continue control flow, so we assert non-null.
+        await submit(
+          `I uploaded a reference image at ${savedPath!} — use it for the design`,
+          undefined,
+          { thumbnailUrl, savedPath: savedPath!, filename: savedFilename },
+        );
+        break;
+      }
+    } finally {
+      setUploadingImage(false);
+    }
+  }, [activeProject, addMessage, submit]);
+
+  const toggleTodo = (id: string) => setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+
+  // Build a transcript summary of the
+  // current conversation for the new-session handoff. Apollo receives
+  // this in its fresh context window so the conversation continues
+  // seamlessly. We:
+  //   - Skip the initial welcome banners (sys-1 / sys-2) — static, no info.
+  //   - Take the last 8 messages (oldest first).
+  //   - Truncate very long messages so the summary itself doesn't blow
+  //     up the new session's context (defeating the whole point).
+  //   - Label each line with the speaker so Apollo knows who said what.
+  const buildConversationSummary = useCallback(() => {
+    const meaningful = messages.filter(m =>
+      !(m.id === 'sys-1' || m.id === 'sys-2') &&
+      m.text && m.text.trim().length > 0
+    );
+    // Collapse runs of consecutive assistant/system messages to a single
+    // entry (the last one in the run). A model stuck re-emitting the same
+    // kind of output (e.g. repeated "update the summary" blocks) would
+    // otherwise poison the handoff — the new session would inherit dozens
+    // of identical response lines and keep the loop alive.
+    const collapsed: typeof meaningful = [];
+    for (const m of meaningful) {
+      const isAssistantLike = m.type === 'response' || m.type === 'system' || m.type === 'delegation' || m.type === 'todo';
+      const prev = collapsed[collapsed.length - 1];
+      if (prev && isAssistantLike && (prev.type === 'response' || prev.type === 'system' || prev.type === 'delegation' || prev.type === 'todo')) {
+        collapsed[collapsed.length - 1] = m;
+      } else {
+        collapsed.push(m);
+      }
+    }
+    const recent = collapsed.slice(-8);
+    if (recent.length === 0) return '(no prior conversation)';
+    const lines: string[] = [
+      `Most recent ${recent.length} message${recent.length === 1 ? '' : 's'} (oldest first):`,
+      '',
+    ];
+    const maxLen = 800;
+    for (const m of recent) {
+      const who =
+        m.type === 'user' ? 'user' :
+        m.type === 'response' ? (m.god ? (GOD_NAMES[m.god] || m.god) : 'assistant') :
+        m.type === 'question' ? (m.god ? (GOD_NAMES[m.god] || m.god) : 'assistant') :
+        m.type === 'context_request' ? (m.god ? (GOD_NAMES[m.god] || m.god) : 'assistant') :
+        m.type === 'delegation' ? 'delegation' :
+        m.type === 'todo' ? 'todo' :
+        m.type === 'error' ? 'error' :
+        'system';
+      const text = m.text.length > maxLen
+        ? m.text.slice(0, maxLen) + '... [truncated]'
+        : m.text;
+      lines.push(`[${who}]: ${text}`);
+    }
+    return lines.join('\n');
+  }, [messages]);
+
+  // Called when the user clicks "new session" in the ContextIndicator.
+  // Mirrors the top of `submit()` so the terminal behaves the same way
+  // for a handoff as for a fresh prompt: clear in-flight state, push a
+  // system message, mark Apollo as thinking.
+  const handleNewSessionStart = useCallback(() => {
+    // Kill any in-flight run so the new session doesn't inherit events from
+    // the old conversation's stream.
+    actionAbortRef.current?.abort();
+    actionAbortRef.current = null;
+    // Rotate the conversation BEFORE the ContextIndicator POSTs: the server
+    // creates a fresh warm opencode session for the new id, and Apollo picks
+    // up the thread from the summary in a clean context window.
+    conversationIdRef.current = makeConversationId();
+    setTodos([]);
+    setGodActivities([]);
+    setSubmitting(true);
+    addMessage({ type: 'system', text: 'Starting a new session — Apollo continues from a summary of this conversation...' });
+    updateGodActivity('apollo', 'thinking', 'Picking up from summary...');
+    pushPulse('apollo', 'apollo');
+    setActiveGod('apollo');
+  }, [addMessage, updateGodActivity, pushPulse, setActiveGod]);
+
+  // Called when the new-session stream ends. handleServerEvent already
+  // processed the 'action_done' SSE event (reset submitting/awaiting/etc.
+  // and added a "Task completed." / "Task failed" message). This is a
+  // safety net for the case where the stream ended WITHOUT an
+  // 'action_done' (network failure before the SSE stream started).
+  const handleNewSessionDone = useCallback(() => {
+    setSubmitting(false);
+    setAwaitingAnswer(false);
+    setAwaitingContext(false);
+    updateGodActivity('apollo', 'idle');
+    inputRef.current?.focus();
+  }, [updateGodActivity]);
+
+  return (
+    <div className="w-full h-full bg-olympus-bg flex flex-col">
+      <div className="h-8 shrink-0 flex items-center justify-between px-3 border-b border-olympus-gold/10 bg-olympus-panel">
+        <div className="flex items-center gap-1.5 text-[10px] font-mono">
+          <Landmark size={11} style={{ color: GOD_COLOR }} />
+          <span style={{ color: GOD_COLOR }} className="font-semibold">Olympus Terminal</span>
+          <span className="text-[#5A5A5A]">-</span>
+          {/* Only one mode now. Always "Interactive Mode" (green). */}
+          <span className="text-[9px] text-olympus-green">
+            Interactive Mode
+          </span>
+          {/* Compact "ctx N%" + bar.
+              Placed next to the title so it reads as a session-state
+              indicator (like a status LED) rather than a control. The
+              "new session" button only renders when quality is warning
+              or critical, so this slot is normally just the percentage
+              + bar (subtle, no clutter). */}
+          <div className="ml-2 flex items-center">
+            <ContextIndicator
+              getSummary={buildConversationSummary}
+              getConversationId={() => conversationIdRef.current}
+              onStart={handleNewSessionStart}
+              onEvent={handleServerEvent}
+              onDone={handleNewSessionDone}
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-1 text-[9px] font-mono text-[#5A5A5A]">
+          {/* Active CLI badge */}
+          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-olympus-gold/10 ring-1 ring-olympus-gold/20 mr-1">
+            <span style={{ color: GOD_COLOR }}>CLI:</span>
+            <span style={{ color: GOD_COLOR }} className="font-semibold">{activeCli}</span>
+          </span>
+          {/* Removed the 2-way mode toggle (Apollo | OpenCode).
+              Only the Interactive (Apollo) chat remains. The OpenCode Chat pane
+              and the TUI are gone from this surface. */}
+          <Users size={9} style={{ color: GOD_COLOR }} />
+          <span>{godActivities.filter(a => a.status !== 'idle').length} gods</span>
+          {todos.length > 0 && (
+            <>
+              <span className="text-[#5A5A5A]">-</span>
+              <span>{todos.filter(t => !t.done).length}/{todos.length} todos</span>
+            </>
+          )}
+          <OlympusTooltip content="Reset terminal (clears all messages + context)" side="bottom">
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              className="ml-2 text-olympus-text-dim hover:text-olympus-red transition-colors"
+            >
+              <RefreshCw size={10} />
+            </button>
+          </OlympusTooltip>
+        </div>
+      </div>
+
+      {/* Reset confirmation dialog — Olympus styled, not browser default */}
+      {showResetConfirm && (
+        <div className="shrink-0 px-3 py-2 bg-olympus-red/10 border-b border-olympus-red/30 flex items-center justify-between">
+          <span className="text-[10px] font-mono text-olympus-red flex items-center gap-1.5">
+            <AlertCircle size={11} />
+            Reset terminal? This clears all messages, TODOs, and context. This cannot be undone.
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowResetConfirm(false)}
+              className="text-[10px] font-mono px-2 py-1 rounded text-olympus-text-dim hover:bg-olympus-gold/10 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={resetTerminal}
+              className="text-[10px] font-mono px-2 py-1 rounded bg-olympus-red/20 text-olympus-red hover:bg-olympus-red/30 ring-1 ring-olympus-red/30 transition-colors"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 min-h-0 flex">
+        {/* Only the Interactive (Apollo) chat remains.
+            The OpenCode Mode toggle and the TerminalTabs rendering are gone.
+            The Apollo chat uses /api/olympus/action (god delegation, todos, etc.). */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 py-2 font-mono text-[11px] leading-relaxed space-y-2">
+            {messages.map(m => <MessageRenderer key={m.id} message={m} onChoice={handleChoice} />)}
+            {/* DesignReviewCard renders inline when Athena
+                surfaces design-system candidates. The card polls
+                /api/olympus/design-review for pending requests and renders
+                itself when one exists. The user clicks a candidate to select
+                it, which auto-submits a user message to the chat. */}
+            <DesignReviewCard
+              onSelect={handleDesignReviewSelect}
+              onDismiss={handleDesignReviewDismiss}
+            />
+            {submitting && !awaitingAnswer && !awaitingContext && (
+              <div className="flex items-center gap-2 text-olympus-text-dim">
+                <Loader2 size={12} className="animate-spin" style={{ color: GOD_COLOR }} />
+                <span>waiting for <span style={{ color: GOD_COLOR }}>Apollo</span>...</span>
+              </div>
+            )}
+            {awaitingAnswer && (
+              <div className="flex items-center gap-2 text-olympus-gold text-[10px]">
+                <ChevronRight size={11} className="animate-pulse" />
+                <span>click a choice above to answer...</span>
+              </div>
+            )}
+            {awaitingContext && (
+              <div className="flex items-center gap-2 text-olympus-gold text-[10px]">
+                <ChevronRight size={11} className="animate-pulse" />
+                <span>type context below, Cmd+Enter to send (empty = skip)...</span>
+              </div>
+            )}
+          </div>
+
+          {showContext && (
+            <div className="shrink-0 border-t border-olympus-gold/10 bg-olympus-panel px-3 py-2">
+              <div className="text-[9px] font-mono text-olympus-text-dim mb-1">
+                Additional context {awaitingContext ? '(Apollo is waiting — Cmd+Enter to send, empty = skip)' : '(optional)'}:
+              </div>
+              <textarea
+                ref={contextRef}
+                value={context}
+                onChange={e => setContext(e.target.value)}
+                placeholder="Add any extra context..."
+                className="w-full bg-olympus-bg border border-olympus-gold/15 rounded-md px-2 py-1.5 text-[11px] font-mono text-olympus-text outline-none focus:border-olympus-gold/40 resize-none"
+                rows={2}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    if (awaitingContext) sendContext();
+                    else submit(input, context);
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          <div className="shrink-0 border-t border-olympus-gold/10 bg-olympus-panel px-3 py-2 flex items-center gap-2">
+            <span style={{ color: GOD_COLOR }} className="font-mono text-[12px] shrink-0">$</span>
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !awaitingAnswer && !awaitingContext) submit(input, context);
+              }}
+              disabled={submitting || awaitingAnswer || awaitingContext}
+              placeholder={awaitingAnswer ? 'click a choice above (or type optional context in the box under the question)...' : awaitingContext ? 'type context below (Cmd+Enter)...' : 'Ask Apollo anything...'}
+              className="flex-1 bg-transparent border-0 outline-none text-[12px] font-mono text-olympus-text placeholder:text-[#5A5A5A] disabled:opacity-50"
+            />
+            {/* Task 3 — the always-visible "ctx" toggle button is gone.
+                Additional context is now collected inline under each
+                interview question (see MessageRenderer's question branch).
+                The `context_request` flow (Apollo explicitly asking for
+                context after a task) still drives `showContext`/`awaitingContext`
+                and renders the textarea below when needed. */}
+            {/* File upload button — accepts .rar, .tar, .svg, code files */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".rar,.tar,.tar.gz,.tgz,.zip,.svg,.md,.txt,.json,.yaml,.yml,.ts,.tsx,.js,.jsx,.py,.rs,.go,.java,.c,.cpp,.h,.hpp,.cs,.rb,.php,.swift,.kt,.scala,.sh,.bash,.ps1,.bat,.html,.css,.scss,.less,.vue,.svelte,.sql,.graphql,.proto"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <OlympusTooltip content="Upload documents for the gods to read (.rar, .tar, .svg, code files)" side="top">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className={cn(
+                  'flex items-center gap-1 px-1.5 py-1 rounded text-[9px] font-mono transition-all shrink-0',
+                  uploading ? 'text-olympus-gold animate-pulse' : 'text-[#5A5A5A] hover:text-olympus-gold',
+                )}
+              >
+                {uploading ? <Loader2 size={10} className="animate-spin" /> : <Paperclip size={10} />}
+                {uploadedFiles.length > 0 && (
+                  <span className="text-olympus-gold">{uploadedFiles.length}</span>
+                )}
+              </button>
+            </OlympusTooltip>
+            {/* Task 2 — Image upload button. Saves the image to
+                <active-project>/reference-images/<timestamp>.<ext> and
+                sends Apollo a prompt pointing at the saved path so Athena
+                can analyze it via the built-in VLM skill. Disabled (with a hint)
+                when no project is active. */}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/bmp,image/svg+xml"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <OlympusTooltip
+              content={
+                activeProject?.path
+                  ? `Send a reference image — saved to <project>/reference-images/ (Athena analyzes it via VLM skill)`
+                  : 'Select an active project first — reference images are saved to <project>/reference-images/'
+              }
+              side="top"
+            >
+              <button
+                onClick={() => imageInputRef.current?.click()}
+                disabled={uploadingImage || !activeProject?.path || submitting}
+                className={cn(
+                  'flex items-center gap-1 px-1.5 py-1 rounded text-[9px] font-mono transition-all shrink-0',
+                  uploadingImage
+                    ? 'text-olympus-cyan animate-pulse cursor-pointer'
+                    : activeProject?.path
+                      ? 'text-[#5A5A5A] hover:text-olympus-cyan cursor-pointer'
+                      // No-project case: keep the ImageIcon (do NOT swap to Ban),
+                      // dim it, and apply the custom OLYMPUS ban cursor. The
+                      // native Windows red-circle-slash cursor is replaced by
+                      // the SVG ban overlay (.olympus-ban-cursor in globals.css).
+                      : 'text-[#5A5A5A]/40 olympus-ban-cursor',
+                )}
+              >
+                {uploadingImage ? (
+                  <Loader2 size={10} className="animate-spin" />
+                ) : (
+                  <ImageIcon size={10} />
+                )}
+              </button>
+            </OlympusTooltip>
+            {submitting ? (
+              <OlympusTooltip content="Stop generation" side="top">
+                <button
+                  onClick={stop}
+                  className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-olympus-red/20 text-olympus-red hover:bg-olympus-red/30 transition-all shrink-0"
+                >
+                  <Square size={11} /> stop
+                </button>
+              </OlympusTooltip>
+            ) : (
+              <OlympusTooltip content={input.trim() ? 'Send to Apollo (Enter)' : 'Type something to send'} side="top">
+                {/* empty-input: keep Send icon */}
+                <button
+                  onClick={() => submit(input, context)}
+                  disabled={!input.trim()}
+                  className={cn(
+                    'flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono transition-all shrink-0',
+                    input.trim()
+                      ? 'bg-olympus-gold/15 ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25 cursor-pointer'
+                      : 'bg-olympus-card/50 ring-1 ring-olympus-red/10 olympus-ban-cursor',
+                  )}
+                  style={input.trim() ? { color: GOD_COLOR } : { color: '#5A5A5A' }}
+                >
+                  <><Send size={11} /> send</>
+                </button>
+              </OlympusTooltip>
+            )}
+            <span className="hidden sm:flex items-center gap-1 text-[9px] font-mono text-[#5A5A5A]">
+              <CornerDownLeft size={9} /> enter
+            </span>
+          </div>
+        </div>
+
+        {godActivities.length > 0 && (
+          <div className="w-56 shrink-0 border-l border-olympus-gold/10 bg-olympus-panel overflow-y-auto custom-scroll">
+            <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide sticky top-0 bg-olympus-panel border-b border-olympus-gold/10 flex items-center gap-1">
+              <Brain size={10} style={{ color: GOD_COLOR }} />
+              <span>God Activity</span>
+            </div>
+            <div className="py-1">
+              {godActivities.map(a => {
+                const Icon = GOD_ICONS[a.god] || Sparkles;
+                const statusColor = a.status === 'thinking' ? '#D4A574'
+                  : a.status === 'working' ? '#7BAE8E'
+                  : a.status === 'delegating' ? '#9B7BAE'
+                  : a.status === 'done' ? '#5A5A5A'
+                  : a.status === 'error' ? '#C4756A'
+                  : '#5A5A5A';
+                return (
+                  <div key={a.god} className="px-2 py-1.5 border-b border-olympus-gold/5">
+                    <div className="flex items-center gap-1.5">
+                      <Icon
+                        size={12}
+                        style={{ color: statusColor }}
+                        className={a.status === 'thinking' || a.status === 'working' ? 'animate-pulse' : ''}
+                      />
+                      <span className="text-[10px] font-mono font-semibold" style={{ color: statusColor }}>
+                        {GOD_NAMES[a.god] || a.god}
+                      </span>
+                      <span className="text-[8px] font-mono text-[#5A5A5A] ml-auto">{a.status}</span>
+                    </div>
+                    {a.task && <div className="text-[9px] font-mono text-olympus-text-dim ml-4 truncate">{a.task}</div>}
+                  </div>
+                );
+              })}
+            </div>
+            {todos.length > 0 && (
+              <>
+                <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide sticky top-0 bg-olympus-panel border-b border-t border-olympus-gold/10 flex items-center gap-1">
+                  <CheckCircle2 size={10} style={{ color: GOD_COLOR }} />
+                  <span>TODO</span>
+                </div>
+                <div className="py-1">
+                  {todos.map(t => (
+                    <div
+                      key={t.id}
+                      onClick={() => toggleTodo(t.id)}
+                      className="px-2 py-1 cursor-default flex items-center gap-1.5 hover:bg-olympus-gold/5 transition-colors"
+                    >
+                      <CheckCircle2 size={11} className={t.done ? 'text-olympus-green' : 'text-[#5A5A5A]'} />
+                      <span className={cn('text-[9px] font-mono', t.done ? 'text-[#5A5A5A] line-through' : 'text-olympus-text')}>
+                        {t.text}
+                      </span>
+                      {t.god && (
+                        <span className="text-[8px] font-mono ml-auto" style={{ color: GOD_COLOR }}>
+                          {GOD_NAMES[t.god] || t.god}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* MessageRenderer — renders each message type. Written with proper    */
+/* multi-line JSX to avoid parsing errors.                             */
+/*                                                                      */
+/* Task 1 — 'response', 'god', 'system', 'todo' messages are rendered  */
+/* as markdown (via `marked`) inside the .olympus-markdown CSS class   */
+/* defined in globals.css. The HTML is memoized so we don't re-parse   */
+/* the same text on every render. User/error/delegation/context_request*/
+/* stay as plain text — they're authored, not LLM-output.              */
+/*                                                                      */
+/* Task 2 — user messages may carry an inline image thumbnail          */
+/* (`imagePath`) shown above the message text.                          */
+/*                                                                      */
+/* Task 3 — question messages render a small inline context textarea   */
+/* below the choices. See QuestionMessage below.                        */
+/* ------------------------------------------------------------------ */
+function MessageRenderer({
+  message,
+  onChoice,
+}: {
+  message: ChatMessage;
+  onChoice: (choice: string, context?: string) => void;
+}) {
+  const time = new Date(message.ts).toLocaleTimeString('en-US', { hour12: false });
+
+  // Task 1 — memoize markdown HTML for the types that should render
+  // formatted. Returns null for types that stay as plain text.
+  const markdownHtml = useMemo(() => {
+    if (
+      message.type === 'response' ||
+      message.type === 'god' ||
+      message.type === 'system' ||
+      message.type === 'todo'
+    ) {
+      return renderMarkdown(message.text);
+    }
+    return null;
+  }, [message.type, message.text]);
+
+  // ----------------------------------------------------------------
+  // USER — plain text (the user's input is never rendered as
+  // markdown). Task 2: optionally render an inline image thumbnail
+  // above the text when the message carries an uploaded image.
+  //
+  // Alignment fix: the timestamp sits in a fixed w-16 column on the
+  // left, and ALL content (the `$` prompt marker + text + optional
+  // image) lives in a single flex-1 column on the right. This keeps
+  // every message type's content starting at the same x position,
+  // regardless of whether the row has icons, markdown, or plain text.
+  // ----------------------------------------------------------------
+  if (message.type === 'user') {
+    return (
+      <div className="flex items-start gap-2 mt-2">
+        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <div className="flex-1 min-w-0">
+          {message.imagePath && (
+            <div className="mb-1.5">
+              <img
+                src={message.imagePath}
+                alt={message.imageFilename || 'reference image'}
+                className="max-h-40 max-w-56 rounded-md ring-1 ring-olympus-gold/25 object-cover"
+              />
+              {message.imageSavedPath && (
+                <div className="text-[9px] text-[#5A5A5A] mt-1 font-mono break-all">
+                  saved → {message.imageSavedPath}
+                </div>
+              )}
+            </div>
+          )}
+          <div className="flex items-start gap-1.5">
+            <span style={{ color: GOD_COLOR }} className="shrink-0">$</span>
+            <span className="text-olympus-text wrap-break-word flex-1 min-w-0">{message.text}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------------
+  // SYSTEM — short status messages. Rendered as markdown so a plan
+  // .md file Apollo echoes back as a system message gets formatted.
+  // Falls back to plain text if marked produced nothing.
+  // ----------------------------------------------------------------
+  if (message.type === 'system') {
+    return (
+      <div className="flex items-start gap-2">
+        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <div className="flex-1 min-w-0">
+          {markdownHtml ? (
+            <div
+              className="olympus-markdown text-[11px]"
+              dangerouslySetInnerHTML={{ __html: markdownHtml }}
+            />
+          ) : (
+            <span className="text-olympus-text-dim">{message.text}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === 'error') {
+    return (
+      <div className="flex items-start gap-2">
+        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <div className="flex items-start gap-1.5 flex-1 min-w-0">
+          <AlertCircle size={11} className="text-olympus-red shrink-0 mt-0.5" />
+          <span className="text-olympus-red wrap-break-word flex-1 min-w-0">{message.text}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === 'delegation') {
+    const Icon = message.god ? GOD_ICONS[message.god] : null;
+    return (
+      <div className="flex items-start gap-2">
+        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <Zap size={11} style={{ color: '#9B7BAE' }} className="shrink-0 mt-0.5" />
+          <span className="text-olympus-purple wrap-break-word flex-1 min-w-0">{message.text}</span>
+          {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5" />}
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === 'context_request') {
+    const Icon = message.god ? GOD_ICONS[message.god] : null;
+    return (
+      <div className="flex items-start gap-2 mt-2">
+        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <div className="flex items-start gap-1.5 flex-1 min-w-0">
+          {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5 animate-pulse" />}
+          <div className="flex-1 min-w-0">
+            <div className="text-olympus-gold font-semibold mb-1">
+              {GOD_NAMES[message.god!] || 'Apollo'} asks:
+            </div>
+            <div className="text-olympus-text">{message.text}</div>
+            <div className="text-[9px] text-[#5A5A5A] mt-1">type in the context box below (Cmd+Enter to send, empty = skip)</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------------
+  // QUESTION — interview prompt with dynamic choices. Task 3: a
+  // small inline context textarea lives below the choices so the
+  // user can send extra context along with their answer. This
+  // replaces the always-visible "ctx" toggle button.
+  // ----------------------------------------------------------------
+  if (message.type === 'question') {
+    return <QuestionMessage message={message} onChoice={onChoice} time={time} />;
+  }
+
+  // ----------------------------------------------------------------
+  // TODO — markdown rendered (todos often contain `**bold**` task
+  // descriptions or short lists from Apollo's plan writer).
+  // ----------------------------------------------------------------
+  if (message.type === 'todo') {
+    const Icon = message.god ? GOD_ICONS[message.god] : null;
+    return (
+      <div className="flex items-start gap-2">
+        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <div className="flex items-start gap-1.5 flex-1 min-w-0">
+          <CheckCircle2 size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5" />
+          {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5" />}
+          {markdownHtml ? (
+            <div
+              className="olympus-markdown text-[11px] flex-1 min-w-0"
+              dangerouslySetInnerHTML={{ __html: markdownHtml }}
+            />
+          ) : (
+            <span className="text-olympus-text wrap-break-word flex-1 min-w-0">{message.text}</span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------------
+  // Default — response (Apollo's main output). Always rendered as
+  // markdown so plans, code blocks, bullet lists, etc. display
+  // formatted. The left border tinted with the god's color is kept
+  // so multi-god conversations still visually separate responses.
+  // ----------------------------------------------------------------
+  const Icon = message.god ? GOD_ICONS[message.god] : null;
+  return (
+    <div className="flex items-start gap-2">
+      <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+      <div className="flex items-start gap-1.5 flex-1 min-w-0">
+        {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5" />}
+        <div
+          className="olympus-markdown text-[11px] flex-1 min-w-0"
+          style={message.god ? { borderLeft: `2px solid ${GOD_COLOR}40`, paddingLeft: '6px' } : undefined}
+          dangerouslySetInnerHTML={{ __html: markdownHtml ?? message.text }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* QuestionMessage — interview prompt with dynamic choices.            */
+/*                                                                      */
+/* Task 3 — a small inline textarea lives below the choices so the     */
+/* user can type optional additional context (limited to MAX_CONTEXT    */
+/* characters with a live counter, like z.ai). When the user clicks a  */
+/* choice, both the choice AND the typed context are sent to Apollo    */
+/* (the choice becomes the answer; the context is folded in as a       */
+/* `context` field on the answer payload).                             */
+/* ------------------------------------------------------------------ */
+function QuestionMessage({
+  message,
+  onChoice,
+  time,
+}: {
+  message: ChatMessage;
+  onChoice: (choice: string, context?: string) => void;
+  time: string;
+}) {
+  const Icon = message.god ? GOD_ICONS[message.god] : null;
+  // Local state for the inline context box. Lives inside this component
+  // so each question tracks its own context independently.
+  const [ctx, setCtx] = useState('');
+  const MAX_CONTEXT = 500;
+
+  return (
+    <div className="flex items-start gap-2 mt-2">
+      <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+      <div className="flex items-start gap-1.5 flex-1 min-w-0">
+        {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5 animate-pulse" />}
+        <div className="flex-1 min-w-0">
+          <div className="text-olympus-gold font-semibold mb-1">
+            {GOD_NAMES[message.god!] || 'Apollo'} asks:
+          </div>
+          <div className="text-olympus-text mb-2">{message.text}</div>
+          {message.choices && message.choices.length > 0 && (
+            <div className="space-y-1">
+              {message.choices.map((choice, i) => (
+                <button
+                  key={i}
+                  onClick={() => onChoice(choice, ctx)}
+                  disabled={!message.awaitingAnswer}
+                  className={cn(
+                    'block w-full text-left px-2 py-1 rounded-md text-[10px] font-mono transition-all',
+                    message.awaitingAnswer
+                      ? 'bg-olympus-card hover:bg-olympus-gold/10 ring-1 ring-olympus-gold/15 hover:ring-olympus-gold/30 text-olympus-text hover:text-olympus-gold cursor-default'
+                      : 'bg-olympus-card/50 ring-1 ring-olympus-gold/5 text-[#5A5A5A] cursor-default opacity-60',
+                  )}
+                >
+                  <span className="text-[#5A5A5A] mr-1.5">{i + 1}.</span>
+                  {choice}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Task 3 — inline context box. Only rendered while the
+              question is awaiting an answer (after the user picks a
+              choice, awaitingAnswer flips false and the box disappears).
+              Limited to MAX_CONTEXT chars with a live counter. The
+              counter turns amber in the last 50 chars as a soft warning. */}
+          {message.awaitingAnswer && (
+            <div className="mt-2">
+              <div className="flex items-center justify-between text-[9px] font-mono text-[#5A5A5A] mb-1">
+                <span>optional context (sent with your answer)</span>
+                <span
+                  className={cn(
+                    ctx.length > MAX_CONTEXT - 50 ? 'text-olympus-amber' : 'text-[#5A5A5A]',
+                  )}
+                >
+                  {ctx.length}/{MAX_CONTEXT}
+                </span>
+              </div>
+              <textarea
+                value={ctx}
+                onChange={e => setCtx(e.target.value.slice(0, MAX_CONTEXT))}
+                placeholder="e.g. 'use Tailwind', 'mobile-first', 'avoid external deps'…"
+                rows={2}
+                className="w-full bg-olympus-bg border border-olympus-gold/15 rounded-md px-2 py-1.5 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/40 resize-none custom-scroll"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

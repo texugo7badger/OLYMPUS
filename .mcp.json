@@ -1,0 +1,218 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@atlassian/mcp-compressor",
+        "-c",
+        "medium",
+        "--",
+        "npx",
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ],
+      "env": {},
+      "_comment": "Library docs — wrapped with mcp-compressor (medium) to compress tool schemas (70-97% token reduction). Used by Hermes, Hephaestus, Athena. ECC's docs-lookup agent hard-codes this."
+    },
+    "tamp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "tamp@latest"
+      ],
+      "env": {},
+      "_comment": "Token compression for MCP tool OUTPUT (orthogonal to mcp-compressor which compresses tool DESCRIPTIONS). Lossless."
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
+      "env": {},
+      "_comment": "Browser inspection. ECC ships this. Used for debugging web apps."
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
+      "env": {},
+      "_comment": "E2E browser automation. Used by Dionysus (QA) + Athena (frontend)."
+    },
+    "serena": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@atlassian/mcp-compressor",
+        "-c",
+        "medium",
+        "--",
+        "npx",
+        "-y",
+        "serena-mcp@latest"
+      ],
+      "env": {},
+      "_comment": "Semantic code edits by symbol (LSP-powered) — wrapped with mcp-compressor (medium). Reduces edit errors on large codebases. Used by Hephaestus."
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking@latest"
+      ],
+      "env": {},
+      "_comment": "Portable multi-step reasoning primitive. Survives model swaps. Small tool surface — no mcp-compressor needed."
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@atlassian/mcp-compressor",
+        "-c",
+        "medium",
+        "--",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-github@latest"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "_comment": "PR/issue/workflow sync — wrapped with mcp-compressor (medium). GitHub MCP exposes 94+ tools (17.6K tokens uncompressed → ~3.3K with medium). Used by Apollo."
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres@latest"
+      ],
+      "env": {},
+      "_comment": "Read-only Postgres EXPLAIN ANALYZE. Used by Persephone. WARNING: gate writes behind permission.ask."
+    },
+    "docker": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "docker-mcp@latest"
+      ],
+      "env": {},
+      "_comment": "Container management (build, run, inspect). Used by Prometheus."
+    },
+    "nakkas": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "nakkas@latest"
+      ],
+      "env": {},
+      "_comment": "AI-driven animated SVG generation with PNG-preview self-critique loop. Used by Athena for artwork creation."
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem@latest",
+        "${PROJECT_ROOT}"
+      ],
+      "env": {}
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory@latest"
+      ],
+      "env": {
+        "MEMORY_FILE_PATH": "${HOME}/OLYMPUS-VAULT/05_Auto_Learning/kg-memory.json"
+      }
+    },
+    "git": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-git@latest",
+        "--repository",
+        "${PROJECT_ROOT}"
+      ],
+      "env": {}
+    },
+    "kubernetes": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-kubernetes@latest"
+      ],
+      "env": {}
+    },
+    "grafana": {
+      "command": "uvx",
+      "args": [
+        "mcp-grafana@latest"
+      ],
+      "env": {
+        "GRAFANA_URL": "${GRAFANA_URL}",
+        "GRAFANA_API_KEY": "${GRAFANA_API_KEY}"
+      }
+    },
+    "mcp-gateway": {
+      "command": "mcp-gateway",
+      "args": [
+        "--config",
+        "${HOME}/.config/mcp-gateway/config.toml"
+      ],
+      "env": {}
+    },
+    "figma": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "figma-developer-mcp@latest",
+        "--figma-api-key=${FIGMA_API_KEY}"
+      ],
+      "env": {}
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "shadcn-mcp@latest"
+      ],
+      "env": {}
+    },
+    "opendesign": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "open-design-mcp@latest"
+      ],
+      "env": {},
+      "_comment": "OpenDesign MCP -- 71+ production design systems (Linear, Stripe, Vercel, Apple, etc.). Free, open-source, BYOK. Queries on-demand via od_list_projects + od_get_project to keep input tokens low. Used by Athena (frontend/design). Replaces magic-mcp (paid)."
+    }
+  },
+  "_olympus_notes": {
+    "permission_policy": "All MCPs are gated by opencode.json's permission: { mcp_*: ask }. The Olympus overlay plugin auto-approves read-only MCP tools; everything else asks the user. Built-in websearch + webfetch tools are auto-allowed (free on GO plan).",
+    "env_var_convention": "API keys use ${VAR_NAME} syntax — OpenCode resolves these from the environment at runtime. Shipped MCPs that need keys: GITHUB_PERSONAL_ACCESS_TOKEN (github), GRAFANA_URL + GRAFANA_API_KEY (grafana), FIGMA_API_KEY (figma). Set in shell, ~/.bashrc, or via the OLYMPUS API Config dialog.",
+    "built_in_tools": {
+      "websearch": "Free on GO plan (Exa-powered, no API key). Replaces the exa MCP server. Enable via opencode.json permission: { websearch: allow }.",
+      "webfetch": "Free on GO plan. Fetches a URL as markdown. Replaces firecrawl's scrape tool. Enable via opencode.json permission: { webfetch: allow }."
+    },
+    "token_compression_stack": {
+      "mcp-compressor": "Wraps the 3 heaviest MCP servers (github, context7, serena) — compresses tool DESCRIPTIONS/schemas (upfront cost). 70-97% reduction benchmarked by Atlassian. Apache-2.0.",
+      "tamp": "Compresses MCP tool OUTPUT (what comes back from a tool call). Orthogonal to mcp-compressor. Lossless.",
+      "caveman": "Compresses god OUTPUT (natural language → terse caveman). 65% reduction. Per-god level.",
+      "strategic_compact": "ECC's compaction timing skill. Manages WHEN to compact (at logical task boundaries). ECC standard, untouched.",
+      "cascading_compression": "5-layer strategy: Layer 1 (User↔Apollo, no compression) → Layer 2 (Apollo↔Gods, caveman) → Layer 3 (Gods↔Demigods, strategic-compact) → Layer 4 (Demigods↔Tools, no LLM) → Layer 5 (Gods↔Demigods latent, Symphony 70-90% transport reduction). See ARCHITECTURE.md."
+    },
+    "adopted_plugins": {
+      "opencode-pty": "In opencode.json plugin array (10 entries total). Embedded terminal for the desktop app.",
+      "opencode-token-monitor": "npm dependency (package.json). Cost tracking MCP feeding the OLYMPUS cost dashboard.",
+      "opencode-vibeguard": "npm dependency (package.json). Secret redaction before LLM requests.",
+      "http-recorder": "Dev dependency for eval harness — install via: bun add -d @opencode-ai/http-recorder@beta"
+    },
+    "missing_mcps": {
+      "vault_fts": "TODO: Build a local-only vault full-text search MCP wrapping @orama/oramajs. No community plugin meets the local-only invariant."
+    }
+  }
+}

@@ -1,0 +1,37 @@
+name: CLA Check
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  statuses: write
+
+jobs:
+  cla-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CLA signature
+        uses: contributor-assistant/github-action@v2.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          path-to-signatures: 'signatures/version1/cla.json'
+          path-to-document: 'https://github.com/${{ github.repository }}/blob/main/CLA.md'
+          branch: 'cla-signatures'
+          allowlist: texugo7badger,dependabot[bot],renovate[bot]
+          remote-organization-name: ${{ github.repository_owner }}
+          remote-repository-name: ${{ github.event.repository.name }}
+          create-file-commit-message: 'chore: add CLA signature for ${{ github.event.pull_request.user.login }}'
+          signed-commit-message: 'chore: ${{ github.event.pull_request.user.login }} has signed the CLA'
+          custom-notsigned-prcomment: |
+            ## Contributor License Agreement
+
+            Thank you for your contribution to OLYMPUS! Before we can merge this PR, you need to sign the [Contributor License Agreement (CLA)](https://github.com/${{ github.repository }}/blob/main/CLA.md).
+
+            **👉 [Click here to sign the CLA](${{ contributorAssistantUrl }})**
+
+            This is a one-time step. Once signed, the CLA covers all future contributions to this repository. For questions about the CLA, see the [CLA FAQ](https://github.com/${{ github.repository }}/blob/main/CLA.md#faq).
+          custom-pr-sign-comment: '✅ **CLA signed!** Thank you, @${{ github.event.pull_request.user.login }}. Your CLA covers all future contributions to OLYMPUS.'
+          custom-allsigned-prcomment: '✅ All contributors have signed the CLA.'

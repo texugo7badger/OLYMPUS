@@ -1,0 +1,383 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* v0.0.1 overhaul — pastel palette (Issue 11) registered as Tailwind colors.
+     Usage: text-olympus-gold, bg-olympus-panel, border-olympus-gold/15, etc. */
+  --color-olympus-gold:        #D4A574;
+  --color-olympus-amber:       #C4956A;
+  --color-olympus-blue:        #6B8FB5;
+  --color-olympus-green:       #7BAE8E;
+  --color-olympus-amber-soft:  #C4A265;
+  --color-olympus-purple:      #9B7BAE;
+  --color-olympus-teal:        #6BAE9B;
+  --color-olympus-red:         #C4756A;
+  --color-olympus-cyan:        #6BAEB5;
+  --color-olympus-bg:          #0A0E16;
+  --color-olympus-panel:       #0E1320;
+  --color-olympus-card:        #121826;
+  --color-olympus-text:        #B8B8B8;
+  --color-olympus-text-dim:    #8B8B8B;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Olympus custom scrollbar — pastel soft-gold thumb (Issue 11). */
+.custom-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 165, 116, 0.25) transparent;
+}
+.custom-scroll::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: rgba(212, 165, 116, 0.25);
+  border-radius: 4px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 165, 116, 0.45);
+}
+
+/* Global dark scrollbar for the workspace */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0E16;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 165, 116, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 165, 116, 0.4);
+}
+
+/* react-force-graph-3d canvas fills container */
+.force-graph-container canvas {
+  display: block !important;
+}
+
+/* ---------------------------------------------------------------- */
+/* brain-atlas WebGL2 renderer canvas + overlay.                      */
+/*                                                                    */
+/* The BrainGLRenderer (brain-atlas/src/gl/brain-gl-renderer.ts)      */
+/* sets explicit pixel sizes on the canvas via canvas.style.width     */
+/* and canvas.style.height in resizeSurface(). Without !important     */
+/* here, those inline pixel sizes would PIN the canvas to a stale     */
+/* size when the container shrinks -- the canvas wouldn't shrink,     */
+/* so the ResizeObserver wouldn't fire, so the renderer would never  */
+/* re-compute. The canvas would be stuck at the old size.            */
+/*                                                                    */
+/* With !important, the canvas always fills its container (100%),    */
+/* the backing store (canvas.width/height in device pixels) is set  */
+/* by the renderer, and the ResizeObserver fires correctly on every  */
+/* container resize. The renderer reads getBoundingClientRect()      */
+/* which returns the CSS-rendered size (100% of container) -- this   */
+/* is the correct value for the backing store computation.           */
+/*                                                                    */
+/* Source: https://github.com/colorpulse6/brain-atlas (MIT)           */
+/* ---------------------------------------------------------------- */
+.brain-atlas-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  touch-action: none;
+}
+
+.brain-atlas-gl-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- */
+/* Markdown rendering for in-app document viewers.                    */
+/*                                                                    */
+/* Used by:                                                           */
+/*   - DemigodPromptModal (renders a demigod's full Identity .txt)    */
+/*   - DocumentViewerModal (renders skill/instinct/knowledge .md)     */
+/*                                                                    */
+/* The source content is local prompt/doc files we control (not       */
+/* user-supplied), so we render with `marked` + dangerouslySetInnerHTML. */
+/* These rules keep the rendered markdown on the Olympus dark theme   */
+/* with the pastel gold/cyan palette used elsewhere.                  */
+/* ---------------------------------------------------------------- */
+.olympus-markdown {
+  color: var(--color-olympus-text);
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+/* Alignment fix — when a markdown message sits next to a plain-text
+   message in the Interactive Terminal, the first child's top margin
+   (e.g. <p>'s 0.6em) would push the first line of text down relative
+   to the timestamp column. Killing the first child's top margin (and
+   the last child's bottom margin) keeps the first line flush with the
+   top of the row, so timestamps line up cleanly across all message
+   types. Other internal margins between paragraphs are preserved. */
+.olympus-markdown > :first-child { margin-top: 0 !important; }
+.olympus-markdown > :last-child { margin-bottom: 0 !important; }
+.olympus-markdown h1,
+.olympus-markdown h2,
+.olympus-markdown h3,
+.olympus-markdown h4,
+.olympus-markdown h5,
+.olympus-markdown h6 {
+  color: var(--color-olympus-gold);
+  font-weight: 600;
+  margin: 1.2em 0 0.5em 0;
+  line-height: 1.3;
+}
+.olympus-markdown h1 { font-size: 1.25em; }
+.olympus-markdown h2 { font-size: 1.15em; border-bottom: 1px solid rgba(212, 165, 116, 0.15); padding-bottom: 0.2em; }
+.olympus-markdown h3 { font-size: 1.05em; }
+.olympus-markdown h4 { font-size: 1em; }
+.olympus-markdown h5,
+.olympus-markdown h6 { font-size: 0.95em; color: var(--color-olympus-amber-soft); }
+.olympus-markdown p { margin: 0.6em 0; }
+.olympus-markdown a {
+  color: var(--color-olympus-cyan);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(107, 174, 181, 0.4);
+}
+.olympus-markdown a:hover { border-bottom-style: solid; }
+.olympus-markdown strong { color: var(--color-olympus-gold); font-weight: 600; }
+.olympus-markdown em { color: var(--color-olympus-amber-soft); font-style: italic; }
+.olympus-markdown code {
+  background: rgba(212, 165, 116, 0.08);
+  color: var(--color-olympus-cyan);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.92em;
+  border: 1px solid rgba(212, 165, 116, 0.15);
+}
+.olympus-markdown pre {
+  background: var(--color-olympus-bg);
+  border: 1px solid rgba(212, 165, 116, 0.15);
+  border-radius: 6px;
+  padding: 0.8em 1em;
+  margin: 0.8em 0;
+  overflow-x: auto;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+.olympus-markdown pre code {
+  background: transparent;
+  color: var(--color-olympus-text);
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+}
+.olympus-markdown blockquote {
+  border-left: 3px solid rgba(212, 165, 116, 0.4);
+  margin: 0.8em 0;
+  padding: 0.2em 1em;
+  color: var(--color-olympus-text-dim);
+  background: rgba(212, 165, 116, 0.04);
+}
+.olympus-markdown ul,
+.olympus-markdown ol {
+  margin: 0.6em 0;
+  padding-left: 1.5em;
+}
+.olympus-markdown ul { list-style: disc; }
+.olympus-markdown ol { list-style: decimal; }
+.olympus-markdown li { margin: 0.3em 0; }
+.olympus-markdown li::marker { color: var(--color-olympus-gold); }
+.olympus-markdown hr {
+  border: none;
+  border-top: 1px solid rgba(212, 165, 116, 0.15);
+  margin: 1.2em 0;
+}
+.olympus-markdown table {
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  width: 100%;
+  font-size: 0.9em;
+}
+.olympus-markdown th,
+.olympus-markdown td {
+  border: 1px solid rgba(212, 165, 116, 0.15);
+  padding: 0.4em 0.7em;
+  text-align: left;
+}
+.olympus-markdown th {
+  background: rgba(212, 165, 116, 0.08);
+  color: var(--color-olympus-gold);
+  font-weight: 600;
+}
+.olympus-markdown td { color: var(--color-olympus-text); }
+
+/* ---------------------------------------------------------------- */
+/* OLYMPUS custom "ban" cursor — replaces the native Windows red     */
+/* circle-with-slash `not-allowed` cursor with an OLYMPUS-styled     */
+/* version (pastel red #C4756A + subtle outer glow ring).            */
+/*                                                                    */
+/* Applied to disabled buttons (empty-input Send, no-project Image,  */
+/* locked MCP toggles) via the `.olympus-ban-cursor` class. The      */
+/* inline SVG data URL keeps it dependency-free and crisply scalable */
+/* at any DPI. The hotspot (11 11) is the SVG's geometric center,    */
+/* matching where the diagonal slash crosses — so clicks register    */
+/* exactly where the user expects.                                   */
+/*                                                                    */
+/* The fallback chain ends in `not-allowed` so any browser that      */
+/* rejects the SVG URL still shows a clear "disabled" cursor.        */
+/* ---------------------------------------------------------------- */
+.olympus-ban-cursor {
+  cursor: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='22'%20height='22'%20viewBox='0%200%2022%2022'%3E%3Ccircle%20cx='11'%20cy='11'%20r='8.5'%20fill='none'%20stroke='%23C4756A'%20stroke-width='0.6'%20opacity='0.35'/%3E%3Ccircle%20cx='11'%20cy='11'%20r='7'%20fill='none'%20stroke='%23C4756A'%20stroke-width='2'/%3E%3Cline%20x1='6'%20y1='16'%20x2='16'%20y2='6'%20stroke='%23C4756A'%20stroke-width='2.2'%20stroke-linecap='round'/%3E%3C/svg%3E") 11 11, not-allowed;
+}
+
+/* ---------------------------------------------------------------- */
+/* Brain Atlas — smooth dropdown menu open animation.                 */
+/*                                                                    */
+/* Used by the performance-preset dropdown in brain-atlas-3d.tsx      */
+/* (and any other dropdown that wants the same feel). The dropdown    */
+/* fades + scales in from the top-right corner over 120ms with an     */
+/* ease-out curve — fast enough to feel snappy, slow enough to read   */
+/* as a deliberate motion rather than a flicker.                      */
+/*                                                                    */
+/* Tailwind's `animate-` utilities don't cover this case (origin +    */
+/* scale + fade with a custom curve), so we hand-roll it here.        */
+/* ---------------------------------------------------------------- */
+@keyframes brain-atlas-menu-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-2px);
+    transform-origin: top right;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    transform-origin: top right;
+  }
+}
+
+.brain-atlas-menu-enter {
+  animation: brain-atlas-menu-enter 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}

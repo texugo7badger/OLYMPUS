@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OLYMPUS Logo — Minimalist Pastel Edition (v0.0.1)
+
+  Concept:
+    - Central mountain peak = Mount Olympus (the gods' throne)
+    - Peak dot = Callimachus, the vault curator who watches over
+      the brain from above, floating above the summit
+    - Atlas dot at the base = the orchestration god standing between
+      the mountain's legs, executing every dispatch
+    - 8 dots in orbit = the 8 specialist gods (Apollo, Hephaestus,
+      Athena, Hermes, Artemis, Dionysus, Persephone, Prometheus)
+    - Outer circle = the unified workspace / brain atlas boundary
+    - Pastel gold (#D4A574) on dark navy (#0A0E16) — matches the
+      OLYMPUS UI palette.
+
+  10 gods total: Apollo plans, Atlas orchestrates, 8 specialists build,
+  Callimachus curates from above.
+
+  Design principles:
+    - Ultra-minimal: one stroke weight, no gradients, no shadows.
+    - Scalable: pure vector, works at any size (favicon to hero).
+    - On-brand: uses the exact pastel gold from the UI.
+
+  © OLYMPUS Contributors — AGPL-3.0-or-later
+-->
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Olympus logo">
+  <!-- Background circle (dark navy, matches workspace bg) -->
+  <circle cx="128" cy="128" r="124" fill="#0A0E16"/>
+
+  <!-- Outer ring (pastel gold, thin) -->
+  <circle cx="128" cy="128" r="112" stroke="#D4A574" stroke-width="1.5" fill="none" opacity="0.4"/>
+
+  <!-- Inner ring (pastel gold, thinner) -->
+  <circle cx="128" cy="128" r="96" stroke="#D4A574" stroke-width="1" fill="none" opacity="0.25"/>
+
+  <!-- Mountain peak (Mount Olympus) — pastel gold, solid -->
+  <path d="M 128 76 L 168 168 L 144 168 L 128 132 L 112 168 L 88 168 Z" fill="#D4A574"/>
+
+  <!-- Callimachus floating above the peak — the vault curator god who watches over the brain from above -->
+  <circle cx="128" cy="60" r="3" fill="#9B7BAE"/>
+
+  <!-- Atlas between the mountain's legs — the orchestration god at the base of every dispatch -->
+  <circle cx="128" cy="168" r="3" fill="#D4A574"/>
+
+  <!-- 8 god dots in orbit around the mountain = the 8 specialist gods -->
+  <!-- Apollo (top) — planning & architecture -->
+  <circle cx="128" cy="24" r="4" fill="#D4A574"/>
+  <!-- Hephaestus (top-right) — backend -->
+  <circle cx="201.6" cy="54.4" r="3.5" fill="#D4A574" opacity="0.85"/>
+  <!-- Athena (right) — frontend -->
+  <circle cx="232" cy="128" r="4" fill="#D4A574"/>
+  <!-- Hermes (bottom-right) — integrations -->
+  <circle cx="201.6" cy="201.6" r="3.5" fill="#D4A574" opacity="0.85"/>
+  <!-- Artemis (bottom) — security -->
+  <circle cx="128" cy="232" r="4" fill="#D4A574"/>
+  <!-- Dionysus (bottom-left) — QA -->
+  <circle cx="54.4" cy="201.6" r="3.5" fill="#D4A574" opacity="0.85"/>
+  <!-- Persephone (left) — database -->
+  <circle cx="24" cy="128" r="4" fill="#D4A574"/>
+  <!-- Prometheus (top-left) — DevOps -->
+  <circle cx="54.4" cy="54.4" r="3.5" fill="#D4A574" opacity="0.85"/>
+
+  <!-- Subtle connection lines from center to each god dot (the brain) -->
+  <g stroke="#D4A574" stroke-width="0.5" opacity="0.15">
+    <line x1="128" y1="128" x2="128" y2="24"/>
+    <line x1="128" y1="128" x2="201.6" y2="54.4"/>
+    <line x1="128" y1="128" x2="232" y2="128"/>
+    <line x1="128" y1="128" x2="201.6" y2="201.6"/>
+    <line x1="128" y1="128" x2="128" y2="232"/>
+    <line x1="128" y1="128" x2="54.4" y2="201.6"/>
+    <line x1="128" y1="128" x2="24" y2="128"/>
+    <line x1="128" y1="128" x2="54.4" y2="54.4"/>
+  </g>
+
+  <title>OLYMPUS</title>
+  <desc>Minimalist logo: a gold mountain with Callimachus floating above the peak, Atlas standing between the legs at the base, and 8 specialist gods in orbit around them.</desc>
+</svg>

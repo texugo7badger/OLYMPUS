@@ -1,0 +1,9 @@
+{
+  "id": "react-perf-02",
+  "prompt": "Review the React component at src/components/olympus/brain-atlas-3d.tsx for performance issues. Identify unnecessary re-renders, missing memoization, and any heavy computations that should be moved to useMemo or web workers. Report as a numbered list with file:line references.",
+  "expectedDispatches": ["athena", "frontend-reviewer"],
+  "maxTokens": 12000,
+  "minShortCircuitRate": 0.2,
+  "qualityThreshold": 0.7,
+  "tags": ["frontend", "react", "performance"]
+}

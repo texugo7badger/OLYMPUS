@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# OLYMPUS v0.0.1 — Multi-agent AI operating system
+# Local-first: this UI runs on http://localhost:3737
+# No tracking, no analytics, no external CDNs.

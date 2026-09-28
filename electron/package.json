@@ -1,0 +1,4 @@
+{
+  "type": "commonjs",
+  "_comment": "Forces TypeScript to emit CommonJS (require) output for the Electron main process despite the root package.json having \"type\":\"module\" (needed by Next.js). Without this file, tsc emits ESM (import) syntax which Electron cannot load."
+}

@@ -1,0 +1,17 @@
+{
+  "languages": {
+    "CSS": {
+      "language_servers": [
+        "tailwindcss-language-server",
+        "!vscode-css-language-server"
+      ]
+    }
+  },
+  "lsp": {
+    "eslint": {
+      "settings": {
+        "onIgnoredFiles": "off"
+      }
+    }
+  }
+}

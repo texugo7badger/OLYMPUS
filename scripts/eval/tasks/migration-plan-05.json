@@ -1,0 +1,9 @@
+{
+  "id": "migration-plan-05",
+  "prompt": "Plan a migration of the OLYMPUS vault from ~/OLYMPUS-VAULT/ to a per-project vault at ./project-vault/. Identify every code path that hardcodes the vault location, list the affected files, and propose a phased migration plan that preserves backwards compatibility. Report as a markdown doc with a checklist.",
+  "expectedDispatches": ["apollo", "planner", "persephone"],
+  "maxTokens": 25000,
+  "minShortCircuitRate": 0.05,
+  "qualityThreshold": 0.7,
+  "tags": ["planning", "migration", "database"]
+}

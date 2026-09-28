@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="820" height="52" viewBox="0 0 820 52" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OLYMPUS badges">
+  <rect x="2" y="2" width="816" height="48" rx="11" ry="11" fill="#0F1419" fill-opacity="0.6" />
+  <rect x="2" y="2" width="816" height="48" rx="11" ry="11" stroke="#D4A574" stroke-width="1" stroke-opacity="0.2" fill="none" />
+
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="820" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#D4A574" stop-opacity="0" />
+      <stop offset="10%"  stop-color="#D4A574" stop-opacity="0.45" />
+      <stop offset="25%"  stop-color="#7BAE8E" stop-opacity="0.35" />
+      <stop offset="40%"  stop-color="#6BAEB5" stop-opacity="0.35" />
+      <stop offset="55%"  stop-color="#6B8FB5" stop-opacity="0.35" />
+      <stop offset="70%"  stop-color="#9B7BAE" stop-opacity="0.35" />
+      <stop offset="90%"  stop-color="#C4756A" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#C4756A" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="accentBottom" x1="820" y1="0" x2="0" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#C4756A" stop-opacity="0" />
+      <stop offset="20%"  stop-color="#C4756A" stop-opacity="0.3" />
+      <stop offset="50%"  stop-color="#6B8FB5" stop-opacity="0.2" />
+      <stop offset="80%"  stop-color="#D4A574" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#D4A574" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <line x1="16" y1="4" x2="804" y2="4" stroke="url(#accent)" stroke-width="1.5" />
+  <line x1="16" y1="48" x2="804" y2="48" stroke="url(#accentBottom)" stroke-width="1" />
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- 1. version  ·  gold #D4A574                                       -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <a href="https://github.com/texugo7badger/olympus/releases" target="_blank">
+    <rect x="24" y="17" width="46" height="18" rx="3" fill="#555" />
+    <text x="47" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">version</text>
+    <rect x="70" y="17" width="40" height="18" rx="3" fill="#D4A574" />
+    <text x="90" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">0.0.1</text>
+  </a>
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- 2. license  ·  green #7BAE8E                                      -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <a href="https://github.com/texugo7badger/olympus/blob/main/LICENSE" target="_blank">
+    <rect x="120" y="17" width="48" height="18" rx="3" fill="#555" />
+    <text x="144" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">license</text>
+    <rect x="168" y="17" width="64" height="18" rx="3" fill="#7BAE8E" />
+    <text x="200" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">AGPL-3.0</text>
+  </a>
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- 3. downloads  ·  teal #6BAEB5                                     -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <a href="https://github.com/texugo7badger/olympus/releases" target="_blank">
+    <rect x="242" y="17" width="62" height="18" rx="3" fill="#555" />
+    <text x="273" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">downloads</text>
+    <rect x="304" y="17" width="28" height="18" rx="3" fill="#6BAEB5" />
+    <text x="318" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">0</text>
+  </a>
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- 4. forks  ·  blue #6B8FB5                                         -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <a href="https://github.com/texugo7badger/olympus/forks" target="_blank">
+    <rect x="342" y="17" width="38" height="18" rx="3" fill="#555" />
+    <text x="361" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">forks</text>
+    <rect x="380" y="17" width="24" height="18" rx="3" fill="#6B8FB5" />
+    <text x="392" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">0</text>
+  </a>
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- 5. stars  ·  bronze #C4956A                                       -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <a href="https://github.com/texugo7badger/olympus/stargazers" target="_blank">
+    <rect x="414" y="17" width="38" height="18" rx="3" fill="#555" />
+    <text x="433" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">stars</text>
+    <rect x="452" y="17" width="24" height="18" rx="3" fill="#C4956A" />
+    <text x="464" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">0</text>
+  </a>
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- 6. last commit  ·  purple #9B7BAE                                 -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <a href="https://github.com/texugo7badger/olympus/commits/main" target="_blank">
+    <rect x="486" y="17" width="68" height="18" rx="3" fill="#555" />
+    <text x="520" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">last commit</text>
+    <rect x="554" y="17" width="62" height="18" rx="3" fill="#9B7BAE" />
+    <text x="585" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">2026-07</text>
+  </a>
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- 7. size  ·  rose #C4756A                                          -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <a href="https://github.com/texugo7badger/olympus" target="_blank">
+    <rect x="626" y="17" width="34" height="18" rx="3" fill="#555" />
+    <text x="643" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">size</text>
+    <rect x="660" y="17" width="48" height="18" rx="3" fill="#C4756A" />
+    <text x="684" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">~15 MB</text>
+  </a>
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- 8. contrib.  ·  sage #8BAE9B                                      -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <a href="https://github.com/texugo7badger/olympus/graphs/contributors" target="_blank">
+    <rect x="718" y="17" width="54" height="18" rx="3" fill="#555" />
+    <text x="745" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">contrib.</text>
+    <rect x="772" y="17" width="24" height="18" rx="3" fill="#8BAE9B" />
+    <text x="784" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">1</text>
+  </a>
+</svg>

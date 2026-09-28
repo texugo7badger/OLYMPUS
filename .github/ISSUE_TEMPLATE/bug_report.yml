@@ -1,0 +1,97 @@
+name: Bug Report
+description: Report a bug in OLYMPUS
+title: '[Bug]: '
+labels: ['bug', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out as much detail as you can.
+
+  - type: input
+    id: version
+    attributes:
+      label: OLYMPUS version
+      description: 'Run `cat VERSION` in the project root, or check Settings → About.'
+      placeholder: '0.0.1'
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      description: 'e.g. Ubuntu 26.04, Fedora 42, Arch (kernel 6.x)'
+      placeholder: 'Ubuntu 26.04'
+    validations:
+      required: true
+
+  - type: input
+    id: strategy
+    attributes:
+      label: LLM strategy
+      description: 'Which strategy are you using? (go-balanced, go-budget, zen-balanced, free-openrouter, free-big-pickle, free-nvidia-build, etc.)'
+      placeholder: 'go-balanced'
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear, concise description of what happened.
+      placeholder: 'When I try to..., the app...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: |
+        List the exact steps to trigger the bug.
+        1. Open OLYMPUS
+        2. Navigate to...
+        3. Run the command...
+        4. See error
+      placeholder: '1.\n2.\n3.'
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+      placeholder: 'The app should...'
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: |
+        Paste any relevant logs from:
+        - `~/.olympus/logs/`
+        - `~/.olympus/crash-log.jsonl`
+        - The in-app terminal output
+        - The Electron devtools console (Ctrl+Shift+I)
+      render: shell
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Component
+      description: Which part of OLYMPUS is affected?
+      options:
+        - Electron app (window, menus, IPC)
+        - Terminal (PTY, xterm, Terminal Bridge)
+        - Editor Bridge (external editor launching)
+        - Agent dispatch (Apollo → gods → demigods)
+        - Symphony protocol
+        - Vault / Brain (instincts, patterns)
+        - Build / installer
+        - IDE extension (VSCode / Zed)
+        - Documentation
+        - Other
+    validations:
+      required: true

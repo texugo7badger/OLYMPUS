@@ -1,0 +1,178 @@
+{
+  "name": "olympus-bridge",
+  "displayName": "OLYMPUS Bridge",
+  "description": "Embed the live OLYMPUS interactive terminal inside VSCode / VSCodium / Cursor. The terminal is shared with the one running in the OLYMPUS Electron app — type in either, see it in both. Only works when OLYMPUS is installed locally.",
+  "version": "0.0.1",
+  "publisher": "olympus",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/texugo7badger/olympus",
+    "directory": "extensions/vscode-olympus"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Terminal",
+    "Machine Learning",
+    "AI"
+  ],
+  "keywords": [
+    "olympus",
+    "ai",
+    "agent",
+    "multi-agent",
+    "terminal",
+    "bridge",
+    "zed"
+  ],
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0A0E16",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "olympus-bridge",
+          "title": "OLYMPUS",
+          "icon": "media/activity-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "olympus-bridge": [
+        {
+          "id": "olympus.status",
+          "name": "Status",
+          "type": "tree"
+        },
+        {
+          "id": "olympus.terminals",
+          "name": "Live Terminals",
+          "type": "tree"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "olympus.openTerminalPanel",
+          "when": "view == olympus.terminals",
+          "group": "navigation"
+        },
+        {
+          "command": "olympus.refreshTerminals",
+          "when": "view == olympus.terminals",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "olympus.attachTerminal",
+          "when": "view == olympus.terminals && viewItem == pty",
+          "group": "inline"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "olympus.openTerminalPanel",
+        "title": "OLYMPUS: Open Terminal Panel",
+        "icon": "$(terminal)",
+        "category": "OLYMPUS"
+      },
+      {
+        "command": "olympus.attachTerminal",
+        "title": "OLYMPUS: Attach to Terminal",
+        "icon": "$(link)",
+        "category": "OLYMPUS"
+      },
+      {
+        "command": "olympus.spawnTerminal",
+        "title": "OLYMPUS: Spawn New Terminal",
+        "icon": "$(add)",
+        "category": "OLYMPUS"
+      },
+      {
+        "command": "olympus.focusOlympusWindow",
+        "title": "OLYMPUS: Open in OLYMPUS (focus Electron window)",
+        "icon": "$(window)",
+        "category": "OLYMPUS"
+      },
+      {
+        "command": "olympus.refreshTerminals",
+        "title": "OLYMPUS: Refresh Terminal List",
+        "icon": "$(refresh)",
+        "category": "OLYMPUS"
+      },
+      {
+        "command": "olympus.showBridgeStatus",
+        "title": "OLYMPUS: Show Bridge Status",
+        "category": "OLYMPUS"
+      },
+      {
+        "command": "olympus.openEditorOnWorkspace",
+        "title": "OLYMPUS: Open OLYMPUS on this workspace",
+        "category": "OLYMPUS"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "olympus.openTerminalPanel",
+        "key": "ctrl+shift+alt+t",
+        "mac": "cmd+shift+alt+t"
+      },
+      {
+        "command": "olympus.focusOlympusWindow",
+        "key": "ctrl+shift+alt+o",
+        "mac": "cmd+shift+alt+o"
+      }
+    ],
+    "configuration": {
+      "title": "OLYMPUS Bridge",
+      "properties": {
+        "olympus.bridge.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically connect to the OLYMPUS Terminal Bridge on startup."
+        },
+        "olympus.bridge.tokenFile": {
+          "type": "string",
+          "default": "",
+          "description": "Override the token file path. Defaults to ~/.olympus/terminal-bridge-token."
+        },
+        "olympus.bridge.reconnectIntervalMs": {
+          "type": "number",
+          "default": 2000,
+          "description": "How often (ms) to retry the connection when OLYMPUS is not running."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package --no-yarn --no-dependencies",
+    "publish": "vsce publish --no-yarn --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.5.10",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
+}

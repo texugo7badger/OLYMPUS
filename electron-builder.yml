@@ -1,0 +1,181 @@
+# electron-builder configuration for OLYMPUS
+#
+# OLYMPUS is a standalone Electron desktop app for Linux. This config packages
+# the Next.js production build (.next/standalone/) + the compiled Electron main
+# process (dist-electron-tsc/) into a Linux AppImage (.deb / .tar.gz optional).
+#
+# Build commands (defined in package.json):
+#   npm run build            # current platform (Linux)
+#   npm run build:linux      # explicit Linux target
+#
+# Output: dist-electron/
+#
+# IMPORTANT:
+#   - `next build` runs FIRST (in package.json `build` script) so .next/
+#     is populated. With `output: 'standalone'` in next.config.ts, Next.js
+#     also produces .next/standalone/ — a self-contained server with its
+#     own minimal node_modules.
+#   - The TypeScript compile step (`tsc -p electron/tsconfig.json`) emits
+#     main.js + preload.js to dist-electron-tsc/. The postcompile script
+#     writes a small package.json marker so Node loads these CJS files
+#     correctly despite the root package.json having `"type":"module"`.
+#   - `package.json` `main` field points at `dist-electron-tsc/main.js`.
+
+appId: ai.olympus.app
+productName: OLYMPUS
+copyright: Copyright (c) 2026 OLYMPUS Contributors
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+
+directories:
+  output: dist-electron
+  buildResources: build
+
+# Both node-pty (NAPI, ABI-stable) and better-sqlite3 (ships Electron
+# prebuilts via prebuild-install) work with their npm-installed binaries.
+# Setting npmRebuild: false uses the prebuilt binaries from npm install.
+npmRebuild: false
+nodeGypRebuild: false
+
+# Files to include in the packaged app (relative to project root).
+# extraResources copies the Next.js standalone server into the app's
+# resources directory. The files list contains only the Electron main
+# process + preload + essential configs — keeping the ASAR archive small.
+files:
+  - dist-electron-tsc/**
+  - electron/**
+  - public/**
+  - bin/**
+  - scripts/olympus-doctor.js
+  - scripts/install-opencode.js
+  - scripts/detect-editors.js
+  - scripts/vault-prune.js
+  - scripts/olympus-terminal.js
+  - scripts/settings-export-import.js
+  - scripts/incremental-skill-index.js
+  - scripts/test-demigod.js
+  - scripts/eval/harness/runner.js
+  - scripts/eval/tasks/*.json
+  - scripts/olympus-terminal-doctor.js
+  - scripts/seed-vault.py
+  - scripts/setup-sub-agent-instincts.js
+  - scripts/electron-postcompile.js
+  - scripts/apply-strategy.js
+  - scripts/build-skill-index.js
+  - scripts/postinstall.js
+  - scripts/setup-mcp-gateway.sh
+  - scripts/install/**
+  - package.json
+  - next.config.ts
+  - next-env.d.ts
+  - tsconfig.json
+  - electron/tsconfig.json
+  - postcss.config.mjs
+  - components.json
+  - opencode.json
+  - .mcp.json
+  - VERSION
+  - .opencode/**
+  - brain-atlas/**
+  - AGENTS.md
+  - ARCHITECTURE.md
+  - CREDITS.md
+  - README.md
+  - TOKEN-ECONOMY.md
+  - CONTRIBUTING.md
+  - SECURITY.md
+  - CLA.md
+  - EDITORS.md
+  - MODEL-STRATEGIES.md
+  - BENCHMARKS.md
+  - LICENSE
+  - "!**/*.map"
+  - "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}"
+  - "!**/._*"
+  - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
+  - "!**/{__pycache__,thumbs.db,.flow,.idea,.vs,.nyc_output}"
+  # Exclude source .ts files (only compiled output is needed).
+  - "!electron/**/*.ts"
+  - "!electron/tsconfig.json"
+  # Exclude .opencode's own node_modules (if any — plugins may have local deps).
+  - "!.opencode/node_modules/**"
+
+# Next.js standalone server + static assets + production node_modules.
+# These go into the app's `resources/` directory (outside the ASAR).
+# extensions/ is included so the packaged app ships the olympus-bridge .vsix
+# for users to install into their editor of choice.
+extraResources:
+  - from: .next/standalone
+    to: next-standalone
+    filter: ['**/*']
+  - from: .next/static
+    to: next-standalone/.next/static
+    filter: ['**/*']
+  - from: public
+    to: next-standalone/public
+    filter: ['**/*']
+# Pack the main process into an ASAR archive for integrity + faster loads.
+asar: true
+# Unpack native modules so they can be loaded by Node from disk
+# (Node can't `require()` inside an ASAR for .node binaries).
+asarUnpack:
+  - '**/better-sqlite3/**'
+  - '**/sqlite-vec/**'
+  - '**/node-pty/**'
+  - '**/win-spawn-examples/**'
+  - '**/node_modules/**/build/Release/*.node'
+  - '**/electron-updater/**'
+  - '**/builder-util-runtime/**'
+
+# ─── Linux ─────────────────────────────────────────────────────────────────
+linux:
+  icon: public/logo.svg
+  category: Development
+  maintainer: OLYMPUS Contributors
+  vendor: OLYMPUS
+  synopsis: Multi-agent AI operating system desktop app
+  description: |
+    OLYMPUS is a standalone desktop application that wraps a multi-agent
+    AI operating system built on OpenCode. 10 gods, 118 demigods, 330
+    skills, cascading token compression (5 layers incl. Symphony v1.0),
+    self-curating brain. Built with Electron + Next.js.
+    Low-cost. Excellent quality. Always free.
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+    - target: tar.gz
+      arch: [x64]
+
+appImage:
+  artifactName: ${productName}-${version}-${os}-${arch}.AppImage
+
+deb:
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libdrm2
+    - libgbm1
+    - libasound2
+
+# ─── Auto-Update ────────────────────────────────────────────────────────
+# Publish to GitHub Releases so electron-updater can check for new versions.
+# The repo must be public. electron-builder writes app-update.yml into the
+# packaged AppImage — electron-updater reads it at runtime.
+#
+# To publish a release:
+#   1. Tag the commit: git tag v0.0.1 && git push origin v0.0.1
+#   2. CI builds and uploads via the release.yml workflow (no local build
+#      needed). For a manual build:
+#      GH_TOKEN=ghp_xxx npm run build:linux
+#   3. Users on older builds see the update notification within 30s of launch.
+publish:
+  provider: github
+  owner: texugo7badger
+  repo: OLYMPUS
+  releaseType: release

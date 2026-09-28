@@ -1,0 +1,67 @@
+name: Eval Harness
+
+on:
+  pull_request:
+    paths:
+      - '.opencode/**'
+      - 'src/**'
+      - 'scripts/eval/**'
+      - 'opencode.json'
+      - '.mcp.json'
+  push:
+    branches: [main]
+    paths:
+      - '.opencode/**'
+      - 'src/**'
+      - 'scripts/eval/**'
+      - 'opencode.json'
+      - '.mcp.json'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript (ECC plugin + OLYMPUS overlay + Electron)
+        run: |
+          npm run electron:compile
+          npm run overlay:compile
+
+      - name: Build skill index
+        run: node scripts/build-skill-index.js
+
+      - name: Apply free-tier strategy (free-openrouter)
+        run: node scripts/apply-strategy.js free-openrouter
+        env:
+          OLYMPUS_OPENROUTER_KEY: ${{ secrets.OLYMPUS_OPENROUTER_KEY }}
+          OLYMPUS_GROQ_KEY: ${{ secrets.OLYMPUS_GROQ_KEY }}
+
+      - name: Run eval harness
+        run: npm run eval
+        env:
+          OLYMPUS_OPENROUTER_KEY: ${{ secrets.OLYMPUS_OPENROUTER_KEY }}
+          OLYMPUS_GROQ_KEY: ${{ secrets.OLYMPUS_GROQ_KEY }}
+        timeout-minutes: 15
+
+      - name: Upload eval reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-reports
+          path: scripts/eval/results/
+          retention-days: 30
