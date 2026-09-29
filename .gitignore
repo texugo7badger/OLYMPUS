@@ -91,6 +91,7 @@ callimachus.lock
 
 # ─── Setup & internal docs (maintainer-only — not for public commit) ──
 BUILD-AND-PUBLISH.md
+WORKLOG.md
 
 # ─── IDE extensions (committed as of v0.0.1) ───────────────────────────
 
