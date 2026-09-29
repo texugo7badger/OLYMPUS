@@ -7,6 +7,8 @@ on:
       - 'src/**'
       - 'scripts/eval/**'
       - 'scripts/apply-strategy.js'
+      - 'scripts/check-strategy-sync.js'
+      - '.github/workflows/eval.yml'
       - 'opencode.json'
       - '.mcp.json'
   push:
@@ -16,6 +18,8 @@ on:
       - 'src/**'
       - 'scripts/eval/**'
       - 'scripts/apply-strategy.js'
+      - 'scripts/check-strategy-sync.js'
+      - '.github/workflows/eval.yml'
       - 'opencode.json'
       - '.mcp.json'
 
@@ -51,7 +55,7 @@ jobs:
         run: node scripts/build-skill-index.js
 
       - name: Apply free-tier strategy (free-openrouter)
-        run: node scripts/apply-strategy.js free-openrouter
+        run: node scripts/apply-strategy.js --strategy free-openrouter
         env:
           OLYMPUS_OPENROUTER_KEY: ${{ secrets.OLYMPUS_OPENROUTER_KEY }}
           OLYMPUS_GROQ_KEY: ${{ secrets.OLYMPUS_GROQ_KEY }}
