@@ -731,6 +731,25 @@ function mapPart(
       onEvent({ type: 'error', msg: `OpenCode error: ${msg}`, raw: part, ts });
       return;
     }
+    case 'reasoning': {
+      // Reasoning tokens (DeepSeek R1-style, glm-5.3, GPT o-series…).
+      // Emitted for the reasoning-expansion UI (Phase 4.1.2) — dim italic
+      // text below the thinking counter. Final text only: deltas for
+      // reasoning arrive as message.part.delta on a reasoning part, which
+      // mapEvent buffers per part id in textBuf — surface accumulated
+      // text exactly like the 'text' case does.
+      if (state.textEmitted.has(part.id)) return;
+      if (!state.stepStarted) return;
+      if (part.messageID && state.userMessageIds.has(part.messageID)) return;
+      const accumulated = state.textBuf.get(part.id);
+      const text = typeof part.text === 'string' && part.text.length > 0 ? part.text : accumulated;
+      if (text) {
+        state.textEmitted.add(part.id);
+        state.textBuf.delete(part.id);
+        onEvent({ type: 'reasoning', timestamp: Date.now(), sessionID: sessionId, part: { type: 'reasoning', text } });
+      }
+      return;
+    }
     default:
       return;
   }
