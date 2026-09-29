@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/header.svg" alt="OLYMPUS" width="600" />
+  <img src="public/header.svg" alt="OLYMPUS" width="100%" />
 </p>
 
 <p align="center">
@@ -15,6 +15,10 @@
 ## What is OLYMPUS?
 
 OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencode.ai). It runs as a standalone **Electron desktop app** on Linux. Other platforms should use WSL. OLYMPUS routes each task to the cheapest LLM that can handle it, cascades token compression across five layers (including the Symphony latent protocol), and learns from every action via a self-curating **VaultBrain**.
+
+<div align="center">
+  <img src="public/olympus.jpeg" alt="OLYMPUS Interface — Brain graph and Interactive Terminal" width="900" />
+</div>
 
 - **Three ways to run.** The GO plan ($10/month flat, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps — full 128-agent OLYMPUS without a GO plan), or **free** (provider-specific strategies — `free-openrouter`, `free-big-pickle`, `free-nvidia-build` — OLYMPUS stays 100% functional at zero cost).
 - **10 gods + 118 demigods (128 agents).** Apollo is the only god who talks to you; the other 9 are dispatched by Apollo via Symphony.
@@ -121,7 +125,7 @@ GLM-5.3 is reserved for go-max-quality (Apollo + Artemis). The daily strategies 
                           ↕
 ┌────────────────────────────────────────────────────────────────┐
 │  OpenCode + Agents                                             │
-│  • 10 OLYMPUS gods → 118 demigods → 18 tools + 19 MCP servers   │
+│  • 10 OLYMPUS gods → 118 demigods → 18 tools + 19 MCP servers  │
 │  • Cascading compression (caveman → strategic-compact →        │
 │    Symphony harmonics)                                         │
 │  • Cache instrumentation (olympus-go-cache + context-cache +   │
@@ -194,28 +198,26 @@ All contributors must accept the [Contributor License Agreement (CLA)](CLA.md) b
 
 ---
 
-### 💙 Support the Dev
+<div align="center">
 
-<sub><i>Did OLYMPUS supercharge your multi-agent workflow? If you can, buy me a coffee to keep the cauldron bubbling!</i></sub>
+  <h3>💙 Support the Dev</h3>
 
-<br>
+  <p>
+    <sub><i>Did OLYMPUS supercharge your multi-agent workflow? If you can, buy me a coffee to keep the cauldron bubbling!</i></sub>
+  </p>
 
-<a href="https://ko-fi.com/G4H521S5GK">
-  <img src="https://storage.ko-fi.com/cdn/kofi5.png?v=6" height="50" alt="Buy Me a Coffee at ko-fi.com" />
-</a>
+  <p>
+    <a href="https://ko-fi.com/G4H521S5GK">
+      <img src="https://storage.ko-fi.com/cdn/kofi5.png?v=6" height="50" alt="Buy Me a Coffee at ko-fi.com" />
+    </a>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="https://livepix.gg/texugo7badger">
+      <img src="https://i.imgur.com/jjPuVUG.png" height="50" alt="Doe via LivePix (PIX)" />
+    </a>
+  </p>
 
-&nbsp;&nbsp;&nbsp;&nbsp;
+  <p>
+    <sub>Made by <a href="https://github.com/texugo7badger">@texugo7badger</a></sub>
+  </p>
 
-<a href="https://livepix.gg/texugo7badger">
-  <img src="https://i.imgur.com/jjPuVUG.png" height="50" alt="Doe via LivePix (PIX)" />
-</a>
-
-<br><br>
-
-<sub>Made by <a href="https://github.com/texugo7badger">@texugo7badger</a></sub>
-
----
-
-<p align="center">
-  <em>OLYMPUS is [AGPL-3.0-or-later](LICENSE). Free forever. Open forever.</em>
-</p>
+</div>
