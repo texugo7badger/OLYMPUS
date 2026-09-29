@@ -89,7 +89,7 @@ olympus apply-strategy go-budget
 
 | God | Domain | Model (go-balanced) |
 |-----|--------|---------------------|
-| **Apollo** | Planning & architecture | GLM-5.3 (sacred) |
+| **Apollo** | Planning & architecture | GLM-5.3-Flash (sacred family) |
 | **Atlas** | Orchestration & execution | Hy3 (sacred) |
 | **Artemis** | Security / auditing | Qwen3.7 Plus |
 | **Athena** | Frontend / design | Qwen3.7 Plus |
@@ -100,7 +100,7 @@ olympus apply-strategy go-budget
 | **Prometheus** | DevOps / CI-CD / deploy | Qwen3.7 Plus |
 | **Callimachus** | Background vault curator | DeepSeek V4 Flash |
 
-GLM-5.3 is reserved for Apollo and Artemis. The 1,080 req/month GO cap is protected by the 80/20 fast-path.
+GLM-5.3 is reserved for go-max-quality (Apollo + Artemis). The daily strategies run Apollo on GLM-5.3-Flash (cap-aware). The 1,080 req/month GO cap is protected by the 80/20 fast-path.
 
 ## Architecture (brief)
 
@@ -135,8 +135,8 @@ GLM-5.3 is reserved for Apollo and Artemis. The 1,080 req/month GO cap is protec
 | Strategy | Apollo | Atlas | Specialists | Callimachus |
 |----------|--------|-------|-------------|-----------|
 | `go-max-quality` | GLM-5.3 | Hy3 | Kimi K2.7 Code / GLM-5.3-Flash / MiniMax M3 | GLM-5.3-Flash |
-| `go-balanced` (default) | GLM-5.3 | Hy3 | Kimi K2.7 Code / Qwen3.7 Plus / GLM-5.3-Flash / MiniMax M3 | GLM-5.3-Flash |
-| `go-budget` | GLM-5.3 (sacred) | Hy3 | GLM-5.3-Flash | GLM-5.3-Flash |
+| `go-balanced` (default) | GLM-5.3-Flash | Hy3 | Kimi K2.7 Code / Qwen3.7 Plus / GLM-5.3-Flash / MiniMax M3 | GLM-5.3-Flash |
+| `go-budget` | GLM-5.3-Flash | Hy3 | GLM-5.3-Flash | GLM-5.3-Flash |
 | `zen-max-quality` (**Zen**) | GLM-5.3 | GPT 6 Sol | Claude Sonnet 5 / GPT 5.6 Terra / GPT 5.6 Luna / Gemini 3.1 Pro / Grok Build 0.1 | Claude Haiku 4.5 |
 | `zen-balanced` (**Zen**) | GLM-5.3 | GPT 6 Sol | Claude Sonnet 5 / GPT 5.6 Terra / GPT 5.6 Luna / GPT 5.4 Mini / Gemini 3.1 Pro / Grok Build 0.1 | Claude Haiku 4.5 |
 | `zen-budget` (**Zen**) | GLM-5.3 | GPT 6 Luna | GLM-5.3-Flash | Claude Haiku 4.5 |

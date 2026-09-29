@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOlympus, GOD_ICONS, GOD_IDS, type LLMStrategy } from '@/lib/olympus-store';
-import { Settings, Save, Loader2, Check, AlertCircle, Zap, BarChart3, Lock, Plus, X, Trash2, Calculator } from 'lucide-react';
+import { Settings, Save, Loader2, Check, AlertCircle, AlertTriangle, Zap, BarChart3, Lock, Plus, X, Trash2, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { strategyApiRequirement, modelClassesForStrategy, estimateStrategyCost, type CostEstimate } from '@/lib/model-strategies';
@@ -102,35 +102,54 @@ const GOD_DOMAINS: Record<string, string> = {
   callimachus: 'Vault curator',
 };
 
+// MIRROR of src/lib/model-strategies.ts (go-balanced gods).
+// Do NOT edit by hand — update the canonical file and run `npm run check-strategy-sync`.
+// Enforced by scripts/check-strategy-sync.js in CI.
 const DEFAULT_CLASSES: Record<string, string> = {
-  apollo: 'opencode-go/glm-5.2',
+  apollo: 'opencode-go/glm-5.3-flash',
   atlas: 'opencode-go/hy3',
-  artemis: 'opencode-go/qwen3.7-plus',
+  artemis: 'opencode-go/glm-5.3-flash',
   athena: 'opencode-go/qwen3.7-plus',
-  dionysus: 'opencode-go/deepseek-v4-pro',
-  hephaestus: 'opencode-go/deepseek-v4-pro',
-  hermes: 'opencode-go/qwen3.7-plus',
-  persephone: 'opencode-go/deepseek-v4-pro',
-  prometheus: 'opencode-go/qwen3.7-plus',
-  callimachus: 'opencode-go/deepseek-v4-flash',
+  dionysus: 'opencode-go/glm-5.3-flash',
+  hephaestus: 'opencode-go/kimi-k2.7-code',
+  hermes: 'opencode-go/kimi-k2.7-code',
+  persephone: 'opencode-go/qwen3.7-plus',
+  prometheus: 'opencode-go/minimax-m3',
+  callimachus: 'opencode-go/glm-5.3-flash',
 };
 
 const ALL_CLASSES = [
-  // GO plan
+  // GO plan — mirrors GO_MODEL_CLASSES in src/lib/model-strategies.ts
+  // (verified 2026-09-28).
   'opencode-go/hy3',
+  'opencode-go/glm-5.3',
+  'opencode-go/glm-5.3-flash',
   'opencode-go/glm-5.2',
   'opencode-go/kimi-k3',
   'opencode-go/kimi-k2.7-code',
+  'opencode-go/kimi-k2.6',
+  'opencode-go/deepseek-v4.1-flash',
   'opencode-go/deepseek-v4-pro',
   'opencode-go/deepseek-v4-flash',
+  'opencode-go/qwen3.8-max',
+  'opencode-go/qwen3.8-flash',
   'opencode-go/qwen3.7-plus',
+  'opencode-go/mimo-v2.6-flash',
+  'opencode-go/mimo-v2.6-pro',
   'opencode-go/mimo-v2.5',
+  'opencode-go/grok-4.7',
+  'opencode-go/grok-4.6',
   'opencode-go/grok-4.5',
   'opencode-go/minimax-m3',
-  // OpenCode Zen (pay-as-you-go) — the full live catalog (verified
-  // 2026-07-31, deprecated excluded) — mirrors ZEN_MODEL_CLASSES in
-  // src/lib/model-strategies.ts. Proprietary APIs first (OpenAI, Anthropic,
-  // Google, xAI, Alibaba, Moonshot, MiniMax), then the open-weight line.
+  'opencode-go/minimax-m2.7',
+  'opencode-go/gpt-6-luna',
+  'opencode-go/gpt-5.6-luna',
+  'opencode-go/longcat-2.0',
+  // OpenCode Zen (pay-as-you-go) — mirrors ZEN_MODEL_CLASSES in
+  // src/lib/model-strategies.ts (verified 2026-09-28, deprecated excluded).
+  'opencode/gpt-6-astra',
+  'opencode/gpt-6-sol',
+  'opencode/gpt-6-luna',
   'opencode/gpt-5.6-sol',
   'opencode/gpt-5.6-terra',
   'opencode/gpt-5.6-luna',
@@ -146,7 +165,9 @@ const ALL_CLASSES = [
   'opencode/gpt-5.1',
   'opencode/gpt-5',
   'opencode/gpt-5-nano',
+  'opencode/claude-fable-5-1',
   'opencode/claude-fable-5',
+  'opencode/claude-opus-5-5',
   'opencode/claude-opus-5',
   'opencode/claude-opus-4-8',
   'opencode/claude-opus-4-7',
@@ -156,13 +177,21 @@ const ALL_CLASSES = [
   'opencode/claude-sonnet-4-6',
   'opencode/claude-sonnet-4-5',
   'opencode/claude-haiku-4-5',
+  'opencode/gemini-3.8-flash',
+  'opencode/gemini-3.7-flash',
   'opencode/gemini-3.6-flash',
   'opencode/gemini-3.5-flash',
   'opencode/gemini-3.5-flash-lite',
   'opencode/gemini-3.1-pro',
   'opencode/gemini-3-flash',
+  'opencode/grok-4.7',
+  'opencode/grok-4.6',
   'opencode/grok-4.5',
   'opencode/grok-build-0.1',
+  'opencode/muse-spark-1.3',
+  'opencode/muse-spark-1.2',
+  'opencode/qwen3.8-max',
+  'opencode/qwen3.8-flash',
   'opencode/qwen3.7-max',
   'opencode/qwen3.7-plus',
   'opencode/qwen3.6-plus',
@@ -172,17 +201,23 @@ const ALL_CLASSES = [
   'opencode/kimi-k2.6',
   'opencode/minimax-m3',
   'opencode/minimax-m2.7',
+  'opencode/glm-5.3-flash',
+  'opencode/glm-5.3',
   'opencode/glm-5.2',
   'opencode/glm-5.1',
+  'opencode/deepseek-v4.1-flash',
   'opencode/deepseek-v4-pro',
   'opencode/deepseek-v4-flash',
+  'opencode/deepseek-v4-flash-vision-exp',
   'opencode/big-pickle',
-  'opencode/deepseek-v4-flash-free',
+  'opencode/space-bunny-free',
+  'opencode/longcat-2.5-preview-free',
+  'opencode/mimo-v2.6-flash-free',
   'opencode/mimo-v2.5-free',
+  'opencode/ling-3.0-flash-fin-free',
   'opencode/nemotron-3-ultra-free',
-  'opencode/ling-3.0-flash-free',
-  'opencode/laguna-s-2.1-free',
-  'opencode/north-mini-code-free',
+  'opencode/nemotron-3.5-lightning-free',
+  'opencode/muse-spark-1.3-contributor-free',
   // Free-tier models (verified live 2026-07-31 — mirrors the model list in
   // scripts/apply-strategy.js so overrides always route). The refresh script
   // (scripts/refresh-free-models.js) may add more at runtime.
@@ -220,82 +255,85 @@ const ALL_CLASSES = [
 // may route to a newer live model at apply time. Custom strategies carry
 // their own gods map from ~/.olympus/custom-strategies.json (merged in on
 // load) and are FREE-ONLY.
+// MIRROR of src/lib/model-strategies.ts (LLM_STRATEGIES[*].gods).
+// Do NOT edit by hand — update the canonical file and run `npm run check-strategy-sync`.
+// Enforced by scripts/check-strategy-sync.js in CI.
 const STRATEGY_MODELS: Record<string, Record<string, string>> = {
   'go-max-quality': {
-    apollo: 'opencode-go/glm-5.2',
+    apollo: 'opencode-go/glm-5.3',
     atlas: 'opencode-go/hy3',
-    hephaestus: 'opencode-go/kimi-k3',
-    athena: 'opencode-go/kimi-k3',
-    artemis: 'opencode-go/kimi-k2.7-code',
-    dionysus: 'opencode-go/kimi-k2.7-code',
+    hephaestus: 'opencode-go/kimi-k2.7-code',
+    athena: 'opencode-go/glm-5.3-flash',
+    artemis: 'opencode-go/glm-5.3',
+    dionysus: 'opencode-go/glm-5.3-flash',
     hermes: 'opencode-go/kimi-k2.7-code',
-    persephone: 'opencode-go/kimi-k2.7-code',
-    prometheus: 'opencode-go/kimi-k2.7-code',
-    callimachus: 'opencode-go/deepseek-v4-flash',
+    persephone: 'opencode-go/glm-5.3-flash',
+    prometheus: 'opencode-go/minimax-m3',
+    callimachus: 'opencode-go/glm-5.3-flash',
   },
   'go-balanced': {
-    apollo: 'opencode-go/glm-5.2',
+    apollo: 'opencode-go/glm-5.3-flash',
     atlas: 'opencode-go/hy3',
-    artemis: 'opencode-go/qwen3.7-plus',
+    hephaestus: 'opencode-go/kimi-k2.7-code',
     athena: 'opencode-go/qwen3.7-plus',
-    dionysus: 'opencode-go/deepseek-v4-pro',
-    hephaestus: 'opencode-go/deepseek-v4-pro',
-    hermes: 'opencode-go/qwen3.7-plus',
-    persephone: 'opencode-go/deepseek-v4-pro',
-    prometheus: 'opencode-go/qwen3.7-plus',
-    callimachus: 'opencode-go/deepseek-v4-flash',
+    artemis: 'opencode-go/glm-5.3-flash',
+    dionysus: 'opencode-go/glm-5.3-flash',
+    hermes: 'opencode-go/kimi-k2.7-code',
+    persephone: 'opencode-go/qwen3.7-plus',
+    prometheus: 'opencode-go/minimax-m3',
+    callimachus: 'opencode-go/glm-5.3-flash',
   },
   'go-budget': {
-    apollo: 'opencode-go/glm-5.2',
+    apollo: 'opencode-go/glm-5.3-flash',
     atlas: 'opencode-go/hy3',
-    artemis: 'opencode-go/deepseek-v4-flash',
-    athena: 'opencode-go/deepseek-v4-flash',
-    dionysus: 'opencode-go/deepseek-v4-flash',
-    hephaestus: 'opencode-go/deepseek-v4-flash',
-    hermes: 'opencode-go/deepseek-v4-flash',
-    persephone: 'opencode-go/deepseek-v4-flash',
-    prometheus: 'opencode-go/deepseek-v4-flash',
-    callimachus: 'opencode-go/deepseek-v4-flash',
+    artemis: 'opencode-go/glm-5.3-flash',
+    athena: 'opencode-go/glm-5.3-flash',
+    dionysus: 'opencode-go/glm-5.3-flash',
+    hephaestus: 'opencode-go/glm-5.3-flash',
+    hermes: 'opencode-go/glm-5.3-flash',
+    persephone: 'opencode-go/glm-5.3-flash',
+    prometheus: 'opencode-go/glm-5.3-flash',
+    callimachus: 'opencode-go/glm-5.3-flash',
   },
   // Zen — full 128-agent shape on OpenCode Zen (pay-as-you-go). Models
   // use the opencode/<id> prefix (distinct from GO's opencode-go/<id>).
   // Zen is built around PROPRIETARY APIs (GPT, Claude, Gemini, Kimi,
   // MiniMax) — the GO plan runs the open-weight line.
   'zen-max-quality': {
-    apollo: 'opencode/glm-5.2',
-    atlas: 'opencode/gemini-3.5-flash',
+    apollo: 'opencode/glm-5.3',
+    atlas: 'opencode/gpt-6-sol',
     hephaestus: 'opencode/claude-sonnet-5',
-    athena: 'opencode/claude-sonnet-5',
-    artemis: 'opencode/gpt-5.4',
-    dionysus: 'opencode/gpt-5.4',
-    hermes: 'opencode/gpt-5.4',
-    persephone: 'opencode/gpt-5.4',
-    prometheus: 'opencode/gpt-5.4',
-    callimachus: 'opencode/gemini-3.5-flash',
+    athena: 'opencode/gpt-5.6-terra',
+    artemis: 'opencode/claude-sonnet-5',
+    dionysus: 'opencode/gpt-5.6-luna',
+    hermes: 'opencode/claude-sonnet-5',
+    persephone: 'opencode/gemini-3.1-pro',
+    prometheus: 'opencode/grok-build-0.1',
+    callimachus: 'opencode/claude-haiku-4-5',
   },
   'zen-balanced': {
-    apollo: 'opencode/glm-5.2',
-    atlas: 'opencode/gemini-3.5-flash',
-    artemis: 'opencode/kimi-k2.7-code',
-    athena: 'opencode/claude-sonnet-5',
-    dionysus: 'opencode/kimi-k2.7-code',
+    apollo: 'opencode/glm-5.3',
+    atlas: 'opencode/gpt-6-sol',
     hephaestus: 'opencode/claude-sonnet-5',
-    hermes: 'opencode/kimi-k2.7-code',
-    persephone: 'opencode/kimi-k2.7-code',
-    prometheus: 'opencode/kimi-k2.7-code',
-    callimachus: 'opencode/minimax-m2.7',
+    athena: 'opencode/gpt-5.6-terra',
+    artemis: 'opencode/claude-sonnet-5',
+    dionysus: 'opencode/gpt-5.6-luna',
+    hermes: 'opencode/gpt-5.4-mini',
+    persephone: 'opencode/gemini-3.1-pro',
+    prometheus: 'opencode/grok-build-0.1',
+    callimachus: 'opencode/claude-haiku-4-5',
   },
   'zen-budget': {
-    apollo: 'opencode/glm-5.2',
-    atlas: 'opencode/gemini-3.5-flash',
-    artemis: 'opencode/minimax-m2.7',
-    athena: 'opencode/minimax-m2.7',
-    dionysus: 'opencode/minimax-m2.7',
-    hephaestus: 'opencode/minimax-m2.7',
-    hermes: 'opencode/minimax-m2.7',
-    persephone: 'opencode/minimax-m2.7',
-    prometheus: 'opencode/minimax-m2.7',
-    callimachus: 'opencode/minimax-m2.7',
+    apollo: 'opencode/glm-5.3',
+    atlas: 'opencode/gpt-6-luna',
+    artemis: 'opencode/glm-5.3-flash',
+    athena: 'opencode/glm-5.3-flash',
+    dionysus: 'opencode/glm-5.3-flash',
+    hephaestus: 'opencode/glm-5.3-flash',
+    hermes: 'opencode/glm-5.3-flash',
+    persephone: 'opencode/glm-5.3-flash',
+    prometheus: 'opencode/glm-5.3-flash',
+    callimachus: 'opencode/claude-haiku-4-5',
   },
   'free-big-pickle': {
     apollo: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
@@ -420,6 +458,65 @@ export default function SettingsDialog() {
   const [customStrategyDescription, setCustomStrategyDescription] = useState('');
   const [customStrategyCreating, setCustomStrategyCreating] = useState(false);
   const [customStrategyError, setCustomStrategyError] = useState<string | null>(null);
+  const [overrideCount, setOverrideCount] = useState(0);
+  const [clearingOverrides, setClearingOverrides] = useState(false);
+
+  // Fix C2: providers loader shared by the mount effect and the
+  // "Clear overrides and re-apply" action (so the dropdowns refresh to the
+  // strategy's clean values without closing the modal).
+  const loadProvidersData = useCallback(async (cancelledCheck?: () => boolean) => {
+    try {
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 5000);
+      const r = await fetch('/api/olympus/providers/gods', { signal: ctrl.signal, cache: 'no-store' });
+      clearTimeout(timeout);
+      if (!r.ok) throw new Error(`API ${r.status}`);
+      const d = await r.json();
+      if (!d || typeof d !== 'object' || !Array.isArray(d.gods)) throw new Error('Invalid API response');
+
+      const initial: Record<string, string> = {};
+      for (const g of d.gods) {
+        if (g && g.id) initial[g.id] = g.current_class || g.override?.class || g.default_class || DEFAULT_CLASSES[g.id];
+      }
+      for (const god of GOD_IDS) if (!initial[god]) initial[god] = DEFAULT_CLASSES[god] || ALL_CLASSES[2];
+
+      // Custom strategies carry their own per-god map from disk — used for
+      // the "(default)" marker when a custom strategy is selected.
+      const customGods: Record<string, Record<string, string>> = {};
+      for (const c of (Array.isArray(d.customStrategies) ? d.customStrategies : [])) {
+        if (c && c.gods) customGods[c.id] = c.gods;
+      }
+
+      if (cancelledCheck?.()) return;
+      setData({
+        provider: d.default_provider || 'opencode-go',
+        defaultProvider: d.default_provider || 'opencode-go',
+        availableProviders: Array.isArray(d.availableProviders) ? d.availableProviders : [],
+        perGodClass: initial,
+        availableClasses: d.available_classes || ALL_CLASSES,
+        classFamilies: d.class_families || FALLBACK_CLASS_FAMILIES,
+        strategy: (d.strategy as LLMStrategy) || 'go-balanced',
+        auth: d.auth ?? null,
+        availableStrategies: Array.isArray(d.availableStrategies) ? d.availableStrategies : fallbackData().availableStrategies,
+        customStrategies: Array.isArray(d.customStrategies) ? d.customStrategies : [],
+      });
+      setEdits(initial);
+      setCustomGodModels(customGods);
+      setProvider(d.default_provider || 'opencode-go');
+      setStrategy((d.strategy as LLMStrategy) || 'go-balanced');
+      setOverrideCount(Object.keys(d.per_god_overrides || {}).length);
+    } catch {
+      if (cancelledCheck?.()) return;
+      const fb = fallbackData();
+      setData(fb);
+      setEdits(fb.perGodClass);
+      setCustomGodModels({});
+      setProvider(fb.provider);
+      setStrategy(fb.strategy);
+      setOverrideCount(0);
+      setUsingFallback(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -427,73 +524,75 @@ export default function SettingsDialog() {
     setData(null);
     setError(null);
     setUsingFallback(false);
+    loadProvidersData(() => cancelled);
 
+    // load benchmark config in parallel.
     (async () => {
       try {
-        const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 5000);
-        const r = await fetch('/api/olympus/providers/gods', { signal: ctrl.signal, cache: 'no-store' });
-        clearTimeout(timeout);
-        if (!r.ok) throw new Error(`API ${r.status}`);
-        const d = await r.json();
-        if (!d || typeof d !== 'object' || !Array.isArray(d.gods)) throw new Error('Invalid API response');
-
-        const initial: Record<string, string> = {};
-        for (const g of d.gods) {
-          if (g && g.id) initial[g.id] = g.current_class || g.override?.class || g.default_class || DEFAULT_CLASSES[g.id];
-        }
-        for (const god of GOD_IDS) if (!initial[god]) initial[god] = DEFAULT_CLASSES[god] || ALL_CLASSES[2];
-
-        // Custom strategies carry their own per-god map from disk — used for
-        // the "(default)" marker when a custom strategy is selected.
-        const customGods: Record<string, Record<string, string>> = {};
-        for (const c of (Array.isArray(d.customStrategies) ? d.customStrategies : [])) {
-          if (c && c.gods) customGods[c.id] = c.gods;
-        }
-
-        if (cancelled) return;
-        setData({
-          provider: d.default_provider || 'opencode-go',
-          defaultProvider: d.default_provider || 'opencode-go',
-          availableProviders: Array.isArray(d.availableProviders) ? d.availableProviders : [],
-          perGodClass: initial,
-          availableClasses: d.available_classes || ALL_CLASSES,
-          classFamilies: d.class_families || FALLBACK_CLASS_FAMILIES,
-          strategy: (d.strategy as LLMStrategy) || 'go-balanced',
-          auth: d.auth ?? null,
-          availableStrategies: Array.isArray(d.availableStrategies) ? d.availableStrategies : fallbackData().availableStrategies,
-          customStrategies: Array.isArray(d.customStrategies) ? d.customStrategies : [],
-        });
-        setEdits(initial);
-        setCustomGodModels(customGods);
-        setProvider(d.default_provider || 'opencode-go');
-        setStrategy((d.strategy as LLMStrategy) || 'go-balanced');
-
-        // load benchmark config in parallel.
-        try {
-          const br = await fetch('/api/olympus/benchmarks', { cache: 'no-store' });
-          if (br.ok) {
-            const bd = await br.json();
-            if (bd?.config) {
-              setBenchRecording(!!bd.config.recordingEnabled);
-              setBenchSessionLabel(bd.config.sessionLabel || '');
-            }
+        const br = await fetch('/api/olympus/benchmarks', { cache: 'no-store' });
+        if (br.ok) {
+          const bd = await br.json();
+          if (bd?.config) {
+            setBenchRecording(!!bd.config.recordingEnabled);
+            setBenchSessionLabel(bd.config.sessionLabel || '');
           }
-        } catch {}
-      } catch {
-        if (cancelled) return;
-        const fb = fallbackData();
-        setData(fb);
-        setEdits(fb.perGodClass);
-        setCustomGodModels({});
-        setProvider(fb.provider);
-        setStrategy(fb.strategy);
-        setUsingFallback(true);
-      }
+        }
+      } catch {}
     })();
 
     return () => { cancelled = true; };
-  }, [open]);
+  }, [open, loadProvidersData]);
+
+  // Fix C2: clear all per-god overrides via the API and re-apply the
+  // selected strategy, then refresh the dropdowns from the clean config.
+  const clearOverrides = async () => {
+    if (clearingOverrides) return;
+    setClearingOverrides(true);
+    try {
+      const res = await fetch('/api/olympus/providers/gods', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clearOverrides: true, strategy }),
+      });
+      const d = await res.json().catch(() => null);
+      if (res.ok && d?.ok) {
+        toast.success('Overrides cleared', { description: `${d.strategy} re-applied cleanly.` });
+        await loadProvidersData();
+      } else {
+        toast.error('Failed to clear overrides', { description: d?.error || 'API error' });
+      }
+    } catch {
+      toast.error('Failed to clear overrides');
+    } finally {
+      setClearingOverrides(false);
+    }
+  };
+
+  // Reset the SELECTED strategy to its canonical god → model mapping:
+  // clears per-god overrides server-side and re-applies the strategy,
+  // then refreshes the dropdowns from the clean config.
+  const resetToDefaults = async () => {
+    if (clearingOverrides) return;
+    setClearingOverrides(true);
+    try {
+      const res = await fetch('/api/olympus/providers/gods', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resetToDefaults: true, strategy }),
+      });
+      const d = await res.json().catch(() => null);
+      if (res.ok && d?.ok) {
+        toast.success('Strategy reset to defaults', { description: `${d.strategy} re-applied with the canonical model map.` });
+        await loadProvidersData();
+      } else {
+        toast.error('Failed to reset', { description: d?.error || 'API error' });
+      }
+    } catch {
+      toast.error('Failed to reset');
+    } finally {
+      setClearingOverrides(false);
+    }
+  };
 
   // Compute available models for custom strategies based on authorized APIs
   // GO plan -> GO models, Zen plan -> Zen models, Free keys -> their free models
@@ -914,9 +1013,31 @@ export default function SettingsDialog() {
             </section>
 
 	                {/* Per-god model class — compact grid */}
+	            {overrideCount > 0 && (
+	              <div className="flex items-start gap-2 rounded-md border border-olympus-amber-soft/30 bg-olympus-amber-soft/5 p-2 mb-2">
+	                <AlertTriangle size={12} className="text-olympus-amber-soft mt-0.5 shrink-0" />
+	                <div className="flex-1 min-w-0 text-[10px] font-mono text-olympus-amber-soft leading-relaxed">
+	                  ⚠ {overrideCount} per-god override{overrideCount === 1 ? '' : 's'} active — {overrideCount === 1 ? 'it will' : 'they will'} override the selected strategy.{' '}
+	                  <button
+	                    onClick={clearOverrides}
+	                    disabled={clearingOverrides}
+	                    className="underline underline-offset-2 hover:text-olympus-amber-soft/80 disabled:opacity-50"
+	                  >
+	                    {clearingOverrides ? 'Clearing…' : 'Clear overrides and re-apply'}
+	                  </button>
+	                </div>
+	              </div>
+	            )}
 	            <section>
 	              <div className="flex items-center gap-2 mb-2">
 	                <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">Per-God Model Class</h3>
+	                <button
+	                  onClick={resetToDefaults}
+	                  disabled={clearingOverrides}
+	                  className="text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold underline underline-offset-2 disabled:opacity-50"
+	                >
+	                  {clearingOverrides ? 'Resetting…' : 'Reset to defaults'}
+	                </button>
 	                <span className="text-[9px] font-mono text-olympus-text-dim ml-auto">{familyLabel} · {displayClasses.length}</span>
 	              </div>
 	              <div className="grid grid-cols-3 gap-1.5">

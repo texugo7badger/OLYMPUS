@@ -346,6 +346,9 @@ function getGodModel(godId: string): string {
     if (fs.existsSync(providersFile)) {
       const cfg = JSON.parse(fs.readFileSync(providersFile, "utf-8"));
       const strategy: string = cfg.strategy || "go-balanced";
+      // MIRROR of src/lib/model-strategies.ts.
+      // Do NOT edit by hand — update the canonical file and run `npm run check-strategy-sync`.
+      // Enforced by scripts/check-strategy-sync.js in CI.
       // Inline the strategy map (mirror of scripts/apply-strategy.js
       // BUILTIN_STRATEGIES — kept short to avoid bloating the plugin).
       const STRATEGY_GODS: Record<string, Record<string, string>> = {
@@ -362,9 +365,9 @@ function getGodModel(godId: string): string {
           callimachus:  "opencode-go/glm-5.3-flash",
         },
         "go-balanced": {
-          apollo:       "opencode-go/glm-5.3",
+          apollo:       "opencode-go/glm-5.3-flash",
           atlas:        "opencode-go/hy3",
-          artemis:      "opencode-go/glm-5.3",
+          artemis:      "opencode-go/glm-5.3-flash",
           athena:       "opencode-go/qwen3.7-plus",
           dionysus:     "opencode-go/glm-5.3-flash",
           hephaestus:   "opencode-go/kimi-k2.7-code",
@@ -374,7 +377,7 @@ function getGodModel(godId: string): string {
           callimachus:  "opencode-go/glm-5.3-flash",
         },
         "go-budget": {
-          apollo:       "opencode-go/glm-5.3",
+          apollo:       "opencode-go/glm-5.3-flash",
           atlas:        "opencode-go/hy3",
           artemis:      "opencode-go/glm-5.3-flash",
           athena:       "opencode-go/glm-5.3-flash",

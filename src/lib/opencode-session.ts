@@ -765,6 +765,18 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
         state.stepStarted = true;
         for (const p of parts) mapPart(p, state, deliver);
         if (info?.finish === 'error') state.gotError = true;
+        // Surface provider-level APIErrors stored on the assistant message
+        // (e.g. the fireworks upstream rejecting cache params with HTTP 400).
+        // opencode records these on message.error and completes the run with
+        // zero parts — previously invisible (terminal showed "Task completed.").
+        const infoErr = info?.error;
+        if (infoErr && !state.gotError) {
+          state.gotError = true;
+          const d = infoErr?.data ?? {};
+          const status = d?.statusCode != null ? `[${d.statusCode}] ` : '';
+          const message = d?.message || infoErr?.message || infoErr?.name || 'unknown API error';
+          deliver({ type: 'error', msg: `OpenCode error: ${status}${message}`, raw: info, ts: new Date().toISOString() });
+        }
       } else {
         // Non-2xx — surface a clear error.
         let msg = `OpenCode request failed (HTTP ${res.status})`;

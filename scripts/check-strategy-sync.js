@@ -77,6 +77,7 @@ function godValue(raw, constantName) {
 //     ...
 //   }
 const msStrategies = {};
+const msStrategiesPrefixed = {};
 const msStrategyRegex = /'((?:go|free|zen)-[a-z-]+)':\s*\{[\s\S]*?gods:\s*\{([\s\S]*?)\}/g;
 let m;
 while ((m = msStrategyRegex.exec(msContent)) !== null) {
@@ -86,10 +87,12 @@ while ((m = msStrategyRegex.exec(msContent)) !== null) {
   // Model IDs contain hyphens and slashes (e.g. openai/gpt-oss-20b:free),
   // so the character class must include '-', '/', '.', ':' and '_'.
   // `opencode-go` MUST precede `opencode` in the alternation (ordered regex).
-  const godRegex = /([a-z]+):\s*'(?:opencode-go|opencode|groq|openrouter|nvidia)\/([a-z0-9._:/-]+)'/g;
+  const godRegex = /([a-z]+):\s*'((?:opencode-go|opencode|groq|openrouter|nvidia)\/[a-z0-9._:/-]+)'/g;
   let g;
   while ((g = godRegex.exec(godsBlock)) !== null) {
-    gods[g[1]] = g[2];
+    gods[g[1]] = g[2].replace(/^(?:opencode-go|opencode|groq|openrouter|nvidia)\//, '');
+    msStrategiesPrefixed[stratName] = msStrategiesPrefixed[stratName] || {};
+    msStrategiesPrefixed[stratName][g[1]] = g[2];
   }
   msStrategies[stratName] = gods;
 }
@@ -152,6 +155,197 @@ for (const strat of msKeys) {
 
 if (drift) {
   fail('strategy tables drifted — see diff above. Update one to match the other.');
+}
+
+// ---- Extended mirror checks (2026-09-28) -----------------------------------
+// The rotation incident (stale glm-5.2 defaults in the Settings UI) happened
+// because FOUR mirrors of LLM_STRATEGIES existed outside this guard. Each is
+// now compared against the canonical map; drift reports file:line and exits 1.
+//
+// NOTE: provider prefixes (opencode-go/, opencode/) are stripped before
+// comparison — mirrors that swap a GO model for a ZEN model with the same
+// id would NOT be caught. This matches the original checker's behavior.
+
+const HOOKS_PATH = path.join(ROOT, '.opencode', 'olympus', 'olympus-hooks.ts');
+const OLYMPUS_TS_PATH = path.join(ROOT, 'src', 'lib', 'olympus.ts');
+const ROUTE_TS_PATH = path.join(ROOT, 'src', 'app', 'api', 'olympus', 'providers', 'gods', 'route.ts');
+const DIALOG_TSX_PATH = path.join(ROOT, 'src', 'components', 'olympus', 'settings-dialog.tsx');
+
+function readOrNull(p) {
+  if (!fs.existsSync(p)) return null;
+  return fs.readFileSync(p, 'utf-8');
+}
+
+function lineOf(content, index) {
+  return content.slice(0, index).split('\n').length;
+}
+
+// Extract `god -> model` pairs from a strategy-map mirror (nested format:
+// "go-balanced": { apollo: "opencode-go/...", ... }). Normalized to bare ids,
+// matching the canonical extraction. Also returns the line of each strategy
+// key for drift reporting.
+function extractStrategyMirror(content, marker, label) {
+  if (content === null) fail(`${label}: file missing (marker "${marker}")`);
+  const start = content.indexOf(marker);
+  if (start === -1) fail(`${label}: marker "${marker}" not found`);
+  const region = content.slice(start, start + 10000);
+  const baseLine = lineOf(content, start);
+  const result = {};
+  const lines = {};
+  const stratRe = /['"]((?:go|free|zen)-[a-z-]+)['"]:\s*\{([^}]*)\}/g;
+  let m;
+  while ((m = stratRe.exec(region)) !== null) {
+    const stratName = m[1];
+    const gods = {};
+    const godRe = /([a-z]+):\s*['"]((?:opencode-go|opencode|groq|openrouter|nvidia)\/[a-z0-9._:/-]+)['"]/g;
+    let g;
+    while ((g = godRe.exec(m[2])) !== null) {
+      if (GOD_NAMES.has(g[1])) {
+        gods[g[1]] = g[2].replace(/^(?:opencode-go|opencode|groq|openrouter|nvidia)\//, '');
+      }
+    }
+    result[stratName] = gods;
+    lines[stratName] = baseLine + lineOf(region, m.index);
+  }
+  return { result, lines, label };
+}
+
+// Extract `god -> model` pairs from a FLAT default map. Handles three field
+// shapes: { model: '...' } (olympus.ts GOD_META), { default_class: '...' }
+// (route.ts GOD_META), and bare pairs god: '...' (DEFAULT_CLASSES).
+function extractDefaultPairs(content, marker, field, label) {
+  if (content === null) fail(`${label}: file missing (marker "${marker}")`);
+  const start = content.indexOf(marker);
+  if (start === -1) fail(`${label}: marker "${marker}" not found`);
+  const end = content.indexOf('\n};', start);
+  if (end === -1) fail(`${label}: closing "};" for "${marker}" not found`);
+  const region = content.slice(start, end);
+  const baseLine = lineOf(content, start);
+  const pairs = {};
+  const lines = {};
+  const re = (field === 'model' || field === 'default_class')
+    ? new RegExp(
+        '([a-z]+):\\s*\\{[^}]*?' + field + ":\\s*'(?:opencode-go|opencode|groq|openrouter|nvidia)\\/([a-z0-9._:/-]+)'",
+        'g',
+      )
+    : /([a-z]+):\s*'(?:opencode-go|opencode|groq|openrouter|nvidia)\/([a-z0-9._:/-]+)'/g;
+  let m;
+  while ((m = re.exec(region)) !== null) {
+    if (!GOD_NAMES.has(m[1])) continue;
+    pairs[m[1]] = m[2];
+    lines[m[1]] = baseLine + lineOf(region, m.index);
+  }
+  return { pairs, lines, label };
+}
+
+// Pricing coverage: every PAID model used by the strategies (opencode-go/,
+// opencode/) must have a MODEL_PRICING_USD_PER_1M entry so the Cost
+// Dashboard never reports $0. Free-tier models (openrouter/, nvidia/) have
+// no per-token price and are excluded.
+function checkPricingCoverage(hooksContent) {
+  if (hooksContent === null) fail('pricing check: olympus-hooks.ts missing');
+  const start = hooksContent.indexOf('MODEL_PRICING_USD_PER_1M');
+  if (start === -1) fail('pricing check: MODEL_PRICING_USD_PER_1M not found in olympus-hooks.ts');
+  const end = hooksContent.indexOf('\n};', start);
+  const region = hooksContent.slice(start, end === -1 ? undefined : end);
+  const priced = new Set();
+  const priceRe = /"(opencode-go|opencode)\/[a-z0-9._:/-]+":\s*\{/g;
+  let m;
+  while ((m = priceRe.exec(region)) !== null) {
+    priced.add(m[0].slice(1, m[0].indexOf('"', 1)));
+  }
+  const missing = new Set();
+  for (const strat of Object.keys(msStrategiesPrefixed)) {
+    for (const god of Object.keys(msStrategiesPrefixed[strat])) {
+      const v = msStrategiesPrefixed[strat][god];
+      if ((v.startsWith('opencode-go/') || v.startsWith('opencode/')) && !priced.has(v)) {
+        missing.add(`${strat}.${god}=${v}`);
+      }
+    }
+  }
+  return missing;
+}
+
+// --- Compare mirrors against the canonical map ------------------------------
+const balanced = msStrategies['go-balanced'] || {};
+let mirrorDrift = false;
+
+function reportMirrorDrift(label, strat, god, canonical, mirror, line) {
+  console.error(
+    `  DRIFT  ${label}: ${strat}.${god} canonical=${canonical || '(missing)'} mirror=${mirror || '(missing)'} (line ${line})`,
+  );
+  mirrorDrift = true;
+}
+
+// 1. olympus-hooks.ts STRATEGY_GODS
+const hooks = readOrNull(HOOKS_PATH);
+const hg = extractStrategyMirror(hooks, 'const STRATEGY_GODS', 'olympus-hooks.ts STRATEGY_GODS');
+for (const strat of msKeys) {
+  for (const god of allGods) {
+    const canonical = msStrategies[strat][god];
+    const mirror = hg.result[strat]?.[god];
+    if (canonical !== mirror) {
+      reportMirrorDrift('olympus-hooks.ts', strat, god, canonical, mirror, hg.lines[strat] || 0);
+    }
+  }
+}
+
+// 2. settings-dialog.tsx STRATEGY_MODELS
+const dialog = readOrNull(DIALOG_TSX_PATH);
+const sm = extractStrategyMirror(dialog, 'const STRATEGY_MODELS', 'settings-dialog.tsx STRATEGY_MODELS');
+for (const strat of msKeys) {
+  for (const god of allGods) {
+    const canonical = msStrategies[strat][god];
+    const mirror = sm.result[strat]?.[god];
+    if (canonical !== mirror) {
+      reportMirrorDrift('settings-dialog.tsx', strat, god, canonical, mirror, sm.lines[strat] || 0);
+    }
+  }
+}
+
+// 3. src/lib/olympus.ts GOD_META (go-balanced defaults)
+const olympusTs = readOrNull(OLYMPUS_TS_PATH);
+const om = extractDefaultPairs(olympusTs, 'const GOD_META', 'model', 'olympus.ts GOD_META');
+for (const god of allGods) {
+  const canonical = balanced[god];
+  const mirror = om.pairs[god];
+  if (canonical !== mirror) {
+    reportMirrorDrift('olympus.ts', 'go-balanced', god, canonical, mirror, om.lines[god] || 0);
+  }
+}
+
+// 4. route.ts GOD_META.default_class
+const route = readOrNull(ROUTE_TS_PATH);
+const rm = extractDefaultPairs(route, 'const GOD_META', 'default_class', 'route.ts GOD_META');
+for (const god of allGods) {
+  const canonical = balanced[god];
+  const mirror = rm.pairs[god];
+  if (canonical !== mirror) {
+    reportMirrorDrift('route.ts', 'go-balanced', god, canonical, mirror, rm.lines[god] || 0);
+  }
+}
+
+// 5. settings-dialog.tsx DEFAULT_CLASSES
+const dc = extractDefaultPairs(dialog, 'const DEFAULT_CLASSES', null, 'settings-dialog.tsx DEFAULT_CLASSES');
+for (const god of allGods) {
+  const canonical = balanced[god];
+  const mirror = dc.pairs[god];
+  if (canonical !== mirror) {
+    reportMirrorDrift('settings-dialog.tsx', 'go-balanced', god, canonical, mirror, dc.lines[god] || 0);
+  }
+}
+
+// 6. Pricing coverage (Cost Dashboard never reports $0 for paid models)
+const missingPrices = checkPricingCoverage(hooks);
+if (missingPrices.size > 0) {
+  for (const item of [...missingPrices].sort()) {
+    console.error(`  DRIFT  pricing: no MODEL_PRICING_USD_PER_1M entry for ${item}`);
+  }
+  mirrorDrift = true;
+}
+
+if (mirrorDrift) {
+  fail('strategy mirrors drifted from src/lib/model-strategies.ts — update the canonical file, not the mirrors (see MIRROR header comments).');
 }
 
 ok(`all ${msKeys.length} strategies in sync (${msKeys.join(', ')}).`);

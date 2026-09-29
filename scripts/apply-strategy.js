@@ -61,7 +61,7 @@
  *   node scripts/apply-strategy.js [--strategy <id>] [--impeccable]
  *                                  [--restore [path]]
  *                                  [--status] [--list-backups]
- *                                  [--dry-run]
+ *                                  [--dry-run] [--keep-overrides]
  *
  * If --strategy is omitted, reads from ~/.olympus/llm-providers.json.
  * Defaults to go-balanced if no config found.
@@ -176,9 +176,9 @@ const BUILTIN_STRATEGIES = {
     callimachus:  'opencode-go/glm-5.3-flash',
   },
   'go-balanced': {
-    apollo:       'opencode-go/glm-5.3',
+    apollo:       'opencode-go/glm-5.3-flash',
     atlas:        'opencode-go/hy3',
-    artemis:      'opencode-go/glm-5.3',
+    artemis:      'opencode-go/glm-5.3-flash',
     athena:       'opencode-go/qwen3.7-plus',
     dionysus:     'opencode-go/glm-5.3-flash',
     hephaestus:   'opencode-go/kimi-k2.7-code',
@@ -188,7 +188,7 @@ const BUILTIN_STRATEGIES = {
     callimachus:  'opencode-go/glm-5.3-flash',
   },
   'go-budget': {
-    apollo:       'opencode-go/glm-5.3',
+    apollo:       'opencode-go/glm-5.3-flash',
     atlas:        'opencode-go/hy3',
     artemis:      'opencode-go/glm-5.3-flash',
     athena:       'opencode-go/glm-5.3-flash',
@@ -914,6 +914,36 @@ function strategyFamily(strategy) {
   return 'GO';
 }
 
+/**
+ * Fix C1 — clear per-god overrides in ~/.olympus/llm-providers.json.
+ * Settings-saved overrides are merged on top of the strategy map at apply
+ * time; on a CLI strategy switch a stale pin (e.g. an old Apollo override)
+ * would silently win over the new strategy's model. Returns the number of
+ * overrides cleared (0 = nothing to do / no file).
+ */
+function clearProviderOverrides() {
+  if (!fs.existsSync(PROVIDERS_FILE)) return 0;
+  let cfg;
+  try {
+    cfg = JSON.parse(fs.readFileSync(PROVIDERS_FILE, 'utf-8'));
+  } catch (e) {
+    log(`Warning: could not parse ${PROVIDERS_FILE}: ${e.message}`);
+    return 0;
+  }
+  const overrides = (cfg && cfg.per_god_overrides) || {};
+  const n = Object.keys(overrides).length;
+  if (n > 0) {
+    cfg.per_god_overrides = {};
+    try {
+      fs.writeFileSync(PROVIDERS_FILE, JSON.stringify(cfg, null, 2) + '\n', 'utf-8');
+    } catch (e) {
+      log(`Warning: could not update ${PROVIDERS_FILE}: ${e.message}`);
+      return 0;
+    }
+  }
+  return n;
+}
+
 function isFreeTierModelMap(modelMap) {
   return Object.values(modelMap).some(m =>
     m.startsWith('openrouter/') || m.startsWith('nvidia/')
@@ -1589,6 +1619,8 @@ Options:
   --status           Show current strategy state + backup list.
   --list-backups     List all backups (alias for --status's backup section).
   --dry-run          Don't write any files — just log what would change.
+  --keep-overrides   Preserve per-god overrides from ~/.olympus/llm-providers.json
+                     when applying a strategy (default: clear them).
   --help, -h         Show this help.
 
 Strategy shapes:
@@ -1645,6 +1677,7 @@ function main() {
   let doRestore = false;
   let doStatus = false;
   let refreshModels = false;
+  let keepOverrides = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--strategy' && args[i + 1]) {
@@ -1656,6 +1689,8 @@ function main() {
       dryRun = true;
     } else if (args[i] === '--refresh-models') {
       refreshModels = true;
+    } else if (args[i] === '--keep-overrides') {
+      keepOverrides = true;
     } else if (args[i] === '--restore') {
       doRestore = true;
       // Optional path argument
@@ -1697,6 +1732,17 @@ function main() {
 
   if (doRestore) {
     restoreBackup(restorePath);
+  }
+
+  // Fix C1 (2026-09-28): a CLI strategy switch clears Settings-saved per-god
+  // overrides so a stale pin can never silently win over the strategy map.
+  // --keep-overrides preserves the pins; --restore and --dry-run never touch
+  // them.
+  if (cliStrategy && !doRestore && !keepOverrides && !dryRun) {
+    const cleared = clearProviderOverrides();
+    if (cleared > 0) {
+      log(`Cleared ${cleared} per-god override(s) (use --keep-overrides to preserve).`);
+    }
   }
 
   log(`Olympus root: ${OLYMPUS_ROOT}`);

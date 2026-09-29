@@ -39,26 +39,22 @@ const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
 const PROVIDERS_FILE = path.join(OLYMPUS_HOME, 'llm-providers.json');
 const ROOT_PROVIDERS = path.join(process.cwd(), '.opencode', 'llm-providers.json');
 
-// God metadata. Models match the go-balanced strategy in model-strategies.ts.
-// GLM-5.2 is reserved for Apollo alone; the `default_class` field is a
-// legacy hint kept for backward-compat with the Settings dialog's
-// per-god override table.
-//
-// Callimachus added. Was missing from this map, which caused
-// the Settings dialog's per-god table to render only 8 rows and the
-// "default_class" for Callimachus to fall through to Apollo's GLM-5.2
-// whenever a strategy wasn't resolved. Mirrors src/lib/olympus.ts GOD_META.
+// MIRROR of src/lib/model-strategies.ts (go-balanced gods).
+// Do NOT edit by hand — update the canonical file and run `npm run check-strategy-sync`.
+// Enforced by scripts/check-strategy-sync.js in CI.
+// The `default_class` field is a legacy hint kept for backward-compat with
+// the Settings dialog's per-god override table.
 const GOD_META: Record<string, { icon: string; default_class: string }> = {
-  apollo:      { icon: 'apollo',     default_class: 'opencode-go/glm-5.2' },
-  atlas:       { icon: 'git-fork',   default_class: 'opencode-go/qwen3.7-plus' },
-  hephaestus:  { icon: 'hephaestus', default_class: 'opencode-go/deepseek-v4-pro' },
+  apollo:      { icon: 'apollo',     default_class: 'opencode-go/glm-5.3-flash' },
+  atlas:       { icon: 'git-fork',   default_class: 'opencode-go/hy3' },
+  hephaestus:  { icon: 'hephaestus', default_class: 'opencode-go/kimi-k2.7-code' },
   athena:      { icon: 'athena',     default_class: 'opencode-go/qwen3.7-plus' },
-  hermes:      { icon: 'hermes',     default_class: 'opencode-go/qwen3.7-plus' },
-  artemis:     { icon: 'artemis',    default_class: 'opencode-go/qwen3.7-plus' },
-  dionysus:    { icon: 'dionysus',   default_class: 'opencode-go/deepseek-v4-pro' },
-  persephone:  { icon: 'persephone', default_class: 'opencode-go/deepseek-v4-pro' },
-  prometheus:  { icon: 'prometheus', default_class: 'opencode-go/qwen3.7-plus' },
-  callimachus: { icon: 'callimachus', default_class: 'opencode-go/deepseek-v4-flash' },
+  hermes:      { icon: 'hermes',     default_class: 'opencode-go/kimi-k2.7-code' },
+  artemis:     { icon: 'artemis',    default_class: 'opencode-go/glm-5.3-flash' },
+  dionysus:    { icon: 'dionysus',   default_class: 'opencode-go/glm-5.3-flash' },
+  persephone:  { icon: 'persephone', default_class: 'opencode-go/qwen3.7-plus' },
+  prometheus:  { icon: 'prometheus', default_class: 'opencode-go/minimax-m3' },
+  callimachus: { icon: 'callimachus', default_class: 'opencode-go/glm-5.3-flash' },
 };
 
 /**
@@ -263,7 +259,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { god, override, strategy, defaultProvider, customStrategy } = body;
+    const { god, override, strategy, defaultProvider, customStrategy, clearOverrides, resetToDefaults } = body;
 
     // Handle custom strategy creation
     if (customStrategy) {
@@ -336,6 +332,16 @@ export async function POST(req: NextRequest) {
 
     const cfg = loadProviders();
     if (!cfg.per_god_overrides) cfg.per_god_overrides = {};
+
+    // Fix C2: explicit "clear all overrides and re-apply" from the Settings
+    // dialog warning. "resetToDefaults" (Reset button) shares the same
+    // server-side behavior — clear overrides, then re-apply cleanly. Both run
+    // before the cross-catalog prune and the apply-strategy spawn.
+    let clearedOverrides = 0;
+    if (clearOverrides === true || resetToDefaults === true) {
+      clearedOverrides = Object.keys(cfg.per_god_overrides).length;
+      cfg.per_god_overrides = {};
+    }
 
     // Persist strategy if present.
     // Accept any built-in strategy id OR any user-defined custom-* strategy.
@@ -430,7 +436,7 @@ export async function POST(req: NextRequest) {
           : (cfg.strategy && /^(go-[a-z-]+|zen-[a-z-]+|free-[a-z-]+|custom-[a-zA-Z0-9_-]+)$/.test(cfg.strategy))
             ? cfg.strategy
             : DEFAULT_LLM_STRATEGY;
-        execSync(`node "${applyScript}" --strategy ${applyTarget}`, {
+        execSync(`node "${applyScript}" --strategy ${applyTarget} --keep-overrides`, {
           cwd: process.cwd(),
           stdio: 'pipe',
           timeout: 15000,
@@ -450,6 +456,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      clearedOverrides,
       god,
       override: god ? (cfg.per_god_overrides[god] || null) : undefined,
       strategy: cfg.strategy,

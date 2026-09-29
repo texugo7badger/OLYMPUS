@@ -15,7 +15,9 @@
  *   - 9 built-in strategies: 3 GO-plan + 3 Zen (pay-as-you-go) + 3 free
  *     (free-openrouter, free-big-pickle, free-nvidia-build). Groq's free tier
  *     was removed — its 12K TPM window cannot serve the OLYMPUS system prompt.
- *   - GLM-5.3 reserved exclusively for Apollo (all strategies) + Artemis (GO).
+ *   - GLM-5.3 reserved for Apollo + Artemis in go-max-quality only; the
+ *     daily strategies (go-balanced/go-budget) keep Apollo on GLM-5.3-Flash
+ *     (cap-aware — the $3/5h rolling cap would blow in a week at 5h/day).
  *   - Kimi K3 (in go-max-quality for top specialists) joins Kimi K2.7 Code,
  *     DeepSeek V4 Pro/Flash, Qwen3.7 Plus, MiMo V2.5, Grok 4.5, MiniMax M3/M2.7.
  *   - Callimachus always uses DeepSeek V4 Flash (background vault curation).
@@ -73,8 +75,8 @@ export const ZEN_PLAN_DOCS_URL = 'https://opencode.ai/docs/zen/';
  * users can reason about quality vs cost.
  *  - quality : best GO has to offer; GLM-5.3 for Apollo + Artemis, Kimi K2.7
  *              Code / GLM-5.3-Flash / MiniMax M3 for specialists
- *  - balanced: GLM-5.3 for Apollo + mid-tier (Kimi K2.7 Code / Qwen3.7 Plus /
- *              GLM-5.3-Flash / MiniMax M3)
+ *  - balanced: GLM-5.3-Flash for Apollo + mid-tier (Kimi K2.7 Code / Qwen3.7
+ *              Plus / GLM-5.3-Flash / MiniMax M3)
  *              for specialists
  *  - budget  : DeepSeek V4 Flash across all gods (effectively unlimited)
  *  - free    : No GO or ZEN plan required — uses the live free tiers (OpenRouter +
@@ -85,8 +87,8 @@ export type LLMStrategyTier = 'quality' | 'balanced' | 'budget' | 'free' | 'cust
 
 export type LLMStrategy =
   | 'go-max-quality'         // GLM-5.3 (Apollo+Artemis) + Kimi K2.7 Code / GLM-5.3-Flash / MiniMax M3 (specialists) + GLM-5.3-Flash (vault) — best quality within GO caps
-  | 'go-balanced'            // GLM-5.3 (Apollo) + Kimi K2.7 Code / Qwen3.7 Plus / GLM-5.3-Flash / MiniMax M3 (specialists) + GLM-5.3-Flash (vault) — optimized for 8h/day sustainable coding
-  | 'go-budget'              // GLM-5.3 (Apollo, sacred) + GLM-5.3-Flash (all others) — max savings within GO caps
+  | 'go-balanced'            // GLM-5.3-Flash (Apollo, cap-aware) + Kimi K2.7 Code / Qwen3.7 Plus / GLM-5.3-Flash / MiniMax M3 (specialists) + GLM-5.3-Flash (vault) — sustainable 5h/day
+  | 'go-budget'              // GLM-5.3-Flash everywhere but Atlas (Hy3) — sustainable 8h/day within GO caps
   | 'zen-max-quality'        // "ZEN Max Quality" — proprietary frontier on OpenCode Zen (Claude Sonnet 5 coding + GPT-5.4 reasoning, opencode/<id>, no caps)
   | 'zen-balanced'           // "ZEN" — full 128-agent OLYMPUS on OpenCode Zen's proprietary models (opencode/<id>), no request caps
   | 'zen-budget'             // "ZEN Budget" — lowest cost on OpenCode Zen (MiniMax M2.7 everywhere but Apollo), still proprietary
@@ -169,18 +171,18 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'go-balanced': {
     label: 'GO Balanced',
     description:
-      'Default — sustainable 8h/day coding. Apollo: GLM-5.3. Atlas: Hy3 (orchestration). Hephaestus/Hermes: Kimi K2.7 Code. Athena/Persephone: Qwen3.7 Plus. Prometheus: MiniMax M3. Dionysus/Callimachus: GLM-5.3-Flash. Artemis: GLM-5.3.',
+      'Default — sustainable 5h/day (cap-aware). Apollo: GLM-5.3-Flash. Atlas: Hy3 (orchestration). Hephaestus/Hermes: Kimi K2.7 Code. Athena/Persephone: Qwen3.7 Plus. Prometheus: MiniMax M3. Dionysus/Artemis/Callimachus: GLM-5.3-Flash.',
     plan: 'GO',
     tier: 'balanced',
-    reasoningModel: 'glm-5.3',
+    reasoningModel: 'glm-5.3-flash',
     codeModel: 'kimi-k2.7-code',
-    terminalModel: 'opencode-go/glm-5.3',
+    terminalModel: 'opencode-go/glm-5.3-flash',
     gods: {
-      apollo:      'opencode-go/glm-5.3',
+      apollo:      'opencode-go/glm-5.3-flash',
       atlas:       'opencode-go/hy3',
       hephaestus:  'opencode-go/kimi-k2.7-code',
       athena:      'opencode-go/qwen3.7-plus',
-      artemis:     'opencode-go/glm-5.3',
+      artemis:     'opencode-go/glm-5.3-flash',
       dionysus:    'opencode-go/glm-5.3-flash',
       hermes:      'opencode-go/kimi-k2.7-code',
       persephone:  'opencode-go/qwen3.7-plus',
@@ -193,14 +195,14 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'go-budget': {
     label: 'GO Budget',
     description:
-      'Lowest cost within GO caps. Apollo: GLM-5.3 (sacred). Atlas: Hy3 (orchestration). All others: GLM-5.3-Flash ($12/5h rolling).',
+      'Lowest cost within GO caps — sustainable 8h/day. Apollo: GLM-5.3-Flash. Atlas: Hy3 (orchestration). All others: GLM-5.3-Flash ($12/5h rolling).',
     plan: 'GO',
     tier: 'budget',
-    reasoningModel: 'glm-5.3',
+    reasoningModel: 'glm-5.3-flash',
     codeModel: 'glm-5.3-flash',
-    terminalModel: 'opencode-go/glm-5.3',
+    terminalModel: 'opencode-go/glm-5.3-flash',
     gods: {
-      apollo:      'opencode-go/glm-5.3',
+      apollo:      'opencode-go/glm-5.3-flash',
       atlas:       'opencode-go/hy3',
       artemis:     'opencode-go/glm-5.3-flash',
       athena:      'opencode-go/glm-5.3-flash',

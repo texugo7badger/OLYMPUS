@@ -2,6 +2,12 @@
 
 > How OLYMPUS picks which LLM each god uses — and how to run OLYMPUS for free.
 
+> **Source of truth:** Model IDs are canonical in `src/lib/model-strategies.ts`.
+> Other files (`apply-strategy.js`, `olympus-hooks.ts`, `olympus.ts`,
+> `route.ts`, `settings-dialog.tsx`) mirror that data. `npm run check-strategy-sync`
+> enforces parity and runs in CI. Docs below are updated manually when the
+> canonical file changes.
+
 **Version:** v0.0.1
 **License:** AGPL-3.0-or-later
 
@@ -10,8 +16,8 @@
 | Strategy | Plan required | Cost | Quality | Daily req budget | When to use |
 |---|---|---|---|---|---|
 | `go-max-quality` | GO plan | $ | Best | ~20-30 (GLM-5.3 tight) | Production — Apollo on GLM-5.3, Atlas on Hy3, Hephaestus/Hermes on Kimi K2.7 Code, Athena/Dionysus/Persephone/Callimachus on GLM-5.3-Flash, Artemis on GLM-5.3, Prometheus on MiniMax M3 |
-| `go-balanced` (default) | GO plan | $ | Great | ~500-1,000 | **Day-to-day 8h/day** — Apollo on GLM-5.3, Atlas on Hy3, Hephaestus/Hermes on Kimi K2.7 Code, Athena/Persephone on Qwen3.7 Plus, Prometheus on MiniMax M3, Dionysus/Callimachus on GLM-5.3-Flash, Artemis on GLM-5.3 |
-| `go-budget` | GO plan | ¢ | Good | ~1,000+ | Maximum savings — Apollo on GLM-5.3, Atlas on Hy3 (orchestration), all others on GLM-5.3-Flash |
+| `go-balanced` (default) | GO plan | $ | Great | ~500-1,000 | **Day-to-day 5h/day (cap-aware)** — Apollo on GLM-5.3-Flash, Atlas on Hy3, Hephaestus/Hermes on Kimi K2.7 Code, Athena/Persephone on Qwen3.7 Plus, Prometheus on MiniMax M3, Dionysus/Artemis/Callimachus on GLM-5.3-Flash |
+| `go-budget` | GO plan | ¢ | Good | ~1,000+ | Maximum savings (cap-aware 8h/day) — Apollo on GLM-5.3-Flash, Atlas on Hy3 (orchestration), all others on GLM-5.3-Flash |
 | `zen-max-quality` (**Zen**) | **Zen plan** | $$ | Best | **No caps** (pay-as-you-go) | Best quality on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Sol, Hephaestus/Artemis/Hermes on Claude Sonnet 5, Athena on GPT 5.6 Terra, Dionysus on GPT 5.6 Luna, Persephone on Gemini 3.1 Pro, Prometheus on Grok Build 0.1, Callimachus on Claude Haiku 4.5, vault on GLM-5.3 |
 | `zen-balanced` (**Zen**) | **Zen plan** | $ | Great | **No caps** (pay-as-you-go) | Full 128-agent OLYMPUS without a GO plan — Apollo on GLM-5.3, Atlas on GPT 6 Sol, Hephaestus/Artemis on Claude Sonnet 5, Athena on GPT 5.6 Terra, Dionysus on GPT 5.6 Luna, Hermes on GPT 5.4 Mini, Persephone on Gemini 3.1 Pro, Prometheus on Grok Build 0.1, Callimachus on Claude Haiku 4.5, vault on GLM-5.3-Flash. Proprietary APIs, charged per request |
 | `zen-budget` (**Zen**) | **Zen plan** | ¢ | Good | **No caps** (pay-as-you-go) | Lowest cost on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Luna, all others on GLM-5.3-Flash, Callimachus on Claude Haiku 4.5 |
@@ -60,19 +66,19 @@ These are dollar-value caps, not request counts. Different models consume the bu
 
 | God | Model | Requests/day | Monthly | % of cap |
 |---|---|---|---|---|
-| Apollo (balanced) | GLM-5.3 | ~20 (planning) | 400 | 37% |
+| Apollo (balanced) | GLM-5.3-Flash | ~20 (planning) | 400 | 1% |
 | Atlas | Hy3 | ~20 (orchestration) | ~400 | Very low |
 | 2 reasoning gods | Qwen3.7 Plus | ~40 each | 800 each | 4% |
 | 2 code gods | Kimi K2.7 Code | ~40 each | 800 each | 12% |
 | 1 orchestration god | MiniMax M3 | ~40 | 800 | 5% |
-| 1 security god | GLM-5.3 | ~30 | 600 | 56% |
+| 1 security god | GLM-5.3-Flash | ~30 | 600 | <2% |
 | 3 mechanical gods | GLM-5.3-Flash | ~30 each | 600 each | <2% |
 
-> Note: GLM-5.3 cap ($15/mo, $3/5h rolling) is shared between Apollo and
-> Artemis. In sustained 8h/day use both would consume ~93% of the monthly
-> budget. The 80/20 fast-path mitigates this, but if Artemis regularly
-> hits the cap, consider moving Artemis to `glm-5.3-flash` in GO Balanced
-> post-benchmark.
+> Note: cap-aware mapping. The daily strategies keep Apollo + Artemis on
+> GLM-5.3-Flash ($60/mo → $12/5h rolling, 31,580 req/mo). GLM-5.3
+> ($15/mo → $3/5h rolling, 1,080 req/mo) is reserved for go-max-quality
+> (occasional premium use). At 5h/day Apollo alone would burn ~$46.86/mo
+> on GLM-5.3 vs ~$5.28/mo on Flash — Flash survives the month comfortably.
 
 **Total monthly spend:** ~$15-20 (well within the $60 plan). Headroom for spikes.
 
@@ -105,12 +111,12 @@ OLYMPUS now has **10 gods** (9 original + Atlas):
 
 | God | Role | Model (balanced) |
 |-----|------|------------------|
-| Apollo | Planning & architecture | GLM-5.3 |
+| Apollo | Planning & architecture | GLM-5.3-Flash |
 | **Atlas** | Orchestration & dispatch execution | Hy3 |
 | Hephaestus | Backend code | Kimi K2.7 Code |
 | Athena | Frontend | Qwen3.7 Plus |
 | Hermes | Integrations | Kimi K2.7 Code |
-| Artemis | Security | GLM-5.3 |
+| Artemis | Security | GLM-5.3-Flash |
 | Dionysus | QA | GLM-5.3-Flash |
 | Persephone | Database | Qwen3.7 Plus |
 | Prometheus | DevOps | MiniMax M3 |
@@ -126,13 +132,13 @@ Apollo gets GLM-5.3 (sacred — shared only with Artemis). Atlas keeps Hy3 (sacr
 
 ### `go-balanced` (default) — great models, moderate cost
 
-Apollo gets GLM-5.3. Specialists get Kimi K2.7 Code (backend/integrations), Qwen3.7 Plus (frontend/data), MiniMax M3 (DevOps), GLM-5.3-Flash (QA/vault), and Artemis shares GLM-5.3 for security.
+Apollo gets GLM-5.3-Flash (cap-aware — GLM-5.3's $3/5h rolling cap is reserved for go-max-quality). Specialists get Kimi K2.7 Code (backend/integrations), Qwen3.7 Plus (frontend/data), MiniMax M3 (DevOps), and GLM-5.3-Flash (QA/security/vault).
 
 **When to use:** Day-to-day work. This is the right default for 90% of users.
 
 ### `go-budget` — lowest cost on the GO plan
 
-**Apollo stays on GLM-5.3** (sacred — never downgraded). Atlas uses **Hy3** — a model specialized for agent orchestration and search tasks. All other gods are on **GLM-5.3-Flash** — $12/5h rolling, ~31,580 requests/month per god.
+**Apollo runs on GLM-5.3-Flash** (cap-aware daily default — the GLM family stays sacred; GLM-5.3 itself is reserved for go-max-quality). Atlas uses **Hy3** — a model specialized for agent orchestration and search tasks. All other gods are on **GLM-5.3-Flash** — $12/5h rolling, ~31,580 requests/month per god. Sustainable at 8h/day (~$8.45/mo for Apollo).
 
 **When to use:** High-volume work where you want maximum throughput and minimum GO plan consumption.
 
@@ -270,8 +276,8 @@ Per-god overrides set in the Settings dialog **do route** for free strategies: a
 
 There are **no automatic model fallbacks** — OLYMPUS never silently downgrades a god's model. When a model's monthly cap is exhausted, you switch strategies:
 
-- **Kimi K3 / Grok 4.7 not used in any strategy:** their GO caps ($15/mo → $3/5h rolling) are too tight for multi-god duty. GLM-5.3 is reserved for Apollo + Artemis only. Switch to `go-balanced` for more headroom, or a **Zen** strategy (`zen-max-quality` keeps frontier quality with Claude Sonnet 5 / GPT 6 Sol; `zen-balanced`/`zen-budget` use GPT 5.6 Terra/Luna / GLM-5.3-Flash — pay-as-you-go, **no request caps**).
-- **GLM-5.3 (Apollo/Artemis) capped (1,080 req/month, shared):** Apollo is sacred and is never downgraded. If GLM-5.3 runs out, Apollo waits for the monthly reset — or switch to a Zen strategy (Apollo stays on `opencode/glm-5.3`, pay-as-you-go) or a free strategy. If only Artemis's half is exhausted, move her to `glm-5.3-flash`.
+- **Kimi K3 / Grok 4.7 not used in any strategy:** their GO caps ($15/mo → $3/5h rolling) are too tight for multi-god duty. GLM-5.3 is reserved for go-max-quality (Apollo + Artemis) only. Switch to `go-balanced` for more headroom, or a **Zen** strategy (`zen-max-quality` keeps frontier quality with Claude Sonnet 5 / GPT 6 Sol; `zen-balanced`/`zen-budget` use GPT 5.6 Terra/Luna / GLM-5.3-Flash — pay-as-you-go, **no request caps**).
+- **GLM-5.3 (go-max-quality only) capped (1,080 req/month, shared Apollo + Artemis):** the daily strategies are unaffected — they run Apollo on GLM-5.3-Flash. If GLM-5.3 runs out on go-max-quality, switch to `go-balanced`, a Zen strategy (Apollo stays on `opencode/glm-5.3`, pay-as-you-go) or a free strategy.
 - **Any GO model capped:** switch to a free strategy in Settings (`free-openrouter`, `free-big-pickle`, `free-nvidia-build`) and keep working at zero cost. When one free provider's rate limit runs out, pick another free strategy and continue.
 
 ## Why no OpenAI/Anthropic direct providers?

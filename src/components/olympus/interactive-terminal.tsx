@@ -113,6 +113,8 @@ export default function InteractiveTerminal() {
   const [showContext, setShowContext] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [awaitingAnswer, setAwaitingAnswer] = useState(false);
+  const runHadText = useRef(false);
+  const runHadError = useRef(false);
   const [awaitingContext, setAwaitingContext] = useState(false);
   const [godActivities, setGodActivities] = useState<GodActivity[]>([]);
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -253,6 +255,7 @@ export default function InteractiveTerminal() {
         }
       }
       if (text) {
+        runHadText.current = true;
         addMessage({ type: 'response', text, god: ev.god || 'apollo' });
         updateGodActivity(ev.god || 'apollo', 'working', 'Responding...');
       }
@@ -293,18 +296,29 @@ export default function InteractiveTerminal() {
       return;
     }
     if (ev.type === 'error') {
+      runHadError.current = true;
       addMessage({ type: 'error', text: ev.msg || ev.text || 'An error occurred' });
       updateGodActivity('apollo', 'error');
       return;
     }
     if (ev.type === 'action_start') {
       // Already handled by the "Routing to Apollo..." message above.
+      runHadText.current = false;
+      runHadError.current = false;
       return;
     }
     if (ev.type === 'action_done') {
       setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false); updateGodActivity('apollo', 'idle');
-      if (ev.code === 0) addMessage({ type: 'system', text: 'Task completed.' });
-      else addMessage({ type: 'error', text: `Task failed (exit code ${ev.code})` });
+      if (ev.code === 0) {
+        if (runHadText.current) {
+          addMessage({ type: 'system', text: 'Task completed.' });
+        } else if (!runHadError.current) {
+          console.warn('[terminal] run ended (code 0) with no output and no error event');
+          addMessage({ type: 'system', text: 'Task completed (no output).' });
+        }
+      } else {
+        addMessage({ type: 'error', text: `Task failed (exit code ${ev.code})` });
+      }
       inputRef.current?.focus();
       return;
     }

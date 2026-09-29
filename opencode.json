@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "opencode-go/glm-5.3",
+  "model": "opencode-go/glm-5.3-flash",
   "small_model": "opencode-go/glm-5.3-flash",
   "default_agent": "apollo",
   "instructions": [],
@@ -33,7 +33,7 @@
     "apollo": {
       "description": "Master Planner — Architecture, planning, and user contract. Apollo designs the DAG, defines acceptance criteria, and hands execution to Atlas.",
       "mode": "primary",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/gods/apollo.txt}",
       "tools": {
         "read": true,
@@ -73,7 +73,7 @@
     "artemis": {
       "description": "Security Warden — Penetration testing, threat modeling, compliance, secrets hygiene.",
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/gods/artemis.txt}",
       "tools": {
         "read": true,
@@ -237,7 +237,7 @@
     },
     "ai-code-auditor": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/ai_code_auditor.txt}"
     },
     "ai-engineer": {
@@ -262,7 +262,7 @@
     },
     "appsec-engineer": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/appsec_engineer.txt}"
     },
     "architect": {
@@ -277,7 +277,7 @@
     },
     "blockchain-security-auditor": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/blockchain_security_auditor.txt}"
     },
     "brain-backup": {
@@ -317,7 +317,7 @@
     },
     "cloud-security-auditor": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/cloud_security_auditor.txt}"
     },
     "code-explorer": {
@@ -342,7 +342,7 @@
     },
     "compliance-auditor": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/compliance_auditor.txt}"
     },
     "conversation-analyzer": {
@@ -572,7 +572,7 @@
     },
     "pentester": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/pentester.txt}"
     },
     "performance-optimizer": {
@@ -592,7 +592,7 @@
     },
     "privacy-engineer": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/privacy_engineer.txt}"
     },
     "prompt-engineer": {
@@ -687,12 +687,12 @@
     },
     "security-architect": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/security_architect.txt}"
     },
     "security-reviewer": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/security_reviewer.txt}"
     },
     "silent-failure-hunter": {
@@ -732,7 +732,7 @@
     },
     "supply-chain-auditor": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/supply_chain_auditor.txt}"
     },
     "systems-reviewer": {
@@ -767,7 +767,7 @@
     },
     "threat-analyst": {
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3",
+      "model": "opencode-go/glm-5.3-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/artemis/threat_analyst.txt}"
     },
     "ts-reviewer": {
