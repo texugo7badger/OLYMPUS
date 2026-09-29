@@ -41,6 +41,22 @@ import { spawnOpencode } from '@/lib/opencode-spawn';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
 
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
+// Vault root — mirrors src/app/api/olympus/upload/route.ts. Used by the
+// permission auto-approval allowlist below.
+const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+// Permission auto-approval allowlist (freeze-class fix 2026-09-29): OpenCode
+// routes reads OUTSIDE the project root through `external_directory: ask`,
+// which permanently blocks the run when no client answers. Vault paths are
+// always user-owned, so asks whose patterns all start with the vault root
+// are approved automatically ("once"), and the approval is logged in the
+// terminal. Override with OLYMPUS_AUTO_APPROVE_GLOBS (comma-separated
+// absolute prefixes; empty string disables auto-approval).
+const DEFAULT_AUTO_APPROVE_PREFIXES = [`${VAULT_ROOT}/`];
+const AUTO_APPROVE_PREFIXES: string[] = (
+  process.env.OLYMPUS_AUTO_APPROVE_GLOBS !== undefined
+    ? process.env.OLYMPUS_AUTO_APPROVE_GLOBS
+    : DEFAULT_AUTO_APPROVE_PREFIXES.join(',')
+).split(',').map(s => s.trim()).filter(Boolean);
 const PID_FILE = path.join(OLYMPUS_HOME, 'opencode-server.pid');
 const LOG_FILE = path.join(OLYMPUS_HOME, 'opencode-server.log');
 const SESSION_MAP_FILE = path.join(OLYMPUS_HOME, 'opencode-sessions.json');
@@ -363,8 +379,32 @@ async function spawnServer(port: number): Promise<ServerInfo> {
 }
 
 /** Kill the warm server (app exit). Removes the PID file. */
-export function cleanupServer() {
-  if (serverChild && serverChild.exitCode === null && serverChild.signalCode === null) {
+/**
+ * Respond to a pending OpenCode permission request. `reply` is one of
+ * "once" | "always" | "reject" (matches POST /permission/{requestID}/reply).
+ * Returns true when the reply was accepted by the warm server.
+ */
+export async function respondToPermission(
+  requestID: string,
+  reply: 'once' | 'always' | 'reject',
+): Promise<boolean> {
+  const server = await ensureServer();
+  const auth = server.authed ? server.password : null;
+  const res = await apiFetch(
+    server.port,
+    auth,
+    `/permission/${encodeURIComponent(requestID)}/reply`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reply }),
+    },
+    10_000,
+  );
+  return res.ok;
+}
+
+export function cleanupServer() {  if (serverChild && serverChild.exitCode === null && serverChild.signalCode === null) {
     try { serverChild.kill('SIGTERM'); } catch {}
   }
   removePidFile();
@@ -519,6 +559,7 @@ function mapEvent(
     stepFinished: boolean;
     gotError: boolean;
     userMessageIds: Set<string>;
+    lastFrameAt: number;
   },
   onEvent: (ev: any) => void,
 ) {
@@ -561,6 +602,31 @@ function mapEvent(
       }
       return;
     }
+    case 'permission.asked': {
+      // Surface OpenCode permission prompts (the run BLOCKS until one is
+      // answered — an unanswered ask previously rendered as an eternal
+      // "waiting for Apollo...", freeze class #3 of 2026-09-29).
+      if (props?.sessionID !== sessionId) return;
+      onEvent({
+        type: 'permission_ask',
+        requestID: props.id,
+        sessionID: sessionId,
+        action: props.permission || 'permission',
+        patterns: Array.isArray(props.patterns) ? props.patterns : [],
+        ts: new Date().toISOString(),
+      });
+      return;
+    }
+    case 'permission.replied': {
+      onEvent({
+        type: 'permission_replied',
+        requestID: props?.id || '',
+        sessionID: props?.sessionID || '',
+        reply: props?.response || props?.reply || '',
+        ts: new Date().toISOString(),
+      });
+      return;
+    }
     default:
       return;
   }
@@ -576,6 +642,7 @@ function mapPart(
     stepFinished: boolean;
     gotError: boolean;
     userMessageIds: Set<string>;
+    lastFrameAt: number;
   },
   onEvent: (ev: any) => void,
 ) {
@@ -690,6 +757,10 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
       stepFinished: false,
       gotError: false,
       userMessageIds: new Set<string>(),
+      // Liveness: the /event pump stamps every received frame here (BEFORE
+      // session filtering — any frame proves the feed is alive). Drives the
+      // silence watchdog.
+      lastFrameAt: Date.now(),
     };
     let receivedEvents = false;
     let postStarted = false;
@@ -713,8 +784,53 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
       onAbort();
     }, opts.maxRuntimeMs ?? 10 * 60_000);
 
+    // Silence watchdog (freeze-class fix 2026-09-29): if NO frame of any
+    // kind arrives from the /event feed for SILENCE_WARN_MS, warn visibly;
+    // if it stays silent for SILENCE_STALL_MS, tell the user explicitly that
+    // the run is stalled and how to abort. Never auto-kills — the user keeps
+    // STOP agency (a wrongly-terminated run loses all progress).
+    const SILENCE_WARN_MS = Number(process.env.OLYMPUS_SILENCE_WARN_MS || 60_000);
+    const SILENCE_STALL_MS = Number(process.env.OLYMPUS_SILENCE_STALL_MS || 150_000);
+    let warnedSilence = false;
+    let stalledNotified = false;
+    const silenceTimer = setInterval(() => {
+      if (postStarted === false || eventCtrl.signal.aborted) return;
+      const silent = Date.now() - state.lastFrameAt;
+      if (silent >= SILENCE_STALL_MS && !stalledNotified) {
+        stalledNotified = true;
+        deliver({
+          type: 'log',
+          msg: `⚠ No stream activity for ${Math.round(silent / 1000)}s — the run looks STALLED (pending permission, provider hang, or dead tool). If this persists, click STOP and resend; nothing is being lost.`,
+          ts: new Date().toISOString(),
+        });
+      } else if (silent >= SILENCE_WARN_MS && !warnedSilence) {
+        warnedSilence = true;
+        deliver({
+          type: 'log',
+          msg: `No stream activity for ${Math.round(silent / 1000)}s — Apollo may be thinking, waiting on a permission, or the provider may be stalled. Watching…`,
+          ts: new Date().toISOString(),
+        });
+      }
+      if (silent < SILENCE_WARN_MS / 2) { warnedSilence = false; stalledNotified = false; }
+    }, 5_000);
+
     // The wrapped onEvent also marks that we delivered at least one event.
     const deliver = (ev: any) => {
+      // Auto-approve allowlisted permission asks (vault paths). Runs BEFORE
+      // delivery so the UI still shows the card (marked auto-approved via
+      // the following log). Never delivered in its own right — do NOT set
+      // receivedEvents for approvals.
+      if (ev.type === 'permission_ask' && AUTO_APPROVE_PREFIXES.length > 0
+          && Array.isArray(ev.patterns) && ev.patterns.length > 0
+          && ev.patterns.every((p: string) => AUTO_APPROVE_PREFIXES.some(pre => p.startsWith(pre)))) {
+        respondToPermission(ev.requestID, 'once')
+          .then(ok => {
+            if (ok && !eventCtrl.signal.aborted) {
+              opts.onEvent({ type: 'log', msg: `[permission] auto-approved ${ev.action} (vault path): ${(ev.patterns || []).join(', ')}`, ts: new Date().toISOString() });
+            }
+          })
+          .catch(() => {});
+      }
       if (!eventCtrl.signal.aborted || ev.type === 'error') {
         receivedEvents = true;
         opts.onEvent(ev);
@@ -831,6 +947,7 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
       };
     } finally {
       clearTimeout(maxTimer);
+      clearInterval(silenceTimer);
       if (outerSignal) outerSignal.removeEventListener('abort', onAbort);
     }
   });
@@ -852,6 +969,7 @@ async function openEventFeed(
     stepFinished: boolean;
     gotError: boolean;
     userMessageIds: Set<string>;
+    lastFrameAt: number;
   },
   onEvent: (ev: any) => void,
   signal: AbortSignal,
@@ -890,10 +1008,16 @@ async function openEventFeed(
           if (!payload) continue;
           try {
             const ev = JSON.parse(payload);
+            // Liveness: only SESSION-OWNED frames count. The feed is
+            // process-global — heartbeats (~20s), plugin bursts, and other
+            // sessions' traffic would otherwise mask a dead run.
             const belongs =
               ev?.properties?.sessionID === sessionId ||
               (ev?.type === 'message.part.updated' && ev?.properties?.part?.sessionID === sessionId);
-            if (belongs) mapEvent(ev, sessionId, state, onEvent);
+            if (belongs) {
+              state.lastFrameAt = Date.now();
+              mapEvent(ev, sessionId, state, onEvent);
+            }
           } catch {
             // Non-JSON data line — ignore.
           }
@@ -932,6 +1056,7 @@ async function synthesizeFromHistory(
     stepFinished: boolean;
     gotError: boolean;
     userMessageIds: Set<string>;
+    lastFrameAt: number;
   },
   onEvent: (ev: any) => void,
 ) {

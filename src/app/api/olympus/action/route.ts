@@ -9,7 +9,13 @@ import { spawnOpencode } from '@/lib/opencode-spawn';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
 // the running server + session (no cold start, context retained).
-import { ensureServer, getOrCreateSession, runWarmMessage, buildStrategyContextBlock } from '@/lib/opencode-session';
+import {
+  ensureServer,
+  getOrCreateSession,
+  runWarmMessage,
+  buildStrategyContextBlock,
+  respondToPermission,
+} from '@/lib/opencode-session';
 // Dynamic input token routing via task classifier.
 import { classifyTask, serializeClassification } from '@/lib/task-classifier';
 // ChildProcess type for the streamChild() signature.
@@ -78,6 +84,27 @@ export async function POST(req: NextRequest) {
     typeof body.conversationId === 'string' && body.conversationId.trim()
       ? body.conversationId.trim()
       : `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  // ---- Permission reply ---------------------------------------------------
+  // `permission` actions answer a pending OpenCode permission ask directly
+  // via the warm server's /permission/{requestID}/reply endpoint — they are
+  // NOT prompts (unlike `answer`, which is fed to the LLM as chat text).
+  if (action === 'permission') {
+    const requestID = typeof body.requestID === 'string' ? body.requestID : '';
+    const reply = body.reply;
+    if (!requestID || (reply !== 'once' && reply !== 'always' && reply !== 'reject')) {
+      return NextResponse.json(
+        { error: 'permission action requires requestID + reply (once|always|reject)' },
+        { status: 400 },
+      );
+    }
+    try {
+      const ok = await respondToPermission(requestID, reply);
+      return NextResponse.json({ ok, error: ok ? undefined : 'OpenCode rejected the reply (unknown requestID or server unavailable)' }, { status: ok ? 200 : 502 });
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e?.message || 'permission reply failed' }, { status: 500 });
+    }
+  }
 
   // ---- Prompt mode -------------------------------------------------------
   // `answer` and `context` actions (from InteractiveTerminal) are treated as

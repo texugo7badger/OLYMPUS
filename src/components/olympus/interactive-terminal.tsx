@@ -87,11 +87,19 @@ function makeConversationId(): string {
   }
 }
 
-type MessageType = 'system' | 'user' | 'response' | 'god' | 'question' | 'todo' | 'error' | 'delegation' | 'context_request';
+type MessageType = 'system' | 'user' | 'response' | 'god' | 'question' | 'todo' | 'error' | 'delegation' | 'context_request' | 'permission' | 'thinking';
 
 interface ChatMessage {
   id: string; type: MessageType; text: string; ts: string;
   god?: string; choices?: string[]; questionId?: string; awaitingAnswer?: boolean;
+  /** OpenCode permission ask (freeze-class fix 2026-09-29). `permissionId`
+   *  is the opencode request id used to POST the reply; `permissionAction`
+   *  is the tool/permission name ("external_directory", "bash", …) and
+   *  `permissionPatterns` are the paths the tool wants to touch. */
+  permissionId?: string;
+  permissionAction?: string;
+  permissionPatterns?: string[];
+  permissionState?: 'pending' | 'approved' | 'always' | 'denied';
   /** Inline image attached to a user message (Task 2 — image upload).
    *  `imagePath` is a local object URL (URL.createObjectURL) used as the
    *  <img src>. `imageSavedPath` is the absolute path on disk returned by
@@ -179,6 +187,24 @@ export default function InteractiveTerminal() {
     setMessages(prev => [...prev, { ...msg, id: `msg-${Date.now()}-${Math.random()}`, ts: new Date().toISOString() }]);
   }, []);
 
+  // Thinking counter (Phase 4.0) — ONE self-updating "thinking… (Ns)" line
+  // sits at the bottom of the transcript while Apollo works. It is opened
+  // after activity-producing events and removed/replaced by the next real
+  // one, so during tool runs, permission waits, and provider stalls the
+  // user sees a live counter instead of silence. Purely client-side: zero
+  // SSE noise, zero server changes.
+  const removeThinking = useCallback(() => {
+    setMessages(prev => (prev.some(m => m.type === 'thinking') ? prev.filter(m => m.type !== 'thinking') : prev));
+  }, []);
+
+  const ensureThinking = useCallback(() => {
+    setMessages(prev => {
+      const last = prev[prev.length - 1];
+      if (last && last.type === 'thinking') return prev; // already ticking
+      return [...prev, { id: `th-${Date.now()}-${Math.random()}`, type: 'thinking' as MessageType, text: 'thinking', ts: new Date().toISOString() }];
+    });
+  }, []);
+
   const updateGodActivity = useCallback((god: string, status: GodActivity['status'], task?: string, subAgents?: string[]) => {
     setGodActivities(prev => {
       const existing = prev.find(a => a.god === god);
@@ -207,6 +233,29 @@ export default function InteractiveTerminal() {
       return;
     }
     if (ev.type === 'answer_recorded') { setAwaitingAnswer(false); setMessages(prev => prev.map(m => m.questionId === ev.id ? { ...m, awaitingAnswer: false } : m)); return; }
+    if (ev.type === 'permission_ask') {
+      // OpenCode blocked the run on a permission ask — surface it NOW (the
+      // run stays parked until one of the buttons is pressed; without this
+      // card the terminal silently hung on "waiting for Apollo...").
+      addMessage({
+        type: 'permission',
+        text: `Apollo needs permission to use ${ev.action} on:`,
+        god: 'apollo',
+        permissionId: ev.requestID,
+        permissionAction: ev.action,
+        permissionPatterns: ev.patterns || [],
+        permissionState: 'pending',
+      });
+      updateGodActivity('apollo', 'working', `Waiting for approval: ${ev.action}`);
+      ensureThinking();
+      return;
+    }
+    if (ev.type === 'permission_replied') {
+      setMessages(prev => prev.map(m => m.permissionId === ev.requestID && m.type === 'permission'
+        ? { ...m, permissionState: ev.reply === 'always' ? 'always' : ev.reply === 'reject' ? 'denied' : 'approved', text: m.text }
+        : m));
+      return;
+    }
     if (ev.type === 'context_request') {
       addMessage({ type: 'context_request', text: ev.msg || 'Anything else?', god: ev.god || 'apollo' });
       setAwaitingContext(true);
@@ -228,6 +277,7 @@ export default function InteractiveTerminal() {
     // messages in the terminal.
     if (ev.type === 'step_start' || ev.type === 'session.start' || ev.type === 'session_start') {
       updateGodActivity('apollo', 'thinking', 'Apollo is thinking...');
+      ensureThinking();
       return;
     }
     // The 'text' event is the actual response from Apollo.
@@ -256,8 +306,10 @@ export default function InteractiveTerminal() {
       }
       if (text) {
         runHadText.current = true;
+        removeThinking();
         addMessage({ type: 'response', text, god: ev.god || 'apollo' });
         updateGodActivity(ev.god || 'apollo', 'working', 'Responding...');
+        ensureThinking();
       }
       return;
     }
@@ -267,13 +319,17 @@ export default function InteractiveTerminal() {
       const summary = typeof toolInput === 'string'
         ? toolInput.slice(0, 100)
         : Object.entries(toolInput).slice(0, 3).map(([k, v]) => `${k}: ${String(v).slice(0, 50)}`).join(', ');
+      removeThinking();
       addMessage({ type: 'system', text: `tool: ${toolName}(${summary})` });
       updateGodActivity(ev.god || 'apollo', 'working', `Using ${toolName}...`);
+      ensureThinking();
       return;
     }
     if (ev.type === 'tool.response' || ev.type === 'tool_response') {
       // Don't surface full tool responses (they can be huge) — just mark the god as working.
+      removeThinking();
       updateGodActivity(ev.god || 'apollo', 'working', 'Processing tool result...');
+      ensureThinking();
       return;
     }
     if (ev.type === 'step_finish') {
@@ -285,6 +341,7 @@ export default function InteractiveTerminal() {
       // net. In normal runs `action_done` follows immediately; in failure
       // modes (e.g. the free-tier compaction loop) the server may close the
       // stream without one, leaving "waiting for Apollo..." stuck forever.
+      removeThinking();
       setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false);
       updateGodActivity('apollo', 'done', 'Session complete');
       return;
@@ -297,6 +354,7 @@ export default function InteractiveTerminal() {
     }
     if (ev.type === 'error') {
       runHadError.current = true;
+      removeThinking();
       addMessage({ type: 'error', text: ev.msg || ev.text || 'An error occurred' });
       updateGodActivity('apollo', 'error');
       return;
@@ -308,6 +366,7 @@ export default function InteractiveTerminal() {
       return;
     }
     if (ev.type === 'action_done') {
+      removeThinking();
       setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false); updateGodActivity('apollo', 'idle');
       if (ev.code === 0) {
         if (runHadText.current) {
@@ -511,6 +570,18 @@ export default function InteractiveTerminal() {
     }
   }, [context, addMessage]);
 
+  const handlePermissionReply = useCallback((requestID: string, reply: 'once' | 'always' | 'reject') => {
+    // POST the reply straight to OpenCode's permission API (via the action
+    // route) — NOT a chat prompt. The matching card flips to its approved /
+    // always / denied state when the `permission_replied` SSE event arrives.
+    fetch('/api/olympus/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'permission', requestID, reply }),
+    }).then(r => {
+      if (!r.ok) return r.json().then(j => { throw new Error(j.error || `HTTP ${r.status}`); });
+    }).catch(err => addMessage({ type: 'error', text: `Permission reply failed: ${err.message}` }));
+  }, [addMessage]);
+
   const stop = useCallback(() => {
     // Abort the in-flight POST — the abort propagates to the server's
     // req.signal, cancelling the warm opencode run (not just local state).
@@ -574,7 +645,16 @@ export default function InteractiveTerminal() {
         formData.append('files', fileList[i]);
       }
       const res = await fetch('/api/olympus/upload', { method: 'POST', body: formData });
-      const d = await res.json();
+      // Safe parse — a missing route or server error returns non-JSON
+      // (Next.js renders a plain-text error page), which used to surface
+      // as "Unexpected token 'S', \"Server act...\" is not valid JSON".
+      const text = await res.text();
+      let d: any;
+      try {
+        d = JSON.parse(text);
+      } catch {
+        throw new Error(`Upload endpoint error (HTTP ${res.status}): ${text.slice(0, 200)}`);
+      }
       if (d.ok && d.files) {
         const names = d.files.map((f: any) => f.name);
         setUploadedFiles(prev => [...prev, ...names]);
@@ -870,7 +950,14 @@ export default function InteractiveTerminal() {
             The Apollo chat uses /api/olympus/action (god delegation, todos, etc.). */}
         <div className="flex-1 min-w-0 flex flex-col">
           <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 py-2 font-mono text-[11px] leading-relaxed space-y-2">
-            {messages.map(m => <MessageRenderer key={m.id} message={m} onChoice={handleChoice} />)}
+            {messages.map(m => (
+              <MessageRenderer
+                key={m.id}
+                message={m}
+                onChoice={handleChoice}
+                onPermissionReply={handlePermissionReply}
+              />
+            ))}
             {/* DesignReviewCard renders inline when Athena
                 surfaces design-system candidates. The card polls
                 /api/olympus/design-review for pending requests and renders
@@ -1128,9 +1215,11 @@ export default function InteractiveTerminal() {
 function MessageRenderer({
   message,
   onChoice,
+  onPermissionReply,
 }: {
   message: ChatMessage;
   onChoice: (choice: string, context?: string) => void;
+  onPermissionReply: (requestID: string, reply: 'once' | 'always' | 'reject') => void;
 }) {
   const time = new Date(message.ts).toLocaleTimeString('en-US', { hour12: false });
 
@@ -1266,6 +1355,68 @@ function MessageRenderer({
   }
 
   // ----------------------------------------------------------------
+  // THINKING — one self-updating "thinking… (Ns)" counter line. Purely
+  // client-side (1s interval over message.ts); it keeps counting through
+  // tool runs, permission waits, and provider stalls, replacing the dead
+  // silence that made freezes #1–#3 look identical.
+  // ----------------------------------------------------------------
+  if (message.type === 'thinking') {
+    return <ThinkingMessage message={message} time={time} />;
+  }
+
+  // ----------------------------------------------------------------
+  // PERMISSION — OpenCode blocked the run on a permission ask.
+  // Buttons POST to /api/olympus/action {action:'permission'} which hits
+  // the warm server's /permission/{id}/reply endpoint directly.
+  // ----------------------------------------------------------------
+  if (message.type === 'permission') {
+    const pending = message.permissionState === 'pending';
+    const decided = message.permissionState === 'approved' ? '✓ approved for this run'
+      : message.permissionState === 'always' ? '✓ always allowed'
+      : message.permissionState === 'denied' ? '✗ denied' : '';
+    return (
+      <div className="flex items-start gap-2 mt-2">
+        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <div className="flex-1 min-w-0 rounded-md border border-olympus-amber-soft/40 bg-olympus-amber-soft/5 p-2">
+          <div className="text-[10px] font-mono font-semibold text-olympus-amber-soft mb-1">
+            {message.permissionAction} permission required
+          </div>
+          <div className="text-[9px] font-mono text-olympus-text-dim mb-1.5">{message.text}</div>
+          {(message.permissionPatterns || []).map((p, i) => (
+            <div key={i} className="text-[9px] font-mono text-olympus-text-dim truncate">• {p}</div>
+          ))}
+          {pending && onPermissionReply && (
+            <div className="flex items-center gap-1.5 mt-2">
+              <button
+                onClick={() => onPermissionReply(message.permissionId!, 'once')}
+                className="text-[10px] font-mono px-2 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold border border-olympus-gold/30 hover:bg-olympus-gold/25 transition-colors"
+              >
+                Allow once
+              </button>
+              <button
+                onClick={() => onPermissionReply(message.permissionId!, 'always')}
+                className="text-[10px] font-mono px-2 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold border border-olympus-gold/30 hover:bg-olympus-gold/25 transition-colors"
+              >
+                Always allow
+              </button>
+              <button
+                onClick={() => onPermissionReply(message.permissionId!, 'reject')}
+                className="text-[10px] font-mono px-2 py-0.5 rounded bg-olympus-red/10 text-olympus-red border border-olympus-red/30 hover:bg-olympus-red/20 transition-colors"
+              >
+                Deny
+              </button>
+              <span className="text-[9px] font-mono text-olympus-text-dim ml-1">run is blocked until one is chosen</span>
+            </div>
+          )}
+          {!pending && (
+            <div className="text-[10px] font-mono text-olympus-green mt-1.5">{decided}</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------------
   // TODO — markdown rendered (todos often contain `**bold**` task
   // descriptions or short lists from Apollo's plan writer).
   // ----------------------------------------------------------------
@@ -1322,6 +1473,38 @@ function MessageRenderer({
 /* (the choice becomes the answer; the context is folded in as a       */
 /* `context` field on the answer payload).                             */
 /* ------------------------------------------------------------------ */
+/* ThinkingMessage — the live "thinking… (Ns)" counter (Phase 4.0). The
+ * counter derives from message.ts, so it survives React re-renders and
+ * keeps ticking while the model streams, a tool runs, or the provider
+ * stalls. Dim gray + pulse — reuses the god-row token palette.        */
+function ThinkingMessage({
+  message,
+  time,
+}: {
+  message: ChatMessage;
+  time: string;
+}) {
+  const [secs, setSecs] = useState(() =>
+    Math.max(0, Math.round((Date.now() - new Date(message.ts).getTime()) / 1000)),
+  );
+  useEffect(() => {
+    const t = setInterval(() => {
+      setSecs(Math.max(0, Math.round((Date.now() - new Date(message.ts).getTime()) / 1000)));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [message.ts]);
+
+  return (
+    <div className="flex items-start gap-2 mt-2">
+      <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className="text-[10px] font-mono text-[#5A5A5A] animate-pulse">thinking…</span>
+        <span className="text-[9px] font-mono text-[#5A5A5A] tabular-nums">({secs}s)</span>
+      </div>
+    </div>
+  );
+}
+
 function QuestionMessage({
   message,
   onChoice,
