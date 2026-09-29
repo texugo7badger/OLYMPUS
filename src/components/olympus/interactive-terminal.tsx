@@ -100,6 +100,10 @@ interface ChatMessage {
   permissionAction?: string;
   permissionPatterns?: string[];
   permissionState?: 'pending' | 'approved' | 'always' | 'denied';
+  /** Accumulated reasoning tokens (4.1.2) — streamed into the open thinking
+   *  message by the `reasoning` SSE event; rendered by ThinkingMessage's
+   *  expandable block. Ephemeral: gone when the turn ends. */
+  reasoning?: string;
   /** Inline image attached to a user message (Task 2 — image upload).
    *  `imagePath` is a local object URL (URL.createObjectURL) used as the
    *  <img src>. `imageSavedPath` is the absolute path on disk returned by
@@ -205,6 +209,18 @@ export default function InteractiveTerminal() {
     });
   }, []);
 
+  // Append reasoning tokens to the OPEN thinking message (4.1.2). Opens one
+  // if none is open (reasoning can arrive before step_start on some models).
+  const appendReasoning = useCallback((text: string) => {
+    setMessages(prev => {
+      const last = prev[prev.length - 1];
+      if (last && last.type === 'thinking') {
+        return prev.map((m, i) => i === prev.length - 1 ? { ...m, reasoning: (m.reasoning || '') + text } : m);
+      }
+      return [...prev, { id: `th-${Date.now()}-${Math.random()}`, type: 'thinking' as MessageType, text: 'thinking', ts: new Date().toISOString(), reasoning: text }];
+    });
+  }, []);
+
   const updateGodActivity = useCallback((god: string, status: GodActivity['status'], task?: string, subAgents?: string[]) => {
     setGodActivities(prev => {
       const existing = prev.find(a => a.god === god);
@@ -254,6 +270,13 @@ export default function InteractiveTerminal() {
       setMessages(prev => prev.map(m => m.permissionId === ev.requestID && m.type === 'permission'
         ? { ...m, permissionState: ev.reply === 'always' ? 'always' : ev.reply === 'reject' ? 'denied' : 'approved', text: m.text }
         : m));
+      return;
+    }
+    if (ev.type === 'reasoning') {
+      // 4.1.2 — accumulate the model's reasoning stream into the open
+      // thinking message (rendered by the expandable ThinkingMessage).
+      const text = ev.part?.text || ev.text || '';
+      if (text) appendReasoning(text);
       return;
     }
     if (ev.type === 'context_request') {
@@ -1487,19 +1510,51 @@ function ThinkingMessage({
   const [secs, setSecs] = useState(() =>
     Math.max(0, Math.round((Date.now() - new Date(message.ts).getTime()) / 1000)),
   );
+  const [expanded, setExpanded] = useState(false);
+  const reasoningRef = useRef<HTMLDivElement>(null);
+  const hasReasoning = (message.reasoning || '').length > 0;
   useEffect(() => {
     const t = setInterval(() => {
       setSecs(Math.max(0, Math.round((Date.now() - new Date(message.ts).getTime()) / 1000)));
     }, 1000);
     return () => clearInterval(t);
   }, [message.ts]);
+  // Auto-scroll the reasoning box while streaming (only when expanded).
+  useEffect(() => {
+    if (expanded && reasoningRef.current) reasoningRef.current.scrollTop = reasoningRef.current.scrollHeight;
+  }, [expanded, message.reasoning]);
 
   return (
     <div className="flex items-start gap-2 mt-2">
       <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
-      <div className="flex items-center gap-1.5 min-w-0">
-        <span className="text-[10px] font-mono text-[#5A5A5A] animate-pulse">thinking…</span>
-        <span className="text-[9px] font-mono text-[#5A5A5A] tabular-nums">({secs}s)</span>
+      <div className="flex-1 min-w-0">
+        <div
+          className="flex items-center gap-1.5 min-w-0 cursor-pointer select-none"
+          onClick={() => setExpanded(x => !x)}
+          title={expanded ? 'Collapse reasoning' : 'Expand reasoning'}
+        >
+          <span className="text-[10px] font-mono text-[#5A5A5A] animate-pulse">thinking…</span>
+          <span className="text-[9px] font-mono text-[#5A5A5A] tabular-nums">({secs}s)</span>
+          <span className="text-[9px] font-mono text-[#5A5A5A] ml-auto shrink-0">
+            {hasReasoning ? (expanded ? '▾' : '▸') : ''}
+          </span>
+        </div>
+        {expanded && (
+          <div
+            ref={reasoningRef}
+            className="mt-1 ml-3 max-h-48 overflow-y-auto custom-scroll border-l border-[#5A5A5A]/30 pl-2"
+          >
+            {hasReasoning ? (
+              <div className="text-[13px] italic text-[#5A5A5A] whitespace-pre-wrap break-words leading-snug">
+                {message.reasoning}
+              </div>
+            ) : (
+              <div className="text-[13px] italic text-[#5A5A5A]">
+                No reasoning stream received — this model may not emit thinking tokens (see LLM Strategy to switch).
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
