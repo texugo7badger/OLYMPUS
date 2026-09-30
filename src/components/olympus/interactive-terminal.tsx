@@ -206,11 +206,21 @@ export default function InteractiveTerminal() {
   // one, so during tool runs, permission waits, and provider stalls the
   // user sees a live counter instead of silence. Purely client-side: zero
   // SSE noise, zero server changes.
+  // Fix B (GOD ACTIVITY honesty): the events that can mark a god 'done'
+  // while the run is still in flight must know whether the thinking counter
+  // is open. messages state is not readable synchronously inside an event
+  // handler, so mirror the counter's intent in a ref: true from
+  // ensureThinking() until removeThinking(). 'Open or about to open' is the
+  // semantic we want — it means "the run has not finished yet".
+  const thinkingOpenRef = useRef(false);
+
   const removeThinking = useCallback(() => {
+    thinkingOpenRef.current = false;
     setMessages(prev => (prev.some(m => m.type === 'thinking') ? prev.filter(m => m.type !== 'thinking') : prev));
   }, []);
 
   const ensureThinking = useCallback(() => {
+    thinkingOpenRef.current = true;
     setMessages(prev => {
       const last = prev[prev.length - 1];
       if (last && last.type === 'thinking') return prev; // already ticking
@@ -371,7 +381,18 @@ export default function InteractiveTerminal() {
       return;
     }
     if (ev.type === 'step_finish') {
-      updateGodActivity('apollo', 'done', 'Step complete');
+      // Fix B: a finishing STEP is not a finishing RUN. opencode emits
+      // step_finish after every tool cycle and then keeps deliberating — the
+      // thinking counter stays open straight through that gap. Unconditionally
+      // reporting 'done' here is what made a silent run look finished: the
+      // spinner kept ticking while the god card read "Step complete".
+      // While the counter is open the truth is 'still working'.
+      if (thinkingOpenRef.current) {
+        updateGodActivity('apollo', 'working', 'Step complete — still working...');
+        ensureThinking();
+      } else {
+        updateGodActivity('apollo', 'done', 'Step complete');
+      }
       return;
     }
     if (ev.type === 'session.end' || ev.type === 'session_end') {
@@ -394,7 +415,17 @@ export default function InteractiveTerminal() {
         // lands inside the TTFB gap, right after the counter was opened, and
         // would otherwise print below it and freeze the line mid-transcript.
         removeThinking();
-        addMessage({ type: 'response', text: msg, god: ev.god });
+        // Fix B: the silence/stall watchdog (opencode-session.ts) speaks with
+        // a ⚠ prefix. Those lines are the ONLY signal a user gets that a run
+        // has gone quiet, so they must not render like assistant prose —
+        // gray text scrolls past and reads as chit-chat. Escalate to the error
+        // style (red) and mirror the elapsed silence into GOD ACTIVITY.
+        const isWatchdog = msg.startsWith('⚠');
+        addMessage({ type: isWatchdog ? 'error' : 'response', text: msg, god: ev.god });
+        if (isWatchdog) {
+          const silent = msg.match(/(\d+)s/)?.[1];
+          updateGodActivity('apollo', 'working', silent ? `Silent ${silent}s — may be stalled` : 'May be stalled');
+        }
         ensureThinking();
       }
       return;
@@ -691,6 +722,10 @@ export default function InteractiveTerminal() {
     actionAbortRef.current = null;
     // Fresh conversation → fresh warm opencode session on the next message.
     conversationIdRef.current = makeConversationId();
+    // Fix B: messages are replaced wholesale below, which drops any open
+    // thinking line — keep the mirror honest or the next step_finish would
+    // see a stale "still working" and never report done again.
+    thinkingOpenRef.current = false;
     setMessages([
       { id: 'sys-1', type: 'system' as const, text: 'Olympus Interactive Terminal - speak directly to Apollo.', ts: new Date().toISOString() },
       { id: 'sys-2', type: 'system' as const, text: 'Apollo will interview you, classify your task, and delegate to the right gods.', ts: new Date().toISOString() },
