@@ -269,6 +269,22 @@ export default function InteractiveTerminal() {
     }
     if (ev.type === 'answer_recorded') { setAwaitingAnswer(false); setMessages(prev => prev.map(m => m.questionId === ev.id ? { ...m, awaitingAnswer: false } : m)); return; }
     if (ev.type === 'permission_ask') {
+      // Fix C (issue #17): the server already granted this permission under
+      // policy and flagged it, so the card would be a lie and its buttons
+      // would send a second reply that 502s ("Permission reply failed").
+      // Say what happened once, keep the card green — the run is unblocked
+      // and continuing — and send nothing back.
+      if (ev.autoApproved) {
+        removeThinking();
+        addMessage({
+          type: 'system',
+          text: `[permission] auto-approved ${ev.action}: ${(ev.patterns || []).join(', ')}`,
+          god: 'apollo',
+        });
+        updateGodActivity('apollo', 'working', `Auto-approved ${ev.action}`);
+        ensureThinking();
+        return;
+      }
       // OpenCode blocked the run on a permission ask — surface it NOW (the
       // run stays parked until one of the buttons is pressed; without this
       // card the terminal silently hung on "waiting for Apollo...").

@@ -1029,20 +1029,42 @@ async function runWarmMessageAttempt(
     let toolCount = 0;
     let readCount = 0;
     const deliver = (ev: any) => {
-      // Auto-approve allowlisted permission asks (vault paths). Runs BEFORE
-      // delivery so the UI still shows the card (marked auto-approved via
-      // the following log). Never delivered in its own right — do NOT set
-      // receivedEvents for approvals.
+      // Auto-approve allowlisted permission asks (vault paths) so the run is
+      // never parked on a decision the user already made by policy. Fix C: the
+      // client used to render the card anyway AND send its own reply, so the
+      // second reply 502'd ("Permission reply failed") for a permission that
+      // had in fact been granted (issue #17).
+      //
+      // The reply is only reported as auto-approved once the POST has actually
+      // succeeded. respondToPermission resolves false on a non-2xx and rejects
+      // on timeout, so if it fails we fall through to the normal path and the
+      // user gets the real card plus the real error — the same honesty Fix A
+      // established for empty runs. Never delivered in its own right, so it
+      // never sets receivedEvents on its own.
       if (ev.type === 'permission_ask' && AUTO_APPROVE_PREFIXES.length > 0
           && Array.isArray(ev.patterns) && ev.patterns.length > 0
           && ev.patterns.every((p: string) => AUTO_APPROVE_PREFIXES.some(pre => p.startsWith(pre)))) {
         respondToPermission(ev.requestID, 'once')
           .then(ok => {
-            if (ok && !eventCtrl.signal.aborted) {
+            if (eventCtrl.signal.aborted) return;
+            if (ok) {
+              // Stamp only now: the client suppresses the card and sends no
+              // reply of its own when it sees this flag.
+              ev.autoApproved = true;
+              opts.onEvent(ev);
               opts.onEvent({ type: 'log', msg: `[permission] auto-approved ${ev.action} (vault path): ${(ev.patterns || []).join(', ')}`, ts: new Date().toISOString() });
+            } else {
+              // Auto-approve failed — surface the ask so the user can decide.
+              opts.onEvent(ev);
+              opts.onEvent({ type: 'error', msg: `[permission] auto-approve failed for ${ev.action} — please reply below`, ts: new Date().toISOString() });
             }
           })
-          .catch(() => {});
+          .catch(() => {
+            if (eventCtrl.signal.aborted) return;
+            opts.onEvent(ev);
+            opts.onEvent({ type: 'error', msg: `[permission] auto-approve failed for ${ev.action} — please reply below`, ts: new Date().toISOString() });
+          });
+        return;
       }
       if (!eventCtrl.signal.aborted || ev.type === 'error') {
         if (ev.type === 'tool.call') {
