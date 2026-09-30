@@ -33,7 +33,7 @@
  */
 
 import { randomBytes } from 'node:crypto';
-import type { ChildProcess } from 'node:child_process';
+import { execSync, spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -190,18 +190,46 @@ async function apiFetch(
 }
 
 /** Probe a port: does an opencode server answer? Try unauthenticated first. */
-async function probeServer(port: number, password: string | null): Promise<{ ok: boolean; authed: boolean }> {
+async function probeServer(
+  port: number,
+  password: string | null,
+): Promise<{ ok: boolean; authed: boolean; status?: number; timedOut?: boolean }> {
+  let timedOut = false;
+  // undici wraps the real cause ("fetch failed" message, ECONNREFUSED /
+  // TimeoutError in `cause`) — BOTH must be inspected, or connection-
+  // refused ports get misclassified as hung serves (Phase B bug found in
+  // live test: the `||` short-circuit never reached `cause`).
+  const isRefused = (e: unknown) => {
+    const m = `${(e as any)?.message || ''} ${(e as any)?.cause || ''}`;
+    return m.includes('ECONNREFUSED') || m.includes('ENOTFOUND') || m.includes('Not Found');
+  };
+  const isAbort = (e: unknown) => {
+    const m = `${(e as any)?.message || ''} ${(e as any)?.cause || ''} ${(e as any)?.name || ''}`;
+    return m.includes('aborted') || m.includes('TimeoutError') || m.includes('timeout');
+  };
   try {
     const r = await apiFetch(port, null, '/config', {}, SERVER_PROBE_TIMEOUT_MS);
     if (r.ok) return { ok: true, authed: false };
-  } catch {}
+    // 401 = a password-protected opencode serve we can't authenticate to
+    // (an orphan whose password was lost). Callers use this to adopt-or-kill.
+    if (r.status === 401) return { ok: false, authed: false, status: 401 };
+    timedOut = false;
+  } catch (e: any) {
+    // Aborted = accepted but never answered (hung serve); refused = free.
+    // Refused = port free (fails fast, ~11ms); abort/hang = accepted but
+    // never answered (costs the full 2.5s). Any non-refused failure counts
+    // as hung — conservative, and correct for the boot-hang signature.
+    timedOut = !isRefused(e);
+  }
   if (password) {
     try {
       const r = await apiFetch(port, password, '/config', {}, SERVER_PROBE_TIMEOUT_MS);
       if (r.ok) return { ok: true, authed: true };
-    } catch {}
+    } catch (e: any) {
+      timedOut = !isRefused(e);
+    }
   }
-  return { ok: false, authed: false };
+  return { ok: false, authed: false, timedOut };
 }
 
 // ---------------------------------------------------------------------------
@@ -262,6 +290,65 @@ function nextPort(start: number): number {
   return (start % 65535) + 1;
 }
 
+// ---------------------------------------------------------------------------
+// Stale-serve reaping (Phase B fix a+b) — orphaned `opencode serve`
+// processes contend with the active one on the shared SQLite DB
+// (~/.local/share/opencode/opencode.db), which crash-loops the newer serve
+// (ServeError) and surfaces "fetch failed" to the client.
+// ---------------------------------------------------------------------------
+
+/** True when /proc/<pid>/cmdline contains "opencode" (guards against killing
+ *  an unrelated process that happens to own the port). */
+function isOpencodeProcess(pid: number): boolean {
+  try {
+    const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
+    return cmdline.includes('opencode');
+  } catch {
+    return false;
+  }
+}
+
+/** Find the PID listening on a TCP port. lsof first, ss as fallback. */
+function findPortOwnerPid(port: number): number | null {
+  try {
+    const out = execSync(`lsof -t -i :${port} -sTCP:LISTEN 2>/dev/null`, { timeout: 3000 }).toString().trim();
+    const pid = parseInt(out.split('\n')[0] || '', 10);
+    if (Number.isFinite(pid) && pid > 0) return pid;
+  } catch {}
+  try {
+    const out = execSync(`ss -ltnp "sport = :${port}" 2>/dev/null`, { timeout: 3000 }).toString();
+    const m = out.match(/pid=(\d+)/);
+    if (m) {
+      const pid = parseInt(m[1], 10);
+      if (Number.isFinite(pid) && pid > 0) return pid;
+    }
+  } catch {}
+  return null;
+}
+
+/** SIGTERM → wait ≤3s → SIGKILL a stale opencode serve. No-op when the PID
+ *  is not an opencode process (safety) or is already dead. */
+async function killStaleServe(pid: number, reason: string): Promise<boolean> {
+  if (!isProcessAlive(pid)) return true;
+  if (!isOpencodeProcess(pid)) {
+    console.log(`[opencode-session] NOT killing pid ${pid} (${reason}) — not an opencode process`);
+    return false;
+  }
+  console.log(`[opencode-session] Killing stale opencode serve (pid ${pid}) — ${reason}`);
+  try { process.kill(pid, 'SIGTERM'); } catch { return isProcessAlive(pid) ? false : true; }
+  for (let i = 0; i < 15; i++) {
+    if (!isProcessAlive(pid)) return true;
+    await sleep(200);
+  }
+  try { process.kill(pid, 'SIGKILL'); } catch {}
+  for (let i = 0; i < 10; i++) {
+    if (!isProcessAlive(pid)) return true;
+    await sleep(200);
+  }
+  console.log(`[opencode-session] WARNING: pid ${pid} ignored SIGKILL`);
+  return false;
+}
+
 /**
  * Ensure a warm `opencode serve` instance is running. Returns the server
  * info. Idempotent — concurrent callers share one in-flight start.
@@ -284,6 +371,10 @@ export async function ensureServer(): Promise<ServerInfo> {
     const startPort = Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_PORT;
 
     // 1. Leftover server from a previous run (PID file).
+    //    (fix a) If the recorded process is alive but its API is gone or
+    //    no longer matches the stored password, it is a stale owner — kill
+    //    it so it can't hold the port or contend on the shared SQLite DB.
+    //    A dead PID's file is simply removed (stale-file cleanup).
     const pidFile = readPidFile();
     if (pidFile && isProcessAlive(pidFile.pid)) {
       const probe = await probeServer(pidFile.port, pidFile.password);
@@ -291,15 +382,32 @@ export async function ensureServer(): Promise<ServerInfo> {
         console.log(`[opencode-session] Reusing warm OpenCode server on port ${pidFile.port} (pid ${pidFile.pid})`);
         return { port: pidFile.port, warm: true, password: pidFile.password, authed: probe.authed };
       }
+      await killStaleServe(pidFile.pid, `pid file stale (API unreachable on port ${pidFile.port})`);
+      removePidFile();
+    } else if (pidFile) {
+      // (fix a) Dead PID — stale file cleanup (B.5).
+      removePidFile();
     }
 
     // 2/3. Scan ports: reuse anything that answers, otherwise spawn.
+    //    (fix b) A 401 means a password-protected ORPHANED opencode serve
+    //    occupies the port — previous lifecycle left it alive with a lost
+    //    password. Kill it by port owner (after verifying it IS opencode)
+    //    and re-probe the same port instead of spawning a second serve
+    //    that would contend on the shared SQLite DB.
     let port = startPort;
     for (let i = 0; i <= PORT_SCAN; i++) {
       const probe = await probeServer(port, null);
       if (probe.ok) {
         console.log(`[opencode-session] Found running OpenCode server on port ${port} — reusing (no cold start)`);
         return { port, warm: true, password: null, authed: false };
+      }
+      if (probe.status === 401) {
+        const ownerPid = findPortOwnerPid(port);
+        if (ownerPid) {
+          await killStaleServe(ownerPid, `orphaned password-protected serve on port ${port} (401)`);
+          continue; // re-probe the same port — the owner is gone now
+        }
       }
       if (i < PORT_SCAN) port = nextPort(port);
     }
@@ -355,6 +463,12 @@ async function spawnServer(port: number): Promise<ServerInfo> {
   serverLogFd = logFd;
 
   const deadline = Date.now() + SERVER_READY_TIMEOUT_MS;
+  // Log offset at spawn start — the ServeError fast-fail reads only NEW
+  // log bytes (older ServeErrors from previous spawns must not count).
+  let logStartSize = 0;
+  try { logStartSize = fs.statSync(LOG_FILE).size; } catch {}
+  let consecutiveTimeouts = 0;
+
   for (;;) {
     // Child died before becoming ready — fail fast.
     if (child.exitCode !== null || child.signalCode !== null) {
@@ -367,6 +481,34 @@ async function spawnServer(port: number): Promise<ServerInfo> {
       writePidFile(port, password, child.pid ?? process.pid);
       console.log(`[opencode-session] OpenCode server ready on port ${port} (pid ${child.pid})`);
       return { port, warm: false, password, authed: probe.authed };
+    }
+    consecutiveTimeouts = probe.timedOut ? consecutiveTimeouts + 1 : 0;
+    // (Phase B) fast-fails for dead ports — each dead port previously
+    // burned the full 60s SERVER_READY_TIMEOUT, blowing the route's 120s
+    // startup budget (freeze 2026-09-29). Two signatures:
+    //   - crash-loop: the child logs "ServeError" repeatedly, never binds.
+    //   - boot-hang: the child binds ("listening") but never ANSWERS —
+    //     /config requests hang during DB-lock contention with a draining
+    //     orphan. A healthy serve answers in <100ms, so 3 consecutive
+    //     probe timeouts (≈7.5s) prove the hang.
+    let crashLooped = false;
+    try {
+      const st = fs.statSync(LOG_FILE);
+      if (st.size > logStartSize) {
+        const len = Math.min(st.size - logStartSize, 64 * 1024);
+        const chunk = Buffer.alloc(len);
+        const fd = fs.openSync(LOG_FILE, 'r');
+        fs.readSync(fd, chunk, 0, len, st.size - len);
+        fs.closeSync(fd);
+        crashLooped = chunk.toString('utf8').includes('ServeError');
+      }
+    } catch {}
+    if (crashLooped || consecutiveTimeouts >= 3) {
+      const why = crashLooped ? 'ServeError in log' : `${consecutiveTimeouts} consecutive probe timeouts (hung serve)`;
+      try { child.kill('SIGKILL'); } catch {}
+      try { fs.closeSync(logFd); } catch {}
+      serverChild = null;
+      throw new Error(`opencode serve ${why} on port ${port} — falling through to next port`);
     }
     if (Date.now() > deadline) {
       try { child.kill('SIGTERM'); } catch {}
@@ -768,19 +910,64 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
   const server = await ensureServer();
 
   return withSessionLock(opts.sessionId, async () => {
-    const state = {
-      textBuf: new Map<string, string>(),
-      textEmitted: new Set<string>(),
-      toolEmitted: new Set<string>(),
-      stepStarted: false,
-      stepFinished: false,
-      gotError: false,
-      userMessageIds: new Set<string>(),
-      // Liveness: the /event pump stamps every received frame here (BEFORE
-      // session filtering — any frame proves the feed is alive). Drives the
-      // silence watchdog.
-      lastFrameAt: Date.now(),
-    };
+    // Retry loop (fix d): one transparent retry when the serve dies with a
+    // TRANSPORT failure mid-run (fetch failed / ECONNREFUSED / crash loop).
+    // The session id persists in the shared SQLite DB, so the re-posted
+    // message keeps its context. Aborts and API-level errors never retry.
+    let srv = server;
+    for (let attempt = 0; ; attempt++) {
+      const result = await runWarmMessageAttempt(srv, opts, attempt === 0);
+      const retryable =
+        attempt === 0 &&
+        !opts.signal?.aborted &&
+        !!result.error &&
+        result.code !== 0 &&
+        TRANSPORT_DEAD_RE.test(result.error);
+      if (!retryable) return result;
+      console.log(`[opencode-session] Warm server transport failure (${result.error}) — respawning + retrying message once`);
+      invalidateServer();
+      srv = await ensureServer();
+    }
+  });
+}
+
+/** Transport-dead signatures (undici "fetch failed", refused/hung sockets). */
+const TRANSPORT_DEAD_RE = /fetch failed|ECONNREFUSED|ECONNRESET|socket hang up|other side closed|UND_ERR|network/i;
+
+/**
+ * One warm-message attempt. `allowRetry` reserved for future use; the retry
+ * decision lives in runWarmMessage's loop (which respawns the server before
+ * re-invoking this).
+ */
+async function runWarmMessageAttempt(
+  server: ServerInfo,
+  opts: WarmRunOptions,
+  _allowRetry: boolean,
+): Promise<WarmRunResult> {
+  // NOTE (fix d revision, 2026-09-29): the original pre-send health check
+  // (2.5s probe → invalidateServer → ensureServer) was REMOVED after live
+  // testing: a freshly-booted serve's first requests are slow (DB open,
+  // session init), the 2.5s probe false-negatived, and ensureServer's
+  // stale-owner kill terminated healthy serves — a respawn thrash that
+  // burned the route's 120s budget. The mid-run transport-failure retry in
+  // runWarmMessage (TRANSPORT_DEAD_RE) covers the serve-died-mid-run case:
+  // the POST rejects, the loop respawns via ensureServer (whose fix-a now
+  // reaps the dead owner) and re-posts once. Orphan reaping (fix a+b)
+  // prevents the crash-loop that caused the original "fetch failed".
+
+  const state = {
+    textBuf: new Map<string, string>(),
+    textEmitted: new Set<string>(),
+    toolEmitted: new Set<string>(),
+    stepStarted: false,
+    stepFinished: false,
+    gotError: false,
+    userMessageIds: new Set<string>(),
+    // Liveness: the /event pump stamps every received frame here (BEFORE
+    // session filtering — any frame proves the feed is alive). Drives the
+    // silence watchdog.
+    lastFrameAt: Date.now(),
+  };
     let receivedEvents = false;
     let postStarted = false;
     let maxTimedOut = false;
@@ -969,7 +1156,6 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
       clearInterval(silenceTimer);
       if (outerSignal) outerSignal.removeEventListener('abort', onAbort);
     }
-  });
 }
 
 /**
