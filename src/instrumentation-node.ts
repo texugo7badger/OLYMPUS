@@ -87,7 +87,10 @@ export async function registerNode() {
       if (!child) {
         try {
           const root = process.env.OLYMPUS_ROOT || process.cwd();
-          const env = { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1', OLYMPUS_JSON: '1' };
+          // Session 3g/#25 — this spawn bypasses buildOpencodeEnv, so without the
+          // flag the plugin gate would silence it (spend un-tracked). Marking it
+          // OLYMPUS-managed keeps the run tracked if the WS bridge revives.
+          const env = { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1', OLYMPUS_JSON: '1', OLYMPUS_MANAGED: '1' };
           const _spawn = eval('require("child_process").spawn');
           // Spawn the global `opencode` binary directly with shell:false so
           // the user's prompt text is passed VERBATIM as a single argv

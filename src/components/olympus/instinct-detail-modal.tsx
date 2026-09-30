@@ -33,17 +33,17 @@ export default function InstinctDetailModal({
  setError(null);
  (async () => {
  try {
- 		// Fix the API 403 error. The instinct path is
- // ABSOLUTE (e.g. /home/user/OLYMPUS-VAULT/05_Auto_Learning/...).
- // The /api/olympus/fs/read route strips leading slashes and resolves
- // against the default safe root (the OLYMPUS app root), which fails
- // because the path doesn't live under the app root.
- //
- // Fix: extract the vault root from the absolute path (the path
- // always contains '/OLYMPUS-VAULT' as a segment) and pass it as the
- // `root` query param. The helper's resolveSafeRoot accepts
- // ~/OLYMPUS-VAULT as a known-safe root, so the path resolves
- // correctly and the file is found.
+		// Vault file resolution (FS API):
+		// - patch-17 fixed the 403 for absolute paths by extracting the
+		//   '/OLYMPUS-VAULT' marker and passing it as `root` so resolveSafeRoot
+		//   maps to the known-safe vault root.
+		// - commit 3fa3858 (resolveSafePath absolute-path branch) fixed the 404
+		//   by accepting in-root absolute paths directly (boundary-checked).
+		// Current behavior: FS read succeeds for vault files with absolute
+		// paths via the marker extraction below.
+		// Known fragility: the '/OLYMPUS-VAULT' marker extraction below relies
+		// on that exact path segment; documented, deliberately NOT changed in
+		// this session (follow-up issue: marker extraction fragility).
  const vaultMarker = '/OLYMPUS-VAULT';
  const vaultIdx = instinctPath.indexOf(vaultMarker);
  const vaultRoot = vaultIdx >= 0
