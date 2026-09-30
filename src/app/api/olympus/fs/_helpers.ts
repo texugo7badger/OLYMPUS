@@ -57,16 +57,47 @@ export function resolveSafeRoot(rootHint?: string | null): string {
 }
 
 /**
- * Resolve a relative path against the safe root, rejecting any attempt to
- * escape via `..` or absolute paths.
+ * Resolve a caller-supplied path against the safe root, rejecting any attempt
+ * to escape via `..` or absolute paths outside the safe root.
  *
- * Returns the resolved absolute path on success, or null if the path is
- * unsafe (escape attempt).
+ * Accepts BOTH relative and absolute inputs:
+ *   • relative — resolved against safeRoot (the historical behaviour).
+ *   • absolute — resolved directly, then held to the SAME sandbox check.
+ *
+ * Why absolute matters (Fix D, issue #26): several server routes hand the
+ * renderer a list of absolute paths (e.g. god/references reads
+ * 04_Knowledge/references/<dir>/*.md and returns `path.join(...)` results),
+ * and the detail modals forward that path verbatim to /api/olympus/fs/read.
+ * The old code stripped the leading "/" and re-resolved the remainder INSIDE
+ * safeRoot, doubling the path:
+ *   /home/<u>/OLYMPUS-VAULT + "home/<u>/OLYMPUS-VAULT/04_Knowledge/x.md"
+ *   → /home/<u>/OLYMPUS-VAULT/home/<u>/OLYMPUS-VAULT/04_Knowledge/x.md
+ * The doubled path still passes the sandbox check (it is inside safeRoot) but
+ * does not exist, so every Knowledge and instinct row 404'd. Note this was
+ * never a usable behaviour: the only possible outcome of an absolute input
+ * was a non-existent doubled path.
+ *
+ * SECURITY: resolving an absolute path does NOT widen access. path.resolve()
+ * collapses ".." first, so "/vault/../etc/passwd" normalizes to
+ * "/etc/passwd" and is then rejected by the identical boundary check used for
+ * relative input. An absolute path outside safeRoot is still refused (null →
+ * the route returns 403).
+ *
+ * Returns the resolved absolute path on success, or null if the path is unsafe
+ * (escape attempt).
  */
 export function resolveSafePath(safeRoot: string, relative: string | undefined | null): string | null {
   if (!relative) return safeRoot;
-  // Normalize the relative path: strip leading slashes (so absolute paths
-  // become relative to safeRoot), then resolve.
+  // Absolute input: resolve it as-is and apply the SAME sandbox check.
+  if (path.isAbsolute(relative)) {
+    const resolved = path.resolve(relative);
+    if (resolved !== safeRoot && !resolved.startsWith(safeRoot + path.sep)) {
+      return null;
+    }
+    return resolved;
+  }
+  // Relative input: normalize then resolve against the safe root. A leading
+  // "./" or redundant separator is fine; ".." escapes are caught below.
   const cleaned = relative.replace(/^[/\\]+/, '');
   const resolved = path.resolve(safeRoot, cleaned);
   // CRITICAL: ensure the resolved path is still inside safeRoot.
