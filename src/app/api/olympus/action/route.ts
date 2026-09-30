@@ -11,6 +11,7 @@ import { spawnOpencode } from '@/lib/opencode-spawn';
 // the running server + session (no cold start, context retained).
 import {
   ensureServer,
+  cleanupServer,
   getOrCreateSession,
   runWarmMessage,
   buildStrategyContextBlock,
@@ -188,6 +189,43 @@ export async function POST(req: NextRequest) {
       },
       meta: { action, node: undefined, cli: `opencode run --format json --agent apollo <handoff>` },
     });
+  }
+
+  // ---- True-reset mode ---------------------------------------------------
+  // "New session" must genuinely RESET the context window. The 'new-session'
+  // branch above cannot do that: it reuses the live warm serve (ensureServer
+  // is a no-op while one is alive) and injects a transcript summary as the
+  // first message, so the "fresh" session starts out holding the entire
+  // previous conversation. Measured: 53% → 82% after one click.
+  //
+  // A real reset means tearing the serve down. opencode keeps session state
+  // in the serve process (RAM + its SQLite store), so only a new process
+  // gives a genuinely empty window. cleanupServer() kills the child, drops
+  // the PID file and nulls the cached serverPromise; the following
+  // ensureServer() therefore cold-starts a brand-new serve on the next free
+  // port and logs "OpenCode server ready on port N (pid M)".
+  //
+  // Project registration lives in ~/.olympus (not in the serve), so it
+  // survives untouched — as do the vault, permissions and instincts.
+  if (action === 'reset-session') {
+    try {
+      cleanupServer();
+      const server = await ensureServer();
+      console.log(
+        `[olympus-action] reset-session: fresh OpenCode server on port ${server.port} (warm=${server.warm})`,
+      );
+      return NextResponse.json({
+        ok: true,
+        port: server.port,
+        warm: server.warm,
+        authed: server.authed,
+      });
+    } catch (e: any) {
+      return NextResponse.json(
+        { ok: false, error: e?.message || 'reset-session failed' },
+        { status: 500 },
+      );
+    }
   }
 
   // ---- Context-menu action mode -----------------------------------------

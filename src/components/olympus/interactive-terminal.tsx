@@ -631,6 +631,7 @@ export default function InteractiveTerminal() {
 
   // Reset terminal with confirmation (clears all messages, TODOs, god activity).
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showNewSessionConfirm, setShowNewSessionConfirm] = useState(false);
   const [uploading, setUploading] = useState(false);
   // TDZ FIX — `uploadedFiles` and `uploadedFileDetails` useState declarations
   // MOVED to the top of the component (before this `submit` useCallback).
@@ -868,29 +869,57 @@ export default function InteractiveTerminal() {
   }, [messages]);
 
   // Called when the user clicks "new session" in the ContextIndicator.
-  // Mirrors the top of `submit()` so the terminal behaves the same way
-  // for a handoff as for a fresh prompt: clear in-flight state, push a
-  // system message, mark Apollo as thinking.
+  // The reset is destructive (it drops the conversation and restarts the
+  // warm server), so we confirm first instead of doing it on click.
   const handleNewSessionStart = useCallback(() => {
     // Kill any in-flight run so the new session doesn't inherit events from
     // the old conversation's stream.
     actionAbortRef.current?.abort();
     actionAbortRef.current = null;
-    // Rotate the conversation BEFORE the ContextIndicator POSTs: the server
-    // creates a fresh warm opencode session for the new id, and Apollo picks
-    // up the thread from the summary in a clean context window.
-    conversationIdRef.current = makeConversationId();
-    setTodos([]);
-    setGodActivities([]);
+    setShowNewSessionConfirm(true);
+  }, []);
+
+  // Confirmed: perform the TRUE reset.
+  //   1. Clear every piece of in-memory client state (resetTerminal does
+  //      this: messages, thinking line, reasoning buffer, todos, god
+  //      activity, uploads, plus a fresh conversationId).
+  //   2. POST action:'reset-session' — the server calls cleanupServer() then
+  //      ensureServer(), so the warm `opencode serve` is killed and a brand
+  //      new one is spawned on the next free port. Only a new process can
+  //      give a genuinely empty context window.
+  //   3. Report the new port so the user can see the server really changed.
+  // The indicator needs no explicit poke: resetTerminal rotates the
+  // conversationId, and the next 5s poll finds no mapping → zeros.
+  const confirmNewSession = useCallback(async () => {
+    setShowNewSessionConfirm(false);
+    resetTerminal();
     setSubmitting(true);
-    addMessage({ type: 'system', text: 'Starting a new session — Apollo continues from a summary of this conversation...' });
-    updateGodActivity('apollo', 'thinking', 'Picking up from summary...');
-    // Same TTFB gap as submit() — the handoff POST streams nothing until the
-    // provider answers, so open the counter here too.
+    addMessage({ type: 'system', text: 'Restarting warm server…' });
+    updateGodActivity('apollo', 'thinking', 'Restarting warm server...');
     ensureThinking();
-    pushPulse('apollo', 'apollo');
-    setActiveGod('apollo');
-  }, [addMessage, updateGodActivity, pushPulse, setActiveGod, ensureThinking]);
+    try {
+      const res = await fetch('/api/olympus/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset-session' }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        addMessage({ type: 'error', text: `Session reset failed: ${data?.error || res.status}` });
+        removeThinking();
+        return;
+      }
+      addMessage({ type: 'system', text: `OpenCode server ready on port ${data.port}${data.warm ? ' (reused)' : ''} — fresh context window.` });
+    } catch (e: any) {
+      addMessage({ type: 'error', text: `Session reset failed: ${e?.message || 'network error'}` });
+      removeThinking();
+    } finally {
+      removeThinking();
+      setSubmitting(false);
+      updateGodActivity('apollo', 'idle');
+      inputRef.current?.focus();
+    }
+  }, [addMessage, updateGodActivity, ensureThinking, removeThinking, resetTerminal]);
 
   // Called when the new-session stream ends. handleServerEvent already
   // processed the 'action_done' SSE event (reset submitting/awaiting/etc.
@@ -961,6 +990,29 @@ export default function InteractiveTerminal() {
       </div>
 
       {/* Reset confirmation dialog — Olympus styled, not browser default */}
+      {showNewSessionConfirm && (
+        <div className="shrink-0 px-3 py-2 bg-olympus-gold/10 border-b border-olympus-gold/30 flex items-center justify-between">
+          <span className="text-[10px] font-mono text-olympus-gold flex items-center gap-1.5">
+            <RefreshCw size={11} />
+            Start a fresh session? This clears the conversation and restarts the warm server (~10s). The project stays the same.
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowNewSessionConfirm(false)}
+              className="text-[10px] font-mono px-2 py-1 rounded text-olympus-text-dim hover:bg-olympus-gold/10 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmNewSession}
+              className="text-[10px] font-mono px-2 py-1 rounded bg-olympus-gold/20 text-olympus-gold hover:bg-olympus-gold/30 ring-1 ring-olympus-gold/30 transition-colors"
+            >
+              Start fresh
+            </button>
+          </div>
+        </div>
+      )}
+
       {showResetConfirm && (
         <div className="shrink-0 px-3 py-2 bg-olympus-red/10 border-b border-olympus-red/30 flex items-center justify-between">
           <span className="text-[10px] font-mono text-olympus-red flex items-center gap-1.5">

@@ -178,78 +178,22 @@ export default function ContextIndicator({
 
   const startNewSession = useCallback(async () => {
     if (starting) return;
-    const summary = getSummary?.() ?? '';
-    const controller = new AbortController();
-    abortRef.current = controller;
+    // The parent (InteractiveTerminal) owns the reset: it asks the user to
+    // confirm, clears local state, and POSTs action:'reset-session', which
+    // kills the warm `opencode serve` and spawns a fresh one.
+    //
+    // We deliberately no longer send a transcript summary here. That handoff
+    // was the whole bug: reusing the live serve while injecting the previous
+    // conversation as context made "new session" GROW the context window
+    // (measured 53% → 82%). A reset that carries the old conversation with
+    // it is not a reset.
     setStarting(true);
-    onStart?.();
-
     try {
-      const res = await fetch('/api/olympus/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'new-session', text: summary, conversationId: getConversationId?.() ?? '' }),
-        signal: controller.signal,
-      });
-      if (!res.body) {
-        onEvent?.({ type: 'error', msg: 'No response stream returned.', ts: new Date().toISOString() });
-        onDone?.(-1);
-        return;
-      }
-
-      // Read the SSE stream — same pattern as the InteractiveTerminal's
-      // submit() function. Each `data: <json>\n\n` chunk is parsed and
-      // forwarded to the parent via `onEvent`.
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
-      let finalCode = 0;
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split('\n\n');
-        buf = parts.pop() || '';
-        for (const part of parts) {
-          const line = part.replace(/^data: /, '').trim();
-          if (!line) continue;
-          try {
-            const ev = JSON.parse(line);
-            onEvent?.(ev);
-            if (ev.type === 'action_done') {
-              finalCode = typeof ev.code === 'number' ? ev.code : 0;
-            }
-          } catch {
-            // Non-JSON chunk — ignore. opencode occasionally emits
-            // non-JSON lines (e.g. progress indicators) that we can't
-            // meaningfully surface.
-          }
-        }
-      }
-      onDone?.(finalCode);
-    } catch (e: any) {
-      if (e?.name === 'AbortError') {
-        // User cancelled (component unmounted). Don't call onDone —
-        // the parent is already tearing down.
-        return;
-      }
-      onEvent?.({
-        type: 'error',
-        msg: `New session failed: ${e?.message || 'unknown error'}`,
-        ts: new Date().toISOString(),
-      });
-      onDone?.(-1);
+      onStart?.();
     } finally {
       setStarting(false);
-      abortRef.current = null;
-      // Give the new session file a moment to land on disk, then
-      // refresh so the indicator shows the fresh (low) usage.
-      setTimeout(() => {
-        lastFetchRef.current = 0; // bypass the throttle
-        poll();
-      }, REFETCH_AFTER_NEW_SESSION_MS);
     }
-  }, [starting, getSummary, getConversationId, onStart, onEvent, onDone, poll]);
+  }, [starting, onStart]);
 
   // ---- Render -----------------------------------------------------------
   // Color falls back to a dim gray when we have no data yet — the
@@ -309,8 +253,8 @@ export default function ContextIndicator({
         <OlympusTooltip
           content={
             pct > 85
-              ? 'Context window critical — LLM quality may degrade. Start a new session: Apollo continues from a summary of this conversation.'
-              : 'Context window filling up — start a new session to preserve quality. Apollo continues from a summary.'
+              ? 'Context window critical — LLM quality may degrade. Start a new session to clear it (the warm server restarts; the project stays the same).'
+              : 'Context window filling up — start a new session to clear it (the warm server restarts; the project stays the same).'
           }
           side="bottom"
         >
@@ -324,7 +268,7 @@ export default function ContextIndicator({
               starting && 'opacity-70 cursor-wait',
             )}
             style={{ color: '#D4A574' }}
-            aria-label="Start a new session — Apollo continues from a summary"
+            aria-label="Start a fresh session — clears the conversation and restarts the warm server"
           >
             {starting ? (
               <Loader2 size={9} className="animate-spin" />
