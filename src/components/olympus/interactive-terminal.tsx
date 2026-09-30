@@ -415,14 +415,24 @@ export default function InteractiveTerminal() {
         // lands inside the TTFB gap, right after the counter was opened, and
         // would otherwise print below it and freeze the line mid-transcript.
         removeThinking();
-        // Fix B: the silence/stall watchdog (opencode-session.ts) speaks with
-        // a ⚠ prefix. Those lines are the ONLY signal a user gets that a run
-        // has gone quiet, so they must not render like assistant prose —
-        // gray text scrolls past and reads as chit-chat. Escalate to the error
-        // style (red) and mirror the elapsed silence into GOD ACTIVITY.
-        const isWatchdog = msg.startsWith('⚠');
-        addMessage({ type: isWatchdog ? 'error' : 'response', text: msg, god: ev.god });
-        if (isWatchdog) {
+        // Fix B2: the watchdog speaks with two different tones and they must
+        // not look alike. The 60s WARN has NO ⚠ prefix (only the 150s STALL
+        // does), so matching on the prefix alone left the warn rendering as
+        // gray prose and never touching GOD ACTIVITY.
+        //   STALL (⚠)      → red   — something is wrong, escalate.
+        //   WARN           → calm system line — this also fires during
+        //                     legitimate long thinking on the free tier, so red
+        //                     here would cry wolf and train users to ignore it.
+        const isStall = msg.startsWith('⚠');
+        const isWarn = !isStall && msg.includes('No stream activity');
+        addMessage({
+          type: isStall ? 'error' : isWarn ? 'system' : 'response',
+          text: msg,
+          god: ev.god,
+        });
+        // Both keep the card green and pulsing: the run is still in flight,
+        // which is exactly what Fix B requires during a silence.
+        if (isStall || isWarn) {
           const silent = msg.match(/(\d+)s/)?.[1];
           updateGodActivity('apollo', 'working', silent ? `Silent ${silent}s — may be stalled` : 'May be stalled');
         }

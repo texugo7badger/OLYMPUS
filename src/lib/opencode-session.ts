@@ -1248,8 +1248,26 @@ async function openEventFeed(
               ev?.properties?.sessionID === sessionId ||
               (ev?.type === 'message.part.updated' && ev?.properties?.part?.sessionID === sessionId);
             if (belongs) {
-              state.lastFrameAt = Date.now();
-              mapEvent(ev, sessionId, state, onEvent);
+              // B2: liveness means VISIBILITY, not frame arrival. Stamping
+              // lastFrameAt here (before mapping) kept the silence clock
+              // alive with frames that map to nothing the user can see:
+              // message.part.delta buffers and returns (:720), re-emitted
+              // text/reasoning parts are dropped by the textEmitted gate
+              // (:809, :883), tool + step churn is deduped (:828, :853, :802)
+              // and non-error session.status frames return silently (:733).
+              // During a real stall opencode keeps streaming exactly those
+              // invisible frames, so the watchdog could never reach its own
+              // threshold. Stamp only when a mapped event actually reaches the
+              // client.
+              //
+              // Deliberately NOT done inside deliver(): synthetic events (this
+              // watchdog's own WARN/STALL lines, the auto-approve notice) flow
+              // through deliver and would postpone the STALL countdown right
+              // after the WARN fired.
+              mapEvent(ev, sessionId, state, (mapped) => {
+                state.lastFrameAt = Date.now();
+                onEvent(mapped);
+              });
             }
           } catch {
             // Non-JSON data line — ignore.
