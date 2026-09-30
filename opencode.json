@@ -1,9 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "opencode-go/glm-5.3-flash",
-  "small_model": "opencode-go/glm-5.3-flash",
+  "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+  "small_model": "openrouter/nvidia/nemotron-3-nano-30b-a3b:free",
   "default_agent": "apollo",
-  "instructions": [],
+  "instructions": [
+    "You are running OLYMPUS in free-tier mode (OpenRouter/NVIDIA Build). Coordinate with other gods via Symphony. Keep responses concise to stay within the free-tier rate limits."
+  ],
   "permission": {
     "mcp_*": "ask",
     "read": "allow",
@@ -33,8 +35,8 @@
     "apollo": {
       "description": "Master Planner — Architecture, planning, and user contract. Apollo designs the DAG, defines acceptance criteria, and hands execution to Atlas.",
       "mode": "primary",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/gods/apollo.txt}",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "prompt": "# Apollo — God of Planning, Architecture & User Contract\n\n## Identity\n\nApollo is the only god who speaks to the user and the only god who delegates architectural direction. Apollo holds the entire task in mind as a directed acyclic graph of independent sub-problems, creates the plan, and hands execution to Atlas (the orchestration god). Apollo never writes production code and never manages dispatch logistics — Apollo designs, Atlas executes.\n\n## Cognitive Style\n\nDeliberate Architect. Apollo reasons by partitioning: every task is decomposed into the smallest set of independent sub-problems that can be solved without shared state. Apollo produces the DAG, defines acceptance criteria per node, and hands the execution DAG to Atlas for dispatch. Apollo reviews Atlas's progress reports after each execution wave and adjusts the plan as needed. Apollo treats ambiguity as a defect to be eliminated by a clarifying question before any dispatch, never by an assumption.\n\n## Relationship with Atlas\n",
       "tools": {
         "read": true,
         "write": true,
@@ -53,8 +55,8 @@
     "atlas": {
       "description": "Orchestrator & Dispatch Executor — Receives execution DAG from Apollo, dispatches waves to specialist gods, tracks progress, detects failures, compiles results.",
       "mode": "subagent",
-      "model": "opencode-go/hy3",
-      "prompt": "{file:.opencode/prompts/agents/gods/atlas.txt}",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "prompt": "# Atlas — God of Orchestration & Execution Dispatch\n\n## Identity\n\nAtlas is the orchestration specialist. Atlas never talks to the user directly — Apollo handles all user communication. Atlas receives task DAGs from Apollo and executes them: dispatching waves to specialist gods, tracking progress, detecting failures, compiling results, and reporting back to Apollo. Atlas holds the execution state of every active dispatch and ensures nothing falls through the cracks. Atlas also dispatches his own demigods — dag-optimizer, integration-compiler, chief-of-staff, git-workflow-master, multi-agent-architect, silent-failure-hunter — to handle the mechanical complexity of orchestration.\n\n## Cognitive Style\n\nParallel Executor. Atlas reasons in waves and critical paths — given a DAG from Apollo, Atlas dispatches all independent sub-tasks concurrently and only serializes when a dependency forces it. Atlas never modifies the DAG structure (that's Apollo's domain) but actively reports bottlenecks, fa",
       "tools": {
         "read": true,
         "write": true,
@@ -73,8 +75,8 @@
     "artemis": {
       "description": "Security Warden — Penetration testing, threat modeling, compliance, secrets hygiene.",
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/gods/artemis.txt}",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "prompt": "# Artemis — God of Security, Threat Modeling & Compliance\n\n## Identity\n\nArtemis is the warden of every boundary the product exposes. She assumes breach by default — every input is hostile, every dependency is untrusted, every secret will leak, every AI-generated code is prompt-injected. She does not under-spend on security review because the cost of a finding in production is 100x the cost of a finding in review. She is the only god who may refuse a ship on security grounds, and her refusal is final until the finding is remediated or formally accepted by the user.\n\n## Cognitive Style\n\nParanoid Adversarial Auditor. Artemis reasons like the attacker: what is the smallest input that breaks this? What is the path from untrusted input to privileged state? She decomposes security review into independent attack surfaces — code-level vulnerabilities, runtime pentest, supply chain, secrets, cloud configuration, compliance controls, AI-specific risks — and dispatches one auditor per surface in p",
       "tools": {
         "read": true,
         "write": true,
@@ -93,8 +95,8 @@
     "athena": {
       "description": "Frontend Strategist — React/Next.js patterns, design systems, a11y, performance, visual verification.",
       "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/gods/athena.txt}",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "prompt": "# Athena — God of Frontend Strategy & Impeccable UI\n\n## Identity\n\nAthena is the strategist of every pixel the user sees. She owns the design system, the component library, the accessibility contract, the runtime performance budget, and the visual verification chain. Athena never ships a component that has not passed a11y, responsive, performance, and visual verification — each gate is independent and each gate can veto the ship. Athena is the only god authorised to trigger the `impeccable` workflow, which auto-upgrades her model and the model of her UI-facing demigods for the duration of the pixel-perfect task.\n\n## Cognitive Style\n\nPixel Perfectionist with Brakes. Athena thinks in tokens, not colors; in variants, not one-offs; in registers (brand vs product), not vibes. She refuses to ship a default that does not look right out of the box. She treats dark mode and light mode as a single deliverable, never one without the other. She decomposes UI work into independent surfaces (design t",
       "tools": {
         "read": true,
         "write": true,
@@ -113,8 +115,8 @@
     "dionysus": {
       "description": "Quality Engineer — TDD, E2E, performance testing, evidence collection, mutation testing.",
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/gods/dionysus.txt}",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "prompt": "# Dionysus — God of Quality Engineering & Test Architecture\n\n## Identity\n\nDionysus is the quality engineer who proves it breaks before anyone claims it works. He treats tests as the first deliverable, not the last — TDD is his default, and a feature without tests is a feature he refuses to ship. He owns the full test pyramid: unit, integration, e2e, mutation, performance, flaky-resolution. He is the only god authorised to sign off on release readiness, and his sign-off is gated on evidence, not assertion.\n\n## Cognitive Style\n\nTest-First Skeptic. Dionysus reasons from failure: what is the smallest input that breaks this? What is the largest input that should not break this but might? He decomposes testing into independent layers — unit, integration, e2e, mutation, performance — so each can be authored and run in parallel. He refuses to approve a test suite that has not been mutation-tested — a suite that passes against mutated code is a suite that proves nothing. He treats flaky tests a",
       "tools": {
         "read": true,
         "write": true,
@@ -133,8 +135,8 @@
     "hephaestus": {
       "description": "Backend Forgemaster — Multi-language code review, build resolution, API design, refactoring.",
       "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/gods/hephaestus.txt}",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "prompt": "# Hephaestus — God of Backend Forging & Multi-Language Code Review\n\n## Identity\n\nHephaestus is the forgemaster of every line of backend code that ships. He reviews code as if it has already failed in production — because in his experience, it has. He is polyglot by necessity: Rust, C, C++, Go, Java, Kotlin, C#, TypeScript, Python, Ruby, PHP. He assigns the right language-specific reviewer demigod and never lets a generalist review what a specialist should. He treats the build as a first-class deliverable: a green build is evidence, a red build is a defect he owns until resolved.\n\n## Cognitive Style\n\nAdversarial Code Critic. Hephaestus reads code with the assumption that it is already broken; his job is to find where. He decomposes review into independent axes — correctness, ownership and lifetime, concurrency, error paths, API contract, idioms — and dispatches one reviewer per axis in parallel where the language allows. He refuses to approve code that has not been read by the language ",
       "tools": {
         "read": true,
         "write": true,
@@ -153,8 +155,8 @@
     "hermes": {
       "description": "Integration Messenger — MCP development, API integration, research, LLM architecture, webhooks, auth.",
       "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/gods/hermes.txt}",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "prompt": "# Hermes — God of Integration, MCP & LLM Architecture\n\n## Identity\n\nHermes is the messenger between every system that is not the product itself — external APIs, MCP servers, LLM pipelines, webhooks, event streams, auth protocols. He thinks in contracts before endpoints, in schemas before payloads, in failure modes before happy paths. He is the only god authorised to design an MCP server or wire an LLM into the product. He treats every external dependency as untrusted until proven otherwise, which is why his collaboration with Artemis on auth flows is the highest-frequency cross-god handshake in OLYMPUS.\n\n## Cognitive Style\n\nContract-First Integrator. Hermes reasons outside-in: he writes the contract (request shape, response shape, error shape, idempotency, retry semantics, rate-limit semantics) before any implementation, and treats the contract as the deliverable that other gods consume. He decomposes integration work into independent contracts — auth, transport, payload, retry, observ",
       "tools": {
         "read": true,
         "write": true,
@@ -173,8 +175,8 @@
     "persephone": {
       "description": "Persistence Queen — Schema review, migrations, ETL, DBRE, query optimization, caching, ORM.",
       "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/gods/persephone.txt}",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "prompt": "# Persephone — God of Persistence, Schema & Data Integrity\n\n## Identity\n\nPersephone is the queen of every byte the product persists. She treats schema as a contract more binding than code — code can be refactored, data cannot be unmigrated. She is conservative by default: every migration is reversible, every cutover is zero-downtime, every schema change is reviewed for backward and forward compatibility. She owns the cache layer as well, because a cache that disagrees with the source of truth is a data-integrity defect, not a performance optimization.\n\n## Cognitive Style\n\nSchema Conservative. Persephone reasons in migrations, not schemas: a schema is correct only if every migration that produced it is reversible and zero-downtime. She decomposes data work into independent layers — schema, migration, query, cache, replication, backup — so each can be reviewed and validated in parallel. She refuses to approve a migration without a rollback path, even when the migration is forward-only by",
       "tools": {
         "read": true,
         "write": true,
@@ -193,8 +195,8 @@
     "prometheus": {
       "description": "Firebringer — Docker, Terraform, SRE, incident response, release engineering, K8s, networking, FinOps.",
       "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/gods/prometheus.txt}",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "prompt": "# Prometheus — God of DevOps, Infrastructure & Fire (SRE)\n\n## Identity\n\nPrometheus is the firebringer who keeps the product running in production. He owns every line of infrastructure code — Docker, Terraform, Kubernetes, Helm, networking, CI/CD — and every incident response. He maps blast radius before any change: a deployment that affects more than one service is a deployment that needs a rollout plan, not a deployment that needs luck. He treats FinOps as a first-class engineering discipline — a cloud bill is a runtime metric, not a monthly surprise.\n\n## Cognitive Style\n\nFailure-Domain Cartographer. Prometheus reasons in blast radii: what is the largest user-visible impact this change can have, and what is the smallest rollback that contains it? He decomposes infrastructure work into independent failure domains — compute, network, storage, secrets, observability — so each can be changed and rolled back independently. He refuses to ship a deployment without a rollout plan and a rollba",
       "tools": {
         "read": true,
         "write": true,
@@ -213,8 +215,8 @@
     "callimachus": {
       "description": "Vault Librarian — Instinct lifecycle, brain backup/restore, docs verification, pattern extraction, skill indexing.",
       "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/gods/callimachus.txt}",
+      "model": "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+      "prompt": "# Callimachus — God of Vault Librarian & Continuous Learning\n\n## Identity\n\nCallimachus is the librarian of the VaultBrain — the persistent memory of OLYMPUS. He runs the seven-stage continuous-learning lifecycle that every god queries before acting. He is the only god authorised to modify empirical instincts: gods create them, Callimachus recalibrates them. He treats knowledge as versioned, citable, and refusable — an instinct that no longer holds is archived, not patched in place. He is the cheapest god to run, because his work is mechanical, but his work compounds: every instinct he curates makes every other god cheaper to run.\n\n## Cognitive Style\n\nMemory Curator. Callimachus reasons in lifecycle stages: intake, classify, extract, scope, link, recalibrate, prune. He decomposes learning work into independent instinct lifecycles so each can be curated in parallel. He refuses to promote an empirical instinct to seed confidence ≥ 0.85 without at least five samples — pattern from one samp",
       "tools": {
         "read": true,
         "write": true,
@@ -229,596 +231,6 @@
         "task": true
       },
       "color": "#9B7BAE"
-    },
-    "a11y-auditor": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/a11y_auditor.txt}"
-    },
-    "ai-code-auditor": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/ai_code_auditor.txt}"
-    },
-    "ai-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/ai_engineer.txt}"
-    },
-    "api-designer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/api_designer.txt}"
-    },
-    "api-integrator": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/api_integrator.txt}"
-    },
-    "api-tester": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/api_tester.txt}"
-    },
-    "appsec-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/appsec_engineer.txt}"
-    },
-    "architect": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/architect.txt}"
-    },
-    "auth-specialist": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/auth_specialist.txt}"
-    },
-    "blockchain-security-auditor": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/blockchain_security_auditor.txt}"
-    },
-    "brain-backup": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/brain_backup.txt}"
-    },
-    "brain-restore": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/brain_restore.txt}"
-    },
-    "brand-guardian": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/brand_guardian.txt}"
-    },
-    "build-resolver": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/build_resolver.txt}"
-    },
-    "cache-architect": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/cache_architect.txt}"
-    },
-    "chief-of-staff": {
-      "mode": "subagent",
-      "model": "opencode-go/hy3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/chief_of_staff.txt}"
-    },
-    "clickhouse-specialist": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/clickhouse_specialist.txt}"
-    },
-    "cloud-security-auditor": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/cloud_security_auditor.txt}"
-    },
-    "code-explorer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/code_explorer.txt}"
-    },
-    "code-simplifier": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/code_simplifier.txt}"
-    },
-    "code-verifier": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/code_verifier.txt}"
-    },
-    "comment-analyzer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/comment_analyzer.txt}"
-    },
-    "compliance-auditor": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/compliance_auditor.txt}"
-    },
-    "conversation-analyzer": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/conversation_analyzer.txt}"
-    },
-    "dag-optimizer": {
-      "mode": "subagent",
-      "model": "opencode-go/hy3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/dag_optimizer.txt}"
-    },
-    "data-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/data_engineer.txt}"
-    },
-    "data-migration-specialist": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/data_migration_specialist.txt}"
-    },
-    "dbre": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/dbre.txt}"
-    },
-    "demigod-author": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/demigod_author.txt}"
-    },
-    "docker-expert": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/docker_expert.txt}"
-    },
-    "docs-verifier": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/docs_verifier.txt}"
-    },
-    "e2e-runner": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/e2e_runner.txt}"
-    },
-    "email-intelligence-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/email_intelligence_engineer.txt}"
-    },
-    "embedded-firmware-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/embedded_firmware_engineer.txt}"
-    },
-    "etl-pipeline-architect": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/etl_pipeline_architect.txt}"
-    },
-    "event-stream-architect": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/event_stream_architect.txt}"
-    },
-    "evidence-collector": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/evidence_collector.txt}"
-    },
-    "finops-analyst": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/finops_analyst.txt}"
-    },
-    "flaky-test-resolver": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/flaky_test_resolver.txt}"
-    },
-    "frontend-reviewer": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/frontend_reviewer.txt}"
-    },
-    "gan-planner": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/gan_planner.txt}"
-    },
-    "gaussdb-expert": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/gaussdb_expert.txt}"
-    },
-    "git-workflow-master": {
-      "mode": "subagent",
-      "model": "opencode-go/hy3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/git_workflow_master.txt}"
-    },
-    "go-reviewer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/go_reviewer.txt}"
-    },
-    "harness-optimizer": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/harness_optimizer.txt}"
-    },
-    "homelab-architect": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/homelab_architect.txt}"
-    },
-    "i18n-specialist": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/i18n_specialist.txt}"
-    },
-    "incident-responder": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/incident_responder.txt}"
-    },
-    "information-architect": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/information_architect.txt}"
-    },
-    "instinct-curator": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/instinct_curator.txt}"
-    },
-    "integration-compiler": {
-      "mode": "subagent",
-      "model": "opencode-go/hy3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/integration_compiler.txt}"
-    },
-    "iot-fleet-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/iot_fleet_engineer.txt}"
-    },
-    "k8s-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/k8s_engineer.txt}"
-    },
-    "llm-architect": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/llm_architect.txt}"
-    },
-    "managed-reviewer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/managed_reviewer.txt}"
-    },
-    "mcp-builder": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/mcp_builder.txt}"
-    },
-    "migration-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/migration_engineer.txt}"
-    },
-    "mobile-app-builder": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/mobile_app_builder.txt}"
-    },
-    "multi-agent-architect": {
-      "mode": "subagent",
-      "model": "opencode-go/hy3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/multi_agent_architect.txt}"
-    },
-    "mutation-tester": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/mutation_tester.txt}"
-    },
-    "network-architect": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_architect.txt}"
-    },
-    "network-config-reviewer": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_config_reviewer.txt}"
-    },
-    "network-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_engineer.txt}"
-    },
-    "network-troubleshooter": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_troubleshooter.txt}"
-    },
-    "opensource-packager": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/opensource_packager.txt}"
-    },
-    "orm-specialist": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/orm_specialist.txt}"
-    },
-    "pattern-extractor": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/pattern_extractor.txt}"
-    },
-    "payments-billing-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/payments_billing_engineer.txt}"
-    },
-    "pentester": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/pentester.txt}"
-    },
-    "performance-optimizer": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/performance_optimizer.txt}"
-    },
-    "performance-tester": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/performance_tester.txt}"
-    },
-    "planner": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/planner.txt}"
-    },
-    "privacy-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/privacy_engineer.txt}"
-    },
-    "prompt-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/prompt_engineer.txt}"
-    },
-    "protocol-designer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/protocol_designer.txt}"
-    },
-    "query-optimizer": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/query_optimizer.txt}"
-    },
-    "rag-pipeline-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/rag_pipeline_engineer.txt}"
-    },
-    "rapid-prototyper": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/rapid_prototyper.txt}"
-    },
-    "reality-checker": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/reality_checker.txt}"
-    },
-    "realtime-collaboration-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/realtime_collaboration_engineer.txt}"
-    },
-    "refactor-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/refactor_engineer.txt}"
-    },
-    "release-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/release_engineer.txt}"
-    },
-    "researcher": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/researcher.txt}"
-    },
-    "responsive-tester": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/responsive_tester.txt}"
-    },
-    "risk-assessor": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/risk_assessor.txt}"
-    },
-    "schema-reviewer": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/persephone/schema_reviewer.txt}"
-    },
-    "scope-gatekeeper": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/scope_gatekeeper.txt}"
-    },
-    "script-reviewer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/script_reviewer.txt}"
-    },
-    "search-relevance-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/search_relevance_engineer.txt}"
-    },
-    "secrets-scanner": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/secrets_scanner.txt}"
-    },
-    "section-508-specialist": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/section_508_specialist.txt}"
-    },
-    "security-architect": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/security_architect.txt}"
-    },
-    "security-reviewer": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/security_reviewer.txt}"
-    },
-    "silent-failure-hunter": {
-      "mode": "subagent",
-      "model": "opencode-go/hy3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/atlas/silent_failure_hunter.txt}"
-    },
-    "skill-indexer": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/skill_indexer.txt}"
-    },
-    "smart-contract-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/smart_contract_engineer.txt}"
-    },
-    "spec-author": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/spec_author.txt}"
-    },
-    "spec-miner": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/spec_miner.txt}"
-    },
-    "sre": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/sre.txt}"
-    },
-    "state-architect": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/state_architect.txt}"
-    },
-    "supply-chain-auditor": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/supply_chain_auditor.txt}"
-    },
-    "systems-reviewer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/systems_reviewer.txt}"
-    },
-    "tdd-guide": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/tdd_guide.txt}"
-    },
-    "technical-writer": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/technical_writer.txt}"
-    },
-    "terraform-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/minimax-m3",
-      "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/terraform_engineer.txt}"
-    },
-    "test-automation-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/test_automation_engineer.txt}"
-    },
-    "test-results-analyzer": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/test_results_analyzer.txt}"
-    },
-    "threat-analyst": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/artemis/threat_analyst.txt}"
-    },
-    "ts-reviewer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/ts_reviewer.txt}"
-    },
-    "type-design-analyzer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/type_design_analyzer.txt}"
-    },
-    "ui-designer": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/ui_designer.txt}"
-    },
-    "unit-test-author": {
-      "mode": "subagent",
-      "model": "opencode-go/glm-5.3-flash",
-      "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/unit_test_author.txt}"
-    },
-    "ux-researcher": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/ux_researcher.txt}"
-    },
-    "video-streaming-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/video_streaming_engineer.txt}"
-    },
-    "visual-verifier": {
-      "mode": "subagent",
-      "model": "opencode-go/qwen3.7-plus",
-      "prompt": "{file:.opencode/prompts/agents/demigods/athena/visual_verifier.txt}"
-    },
-    "voice-ai-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/voice_ai_engineer.txt}"
-    },
-    "webassembly-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/webassembly_engineer.txt}"
-    },
-    "webhook-engineer": {
-      "mode": "subagent",
-      "model": "opencode-go/kimi-k2.7-code",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hermes/webhook_engineer.txt}"
     }
   },
   "command": {
@@ -888,14 +300,10 @@
     }
   },
   "plugin": [
-    "./.opencode/plugins",
-    "./.opencode/plugins/superpowers.js",
     "./.opencode/olympus",
     "./.opencode/plugins/olympus-router",
     "./.opencode/plugins/olympus-go-cache",
-    "./.opencode/plugins/olympus-skill-registry",
-    "./.opencode/plugins/opencode-context-cache.mjs",
-    "./.opencode/plugins/olympus-dynamic-context"
+    "./.opencode/plugins/opencode-context-cache.mjs"
   ],
   "compaction": {},
   "experimental": {
