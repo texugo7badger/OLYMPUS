@@ -127,6 +127,15 @@ export default function InteractiveTerminal() {
   const [awaitingAnswer, setAwaitingAnswer] = useState(false);
   const runHadText = useRef(false);
   const runHadError = useRef(false);
+  // Fix A (silent-failure UX): per-run output census. opencode can finish a
+  // turn with code 0 while producing nothing at all — the model stalls right
+  // after its first tool call. That is a failure, not a success, so the
+  // census decides which completion message the user sees. runLastTool names
+  // the last tool that actually ran, so the failure message can point at it
+  // instead of just saying "no output".
+  const runToolCount = useRef(0);
+  const runTextCount = useRef(0);
+  const runLastTool = useRef('');
   const [awaitingContext, setAwaitingContext] = useState(false);
   const [godActivities, setGodActivities] = useState<GodActivity[]>([]);
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -329,6 +338,7 @@ export default function InteractiveTerminal() {
       }
       if (text) {
         runHadText.current = true;
+        runTextCount.current++;
         removeThinking();
         addMessage({ type: 'response', text, god: ev.god || 'apollo' });
         updateGodActivity(ev.god || 'apollo', 'working', 'Responding...');
@@ -342,6 +352,11 @@ export default function InteractiveTerminal() {
       const summary = typeof toolInput === 'string'
         ? toolInput.slice(0, 100)
         : Object.entries(toolInput).slice(0, 3).map(([k, v]) => `${k}: ${String(v).slice(0, 50)}`).join(', ');
+      // Fix A: census the tools this run actually invoked, and keep the most
+      // useful argument (a path) for the stall message.
+      runToolCount.current++;
+      const arg = toolInput?.filePath || toolInput?.path || toolInput?.file || toolInput?.pattern || summary;
+      runLastTool.current = `${toolName}(${String(arg).slice(0, 60)})`;
       removeThinking();
       addMessage({ type: 'system', text: `tool: ${toolName}(${summary})` });
       updateGodActivity(ev.god || 'apollo', 'working', `Using ${toolName}...`);
@@ -395,17 +410,35 @@ export default function InteractiveTerminal() {
       // Already handled by the "Routing to Apollo..." message above.
       runHadText.current = false;
       runHadError.current = false;
+      // Fix A: a new run starts with an empty census.
+      runToolCount.current = 0;
+      runTextCount.current = 0;
+      runLastTool.current = '';
       return;
     }
     if (ev.type === 'action_done') {
       removeThinking();
       setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false); updateGodActivity('apollo', 'idle');
       if (ev.code === 0) {
-        if (runHadText.current) {
+        if (runTextCount.current > 0) {
           addMessage({ type: 'system', text: 'Task completed.' });
         } else if (!runHadError.current) {
-          console.warn('[terminal] run ended (code 0) with no output and no error event');
-          addMessage({ type: 'system', text: 'Task completed (no output).' });
+          // Fix A: exit code 0 with zero text blocks. The run DID tools
+          // (typically an initial read) and then the model went quiet, so
+          // this is a silent failure. The old copy — "Task completed
+          // (no output)" — read as a success and is what trained users to
+          // trust a stalled run. Say what happened, name the last tool, and
+          // give the two ways out (STOP, or resend narrower).
+          console.warn(
+            `[terminal] no_output: tool_count=${runToolCount.current} text_count=${runTextCount.current} last_tool=${runLastTool.current || 'none'}`,
+          );
+          const last = runLastTool.current;
+          addMessage({
+            type: 'error',
+            text: last
+              ? `Run ended with no output. The model may have stalled. Last tool: ${last}. Click STOP or resend with a smaller scope.`
+              : 'Run ended with no output. The model may have stalled before making any tool call. Click STOP or resend with a smaller scope.',
+          });
         }
       } else {
         addMessage({ type: 'error', text: `Task failed (exit code ${ev.code})` });
@@ -508,6 +541,12 @@ export default function InteractiveTerminal() {
 
     // SSE-only — always POST, no WS check.
     setInput(''); setContext(''); setShowContext(false); setSubmitting(true);
+    // Fix A: reset the census here too, not only on action_start. If the run
+    // dies before action_start (abort, 502, provider error) the previous run's
+    // counts would otherwise be read as this run's output.
+    runToolCount.current = 0;
+    runTextCount.current = 0;
+    runLastTool.current = '';
     setTodos([]); setGodActivities([]);
     addMessage({
       type: 'user',

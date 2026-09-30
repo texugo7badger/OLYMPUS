@@ -1021,6 +1021,13 @@ async function runWarmMessageAttempt(
     }, 5_000);
 
     // The wrapped onEvent also marks that we delivered at least one event.
+    // Fix A: every mapped event in the run funnels through here, so this is
+    // the one place that can census the run without threading counters
+    // through mapPart/openEventFeed. readCount is tracked separately because
+    // "read one file then went quiet" is the exact stall signature we care
+    // about — it is what the old "Task completed (no output)" masked.
+    let toolCount = 0;
+    let readCount = 0;
     const deliver = (ev: any) => {
       // Auto-approve allowlisted permission asks (vault paths). Runs BEFORE
       // delivery so the UI still shows the card (marked auto-approved via
@@ -1038,6 +1045,11 @@ async function runWarmMessageAttempt(
           .catch(() => {});
       }
       if (!eventCtrl.signal.aborted || ev.type === 'error') {
+        if (ev.type === 'tool.call') {
+          toolCount++;
+          const name = String(ev.tool?.name || ev.name || '').toLowerCase();
+          if (name === 'read' || name === 'readfile' || name === 'read_file') readCount++;
+        }
         receivedEvents = true;
         opts.onEvent(ev);
       }
@@ -1115,6 +1127,22 @@ async function runWarmMessageAttempt(
       //    and synthesize from the newest assistant message.
       if (state.textEmitted.size === 0 && !state.gotError) {
         await synthesizeFromHistory(server, opts.sessionId, state, deliver);
+      }
+
+      // Fix A: no_output telemetry. A code-0 run that produced no text and no
+      // error is a silent failure — the model stalled. Emit it as a log line
+      // so the transcript carries the stall's shape instead of the UI merely
+      // not saying "Task completed".
+      //
+      // MUST run before the eventCtrl.abort() below: deliver() is a no-op
+      // once the feed is aborted (except for errors), so a log emitted after
+      // that point would be silently dropped.
+      if (!state.gotError && state.textEmitted.size === 0) {
+        deliver({
+          type: 'log',
+          msg: `[olympus-run] no_output: read_count=${readCount} tool_count=${toolCount} text_count=${state.textEmitted.size}`,
+          ts: new Date().toISOString(),
+        });
       }
 
       // 4. Close the feed subscription.
