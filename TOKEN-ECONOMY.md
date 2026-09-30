@@ -160,7 +160,7 @@ The same project on a **free strategy** (e.g. `free-openrouter`): **$0 total cos
 
 ## Benchmark recording costs
 
-When benchmark recording is enabled (Settings → Benchmark Recording toggle), every finalized dispatch is logged to `~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl`. This is **pure file I/O** — zero LLM tokens, < 1KB per dispatch. The file is pruned when it exceeds 100MB (configurable via `~/.olympus/vault-policy.json`). The recording is opt-in and off by default.
+When benchmark recording is enabled (Settings → Benchmark Recording toggle), each finished run is logged to `~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl` — one row per (session, agent), written when the run goes idle, when recording is toggled off, and best-effort on app shutdown. The writer is app-side (`src/lib/benchmarks.ts`), not a plugin, so it records runs started from Zed and other non-OLYMPUS spawns too. This is **pure file I/O** — zero LLM tokens, < 1KB per row. The file is pruned when it exceeds 50MB (configurable via `maxBenchmarkLogMB` in `~/.olympus/vault-policy.json`). The recording is opt-in and off by default.
 
 ---
 

@@ -97,14 +97,20 @@ The harness picks it up automatically — no registration needed.
 
 ### What it does
 
-When enabled, every finalized dispatch is logged to `~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl` with:
+When enabled, each finished run is logged to `~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl` — **one row per (session, agent)**. Rows are written when the run goes idle, when recording is toggled off, and best-effort on app shutdown. The writer lives in the app (`src/lib/benchmarks.ts`), not the `olympus-hooks` plugin: that plugin is gated behind `OLYMPUS_MANAGED=1` (#25) and is silent in Zed and other non-OLYMPUS spawns.
+
+Each row carries:
 
 - Timestamp + session label (optional)
-- God, demigod, instinct ID, short-circuit flag
+- God, demigod (`null` when no single demigod owns the window), instinct ID, short-circuit flag
 - Skill + MCP equipped
-- Task signature, stack, project
-- Outcome (success / failure / unknown)
-- Duration, input/output tokens, error flag, tool call count
+- Task signature **hash** (12-hex sha256 prefix of the normalized task signature + stack + project — god-agnostic, so the same task hashes identically across gods). The raw task signature is never written.
+- Stack, project
+- Model (runtime `modelID`) + active strategy
+- Outcome (success / failure)
+- Duration, input/output tokens, reasoning + cache tokens tracked separately, spend in USD, error flag, tool call count
+
+> **Attribution limit (v1).** The app has no dispatch lifecycle to correlate against — `dispatch-tracker` is plugin-side — and `message.updated` carries no agent name (only `modelID`/`providerID`). God and demigod rows are therefore attributed as `multi` / `null`. The `per_god` and Top-10 demigod breakdowns stay empty until the app can learn the agent name from the stream.
 
 The Benchmarks panel (Activity Bar → BarChart3 icon) shows aggregate totals updated every 30 seconds.
 
@@ -152,7 +158,7 @@ The recorded data lets you answer questions like:
 
 ### Privacy
 
-Benchmark data is **local-only**. It never leaves your machine. The log file is at `~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl`. Vault TTL pruning (see [vault-policy](#vault-policy-integration)) rolls the log over when it exceeds 100MB.
+Benchmark data is **local-only**. It never leaves your machine. The log file is at `~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl`. Vault TTL pruning (see [vault-policy](#vault-policy-integration)) rolls the log over when it exceeds 50MB (`maxBenchmarkLogMB`).
 
 ### Vault policy integration
 
@@ -206,7 +212,7 @@ When `dryRun` is true (the default), pruning just logs what it would do. Set `dr
 | Eval pass rate (local, GO plan) | 100% with quality ≥ 0.75 | Manual `npm run eval` |
 | Short-circuit rate (after 100 dispatches) | > 30% | `~/OLYMPUS-VAULT/05_Auto_Learning/shortcircuit-log.jsonl` |
 | Vault growth | < 100MB/month/project | `olympus vault prune --dry-run` |
-| Benchmark log size | < 100MB before rollover | `~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl` |
+| Benchmark log size | < 50MB before rollover | `~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl` |
 
 ---
 

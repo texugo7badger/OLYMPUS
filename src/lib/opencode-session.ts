@@ -38,6 +38,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnOpencode } from '@/lib/opencode-spawn';
+import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
 
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
@@ -689,6 +690,192 @@ async function withSessionLock<T>(key: string, fn: () => Promise<T>): Promise<T>
   }
 }
 
+/**
+ * Benchmark accumulator (issue #28).
+ *
+ * One window per (sessionID, agent). Sums step-finish token/cost counters and
+ * wall-clock, then emits one row per agent on flush.
+ *
+ * R-C FINDING — why `agent` is null for now, not "multi":
+ *  message.updated's AssistantMessage (SDK types.gen.d.ts:98-127) carries
+ *  modelID/providerID/mode/parentID but NO agent-name field, so the join key
+ *  R-A assumes does not exist. The only agent name on the wire is a `subtask`
+ *  Part (types.gen.d.ts:349-352), which appears only for dispatched
+ *  subagents — god turns have no counterpart, so per-agent rows would
+ *  attribute demigod work while leaving god turns unattributed (asymmetric,
+ *  silently wrong totals). Per R-C this module therefore keeps the per-agent
+ *  sub-map SHAPE (so R-A lands as a one-line change once an agent name is
+ *  available) but parks unattributed counters under the reserved key
+ *  MULTI_KEY. Corroborating: `god_working` — the event the UI would use to
+ *  learn agent names — has no producer anywhere in src/.
+ *
+ * The key is deliberately not the literal "multi": if real agent names ever
+ * arrive, a god or demigod could legitimately be called "multi" and would
+ * then collide with this bucket.
+ */
+const MULTI_KEY = '__multi__';
+
+interface AgentBucket {
+  agentName: string;
+  tokens_input: number;
+  tokens_output: number;
+  tokens_reasoning: number;
+  tokens_cache_read: number;
+  tokens_cache_write: number;
+  spend_usd: number;
+  tool_call_count: number;
+  had_error: boolean;
+  /** messageID -> model, from message.updated (runtime beats registry config). */
+  modelByMessage: Map<string, string>;
+  /** messageID -> providerID, from message.updated. */
+  providerByMessage: Map<string, string>;
+  /** step-finish part IDs already counted — re-sent parts must not double-count. */
+  countedSteps: Set<string>;
+  taskSignature: string;
+  firstTs: number;
+  lastTs: number;
+}
+
+/** sessionID -> agentName -> bucket */
+const accumulators = new Map<string, Map<string, AgentBucket>>();
+
+function getBucket(sessionID: string, agentName: string): AgentBucket {
+  let byAgent = accumulators.get(sessionID);
+  if (!byAgent) {
+    byAgent = new Map();
+    accumulators.set(sessionID, byAgent);
+  }
+  let b = byAgent.get(agentName);
+  if (!b) {
+    b = {
+      agentName,
+      tokens_input: 0,
+      tokens_output: 0,
+      tokens_reasoning: 0,
+      tokens_cache_read: 0,
+      tokens_cache_write: 0,
+      spend_usd: 0,
+      tool_call_count: 0,
+      had_error: false,
+      modelByMessage: new Map(),
+      providerByMessage: new Map(),
+      countedSteps: new Set(),
+      taskSignature: '',
+      firstTs: Date.now(),
+      lastTs: Date.now(),
+    };
+    byAgent.set(agentName, b);
+  }
+  return b;
+}
+
+/** message.updated: remember the runtime model for this messageID. */
+function noteMessageModel(sessionID: string, info: any): void {
+  if (!info || typeof info.id !== 'string') return;
+  const b = getBucket(sessionID, MULTI_KEY);
+  if (typeof info.modelID === 'string' && info.modelID) b.modelByMessage.set(info.id, info.modelID);
+  if (typeof info.providerID === 'string' && info.providerID) b.providerByMessage.set(info.id, info.providerID);
+}
+
+/** step-finish: fold this step's tokens + cost into the bucket. */
+function noteStepFinish(sessionID: string, part: any): void {
+  if (!part || typeof part.id !== 'string') return;
+  const b = getBucket(sessionID, MULTI_KEY);
+  if (b.countedSteps.has(part.id)) return; // re-sent part, already counted
+  b.countedSteps.add(part.id);
+  const t = part.tokens || {};
+  const cache = t.cache || {};
+  b.tokens_input += num(t.input);
+  b.tokens_output += num(t.output);
+  b.tokens_reasoning += num(t.reasoning);
+  b.tokens_cache_read += num(cache.read);
+  b.tokens_cache_write += num(cache.write);
+  b.spend_usd += num(part.cost);
+  b.lastTs = Date.now();
+}
+
+function noteToolCall(sessionID: string): void {
+  const b = getBucket(sessionID, MULTI_KEY);
+  b.tool_call_count++;
+  b.lastTs = Date.now();
+}
+
+function noteSessionError(sessionID: string): void {
+  getBucket(sessionID, MULTI_KEY).had_error = true;
+}
+
+function num(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+}
+
+/**
+ * Set the content-free task signature for this window. Only the hash of it is
+ * ever persisted, so the raw string stays in memory.
+ */
+function setBenchmarkTaskSignature(sessionID: string, taskSignature: string): void {
+  const byAgent = accumulators.get(sessionID);
+  if (!byAgent) return;
+  for (const b of byAgent.values()) b.taskSignature = taskSignature;
+}
+
+/**
+ * Emit one row per agent for this session, then reset the window.
+ *
+ * Recording OFF is a strict no-op: if nothing accumulated we return before any
+ * config read, so no dir or file is ever created. Failures never propagate —
+ * this runs on the SSE path.
+ */
+function flushBenchmarkAccumulator(sessionID: string): void {
+  try {
+    const byAgent = accumulators.get(sessionID);
+    if (!byAgent || byAgent.size === 0) return; // empty guard: dedupes double flush
+    if (!loadBenchmarkConfig().recordingEnabled) {
+      accumulators.delete(sessionID);
+      return;
+    }
+    const strategy = activeStrategyId();
+    const stack = Array.isArray(process.env.OLYMPUS_ACTIVE_STACK)
+      ? process.env.OLYMPUS_ACTIVE_STACK
+      : (process.env.OLYMPUS_ACTIVE_STACK || null);
+    const project = process.env.OLYMPUS_ACTIVE_PROJECT || null;
+
+    for (const b of byAgent.values()) {
+      // Runtime model wins; fall back to the most recent message's model.
+      let model: string | null = null;
+      for (const m of b.modelByMessage.values()) model = m;
+      if (!model) for (const m of b.providerByMessage.values()) model = m;
+      const unattributed = b.agentName === MULTI_KEY;
+      appendBenchmarkEntry({
+        sessionID,
+        taskSignature: b.taskSignature || sessionID,
+        stack,
+        project,
+        model,
+        strategy,
+        tokens_input: b.tokens_input,
+        tokens_output: b.tokens_output,
+        tokens_reasoning: b.tokens_reasoning,
+        tokens_cache_read: b.tokens_cache_read,
+        tokens_cache_write: b.tokens_cache_write,
+        spend_usd: b.spend_usd,
+        had_error: b.had_error,
+        tool_call_count: b.tool_call_count,
+        duration_ms: b.lastTs - b.firstTs,
+        god: unattributed ? 'multi' : b.agentName,
+        demigod: unattributed ? null : b.agentName,
+      });
+    }
+    accumulators.delete(sessionID);
+  } catch (err: any) {
+    console.error('[olympus:benchmarks] flush failed:', err?.message);
+  }
+}
+
+/** Best-effort flush of every open window (toggle-off, app shutdown). */
+function flushAllBenchmarkAccumulators(): void {
+  for (const sessionID of Array.from(accumulators.keys())) flushBenchmarkAccumulator(sessionID);
+}
+
 /** Map a server SSE event / message part into the UI event format. */
 function mapEvent(
   ev: any,
@@ -716,6 +903,11 @@ function mapEvent(
       if (props?.sessionID === sessionId && props?.info?.role === 'user' && typeof props?.info?.id === 'string') {
         state.userMessageIds.add(props.info.id);
       }
+      // Benchmark: retain the runtime model for this messageID. Note there is
+      // no agent name here (see R-C finding above).
+      if (props?.sessionID === sessionId && props?.info?.role === 'assistant') {
+        noteMessageModel(sessionId, props.info);
+      }
       return;
     }
     case 'message.part.delta': {
@@ -735,13 +927,27 @@ function mapEvent(
       const st = props.status;
       if (st?.type === 'error') {
         state.gotError = true;
+        noteSessionError(sessionId);
         onEvent({
           type: 'error',
           msg: `OpenCode session error: ${st.message || 'unknown'}`,
           raw: props,
           ts: new Date().toISOString(),
         });
+        return;
       }
+      // R-D: idle is the run-end signal. Previously fell through and returned
+      // silently, so nothing ever closed a benchmark window.
+      if (st?.type === 'idle') flushBenchmarkAccumulator(sessionId);
+      return;
+    }
+    case 'session.idle': {
+      // SDK types.gen.d.ts:413-418 — { sessionID }. The pump's `belongs`
+      // filter already admits this frame (properties.sessionID matches).
+      // Both this and session.status/idle fire on run end; the accumulator's
+      // empty guard makes the second one a no-op.
+      if (props?.sessionID !== sessionId) return;
+      flushBenchmarkAccumulator(sessionId);
       return;
     }
     case 'permission.asked': {
@@ -799,6 +1005,10 @@ function mapPart(
       return;
     }
     case 'step-finish': {
+      // Benchmark: fold tokens+cost in BEFORE the emit gate. The gate below is
+      // a single boolean per session, so a multi-step turn would otherwise
+      // only ever count its first step.
+      noteStepFinish(sessionId, part);
       if (!state.stepFinished) {
         state.stepFinished = true;
         onEvent({ type: 'step_finish', timestamp: Date.now(), sessionID: sessionId, part });
@@ -826,6 +1036,12 @@ function mapPart(
       const status = part.state?.status;
       const callKey = `${part.id}:${part.callID || 'call'}`;
       const callEmitted = state.toolEmitted.has(callKey + ':call');
+      // Benchmark: count each distinct call once, deduped on the same key the
+      // emit gate uses so re-sent parts don't inflate the count.
+      if (status !== undefined && !state.toolEmitted.has(callKey + ':bench')) {
+        state.toolEmitted.add(callKey + ':bench');
+        noteToolCall(sessionId);
+      }
       if (status === 'running' && !callEmitted) {
         // Emit tool.call on 'running' (the `pending` update has an empty
         // input object — waiting for 'running' gives the real args).
@@ -1088,6 +1304,10 @@ async function runWarmMessageAttempt(
       // 2. Post the message (waits for the full turn).
       const auth = server.authed ? server.password : null;
       postStarted = true;
+      // Benchmark: remember this turn's task signature (raw text stays in
+      // memory; only its sha256 prefix is ever written to the log). Recorded
+      // before the post so an immediate crash still leaves a flushable row.
+      setBenchmarkTaskSignature(opts.sessionId, opts.text);
       const res = await apiFetch(
         server.port,
         auth,
@@ -1366,3 +1586,33 @@ function registerExitCleanup() {
 }
 
 registerExitCleanup();
+
+/**
+ * Best-effort flush on process exit (R-D). Registered at module load so it
+ * covers any exit path — including one the explicit cleanup path misses.
+ * `once` + a synchronous writer keep this from racing the exit itself.
+ */
+let exitFlushRegistered = false;
+function registerBenchmarkExitFlush(): void {
+  if (exitFlushRegistered) return;
+  exitFlushRegistered = true;
+  const flush = () => {
+    try {
+      flushAllBenchmarkAccumulators();
+    } catch {}
+  };
+  process.once('exit', flush);
+  process.once('SIGINT', flush);
+  process.once('SIGTERM', flush);
+  process.once('beforeExit', flush);
+}
+registerBenchmarkExitFlush();
+
+/**
+ * Flush any open benchmark windows. Called when benchmark recording is
+ * toggled off so the in-flight conversation's counters are not lost — without
+ * this, disabling recording silently discards everything accumulated so far.
+ */
+export function flushBenchmarkWindows(): void {
+  flushAllBenchmarkAccumulators();
+}

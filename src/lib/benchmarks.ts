@@ -1,15 +1,22 @@
 /**
- * Benchmarks — log reader + config persistence for the Benchmarks panel.
+ * Benchmarks — log reader + writer + config persistence for the Benchmarks panel.
  *
  * Reads dispatches.jsonl from the vault and returns aggregate stats.
  * Also handles the recording config at ~/.olympus/benchmark-config.json.
  *
+ * WRITER (issue #28): this module is the app-side writer. It is deliberately
+ * app-side rather than a plugin sink — the olympus-hooks plugin is gated
+ * behind OLYMPUS_MANAGED=1 (issue #25), so a plugin writer would be silenced
+ * in Zed and any non-OLYMPUS spawn, i.e. exactly the runs benchmark recording
+ * exists to measure. The app process is never gated.
+ *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { existsSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, appendFileSync, mkdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
+import { createHash } from 'node:crypto';
 
 const BENCHMARK_CONFIG_FILE = join(homedir(), '.olympus', 'benchmark-config.json');
 const VAULT_ROOT = process.env.OLYMPUS_VAULT_DIR || join(homedir(), 'OLYMPUS-VAULT');
@@ -23,20 +30,41 @@ export interface BenchmarkConfig {
 export interface BenchmarkEntry {
   ts: string;
   session_label: string | null;
+  /** Never null — the reader drops rows where god is falsy. Session-level
+   *  rows use "multi" when no single god owns the whole session window. */
   god: string;
-  demigod: string;
+  /** null when the row is attributed to a god rather than a named subagent. */
+  demigod: string | null;
   instinct_id: string | null;
   short_circuited: boolean;
   skill: string | null;
   mcp: string | null;
-  task_signature: string;
+  /** Dispatch correlation id. Always null in session-level v1: the app has
+   *  no dispatch lifecycle to correlate against (dispatch-tracker is
+   *  plugin-side). Reserved so per-dispatch rows need no schema migration. */
+  dispatch_id: string | null;
+  /** sha256(task_signature + stack + project), normalized and truncated to 12
+   *  hex chars. The raw task signature is NEVER written — this is what keeps
+   *  the log content-free. */
+  task_sig_hash: string;
   stack: string | null;
   project: string | null;
   outcome: string;
   duration_ms: number | null;
+  /** Runtime model id from message.updated (e.g. "glm-5.3"). Registry static
+   *  models are a fallback only — runtime beats declared config. */
+  model: string | null;
+  /** activeStrategyId() sampled at flush time. */
+  strategy: string | null;
   tokens_input: number;
   tokens_output: number;
+  /** input + output only. Reasoning and cache are accounted separately so
+   *  cache reads never inflate the headline token count. */
   tokens_total: number;
+  tokens_reasoning: number;
+  tokens_cache_read: number;
+  tokens_cache_write: number;
+  spend_usd: number;
   had_error: boolean;
   tool_call_count: number;
 }
@@ -89,6 +117,92 @@ export function saveBenchmarkConfig(cfg: BenchmarkConfig): void {
     writeFileSync(BENCHMARK_CONFIG_FILE, JSON.stringify(cfg, null, 2), { mode: 0o600 });
   } catch (err: any) {
     console.error('[olympus:benchmarks] saveBenchmarkConfig failed:', err.message);
+  }
+}
+
+/**
+ * Content-free task signature hash.
+ *
+ * God-agnostic on purpose: the same task dispatched by two different gods
+ * must hash identically, otherwise cross-model comparison silently breaks.
+ * Normalization is trim + collapse internal whitespace + lowercase so
+ * cosmetic reformatting doesn't fork a task into two buckets.
+ */
+export function hashTaskSignature(taskSignature: string, stack: string | null, project: string | null): string {
+  const norm = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+  const payload = `${norm(taskSignature)}|${norm(stack ?? '')}|${norm(project ?? '')}`;
+  return createHash('sha256').update(payload).digest('hex').slice(0, 12);
+}
+
+/** Shape the accumulator in opencode-session.ts flushes. */
+export interface BenchmarkSessionRow {
+  sessionID: string;
+  taskSignature: string;
+  stack: string | null;
+  project: string | null;
+  model: string | null;
+  strategy: string | null;
+  tokens_input: number;
+  tokens_output: number;
+  tokens_reasoning: number;
+  tokens_cache_read: number;
+  tokens_cache_write: number;
+  spend_usd: number;
+  had_error: boolean;
+  tool_call_count: number;
+  duration_ms: number;
+  god: string;
+  demigod: string | null;
+}
+
+/**
+ * Append one benchmark row.
+ *
+ * Hard rules:
+ *  - Recording OFF is a strict no-op: no mkdir, no file, no dir side effects.
+ *  - Failures are logged and swallowed. This is called from the SSE path; a
+ *    throw here would kill an in-flight run over a telemetry write.
+ *  - Rollover is handled by the vault-policy pruner, not inline.
+ */
+export function appendBenchmarkEntry(row: BenchmarkSessionRow, ts?: string): boolean {
+  try {
+    // Read config fresh: a toggle-off must take effect on the very next flush.
+    if (!loadBenchmarkConfig().recordingEnabled) return false;
+
+    const entry: BenchmarkEntry = {
+      ts: ts ?? new Date().toISOString(),
+      session_label: loadBenchmarkConfig().sessionLabel ?? null,
+      god: row.god,
+      demigod: row.demigod,
+      instinct_id: null,
+      short_circuited: false,
+      skill: null,
+      mcp: null,
+      dispatch_id: null,
+      task_sig_hash: hashTaskSignature(row.taskSignature, row.stack, row.project),
+      stack: row.stack,
+      project: row.project,
+      outcome: row.had_error ? 'error' : 'success',
+      duration_ms: Math.round(row.duration_ms),
+      model: row.model,
+      strategy: row.strategy,
+      tokens_input: row.tokens_input,
+      tokens_output: row.tokens_output,
+      tokens_total: row.tokens_input + row.tokens_output,
+      tokens_reasoning: row.tokens_reasoning,
+      tokens_cache_read: row.tokens_cache_read,
+      tokens_cache_write: row.tokens_cache_write,
+      spend_usd: Number(row.spend_usd.toFixed(6)),
+      had_error: row.had_error,
+      tool_call_count: row.tool_call_count,
+    };
+
+    mkdirSync(dirname(BENCHMARK_LOG), { recursive: true });
+    appendFileSync(BENCHMARK_LOG, JSON.stringify(entry) + '\n', { mode: 0o600 });
+    return true;
+  } catch (err: any) {
+    console.error('[olympus:benchmarks] appendBenchmarkEntry failed:', err.message);
+    return false;
   }
 }
 
@@ -155,9 +269,12 @@ export function getBenchmarkStats(maxLines: number = 100_000): BenchmarkStats {
     };
   }
 
-  // Top demigods by dispatch count.
+  // Top demigods by dispatch count. Session-level rows carry demigod: null
+  // (no app-side dispatch correlation exists) — skip them rather than
+  // bucketing every session row under a literal "null" key.
   const perDemigodMap = new Map<string, { count: number; tokens: number; success_count: number }>();
   for (const e of entries) {
+    if (!e.demigod) continue;
     let d = perDemigodMap.get(e.demigod);
     if (!d) {
       d = { count: 0, tokens: 0, success_count: 0 };

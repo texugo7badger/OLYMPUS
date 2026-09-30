@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
         maxActivityFeedMB: Number.isFinite(patch.maxActivityFeedMB) ? Math.max(1, patch.maxActivityFeedMB) : current.maxActivityFeedMB,
         maxShortCircuitLogMB: Number.isFinite(patch.maxShortCircuitLogMB) ? Math.max(1, patch.maxShortCircuitLogMB) : current.maxShortCircuitLogMB,
         maxVibrationsMB: Number.isFinite(patch.maxVibrationsMB) ? Math.max(1, patch.maxVibrationsMB) : current.maxVibrationsMB,
+        maxBenchmarkLogMB: Number.isFinite(patch.maxBenchmarkLogMB) ? Math.max(1, patch.maxBenchmarkLogMB) : current.maxBenchmarkLogMB,
         instinctMaxAgeDays: Number.isFinite(patch.instinctMaxAgeDays) ? Math.max(1, patch.instinctMaxAgeDays) : current.instinctMaxAgeDays,
         archiveOlderThanDays: Number.isFinite(patch.archiveOlderThanDays) ? Math.max(1, patch.archiveOlderThanDays) : current.archiveOlderThanDays,
         autoPruneOnIdle: typeof patch.autoPruneOnIdle === 'boolean' ? patch.autoPruneOnIdle : current.autoPruneOnIdle,

@@ -8,8 +8,14 @@
  * BenchmarksPanel — read-only panel showing real-world benchmark totals.
  *
  * Reads from /api/olympus/benchmarks which parses
- * ~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl (written by the
- * olympus-hooks overlay plugin when recording is enabled in Settings).
+ * ~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl, written by the app
+ * itself (src/lib/benchmarks.ts) when recording is enabled in Settings. The
+ * writer is app-side, not the olympus-hooks plugin: that plugin is gated
+ * behind OLYMPUS_MANAGED=1 (#25), so a plugin writer is silent in Zed and
+ * other non-OLYMPUS spawns — exactly the runs worth measuring.
+ *
+ * Rows are per (session, agent) and are flushed when the run goes idle, when
+ * recording is toggled off, and best-effort on app shutdown.
  *
  * The panel shows:
  *   - Aggregate KPIs (total dispatches, tokens, success rate, short-circuit rate)

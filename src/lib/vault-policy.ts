@@ -20,6 +20,8 @@ export interface VaultPolicy {
   maxShortCircuitLogMB: number;
   /** Max size of 05_Auto_Learning/vibrations/registry.jsonl in MB. */
   maxVibrationsMB: number;
+  /** Max size of 07_Reviews/benchmarks/dispatches.jsonl in MB. */
+  maxBenchmarkLogMB: number;
   /** Instincts older than this many days are archived to 09_Archive/. */
   instinctMaxAgeDays: number;
   /** Archived instincts older than this many days are deleted entirely. */
@@ -36,6 +38,7 @@ export const DEFAULT_VAULT_POLICY: VaultPolicy = {
   maxActivityFeedMB: 500,
   maxShortCircuitLogMB: 100,
   maxVibrationsMB: 200,
+  maxBenchmarkLogMB: 50,
   instinctMaxAgeDays: 180,
   archiveOlderThanDays: 365,
   autoPruneOnIdle: true,
@@ -184,6 +187,11 @@ export function runVaultPrune(policyOverride?: Partial<VaultPolicy>): PruneResul
       path: join(root, '05_Auto_Learning', 'vibrations', 'registry.jsonl'),
       maxMB: policy.maxVibrationsMB,
       reason: `vibrations registry exceeded ${policy.maxVibrationsMB} MB cap`,
+    },
+    {
+      path: join(root, '07_Reviews', 'benchmarks', 'dispatches.jsonl'),
+      maxMB: policy.maxBenchmarkLogMB,
+      reason: `benchmark log exceeded ${policy.maxBenchmarkLogMB} MB cap`,
     },
   ];
   for (const { path: p, maxMB, reason } of logFiles) {
@@ -362,6 +370,7 @@ export function getVaultSizeReport(): VaultSizeReport {
     { path: join(root, '06_Activity_Feed', 'live.jsonl'), capMB: policy.maxActivityFeedMB },
     { path: join(root, '05_Auto_Learning', 'shortcircuit-log.jsonl'), capMB: policy.maxShortCircuitLogMB },
     { path: join(root, '05_Auto_Learning', 'vibrations', 'registry.jsonl'), capMB: policy.maxVibrationsMB },
+    { path: join(root, '07_Reviews', 'benchmarks', 'dispatches.jsonl'), capMB: policy.maxBenchmarkLogMB },
   ];
   for (const { path: p, capMB } of checks) {
     try {

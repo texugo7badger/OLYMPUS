@@ -1083,9 +1083,9 @@ export default function SettingsDialog() {
 	            </section>
 
             {/* opt-in toggle for real-world
-                benchmark recording. When enabled, every dispatch is logged to
-                ~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl. The
-                Benchmarks panel shows the running totals. */}
+                benchmark recording. When enabled, each finished run is logged
+                to ~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl as
+                it goes idle. The Benchmarks panel shows the running totals. */}
             <section>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide flex items-center gap-1.5">
@@ -1118,7 +1118,8 @@ export default function SettingsDialog() {
                   onBlur={() => saveBenchmark(benchRecording, benchSessionLabel)}
                 />
                 <div className="text-[9px] text-olympus-text-dim font-mono leading-relaxed">
-                  When enabled, every dispatch (god, demigod, instinct, tokens, duration, outcome)
+                  When enabled, each finished run (one row per session and agent:
+                  model, strategy, tokens, cost, duration, outcome)
                   is logged to <code className="text-olympus-gold">~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl</code>.
                   Use the Benchmarks panel (Activity Bar → Benchmarks) to view running totals.
                   Off by default — only enable when you want to record real-world metrics.
