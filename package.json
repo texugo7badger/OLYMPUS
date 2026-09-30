@@ -114,7 +114,7 @@
     "css-select": "latest",
     "css-tree": "latest",
     "domutils": "latest",
-    "electron": "latest",
+    "electron": "43.2.0",
     "electron-builder": "latest",
     "electron-updater": "latest",
     "eslint": "latest",

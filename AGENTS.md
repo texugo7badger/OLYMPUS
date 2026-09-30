@@ -93,3 +93,13 @@ The skill index (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) provides sub-milliseco
 ## Symphony Arsenal Resolver
 
 The Arsenal Resolver is Symphony's quick-circuit layer for arsenal selection. It queries the Arsenal Resonance log (`~/OLYMPUS-VAULT/03_Index/arsenal-resonance.jsonl`) for past dispatch outcomes that match the current task signature (Jaccard similarity ≥ 0.4). If coherence ≥ 0.85, a quick-circuit fires — returning the proven arsenal (skills, MCPs, demigods) as hints. Gods are not dependent on quick-circuits; they evaluate the task + instincts at dispatch time and may override.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
