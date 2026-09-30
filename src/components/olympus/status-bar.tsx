@@ -124,7 +124,7 @@ export default function StatusBar({ health }: { health: any }) {
  <div
  data-drag-region
 	 // Flat background (single panel color — no gradient).
-	 className="h-7 shrink-0 bg-olympus-panel border-b border-olympus-gold/10 flex items-center justify-between px-3 text-[11px] font-mono text-olympus-text-dim overflow-hidden select-none"
+	 className="h-7 shrink-0 bg-olympus-panel border-b border-olympus-gold/10 flex items-center justify-between px-3 text-[11px] font-mono text-olympus-text-dim select-none"
  style={{ WebkitAppRegion: 'drag', paddingLeft: isMac && isElectron ? 80 : 12 } as React.CSSProperties}
  >
 	 {/* LEFT SIDE: logo + window controls + Compact Brain + focus mode + nav info */}
