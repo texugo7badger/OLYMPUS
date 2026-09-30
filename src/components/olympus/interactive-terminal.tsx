@@ -372,7 +372,16 @@ export default function InteractiveTerminal() {
 
     if (ev.type === 'response' || ev.type === 'cli' || ev.type === 'log') {
       const msg = ev.msg || ev.cli || ev.text || '';
-      if (msg) addMessage({ type: 'response', text: msg, god: ev.god });
+      if (msg) {
+        // Same remove → add → ensure pattern as every other handler here, so
+        // the counter stays the LAST line while it ticks. This matters for
+        // the "Connected to the warm OpenCode session" log specifically: it
+        // lands inside the TTFB gap, right after the counter was opened, and
+        // would otherwise print below it and freeze the line mid-transcript.
+        removeThinking();
+        addMessage({ type: 'response', text: msg, god: ev.god });
+        ensureThinking();
+      }
       return;
     }
     if (ev.type === 'error') {
@@ -509,6 +518,11 @@ export default function InteractiveTerminal() {
     });
     addMessage({ type: 'system', text: 'Routing to Apollo...' });
     updateGodActivity('apollo', 'thinking', 'Analyzing prompt...');
+    // Open the counter NOW, before the POST. The provider's time-to-first-
+    // token is 2-10s and nothing else renders until the first SSE event
+    // arrives, so without this the terminal looks hung right after send.
+    // Placed after the local echoes so it stays the LAST transcript line.
+    ensureThinking();
     pushPulse('apollo', 'apollo'); setActiveGod('apollo');
 
     try {
@@ -871,9 +885,12 @@ export default function InteractiveTerminal() {
     setSubmitting(true);
     addMessage({ type: 'system', text: 'Starting a new session — Apollo continues from a summary of this conversation...' });
     updateGodActivity('apollo', 'thinking', 'Picking up from summary...');
+    // Same TTFB gap as submit() — the handoff POST streams nothing until the
+    // provider answers, so open the counter here too.
+    ensureThinking();
     pushPulse('apollo', 'apollo');
     setActiveGod('apollo');
-  }, [addMessage, updateGodActivity, pushPulse, setActiveGod]);
+  }, [addMessage, updateGodActivity, pushPulse, setActiveGod, ensureThinking]);
 
   // Called when the new-session stream ends. handleServerEvent already
   // processed the 'action_done' SSE event (reset submitting/awaiting/etc.

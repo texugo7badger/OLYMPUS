@@ -54,10 +54,102 @@ export const dynamic = 'force-dynamic';
 // Default context-window limit. Most GO-plan models (Claude Sonnet/Opus,
 // GPT-4o, GLM-5.2) ship with 128k–200k context. 200k is a conservative
 // default — the session file's metadata.contextWindow overrides this when
-// available. If we overestimate the limit, the indicator just reads low;
-// if we underestimate it, the indicator reads high. The former is the
-// safer failure mode (we don't bother the user with a false alarm).
+// available, and the model catalog (~/.cache/opencode/models.json) is
+// consulted before we settle on it (see resolveModelsJsonContext). If we
+// overestimate the limit, the indicator just reads low; if we underestimate
+// it, the indicator reads high. The former is the safer failure mode (we
+// don't bother the user with a false alarm).
 const DEFAULT_CONTEXT_LIMIT = 200_000;
+
+/**
+ * Candidate locations for OpenCode's model catalog — the authoritative
+ * source for each model's declared context window. The `~/.opencode` path is
+ * checked first (explicit override), then the XDG cache dir, which is where
+ * OpenCode actually writes the provider catalog it fetches at startup.
+ */
+const MODELS_JSON_CANDIDATES = [
+  path.join(os.homedir(), '.opencode', 'models.json'),
+  process.env.XDG_CACHE_HOME
+    ? path.join(process.env.XDG_CACHE_HOME, 'opencode', 'models.json')
+    : null,
+  path.join(os.homedir(), '.cache', 'opencode', 'models.json'),
+  path.join(os.homedir(), 'Library', 'Caches', 'opencode', 'models.json'),
+].filter((p): p is string => Boolean(p));
+
+/**
+ * Parsed-catalog cache. The catalog is ~5 MB and the indicator polls this
+ * route every 5s, so we hold the parsed object and only re-read when the
+ * file's mtime or size changes.
+ */
+let modelsJsonCache: { file: string; mtimeMs: number; size: number; data: any } | null = null;
+
+function loadModelsJson(): any | null {
+  for (const file of MODELS_JSON_CANDIDATES) {
+    try {
+      const st = fs.statSync(file);
+      const c = modelsJsonCache;
+      if (c && c.file === file && c.mtimeMs === st.mtimeMs && c.size === st.size) {
+        return c.data;
+      }
+      const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+      modelsJsonCache = { file, mtimeMs: st.mtimeMs, size: st.size, data };
+      return data;
+    } catch {}
+  }
+  return null;
+}
+
+/**
+ * Resolve a model's declared context window from the OpenCode catalog.
+ *
+ * The catalog is keyed by provider id at the top level, with each model
+ * under `<provider>.models[<modelId>]` and its window at `limit.context`
+ * (e.g. opencode-go/glm-5.3 → 1,000,000). When the session records a
+ * providerID we prefer that provider, since many providers define the same
+ * model id; otherwise we scan every provider.
+ *
+ * Returns null when the model isn't in the catalog or the file is missing —
+ * the caller then keeps DEFAULT_CONTEXT_LIMIT.
+ */
+function resolveModelsJsonContext(modelId?: string, providerId?: string): number | null {
+  if (!modelId) return null;
+  const data = loadModelsJson();
+  if (!data || typeof data !== 'object') return null;
+
+  const all = Object.keys(data);
+  const providers = providerId && data[providerId]
+    ? [providerId, ...all.filter((p) => p !== providerId)]
+    : all;
+
+  const readCtx = (entry: any): number | null => {
+    const ctx = Number(entry?.limit?.context ?? entry?.contextWindow ?? entry?.context_window);
+    return Number.isFinite(ctx) && ctx > 0 ? ctx : null;
+  };
+
+  // Exact id match first.
+  for (const p of providers) {
+    const entry = data[p]?.models?.[modelId];
+    if (!entry) continue;
+    const ctx = readCtx(entry);
+    if (ctx != null) return ctx;
+  }
+  // Then a conservative substring match, mirroring resolveFreeModelContext:
+  // session model ids can carry provider/size suffixes (e.g.
+  // "nvidia/nemotron-3-ultra-550b-a55b:free"). Require a reasonably specific
+  // key so we never latch onto an unrelated model.
+  for (const p of providers) {
+    const models = data[p]?.models;
+    if (!models || typeof models !== 'object') continue;
+    for (const key of Object.keys(models)) {
+      if (key.length < 4) continue;
+      if (modelId.includes(key)) {
+        const ctx = readCtx(models[key]);
+        if (ctx != null) return ctx;
+      }
+    }
+  }
+  return null;
+}
 
 /**
  * Resolve the context-window limit for a model from the live provider
@@ -152,23 +244,32 @@ function readUsageFromDb(sessionId?: string): {
       }
       if (!row) return null;
 
+      // Deliberately excludes tokens_cache_read: opencode reports cache
+      // reads as a SUBSET of tokens_input (the cached prompt prefix), so
+      // adding it double-counts. Live proof: one session reported
+      // input=10,472,846 with cache_read=239,497,874, which inflated the
+      // "used" figure to 250M and the indicator past 125,000%.
       const used = (row.tokens_input || 0) + (row.tokens_output || 0)
-        + (row.tokens_reasoning || 0) + (row.tokens_cache_read || 0);
+        + (row.tokens_reasoning || 0);
 
       // Model: the session.model column is a JSON blob like
       // {"id":"openai/gpt-oss-120b","providerID":"groq",...} — surface the id.
       let model: string | undefined;
+      let providerId: string | undefined;
       try {
         if (typeof row.model === 'string') {
           const parsed = JSON.parse(row.model);
           model = typeof parsed?.id === 'string' ? parsed.id : row.model;
+          if (typeof parsed?.providerID === 'string') providerId = parsed.providerID;
         } else if (row.model && typeof row.model === 'object') {
           model = row.model.id;
+          if (typeof row.model.providerID === 'string') providerId = row.model.providerID;
         }
       } catch { model = undefined; }
 
       // Limit: metadata.contextWindow if present, else the live free-model
-      // list context, else the default.
+      // list context, else the model catalog's declared window, else the
+      // default.
       let limit = DEFAULT_CONTEXT_LIMIT;
       try {
         const md = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
@@ -180,6 +281,10 @@ function readUsageFromDb(sessionId?: string): {
       if (limit === DEFAULT_CONTEXT_LIMIT) {
         const fmCtx = resolveFreeModelContext(model);
         if (fmCtx != null) limit = fmCtx;
+      }
+      if (limit === DEFAULT_CONTEXT_LIMIT) {
+        const mjCtx = resolveModelsJsonContext(model, providerId);
+        if (mjCtx != null) limit = mjCtx;
       }
 
       return { used, limit, model, sessionId: row.id };
@@ -340,9 +445,15 @@ function extractUsage(session: any): {
   let limit = num(limitRaw);
   if (limit <= 0) {
     // No per-session context window — fall back to the live free-model list
-    // (1M for Nemotron Ultra etc.) before the 200k default.
+    // (1M for Nemotron Ultra etc.), then the model catalog's declared
+    // window, before the 200k default.
     const fmCtx = resolveFreeModelContext(model);
-    limit = fmCtx != null ? fmCtx : DEFAULT_CONTEXT_LIMIT;
+    if (fmCtx != null) {
+      limit = fmCtx;
+    } else {
+      const mjCtx = resolveModelsJsonContext(model);
+      limit = mjCtx != null ? mjCtx : DEFAULT_CONTEXT_LIMIT;
+    }
   }
 
   // ---- Used (token count) ----
@@ -354,7 +465,8 @@ function extractUsage(session: any): {
   );
   let used = totalDirect;
 
-  // 2. Sum input + output (+ cache reads)
+  // 2. Sum input + output. Deliberately excludes cache reads — they are a
+  // subset of input, so adding them double-counts (see readUsageFromDb).
   if (used === 0) {
     const inputTokens = num(
       session?.metadata?.tokens?.input ??
@@ -366,12 +478,7 @@ function extractUsage(session: any): {
       session?.tokens?.output ??
       session?.usage?.output_tokens
     );
-    const cacheRead = num(
-      session?.metadata?.tokens?.cache?.read ??
-      session?.tokens?.cache?.read ??
-      session?.usage?.cache_read_input_tokens
-    );
-    used = inputTokens + outputTokens + cacheRead;
+    used = inputTokens + outputTokens;
   }
 
   // 3. Fall back to summing per-message usage from messages[]
@@ -380,8 +487,7 @@ function extractUsage(session: any): {
     for (const m of session.messages) {
       const u = m?.metadata?.usage ?? m?.usage ?? {};
       msgTotal += num(u.input_tokens ?? u.input) +
-                  num(u.output_tokens ?? u.output) +
-                  num(u.cache_read_input_tokens ?? u.cache?.read);
+                  num(u.output_tokens ?? u.output);
     }
     used = msgTotal;
   }
