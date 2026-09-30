@@ -655,6 +655,43 @@ function releaseCallimachusLock(): void {
 
 type OlympusHooksPluginFn = (input: PluginInput) => Promise<Record<string, unknown>>;
 
+/**
+ * Custom tools registered by the Olympus overlay.
+ *
+ * Hoisted to module scope (session 3g) so the managed-process gate below can
+ * hand out the tools without re-declaring them — one source of truth, no
+ * duplicated tool map.
+ *
+ * Adds olympus-patterns for cross-god dispatch chain queries.
+ *
+ * Register the Symphony overlay tools (symphony-resonate,
+ * symphony-harmonize, symphony-decode) so they are available to the gods.
+ * SYMPHONY_TOOLS is exported from symphony-hooks.ts and imported here; the
+ * array is ordered [resonate, harmonize, decode] (see
+ * symphony-hooks.ts:46-50) and we map by index to the canonical tool names.
+ * The opencode.json permissions for these tools resolve to the canonical
+ * names.
+ */
+const OLYMPUS_TOOLS = {
+  "olympus-instinct-query": instinctQueryTool,
+  "olympus-shortcircuit": shortcircuitTool,
+  "olympus-dispatch": dispatchTool,
+  "olympus-patterns": patternsTool,
+  "sub-agent-instinct-query": subAgentInstinctQueryTool,
+  // human-in-the-loop review tools.
+  // olympus-design-review (Athena), olympus-deploy-review (Prometheus),
+  // olympus-integration-review (Hermes). The interactive-terminal.tsx +
+  // /api/olympus/design-review route render the DesignReviewCard from the
+  // `design-review-requested` event these tools write to live.jsonl.
+  "olympus-design-review": designReviewTool,
+  "olympus-deploy-review": deployReviewTool,
+  "olympus-integration-review": integrationReviewTool,
+  // Symphony overlay tools.
+  "symphony-resonate": SYMPHONY_TOOLS[0],
+  "symphony-harmonize": SYMPHONY_TOOLS[1],
+  "symphony-decode": SYMPHONY_TOOLS[2],
+};
+
 export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
   client,
   $,
@@ -662,6 +699,39 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
   worktree,
 }: PluginInput) => {
   const worktreePath = worktree || directory;
+
+  // ─── Managed-process gate (session 3g, issue #25) ────────────────────────
+  // This plugin is registered at PROJECT level (.opencode/olympus/), so
+  // opencode loads it in EVERY process started inside this repo — including
+  // Zed's external agent (pid 38014, its own ACP process on its own port) and
+  // manual CLI runs. Metrics capture is MACHINE-GLOBAL
+  // (~/.olympus/metrics/cost.jsonl), and the god for each cost entry comes
+  // from the global active-agent tracker, so a foreign run's spend was
+  // attributed to whatever god OLYMPUS happened to be running. That is issue
+  // #25.
+  //
+  // OLYMPUS marks only the processes it spawns, via OLYMPUS_MANAGED=1 in
+  // buildOpencodeEnv (src/lib/opencode-spawn.ts) — the single injection point
+  // for every OLYMPUS-spawned opencode. Anything else leaves the flag unset.
+  //
+  // The gate returns BEFORE any tracker is initialized and before any hook is
+  // registered, which silences every side effect at once:
+  //   • cost.jsonl appends            (appendCostFeed, :541 / :909)
+  //   • active-agent.json reads       (getActiveAgent, god attribution)
+  //   • ctx% / session-state writes   (session.created / session.deleted)
+  //   • VaultBrain instinct mutations (penalize/reward, session.idle)
+  //   • the session.idle heartbeat    (Callimachus)
+  //   • dispatch-tracker registration (registerOpenDispatch)
+  // None of these can run without the returned hooks, and initTracker() only
+  // loads persisted state into memory — it never writes — so returning here
+  // leaves ~/.olympus completely untouched.
+  //
+  // The tool map is still returned: those tools are MCP-backed and useful in
+  // any client, and withholding them would silently strip Zed's capabilities
+  // — a change well beyond cost attribution.
+  if (process.env.OLYMPUS_MANAGED !== '1') {
+    return { tool: OLYMPUS_TOOLS };
+  }
 
   // Initialize the active-agent tracker + dispatch tracker
   initTracker();
@@ -1195,25 +1265,7 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
      * The opencode.json permissions for these tools resolve to the canonical
      * names.
      */
-    tool: {
-      "olympus-instinct-query": instinctQueryTool,
-      "olympus-shortcircuit": shortcircuitTool,
-      "olympus-dispatch": dispatchTool,
-      "olympus-patterns": patternsTool,
-      "sub-agent-instinct-query": subAgentInstinctQueryTool,
-      // human-in-the-loop review tools.
-      // olympus-design-review (Athena), olympus-deploy-review (Prometheus),
-      // olympus-integration-review (Hermes). The interactive-terminal.tsx +
-      // /api/olympus/design-review route render the DesignReviewCard from the
-      // `design-review-requested` event these tools write to live.jsonl.
-      "olympus-design-review": designReviewTool,
-      "olympus-deploy-review": deployReviewTool,
-      "olympus-integration-review": integrationReviewTool,
-      // Symphony overlay tools.
-      "symphony-resonate": SYMPHONY_TOOLS[0],
-      "symphony-harmonize": SYMPHONY_TOOLS[1],
-      "symphony-decode": SYMPHONY_TOOLS[2],
-    },
+    tool: OLYMPUS_TOOLS,
 
     /**
      * REAL cost capture via the OpenCode SDK event stream.

@@ -233,6 +233,22 @@ export function buildOpencodeEnv(
   // Merge caller-supplied env (highest priority).
   Object.assign(env, extraEnv);
 
+  // Session 3g (issue #25): mark this process as OLYMPUS-managed.
+  //
+  // The olympus-hooks plugin is registered at PROJECT level (.opencode/), so
+  // opencode loads it in EVERY process started inside this repo — including
+  // Zed's external agent and manual CLI runs. Metrics capture is
+  // machine-global (~/.olympus/metrics/cost.jsonl), so those foreign runs
+  // were appending spend attributed to whatever god happened to be recorded
+  // in the global active-agent tracker.
+  //
+  // This is the single injection point for the flag (every OLYMPUS-spawned
+  // opencode goes through buildOpencodeEnv), and it is set AFTER the
+  // extraEnv merge so a caller cannot accidentally strip it. The plugin
+  // registers no hooks unless it sees exactly '1', so anything OLYMPUS does
+  // not spawn stays silent.
+  env.OLYMPUS_MANAGED = '1';
+
   // The opencode CLI respects NO_COLOR / FORCE_COLOR. Default to no color
   // for clean log parsing (the SSE stream parses opencode output as
   // JSONL — ANSI escapes would break it).
