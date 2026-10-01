@@ -28,7 +28,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { getVaultRoot } from '../../vault-root';
+import { getVaultRoot } from '../../vault-root.js';
 
 const VAULT_ROOT = getVaultRoot();
 

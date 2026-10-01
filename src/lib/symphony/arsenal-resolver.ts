@@ -37,7 +37,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { getVaultRoot } from '../vault-root';
+import { getVaultRoot } from '../vault-root.js';
 
 const VAULT_ROOT = getVaultRoot();
 const ARSENAL_LOG = path.join(VAULT_ROOT, '03_Index', 'arsenal-resonance.jsonl');
