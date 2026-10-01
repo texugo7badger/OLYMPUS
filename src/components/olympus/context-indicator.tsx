@@ -102,10 +102,12 @@ export default function ContextIndicator({
   onDone,
 }: ContextIndicatorProps) {
   const [usage, setUsage] = useState<ContextUsage | null>(null);
-  // `showBtn` is tracked separately from `usage.quality` so the button
-  // doesn't flash on/off while a fetch is in-flight — we keep it shown
-  // until we get a definitive 'good' reading back.
-  const [showBtn, setShowBtn] = useState(false);
+  // Issue #32: the reset control is NOT gated on context quality. It used to
+  // be, via `showBtn` (default false), so a user stuck at 14% context with a
+  // poisoned conversation had no way to flush it — the escape hatch appeared
+  // only once the context was already bad enough to want it. Gating a
+  // recovery action on a health metric hides it exactly when it is most
+  // needed, so the control now renders at any level.
   const [starting, setStarting] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -137,7 +139,6 @@ export default function ContextIndicator({
       if (!res.ok) { setFetchError(true); return; }
       const d: ContextUsage = await res.json();
       setUsage(d);
-      setShowBtn(d.quality === 'warning' || d.quality === 'critical');
       setFetchError(false);
     } catch {
       // Silent failure — the indicator just stays at the last known
@@ -161,7 +162,6 @@ export default function ContextIndicator({
   useEffect(() => {
     if (lastConvIdRef.current !== null && lastConvIdRef.current !== convIdNow) {
       setUsage(null);
-      setShowBtn(false);
       setFetchError(false);
       lastFetchRef.current = 0; // bypass the 2s throttle
       poll();
@@ -249,36 +249,30 @@ export default function ContextIndicator({
         </div>
       </OlympusTooltip>
 
-      {showBtn && (
-        <OlympusTooltip
-          content={
-            pct > 85
-              ? 'Context window critical — LLM quality may degrade. Start a new session to clear it (the warm server restarts; the project stays the same).'
-              : 'Context window filling up — start a new session to clear it (the warm server restarts; the project stays the same).'
-          }
-          side="bottom"
+      <OlympusTooltip
+        content="Flush the current session and start a fresh one (server restarts; the project stays the same)."
+        side="bottom"
+      >
+        <button
+          onClick={startNewSession}
+          disabled={starting}
+          className={cn(
+            'flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono',
+            'transition-all',
+            'ring-1 ring-olympus-gold/30 bg-olympus-gold/10 hover:bg-olympus-gold/20',
+            starting && 'opacity-70 cursor-wait',
+          )}
+          style={{ color: '#D4A574' }}
+          aria-label="Start a fresh session — clears the conversation and restarts the warm server"
         >
-          <button
-            onClick={startNewSession}
-            disabled={starting}
-            className={cn(
-              'flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono',
-              'transition-all',
-              'ring-1 ring-olympus-gold/30 bg-olympus-gold/10 hover:bg-olympus-gold/20',
-              starting && 'opacity-70 cursor-wait',
-            )}
-            style={{ color: '#D4A574' }}
-            aria-label="Start a fresh session — clears the conversation and restarts the warm server"
-          >
-            {starting ? (
-              <Loader2 size={9} className="animate-spin" />
-            ) : (
-              <Zap size={9} />
-            )}
-            {starting ? 'starting' : 'new session'}
-          </button>
-        </OlympusTooltip>
-      )}
+          {starting ? (
+            <Loader2 size={9} className="animate-spin" />
+          ) : (
+            <Zap size={9} />
+          )}
+          {starting ? 'starting' : 'new session'}
+        </button>
+      </OlympusTooltip>
     </div>
   );
 }

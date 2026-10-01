@@ -136,6 +136,21 @@ export default function InteractiveTerminal() {
   const runToolCount = useRef(0);
   const runTextCount = useRef(0);
   const runLastTool = useRef('');
+  // Issue #32: a code-0 exit is not proof that anything changed on disk. A
+  // read-only turn (research, a status check, a grep) finishes 0 and was
+  // reported as "Task completed.", which taught users that a green run means
+  // edits landed. These tallies let the completion line state what actually
+  // happened instead of inferring it from the exit code.
+  const runWriteCount = useRef(0);
+  const runEditCount = useRef(0);
+  const runCommandCount = useRef(0);
+  const runReadCount = useRef(0);
+  // Issue #32 (task 3): addMessage appends unconditionally, so a redelivered
+  // permission_ask renders a second identical card. Single slot, so only
+  // CONSECUTIVE duplicates collapse — keyed on permissionId rather than the
+  // rendered text, because two distinct asks can produce identical copy and
+  // dropping the second would leave the parked run with nothing to answer.
+  const lastPermissionId = useRef('');
   const [awaitingContext, setAwaitingContext] = useState(false);
   const [godActivities, setGodActivities] = useState<GodActivity[]>([]);
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -287,6 +302,9 @@ export default function InteractiveTerminal() {
       // OpenCode blocked the run on a permission ask — surface it NOW (the
       // run stays parked until one of the buttons is pressed; without this
       // card the terminal silently hung on "waiting for Apollo...").
+      // Issue #32: a redelivery of the ask we already carded renders once.
+      if (lastPermissionId.current === ev.requestID) return;
+      lastPermissionId.current = ev.requestID;
       addMessage({
         type: 'permission',
         text: `Apollo needs permission to use ${ev.action} on:`,
@@ -301,6 +319,9 @@ export default function InteractiveTerminal() {
       return;
     }
     if (ev.type === 'permission_replied') {
+      // Issue #32: the ask is answered, so the guard slot frees up for the
+      // next one. Without this a later ask reusing the id would be swallowed.
+      if (lastPermissionId.current === ev.requestID) lastPermissionId.current = '';
       setMessages(prev => prev.map(m => m.permissionId === ev.requestID && m.type === 'permission'
         ? { ...m, permissionState: ev.reply === 'always' ? 'always' : ev.reply === 'reject' ? 'denied' : 'approved', text: m.text }
         : m));
@@ -380,6 +401,15 @@ export default function InteractiveTerminal() {
       // Fix A: census the tools this run actually invoked, and keep the most
       // useful argument (a path) for the stall message.
       runToolCount.current++;
+      // Issue #32: classify the call so action_done can report a census instead
+      // of a verdict. Only the classes the fix cares about are tallied; any
+      // other tool still counts toward runToolCount above.
+      if (toolName === 'write') runWriteCount.current++;
+      else if (toolName === 'edit') runEditCount.current++;
+      else if (toolName === 'bash') runCommandCount.current++;
+      else if (toolName === 'read' || toolName === 'grep' || toolName === 'glob' || toolName === 'list') {
+        runReadCount.current++;
+      }
       const arg = toolInput?.filePath || toolInput?.path || toolInput?.file || toolInput?.pattern || summary;
       runLastTool.current = `${toolName}(${String(arg).slice(0, 60)})`;
       removeThinking();
@@ -466,10 +496,16 @@ export default function InteractiveTerminal() {
       // Already handled by the "Routing to Apollo..." message above.
       runHadText.current = false;
       runHadError.current = false;
+      // Issue #32: a new run is a new permission context.
+      lastPermissionId.current = '';
       // Fix A: a new run starts with an empty census.
       runToolCount.current = 0;
       runTextCount.current = 0;
       runLastTool.current = '';
+      runWriteCount.current = 0;
+      runEditCount.current = 0;
+      runCommandCount.current = 0;
+      runReadCount.current = 0;
       return;
     }
     if (ev.type === 'action_done') {
@@ -477,7 +513,19 @@ export default function InteractiveTerminal() {
       setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false); updateGodActivity('apollo', 'idle');
       if (ev.code === 0) {
         if (runTextCount.current > 0) {
-          addMessage({ type: 'system', text: 'Task completed.' });
+          // Issue #32: report the census, not a verdict. A code-0 exit with
+          // zero write/edit calls changed nothing on disk, and calling that
+          // "Task completed." is what let a read-only turn read as real work.
+          const writes = runWriteCount.current;
+          const edits = runEditCount.current;
+          const commands = runCommandCount.current;
+          const reads = runReadCount.current;
+          addMessage({
+            type: 'system',
+            text: writes + edits > 0
+              ? `Task completed. Census: writes ${writes}, edits ${edits}, commands ${commands}.`
+              : `Run ended. Census: files written 0 — no changes on disk (reads ${reads}, commands ${commands}).`,
+          });
         } else if (!runHadError.current) {
           // Fix A: exit code 0 with zero text blocks. The run DID tools
           // (typically an initial read) and then the model went quiet, so
@@ -603,6 +651,10 @@ export default function InteractiveTerminal() {
     runToolCount.current = 0;
     runTextCount.current = 0;
     runLastTool.current = '';
+    runWriteCount.current = 0;
+    runEditCount.current = 0;
+    runCommandCount.current = 0;
+    runReadCount.current = 0;
     setTodos([]); setGodActivities([]);
     addMessage({
       type: 'user',
