@@ -40,11 +40,12 @@ import path from 'node:path';
 import { spawnOpencode } from '@/lib/opencode-spawn';
 import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
+import { getVaultRoot } from '@/lib/vault-root';
 
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
 // Vault root — mirrors src/app/api/olympus/upload/route.ts. Used by the
 // permission auto-approval allowlist below.
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT_ROOT = getVaultRoot();
 // Permission auto-approval allowlist (freeze-class fix 2026-09-29): OpenCode
 // routes reads OUTSIDE the project root through `external_directory: ask`,
 // which permanently blocks the run when no client answers. Vault paths are

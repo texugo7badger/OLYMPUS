@@ -5,14 +5,14 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 // Shared no-cache headers for live API routes.
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT = getVaultRoot();
 const EPISODES_DIR = path.join(VAULT, '05_Auto_Learning', 'episodes');
 
 interface Episode {

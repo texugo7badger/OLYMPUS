@@ -25,13 +25,13 @@
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { organizeExtraction, type OrganizeResult } from './vault-organizer';
 import { detectStacksWithFs, type StackDetection, type FsAdapter } from './stack-detector';
 import { createProject, type ProjectNote, type CreateProjectResult, VAULT as PROJECT_VAULT, slugify } from './project-context';
 import { summarizeDocs, type DocSummaryResult } from './doc-summarizer';
 import { buildHandoffPrompt, saveHandoffPrompt, type HandoffContext } from './handoff-prompt-builder';
 import { appendActivity } from './activity-feed';
+import { getVaultRoot } from './vault-root';
 
 /**
  * ExtractionResult — shape preserved for backwards compat with the
@@ -46,7 +46,7 @@ export interface ExtractionResult {
   treePath: string;
 }
 
-const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT = getVaultRoot();
 
 export type IntakeSource = 'archive' | 'git' | 'conversational' | 'empty';
 export type TargetTui = 'opencode' | 'generic';

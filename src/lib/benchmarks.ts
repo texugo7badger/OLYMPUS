@@ -17,9 +17,13 @@ import { existsSync, readFileSync, writeFileSync, appendFileSync, mkdirSync, sta
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
+import { getVaultRoot } from './vault-root';
 
 const BENCHMARK_CONFIG_FILE = join(homedir(), '.olympus', 'benchmark-config.json');
-const VAULT_ROOT = process.env.OLYMPUS_VAULT_DIR || join(homedir(), 'OLYMPUS-VAULT');
+// Issue #30: the recording path resolved the root on its own
+// (OLYMPUS_VAULT_DIR || ~/OLYMPUS-VAULT), skipping ~/.olympus/vault-root.txt —
+// so a Settings-switched vault recorded nothing. Use the canonical root.
+const VAULT_ROOT = getVaultRoot();
 const BENCHMARK_LOG = join(VAULT_ROOT, '07_Reviews', 'benchmarks', 'dispatches.jsonl');
 
 export interface BenchmarkConfig {

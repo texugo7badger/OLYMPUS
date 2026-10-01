@@ -19,11 +19,11 @@
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { type ProjectNote, VAULT as PROJECT_VAULT } from './project-context';
 import { type StackDetection } from './stack-detector';
+import { getVaultRoot } from './vault-root';
 
-const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT = getVaultRoot();
 
 export interface HandoffContext {
   /** The user's original request (what they typed in the terminal) */

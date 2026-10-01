@@ -27,11 +27,10 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import * as crypto from 'crypto';
+import { getVaultRoot } from '../../vault-root';
 
-const VAULT_ROOT =
-  process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT_ROOT = getVaultRoot();
 
 const REGISTRY_DIR = path.join(VAULT_ROOT, '05_Auto_Learning', 'vibrations');
 const REGISTRY_PATH = path.join(REGISTRY_DIR, 'registry.jsonl');

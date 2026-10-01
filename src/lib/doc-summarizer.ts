@@ -14,11 +14,11 @@
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 // Use spawnOpencode() for Windows + stdin fix.
 import { spawnOpencode } from '@/lib/opencode-spawn';
+import { getVaultRoot } from './vault-root';
 
-const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT = getVaultRoot();
 
 export interface DocSummaryResult {
   summaryPath: string;       // absolute path to _summary.md

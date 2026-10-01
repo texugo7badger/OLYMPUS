@@ -7,11 +7,12 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT_ROOT = getVaultRoot();
 const ACTIVITY_FEED = path.join(VAULT_ROOT, '06_Activity_Feed', 'live.jsonl');
 const COST_FEED = path.join(os.homedir(), '.olympus', 'metrics', 'cost.jsonl');
 const OLYMPUS_ROOT = process.env.OLYMPUS_ROOT || process.cwd();

@@ -5,16 +5,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 // Use spawnOpencode() for cross-platform support.
 import { spawnOpencode } from '@/lib/opencode-spawn';
 // Issue 1 dynamic input token routing.
 import { classifyTask, serializeClassification } from '@/lib/task-classifier';
+import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT_ROOT = getVaultRoot();
 
 /**
  * POST /api/olympus/intake

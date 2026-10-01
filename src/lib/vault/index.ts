@@ -17,7 +17,6 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import path from 'node:path';
 import os from 'node:os';
 import { FsBackend, type FsBackendOptions } from './fs-backend';
 import { parseNote } from './parse';
@@ -33,6 +32,7 @@ import * as vaultPeriodic from '../vault-periodic';
 import * as vaultSync from '../vault-sync';
 import * as vaultDeeplink from '../vault-deeplink';
 import * as vaultSemantic from '../vault-semantic';
+import { getVaultRoot } from '../vault-root';
 import type {
   LintAllReport,
   LintReport,
@@ -401,7 +401,7 @@ export async function createVaultAPI(opts: VaultApiOptions = {}): Promise<VaultA
   return api;
 }
 
-/** Resolve the default vault root from env / homedir. */
+/** Resolve the canonical vault root. */
 export function getDefaultVaultRoot(): string {
-  return process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+  return getVaultRoot();
 }

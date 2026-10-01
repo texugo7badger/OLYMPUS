@@ -15,12 +15,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT_ROOT = getVaultRoot();
 const FEED_PATH = path.join(VAULT_ROOT, '06_Activity_Feed', 'live.jsonl');
 
 /**

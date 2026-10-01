@@ -9,11 +9,12 @@ import path from 'path';
 import os from 'os';
 import { isSkillVisible, isKnowledgeVisible, KNOWLEDGE_STACK_MAP } from './skill-stacks';
 import { LLM_STRATEGIES } from './model-strategies';
+import { getVaultRoot } from './vault-root';
 
 // OLYMPUS_ROOT is the project root (where package.json + opencode.json live).
 const _cwd = process.cwd();
 const OLYMPUS_ROOT = process.env.OLYMPUS_ROOT || _cwd;
-const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT = getVaultRoot();
 const METRICS_DIR = path.join(os.homedir(), '.olympus', 'metrics');
 
 export type NodeType =

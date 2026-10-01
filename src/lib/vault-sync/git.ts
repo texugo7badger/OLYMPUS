@@ -21,8 +21,8 @@ import git from 'isomorphic-git';
 import http from 'isomorphic-git/http/node';
 import { promises as fs, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { spawn } from 'node:child_process';
+import { getVaultRoot } from '../vault-root';
 import type {
   CommitResult,
   InitResult,
@@ -30,9 +30,9 @@ import type {
   StatusResult,
 } from './types';
 
-/** Resolve the vault root from env / homedir. */
+/** Resolve the canonical vault root. */
 function vaultRoot(): string {
-  return process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+  return getVaultRoot();
 }
 
 /** Default commit identity (overridable via env). */

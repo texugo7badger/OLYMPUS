@@ -28,6 +28,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { detectStacksWithFs, type StackDetection, type FsAdapter } from './stack-detector';
+import { getVaultRoot } from './vault-root';
 
 export interface ProjectNote {
   slug: string;
@@ -47,7 +48,7 @@ export interface ActiveProjectFile {
   ts: string;
 }
 
-export const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+export const VAULT = getVaultRoot();
 export const PROJECTS_DIR = path.join(VAULT, '02_Projects');
 export const ACTIVE_FILE = path.join(os.homedir(), '.olympus', 'active-project.json');
 export const WORKSPACES_DIR = path.join(os.homedir(), '.olympus', 'workspaces');

@@ -46,9 +46,9 @@
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { getVaultRoot } from './vault-root';
 
-const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT = getVaultRoot();
 // v3.0: switched from live.md -> live.jsonl to align with the overlay plugin,
 // the seed-vault.py, and the brain-stats API. The file is pure JSONL now
 // (no frontmatter/markdown header) so it can be tailed efficiently by the

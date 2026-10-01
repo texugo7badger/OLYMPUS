@@ -6,12 +6,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT = getVaultRoot();
 
 // God metadata. Models match the go-balanced strategy in model-strategies.ts.
 // GLM-5.2 is reserved for Apollo alone.

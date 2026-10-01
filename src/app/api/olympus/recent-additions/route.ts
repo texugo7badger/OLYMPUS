@@ -5,8 +5,8 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +29,7 @@ export const dynamic = 'force-dynamic';
  * evolution; this endpoint surfaces his work.
  */
 
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT_ROOT = getVaultRoot();
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RECENT_WINDOW_DAYS = 14;
 const MAX_PER_CATEGORY = 20;

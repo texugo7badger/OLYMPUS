@@ -2,8 +2,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import Handlebars from 'handlebars';
-import path from 'node:path';
-import os from 'node:os';
+import { getVaultRoot } from '../../vault-root';
 
 export function registerOlympusHelpers(hbs: typeof Handlebars): void {
   hbs.registerHelper('olympus', (prop: string) => {
@@ -11,7 +10,7 @@ export function registerOlympusHelpers(hbs: typeof Handlebars): void {
       case 'root':
         return process.env.OLYMPUS_ROOT || process.cwd();
       case 'vault':
-        return process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+        return getVaultRoot();
       case 'now':
         return new Date().toISOString();
       case 'god':

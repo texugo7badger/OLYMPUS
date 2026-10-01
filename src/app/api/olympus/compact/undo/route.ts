@@ -5,12 +5,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const VAULT = getVaultRoot();
 const BRAIN_GC_DIR = path.join(VAULT, '09_Archive', 'brain_gc');
 const UNDO_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 

@@ -16,13 +16,13 @@
 
 import { promises as fs, constants as fsConstants, type Dirent } from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { spawn } from 'node:child_process';
 import chokidar, { type FSWatcher } from 'chokidar';
 import type { VaultBackend, VaultEvent, Unsubscribe } from './backend';
 import type { VaultEntry, WriteOpts } from './types';
+import { getVaultRoot } from '../vault-root';
 
-const DEFAULT_VAULT_ROOT = () => process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+const DEFAULT_VAULT_ROOT = () => getVaultRoot();
 
 /**
  * The standard top-level directories every vault must have.

@@ -30,6 +30,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { platform, homedir } from 'node:os';
 import { decryptValue } from './env-crypto';
+import { getVaultRoot } from './vault-root';
 
 const isWindows = platform() === 'win32';
 
@@ -226,9 +227,13 @@ export function buildOpencodeEnv(
 
   // Useful context for the spawned opencode process.
   env.OLYMPUS_ROOT = root;
-  if (!env.OLYMPUS_VAULT) {
-    env.OLYMPUS_VAULT = join(homedir(), 'OLYMPUS-VAULT');
-  }
+  // Issue #30 (D1): the plugin must follow the same vault the app serves.
+  // A bare OLYMPUS_VAULT inherited from the app's own environment is not
+  // canonical — it would shadow the active root resolved by Settings →
+  // Switch Vault or OLYMPUS_VAULT_DIR, splitting the plugin's tree from the
+  // one the UI reads. Inject unconditionally; the extraEnv merge below stays
+  // highest priority so a caller can still override.
+  env.OLYMPUS_VAULT = getVaultRoot();
 
   // Merge caller-supplied env (highest priority).
   Object.assign(env, extraEnv);
