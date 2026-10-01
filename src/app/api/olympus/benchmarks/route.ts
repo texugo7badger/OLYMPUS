@@ -9,6 +9,7 @@ import {
   saveBenchmarkConfig,
   type BenchmarkConfig,
 } from '@/lib/benchmarks';
+import { flushBenchmarkWindows } from '@/lib/opencode-session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -53,7 +54,16 @@ export async function POST(req: NextRequest) {
       recordingEnabled: typeof body.recordingEnabled === 'boolean' ? body.recordingEnabled : current.recordingEnabled,
       sessionLabel: typeof body.sessionLabel === 'string' ? (body.sessionLabel.trim() || undefined) : current.sessionLabel,
     };
+    // Toggle-off must land the in-flight conversation's counters rather than
+    // discarding them (R-D). The accumulator re-reads config on flush, so save
+    // first, then flush — otherwise the just-closed window is dropped.
+    const turnedOff = current.recordingEnabled && !updated.recordingEnabled;
     saveBenchmarkConfig(updated);
+    if (turnedOff) {
+      try {
+        flushBenchmarkWindows();
+      } catch {}
+    }
     return NextResponse.json({ ok: true, config: updated });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
