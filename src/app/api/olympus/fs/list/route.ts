@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { resolveSafeRoot, resolveSafePath, formatStat } from '../_helpers';
+import { requireReadAuth } from '@/lib/auth';
 
 /**
  * GET /api/olympus/fs/list?path=<relative>&root=<optional-safe-root>
@@ -19,6 +20,11 @@ import { resolveSafeRoot, resolveSafePath, formatStat } from '../_helpers';
  * Used by the FileExplorer component to render the project's directory tree.
  */
 export async function GET(req: NextRequest) {
+  // Issue #29: the fs/* family had no auth. Reads use requireReadAuth,
+  // mutators requireAuth.
+  const authError = requireReadAuth(req);
+  if (authError) return authError;
+
   const url = new URL(req.url);
   const relative = url.searchParams.get('path') || '';
   const rootHint = url.searchParams.get('root');

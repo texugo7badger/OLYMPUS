@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { resolveSafeRoot, resolveSafePath } from '../_helpers';
+import { requireAuth } from '@/lib/auth';
 
 /**
  * POST /api/olympus/fs/write
@@ -17,6 +18,11 @@ import { resolveSafeRoot, resolveSafePath } from '../_helpers';
  * Used by the Editor Bridge's "Save" (Cmd/Ctrl+S) action when previewing a file.
  */
 export async function POST(req: NextRequest) {
+  // Issue #29: the fs/* family had no auth. Reads use requireReadAuth,
+  // mutators requireAuth.
+  const authError = requireAuth(req);
+  if (authError) return authError;
+
   try {
     const body = await req.json();
     const { path: relative, content, root: rootHint, createIfMissing = true } = body;

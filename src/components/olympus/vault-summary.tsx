@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 // InstinctDetailModal lets the user click an instinct name and read its full markdown.
-// Fetches the file via /api/olympus/fs/read?path=<abs_path>.
+// InstinctDetailModal fetches the file itself, via /api/vault/file/read?path=<vault-relative path> (not /api/olympus/fs/read).
 import InstinctDetailModal from './instinct-detail-modal';
 
 /* ------------------------------------------------------------------ */

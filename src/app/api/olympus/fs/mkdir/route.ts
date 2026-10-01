@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { resolveSafeRoot, resolveSafePath } from '../_helpers';
+import { requireAuth } from '@/lib/auth';
 
 /**
  * POST /api/olympus/fs/mkdir
@@ -14,6 +15,11 @@ import { resolveSafeRoot, resolveSafePath } from '../_helpers';
  * Creates a directory relative to the safe root.
  */
 export async function POST(req: NextRequest) {
+  // Issue #29: the fs/* family had no auth. Reads use requireReadAuth,
+  // mutators requireAuth.
+  const authError = requireAuth(req);
+  if (authError) return authError;
+
   try {
     const body = await req.json();
     const { path: relative, root: rootHint, recursive = true } = body;

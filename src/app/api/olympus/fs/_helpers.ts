@@ -16,6 +16,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,19 +24,32 @@ export const dynamic = 'force-dynamic';
 /**
  * Resolve the safe root for fs operations. Used by every route in this
  * directory. Order of preference:
- *   1. The `root` query param (if it points to a real directory AND is
- *      inside the active project's path or the Olympus root — prevents
- *      the renderer from browsing arbitrary disk locations).
- *   2. The active project's `path` (read from ~/.olympus/projects.json).
- *   3. The Olympus app root (process.cwd() / resourcesPath).
+ *   1. The `root` query param — accepted only if it points to a real
+ *      directory AND is inside one of the known-safe roots below. This
+ *      prevents the renderer from browsing arbitrary disk locations.
+ *   2. The Olympus app root (process.cwd() in dev / resourcesPath when
+ *      packaged).
+ *
+ * Note: an earlier version of this doc claimed the active project's `path`
+ * was read from ~/.olympus/projects.json and used as a fallback root. The
+ * code has never done that — projects.json is not read here. Corrected in
+ * issue #29.
+ *
+ * The known-safe roots are the app root, the ACTIVE vault (via the canonical
+ * getVaultRoot(), so a Settings-switched or custom vault is covered), and
+ * ~/.olympus/projects.
+ *
+ * Issue #29: this list previously ended with a bare `os.homedir()` entry,
+ * which admitted EVERY descendant of $HOME (~/.ssh, ~/.aws, ~/.config, …)
+ * to a family that includes write/delete/mkdir/rename. That entry is gone.
+ * It is not merely deleted either: Fix D (issue #26, see resolveSafePath
+ * below) made that function accept absolute vault paths, and several server
+ * routes hand the renderer absolute paths inside the vault, so the vault
+ * itself must stay reachable — hence getVaultRoot() instead of deletion.
  */
 export function resolveSafeRoot(rootHint?: string | null): string {
-  // Always allow the Olympus app root + the user's home directory's
-  // "OLYMPUS-VAULT" folder (where the brain lives) + the user's projects
-  // folder (~/.olympus/projects). Anything outside these needs an explicit
-  // `root` query param that matches an existing directory.
   const olympusRoot = process.cwd();
-  const vaultRoot = path.join(os.homedir(), 'OLYMPUS-VAULT');
+  const vaultRoot = getVaultRoot();
   const projectsRoot = path.join(os.homedir(), '.olympus', 'projects');
 
   if (rootHint && typeof rootHint === 'string') {
@@ -43,7 +57,7 @@ export function resolveSafeRoot(rootHint?: string | null): string {
       const resolved = path.resolve(rootHint);
       if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
         // Allow if the hint is under one of the known-safe roots.
-        for (const safe of [olympusRoot, vaultRoot, projectsRoot, os.homedir()]) {
+        for (const safe of [olympusRoot, vaultRoot, projectsRoot]) {
           if (resolved === safe || resolved.startsWith(safe + path.sep)) {
             return resolved;
           }

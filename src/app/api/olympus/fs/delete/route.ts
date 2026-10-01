@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import { resolveSafeRoot, resolveSafePath } from '../_helpers';
+import { requireAuth } from '@/lib/auth';
 
 /**
  * DELETE /api/olympus/fs/delete?path=<relative>&root=<optional-safe-root>&recursive=<bool>
@@ -14,6 +15,11 @@ import { resolveSafeRoot, resolveSafePath } from '../_helpers';
  * itself (would wipe the project).
  */
 export async function DELETE(req: NextRequest) {
+  // Issue #29: the fs/* family had no auth. Reads use requireReadAuth,
+  // mutators requireAuth.
+  const authError = requireAuth(req);
+  if (authError) return authError;
+
   const url = new URL(req.url);
   const relative = url.searchParams.get('path') || '';
   const rootHint = url.searchParams.get('root');

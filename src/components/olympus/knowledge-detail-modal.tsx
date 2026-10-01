@@ -24,7 +24,9 @@ import { X, BookOpenText, Loader2 } from 'lucide-react';
  * Issue #27: the '/OLYMPUS-VAULT' marker extraction that used to derive a
  * `root` query param for /api/olympus/fs/read is deleted — it broke for any
  * non-default vault root and on non-POSIX separators. The vault read endpoint
- * takes a vault-relative path and resolves the root server-side.
+ * takes a vault-relative path and resolves the root server-side. This modal
+ * now fetches via /api/vault/file/read?path=<vault-relative path> — NOT
+ * /api/olympus/fs/read.
  */
 export default function KnowledgeDetailModal({
   knowledgeRelPath,

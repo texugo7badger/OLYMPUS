@@ -20,7 +20,8 @@ import { X, FileText, Loader2 } from 'lucide-react';
  * OLYMPUS_VAULT_DIR / ~/.olympus/vault-root.txt), on non-POSIX separators, and
  * on paths with a later/duplicate marker occurrence. The vault read endpoint is
  * already vault-relative and resolves the root server-side, so the marker hack
- * is deleted outright.
+ * is deleted outright. This modal now fetches via /api/vault/file/read?path=
+ * <vault-relative path> — NOT /api/olympus/fs/read.
  */
 export default function InstinctDetailModal({
   instinctRelPath,

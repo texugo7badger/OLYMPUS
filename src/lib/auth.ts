@@ -1,7 +1,16 @@
 /**
  * Olympus Auth Middleware — bearer-token authentication for mutating API
- * routes when running in `lan` or `tunnel` network mode. Skipped in `local`
- * mode (127.0.0.1 bind only).
+ * routes when running in `lan` or `tunnel` network mode. In `local` mode no
+ * token is required, but the Origin/IP checks below still apply.
+ *
+ * IMPORTANT (issue #29): nothing actually pins the HTTP bind to 127.0.0.1.
+ * The Next server is started as `next dev -p 3737` / `next start -p 3737`
+ * with no `--hostname` flag (see electron/main.ts and package.json), so
+ * Next's default applies and the server binds 0.0.0.0. `local` mode's
+ * protection therefore rests on the Origin/IP checks plus the token in
+ * lan/tunnel mode — not on loopback-only reachability. Routes that skip
+ * requireAuth/requireReadAuth (as the fs/* family did before #29) have no
+ * CSRF defense at all.
  *
  * Token lifecycle: generated at ~/.olympus/session-token, checked against
  * Authorization: Bearer <token> or X-Olympus-Token header.

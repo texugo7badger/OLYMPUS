@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import { resolveSafeRoot, resolveSafePath } from '../_helpers';
+import { requireReadAuth } from '@/lib/auth';
 
 /**
  * GET /api/olympus/fs/read?path=<relative>&root=<optional-safe-root>&raw=1
@@ -36,6 +37,9 @@ const RAW_MIME_TYPES: Record<string, string> = {
 };
 
 export async function GET(req: NextRequest) {
+  const authError = requireReadAuth(req);
+  if (authError) return authError;
+
   const url = new URL(req.url);
   const relative = url.searchParams.get('path') || '';
   const rootHint = url.searchParams.get('root');

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { resolveSafeRoot, resolveSafePath } from '../_helpers';
+import { requireReadAuth } from '@/lib/auth';
 
 /**
  * GET /api/olympus/fs/quick-open?root=<optional-safe-root>&limit=<int>
@@ -43,6 +44,11 @@ const SKIP_DIRS = new Set([
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export async function GET(req: NextRequest) {
+  // Issue #29: the fs/* family had no auth. Reads use requireReadAuth,
+  // mutators requireAuth.
+  const authError = requireReadAuth(req);
+  if (authError) return authError;
+
   const url = new URL(req.url);
   const rootHint = url.searchParams.get('root');
   const limitParam = parseInt(url.searchParams.get('limit') || '2000', 10);
