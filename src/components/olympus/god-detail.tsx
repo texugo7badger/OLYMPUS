@@ -73,7 +73,7 @@ export default function GodDetail() {
  	// When set, opens KnowledgeDetailModal showing the
  // knowledge doc's full markdown (frontmatter + body) as a markdown-box
  // overlay. Replaces the old setIdeFilePath() call that opened the IDE.
- const [viewingKnowledge, setViewingKnowledge] = useState<{ path: string; name: string } | null>(null);
+ const [viewingKnowledge, setViewingKnowledge] = useState<{ relPath: string; name: string } | null>(null);
 
  	// LIVE demigod catalog + brain-stats + instincts + references.
  // All fetches run on mount + every 10s + on the 'olympus:demigods-changed'
@@ -330,7 +330,7 @@ export default function GodDetail() {
  {references.map((ref, i) => (
  <button
  key={`ref-${i}`}
- onClick={() => ref.path && setViewingKnowledge({ path: ref.path, name: ref.name })}
+ onClick={() => ref.relPath && setViewingKnowledge({ relPath: ref.relPath, name: ref.name })}
  className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-olympus-gold/5 transition-colors"
  title={`Open ${ref.name}`}
  disabled={!ref.path}
@@ -399,7 +399,7 @@ export default function GodDetail() {
  body) as a markdown-box overlay, matching the instinct modal UX. */}
  {viewingKnowledge && (
  <KnowledgeDetailModal
- knowledgePath={viewingKnowledge.path}
+ knowledgeRelPath={viewingKnowledge.relPath}
  knowledgeName={viewingKnowledge.name}
  onCloseAction={() => setViewingKnowledge(null)}
  />

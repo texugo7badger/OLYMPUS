@@ -33,6 +33,14 @@ const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAUL
 const LIVE_FEED = path.join(VAULT, '06_Activity_Feed', 'live.jsonl');
 const INSTINCTS_DIR = path.join(VAULT, '05_Auto_Learning', 'instincts');
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
+
+/**
+ * Vault-relative POSIX path for an absolute instinct file (issue #27).
+ * VaultSummary's instinct rows feed instinct-detail-modal, which now reads
+ * via /api/vault/file/read (vault-relative) instead of reconstructing the
+ * vault root from an '/OLYMPUS-VAULT' marker.
+ */
+const toRelPath = (abs: string): string => path.relative(VAULT, abs).split(path.sep).join('/');
 const PROVIDERS_FILE = path.join(OLYMPUS_HOME, 'llm-providers.json');
 
 interface DispatchEvent {
@@ -70,6 +78,8 @@ interface InstinctMeta {
   name?: string;
   demigod?: string;
   path: string;
+  /** Vault-relative POSIX path — added in issue #27. */
+  relPath: string;
 }
 
 /**
@@ -182,6 +192,7 @@ function loadInstinctsForGod(godId: string): { seed: InstinctMeta[]; empirical: 
               : path.basename(file, '.md'),
             demigod: fm.demigod,
             path: filePath,
+            relPath: toRelPath(filePath),
           });
         } catch {
           // skip unreadable
@@ -334,6 +345,7 @@ export async function GET(req: NextRequest) {
           trigger: i.trigger,
           demigod: i.demigod,
           path: i.path,
+          relPath: i.relPath,
         })),
         empirical: instincts.empirical.slice(0, 10).map(i => ({
           id: i.id,
@@ -342,6 +354,7 @@ export async function GET(req: NextRequest) {
           trigger: i.trigger,
           demigod: i.demigod,
           path: i.path,
+          relPath: i.relPath,
         })),
         archived: instincts.archived.slice(0, 10).map(i => ({
           id: i.id,
@@ -350,6 +363,7 @@ export async function GET(req: NextRequest) {
           trigger: i.trigger,
           demigod: i.demigod,
           path: i.path,
+          relPath: i.relPath,
         })),
       },
       shortCircuitHitRate: Math.round(shortCircuitHitRate * 1000) / 1000,

@@ -5,26 +5,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+// Canonical vault root (issue #27). Previously this was
+// `process.env.OLYMPUS_VAULT || ~/OLYMPUS-VAULT`, which ignored
+// OLYMPUS_VAULT_DIR and ~/.olympus/vault-root.txt, so with a custom vault
+// this route listed a tree the app never actually served.
+const VAULT_ROOT = getVaultRoot();
+
+/** Vault-relative POSIX path for an absolute path inside the vault. */
+const toRelPath = (abs: string): string => path.relative(VAULT_ROOT, abs).split(path.sep).join('/');
 
 /**
  * GET /api/olympus/god/instincts?god=<god>
  *
  * Returns the seed + empirical instincts for a god, with id, name, tags,
- * confidence, scope, and absolute path. Used by god-detail.tsx to render
- * the Instincts section + power the instinct-detail-modal.
+ * confidence, scope, absolute `path` (kept for backward compatibility) and
+ * vault-relative `relPath`. Used by god-detail.tsx to render the Instincts
+ * section + power the instinct-detail-modal.
  *
  * Returns:
  *   {
  *     ok: true,
  *     god: string,
- *     seed: Array<{ id, name, tags, confidence, scope, path }>,
- *     empirical: Array<{ id, name, tags, confidence, scope, path }>,
+ *     seed: Array<{ id, name, tags, confidence, scope, path, relPath }>,
+ *     empirical: Array<{ id, name, tags, confidence, scope, path, relPath }>,
  *   }
  */
 export async function GET(req: NextRequest) {
@@ -41,7 +49,7 @@ export async function GET(req: NextRequest) {
       if (!fs.existsSync(dir)) return [];
       const out: Array<{
         id: string; name: string; tags: string[];
-        confidence: number; scope: string[]; path: string;
+        confidence: number; scope: string[]; path: string; relPath: string;
       }> = [];
       for (const f of fs.readdirSync(dir)) {
         if (!f.endsWith('.md') || f.startsWith('_')) continue;
@@ -79,6 +87,7 @@ export async function GET(req: NextRequest) {
             confidence: parseFloat(getField('confidence') || '0.5'),
             scope: getList('scope'),
             path: full,
+            relPath: toRelPath(full),
           });
         } catch { /* skip unreadable */ }
       }

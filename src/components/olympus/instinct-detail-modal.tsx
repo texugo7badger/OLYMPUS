@@ -10,59 +10,57 @@ import { X, FileText, Loader2 } from 'lucide-react';
 /**
  * InstinctDetailModal — modal showing an instinct's full markdown content.
  *
- * Fetches the instinct file's content from /api/olympus/fs/read?path=<abs_path>
+ * Fetches the instinct file's content from /api/vault/file/read?path=<rel_path>
  * and renders the frontmatter as a structured table + the body as preformatted
  * markdown. Opened by god-detail.tsx when the user clicks an instinct row.
+ *
+ * Issue #27: previously this reconstructed the vault root by slicing the
+ * '/OLYMPUS-VAULT' marker out of an absolute path and passed it as `root` to
+ * /api/olympus/fs/read. That broke for any non-default vault root (custom
+ * OLYMPUS_VAULT_DIR / ~/.olympus/vault-root.txt), on non-POSIX separators, and
+ * on paths with a later/duplicate marker occurrence. The vault read endpoint is
+ * already vault-relative and resolves the root server-side, so the marker hack
+ * is deleted outright.
  */
 export default function InstinctDetailModal({
- instinctPath,
- instinctName,
- onCloseAction,
+  instinctRelPath,
+  instinctName,
+  onCloseAction,
 }: {
- instinctPath: string;
- instinctName: string;
- onCloseAction: () => void;
+  /** Vault-relative POSIX path, e.g. 05_Auto_Learning/instincts/<god>/seed/x.md */
+  instinctRelPath: string;
+  instinctName: string;
+  onCloseAction: () => void;
 }) {
- const [loading, setLoading] = useState(true);
- const [content, setContent] = useState<string>('');
- const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [content, setContent] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
- useEffect(() => {
- let cancelled = false;
- setLoading(true);
- setError(null);
- (async () => {
- try {
-		// Vault file resolution (FS API):
-		// - patch-17 fixed the 403 for absolute paths by extracting the
-		//   '/OLYMPUS-VAULT' marker and passing it as `root` so resolveSafeRoot
-		//   maps to the known-safe vault root.
-		// - commit 3fa3858 (resolveSafePath absolute-path branch) fixed the 404
-		//   by accepting in-root absolute paths directly (boundary-checked).
-		// Current behavior: FS read succeeds for vault files with absolute
-		// paths via the marker extraction below.
-		// Known fragility: the '/OLYMPUS-VAULT' marker extraction below relies
-		// on that exact path segment; documented, deliberately NOT changed in
-		// this session (follow-up issue: marker extraction fragility).
- const vaultMarker = '/OLYMPUS-VAULT';
- const vaultIdx = instinctPath.indexOf(vaultMarker);
- const vaultRoot = vaultIdx >= 0
- ? instinctPath.slice(0, vaultIdx + vaultMarker.length)
- : '';
- const rootParam = vaultRoot ? `&root=${encodeURIComponent(vaultRoot)}` : '';
- const r = await fetch(`/api/olympus/fs/read?path=${encodeURIComponent(instinctPath)}${rootParam}`, { cache: 'no-store' });
- if (!r.ok) throw new Error(`API ${r.status}`);
- const d = await r.json();
- if (cancelled) return;
- setContent(d.content || '');
- } catch (e: any) {
- if (!cancelled) setError(e.message);
- } finally {
- if (!cancelled) setLoading(false);
- }
- })();
- return () => { cancelled = true; };
- }, [instinctPath]);
+  useEffect(() => {
+  let cancelled = false;
+  setLoading(true);
+  setError(null);
+  (async () => {
+  try {
+    if (!instinctRelPath || instinctRelPath.startsWith('..')) {
+      throw new Error('Invalid instinct path');
+    }
+    const r = await fetch(
+      `/api/vault/file/read?path=${encodeURIComponent(instinctRelPath)}`,
+      { cache: 'no-store' },
+    );
+    if (!r.ok) throw new Error(`API ${r.status}`);
+    const d = await r.json();
+    if (cancelled) return;
+    setContent(d.content || '');
+  } catch (e: any) {
+  if (!cancelled) setError(e.message);
+  } finally {
+  if (!cancelled) setLoading(false);
+  }
+  })();
+  return () => { cancelled = true; };
+  }, [instinctRelPath]);
 
  // Parse frontmatter + body.
  	// CRLF-tolerant regex. The seed instinct .md files

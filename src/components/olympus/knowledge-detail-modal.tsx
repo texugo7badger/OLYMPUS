@@ -16,17 +16,23 @@ import { X, BookOpenText, Loader2 } from 'lucide-react';
  * old behavior called a setter that opened the file in the in-app Monaco
  * editor (which the user called "the terminal"). The user wanted it to
  * open as a markdown-box overlay, like the instinct detail modal. This
- * component reuses the same /api/olympus/fs/read endpoint and the same
- * vault-root extraction logic (patch-17 fix for the 403). with Monaco removed, this modal is the only way to view
+ * component reuses the same vault-relative /api/vault/file/read endpoint that
+ * document-viewer-modal uses. with Monaco removed, this modal is the only way to view
  * knowledge/reference docs in-app. For full-text editing the user opens
  * the file in their external editor via the Editor Bridge tab.
+ *
+ * Issue #27: the '/OLYMPUS-VAULT' marker extraction that used to derive a
+ * `root` query param for /api/olympus/fs/read is deleted — it broke for any
+ * non-default vault root and on non-POSIX separators. The vault read endpoint
+ * takes a vault-relative path and resolves the root server-side.
  */
 export default function KnowledgeDetailModal({
-  knowledgePath,
+  knowledgeRelPath,
   knowledgeName,
   onCloseAction,
 }: {
-  knowledgePath: string;
+  /** Vault-relative POSIX path, e.g. 04_Knowledge/references/<dir>/x.md */
+  knowledgeRelPath: string;
   knowledgeName: string;
   onCloseAction: () => void;
 }) {
@@ -40,16 +46,13 @@ export default function KnowledgeDetailModal({
     setError(null);
     (async () => {
       try {
-        // same vault-root extraction as instinct-detail-modal.
-        // Knowledge docs live under ~/OLYMPUS-VAULT/04_Knowledge/ so the same
-        // /OLYMPUS-VAULT marker extraction works.
-        const vaultMarker = '/OLYMPUS-VAULT';
-        const vaultIdx = knowledgePath.indexOf(vaultMarker);
-        const vaultRoot = vaultIdx >= 0
-          ? knowledgePath.slice(0, vaultIdx + vaultMarker.length)
-          : '';
-        const rootParam = vaultRoot ? `&root=${encodeURIComponent(vaultRoot)}` : '';
-        const r = await fetch(`/api/olympus/fs/read?path=${encodeURIComponent(knowledgePath)}${rootParam}`, { cache: 'no-store' });
+        if (!knowledgeRelPath || knowledgeRelPath.startsWith('..')) {
+          throw new Error('Invalid knowledge path');
+        }
+        const r = await fetch(
+          `/api/vault/file/read?path=${encodeURIComponent(knowledgeRelPath)}`,
+          { cache: 'no-store' },
+        );
         if (!r.ok) throw new Error(`API ${r.status}`);
         const d = await r.json();
         if (cancelled) return;
@@ -61,7 +64,7 @@ export default function KnowledgeDetailModal({
       }
     })();
     return () => { cancelled = true; };
-  }, [knowledgePath]);
+  }, [knowledgeRelPath]);
 
   // Parse frontmatter + body (CRLF-tolerant, same as patch-6).
   let frontmatterLines: Array<[string, string]> = [];

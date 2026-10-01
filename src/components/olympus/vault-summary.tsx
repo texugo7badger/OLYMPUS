@@ -695,7 +695,7 @@ function CompactInstinctTable({
 	 // When set, opens InstinctDetailModal showing the
  // instinct file's full markdown. Set by clicking an instinct name in
  // the expanded row. Cleared by the modal's onClose.
- const [selectedInstinct, setSelectedInstinct] = useState<{ path: string; name: string } | null>(null);
+ const [selectedInstinct, setSelectedInstinct] = useState<{ relPath: string; name: string } | null>(null);
 
  return (
  <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3">
@@ -797,19 +797,19 @@ function CompactInstinctTable({
  label="Mastered (seed)"
  color="text-olympus-gold"
  entries={names.seed}
- onSelect={(entry) => entry.path && setSelectedInstinct({ path: entry.path, name: entry.name })}
+ onSelect={(entry) => entry.relPath && setSelectedInstinct({ relPath: entry.relPath, name: entry.name })}
  />
  <ExpandedTier
  label="Learning (empirical)"
  color="text-olympus-green"
  entries={names.empirical}
- onSelect={(entry) => entry.path && setSelectedInstinct({ path: entry.path, name: entry.name })}
+ onSelect={(entry) => entry.relPath && setSelectedInstinct({ relPath: entry.relPath, name: entry.name })}
  />
  <ExpandedTier
  label="Quick Circuits (archived)"
  color="text-olympus-purple"
  entries={names.archived}
- onSelect={(entry) => entry.path && setSelectedInstinct({ path: entry.path, name: entry.name })}
+ onSelect={(entry) => entry.relPath && setSelectedInstinct({ relPath: entry.relPath, name: entry.name })}
  />
  </div>
  )}
@@ -840,7 +840,7 @@ function CompactInstinctTable({
  full markdown (frontmatter + body) as a scrollable document. */}
  {selectedInstinct && (
  <InstinctDetailModal
- instinctPath={selectedInstinct.path}
+ instinctRelPath={selectedInstinct.relPath}
  instinctName={selectedInstinct.name}
  onCloseAction={() => setSelectedInstinct(null)}
  />
@@ -870,8 +870,8 @@ function ExpandedTier({
 }: {
  label: string;
  color: string;
- entries: { id: string; name: string; confidence?: number; path?: string }[] | undefined;
- onSelect: (entry: { id: string; name: string; confidence?: number; path?: string }) => void;
+ entries: { id: string; name: string; confidence?: number; path?: string; relPath?: string }[] | undefined;
+ onSelect: (entry: { id: string; name: string; confidence?: number; path?: string; relPath?: string }) => void;
 }) {
 	 // Show a placeholder for empty tiers (using the tier's
  // color) instead of hiding them entirely. The user wants to see all three
@@ -899,9 +899,9 @@ function ExpandedTier({
  <button
  key={`${entry.id}-${i}`}
  onClick={() => onSelect(entry)}
- disabled={!entry.path}
+ disabled={!entry.relPath}
  className="w-full text-left flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-olympus-gold/5 transition-colors text-[10px] font-mono disabled:opacity-60 disabled:hover:bg-transparent"
- title={entry.path ? `Open ${entry.name}` : 'no path available'}
+ title={entry.relPath ? `Open ${entry.name}` : 'no vault path available'}
  >
  <span className="text-olympus-text-dim truncate flex-1">{entry.name}</span>
  {typeof entry.confidence === 'number' && (
