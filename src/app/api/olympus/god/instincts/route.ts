@@ -24,8 +24,12 @@ const toRelPath = (abs: string): string => path.relative(VAULT_ROOT, abs).split(
  *
  * Returns the seed + empirical instincts for a god, with id, name, tags,
  * confidence, scope, absolute `path` (kept for backward compatibility) and
- * vault-relative `relPath`. Used by god-detail.tsx to render the Instincts
- * section + power the instinct-detail-modal.
+ * vault-relative `relPath`.
+ *
+ * Currently unconsumed by any component (the live instinct producer is
+ * /api/olympus/brain-stats, whose `instinctNames` feed VaultSummary → the
+ * instinct-detail-modal); kept for API completeness. `relPath` is emitted so
+ * this route agrees with the canonical-root contract used by the detail modal.
  *
  * Returns:
  *   {

@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { GOD_IDS, DEFAULT_LLM_STRATEGY, type LLMStrategy } from '@/lib/model-strategies';
+import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,17 @@ export const dynamic = 'force-dynamic';
  *   ?range=7     — days for success-rate calculation (default 7; also computes 30d + all-time)
  */
 
-const VAULT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+/**
+ * Canonical vault root (issue #27).
+ *
+ * This was `process.env.OLYMPUS_VAULT || ~/OLYMPUS-VAULT`, which disagreed
+ * with the tree /api/vault/* serves. With Settings → Switch Vault (or
+ * OLYMPUS_VAULT_DIR set) the old constant listed the DEFAULT vault while the
+ * vault route served the custom one, so the `relPath` values emitted below
+ * pointed into a tree the reader never resolves. relPath must match the tree
+ * that is served, so use the same canonical root as the vault API singleton.
+ */
+const VAULT = getVaultRoot();
 const LIVE_FEED = path.join(VAULT, '06_Activity_Feed', 'live.jsonl');
 const INSTINCTS_DIR = path.join(VAULT, '05_Auto_Learning', 'instincts');
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');

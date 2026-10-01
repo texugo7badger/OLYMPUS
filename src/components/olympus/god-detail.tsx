@@ -333,7 +333,7 @@ export default function GodDetail() {
  onClick={() => ref.relPath && setViewingKnowledge({ relPath: ref.relPath, name: ref.name })}
  className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-olympus-gold/5 transition-colors"
  title={`Open ${ref.name}`}
- disabled={!ref.path}
+ disabled={!ref.relPath}
  >
  <BookOpenText size={10} className="text-olympus-cyan shrink-0" />
  <div className="flex-1 min-w-0">
