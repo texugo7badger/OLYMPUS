@@ -260,7 +260,6 @@ export default function InteractiveTerminal() {
       return;
     }
     if (ev.type === 'god_thinking') { updateGodActivity(ev.god, 'thinking', ev.msg || 'Thinking...'); return; }
-    if (ev.type === 'god_working') { updateGodActivity(ev.god, 'working', ev.msg || 'Working...', ev.sub_agents); return; }
     if (ev.type === 'god_done') { updateGodActivity(ev.god, 'done', ev.msg || 'Done'); return; }
     if (ev.type === 'question') {
       addMessage({ type: 'question', text: ev.msg || ev.text || 'Question', god: ev.god || 'apollo', choices: ev.choices, questionId: ev.id, awaitingAnswer: true });

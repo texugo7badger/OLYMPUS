@@ -707,7 +707,9 @@ async function withSessionLock<T>(key: string, fn: () => Promise<T>): Promise<T>
  *  sub-map SHAPE (so R-A lands as a one-line change once an agent name is
  *  available) but parks unattributed counters under the reserved key
  *  MULTI_KEY. Corroborating: `god_working` — the event the UI would use to
- *  learn agent names — has no producer anywhere in src/.
+ *  learn agent names — was never emitted by this module (or any other); its
+ *  single consumer was removed as dead code in issue #31, so it is now
+ *  unreferenced rather than merely unreachable.
  *
  * The key is deliberately not the literal "multi": if real agent names ever
  * arrive, a god or demigod could legitimately be called "multi" and would
