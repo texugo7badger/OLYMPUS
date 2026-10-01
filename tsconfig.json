@@ -45,6 +45,7 @@
     "extensions/**",
     ".next/**",
     "dist-electron-tsc/**",
+    "dist-electron/**",
     ".opencode/**"
   ]
 }
