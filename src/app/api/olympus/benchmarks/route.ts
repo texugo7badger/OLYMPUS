@@ -55,15 +55,22 @@ export async function POST(req: NextRequest) {
       sessionLabel: typeof body.sessionLabel === 'string' ? (body.sessionLabel.trim() || undefined) : current.sessionLabel,
     };
     // Toggle-off must land the in-flight conversation's counters rather than
-    // discarding them (R-D). The accumulator re-reads config on flush, so save
-    // first, then flush — otherwise the just-closed window is dropped.
+    // discarding them (R-D).
+    //
+    // ORDER MATTERS: flushBenchmarkAccumulator (opencode-session.ts:834)
+    // re-reads the config via loadBenchmarkConfig() — a fresh synchronous disk
+    // read (benchmarks.ts:102) — and DELETES the accumulator without writing
+    // when recording is off. Since saveBenchmarkConfig is a synchronous
+    // writeFileSync (benchmarks.ts:117), flushing after the save would always
+    // observe OFF and silently drop the window. Flush first, while the config
+    // on disk still says ON, then persist OFF.
     const turnedOff = current.recordingEnabled && !updated.recordingEnabled;
-    saveBenchmarkConfig(updated);
     if (turnedOff) {
       try {
         flushBenchmarkWindows();
       } catch {}
     }
+    saveBenchmarkConfig(updated);
     return NextResponse.json({ ok: true, config: updated });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
