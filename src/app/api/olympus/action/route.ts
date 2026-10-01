@@ -16,6 +16,7 @@ import {
   runWarmMessage,
   buildStrategyContextBlock,
   respondToPermission,
+  markSessionError,
 } from '@/lib/opencode-session';
 // Dynamic input token routing via task classifier.
 import { classifyTask, serializeClassification } from '@/lib/task-classifier';
@@ -484,8 +485,14 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         closed = true;
       };
 
+      // Issue #35: sessionId lands here once known; fail() may fire before
+      // that (startup timeout), so hold it in a pre-declared holder (no TDZ).
+      let errSessionId: string | null = null;
       const fail = (msg: string) => {
         if (closed) return;
+        if (errSessionId) {
+          try { markSessionError(errSessionId); } catch {}
+        }
         clearTimeout(startupTimer);
         clearTimeout(maxRuntimeTimer);
         send({ type: 'error', msg, ts: new Date().toISOString() });
@@ -588,6 +595,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           return;
         }
         if (closed) return;
+        errSessionId = sessionId;
 
         // 3. Run the message on the warm session.
         const result = await runWarmMessage({

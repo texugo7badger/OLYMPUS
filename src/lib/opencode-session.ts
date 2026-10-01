@@ -807,6 +807,18 @@ function noteSessionError(sessionID: string): void {
   getBucket(sessionID, MULTI_KEY).had_error = true;
 }
 
+/**
+ * Issue #35: app-side error marker for failure paths OUTSIDE the event feed
+ * (route-level fail(), runWarmMessage HTTP failures). Deliberately does NOT
+ * create a bucket via getBucket() — if the window already flushed, creating
+ * one would re-arm a zero-activity ghost row. Marks only live buckets.
+ */
+export function markSessionError(sessionID: string): void {
+  const byAgent = accumulators.get(sessionID);
+  if (!byAgent) return;
+  for (const b of byAgent.values()) b.had_error = true;
+}
+
 function num(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : 0;
 }
@@ -1088,6 +1100,10 @@ function mapPart(
     }
     case 'error': {
       state.gotError = true;
+      // Issue #35: part-level provider errors must poison the benchmark
+      // window too, not just the UI — otherwise the flush writes
+      // outcome=success for a dead run (observed live on Nvidia 503s).
+      noteSessionError(sessionId);
       const msg = part.error?.message || part.text || 'unknown error';
       onEvent({ type: 'error', msg: `OpenCode error: ${msg}`, raw: part, ts });
       return;
@@ -1343,7 +1359,10 @@ async function runWarmMessageAttempt(
         // step as started so text parts aren't suppressed by the gate.
         state.stepStarted = true;
         for (const p of parts) mapPart(p, state, deliver);
-        if (info?.finish === 'error') state.gotError = true;
+        if (info?.finish === 'error') {
+          state.gotError = true;
+          noteSessionError(opts.sessionId);
+        }
         // Surface provider-level APIErrors stored on the assistant message
         // (e.g. the fireworks upstream rejecting cache params with HTTP 400).
         // opencode records these on message.error and completes the run with
@@ -1351,6 +1370,7 @@ async function runWarmMessageAttempt(
         const infoErr = info?.error;
         if (infoErr && !state.gotError) {
           state.gotError = true;
+          noteSessionError(opts.sessionId);
           const d = infoErr?.data ?? {};
           const status = d?.statusCode != null ? `[${d.statusCode}] ` : '';
           const message = d?.message || infoErr?.message || infoErr?.name || 'unknown API error';
@@ -1364,6 +1384,7 @@ async function runWarmMessageAttempt(
           msg = body?.data?.message || body?.message || body?.error?.message || msg;
         } catch {}
         state.gotError = true;
+        noteSessionError(opts.sessionId);
         deliver({ type: 'error', msg: `OpenCode error: ${msg}`, raw: null, ts: new Date().toISOString() });
       }
 

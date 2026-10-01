@@ -173,6 +173,16 @@ export function appendBenchmarkEntry(row: BenchmarkSessionRow, ts?: string): boo
     // Read config fresh: a toggle-off must take effect on the very next flush.
     if (!loadBenchmarkConfig().recordingEnabled) return false;
 
+    // Issue #35 invariant: all-zero rows are forbidden. A zero-activity row
+    // that claims success is ghost noise (late re-flush of a re-created empty
+    // bucket after an error-second flush). True error rows are kept even at
+    // zero activity — the failure signal must survive.
+    const zeroActivity = row.tokens_input === 0
+      && row.tokens_output === 0
+      && row.tokens_reasoning === 0
+      && row.tool_call_count === 0;
+    if (zeroActivity && !row.had_error) return false;
+
     const entry: BenchmarkEntry = {
       ts: ts ?? new Date().toISOString(),
       session_label: loadBenchmarkConfig().sessionLabel ?? null,
