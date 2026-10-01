@@ -231,6 +231,11 @@
         "task": true
       },
       "color": "#9B7BAE"
+    },
+    "architect": {
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/apollo/architect.txt}"
     }
   },
   "command": {
