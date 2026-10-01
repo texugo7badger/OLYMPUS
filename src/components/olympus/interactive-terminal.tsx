@@ -274,6 +274,14 @@ export default function InteractiveTerminal() {
       setActiveGod(ev.to);
       return;
     }
+    // Issue #36: subtask parts (god -> demigod). Same wire type as the god->god
+    // frame above, but no from/to — that branch's guard lets this one through.
+    if (ev.type === 'delegation') {
+      const god = ev.god || 'unknown god';
+      addMessage({ type: 'delegation', text: `>> delegation: ${god} — ${ev.description || ''}`.trimEnd(), god: ev.god || undefined });
+      updateGodActivity(ev.god || 'apollo', 'working', 'Delegated task running...');
+      return;
+    }
     if (ev.type === 'god_thinking') { updateGodActivity(ev.god, 'thinking', ev.msg || 'Thinking...'); return; }
     if (ev.type === 'god_done') { updateGodActivity(ev.god, 'done', ev.msg || 'Done'); return; }
     if (ev.type === 'question') {

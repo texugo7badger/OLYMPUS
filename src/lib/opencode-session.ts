@@ -1127,6 +1127,23 @@ function mapPart(
       }
       return;
     }
+    // Issue #36: a subtask part IS a god->demigod dispatch. It used to fall to
+    // default and vanish, which is why telemetry attributed everything to
+    // __multi__ — this Part is the only place the delegated agent is named.
+    // Gated like the text cases so user-side echoes stay out; start frame only,
+    // completion tracking is a later batch.
+    case 'subtask': {
+      if (!state.stepStarted) return;
+      if (part.messageID && state.userMessageIds.has(part.messageID)) return;
+      onEvent({
+        type: 'delegation',
+        timestamp: Date.now(),
+        sessionID: sessionId,
+        god: part.agent ?? '',
+        description: part.description || part.prompt || '',
+      });
+      return;
+    }
     default:
       return;
   }
