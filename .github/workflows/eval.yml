@@ -51,6 +51,14 @@ jobs:
           npm run electron:compile
           npm run overlay:compile
 
+      - name: Typecheck app (root tsconfig)
+        run: npx tsc --noEmit
+
+      - name: Build Next (packaging gate)
+        run: npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
       - name: Build skill index
         run: node scripts/build-skill-index.js
 
