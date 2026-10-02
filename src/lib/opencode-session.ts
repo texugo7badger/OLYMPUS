@@ -654,6 +654,10 @@ export interface WarmRunResult {
   receivedEvents: boolean;
   /** True if the message POST was sent to the server. */
   postStarted: boolean;
+  /** Provider/transport HTTP status when the failure carried one structurally
+   *  (APIError data.statusCode, or a non-2xx POST). Absent when the failure had
+   *  no status — classifyRetry then falls back to matching the error string. */
+  statusCode?: number;
 }
 
 export interface WarmRunOptions {
@@ -1162,29 +1166,82 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
   const server = await ensureServer();
 
   return withSessionLock(opts.sessionId, async () => {
-    // Retry loop (fix d): one transparent retry when the serve dies with a
-    // TRANSPORT failure mid-run (fetch failed / ECONNREFUSED / crash loop).
-    // The session id persists in the shared SQLite DB, so the re-posted
-    // message keeps its context. Aborts and API-level errors never retry.
+    // Retry loop (fix d + issue #39): a TRANSPORT failure mid-run (fetch
+    // failed / ECONNREFUSED / crash loop) respawns the server; a transient
+    // PROVIDER failure (429/5xx — the free-tier pools 503 constantly) must
+    // NOT respawn, because the server is alive and healthy. Up to 3 attempts
+    // total, 5s then 15s. The session id persists in the shared SQLite DB, so
+    // a re-posted message keeps its context.
+    //
+    // DUPLICATE SIDE-EFFECT RISK: re-posting a turn that already began
+    // executing tools can run them TWICE (a bash write, an outbound POST, a
+    // file edit). A provider 503 only surfaces at the END of a failed attempt,
+    // so partial execution is entirely possible and there is no transactional
+    // rollback here. The backoff is long (5s/15s) so the upstream pool can
+    // recover, which also widens the window for work already in flight.
+    // Retries are best-effort resumption, not a safety guarantee.
+    const RETRY_BACKOFF_MS = [5_000, 15_000];
+    const RETRY_MAX_ATTEMPTS = RETRY_BACKOFF_MS.length + 1;
     let srv = server;
     for (let attempt = 0; ; attempt++) {
       const result = await runWarmMessageAttempt(srv, opts, attempt === 0);
-      const retryable =
-        attempt === 0 &&
-        !opts.signal?.aborted &&
-        !!result.error &&
-        result.code !== 0 &&
-        TRANSPORT_DEAD_RE.test(result.error);
-      if (!retryable) return result;
-      console.log(`[opencode-session] Warm server transport failure (${result.error}) — respawning + retrying message once`);
-      invalidateServer();
-      srv = await ensureServer();
+      if (attempt >= RETRY_MAX_ATTEMPTS - 1) return result;
+      // Aborts never retry (checked before every retry, per the contract).
+      if (opts.signal?.aborted) return result;
+      const kind = classifyRetry(result);
+      if (!kind) return result;
+      const delay = RETRY_BACKOFF_MS[attempt];
+      const label = typeof result.statusCode === 'number' ? `Provider ${result.statusCode}` : 'Transport failure';
+      // Issue #39: visible in the OLYMPUS terminal, never console-only.
+      // Emitting BEFORE the sleep also pins firstEventAt in the route's
+      // startup timer, so STARTUP_TIMEOUT_MS (action/route.ts:503, 120s —
+      // it only fires while firstEventAt === null) cannot kill a retry that is
+      // deliberately waiting out a rate limit.
+      opts.onEvent({
+        type: 'log',
+        msg: `${label} (attempt ${attempt + 1}/${RETRY_MAX_ATTEMPTS}) — retrying in ${Math.round(delay / 1000)}s; session context preserved${result.error ? ` [${result.error}]` : ''}`,
+        ts: new Date().toISOString(),
+      });
+      if (kind === 'transport') {
+        invalidateServer();
+        srv = await ensureServer();
+      }
+      await sleep(delay);
     }
   });
 }
 
 /** Transport-dead signatures (undici "fetch failed", refused/hung sockets). */
 const TRANSPORT_DEAD_RE = /fetch failed|ECONNREFUSED|ECONNRESET|socket hang up|other side closed|UND_ERR|network/i;
+
+/** Provider statuses worth re-posting: rate limits + upstream/gateway faults. */
+const RETRYABLE_PROVIDER_STATUS = new Set([429, 500, 502, 503, 504]);
+/** Deterministic client/auth failures — a retry just burns the route budget. */
+const NEVER_RETRY_STATUS = new Set([400, 401, 403, 404]);
+/** Display-string fallback mirroring TRANSPORT_DEAD_RE, used only when no
+ *  status was threaded. Kept deliberately tight to avoid matching stray ids. */
+const PROVIDER_TRANSIENT_RE = /\b(?:429|500|502|503|504)\b/;
+/** Conditions that must never retry regardless of any status code. */
+const NEVER_RETRY_RE = /rejected permission|permission to use|aborted|session (?:error|not found)/i;
+
+type RetryClass = 'transport' | 'provider';
+
+/**
+ * Classify a failed attempt. The structured `statusCode` wins outright: when it
+ * is present and not transient we return null instead of falling through to
+ * string parsing, so a 400/401/403/404 can never be rescued by a loose regex.
+ */
+function classifyRetry(result: WarmRunResult): RetryClass | null {
+  if (result.code === 0 || !result.error) return null;
+  if (NEVER_RETRY_RE.test(result.error)) return null;
+  const sc = result.statusCode;
+  if (typeof sc === 'number') {
+    if (NEVER_RETRY_STATUS.has(sc)) return null;
+    return RETRYABLE_PROVIDER_STATUS.has(sc) ? 'provider' : null;
+  }
+  if (TRANSPORT_DEAD_RE.test(result.error)) return 'transport';
+  return PROVIDER_TRANSIENT_RE.test(result.error) ? 'provider' : null;
+}
 
 /**
  * One warm-message attempt. `allowRetry` reserved for future use; the retry
@@ -1223,6 +1280,9 @@ async function runWarmMessageAttempt(
     let receivedEvents = false;
     let postStarted = false;
     let maxTimedOut = false;
+    // Issue #39: the provider HTTP status behind this attempt's failure, so
+    // classifyRetry can prefer a structured code over display-string parsing.
+    let providerStatus: number | undefined;
 
     const eventCtrl = new AbortController();
     const postCtrl = new AbortController();
@@ -1389,6 +1449,9 @@ async function runWarmMessageAttempt(
           state.gotError = true;
           noteSessionError(opts.sessionId);
           const d = infoErr?.data ?? {};
+          // Issue #39: keep the structured status; the display string below is
+          // lossy (it drops the code when a message is present).
+          if (typeof d?.statusCode === 'number') providerStatus = d.statusCode;
           const status = d?.statusCode != null ? `[${d.statusCode}] ` : '';
           const message = d?.message || infoErr?.message || infoErr?.name || 'unknown API error';
           deliver({ type: 'error', msg: `OpenCode error: ${status}${message}`, raw: info, ts: new Date().toISOString() });
@@ -1396,6 +1459,8 @@ async function runWarmMessageAttempt(
       } else {
         // Non-2xx — surface a clear error.
         let msg = `OpenCode request failed (HTTP ${res.status})`;
+        providerStatus = res.status; // Issue #39: structured, captured before the
+        // body overwrite below discards the code from the display string.
         try {
           const body: any = await res.json();
           msg = body?.data?.message || body?.message || body?.error?.message || msg;
@@ -1433,9 +1498,9 @@ async function runWarmMessageAttempt(
       eventCtrl.abort();
       try { await closeFeed(); } catch {}
 
-      if (state.gotError) {
-        return { code: 1, sessionId: opts.sessionId, receivedEvents, postStarted, error: 'OpenCode reported an error during the run' };
-      }
+if (state.gotError) {
+          return { code: 1, sessionId: opts.sessionId, receivedEvents, postStarted, error: 'OpenCode reported an error during the run', statusCode: providerStatus };
+        }
       return { code: 0, sessionId: opts.sessionId, receivedEvents, postStarted };
     } catch (err: any) {
       eventCtrl.abort();
@@ -1461,6 +1526,8 @@ async function runWarmMessageAttempt(
         receivedEvents,
         postStarted,
         error: err?.message || String(err),
+        // Issue #39: fetch/APIError surfaces often carry a numeric status.
+        statusCode: typeof err?.statusCode === 'number' ? err.statusCode : typeof err?.status === 'number' ? err.status : undefined,
       };
     } finally {
       clearTimeout(maxTimer);
