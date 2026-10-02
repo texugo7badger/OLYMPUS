@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { GOD_ICONS } from '@/lib/olympus-store';
-import { DollarSign, Zap, Server, CheckCircle2, ChevronRight, ChevronDown, Cpu, FileText } from 'lucide-react';
+import { DollarSign, Zap, Server, CheckCircle2, ChevronRight, ChevronDown, Cpu, FileText, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { demigodShortDescription } from '@/lib/demigod-short-desc';
 import DemigodPromptModal from './demigod-prompt-modal';
@@ -421,7 +421,7 @@ function GodRow({
  // agent's full Identity .txt prompt. Set by clicking a demigod row.
  const [viewingDemigod, setViewingDemigod] = useState<{ god: string; agent: string; shortDesc: string } | null>(null);
  const hasData = c.requests > 0;
- const Icon = GOD_ICONS[c.god] || GOD_ICONS[c.icon];
+ const Icon = GOD_ICONS[c.god] || GOD_ICONS[c.icon] || Globe;
  const subAgentCount = dispatchInfo?.subAgentCount ?? 0;
  const hasSubAgents = subAgentCount > 0;
  // LIVE active ECC count (from live.jsonl dispatch events).
