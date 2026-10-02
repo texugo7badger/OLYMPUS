@@ -17,6 +17,7 @@ import {
   buildStrategyContextBlock,
   respondToPermission,
   markSessionError,
+  forgetConversation,
 } from '@/lib/opencode-session';
 // Dynamic input token routing via task classifier.
 import { classifyTask, serializeClassification } from '@/lib/task-classifier';
@@ -212,14 +213,22 @@ export async function POST(req: NextRequest) {
     try {
       cleanupServer();
       const server = await ensureServer();
+      // Issue #21: drop the pre-reset conversation's session mapping. Its
+      // `opencode serve` was just killed by cleanupServer(), so the entry is a
+      // dangling reference — leaving it behind means a later context lookup on
+      // that conversationId still reports the pre-reset percentage of a
+      // session that no longer exists. The client sends the OLD id, captured
+      // before it rotated to a fresh one.
+      const forgotten = forgetConversation(body.conversationId || '');
       console.log(
-        `[olympus-action] reset-session: fresh OpenCode server on port ${server.port} (warm=${server.warm})`,
+        `[olympus-action] reset-session: fresh OpenCode server on port ${server.port} (warm=${server.warm}, pruned_stale_mapping=${forgotten})`,
       );
       return NextResponse.json({
         ok: true,
         port: server.port,
         warm: server.warm,
         authed: server.authed,
+        prunedStaleMapping: forgotten,
       });
     } catch (e: any) {
       return NextResponse.json(

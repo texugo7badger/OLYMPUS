@@ -602,6 +602,29 @@ function saveConversationMap(map: Record<string, ConversationRecord>) {
 }
 
 /**
+ * Forget a conversation's session mapping (issue #21).
+ *
+ * `reset-session` kills the warm `opencode serve` and the client rotates its
+ * conversationId, but the OLD conversationId kept its entry in
+ * ~/.olympus/opencode-sessions.json. That entry is not merely stale — the
+ * serve it points at was just killed, so it is a dangling reference: asking
+ * for context on the old conversationId reports the pre-reset percentage of a
+ * session that no longer exists. Deleting it keeps the map from accumulating
+ * one dead entry per reset.
+ *
+ * Best-effort and idempotent: a missing key is not an error, and any write
+ * failure is swallowed like every other writer of this file.
+ */
+export function forgetConversation(conversationId: string): boolean {
+  if (!conversationId) return false;
+  const map = loadConversationMap();
+  if (!(conversationId in map)) return false;
+  delete map[conversationId];
+  saveConversationMap(map);
+  return true;
+}
+
+/**
  * Get the opencode session ID for a chat conversation, creating it on the
  * warm server on first use. Session IDs survive app restarts (persisted to
  * ~/.olympus/opencode-sessions.json), so context is retained even across

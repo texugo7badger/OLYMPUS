@@ -1091,6 +1091,10 @@ export default function InteractiveTerminal() {
   // conversationId, and the next 5s poll finds no mapping → zeros.
   const confirmNewSession = useCallback(async () => {
     setShowNewSessionConfirm(false);
+    // Issue #21: resetTerminal() rotates conversationId below, so capture the
+    // pre-reset id FIRST and hand it to the server — that is the stale mapping
+    // it needs to prune from ~/.olympus/opencode-sessions.json.
+    const staleConversationId = conversationIdRef.current;
     resetTerminal();
     setSubmitting(true);
     addMessage({ type: 'system', text: 'Restarting warm server…' });
@@ -1100,7 +1104,7 @@ export default function InteractiveTerminal() {
       const res = await fetch('/api/olympus/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset-session' }),
+        body: JSON.stringify({ action: 'reset-session', conversationId: staleConversationId }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) {
