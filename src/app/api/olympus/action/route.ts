@@ -23,7 +23,7 @@ import {
 import { classifyTask, serializeClassification } from '@/lib/task-classifier';
 // Issue #41: persisting an "always" grant so the next ask for the same tool
 // is settled by policy instead of by another card.
-import { grantAlways } from '@/lib/permissions';
+import { grantAlways, loadPermissions, revokeTool, SEED_TOOL_NAMES } from '@/lib/permissions';
 // ChildProcess type for the streamChild() signature.
 import type { ChildProcess } from 'node:child_process';
 
@@ -128,6 +128,26 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message || 'permission reply failed' }, { status: 500 });
     }
+  }
+
+  // ---- Permission policy (issue #47) --------------------------------------
+  // `permissions-list` / `permissions-revoke` back the /permissions panel.
+  // Both live here, under the same local-origin/auth guard as every other
+  // action, and both answer with the full refreshed list so the panel never
+  // has to guess what the file now says.
+  if (action === 'permissions-list' || action === 'permissions-revoke') {
+    const policy = loadPermissions();
+    const list = {
+      tools: policy.tools,
+      paths: policy.paths,
+      seededTools: [...SEED_TOOL_NAMES],
+    };
+    if (action === 'permissions-list') return NextResponse.json(list);
+
+    const tool = typeof body.tool === 'string' ? body.tool.trim() : '';
+    if (!tool) return NextResponse.json({ error: 'permissions-revoke requires tool' }, { status: 400 });
+    const revoked = revokeTool(tool);
+    return NextResponse.json({ ok: true, revoked, list });
   }
 
   // ---- Prompt mode -------------------------------------------------------

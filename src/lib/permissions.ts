@@ -49,6 +49,13 @@ const SEED_TOOLS: Record<string, ToolPolicy> = {
   list: { always: ['*'], denied: [] },
 };
 
+/**
+ * Issue #47 — the seeded tool names, for the /permissions panel to flag which
+ * rows come from the seed rather than from something the user clicked. Exported
+ * (derived from SEED_TOOLS, so it cannot drift) instead of hardcoded in the UI.
+ */
+export const SEED_TOOL_NAMES: readonly string[] = Object.keys(SEED_TOOLS);
+
 export function permissionsPath(): string {
   return path.join(os.homedir(), '.olympus', 'permissions.json');
 }

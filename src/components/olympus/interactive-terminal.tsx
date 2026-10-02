@@ -27,6 +27,9 @@ import GodPanel, { type GodState } from './god-panel';
 // Issue #43: the Plan panel. A todo list is a plan; this one stays pinned to
 // the bottom of the Parthenon column instead of scrolling away with the log.
 import PlanPanel, { normalizeTodoEvent, type PlanItem } from './plan-panel';
+// Issue #47 — /permissions panel (list + revoke). Separate file so the
+// terminal's own surface doesn't keep growing.
+import PermissionsPanel from './permissions-panel';
 // Issue #44: file-touching tool frames show the shape of the change (M/A
 // badge, +/- counts, a truncated preview) instead of just naming a path.
 import { ToolFrame } from './tool-frame';
@@ -37,6 +40,20 @@ import { ToolFrame } from './tool-frame';
 // The opencode one-shot run IPC channel is still registered.
 
 const GOD_COLOR = '#D4A574';
+
+/**
+ * Issue #46 — an unanswered permission ask is a permanently parked run.
+ *
+ * OpenCode holds the run open until the ask is answered, and before this the
+ * only way out was the card's buttons: step away for two minutes, come back,
+ * and the run is still frozen with nothing indicating it will ever thaw. So
+ * every ask gets its own timer and, unanswered after 2 minutes, is denied by
+ * the client — which is the same decision the Deny button makes, once, for
+ * that run. Deliberately NOT a persisted denial: a timeout is "nobody was
+ * there", not "never do this again", so nothing is written to
+ * permissions.json and the next ask cards again.
+ */
+const PERMISSION_TIMEOUT_MS = 120_000; // 2 minutes
 // Callimachus uses Landmark icon (Library of Alexandria).
 const GOD_ICONS: Record<string, LucideIcon> = {
   apollo: Sun, hephaestus: Hammer, athena: Bird, hermes: Compass,
@@ -140,6 +157,10 @@ interface ChatMessage {
   permissionAction?: string;
   permissionPatterns?: string[];
   permissionState?: 'pending' | 'approved' | 'always' | 'denied';
+  /** Issue #46: the 120s timer fired before anyone answered, so this card was
+   *  denied by the client. `permission_replied` then flips the state to
+   *  'denied' — this flag is what keeps the "(timeout)" label on it. */
+  permissionTimedOut?: boolean;
   /** Issue #44: the tool frame needs the name and args, not just the rendered
    *  one-liner, to derive an M/A badge and a change preview. */
   toolName?: string;
@@ -209,6 +230,24 @@ export default function InteractiveTerminal() {
   // Issue #41: requestID -> the tool/paths that were asked for, so an "always"
   // reply can be persisted as a policy grant instead of expiring with the run.
   const pendingPermissionsRef = useRef<Record<string, { tool: string; patterns: string[] }>>({});
+  // Issue #46: requestID -> its timeout timer. A map, not a single timer,
+  // because parallel dispatches park several asks at once and each one owes
+  // the user an answer on its own card.
+  const permissionTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // The timer fires long after the event handler that armed it was built, and
+  // handlePermissionReply is declared further down the component — so the
+  // callback goes through a ref rather than a dependency.
+  const permissionReplyRef = useRef<(requestID: string, reply: 'once' | 'always' | 'reject') => void>(() => {});
+
+  const clearPermissionTimer = useCallback((requestID: string) => {
+    const t = permissionTimersRef.current[requestID];
+    if (t) { clearTimeout(t); delete permissionTimersRef.current[requestID]; }
+  }, []);
+
+  const clearAllPermissionTimers = useCallback(() => {
+    for (const t of Object.values(permissionTimersRef.current)) clearTimeout(t);
+    permissionTimersRef.current = {};
+  }, []);
   const [awaitingContext, setAwaitingContext] = useState(false);
   // Issue #42: single source of truth for per-god state. Written only by
   // `updateGodActivity` at the existing event call sites — the Parthenon panel
@@ -217,6 +256,10 @@ export default function InteractiveTerminal() {
   const [focusedGod, setFocusedGod] = useState<string | null>(null);
   const [todos, setTodos] = useState<PlanItem[]>([]);
   const [sseConnected, setSseConnected] = useState(false);
+  // Issue #47: the /permissions panel. Declared here (with the other
+  // top-of-component state) because `submit` reads it — see the comment
+  // above `submit` about the TDZ this file already fixed once.
+  const [showPermissions, setShowPermissions] = useState(false);
   // Removed the terminalMode toggle. The Olympus
   // Terminal now renders ONLY the Interactive (Apollo) chat. The OpenCode
   // Chat pane and the TUI are gone from this surface. (The opencode one-shot
@@ -399,6 +442,19 @@ export default function InteractiveTerminal() {
       if (lastPermissionId.current === ev.requestID) return;
       lastPermissionId.current = ev.requestID;
       pendingPermissionsRef.current[ev.requestID] = { tool: ev.action || '', patterns: ev.patterns || [] };
+      // Issue #46: arm this ask's own timeout. The pendingPermissions check
+      // inside it is what makes the timer safe — an ask answered by a button
+      // click is already deleted from pendingPermissions by the time it fires.
+      permissionTimersRef.current[ev.requestID] = setTimeout(() => {
+        delete permissionTimersRef.current[ev.requestID];
+        if (!pendingPermissionsRef.current[ev.requestID]) return; // answered already
+        // Deny it for this run only — exactly what the Deny button sends.
+        // Never grantDenied: a timeout is not a policy decision.
+        permissionReplyRef.current(ev.requestID, 'reject');
+        setMessages(prev => prev.map(m => m.permissionId === ev.requestID && m.type === 'permission'
+          ? { ...m, permissionTimedOut: true }
+          : m));
+      }, PERMISSION_TIMEOUT_MS);
       addMessage({
         type: 'permission',
         text: `Apollo needs permission to use ${ev.action} on:`,
@@ -417,6 +473,9 @@ export default function InteractiveTerminal() {
       // next one. Without this a later ask reusing the id would be swallowed.
       if (lastPermissionId.current === ev.requestID) lastPermissionId.current = '';
       delete pendingPermissionsRef.current[ev.requestID];
+      // Issue #46: the answer arrived — stop the timer so it cannot answer a
+      // second time. The card's timed-out label (if any) is left alone.
+      clearPermissionTimer(ev.requestID);
       setMessages(prev => prev.map(m => m.permissionId === ev.requestID && m.type === 'permission'
         ? { ...m, permissionState: ev.reply === 'always' ? 'always' : ev.reply === 'reject' ? 'denied' : 'approved', text: m.text }
         : m));
@@ -676,7 +735,7 @@ export default function InteractiveTerminal() {
     }
     // Unknown event types — log to console for debugging but don't show in UI.
     // This prevents noise from opencode internal events.
-  }, [pushEvent, pushPulse, setActiveGod, addMessage, updateGodActivity]);
+  }, [pushEvent, pushPulse, setActiveGod, addMessage, updateGodActivity, clearPermissionTimer]);
 
   // SSE-only — no WebSocket. The interactive terminal sends
   // prompts via POST to /api/olympus/action and receives events via the SSE
@@ -698,6 +757,12 @@ export default function InteractiveTerminal() {
   }, []);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, godStates]);
+  // Issue #46: a pending timeout that outlives its component would answer a
+  // permission after the terminal is gone.
+  useEffect(() => () => {
+    for (const t of Object.values(permissionTimersRef.current)) clearTimeout(t);
+    permissionTimersRef.current = {};
+  }, []);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   const submit = useCallback(async (
@@ -709,6 +774,15 @@ export default function InteractiveTerminal() {
      *  by /api/olympus/image-upload — Apollo reads the file from there. */
     image?: { thumbnailUrl: string; savedPath: string; filename: string },
   ) => {
+    // Issue #47: '/permissions' is a local command, not a prompt. Until the
+    // panel existed there was no way to see or undo an "always" grant — a rule
+    // written to permissions.json was invisible and permanent. One inline
+    // intercept, deliberately not a command framework.
+    if (text.trim() === '/permissions') {
+      setInput('');
+      setShowPermissions(prev => !prev);
+      return;
+    }
     if (!text.trim() || submitting) return;
 
     // Build the uploaded-files prefix including the file tree for any
@@ -879,6 +953,16 @@ export default function InteractiveTerminal() {
   }, [context, addMessage]);
 
   const handlePermissionReply = useCallback((requestID: string, reply: 'once' | 'always' | 'reject') => {
+    // Issue #46: the FIRST answer wins, and this is the one place that can
+    // enforce it — the ask is only in pendingPermissionsRef while it is
+    // genuinely unanswered. Three things can beat a button click to it: the
+    // 120s timeout, a double-click, and the click that races the timer. Once
+    // answered (here, by the timer, or by the SSE reply) the entry is gone,
+    // and a second reply would 502 and double-answer one permission server-side.
+    const ask = pendingPermissionsRef.current[requestID];
+    if (!ask) return;
+    delete pendingPermissionsRef.current[requestID];
+    clearPermissionTimer(requestID);
     // POST the decision straight to OpenCode's permission API (via the action
     // route) — NOT a chat prompt. The matching card flips to its approved /
     // always / denied state when the `permission_replied` SSE event arrives.
@@ -886,20 +970,25 @@ export default function InteractiveTerminal() {
     // Issue #41: the tool + patterns ride along so the route can persist an
     // "always" grant to ~/.olympus/permissions.json. Without them the grant
     // would only last for this run and the next ask would card again.
-    const ask = pendingPermissionsRef.current[requestID];
     fetch('/api/olympus/action', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'respond-permission',
         requestID,
         decision: reply,
-        tool: ask?.tool,
-        patterns: ask?.patterns,
+        tool: ask.tool,
+        patterns: ask.patterns,
       }),
     }).then(r => {
       if (!r.ok) return r.json().then(j => { throw new Error(j.error || `HTTP ${r.status}`); });
     }).catch(err => addMessage({ type: 'error', text: `Permission reply failed: ${err.message}` }));
-  }, [addMessage]);
+  }, [addMessage, clearPermissionTimer]);
+
+  // Issue #46: the permission timeout needs this handler but is declared
+  // before it, so the timer calls through a ref rather than a dependency.
+  useEffect(() => {
+    permissionReplyRef.current = handlePermissionReply;
+  }, [handlePermissionReply]);
 
   const stop = useCallback(() => {
     // Abort the in-flight POST — the abort propagates to the server's
@@ -952,10 +1041,16 @@ export default function InteractiveTerminal() {
     setInput('');
     setContext('');
     setUploadedFileDetails([]);
+    // Issue #46: a reset abandons every parked ask — its timer has to go with
+    // it, or it would fire minutes later and reply on behalf of a conversation
+    // that no longer exists. Neither of these was cleared here before.
+    clearAllPermissionTimers();
+    pendingPermissionsRef.current = {};
+    lastPermissionId.current = '';
     updateGodActivity('apollo', 'idle');
     setShowResetConfirm(false);
     inputRef.current?.focus();
-  }, [updateGodActivity]);
+  }, [updateGodActivity, clearAllPermissionTimers]);
 
   // File upload handler — sends files to /api/olympus/upload, then appends
   // the file paths to the uploadedFiles list so they can be included in the
@@ -1328,6 +1423,10 @@ export default function InteractiveTerminal() {
           </div>
         </div>
       )}
+
+      {/* Issue #47 — toggled by typing /permissions. Owns its own fetch and
+          revoke confirmations, so it stays out of the terminal's state. */}
+      {showPermissions && <PermissionsPanel onClose={() => setShowPermissions(false)} />}
 
       <div className="flex-1 min-h-0 flex">
         {/* Only the Interactive (Apollo) chat remains.
@@ -1743,7 +1842,10 @@ function MessageRenderer({
     const pending = message.permissionState === 'pending';
     const decided = message.permissionState === 'approved' ? '✓ approved for this run'
       : message.permissionState === 'always' ? '✓ always allowed'
-      : message.permissionState === 'denied' ? '✗ denied' : '';
+      // Issue #46: the timeout denies the ask, so the SSE reply flips this to
+      // 'denied' — the flag is what distinguishes "nobody answered" from a
+      // deliberate Deny click, and it survives that flip.
+      : message.permissionState === 'denied' ? (message.permissionTimedOut ? '✗ denied (timeout)' : '✗ denied') : '';
     return (
       <div className="flex items-start gap-2 mt-2">
         <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
@@ -1782,7 +1884,9 @@ function MessageRenderer({
             </div>
           )}
           {!pending && (
-            <div className="text-[10px] font-mono text-olympus-green mt-1.5">{decided}</div>
+            // Issue #46: a denial (a Deny click, or the timeout) is not a
+            // green outcome — it read as "allowed" until now.
+            <div className={`text-[10px] font-mono mt-1.5 ${message.permissionState === 'denied' ? 'text-olympus-red' : 'text-olympus-green'}`}>{decided}</div>
           )}
         </div>
       </div>
