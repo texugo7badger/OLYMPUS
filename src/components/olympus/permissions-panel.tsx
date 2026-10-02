@@ -70,9 +70,10 @@ export default function PermissionsPanel({ onClose }: { onClose: () => void }) {
     setBusy(true);
     try {
       const res = await call('permissions-revoke', { tool });
-      // The route returns the refreshed list, so the panel re-reads from the
-      // source of truth rather than guessing at the post-revoke shape.
-      setData(res.list);
+      // The route returns the refreshed list directly (not wrapped in .list),
+      // so the panel re-reads from the source of truth rather than guessing
+      // at the post-revoke shape.
+      setData(res);
       setConfirming(null);
     } catch (e: any) {
       setError(e.message || 'revoke failed');

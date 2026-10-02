@@ -135,19 +135,31 @@ export async function POST(req: NextRequest) {
   // Both live here, under the same local-origin/auth guard as every other
   // action, and both answer with the full refreshed list so the panel never
   // has to guess what the file now says.
-  if (action === 'permissions-list' || action === 'permissions-revoke') {
+  if (action === 'permissions-list') {
     const policy = loadPermissions();
-    const list = {
+    return NextResponse.json({
       tools: policy.tools,
       paths: policy.paths,
       seededTools: [...SEED_TOOL_NAMES],
-    };
-    if (action === 'permissions-list') return NextResponse.json(list);
+    });
+  }
 
+  if (action === 'permissions-revoke') {
     const tool = typeof body.tool === 'string' ? body.tool.trim() : '';
     if (!tool) return NextResponse.json({ error: 'permissions-revoke requires tool' }, { status: 400 });
+    // The list MUST be read after the revoke: revokeTool() -> commit() ->
+    // resetPermissionCache() swaps in a brand-new policy object, so a snapshot
+    // taken before the call still carries the row we just removed and the
+    // panel would re-render the very tool it just revoked.
     const revoked = revokeTool(tool);
-    return NextResponse.json({ ok: true, revoked, list });
+    const policy = loadPermissions();
+    return NextResponse.json({
+      ok: true,
+      revoked,
+      tools: policy.tools,
+      paths: policy.paths,
+      seededTools: [...SEED_TOOL_NAMES],
+    });
   }
 
   // ---- Prompt mode -------------------------------------------------------

@@ -981,7 +981,18 @@ export default function InteractiveTerminal() {
       }),
     }).then(r => {
       if (!r.ok) return r.json().then(j => { throw new Error(j.error || `HTTP ${r.status}`); });
-    }).catch(err => addMessage({ type: 'error', text: `Permission reply failed: ${err.message}` }));
+    }).catch(err => {
+      // The claim is ours, not the server's: OpenCode may never have seen the
+      // decision (a dead warm server 502s, a dropped connection rejects). If we
+      // keep the claim the card is frozen on a reply that was never delivered —
+      // the exact freeze #46 exists to kill — so give the ask back to the
+      // buttons. We deliberately do NOT re-arm the 120s timer here; the user is
+      // looking at the error, and the buttons are the right affordance. A late
+      // `permission_replied` for a restored claim just 502s harmlessly: the
+      // server stays authoritative about what was actually answered.
+      pendingPermissionsRef.current[requestID] = ask;
+      addMessage({ type: 'error', text: `Permission reply failed: ${err.message}` });
+    });
   }, [addMessage, clearPermissionTimer]);
 
   // Issue #46: the permission timeout needs this handler but is declared
