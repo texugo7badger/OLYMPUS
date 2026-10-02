@@ -181,6 +181,34 @@ function resolveGodForStepFinish(
   return state.godId || "system";
 }
 
+/**
+ * Issue #25: pick the agent a cost line belongs to, from the event itself.
+ * Ladder: this event's agent → tracker's last-seen god → "global" (no model,
+ * so no priced spend). Never "ecc": that phantom god resolved a model, so
+ * unattributed spend was costed as though a real god had made it.
+ */
+type CostAttribution = { god: string; subagent: string | null; priced: boolean };
+
+function resolveCostGod(
+  eventAgent: string | undefined,
+  state: ActiveAgentState,
+  demigodMap: Map<string, string>,
+): CostAttribution {
+  if (typeof eventAgent === "string" && eventAgent.trim()) {
+    const agent = eventAgent.trim();
+    if (GOD_NAMES.has(agent)) return { god: agent, subagent: null, priced: true };
+    const parent = demigodMap.get(agent);
+    if (parent) return { god: parent, subagent: agent, priced: true };
+    const dispatchGod = getOpenDispatches().find(d => d.demigod === agent)?.god;
+    if (dispatchGod) return { god: dispatchGod, subagent: agent, priced: true };
+  }
+  if (state.godId) {
+    const demigod = state.agentId && state.agentId !== state.godId ? state.agentId : null;
+    return { god: state.godId, subagent: demigod, priced: true };
+  }
+  return { god: "global", subagent: null, priced: false };
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────
 interface ToolArgs {
   filePath?: string;
@@ -196,6 +224,9 @@ interface ToolInput {
   callID?: string;
   args?: ToolArgs;
   agent?: string;
+  /** Issue #25: the SDK types sessionID as required on both tool.execute
+   *  hooks (verified in the shipped binary). `agent` is NOT on that payload. */
+  sessionID?: string;
 }
 
 interface ToolOutput {
@@ -516,6 +547,7 @@ function appendCostFeed(input: {
   tokens: { input: number; output: number };
   success: boolean;
   subagent?: string | null;
+  sessionId?: string | null;
 }): void {
   try {
     if (!fs.existsSync(METRICS_DIR)) {
@@ -537,6 +569,9 @@ function appendCostFeed(input: {
       // god (not via a dispatch). When non-null, this is the demigod that
       // was active when the tool fired.
       subagent: input.subagent ?? null,
+      // Issue #25: makes a cost line sliceable to its run. Appended LAST so
+      // pre-existing lines keep their shape; old lines have no such field.
+      session_id: input.sessionId ?? null,
     };
     fs.appendFileSync(COST_FEED, JSON.stringify(event) + "\n", "utf-8");
   } catch {
@@ -740,6 +775,21 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
   // Static demigod → parent-god map for cost attribution (step-finish
   // events carry the demigod name; the dashboard aggregates by god).
   const demigodGodMap = buildDemigodGodMap(worktreePath);
+
+  // Issue #25: the tool payload has no `agent`, but the bus does — every
+  // message.part.updated carries the owning Message (info.agent) plus the same
+  // callID the tool hook reports. Bounded, or a long session would grow it.
+  const callAgentByCallId = new Map<string, string>();
+  const rememberCallAgent = (callID: unknown, agent: unknown): void => {
+    if (typeof callID !== "string" || !callID) return;
+    if (typeof agent !== "string" || !agent) return;
+    callAgentByCallId.delete(callID);
+    callAgentByCallId.set(callID, agent);
+    if (callAgentByCallId.size > 512) {
+      const oldest = callAgentByCallId.keys().next();
+      if (!oldest.done) callAgentByCallId.delete(oldest.value);
+    }
+  };
 
   // Track the last-seen agent so we can detect agent transitions
   let lastAgentId: string | null = null;
@@ -946,11 +996,16 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
      */
     "tool.execute.after": async (input: ToolInput, output: unknown) => {
       const state = getActiveAgent();
-      if (!state.agentId) return;
-
-      const godId = state.godId || "ecc";
       const isError = isToolOutputError(input.tool, output);
       const tokens = estimateTokens(input.tool, input, output);
+
+      // Issue #25: attribute to the agent that made THIS call. input.agent is
+      // honoured when present; else the bus-recorded agent for this callID.
+      const eventAgent = input.agent
+        || (input.callID ? callAgentByCallId.get(input.callID) : undefined);
+      const { god: godId, subagent: subagentId, priced } = resolveCostGod(
+        eventAgent, state, demigodGodMap,
+      );
 
       // Write a per-god cost event to cost.jsonl so the Cost Dashboard can
       // render live spend. This is best-effort: if the file isn't writable
@@ -966,16 +1021,8 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           && input.tool !== "olympus-instinct-query"
           && input.tool !== "sub-agent-instinct-query"
           && input.tool !== "olympus-patterns") {
-        const model = getGodModel(godId);
-        // Pass the active demigod (if any) so the cost dashboard's
-        // per-demigod breakdown has the data it needs. state.agentId is the
-        // god's own ID for god-level calls and the demigod's ID for demigod
-        // calls. We only surface the demigod ID when it differs from the
-        // god's own ID (i.e., it's a demigod).
-        // Symphony-native: gods are identified by NAME, not by prefix.
-        const subagentId = state.agentId && state.agentId !== godId
-          ? state.agentId
-          : null;
+        // No model to price against: estimating one would invent spend.
+        const model = priced ? getGodModel(godId) : "unknown";
         appendCostFeed({
           god: godId,
           model,
@@ -983,8 +1030,14 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           tokens,
           success: !isError,
           subagent: subagentId,
+          sessionId: input.sessionID ?? null,
         });
       }
+
+      // Everything below attributes to the ACTIVE dispatch and still needs one;
+      // the cost line above does not — an unattributed call is worth recording
+      // under "global" rather than dropping on the floor.
+      if (!state.agentId) return;
 
       // ─── Handle olympus-dispatch: register an open dispatch ─────────
       if (input.tool === "olympus-dispatch" && input.args) {
@@ -1312,6 +1365,10 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         if (evtType !== "message.part.updated") return;
 
         const part = evt.part || (evt as any).properties?.part;
+        // Issue #25: record the calling agent before the step-finish filter.
+        const evtInfo0 = (evt as any).properties?.info ?? evt.info ?? null;
+        if (part?.type === "tool") rememberCallAgent(part.callID, evtInfo0?.agent);
+
         if (!part || part.type !== "step-finish") return;
 
         const tokens = part.tokens;

@@ -1138,7 +1138,12 @@ function readRealCosts(): GodCost[] {
         const ev = JSON.parse(line);
         const ts = new Date(ev.ts).getTime();
         if (ts < fiveHrsAgo) continue;
-        const god = ev.god;
+        // Issue #25: "ecc" was a phantom god written whenever a call had no
+        // identifiable agent. Newer lines say "global"; fold the history into
+        // the same bucket so the two do not read as two different things.
+        const rawGod = typeof ev.god === 'string' ? ev.god : '';
+        const god = rawGod === 'ecc' ? 'global' : rawGod;
+        if (!god) continue;
         if (!byGod[god]) byGod[god] = { requests: 0, input: 0, output: 0, cached: 0, spend: 0, latencies: [], successes: 0 };
         byGod[god].requests++;
         byGod[god].input += ev.input_tokens || 0;
@@ -1165,6 +1170,30 @@ function readRealCosts(): GodCost[] {
     c.avgLatencyMs = r.latencies.length ? Math.round(r.latencies.reduce((s, l) => s + l, 0) / r.latencies.length) : 0;
     c.successRate = r.requests ? Math.round((r.successes / r.requests) * 100) / 100 : 0;
     c.sparkline = tickBuckets[c.god] || [];
+  }
+
+  // Issue #25: "global" is not one of the ten gods, so the loop above (which
+  // walks the god list) cannot emit it — unattributed spend would stay
+  // invisible in the totals. Append it as its own line when it exists.
+  const globalRow = byGod['global'];
+  if (globalRow) {
+    costs.push({
+      god: 'global', icon: 'global',
+      model: 'unattributed',
+      requests: globalRow.requests,
+      inputTokens: globalRow.input,
+      outputTokens: globalRow.output,
+      cachedTokens: globalRow.cached,
+      spend: Math.round(globalRow.spend * 100) / 100,
+      cap5h: null, pctOfCap: 0,
+      avgLatencyMs: globalRow.latencies.length
+        ? Math.round(globalRow.latencies.reduce((s, l) => s + l, 0) / globalRow.latencies.length)
+        : 0,
+      successRate: globalRow.requests
+        ? Math.round((globalRow.successes / globalRow.requests) * 100) / 100
+        : 0,
+      sparkline: tickBuckets['global'] || [],
+    });
   }
   return costs;
 }
