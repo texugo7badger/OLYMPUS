@@ -86,14 +86,59 @@ export function isLocalOrigin(req: NextRequest): boolean {
 /**
  * Check if the request's IP is a localhost IP.
  * In Next.js, the IP is available via the `x-forwarded-for` header (when behind
- * a proxy) or `x-real-ip`. If neither is set, we assume localhost (dev server).
+ * a proxy) or `x-real-ip`.
+ *
+ * Issue #34: this used to `return true` when neither header was present,
+ * reasoning "no IP info = same machine (dev server)". That is wrong: Next
+ * binds every interface (issue #33), so a direct LAN connection also arrives
+ * with no proxy headers — the absence of a header proves nothing about the
+ * peer. Treating unknown as local made this check a no-op that silently
+ * OR-ed "allow" into every local-mode GET gate, so the Origin check became
+ * decorative.
+ *
+ * Unknown is now NOT local. A genuine same-machine request with no proxy
+ * headers is still allowed, because `isLocalOrigin` covers that case (the
+ * browser omits Origin on same-origin requests) — this function only narrows
+ * what counts as a resolved localhost address, it never widens access.
  */
 export function isLocalIp(req: NextRequest): boolean {
   const xff = req.headers.get('x-forwarded-for') || '';
   const xri = req.headers.get('x-real-ip') || '';
   const ip = (xri || xff.split(',')[0] || '').trim();
-  if (!ip) return true;  // no IP info = same machine (Next dev server)
+  // No proxy headers => peer address unresolved. Not evidence of locality.
+  if (!ip) return false;
   return ip === '127.0.0.1' || ip === '::1' || ip === 'localhost' || ip.startsWith('127.');
+}
+
+/**
+ * Check the `Host` header against loopback names (issue #34).
+ *
+ * Origin and IP checks cannot see a DNS-rebinding attack: the victim's browser
+ * has been convinced that `evil.com` IS `127.0.0.1`, so the request arrives as
+ * same-origin (no Origin header) from a resolved loopback peer — every other
+ * check passes. What the attacker cannot forge is that the browser must still
+ * address us by the hostname it thinks it is talking to, so the `Host` header
+ * carries the rebinding domain. Requiring a loopback Host closes that hole for
+ * both reads and writes, and is independent of issue #33's bind.
+ */
+export function isLocalHost(req: NextRequest): boolean {
+  const host = (req.headers.get('host') || '').trim().toLowerCase();
+  if (!host) return false;
+  // Strip the port, keeping bracketed IPv6 literals intact, then drop the
+  // brackets so "::1" and "[::1]" compare equal.
+  const raw = host.startsWith('[')
+    ? host.slice(0, host.indexOf(']') + 1)
+    : host.split(':')[0];
+  const name = raw.startsWith('[') && raw.endsWith(']') ? raw.slice(1, -1) : raw;
+  if (!name) return false;
+  if (name === 'localhost' || name.endsWith('.localhost')) return true;
+  if (name === '::1') return true;
+  // Link-local, matching ALLOWED_LOCAL_ORIGINS: Next prints the Windows
+  // "Network URL" (169.254.x.x) and IPv6 fe80:: is the Tailscale-style
+  // address, so those must keep working in local mode.
+  if (/^169\.254\.\d{1,3}\.\d{1,3}$/.test(name)) return true;
+  if (/^fe80:/.test(name)) return true;
+  return /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(name);
 }
 
 /**
@@ -110,12 +155,15 @@ export function isLocalIp(req: NextRequest): boolean {
 export function requireAuth(req: NextRequest): NextResponse | null {
   const mode = getNetworkMode();
 
-  // Local mode + localhost origin → allow without token
-  if (mode === 'local' && isLocalOrigin(req)) {
-    return null;
-  }
-  // Local mode + non-localhost origin → suspicious (DNS rebinding?)
-  if (mode === 'local' && !isLocalOrigin(req)) {
+  // Local mode → localhost Host only, then localhost origin (issue #34).
+  if (mode === 'local') {
+    if (!isLocalHost(req)) {
+      return NextResponse.json(
+        { error: 'Forbidden: non-loopback Host header in local mode' },
+        { status: 403 },
+      );
+    }
+    if (isLocalOrigin(req)) return null;
     return NextResponse.json(
       { error: 'Forbidden: non-localhost origin in local mode' },
       { status: 403 },
@@ -155,12 +203,13 @@ export function requireAuth(req: NextRequest): NextResponse | null {
 export function requireReadAuth(req: NextRequest): NextResponse | null {
   const mode = getNetworkMode();
 
-  // Local mode → allow all GET from localhost
-  if (mode === 'local' && (isLocalOrigin(req) || isLocalIp(req))) {
-    return null;
-  }
-  // Local mode + non-localhost → refuse
+  // Local mode → allow all GET from localhost (issue #34).
   if (mode === 'local') {
+    // Host first: a rebound domain arrives same-origin with no Origin header
+    // and no proxy headers, so it would otherwise sail through both checks.
+    if (isLocalHost(req) && (isLocalOrigin(req) || isLocalIp(req))) {
+      return null;
+    }
     return NextResponse.json(
       { error: 'Forbidden: non-localhost request in local mode' },
       { status: 403 },
