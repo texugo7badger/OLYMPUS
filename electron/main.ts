@@ -106,9 +106,42 @@ async function isNextAlreadyRunning(): Promise<boolean> {
 }
 
 /**
+ * Resolve the address Next.js should bind (issue #33).
+ *
+ * Next binds 0.0.0.0 unless told otherwise — `next dev` with no -H, and the
+ * standalone server.js via `process.env.HOSTNAME || '0.0.0.0'`. That made the
+ * whole app reachable from the LAN in *every* network mode, including
+ * 'local', which is documented as needing no token. auth.ts could not be
+ * relied on to stop it: 44 of the 60 olympus API routes carry no
+ * requireAuth/requireReadAuth gate at all, and in local mode the gate is
+ * intended to be a no-op.
+ *
+ * So bind the socket instead of trusting every route to police itself:
+ *   lan      → 0.0.0.0, the mode that exists to be reachable, and which
+ *             requires a bearer token anyway.
+ *   local    → loopback only. The documented meaning of local mode.
+ *   tunnel   → loopback, matching its documented "127.0.0.1 bind + Tailscale
+ *             or SSH"; the tunnel provides reachability, the port does not.
+ *
+ * Unset or unreadable mode file → 'local' (the same default auth.ts applies),
+ * hence loopback. OLYMPUS_BIND overrides, for developers who need to reach a
+ * dev server from another host deliberately.
+ */
+function resolveNextBind(): string {
+  const override = (process.env.OLYMPUS_BIND || '').trim();
+  if (override) return override;
+  let mode = '';
+  try {
+    mode = readFileSync(join(nodeOs.homedir(), '.olympus', 'network-mode'), 'utf-8').trim();
+  } catch {}
+  return mode === 'lan' ? '0.0.0.0' : '127.0.0.1';
+}
+
+/**
  * Spawn the Next.js server.
  */
 function spawnNext(): ChildProcess {
+  const bind = resolveNextBind();
   let args: string[];
   let cwd: string;
 
@@ -120,7 +153,9 @@ function spawnNext(): ChildProcess {
       app.quit();
       process.exit(1);
     }
-    args = [nextCli, 'dev', '-p', String(PORT)];
+    // `next dev` ignores the HOSTNAME env var, so the bind must be explicit
+    // (issue #33). Without -H it defaults to 0.0.0.0.
+    args = [nextCli, 'dev', '-p', String(PORT), '-H', bind];
     cwd = appRoot;
   } else {
     const resourcesPath = process.resourcesPath || join(appRoot, 'resources');
@@ -136,6 +171,7 @@ function spawnNext(): ChildProcess {
   }
 
   console.log(`[olympus:electron] spawning Next.js: node ${args.join(' ')}`);
+  console.log(`[olympus:electron] bind: ${bind} (network mode: ${bind === '0.0.0.0' ? 'lan' : 'loopback-only'})`);
   console.log(`[olympus:electron] cwd: ${cwd}`);
 
   // Use the system node binary for the Next.js child process.
@@ -149,6 +185,10 @@ function spawnNext(): ChildProcess {
     env: {
       ...process.env,
       PORT: String(PORT),
+      // The standalone server.js reads process.env.HOSTNAME and falls back to
+      // 0.0.0.0, so this is the only lever on the packaged app's bind
+      // (issue #33). `next dev` needs -H instead; see spawnNext above.
+      HOSTNAME: bind,
       NODE_ENV: isDev ? 'development' : 'production',
     },
   });

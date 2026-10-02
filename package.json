@@ -63,7 +63,7 @@
     "fix-types": "node scripts/fix-types.js",
     "electron:compile": "tsc -p electron/tsconfig.json && node scripts/electron-postcompile.js",
     "overlay:compile": "tsc -p .opencode/olympus/tsconfig.json && node scripts/olympus-overlay-postcompile.js",
-    "electron:dev": "concurrently -k -n next,electron -c cyan,magenta \"next dev -p 3737\" \"wait-on http://localhost:3737/api/olympus/health && npm run rebuild:native && tsc -p electron/tsconfig.json && node scripts/electron-postcompile.js && electron .\"",
+    "electron:dev": "concurrently -k -n next,electron -c cyan,magenta \"next dev -p 3737 -H 127.0.0.1\" \"wait-on http://localhost:3737/api/olympus/health && npm run rebuild:native && tsc -p electron/tsconfig.json && node scripts/electron-postcompile.js && electron .\"",
     "olympus": "node bin/olympus.js",
     "postinstall": "node scripts/postinstall.js"
   },
