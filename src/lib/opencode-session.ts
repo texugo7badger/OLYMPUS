@@ -929,6 +929,47 @@ function flushAllBenchmarkAccumulators(): void {
   for (const sessionID of Array.from(accumulators.keys())) flushBenchmarkAccumulator(sessionID);
 }
 
+/**
+ * Issue #40: hold reasoning that arrives before the first step-start.
+ *
+ * The stepStarted gate exists to keep the user's own message parts out of the
+ * assistant's stream. On some models (DeepSeek R1-style, glm-5.3) the
+ * reasoning part lands BEFORE step-start, so the gate threw it away — and
+ * because reasoning is emitted once, final-text-only, nothing ever recovered
+ * it. The terminal's own comment claimed it "can arrive before step_start",
+ * which this path made unreachable.
+ *
+ * Buffering is capped: an unbounded reasoning prelude would be an
+ * unbounded transcript for a model that thinks at length.
+ */
+const PRE_STEP_REASONING_MAX = 8 * 1024;
+
+function bufferPreStepReasoning(state: { reasoningPre?: string }, text: string): void {
+  if (!text) return;
+  const held = (state.reasoningPre ?? '') + text;
+  state.reasoningPre =
+    held.length <= PRE_STEP_REASONING_MAX
+      ? held
+      : `${held.slice(0, PRE_STEP_REASONING_MAX)}\n\n[reasoning truncated at ${PRE_STEP_REASONING_MAX / 1024} KB]`;
+}
+
+/** Emit anything buffered before the step began, then clear it. */
+function flushPreStepReasoning(
+  state: { reasoningPre?: string },
+  sessionId: string | undefined,
+  onEvent: (ev: any) => void,
+): void {
+  const held = state.reasoningPre;
+  if (!held) return;
+  state.reasoningPre = '';
+  onEvent({
+    type: 'reasoning',
+    timestamp: Date.now(),
+    sessionID: sessionId,
+    part: { type: 'reasoning', text: held, prelude: true },
+  });
+}
+
 /** Map a server SSE event / message part into the UI event format. */
 function mapEvent(
   ev: any,
@@ -942,6 +983,9 @@ function mapEvent(
     gotError: boolean;
     userMessageIds: Set<string>;
     lastFrameAt: number;
+    /** Issue #40: reasoning that arrived BEFORE the first step-start is held
+     *  here instead of being dropped, then flushed with a prelude marker. */
+    reasoningPre?: string;
   },
   onEvent: (ev: any) => void,
 ) {
@@ -1044,6 +1088,9 @@ function mapPart(
     gotError: boolean;
     userMessageIds: Set<string>;
     lastFrameAt: number;
+    /** Issue #40: reasoning that arrived BEFORE the first step-start is held
+     *  here instead of being dropped, then flushed with a prelude marker. */
+    reasoningPre?: string;
   },
   onEvent: (ev: any) => void,
 ) {
@@ -1054,6 +1101,10 @@ function mapPart(
       if (!state.stepStarted) {
         state.stepStarted = true;
         onEvent({ type: 'step_start', timestamp: Date.now(), sessionID: sessionId, part });
+        // Issue #40: reasoning that preceded the step surfaces here rather
+        // than being lost. Emitted after step_start so the terminal's own
+        // ordering is unchanged — the prelude flag marks it as out of order.
+        flushPreStepReasoning(state, sessionId, onEvent);
       }
       return;
     }
@@ -1154,15 +1205,22 @@ function mapPart(
       // mapEvent buffers per part id in textBuf — surface accumulated
       // text exactly like the 'text' case does.
       if (state.textEmitted.has(part.id)) return;
-      if (!state.stepStarted) return;
       if (part.messageID && state.userMessageIds.has(part.messageID)) return;
       const accumulated = state.textBuf.get(part.id);
       const text = typeof part.text === 'string' && part.text.length > 0 ? part.text : accumulated;
-      if (text) {
+      if (!text) return;
+      // Issue #40: hold pre-step reasoning instead of dropping it. Only a
+      // user echo is discarded outright; the stepStarted gate no longer eats
+      // the model's own thinking.
+      if (!state.stepStarted) {
         state.textEmitted.add(part.id);
         state.textBuf.delete(part.id);
-        onEvent({ type: 'reasoning', timestamp: Date.now(), sessionID: sessionId, part: { type: 'reasoning', text } });
+        bufferPreStepReasoning(state, text);
+        return;
       }
+      state.textEmitted.add(part.id);
+      state.textBuf.delete(part.id);
+      onEvent({ type: 'reasoning', timestamp: Date.now(), sessionID: sessionId, part: { type: 'reasoning', text } });
       return;
     }
     // Issue #36: a subtask part IS a god->demigod dispatch. It used to fall to
@@ -1331,6 +1389,7 @@ async function runWarmMessageAttempt(
     stepFinished: false,
     gotError: false,
     userMessageIds: new Set<string>(),
+    reasoningPre: '',
     // Liveness: the /event pump stamps every received frame here (BEFORE
     // session filtering — any frame proves the feed is alive). Drives the
     // silence watchdog.
@@ -1575,6 +1634,12 @@ async function runWarmMessageAttempt(
         });
       }
 
+      // Issue #40: if the turn ended with no step-start (fast model, or a
+      // feed that dropped it), the held reasoning would never flush. Emit it
+      // now, before the feed closes — after eventCtrl.abort() deliver() is a
+      // no-op and the thought would be lost for good.
+      flushPreStepReasoning(state, opts.sessionId, deliver);
+
       // 4. Close the feed subscription.
       await sleep(300);
       eventCtrl.abort();
@@ -1635,6 +1700,9 @@ async function openEventFeed(
     gotError: boolean;
     userMessageIds: Set<string>;
     lastFrameAt: number;
+    /** Issue #40: reasoning that arrived BEFORE the first step-start is held
+     *  here instead of being dropped, then flushed with a prelude marker. */
+    reasoningPre?: string;
   },
   onEvent: (ev: any) => void,
   signal: AbortSignal,
@@ -1740,6 +1808,9 @@ async function synthesizeFromHistory(
     gotError: boolean;
     userMessageIds: Set<string>;
     lastFrameAt: number;
+    /** Issue #40: reasoning that arrived BEFORE the first step-start is held
+     *  here instead of being dropped, then flushed with a prelude marker. */
+    reasoningPre?: string;
   },
   onEvent: (ev: any) => void,
 ) {
