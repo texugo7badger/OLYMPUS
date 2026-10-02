@@ -24,6 +24,9 @@ import DesignReviewCard from './design-review-card';
 // Issue #42: the Parthenon panel. One card per god — status, current tool,
 // step count — and a click focuses the message stream on that god.
 import GodPanel, { type GodState } from './god-panel';
+// Issue #43: the Plan panel. A todo list is a plan; this one stays pinned to
+// the bottom of the Parthenon column instead of scrolling away with the log.
+import PlanPanel, { normalizeTodoEvent, type PlanItem } from './plan-panel';
 
 // The OLYMPUS Terminal renders only the Interactive (Apollo) chat.
 // OpenCode Chat is available in the IDE tab's terminal panel via
@@ -158,7 +161,7 @@ const PHASE_TO_STATUS: Record<GodPhase, GodState['status']> = {
   done: 'done',
   error: 'blocked',
 };
-interface TodoItem { id: string; text: string; done: boolean; god?: string; }
+// Issue #43: todos are plan items — `{ content, status }`, not a done flag.
 
 export default function InteractiveTerminal() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -202,7 +205,7 @@ export default function InteractiveTerminal() {
   // reads this, it never re-derives god state from the message log.
   const [godStates, setGodStates] = useState<Map<string, GodState>>(() => new Map());
   const [focusedGod, setFocusedGod] = useState<string | null>(null);
-  const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [todos, setTodos] = useState<PlanItem[]>([]);
   const [sseConnected, setSseConnected] = useState(false);
   // Removed the terminalMode toggle. The Olympus
   // Terminal now renders ONLY the Interactive (Apollo) chat. The OpenCode
@@ -419,12 +422,26 @@ export default function InteractiveTerminal() {
       return;
     }
     if (ev.type === 'context_recorded' || ev.type === 'context_skipped') { setAwaitingContext(false); setShowContext(false); setContext(''); return; }
-    if (ev.type === 'todo') {
-      setTodos(prev => { if (prev.find(t => t.id === ev.id)) return prev; return [...prev, { id: ev.id, text: ev.text || ev.msg, done: false, god: ev.god }]; });
-      addMessage({ type: 'todo', text: ev.text || ev.msg, god: ev.god });
+    // Issue #43: one parser for every todo shape (legacy `{type,id,text}` +
+    // `todo_done`, the activity-feed `{action,msg,meta.status}` envelope, and a
+    // bulk `items[]` write). Rows merge by id, so the panel keeps stream
+    // history instead of resetting on every write.
+    const planRows = normalizeTodoEvent(ev);
+    if (planRows) {
+      setTodos(prev => {
+        const next = [...prev];
+        for (const row of planRows) {
+          const i = next.findIndex(t => t.id === row.id);
+          if (i === -1) next.push(row);
+          else if (row.status === 'done' && !row.content) next[i] = { ...next[i], status: 'done' };
+          else next[i] = { ...next[i], ...row };
+        }
+        return next;
+      });
+      // The stream keeps its own copy — the log is history, the panel is state.
+      for (const row of planRows) addMessage({ type: 'todo', text: row.content, god: row.god });
       return;
     }
-    if (ev.type === 'todo_done') { setTodos(prev => prev.map(t => t.id === ev.id ? { ...t, done: true } : t)); return; }
 
     // Handle opencode --format json event types.
     // opencode 1.18.3 emits: step_start, text, step_finish, tool.call,
@@ -1055,7 +1072,9 @@ export default function InteractiveTerminal() {
     }
   }, [activeProject, addMessage, submit]);
 
-  const toggleTodo = (id: string) => setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const toggleTodo = (id: string) => setTodos(prev => prev.map(t =>
+    t.id === id ? { ...t, status: t.status === 'done' ? 'pending' : 'done' } : t,
+  ));
 
   // Build a transcript summary of the
   // current conversation for the new-session handoff. Apollo receives
@@ -1222,7 +1241,7 @@ export default function InteractiveTerminal() {
           {todos.length > 0 && (
             <>
               <span className="text-[#5A5A5A]">-</span>
-              <span>{todos.filter(t => !t.done).length}/{todos.length} todos</span>
+              <span>{todos.filter(t => t.status !== 'done').length}/{todos.length} todos</span>
             </>
           )}
           <OlympusTooltip content="Reset terminal (clears all messages + context)" side="bottom">
@@ -1470,36 +1489,13 @@ export default function InteractiveTerminal() {
         </div>
 
         {(godStateList.length > 0 || todos.length > 0) && (
-          <div className="w-60 shrink-0 border-l border-olympus-gold/10 bg-olympus-panel overflow-y-auto custom-scroll">
-            <GodPanel states={godStateList} focusedGod={focusedGod} onFocus={setFocusedGod}>
-            {todos.length > 0 && (
-              <>
-                <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide sticky top-0 bg-olympus-panel border-b border-t border-olympus-gold/10 flex items-center gap-1">
-                  <CheckCircle2 size={10} style={{ color: GOD_COLOR }} />
-                  <span>TODO</span>
-                </div>
-                <div className="py-1">
-                  {todos.map(t => (
-                    <div
-                      key={t.id}
-                      onClick={() => toggleTodo(t.id)}
-                      className="px-2 py-1 cursor-default flex items-center gap-1.5 hover:bg-olympus-gold/5 transition-colors"
-                    >
-                      <CheckCircle2 size={11} className={t.done ? 'text-olympus-green' : 'text-[#5A5A5A]'} />
-                      <span className={cn('text-[9px] font-mono', t.done ? 'text-[#5A5A5A] line-through' : 'text-olympus-text')}>
-                        {t.text}
-                      </span>
-                      {t.god && (
-                        <span className="text-[8px] font-mono ml-auto" style={{ color: GOD_COLOR }}>
-                          {GOD_NAMES[t.god] || t.god}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            </GodPanel>
+          <div className="w-60 shrink-0 border-l border-olympus-gold/10 bg-olympus-panel flex flex-col min-h-0">
+            {/* The cards scroll; the plan does not. A checklist you have to
+                scroll to find is not telling you what is happening now. */}
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scroll">
+              <GodPanel states={godStateList} focusedGod={focusedGod} onFocus={setFocusedGod} />
+            </div>
+            <PlanPanel items={todos} onToggle={toggleTodo} />
           </div>
         )}
       </div>
