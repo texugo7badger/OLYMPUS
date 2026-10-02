@@ -141,6 +141,11 @@ export function buildStrategyContextBlock(): string {
     `Strategy: ${id} (${label}) — ${family}${descShort ? `. ${descShort}` : ''}`,
   ];
   for (const [god, model] of Object.entries(gods)) lines.push(`  ${god}: ${model}`);
+  // Issue #32 (complaint 5: "vault path guessing"). The canonical root is
+  // already resolved on the OLYMPUS side; without stating it here the model
+  // guesses (observed: it tried ~/Projects/olympus/OLYMPUS-VAULT before the
+  // canonical ~/OLYMPUS-VAULT) and burns probe cycles per run.
+  lines.push(`Vault root: ${VAULT_ROOT} — never guess vault paths; resolve from this root.`);
   return lines.join('\n');
 }
 
@@ -1389,7 +1394,11 @@ async function runWarmMessageAttempt(
               // reply of its own when it sees this flag.
               ev.autoApproved = true;
               opts.onEvent(ev);
-              opts.onEvent({ type: 'log', msg: `[permission] auto-approved ${ev.action} (vault path): ${(ev.patterns || []).join(', ')}`, ts: new Date().toISOString() });
+              // Issue #32 (complaint 4): the forwarded event above is the ONE
+              // line for this auto-approval — the client renders it from
+              // ev.autoApproved. A parallel `log` event here used to produce a
+              // second "[permission] auto-approved" line in the same stream.
+              // Do not re-add it; the failure branch below keeps its own line.
             } else {
               // Auto-approve failed — surface the ask so the user can decide.
               opts.onEvent(ev);
@@ -1533,9 +1542,9 @@ async function runWarmMessageAttempt(
       eventCtrl.abort();
       try { await closeFeed(); } catch {}
 
-if (state.gotError) {
-          return { code: 1, sessionId: opts.sessionId, receivedEvents, postStarted, error: 'OpenCode reported an error during the run', statusCode: providerStatus };
-        }
+      if (state.gotError) {
+        return { code: 1, sessionId: opts.sessionId, receivedEvents, postStarted, error: 'OpenCode reported an error during the run', statusCode: providerStatus };
+      }
       return { code: 0, sessionId: opts.sessionId, receivedEvents, postStarted };
     } catch (err: any) {
       eventCtrl.abort();
