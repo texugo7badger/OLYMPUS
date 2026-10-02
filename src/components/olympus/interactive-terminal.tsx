@@ -87,7 +87,38 @@ function makeConversationId(): string {
   }
 }
 
-type MessageType = 'system' | 'user' | 'response' | 'god' | 'question' | 'todo' | 'error' | 'delegation' | 'context_request' | 'permission' | 'thinking';
+type MessageType = 'system' | 'user' | 'response' | 'god' | 'question' | 'todo' | 'error' | 'delegation' | 'tool' | 'context_request' | 'permission' | 'thinking';
+
+/**
+ * Issue #32 (complaint 2: "tool lines render the call but NEVER the result").
+ * One compact line per result — deliberately a PREVIEW, never a dump: a read
+ * of a large file reports its size, not its contents.
+ */
+function summarizeToolResult(output: unknown, error: unknown): string {
+  if (error) return `error: ${String(error).replace(/\s+/g, ' ').slice(0, 90)}`;
+  let s: string;
+  if (typeof output === 'string') s = output;
+  else if (output == null) s = '';
+  else {
+    try { s = JSON.stringify(output); } catch { s = String(output); }
+  }
+  if (!s) return 'no output';
+  const exit = /exit(?:\s+code|\s+status)[:\s]*(\d+)/i.exec(s);
+  const lines = s.split('\n').filter((l) => l.trim().length > 0).length;
+  const size = s.length >= 1024 ? `${(s.length / 1024).toFixed(1)} KB` : `${s.length} B`;
+  return exit ? `exit ${exit[1]} · ${lines} lines · ${size}` : `${lines} lines · ${size}`;
+}
+
+/** The single most useful argument of a tool call, for the compact call line. */
+function toolCallTarget(toolInput: any): string {
+  const v = toolInput?.filePath ?? toolInput?.path ?? toolInput?.file ?? toolInput?.pattern ?? toolInput?.command;
+  if (typeof v === 'string' && v) return v.length > 80 ? `…${v.slice(-78)}` : v;
+  if (typeof toolInput === 'string' && toolInput) return toolInput.slice(0, 80);
+  try {
+    const s = JSON.stringify(toolInput || {});
+    return s === '{}' ? 'no args' : (s.length > 80 ? `${s.slice(0, 77)}…` : s);
+  } catch { return 'no args'; }
+}
 
 interface ChatMessage {
   id: string; type: MessageType; text: string; ts: string;
@@ -421,14 +452,23 @@ export default function InteractiveTerminal() {
       const arg = toolInput?.filePath || toolInput?.path || toolInput?.file || toolInput?.pattern || summary;
       runLastTool.current = `${toolName}(${String(arg).slice(0, 60)})`;
       removeThinking();
-      addMessage({ type: 'system', text: `tool: ${toolName}(${summary})` });
+      // Issue #32: the call was already surfaced as a raw `k: v` system line;
+      // replace it with the compact one-line form. The RESULT now gets its own
+      // line below (previously nothing was rendered at all).
+      addMessage({ type: 'tool', text: `⚙ ${toolName} — ${toolCallTarget(toolInput)}`, god: ev.god || undefined });
       updateGodActivity(ev.god || 'apollo', 'working', `Using ${toolName}...`);
       ensureThinking();
       return;
     }
     if (ev.type === 'tool.response' || ev.type === 'tool_response') {
-      // Don't surface full tool responses (they can be huge) — just mark the god as working.
+      // Issue #32 (complaint 2): the result was previously invisible — this
+      // branch only moved the god pill, so the user saw a call and never its
+      // answer. One compact line, preview only.
       removeThinking();
+      addMessage({
+        type: 'tool',
+        text: `⚙ ${ev.tool?.name || ev.name || 'tool'} — ${summarizeToolResult(ev.tool?.output ?? ev.output, ev.tool?.error ?? ev.error)}`,
+      });
       updateGodActivity(ev.god || 'apollo', 'working', 'Processing tool result...');
       ensureThinking();
       return;
@@ -1572,6 +1612,18 @@ function MessageRenderer({
           <span className="text-olympus-purple wrap-break-word flex-1 min-w-0">{message.text}</span>
           {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5" />}
         </div>
+      </div>
+    );
+  }
+
+  if (message.type === 'tool') {
+    // Issue #32: compact one-line tool activity. Dimmer than a delegation
+    // frame — these are frequent and are signal, not narration. Deliberately
+    // NOT markdown-rendered (bash output can contain backticks/brackets).
+    return (
+      <div className="flex items-start gap-2">
+        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <span className="text-[11px] text-[#8A8A8A] wrap-break-word flex-1 min-w-0 font-mono leading-snug">{message.text}</span>
       </div>
     );
   }

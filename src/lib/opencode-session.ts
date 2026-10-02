@@ -1425,6 +1425,16 @@ async function runWarmMessageAttempt(
       // 2. Post the message (waits for the full turn).
       const auth = server.authed ? server.password : null;
       postStarted = true;
+      // Issue #32 (complaint 1: 66s of silence between "Routing to Apollo..."
+      // and opencode actually starting). Emitted at the moment the POST goes
+      // out, so the gap is explained rather than blank. Agent stands in for
+      // the model here: the model id only arrives later on message.updated,
+      // long after this line is the only thing the user can see.
+      opts.onEvent({
+        type: 'log',
+        msg: `▶ dispatching to warm session ${String(opts.sessionId).slice(-8)} (${opts.agent || 'apollo'})`,
+        ts: new Date().toISOString(),
+      });
       // Benchmark: remember this turn's task signature (raw text stays in
       // memory; only its sha256 prefix is ever written to the log). Recorded
       // before the post so an immediate crash still leaves a flushable row.
