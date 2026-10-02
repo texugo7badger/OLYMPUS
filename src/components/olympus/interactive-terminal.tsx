@@ -27,6 +27,9 @@ import GodPanel, { type GodState } from './god-panel';
 // Issue #43: the Plan panel. A todo list is a plan; this one stays pinned to
 // the bottom of the Parthenon column instead of scrolling away with the log.
 import PlanPanel, { normalizeTodoEvent, type PlanItem } from './plan-panel';
+// Issue #44: file-touching tool frames show the shape of the change (M/A
+// badge, +/- counts, a truncated preview) instead of just naming a path.
+import { ToolFrame } from './tool-frame';
 
 // The OLYMPUS Terminal renders only the Interactive (Apollo) chat.
 // OpenCode Chat is available in the IDE tab's terminal panel via
@@ -137,6 +140,10 @@ interface ChatMessage {
   permissionAction?: string;
   permissionPatterns?: string[];
   permissionState?: 'pending' | 'approved' | 'always' | 'denied';
+  /** Issue #44: the tool frame needs the name and args, not just the rendered
+   *  one-liner, to derive an M/A badge and a change preview. */
+  toolName?: string;
+  toolInput?: any;
   /** Accumulated reasoning tokens (4.1.2) — streamed into the open thinking
    *  message by the `reasoning` SSE event; rendered by ThinkingMessage's
    *  expandable block. Ephemeral: gone when the turn ends. */
@@ -518,7 +525,7 @@ export default function InteractiveTerminal() {
       // Issue #32: the call was already surfaced as a raw `k: v` system line;
       // replace it with the compact one-line form. The RESULT now gets its own
       // line below (previously nothing was rendered at all).
-      addMessage({ type: 'tool', text: `⚙ ${toolName} — ${toolCallTarget(toolInput)}`, god: ev.god || undefined });
+      addMessage({ type: 'tool', text: `⚙ ${toolName} — ${toolCallTarget(toolInput)}`, god: ev.god || undefined, toolName, toolInput });
       updateGodActivity(ev.god || 'apollo', 'working', `Using ${toolName}...`, { currentTool: toolName });
       ensureThinking();
       return;
@@ -534,6 +541,7 @@ export default function InteractiveTerminal() {
         // Parthenon on one god shows that god's calls *and* their answers.
         god: ev.god || undefined,
         text: `⚙ ${ev.tool?.name || ev.name || 'tool'} — ${summarizeToolResult(ev.tool?.output ?? ev.output, ev.tool?.error ?? ev.error)}`,
+        toolName: String(ev.tool?.name || ev.name || ''),
       });
       updateGodActivity(ev.god || 'apollo', 'working', 'Processing tool result...', {
         currentTool: ev.tool?.name || ev.name,
@@ -1675,10 +1683,14 @@ function MessageRenderer({
     // Issue #32: compact one-line tool activity. Dimmer than a delegation
     // frame — these are frequent and are signal, not narration. Deliberately
     // NOT markdown-rendered (bash output can contain backticks/brackets).
+    // Issue #44: file-touching tools render a diff-aware frame instead; every
+    // other tool keeps exactly the single compact line it had.
     return (
       <div className="flex items-start gap-2">
         <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
-        <span className="text-[11px] text-[#8A8A8A] wrap-break-word flex-1 min-w-0 font-mono leading-snug">{message.text}</span>
+        <div className="flex-1 min-w-0">
+          <ToolFrame toolName={message.toolName || ''} input={message.toolInput} text={message.text} />
+        </div>
       </div>
     );
   }
