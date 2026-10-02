@@ -1182,9 +1182,34 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
     // Retries are best-effort resumption, not a safety guarantee.
     const RETRY_BACKOFF_MS = [5_000, 15_000];
     const RETRY_MAX_ATTEMPTS = RETRY_BACKOFF_MS.length + 1;
+    // Issue #35/#39: snapshot the poison state BEFORE the loop. A transient
+    // failure calls noteSessionError, which flags the window; if a retry then
+    // succeeds we must undo that flag or the flush records outcome=error for a
+    // turn that actually completed (the #35 invariant, wrongly applied).
+    // Read via the raw map, never getBucket(): creating a bucket here would
+    // re-arm a zero-activity ghost row (same rule as markSessionError).
+    const preRunPoisoned = accumulators.get(opts.sessionId)?.get(MULTI_KEY)?.had_error === true;
     let srv = server;
     for (let attempt = 0; ; attempt++) {
       const result = await runWarmMessageAttempt(srv, opts, attempt === 0);
+      // Issue #35/#39: the window outcome must reflect the TURN's final result,
+      // and the retries themselves are already visible in the terminal log.
+      // Narrowest correct clear: only the poison WE introduced (flag clean
+      // before the loop). If the window was already flagged, that error came
+      // from an earlier turn and is not ours to erase.
+      if (attempt > 0 && result.code === 0 && !result.error) {
+        const bucket = accumulators.get(opts.sessionId)?.get(MULTI_KEY);
+        const cleared = !!bucket && bucket.had_error && !preRunPoisoned;
+        if (cleared) bucket!.had_error = false;
+        const n = `${attempt} transient ${attempt === 1 ? 'retry' : 'retries'}`;
+        opts.onEvent({
+          type: 'log',
+          msg: cleared
+            ? `Run recovered after ${n} — benchmark window recorded as success`
+            : `Run recovered after ${n} — benchmark window still flagged from an earlier error`,
+          ts: new Date().toISOString(),
+        });
+      }
       if (attempt >= RETRY_MAX_ATTEMPTS - 1) return result;
       // Aborts never retry (checked before every retry, per the contract).
       if (opts.signal?.aborted) return result;
