@@ -6,8 +6,8 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
-  Send, Loader2, CornerDownLeft, Sparkles, ChevronRight,
-  Brain, Zap, CheckCircle2, AlertCircle, Users, Sun, Hammer, Bird,
+  Send, Loader2, CornerDownLeft, ChevronRight,
+  Zap, CheckCircle2, AlertCircle, Users, Sun, Hammer, Bird,
   Compass, Target, Wine, Flower2, Flame, Square, RefreshCw, Paperclip, type LucideIcon,
   Landmark, Terminal as TerminalIcon, ImageIcon,
 } from 'lucide-react';
@@ -21,6 +21,9 @@ import ContextIndicator from './context-indicator';
 // DesignReviewCard renders inline when Athena surfaces design-system candidates
 // for the user to review and select.
 import DesignReviewCard from './design-review-card';
+// Issue #42: the Parthenon panel. One card per god — status, current tool,
+// step count — and a click focuses the message stream on that god.
+import GodPanel, { type GodState } from './god-panel';
 
 // The OLYMPUS Terminal renders only the Interactive (Apollo) chat.
 // OpenCode Chat is available in the IDE tab's terminal panel via
@@ -143,7 +146,18 @@ interface ChatMessage {
   imageFilename?: string;
   imageSavedPath?: string;
 }
-interface GodActivity { god: string; status: 'idle' | 'thinking' | 'working' | 'delegating' | 'done' | 'error'; task?: string; subAgents?: string[]; ts: string; }
+// Issue #42: the wire-level phases a god reports. `thinking`, `working` and
+// `delegating` all read as "busy" to a user, so they collapse into the
+// `working` bucket on the card; `error` is the only thing that reads as blocked.
+type GodPhase = 'idle' | 'thinking' | 'working' | 'delegating' | 'done' | 'error';
+const PHASE_TO_STATUS: Record<GodPhase, GodState['status']> = {
+  idle: 'idle',
+  thinking: 'working',
+  working: 'working',
+  delegating: 'working',
+  done: 'done',
+  error: 'blocked',
+};
 interface TodoItem { id: string; text: string; done: boolean; god?: string; }
 
 export default function InteractiveTerminal() {
@@ -183,7 +197,11 @@ export default function InteractiveTerminal() {
   // dropping the second would leave the parked run with nothing to answer.
   const lastPermissionId = useRef('');
   const [awaitingContext, setAwaitingContext] = useState(false);
-  const [godActivities, setGodActivities] = useState<GodActivity[]>([]);
+  // Issue #42: single source of truth for per-god state. Written only by
+  // `updateGodActivity` at the existing event call sites — the Parthenon panel
+  // reads this, it never re-derives god state from the message log.
+  const [godStates, setGodStates] = useState<Map<string, GodState>>(() => new Map());
+  const [focusedGod, setFocusedGod] = useState<string | null>(null);
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [sseConnected, setSseConnected] = useState(false);
   // Removed the terminalMode toggle. The Olympus
@@ -286,13 +304,33 @@ export default function InteractiveTerminal() {
     });
   }, []);
 
-  const updateGodActivity = useCallback((god: string, status: GodActivity['status'], task?: string, subAgents?: string[]) => {
-    setGodActivities(prev => {
-      const existing = prev.find(a => a.god === god);
-      if (existing) return prev.map(a => a.god === god ? { ...a, status, task, subAgents, ts: new Date().toISOString() } : a);
-      return [...prev, { god, status, task, subAgents, ts: new Date().toISOString() }];
+  const updateGodActivity = useCallback((
+    god: string,
+    phase: GodPhase,
+    task?: string,
+    opts?: { currentTool?: string; steps?: number },
+  ) => {
+    setGodStates(prev => {
+      const next = new Map(prev);
+      const existing = next.get(god);
+      next.set(god, {
+        god,
+        status: PHASE_TO_STATUS[phase] || 'working',
+        task,
+        // A step is banked when a god reports completion, never while it is
+        // mid-flight — otherwise the counter ticks on every tool call.
+        steps: opts?.steps ?? (phase === 'done' ? (existing?.steps || 0) + 1 : existing?.steps || 0),
+        currentTool: phase === 'idle' ? undefined : (opts?.currentTool ?? existing?.currentTool),
+        lastEvent: task ?? existing?.lastEvent,
+        lastTs: Date.now(),
+      });
+      return next;
     });
   }, []);
+
+  // Issue #42: the panel takes an ordered array; the map stays the single
+  // writable store so no other code path can invent god state.
+  const godStateList = useMemo(() => Array.from(godStates.values()), [godStates]);
 
   const handleServerEvent = useCallback((ev: any) => {
     pushEvent(ev);
@@ -456,7 +494,7 @@ export default function InteractiveTerminal() {
       // replace it with the compact one-line form. The RESULT now gets its own
       // line below (previously nothing was rendered at all).
       addMessage({ type: 'tool', text: `⚙ ${toolName} — ${toolCallTarget(toolInput)}`, god: ev.god || undefined });
-      updateGodActivity(ev.god || 'apollo', 'working', `Using ${toolName}...`);
+      updateGodActivity(ev.god || 'apollo', 'working', `Using ${toolName}...`, { currentTool: toolName });
       ensureThinking();
       return;
     }
@@ -467,9 +505,14 @@ export default function InteractiveTerminal() {
       removeThinking();
       addMessage({
         type: 'tool',
+        // Issue #42: the result frame carries its god too, so focusing the
+        // Parthenon on one god shows that god's calls *and* their answers.
+        god: ev.god || undefined,
         text: `⚙ ${ev.tool?.name || ev.name || 'tool'} — ${summarizeToolResult(ev.tool?.output ?? ev.output, ev.tool?.error ?? ev.error)}`,
       });
-      updateGodActivity(ev.god || 'apollo', 'working', 'Processing tool result...');
+      updateGodActivity(ev.god || 'apollo', 'working', 'Processing tool result...', {
+        currentTool: ev.tool?.name || ev.name,
+      });
       ensureThinking();
       return;
     }
@@ -621,7 +664,7 @@ export default function InteractiveTerminal() {
     return () => clearInterval(iv);
   }, []);
 
-  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, godActivities]);
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, godStates]);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   const submit = useCallback(async (
@@ -703,7 +746,7 @@ export default function InteractiveTerminal() {
     runEditCount.current = 0;
     runCommandCount.current = 0;
     runReadCount.current = 0;
-    setTodos([]); setGodActivities([]);
+    setTodos([]); setGodStates(new Map());
     addMessage({
       type: 'user',
       text: text.trim(),
@@ -856,7 +899,8 @@ export default function InteractiveTerminal() {
       { id: 'sys-2', type: 'system' as const, text: 'Apollo will interview you, classify your task, and delegate to the right gods.', ts: new Date().toISOString() },
     ]);
     setTodos([]);
-    setGodActivities([]);
+    setGodStates(new Map());
+    setFocusedGod(null);
     setSubmitting(false);
     setAwaitingAnswer(false);
     setAwaitingContext(false);
@@ -1174,7 +1218,7 @@ export default function InteractiveTerminal() {
               Only the Interactive (Apollo) chat remains. The OpenCode Chat pane
               and the TUI are gone from this surface. */}
           <Users size={9} style={{ color: GOD_COLOR }} />
-          <span>{godActivities.filter(a => a.status !== 'idle').length} gods</span>
+          <span>{godStateList.filter(s => s.status !== 'idle').length} gods</span>
           {todos.length > 0 && (
             <>
               <span className="text-[#5A5A5A]">-</span>
@@ -1246,9 +1290,10 @@ export default function InteractiveTerminal() {
         <div className="flex-1 min-w-0 flex flex-col">
           <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 py-2 font-mono text-[11px] leading-relaxed space-y-2">
             {messages.map(m => (
-              <MessageRenderer
+              <VisibleMessage
                 key={m.id}
                 message={m}
+                focusedGod={focusedGod}
                 onChoice={handleChoice}
                 onPermissionReply={handlePermissionReply}
               />
@@ -1424,39 +1469,9 @@ export default function InteractiveTerminal() {
           </div>
         </div>
 
-        {godActivities.length > 0 && (
-          <div className="w-56 shrink-0 border-l border-olympus-gold/10 bg-olympus-panel overflow-y-auto custom-scroll">
-            <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide sticky top-0 bg-olympus-panel border-b border-olympus-gold/10 flex items-center gap-1">
-              <Brain size={10} style={{ color: GOD_COLOR }} />
-              <span>God Activity</span>
-            </div>
-            <div className="py-1">
-              {godActivities.map(a => {
-                const Icon = GOD_ICONS[a.god] || Sparkles;
-                const statusColor = a.status === 'thinking' ? '#D4A574'
-                  : a.status === 'working' ? '#7BAE8E'
-                  : a.status === 'delegating' ? '#9B7BAE'
-                  : a.status === 'done' ? '#5A5A5A'
-                  : a.status === 'error' ? '#C4756A'
-                  : '#5A5A5A';
-                return (
-                  <div key={a.god} className="px-2 py-1.5 border-b border-olympus-gold/5">
-                    <div className="flex items-center gap-1.5">
-                      <Icon
-                        size={12}
-                        style={{ color: statusColor }}
-                        className={a.status === 'thinking' || a.status === 'working' ? 'animate-pulse' : ''}
-                      />
-                      <span className="text-[10px] font-mono font-semibold" style={{ color: statusColor }}>
-                        {GOD_NAMES[a.god] || a.god}
-                      </span>
-                      <span className="text-[8px] font-mono text-[#5A5A5A] ml-auto">{a.status}</span>
-                    </div>
-                    {a.task && <div className="text-[9px] font-mono text-olympus-text-dim ml-4 truncate">{a.task}</div>}
-                  </div>
-                );
-              })}
-            </div>
+        {(godStateList.length > 0 || todos.length > 0) && (
+          <div className="w-60 shrink-0 border-l border-olympus-gold/10 bg-olympus-panel overflow-y-auto custom-scroll">
+            <GodPanel states={godStateList} focusedGod={focusedGod} onFocus={setFocusedGod}>
             {todos.length > 0 && (
               <>
                 <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide sticky top-0 bg-olympus-panel border-b border-t border-olympus-gold/10 flex items-center gap-1">
@@ -1484,6 +1499,7 @@ export default function InteractiveTerminal() {
                 </div>
               </>
             )}
+            </GodPanel>
           </div>
         )}
       </div>
@@ -1507,6 +1523,26 @@ export default function InteractiveTerminal() {
 /* Task 3 — question messages render a small inline context textarea   */
 /* below the choices. See QuestionMessage below.                        */
 /* ------------------------------------------------------------------ */
+/**
+ * Issue #42 — click-to-focus. Focusing a god in the Parthenon narrows the
+ * stream to that god's frames. Frames with no god are global by construction
+ * (the user's own words, system notices, errors), and hiding them would strand
+ * a parked run with nothing to answer — so they always stay visible.
+ */
+function VisibleMessage({
+  message,
+  focusedGod,
+  ...rest
+}: {
+  message: ChatMessage;
+  focusedGod: string | null;
+  onChoice: (choice: string, context?: string) => void;
+  onPermissionReply: (requestID: string, reply: 'once' | 'always' | 'reject') => void;
+}) {
+  if (focusedGod && message.god && message.god !== focusedGod) return null;
+  return <MessageRenderer message={message} {...rest} />;
+}
+
 function MessageRenderer({
   message,
   onChoice,
