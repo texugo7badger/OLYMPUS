@@ -21,6 +21,9 @@ import {
 } from '@/lib/opencode-session';
 // Dynamic input token routing via task classifier.
 import { classifyTask, serializeClassification } from '@/lib/task-classifier';
+// Issue #41: persisting an "always" grant so the next ask for the same tool
+// is settled by policy instead of by another card.
+import { grantAlways } from '@/lib/permissions';
 // ChildProcess type for the streamChild() signature.
 import type { ChildProcess } from 'node:child_process';
 
@@ -92,18 +95,36 @@ export async function POST(req: NextRequest) {
   // `permission` actions answer a pending OpenCode permission ask directly
   // via the warm server's /permission/{requestID}/reply endpoint — they are
   // NOT prompts (unlike `answer`, which is fed to the LLM as chat text).
-  if (action === 'permission') {
+  //
+  // Issue #41: `respond-permission` is the card's action. It carries a
+  // `decision` (once|always|reject) and, for `always`, the tool + pattern it
+  // applies to — the grant is written to ~/.olympus/permissions.json so the
+  // next ask for the same tool is settled by policy instead of by a card.
+  // The legacy `permission` + `reply` shape stays supported so an older
+  // client cannot strand a parked run.
+  if (action === 'permission' || action === 'respond-permission') {
     const requestID = typeof body.requestID === 'string' ? body.requestID : '';
-    const reply = body.reply;
-    if (!requestID || (reply !== 'once' && reply !== 'always' && reply !== 'reject')) {
+    const decision = action === 'respond-permission' ? body.decision : body.reply;
+    if (!requestID || (decision !== 'once' && decision !== 'always' && decision !== 'reject')) {
       return NextResponse.json(
         { error: 'permission action requires requestID + reply (once|always|reject)' },
         { status: 400 },
       );
     }
     try {
-      const ok = await respondToPermission(requestID, reply);
-      return NextResponse.json({ ok, error: ok ? undefined : 'OpenCode rejected the reply (unknown requestID or server unavailable)' }, { status: ok ? 200 : 502 });
+      const ok = await respondToPermission(requestID, decision);
+      // Persist the grant only when OpenCode accepted it, so a failed reply
+      // cannot leave a rule the user thinks they set but that never applied.
+      let granted = false;
+      if (ok && decision === 'always') {
+        const tool = typeof body.tool === 'string' ? body.tool.trim() : '';
+        if (tool) {
+          const pattern = Array.isArray(body.patterns) && typeof body.patterns[0] === 'string' ? body.patterns[0] : '';
+          grantAlways(tool, pattern);
+          granted = true;
+        }
+      }
+      return NextResponse.json({ ok, granted, error: ok ? undefined : 'OpenCode rejected the reply (unknown requestID or server unavailable)' }, { status: ok ? 200 : 502 });
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message || 'permission reply failed' }, { status: 500 });
     }

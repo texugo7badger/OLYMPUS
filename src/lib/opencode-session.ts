@@ -41,18 +41,24 @@ import { spawnOpencode } from '@/lib/opencode-spawn';
 import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
 import { getVaultRoot } from '@/lib/vault-root';
+// Issue #41: explicit, revisable permission policy. Replaces the silent
+// auto-approve branch in the event pump; the vault prefixes below now seed
+// `paths.always` in ~/.olympus/permissions.json instead of living as a
+// constant the user cannot see or revoke.
+import { loadPermissions, decidePermission } from '@/lib/permissions';
 
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
 // Vault root — mirrors src/app/api/olympus/upload/route.ts. Used by the
 // permission auto-approval allowlist below.
 const VAULT_ROOT = getVaultRoot();
-// Permission auto-approval allowlist (freeze-class fix 2026-09-29): OpenCode
-// routes reads OUTSIDE the project root through `external_directory: ask`,
-// which permanently blocks the run when no client answers. Vault paths are
-// always user-owned, so asks whose patterns all start with the vault root
-// are approved automatically ("once"), and the approval is logged in the
-// terminal. Override with OLYMPUS_AUTO_APPROVE_GLOBS (comma-separated
-// absolute prefixes; empty string disables auto-approval).
+// Seed for `paths.always` in ~/.olympus/permissions.json (freeze-class fix
+// 2026-09-29): OpenCode routes reads OUTSIDE the project root through
+// `external_directory: ask`, which permanently blocks the run when no client
+// answers. Vault paths are always user-owned, so asks under the vault root are
+// approved without a prompt. This only SEEDS the policy file — once it exists,
+// the file wins, so a user who revokes the rule keeps it revoked.
+// OLYMPUS_AUTO_APPROVE_GLOBS (comma-separated absolute prefixes, empty =
+// no path grants) overrides the default seed.
 const DEFAULT_AUTO_APPROVE_PREFIXES = [`${VAULT_ROOT}/`];
 const AUTO_APPROVE_PREFIXES: string[] = (
   process.env.OLYMPUS_AUTO_APPROVE_GLOBS !== undefined
@@ -1393,9 +1399,12 @@ async function runWarmMessageAttempt(
     // about — it is what the old "Task completed (no output)" masked.
     let toolCount = 0;
     let readCount = 0;
+    // Prime the policy store with the legacy path allowlist so the first
+    // permission ask of a cold process seeds the file with the vault rule.
+    loadPermissions({ pathAlwaysPrefixes: AUTO_APPROVE_PREFIXES });
     const deliver = (ev: any) => {
-      // Auto-approve allowlisted permission asks (vault paths) so the run is
-      // never parked on a decision the user already made by policy. Fix C: the
+      // Settle asks the policy store already answers so the run is never
+      // parked on a decision the user made by policy. Fix C: the
       // client used to render the card anyway AND send its own reply, so the
       // second reply 502'd ("Permission reply failed") for a permission that
       // had in fact been granted (issue #17).
@@ -1406,34 +1415,40 @@ async function runWarmMessageAttempt(
       // user gets the real card plus the real error — the same honesty Fix A
       // established for empty runs. Never delivered in its own right, so it
       // never sets receivedEvents on its own.
-      if (ev.type === 'permission_ask' && AUTO_APPROVE_PREFIXES.length > 0
-          && Array.isArray(ev.patterns) && ev.patterns.length > 0
-          && ev.patterns.every((p: string) => AUTO_APPROVE_PREFIXES.some(pre => p.startsWith(pre)))) {
-        respondToPermission(ev.requestID, 'once')
-          .then(ok => {
-            if (eventCtrl.signal.aborted) return;
-            if (ok) {
-              // Stamp only now: the client suppresses the card and sends no
-              // reply of its own when it sees this flag.
-              ev.autoApproved = true;
+      if (ev.type === 'permission_ask') {
+        // Issue #41: the policy store owns the ruling. `always` and `denied`
+        // are decided on the server so the client never renders a card for a
+        // decision the user already made — and `ask` falls through to the
+        // normal path untouched.
+        const verdict = decidePermission(ev.action, ev.patterns || []);
+        if (verdict !== 'ask') {
+          const reply = verdict === 'always' ? 'once' : 'reject';
+          respondToPermission(ev.requestID, reply)
+            .then(ok => {
+              if (eventCtrl.signal.aborted) return;
+              if (ok) {
+                // Stamp only now: the client suppresses the card and sends no
+                // reply of its own when it sees this flag.
+                ev.autoApproved = true;
+                ev.policyVerdict = verdict;
+                opts.onEvent(ev);
+                // Issue #32 (complaint 4): the forwarded event above is the ONE
+                // line for this ruling — the client renders it from
+                // ev.autoApproved. A parallel `log` event here used to produce a
+                // second line in the same stream. Do not re-add it.
+              } else {
+                // The ruling failed — surface the ask so the user can decide.
+                opts.onEvent(ev);
+                opts.onEvent({ type: 'error', msg: `[permission] policy (${verdict}) failed for ${ev.action} — please reply below`, ts: new Date().toISOString() });
+              }
+            })
+            .catch(() => {
+              if (eventCtrl.signal.aborted) return;
               opts.onEvent(ev);
-              // Issue #32 (complaint 4): the forwarded event above is the ONE
-              // line for this auto-approval — the client renders it from
-              // ev.autoApproved. A parallel `log` event here used to produce a
-              // second "[permission] auto-approved" line in the same stream.
-              // Do not re-add it; the failure branch below keeps its own line.
-            } else {
-              // Auto-approve failed — surface the ask so the user can decide.
-              opts.onEvent(ev);
-              opts.onEvent({ type: 'error', msg: `[permission] auto-approve failed for ${ev.action} — please reply below`, ts: new Date().toISOString() });
-            }
-          })
-          .catch(() => {
-            if (eventCtrl.signal.aborted) return;
-            opts.onEvent(ev);
-            opts.onEvent({ type: 'error', msg: `[permission] auto-approve failed for ${ev.action} — please reply below`, ts: new Date().toISOString() });
-          });
-        return;
+              opts.onEvent({ type: 'error', msg: `[permission] policy (${verdict}) failed for ${ev.action} — please reply below`, ts: new Date().toISOString() });
+            });
+          return;
+        }
       }
       if (!eventCtrl.signal.aborted || ev.type === 'error') {
         if (ev.type === 'tool.call') {

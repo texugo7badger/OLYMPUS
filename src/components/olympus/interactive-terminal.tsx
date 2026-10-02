@@ -199,6 +199,9 @@ export default function InteractiveTerminal() {
   // rendered text, because two distinct asks can produce identical copy and
   // dropping the second would leave the parked run with nothing to answer.
   const lastPermissionId = useRef('');
+  // Issue #41: requestID -> the tool/paths that were asked for, so an "always"
+  // reply can be persisted as a policy grant instead of expiring with the run.
+  const pendingPermissionsRef = useRef<Record<string, { tool: string; patterns: string[] }>>({});
   const [awaitingContext, setAwaitingContext] = useState(false);
   // Issue #42: single source of truth for per-god state. Written only by
   // `updateGodActivity` at the existing event call sites — the Parthenon panel
@@ -370,12 +373,15 @@ export default function InteractiveTerminal() {
       // and continuing — and send nothing back.
       if (ev.autoApproved) {
         removeThinking();
+        const denied = ev.policyVerdict === 'denied';
         addMessage({
           type: 'system',
-          text: `[permission] auto-approved ${ev.action}: ${(ev.patterns || []).join(', ')}`,
+          text: denied
+            ? `[permission] denied by policy — ${ev.action}: ${(ev.patterns || []).join(', ')}`
+            : `[permission] allowed by policy — ${ev.action}: ${(ev.patterns || []).join(', ')}`,
           god: 'apollo',
         });
-        updateGodActivity('apollo', 'working', `Auto-approved ${ev.action}`);
+        updateGodActivity('apollo', 'working', `${denied ? 'Denied' : 'Auto-approved'} ${ev.action}`);
         ensureThinking();
         return;
       }
@@ -385,6 +391,7 @@ export default function InteractiveTerminal() {
       // Issue #32: a redelivery of the ask we already carded renders once.
       if (lastPermissionId.current === ev.requestID) return;
       lastPermissionId.current = ev.requestID;
+      pendingPermissionsRef.current[ev.requestID] = { tool: ev.action || '', patterns: ev.patterns || [] };
       addMessage({
         type: 'permission',
         text: `Apollo needs permission to use ${ev.action} on:`,
@@ -402,6 +409,7 @@ export default function InteractiveTerminal() {
       // Issue #32: the ask is answered, so the guard slot frees up for the
       // next one. Without this a later ask reusing the id would be swallowed.
       if (lastPermissionId.current === ev.requestID) lastPermissionId.current = '';
+      delete pendingPermissionsRef.current[ev.requestID];
       setMessages(prev => prev.map(m => m.permissionId === ev.requestID && m.type === 'permission'
         ? { ...m, permissionState: ev.reply === 'always' ? 'always' : ev.reply === 'reject' ? 'denied' : 'approved', text: m.text }
         : m));
@@ -863,12 +871,23 @@ export default function InteractiveTerminal() {
   }, [context, addMessage]);
 
   const handlePermissionReply = useCallback((requestID: string, reply: 'once' | 'always' | 'reject') => {
-    // POST the reply straight to OpenCode's permission API (via the action
+    // POST the decision straight to OpenCode's permission API (via the action
     // route) — NOT a chat prompt. The matching card flips to its approved /
     // always / denied state when the `permission_replied` SSE event arrives.
+    //
+    // Issue #41: the tool + patterns ride along so the route can persist an
+    // "always" grant to ~/.olympus/permissions.json. Without them the grant
+    // would only last for this run and the next ask would card again.
+    const ask = pendingPermissionsRef.current[requestID];
     fetch('/api/olympus/action', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'permission', requestID, reply }),
+      body: JSON.stringify({
+        action: 'respond-permission',
+        requestID,
+        decision: reply,
+        tool: ask?.tool,
+        patterns: ask?.patterns,
+      }),
     }).then(r => {
       if (!r.ok) return r.json().then(j => { throw new Error(j.error || `HTTP ${r.status}`); });
     }).catch(err => addMessage({ type: 'error', text: `Permission reply failed: ${err.message}` }));
@@ -1744,7 +1763,10 @@ function MessageRenderer({
               >
                 Deny
               </button>
-              <span className="text-[9px] font-mono text-olympus-text-dim ml-1">run is blocked until one is chosen</span>
+              {/* Issue #41: "always" is no longer a promise about this run. */}
+              <span className="text-[9px] font-mono text-olympus-text-dim ml-1">
+                run is blocked until one is chosen — always writes {message.permissionAction || 'this tool'} to permissions.json
+              </span>
             </div>
           )}
           {!pending && (
