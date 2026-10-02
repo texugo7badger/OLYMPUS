@@ -20,7 +20,8 @@ import {
   forgetConversation,
 } from '@/lib/opencode-session';
 // Dynamic input token routing via task classifier.
-import { classifyTask, serializeClassification } from '@/lib/task-classifier';
+import { classifyTask, serializeClassification, type TaskClassification } from '@/lib/task-classifier';
+import { appendActivity } from '@/lib/activity-feed';
 // Issue #41: persisting an "always" grant so the next ask for the same tool
 // is settled by policy instead of by another card.
 import { grantAlways, loadPermissions, revokeTool, SEED_TOOL_NAMES } from '@/lib/permissions';
@@ -180,12 +181,29 @@ export async function POST(req: NextRequest) {
     const classification = classifyTask(promptText);
     const classificationEnv = serializeClassification(classification);
 
+    // R-C: appendActivity for prompt (not answer/context) — durable run-start audit.
+    if (action === 'prompt') {
+      appendActivity({
+        god: 'system',
+        action: 'classification',
+        msg: classification.reason,
+        meta: {
+          domain: classification.domain,
+          complexity: classification.complexity,
+          routeTo: classification.routeTo,
+          estimatedTokens: classification.estimatedTokens,
+          needsPlanning: classification.needsPlanning,
+        },
+      });
+    }
+
     return streamWarm(req, {
       conversationId,
       text: promptText,
       agent: 'apollo',
       extraEnv: { OLYMPUS_TASK_CLASSIFICATION: classificationEnv },
       meta: { action, node: undefined, cli: `opencode run --format json --agent apollo <text>` },
+      classification,
     });
   }
 
@@ -231,6 +249,20 @@ export async function POST(req: NextRequest) {
     const classification = classifyTask(handoffPrompt);
     const classificationEnv = serializeClassification(classification);
 
+    // R-C: appendActivity for new-session — durable run-start audit.
+    appendActivity({
+      god: 'system',
+      action: 'classification',
+      msg: classification.reason,
+      meta: {
+        domain: classification.domain,
+        complexity: classification.complexity,
+        routeTo: classification.routeTo,
+        estimatedTokens: classification.estimatedTokens,
+        needsPlanning: classification.needsPlanning,
+      },
+    });
+
     return streamWarm(req, {
       conversationId,
       text: handoffPrompt,
@@ -243,6 +275,7 @@ export async function POST(req: NextRequest) {
         OLYMPUS_NEW_SESSION: '1',
       },
       meta: { action, node: undefined, cli: `opencode run --format json --agent apollo <handoff>` },
+      classification,
     });
   }
 
@@ -509,6 +542,7 @@ interface WarmStreamOptions {
   agent: string;
   extraEnv?: Record<string, string>;
   meta: { action: string; node?: string; cli: string };
+  classification?: TaskClassification;
 }
 
 /**
@@ -625,6 +659,17 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
 
       (async () => {
         send({ type: 'action_start', action: opts.meta.action, node: opts.meta.node, cli: opts.meta.cli, ts: new Date().toISOString() });
+
+        // Emit classification immediately after action_start — first thing the
+        // user sees in the 66s window (R-A).
+        if (opts.classification) {
+          const c = opts.classification;
+          send({
+            type: 'classification',
+            classification: c,
+            ts: new Date().toISOString(),
+          });
+        }
 
         // 1. Warm server (only cold start). Failure → one-shot without session.
         let server;

@@ -9,7 +9,7 @@ import {
   Send, Loader2, CornerDownLeft, ChevronRight,
   Zap, CheckCircle2, AlertCircle, Users, Sun, Hammer, Bird,
   Compass, Target, Wine, Flower2, Flame, Square, RefreshCw, Paperclip, type LucideIcon,
-  Landmark, Terminal as TerminalIcon, ImageIcon,
+  Landmark, Terminal as TerminalIcon, ImageIcon, Globe,
 } from 'lucide-react';
 import { marked } from 'marked';
 import { useOlympus } from '@/lib/olympus-store';
@@ -58,7 +58,7 @@ const PERMISSION_TIMEOUT_MS = 120_000; // 2 minutes
 const GOD_ICONS: Record<string, LucideIcon> = {
   apollo: Sun, hephaestus: Hammer, athena: Bird, hermes: Compass,
   artemis: Target, dionysus: Wine, persephone: Flower2, prometheus: Flame,
-  callimachus: Landmark,
+  callimachus: Landmark, global: Globe,
 };
 const GOD_NAMES: Record<string, string> = {
   apollo: 'Apollo', hephaestus: 'Hephaestus', athena: 'Athena', hermes: 'Hermes',
@@ -648,7 +648,7 @@ export default function InteractiveTerminal() {
         // does), so matching on the prefix alone left the warn rendering as
         // gray prose and never touching GOD ACTIVITY.
         //   STALL (⚠)      → red   — something is wrong, escalate.
-        //   WARN           → calm system line — this also fires during
+        //   WARN           — calm system line — this also fires during
         //                     legitimate long thinking on the free tier, so red
         //                     here would cry wolf and train users to ignore it.
         const isStall = msg.startsWith('⚠');
@@ -666,6 +666,17 @@ export default function InteractiveTerminal() {
         }
         ensureThinking();
       }
+      return;
+    }
+    // R-B: classification visibility — render one dim/mono inline line
+    // (same class as 'log' events). Must NOT touch message flow, permission
+    // cards, or feed panel logic.
+    if (ev.type === 'classification' && ev.classification) {
+      const c = ev.classification;
+      const line = `classified: ${c.domain} · ${c.complexity} → ${c.routeTo} · ~${Math.round(c.estimatedTokens / 1000)}k tok · planning=${c.needsPlanning ? 'yes' : 'no'}`;
+      removeThinking();
+      addMessage({ type: 'system', text: line });
+      ensureThinking();
       return;
     }
     if (ev.type === 'error') {

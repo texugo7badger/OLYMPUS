@@ -8,7 +8,7 @@
 import { create } from 'zustand';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Sun, Hammer, Bird, Compass, Target, Wine, Flower2, Flame, BookMarked, Orbit,
+  Sun, Hammer, Bird, Compass, Target, Wine, Flower2, Flame, BookMarked, Orbit, Globe,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -28,6 +28,7 @@ export const GOD_ICONS: Record<string, LucideIcon> = {
   persephone: Flower2,
   prometheus: Flame,
   callimachus: BookMarked,
+  global: Globe,
 };
 
 export const GOD_IDS = Object.keys(GOD_ICONS);
