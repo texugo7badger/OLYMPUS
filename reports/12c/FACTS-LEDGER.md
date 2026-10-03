@@ -61,3 +61,20 @@ re-created from the same command evidence; see WORKLOG incidents.)
 | C7-1 | #54 closed (pre-approved) with final evidence roll-up | `gh issue close 54` | `✓ Closed … #54` |
 | C7-2 | #57 closed (pre-approved) with fix + re-verification evidence | `gh issue close 57` | `✓ Closed … #57` |
 | C7-3 | test-iteration disclosure: two classifier-test expectations were wrong during P2 development (design/schema words hit earlier cascade branches); fixed the expectations, not the code | test runs | final 15/15 with corrected expectations |
+
+## Phases 8–9 — B5 disposition + validation suite
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| C9-1 | build:app EXIT 0 (after one transient retry) | `npm run build:app` → 12c-buildapp2.log | `✓ Compiled successfully in 45s` / `Finished TypeScript in 5.5s` / `[electron-postcompile] wrote …` / `EXIT: 0` |
+| C9-2 | first build attempt failed on a transient-file race: the app's live-preview Firefox profiles (tmp/ffprof-*) race the standalone copy | 12c-buildapp.log tail | `copyfile … path: '…tmp/ffprof-m/192.168.0.6:+896525' … code: 'ENOENT'` — compile+TS+static-gen all PASSED before it |
+| C9-3 | full npm run build (deb/tar.gz) stays skipped — EDQUOT quota, environmental (verbatim from 12b; unchanged) | — | stated verbatim in the report |
+| C9-4 | fixture battery green | metric + distill + classifier tests | `All fixture assertions passed` / `All context-distill self-test assertions passed` / `All task-classifier regression assertions passed` (25/4/15, all exit 0) |
+| C9-5 | attended probe stall signature (post-P5), verbatim | probe-12c-P9A3.sse final texts | "**Question 1 of a few** — one at a time, as I work toward a design you'll approve." (64 events, full exploration, question-and-wait at the gate) |
+| C9-6 | unattended probe override signature (post-P5), verbatim | probe-12c-P9B2.sse | "The brainstorming skill is loaded. **Adapting its checklist to unattended mode** … Item 2 (visual companion): skipped — it requires a human … impossible unattended" — no user-question gate |
+| C9-7 | provider queue latency today: nvidia pool >10-16 min (two probes died inside it; one groq test hung >75s; attended3+unattended2 got through with long windows) | opencode.log stream entries (17:31:01 first stream for a 17:15 session) + P9B MAX_RUNTIME error | "OpenCode exceeded the maximum runtime of 10 minutes." on the first unattended attempt; retry succeeded |
+| C9-8 | unattended_mode telemetry still firing (marker chain post-P5) | grep live.jsonl | `…17:46:42…action:unattended_mode…no human will answer questions…` |
+| C9-9 | 12c window metric: the P2 probe pair MATCHES (id-join) | metric --since 2026-10-03T16:25:00Z --json | `joined: 1 (id: 1) matches: 1 agreement: 1` — PAIR `cls_musltzwawmzkb5, intent/executed apollo/planner, match:true`; 6 unjoined classifications (P9 probe runs, no dispatches), 0 unjoined dispatches |
+| C9-10 | machine clean: fixed harness killed wrapper AND real listener by port | probe-harness stop output | `Killing real listener on port 3737 (PID 17044)… Port 3737 is free` + serve on 3777 killed by exact PID |
+| C9-11 | opencode.json restored byte-for-byte | sha256sum | `db62995d924ab7313a66db663af7869b2e84c7f47f1a5b35eac76a09ed3c8ff3` (== snapshot) |
+| C9-12 | no listeners on 3737/3738/3740/3777 at close | ss check | `no listeners on 3737/3738/3740/3777` |
