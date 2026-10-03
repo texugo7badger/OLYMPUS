@@ -34,3 +34,21 @@ Raw values quoted verbatim. No ledger entry → no claim.
 | P1-8 | electron tsconfig cannot produce the reported errors (includes only electron/**/*.ts) | `grep include electron/tsconfig.json` | `"include": ["./**/*.ts"]` under electron/ |
 | P1-9 | #50 closed with the evidence comment | `gh issue close 50 --comment ...` | `✓ Closed issue texugo7badger/OLYMPUS#50` |
 | P1-10 | first full `npm run build` attempt was killed by MY tool timeout mid-deb-packaging (not a failure) | tail of /tmp/opencode/build-after.log | `building target=deb ...` then shell timeout at 900000ms; `grep -cE "error\|Error"` → `0` |
+
+## Phase 2 — #51 unattended-mode bypass
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| P2-1 | the hard-gate lives in the prompt layer (skill file) | `read .opencode/skills/superpowers/brainstorming/SKILL.md:12-14` | `<HARD-GATE> Do NOT invoke any implementation skill … until … the user has approved it` |
+| P2-2 | probe A (attended) stalls at the gate, verbatim | one-shot session ses_efee90565ffedT0fjwkPnFPyK3 via serve /message query | "First clarifying question (one at a time, per the process): **Where should this testimonial section live?** … A) Standalone … B) React/TSX … C) HTML/CSS snippet", `finish: stop` |
+| P2-3 | probe B5 (unattended) overrides the gate, verbatim | SSE capture /tmp/opencode/probe-2B5.sse | "The brainstorming skill's HARD-GATE (interview + user approval) is explicitly overridden by the unattended directive — I'll satisfy each gate myself and record the decisions" |
+| P2-4 | unattended telemetry event fires with in-band source | `grep unattended_mode live.jsonl` | `{"ts":"2026-10-03T09:47:34.879Z",…,"action":"unattended_mode","msg":"…session ses_efed691bdffei7UVlP10DAqqvV…","meta":{"source":"in-band marker"}}` |
+| P2-5 | session.created never fires for one-shot runs (env branch = dead in practice) | `grep -c session_start live.jsonl` → `1` (event dated 2026-07-31, different shape) + manual one-shot with OLYMPUS_UNATTENDED=1 wrote no event | `1` |
+| P2-6 | probeServer 401 early-return made warm adoption impossible → fixed | `git show 240be87` | `fix(opencode-session): probeServer 401 early-return blocked warm-serve adoption (#57)` |
+| P2-7 | after the fix the warm path round-trips | warmcheck2 POST SSE | `▶ dispatching to warm session 69zgBkrj (apollo)` → `text "ready"` → `action_done` (no 401, no one-shot) |
+| P2-8 | opencode-go gateway hangs from spawned processes tonight; nvidia/z-ai/glm-5.3 works | direct serve message tests | opencode-go default → hang >300s; `nvidia/z-ai/glm-5.3` → `200, took 8s, text "pong", finish "stop"` |
+| P2-9 | nvidia/z-ai/glm-5.3-flash and glm-5.2 are broken/stale tonight | direct serve message tests | flash → hangs >90s ×2; glm-5.2 → `ProviderModelNotFoundError: Model not found: nvidia/z-ai/glm-5.2. Did you mean: z-ai/glm-5.3, z-ai/glm-5.3-flash, baai/bge-m3?` |
+| P2-10 | strategy context block shows free-openrouter while models run on nvidia (activeStrategyId reads llm-providers.json first) | `read src/lib/opencode-session.ts:95-105` | `for (const file of [PROVIDERS_FILE, …active-strategy.json])` — user's declared strategy wins over last-applied |
+| P2-11 | #51 closed with A/B evidence | `gh issue close 51` | `✓ Closed issue texugo7badger/OLYMPUS#51` |
+| P2-12 | issues #57 and #58 filed (pre-existing infra breakages found during probe work) | `gh issue create` ×2 | `…/issues/57`, `…/issues/58` |
+| P2-13 | probe A5 one-shot completed in ~105s; B1/B2 one-shots died at exactly 120s (firstEventAt never wired on fallback path) | SSE captures probe-2A5/B/B2 + opencode.log | `ERROR: OpenCode produced no output within 120s` while the process was alive (unattended event at t+80s) |

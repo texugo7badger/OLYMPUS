@@ -1306,11 +1306,17 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         msg: "Olympus session started (VaultBrain v3.0)",
       });
 
-      // Issue #51: unattended mode declared via env — this only fires for
-      // ONE-SHOT spawns (opencode run), where the action API's extraEnv
-      // reached this process at spawn time. The WARM server is shared and
-      // already running, so warm runs declare unattended mode in-band
-      // instead — parsed by the chat.message hook below.
+      // Issue #51: unattended mode declared via env — DEFENSIVE ONLY.
+      // Observed against opencode 1.18.10: session.created does NOT fire
+      // for one-shot `opencode run` spawns (the only session_start event in
+      // the entire live feed predates this feature), and the WARM server is
+      // a shared, already-running process that per-request env cannot
+      // reach. The RELIABLE detection path on both warm and one-shot runs
+      // is the in-band [OLYMPUS UNATTENDED MODE] marker parsed by the
+      // chat.message hook below — that is where every unattended_mode
+      // telemetry event observed in live.jsonl actually came from. This
+      // branch stays for future opencode versions that fire session.created
+      // on one-shot runs.
       if (process.env.OLYMPUS_UNATTENDED === '1') {
         appendActivityFeed({
           ts: new Date().toISOString(),

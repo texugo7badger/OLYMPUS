@@ -33,3 +33,14 @@ Format: `phase | status | commit | next`. Append after every phase.
 - Full `npm run build` (incl. electron-builder): first attempt killed by MY 15-min tool timeout mid-deb (0 errors in log); electron-builder restarted detached (PID 856747) for the end-to-end record — result to be ledgered when it finishes.
 - Issue #50 CLOSED with evidence comment (not-reproducible-on-committed-tree + reopen conditions).
 - Honest-deviation note: batch expected a `fix(build)` commit; no code change was possible/needed — fabricating one would violate the no-fabrication guardrail. Phase-1 record = ledger + this log.
+
+## 2026-10-03T09:5xZ — Phase 2 (#51): COMPLETE
+
+- phase 2 | DONE | 7529201 (feat #51) + 240be87 (fix #57, unblock) + comment amendment | next: Phase 3 (#54)
+- Gate diagnosed as prompt-layer (brainstorming SKILL.md HARD-GATE). Implemented in-band directive + env flag + chat.message marker parser in plugin.
+- Probe A (attended): "First clarifying question (one at a time, per the process): Where should this testimonial section live?" + finish:stop — stall reproduced.
+- Probe B (unattended): "HARD-GATE … explicitly overridden by the unattended directive — I'll satisfy each gate myself" + autonomous progress. PASS.
+- Telemetry: unattended_mode events in live.jsonl, source "in-band marker". Env/session.created branch is dead code in practice (session.created never fires for opencode run) — comment documents this.
+- INFRA SAGA (all ledgered): opencode-go gateway hangs tonight; glm-5.3-flash hangs (>90s ×2); glm-5.2 stale (ProviderModelNotFoundError); glm-5.3 works (pong 8s). Models temporarily set to nvidia/z-ai/glm-5.3 across opencode.json (user snapshot exists; restore at end). probeServer 401 early-return bug found + fixed (#57, commit 240be87) — root cause of tonight's serve crash-loop; one-shot startup-timer bug filed (#58). Warm path verified working after fix.
+- #51 CLOSED with evidence. #57, #58 filed.
+- Dev server now: PID 885753 (probe-harness-managed); warm serve: manual PID 877031 (stable, hooks active), pidfile corrected (877031, verified via ss).
