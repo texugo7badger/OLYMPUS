@@ -72,3 +72,10 @@ Format: `phase | status | commit | next`. Append after every phase.
 - 12a NOTE-2 CLOSED: committed 117→118 after registry fix; metric resolves 118; discrepancy was .gitignore *secrets*.
 - All servers stopped (real next-server killed by PID, not wrapper — the harness bug is filed as #59). No strays (ss + pgrep evidence). Pidfiles removed.
 - User state restored byte-for-byte (sha256-verified): opencode.json + active-strategy.json back to free-openrouter; llm-providers.json never touched. The restored opencode.json carries the user's own uncommitted architect-entry removal — their state, not mine.
+
+## 2026-10-03T11:3xZ — Phase 6: COMPLETE — RUN TERMINAL
+
+- phase 6 | DONE | (this report commit) | RUN COMPLETE
+- Self-critique gate executed: 3 weakest claims re-verified (session.created delta-0 re-confirmed; #57 pidfile adoption re-confirmed live with one inconclusive sub-check disclosed; npm-run-build claim downgraded honestly — electron deb/tar.gz blocked by EDQUOT disk quota, AppImage built fine).
+- Final report written to reports/12b-NIGHT/BATCH-12b-NIGHT-REPORT.md and pasted as the final chat message.
+- Final state: 13 commits on night/12b-overnight (never pushed); machine clean; user state restored sha256-verified; issues #50/#51 closed, #54 commented, #55-#59 filed.
