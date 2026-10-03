@@ -53,6 +53,10 @@ export interface OpenDispatch {
   taskSignature: string;
   /** Issue #54 join key: the classificationId of the run that opened this dispatch (from the in-band marker). */
   classificationId: string | null;
+  /** RLM P1 (budgeted recursion): the requested token budget, or null when unbounded. */
+  budgetTokens: number | null;
+  /** RLM P1 (handoff contract): the requested output shape, or null. */
+  outputShape: string | null;
   /** Active stack(s) when the dispatch was opened. */
   stack: string | null;
   /** Active project slug when the dispatch was opened. */
@@ -159,6 +163,8 @@ export function registerOpenDispatch(input: {
   mcp?: string | null;
   taskSignature: string;
   classificationId?: string | null;
+  budgetTokens?: number | null;
+  outputShape?: string | null;
   stack?: string | null;
   project?: string | null;
 }): void {
@@ -185,6 +191,8 @@ export function registerOpenDispatch(input: {
     mcp: input.mcp ?? null,
     taskSignature: input.taskSignature,
     classificationId: input.classificationId ?? null,
+    budgetTokens: input.budgetTokens ?? null,
+    outputShape: input.outputShape ?? null,
     stack: input.stack ?? null,
     project: input.project ?? null,
     startTs: new Date().toISOString(),
@@ -292,6 +300,14 @@ function finalizeDispatch(
       fs.mkdirSync(dir, { recursive: true });
     }
     const durationMs = Date.now() - new Date(d.startTs).getTime();
+    // RLM P1: budget adherence = used / requested, rounded to 3 decimals.
+    // Null when no budget was requested (unbounded — behavior identical
+    // to pre-P1). >= 1 means the budget was exceeded.
+    const totalTokensUsed = (d.tokensUsed?.input ?? 0) + (d.tokensUsed?.output ?? 0);
+    const budgetAdherence =
+      typeof d.budgetTokens === "number" && d.budgetTokens > 0
+        ? Math.round((totalTokensUsed / d.budgetTokens) * 1000) / 1000
+        : null;
     const event = {
       ts: new Date().toISOString(),
       god: d.god,
@@ -303,6 +319,9 @@ function finalizeDispatch(
       instinct_id: d.instinctId,
       short_circuited: d.shortCircuited,
       classification_id: d.classificationId,
+      budget_tokens: d.budgetTokens,
+      output_shape: d.outputShape,
+      budget_adherence: budgetAdherence,
       outcome,
       duration_ms: durationMs,
       tokens_used: d.tokensUsed,

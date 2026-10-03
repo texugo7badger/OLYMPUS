@@ -1057,6 +1057,12 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         const shortCircuited = args.shortCircuit === true;
         const instinctId = args.instinctId ? String(args.instinctId) : null;
         const dispatchGod = args.godId ? String(args.godId) : godId;
+        // RLM P1 (budgeted recursion): optional handoff budget + output
+        // contract, threaded to the open-dispatch record so the
+        // dispatch_outcome event can report adherence.
+        const budgetTokens =
+          typeof args.budgetTokens === "number" && Number.isFinite(args.budgetTokens) ? args.budgetTokens : null;
+        const outputShape = typeof args.outputShape === "string" && args.outputShape ? args.outputShape : null;
 
         // Extract stack/project from env (set by shell.env) or args
         const stack = (process.env.OLYMPUS_ACTIVE_STACK || null);
@@ -1079,6 +1085,8 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           stack,
           project,
           classificationId,
+          budgetTokens,
+          outputShape,
         });
 
         appendActivityFeed({
@@ -1092,6 +1100,8 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           instinct_id: instinctId,
           short_circuited: shortCircuited,
           classification_id: classificationId,
+          budget_tokens: budgetTokens,
+          output_shape: outputShape,
           stack,
           project,
           msg: `Dispatched to ${demigod} for "${taskSignature.slice(0, 100)}"`,

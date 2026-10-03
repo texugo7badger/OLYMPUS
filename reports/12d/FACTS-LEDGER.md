@@ -23,3 +23,17 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | D1-4 | the ONE authorized main push executed | `git push origin main` | `10d1adc..7ce4106 main -> main`; main==origin==7ce4106 |
 | D1-5 | night/12d branched from merged main | `git checkout -b night/12d` | branch @ 7ce4106 |
 | D1-6 | ride-along: 12c report header pinned to 7ce4106 (11 commits). Deviation note: the file never contained the literal "4136271" (that hash appeared only in the chat paste); the header's imprecision was the unnamed "final HEAD (10 commits…)" — corrected to name 7ce4106 + true count | `grep -rn 4136271 reports/12c/` → empty + header edit | header now reads `@ final HEAD 7ce4106 (11 commits …)` |
+
+## Phase 2 — RLM P1: budget + output-shape fields in the dispatch handoff
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| D2-1 | P1 implemented per the memo sketch (dispatch args + relay line + tracker + outcome fields + adherence) | `git diff` → commit (see below) | dispatch.ts args/message + hooks threading + tracker OpenDispatch/register/event + budget_adherence at finalize |
+| D2-2 | overlay recompiled; served tool descriptions changed | `grep -c budgetTokens dist/tools/dispatch.js` + Budget line grep | `5` matches + `Budget: ${typeof budgetTokens…` present in dist |
+| D2-3 | deterministic end-to-end: dispatch_outcome carries budget fields + adherence 60/100=0.6 (temp vault via OLYMPUS_VAULT; NO real feed pollution) | `OLYMPUS_VAULT=/tmp/opencode/p1-vault node /tmp/opencode/p1-verify.mjs` | 5/5 PASS: classification_id, budget_tokens=100, output_shape, budget_adherence=0.6, tokens_used |
+| D2-4 | backward compat: absent args → nulls, behavior identical | `OLYMPUS_VAULT=/tmp/opencode/p1-vault node /tmp/opencode/p1-compat.mjs` | 4/4 PASS (budget_tokens/output_shape/budget_adherence/classification_id all null) |
+| D2-5 | queue check before probe: provider fast today (12s round trip) | queue probe wall time | `wall: 12s` / final text "queued" |
+| D2-6 | LIVE dispatch probe: god used the new args; tool relayed the budget line verbatim | probe-12d-P2.sse tool.response | `Budget: ≤100 tokens. Output shape: one-line acknowledgment. Relay both to the subtask.` |
+| D2-7 | LIVE feed event carries the fields | grep budget_tokens live.jsonl | `symphony-dispatch … budget_tokens: 100 \| output_shape: "one-line acknowledgment" \| demigod: planner` |
+| D2-8 | live dispatch_outcome deferred (subtask finalize pending server-side); outcome shape proven deterministically (D2-3) | grep dispatch_outcome (empty at poll time) | no outcome event yet — disclosed; deterministic driver covers the shape |
+| D2-9 | interpretation disclosed: the batch's "ONE attended live dispatch probe" = run it live via the harness (vs LIVE-PROBE-SKIPPED); the run used unattended:true (12c-precedented shape, avoids gate roulette) | reasoning | — |

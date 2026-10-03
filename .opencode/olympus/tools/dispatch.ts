@@ -330,6 +330,14 @@ const dispatchTool: ToolDefinition = tool({
       .string()
       .optional()
       .describe("The active project slug. If omitted, the brain reads it from the OLYMPUS_ACTIVE_PROJECT env var."),
+    budgetTokens: tool.schema
+      .number()
+      .optional()
+      .describe("RLM P1 (budgeted recursion): the token budget for the demigod's work — relayed to the subtask as an explicit instruction and recorded on the dispatch so dispatch_outcome can report budget adherence (budget_tokens / budget_adherence). Optional; absent = unbounded, exactly as before."),
+    outputShape: tool.schema
+      .string()
+      .optional()
+      .describe("RLM P1 (handoff contract): one line describing the required output shape (e.g., 'verdict + max 3 findings lines'). Relayed to the subtask and recorded on the dispatch. Optional; absent = no explicit output contract."),
   },
   execute: async (args: {
     godId: string;
@@ -341,6 +349,8 @@ const dispatchTool: ToolDefinition = tool({
     instinctId?: string;
     stack?: string;
     project?: string;
+    budgetTokens?: number;
+    outputShape?: string;
   }, context: { sessionID?: string }) => {
     const {
       godId,
@@ -352,6 +362,8 @@ const dispatchTool: ToolDefinition = tool({
       instinctId,
       stack,
       project,
+      budgetTokens,
+      outputShape,
     } = args;
 
     // Validate the demigod name — must NOT be prefixed (no ecc-, olympus-, volt-)
@@ -447,6 +459,10 @@ const dispatchTool: ToolDefinition = tool({
         // sessions (e.g. manual opencode runs) — the metric falls back to
         // ts-proximity for those.
         classification_id: getClassificationId(context.sessionID),
+        // RLM P1 (budgeted recursion): the handoff's budget + output
+        // contract, stamped for the dispatch_outcome adherence report.
+        budget_tokens: typeof budgetTokens === "number" && Number.isFinite(budgetTokens) ? budgetTokens : null,
+        output_shape: typeof outputShape === "string" && outputShape ? outputShape : null,
         stack: resolvedStack,
         project: resolvedProject,
         signature_id: signature.id,
@@ -515,6 +531,14 @@ const dispatchTool: ToolDefinition = tool({
           ? " Demigod was already present in opencode.json."
           : "";
 
+    // RLM P1: relay the budget + output contract to the god IN-BAND, so the
+    // instruction reaches the demigod's subtask even when only the message
+    // text is passed on. Absent args produce no line (behavior identical).
+    const budgetMessage =
+      (typeof budgetTokens === "number" && Number.isFinite(budgetTokens)) || (typeof outputShape === "string" && outputShape)
+        ? ` Budget: ${typeof budgetTokens === "number" && Number.isFinite(budgetTokens) ? `≤${budgetTokens} tokens` : "unspecified"}. Output shape: ${typeof outputShape === "string" && outputShape ? outputShape : "unspecified"}. Relay both to the subtask.`
+        : "";
+
     return {
       output: JSON.stringify({
         ok: true,
@@ -536,7 +560,7 @@ const dispatchTool: ToolDefinition = tool({
         intentType: signature.intentVector.intentType,
         economyReduction: economyEstimate.projectedReduction,
         demigodInjection: injectResult.status,
-        message: `Symphony signature composed + broadcast to ${demigod}. The full payload is preserved in the Vault at registry entry ${signature.vaultAnchor.anchorId} (zero-loss). The tool.execute.after hook will attribute subsequent tool calls to this dispatch and finalize it with outcome + duration + tokens when the agent changes.${injectMessage} Now invoke the demigod via the appropriate mechanism (slash command or task tool).`,
+        message: `Symphony signature composed + broadcast to ${demigod}. The full payload is preserved in the Vault at registry entry ${signature.vaultAnchor.anchorId} (zero-loss). The tool.execute.after hook will attribute subsequent tool calls to this dispatch and finalize it with outcome + duration + tokens when the agent changes.${injectMessage}${budgetMessage} Now invoke the demigod via the appropriate mechanism (slash command or task tool).`,
         nextStep: `The demigod "${demigod}" is now available. OpenCode's task system can spawn it.`,
       }, null, 2),
     };
