@@ -220,13 +220,18 @@ async function probeServer(
     const m = `${(e as any)?.message || ''} ${(e as any)?.cause || ''} ${(e as any)?.name || ''}`;
     return m.includes('aborted') || m.includes('TimeoutError') || m.includes('timeout');
   };
+  let saw401 = false;
   try {
     const r = await apiFetch(port, null, '/config', {}, SERVER_PROBE_TIMEOUT_MS);
     if (r.ok) return { ok: true, authed: false };
-    // 401 = a password-protected opencode serve we can't authenticate to
-    // (an orphan whose password was lost). Callers use this to adopt-or-kill.
-    if (r.status === 401) return { ok: false, authed: false, status: 401 };
-    timedOut = false;
+    // 401 = a password-protected opencode serve. Do NOT early-return yet:
+    // when the caller HAS a password (pidfile adoption), the authenticated
+    // probe below must get its chance — the previous early-return made
+    // adoption unreachable for every password-protected serve (the only
+    // kind spawnServer creates), so healthy serves were misclassified as
+    // orphans and killed (crash-loop cascade, see issue #57).
+    if (r.status === 401) saw401 = true;
+    else timedOut = false;
   } catch (e: any) {
     // Aborted = accepted but never answered (hung serve); refused = free.
     // Refused = port free (fails fast, ~11ms); abort/hang = accepted but
@@ -242,6 +247,7 @@ async function probeServer(
       timedOut = !isRefused(e);
     }
   }
+  if (saw401) return { ok: false, authed: false, status: 401 };
   return { ok: false, authed: false, timedOut };
 }
 
