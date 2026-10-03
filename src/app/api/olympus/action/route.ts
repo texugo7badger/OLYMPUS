@@ -673,7 +673,13 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         ];
         send({ type: 'log', msg: `Falling back to one-shot: opencode ${args.join(' ').slice(0, 120)}…`, ts: new Date().toISOString() });
         const child = spawnOpencode(args, { extraEnv: opts.extraEnv });
-        const handler = makeOpenCodeLineHandler(send);
+        // Issue #58: route one-shot output through the SAME onEvent wrapper
+        // the warm path uses, so firstEventAt is set on the first streamed
+        // line and the 120s startup timer becomes a true no-OUTPUT bound.
+        // Previously this passed `send` directly — firstEventAt stayed null
+        // and the timer killed one-shot runs mid-output (12b probes B1/B2
+        // died at exactly 120s while the process was streaming).
+        const handler = makeOpenCodeLineHandler(onEvent);
         const lineBuf: string[] = [];
         child.stdout?.on('data', (chunk) => {
           lineBuf.push(...chunk.toString().split('\n'));
