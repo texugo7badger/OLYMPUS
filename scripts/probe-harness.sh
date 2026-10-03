@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # probe-harness.sh — robust dev server lifecycle for SSE probe runs
-# Usage: probe-harness.sh [start|stop|soak|health]
+# Usage: probe-harness.sh [start|stop|soak|health|run <seconds> <cmd...>]
 # Env: PROBE_PORT (default 3737), PROBE_HOST (default 127.0.0.1)
 
 set -euo pipefail
@@ -11,7 +11,8 @@ PROBE_URL="http://${PROBE_HOST}:${PROBE_PORT}/api/olympus/health"
 PID_FILE="/tmp/olympus-probe-server.pid"
 LOG_FILE="/tmp/olympus-probe-server.log"
 
-cd /home/texugo/Projects/olympus
+# Portable project root
+cd "$(git rev-parse --show-toplevel)"
 
 start_server() {
   # Clean up any existing
@@ -23,8 +24,8 @@ start_server() {
   echo "${pid}" > "${PID_FILE}"
   echo "Started server PID ${pid}"
   
-  # Readiness loop: 10 attempts × 1s
-  for i in {1..10}; do
+  # Readiness loop: 20 attempts × 1s (B3 measured 14s cold start)
+  for i in {1..20}; do
     if curl -s --max-time 3 "${PROBE_URL}" >/dev/null 2>&1; then
       echo "Server ready at ${PROBE_URL} (PID ${pid})"
       return 0
@@ -47,7 +48,7 @@ stop_server() {
       # Wait up to 5s for graceful shutdown
       for i in {1..5}; do
         if ! kill -0 "${pid}" 2>/dev/null; then
-          echo "Server stopped gracefully (PID ${pid})"
+          echo "Server stopped gracefully (PID ${pid}, exit code 0)"
           rm -f "${PID_FILE}"
           return 0
         fi
@@ -56,7 +57,7 @@ stop_server() {
       # Force kill
       kill -KILL "${pid}" 2>/dev/null || true
       sleep 1
-      echo "Server force-killed (PID ${pid})"
+      echo "Server force-killed (PID ${pid}, exit code 137)"
     fi
   fi
   rm -f "${PID_FILE}"
@@ -87,6 +88,49 @@ soak() {
   return 0
 }
 
+# run_with_deadline <seconds> <cmd...>
+# Executes cmd with deadline; on deadline sends TERM then KILL.
+# Prints explicit verdict:
+#   - "HARNESS KILL (deadline)" if deadline fired (exit 124)
+#   - "EXIT <code>" if command exited before deadline
+#   - "CRASH (unexpected exit)" if code != 0 and not deadline
+run_with_deadline() {
+  local deadline_seconds="${1:-60}"
+  shift
+  local cmd=("$@")
+  local start_ts end_ts
+  
+  start_ts=$(date +%s)
+  end_ts=$((start_ts + deadline_seconds))
+  
+  "${cmd[@]}" &
+  local cmd_pid=$!
+  
+  while [[ $(date +%s) -lt ${end_ts} ]]; do
+    if ! kill -0 "${cmd_pid}" 2>/dev/null; then
+      # Command exited before deadline
+      wait "${cmd_pid}"
+      local exit_code=$?
+      echo "EXIT ${exit_code}"
+      if [[ ${exit_code} -ne 0 ]]; then
+        echo "CRASH (unexpected exit)" >&2
+      fi
+      return ${exit_code}
+    fi
+    sleep 1
+  done
+  
+  # Deadline reached - kill the process
+  echo "HARNESS KILL (deadline)" >&2
+  kill -TERM "${cmd_pid}" 2>/dev/null || true
+  sleep 2
+  if kill -0 "${cmd_pid}" 2>/dev/null; then
+    kill -KILL "${cmd_pid}" 2>/dev/null || true
+  fi
+  wait "${cmd_pid}" 2>/dev/null
+  return 124
+}
+
 health() {
   curl -s --max-time 3 "${PROBE_URL}" >/dev/null 2>&1
 }
@@ -96,5 +140,6 @@ case "${1:-}" in
   stop) stop_server ;;
   soak) soak "${2:-150}" ;;
   health) health ;;
-  *) echo "Usage: $0 {start|stop|soak [seconds]|health}" >&2; exit 1 ;;
+  run) run_with_deadline "${2:-60}" "${@:3}" ;;
+  *) echo "Usage: $0 {start|stop|soak [seconds]|health|run <seconds> <cmd...>}" >&2; exit 1 ;;
 esac
