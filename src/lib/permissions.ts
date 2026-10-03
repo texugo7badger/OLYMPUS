@@ -98,10 +98,10 @@ export function loadPermissions(opts?: { pathAlwaysPrefixes?: string[] }): Permi
   let parsed: any = null;
   try {
     if (fs.existsSync(file)) parsed = JSON.parse(fs.readFileSync(file, 'utf-8'));
-  } catch {
+  } catch (err) {
     // A corrupt policy file must not take the run down with it. Move it aside
     // so the user can inspect it, then fall through to the seed.
-    try { fs.renameSync(file, `${file}.corrupt`); } catch {}
+    try { fs.renameSync(file, `${file}.corrupt`); } catch (err) {}
     parsed = null;
   }
 
@@ -136,10 +136,13 @@ function persist(next: PermissionsFile): void {
   const tmp = `${file}.${process.pid}.tmp`;
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(tmp, `${JSON.stringify(next, null, 2)}\n`, 'utf-8');
+    fs.writeFileSync(tmp, `${JSON.stringify(next, null, 2)}
+`, 'utf-8');
     fs.renameSync(tmp, file);
-  } catch {
+  } catch (err) {
     try { fs.unlinkSync(tmp); } catch {}
+    console.error('[permissions] Failed to persist permissions:', err);
+    throw err;
   }
 }
 
