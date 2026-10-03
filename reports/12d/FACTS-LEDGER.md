@@ -83,3 +83,16 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | D6-6 | fix attempt 1 (override >= 7.29.6) over-resolved to MAJOR 8.0.6 — caught, tightened to ^7.29.6 → 7.29.7 (7.x line, ≥ patch) | reinstall + lockfile check | `lockfile @babel/core now: 7.29.7 \| patched: true`; 0 stale 7.28.0 refs |
 | D6-7 | compile/typecheck + suite proof after the bump | tsc + 4 suites | `TSC: 0`; metric 25/25, distill 4/4, classifier 15/15, telemetry-slice 10/10 all green |
 | D6-8 | alert auto-resolves when the lockfile reaches main (GitHub rescans on push) — noted for the merge-readiness section | reasoning (Dependabot behavior) | — |
+
+## Phase 7 — validation + hygiene
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| D7-1 | build:app compile+TS green (EDQUOT protocol applied): "✓ Compiled successfully in 86s" + "Finished TypeScript in 8.0s"; the optimization/finalization phase HANGS against the quota/disk (90%) — killed; clean tsc record | build log + `npx tsc --noEmit -p tsconfig.json` | `TSC EXIT: 0`; hang disclosed verbatim: stuck at `Finalizing page optimization …` 4.5+ min on the detached run |
+| D7-2 | build:app interruptions disclosed: run 1 killed by my tool timeout mid-optimization; run 2 detached, cache-warmed, HUNG at the same phase — environmental, consistent with the 12b EDQUOT (errno -122) + 12c ffprof-race findings | pgrep + log tails | both attempts died/hung at the same non-code phase |
+| D7-3 | all four suites green post-Dependabot-bump (D6-7 record): metric 25/25, distill 4/4, classifier 15/15, telemetry-slice 10/10 | suite runs | all green |
+| D7-4 | harness start/stop cycle incl. logs demo + port-free assertion: the Phase-5 closure demo (start 95292 → logs real lines → stop → `Port 3737 is free`) — one measurement, one record; reused as this phase's cycle | Phase-5 transcript | see D5-2 |
+| D7-5 | batch-window metric: 3 classifications, 1 dispatch, 1 id-joined MATCH (the P1 budget probe cls_musro5thx2m6xl, intent apollo / executed apollo / planner), agreement 1.0; 2 unjoined classifications = queue-check + spawn-check probes (no dispatches by design) | metric --since 18:55Z | `joined: 1 (id: 1) matches: 1 agreement: 1` |
+| D7-6 | machine clean: no listeners on 3737/3738/3740/3777; both pidfiles removed | ss + ls | `no listeners…` / `pidfiles clean` |
+| D7-7 | opencode.json side effects disclosed + restored: the P1 probe AUTO-INJECTED `planner` (event: demigod_injection:"injected") — the documented dispatch side effect; restored byte-for-byte from the snapshot, sha256 `db62995d…` verified | agents-delta check + sha256sum | `agents added: ['planner']` pre-restore → `db62995d…` post-restore |
+| D7-8 | next-env.d.ts touched by MY builds (dev→build type-import flip, mechanical) — reverted; Next regenerates per mode | git diff + checkout | diff = `.next/dev/types/` → `.next/types/`; reverted to committed state |
