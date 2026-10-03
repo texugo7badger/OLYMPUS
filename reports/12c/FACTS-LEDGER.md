@@ -39,3 +39,25 @@ re-created from the same command evidence; see WORKLOG incidents.)
 | C2-4 | live probe: classification event routeTo verbatim shows the fix | probe-12c-P2.sse classification event | `routeTo verbatim: "apollo" \| domain: "planning"` (12b same-shape probe was `"hermes"`) |
 | C2-5 | metric over probe window: id-joined pair is a MATCH | metric `--since <probe ts> --json` | `joined: 1 (id: 1) matches: 1 agreement: 1` — PAIR `"intent":"apollo","executed":"apollo","match":true,"join":"id","classification_id":"cls_musltzwawmzkb5"` |
 | C2-6 | behavior preservation: pre-existing cascade verified by test (design→frontend, schema→database fire before integrations — noted in test comments) | test development iterations | two bad test expectations corrected during development (both were my expectation errors, not code regressions — the cascade is untouched) |
+
+## Phases 3–7 — #58 fix, #59 fix, #55 doc pass, #60 filed, closures
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| C3-1 | #58 fix: one-shot wires firstEventAt via the same onEvent wrapper | `git show cf8ed8a` | route.ts fallbackOneShot now passes `onEvent` to makeOpenCodeLineHandler (was `send`) |
+| C3-2 | #58 code-path reasoning | route.ts :628 timer gate vs :658-661 onEvent vs :416-440 handler first-line | timer fires only while firstEventAt===null; any one-shot output line now sets it → no mid-output kill |
+| C3-3 | #58 live regression probe (forced one-shot path) | probe-12c-P3.sse analysis | `fallback: one-shot fallback taken` / `startup-kill fired: false` / final text `"oneshot"` — path completes end-to-end |
+| C3-4 | #58 commit-message cosmetic mangle disclosed (backticks → command substitution ate the word `send`) | `git log -1 --format=%B` | "passed  directly to makeOpenCodeLineHandler" — meaning intact; left unamended per no-rewrite guardrail |
+| C4-1 | #59 fix: harness records real listener PID + kills by port + asserts free | `git show a11e4ec --stat` | probe-harness.sh +79/−12 |
+| C4-2 | clean cycle 1: real PID recorded, port freed | cycle transcript | wrapper 993894 / listener 993924 recorded → stop → `Port 3737 is free` → ss: FREE |
+| C4-3 | clean cycle 2 (the regression cycle): no shadow, no 3738 orphan | cycle transcript | wrapper 994266 / listener 994296 → stop → 3737 FREE + `3738 FREE (no shifted orphan)` |
+| C4-4 | #59 closed with evidence | `gh issue close 59` | `✓ Closed … #59` |
+| C5-1 | #55 doc pass: 3 phantom names removed (10 spots), replaced with registry names | `git show 289fe31 --stat` | 3 files, +8/−8 |
+| C5-2 | sweep clean post-fix (rust-build-error-specialist = legit hypothetical, exempt) | sweep script | `SWEEP CLEAN` |
+| C5-3 | registry unchanged: 118 on disk | `ls …demigods/*/*.txt \| wc -l` | `118` |
+| C5-4 | overlay recompiled so served descriptions match | `npm run overlay:compile` | `Overlay post-compile complete` |
+| C5-5 | #55 closed with evidence | `gh issue close 55` | `✓ Closed … #55` |
+| C6-1 | SSE-abort issue filed with B5 evidence, not fixed (12d/13 candidate) | `gh issue create` | `…/issues/60` |
+| C7-1 | #54 closed (pre-approved) with final evidence roll-up | `gh issue close 54` | `✓ Closed … #54` |
+| C7-2 | #57 closed (pre-approved) with fix + re-verification evidence | `gh issue close 57` | `✓ Closed … #57` |
+| C7-3 | test-iteration disclosure: two classifier-test expectations were wrong during P2 development (design/schema words hit earlier cascade branches); fixed the expectations, not the code | test runs | final 15/15 with corrected expectations |
