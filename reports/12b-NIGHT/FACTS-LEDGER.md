@@ -52,3 +52,20 @@ Raw values quoted verbatim. No ledger entry → no claim.
 | P2-11 | #51 closed with A/B evidence | `gh issue close 51` | `✓ Closed issue texugo7badger/OLYMPUS#51` |
 | P2-12 | issues #57 and #58 filed (pre-existing infra breakages found during probe work) | `gh issue create` ×2 | `…/issues/57`, `…/issues/58` |
 | P2-13 | probe A5 one-shot completed in ~105s; B1/B2 one-shots died at exactly 120s (firstEventAt never wired on fallback path) | SSE captures probe-2A5/B/B2 + opencode.log | `ERROR: OpenCode produced no output within 120s` while the process was alive (unattended event at t+80s) |
+
+## Phase 3 — #54 classification join key
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| P3-1 | classificationId minted + carried in env payload automatically | `git show c381801 --stat` | 9 files, +260/−23; `task-classifier.ts` interface + mint |
+| P3-2 | fixture self-test green (25 assertions, exit 0) | `node scripts/agreement-metric.test.mjs` | `All fixture assertions passed` / `TEST EXIT: 0` |
+| P3-3 | one-shot path: classification + dispatch share id; metric joins by id | metric `--since 2026-10-03T10:14:00Z --json` | `id_joined_pairs: 1`; PAIR `"join":"id","classification_id":"cls_mus8ixsyzo7e9q"` |
+| P3-4 | warm path: classification + dispatch share id; metric joins by id | metric `--since 2026-10-03T10:24:33Z --json` | `id_joined_pairs: 1`; PAIR `"join":"id","classification_id":"cls_mus8w7tapy5xp0"` |
+| P3-5 | live classification event carries meta.classificationId | grep feed | `2026-10-03T10:24:33.166Z \| classification \| system \| cls_mus8w7tapy5xp0` |
+| P3-6 | live warm dispatch event carries classification_id | grep feed | `2026-10-03T10:24:37.050Z \| symphony-dispatch \| apollo \| cls_mus8w7tapy5xp0` |
+| P3-7 | --since second-precision bug found live + fixed (1780c34) | metric before fix: `classifications: 0` vs after: `classifications: 1` | boundary at 10:24:33Z excluded the 10:24:33.166Z event on string compare |
+| P3-8 | "apollo" keyword collides with graphql stack → real measurable mismatch | `npx tsx` classifyTask on probe text | `routeTo: hermes \| domain: integrations \| stacks=[graphql]` |
+| P3-9 | #54 commented with evidence (not closed) | `gh issue comment 54` | `…issues/54#issuecomment-5968273124` |
+| P3-10 | probe-harness stop never killed the real next-server (wrapper-vs-child) — the 05:35 dev server served ALL evening while newer starts landed on 3738 | `ss -tlnp \| grep 3737` after 4 harness stop/start cycles | `next-server (v1, pid=862427 … STARTED Sat Oct 3 05:35:02)` |
+| P3-11 | after killing the real next-server and restarting once, warm session creation works (no 401, no one-shot) | adoptcheck2 SSE | `▶ dispatching to warm session vs39fnuQ (apollo)` → text `adopted2` → action_done |
+| P3-12 | warm-path dispatch-forced probe runs clean (dispatch tool → DONE) | probe-54warm.sse | `tool.call/tool.response olympus-dispatch` → `TEXT: DONE` → `action_done` |

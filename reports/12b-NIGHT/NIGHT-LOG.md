@@ -44,3 +44,15 @@ Format: `phase | status | commit | next`. Append after every phase.
 - INFRA SAGA (all ledgered): opencode-go gateway hangs tonight; glm-5.3-flash hangs (>90s ×2); glm-5.2 stale (ProviderModelNotFoundError); glm-5.3 works (pong 8s). Models temporarily set to nvidia/z-ai/glm-5.3 across opencode.json (user snapshot exists; restore at end). probeServer 401 early-return bug found + fixed (#57, commit 240be87) — root cause of tonight's serve crash-loop; one-shot startup-timer bug filed (#58). Warm path verified working after fix.
 - #51 CLOSED with evidence. #57, #58 filed.
 - Dev server now: PID 885753 (probe-harness-managed); warm serve: manual PID 877031 (stable, hooks active), pidfile corrected (877031, verified via ss).
+
+## 2026-10-03T10:4xZ — Phase 3 (#54): COMPLETE
+
+- phase 3 | DONE | c381801 (feat #54) + 1780c34 (fix metric --since) | next: Phase 4 (RLM memo)
+- classificationId end-to-end: mint (task-classifier) → env payload + in-band marker (route) → chat.message parser (plugin) → both dispatch writers + dispatch_outcome → metric id-join (join:"id"/"ts", id_joined_pairs/ts_joined_pairs).
+- Fixture self-test: 25/25 green, exit 0.
+- Live proof BOTH paths: one-shot (cls_mus8ixsyzo7e9q) + warm (cls_mus8w7tapy5xp0) — metric shows id-joined pairs.
+- Real mismatch surfaced: "apollo" → graphql stack keyword collision routes godId=apollo prompts to hermes. 12c candidate.
+- INFRA (ledgered P3-10/11): probe-harness stop kills the npm wrapper, not the next-server child — the 05:35 dev server (pre-#57 code) served ALL evening; newer starts auto-shifted to 3738 while health checks passed against the old one. Killed the real tree, restarted once → warm adoption works, warm-path probe clean. Harness bug to file (Phase 6 issue list).
+- --since precision bug in metric found live + fixed (1780c34).
+- #54 commented with evidence; NOT closed (auditor's call).
+- Current stack state: dev server PID 900622 (real next-server, harness-managed via wrapper 900595), app-spawned warm serve 900854 on 3777 (new plugin dist, clean pidfile).
