@@ -70,3 +70,16 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | D5-1 | `logs` subcommand landed (path + tail 200 default, -f follow, PROBE_LOG_LINES override) + header docs | `git show <commit>` + `bash -n` | SYNTAX OK; usage line updated |
 | D5-2 | CLOSURE DEMO: start → logs returns REAL server lines → stop → port free | demo transcript | `Harness log: /tmp/olympus-probe-server.log` + `▲ Next.js 16.3.7 (Turbopack)` + `✓ Ready in 732ms` + 10 matching lines; stop → `Port 3737 is free` |
 | D5-3 | #23 taxonomy verified on-pattern before closure (standing rule) | `gh issue view 23` | `feat(dev-server): agent couldn't read its own dev server stdout [enhancement, dev-server]` |
+
+## Phase 6 — closures + Dependabot triage
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| D6-1 | #58 CLOSED (pre-approved by embedded AUD-12c ruling; closing comment links cf8ed8a + regression probe + suites + the environmental-proof note) | `gh issue close 58` | `✓ Closed … #58` |
+| D6-2 | #56 CLOSED (Phase-4 evidence green; comment links c49b17f + 9/9 matrix + M1–M4 + live INFO line; taxonomy verified on-pattern) | `gh issue close 56` | `✓ Closed … #56` |
+| D6-3 | #23 CLOSED (Phase-5 demo green; comment links fbb1d21 + verbatim demo) | `gh issue close 23` | `✓ Closed … #23` |
+| D6-4 | Dependabot alert #2 identified: @babel/core (transitive dev dep via @opencode-ai/plugin → @opentui/solid), GHSA-4x5r-pxfx-6jf8, low, "Arbitrary File Read via sourceMappingURL Comment", vuln ≤7.29.0 → patched 7.29.6 | `gh api dependabot/alerts/2` | `2 [open] low — pkg: @babel/core (development) … vuln: <= 7.29.0 → patched: 7.29.6` |
+| D6-5 | direct-dep check: NOT direct; lockfile pinned 7.28.0; npm update could NOT reach the patch | `npm ls @babel/core` + `npm update @babel/core` | transitive via plugin chain; lockfile still 7.28.0 after update |
+| D6-6 | fix attempt 1 (override >= 7.29.6) over-resolved to MAJOR 8.0.6 — caught, tightened to ^7.29.6 → 7.29.7 (7.x line, ≥ patch) | reinstall + lockfile check | `lockfile @babel/core now: 7.29.7 \| patched: true`; 0 stale 7.28.0 refs |
+| D6-7 | compile/typecheck + suite proof after the bump | tsc + 4 suites | `TSC: 0`; metric 25/25, distill 4/4, classifier 15/15, telemetry-slice 10/10 all green |
+| D6-8 | alert auto-resolves when the lockfile reaches main (GitHub rescans on push) — noted for the merge-readiness section | reasoning (Dependabot behavior) | — |

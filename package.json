@@ -140,7 +140,8 @@
   "overrides": {
     "ini": "^6.0.0",
     "@emnapi/core": "^2.0.0-alpha.3",
-    "@napi-rs/wasm-runtime": "1.2.0"
+    "@napi-rs/wasm-runtime": "1.2.0",
+    "@babel/core": "^7.29.6"
   },
   "allowScripts": {
     "@fission-ai/openspec": true,
