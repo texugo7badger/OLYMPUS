@@ -62,3 +62,11 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | D4-8 | apply-time M4 (keys + FRESH cache): keys present, ZERO stale warnings | fake home + fresh free-models.json | exit 0; stale-warning grep count 0 |
 | D4-9 | LIVE spawn-side evidence: one-shot probe (serve killed → app-side spawn) → the new INFO preflight in the harness log; the 12b false-negative warning is GONE | kill serve → probe → `strings /tmp/olympus-probe-server.log \| grep opencode-spawn` | `[opencode-spawn] INFO: strategy 'free-openrouter' …` (full: required key found in OpenCode auth.json) |
 | D4-10 | interpretation disclosed: the spawn preflight is diagnostic (structured error + guidance; spawn proceeds — no behavior gate, no auto-switch), per the batch's "fallback is EXPLICIT guidance" framing | reasoning | — |
+
+## Phase 5 — issue #23: logs subcommand
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| D5-1 | `logs` subcommand landed (path + tail 200 default, -f follow, PROBE_LOG_LINES override) + header docs | `git show <commit>` + `bash -n` | SYNTAX OK; usage line updated |
+| D5-2 | CLOSURE DEMO: start → logs returns REAL server lines → stop → port free | demo transcript | `Harness log: /tmp/olympus-probe-server.log` + `▲ Next.js 16.3.7 (Turbopack)` + `✓ Ready in 732ms` + 10 matching lines; stop → `Port 3737 is free` |
+| D5-3 | #23 taxonomy verified on-pattern before closure (standing rule) | `gh issue view 23` | `feat(dev-server): agent couldn't read its own dev server stdout [enhancement, dev-server]` |
