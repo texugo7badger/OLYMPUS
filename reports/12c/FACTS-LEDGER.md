@@ -28,3 +28,14 @@ re-created from the same command evidence; see WORKLOG incidents.)
 | C1-6 | the ONE authorized main push executed | `git push origin main` | `2bab1b3..10d1adc main -> main`; main==origin/main==`10d1adcb…` |
 | C1-7 | GitHub flagged 1 low-severity dependabot alert on push (disclosure) | push output | `GitHub found 1 vulnerability … (1 low) … /security/dependabot/2` |
 | C1-8 | night/12c created from merged main; phase-0 ledger landed | `git checkout -b night/12c` + commit | `7aef140` on top of `10d1adc` |
+
+## Phase 2 — P5 classifier collision fix
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| C2-1 | fix landed: god names never bare stack keywords + explicit godId precedence | `git show b139375 --stat` | 2 files, +110/−1 (task-classifier.ts + new test) |
+| C2-2 | regression test 15/15 green (incl. 12b collision prompt verbatim) | `npx tsx scripts/task-classifier.test.mjs` | `All task-classifier regression assertions passed` / exit 0 |
+| C2-3 | tsc + eslint green on touched files | `npx tsc --noEmit -p tsconfig.json` + eslint | both exit 0 |
+| C2-4 | live probe: classification event routeTo verbatim shows the fix | probe-12c-P2.sse classification event | `routeTo verbatim: "apollo" \| domain: "planning"` (12b same-shape probe was `"hermes"`) |
+| C2-5 | metric over probe window: id-joined pair is a MATCH | metric `--since <probe ts> --json` | `joined: 1 (id: 1) matches: 1 agreement: 1` — PAIR `"intent":"apollo","executed":"apollo","match":true,"join":"id","classification_id":"cls_musltzwawmzkb5"` |
+| C2-6 | behavior preservation: pre-existing cascade verified by test (design→frontend, schema→database fire before integrations — noted in test comments) | test development iterations | two bad test expectations corrected during development (both were my expectation errors, not code regressions — the cascade is untouched) |
