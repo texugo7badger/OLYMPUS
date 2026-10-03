@@ -31,6 +31,11 @@ electron-builder-cache/
 *apikey*
 *token*
 *tokens*
+
+# Demigod prompt templates are source, not secrets. The broad patterns above
+# (e.g. *secrets* matching artemis/secrets_scanner.txt) must never swallow a
+# registry prompt file — a fresh clone would lose the demigod entirely.
+!.opencode/prompts/agents/demigods/**
 *.pem
 *.key
 *.crt
