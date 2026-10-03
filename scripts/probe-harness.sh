@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # probe-harness.sh — robust dev server lifecycle for SSE probe runs
-# Usage: probe-harness.sh [start|stop|soak|health|run <seconds> <cmd...>]
+# Usage: probe-harness.sh [start|stop|soak|health|logs [-f]|run <seconds> <cmd...>]
 # Env: PROBE_PORT (default 3737), PROBE_HOST (default 127.0.0.1)
+#
+# logs — issue #23: first-class server-stdout access for agents. Prints the
+#   harness log path, then tails it (last 200 lines by default). With -f,
+#   follows the log live (tail -F). The dev server's stdout/stderr lands in
+#   this file (spawn line, provider banners, request lines, warnings) — this
+#   is how 12b/12c/12d diagnosed server-side behavior without app UI tools.
 
 set -euo pipefail
 
@@ -202,11 +208,23 @@ health() {
   curl -s --max-time 3 "${PROBE_URL}" >/dev/null 2>&1
 }
 
+logs() {
+  local lines="${PROBE_LOG_LINES:-200}"
+  echo "Harness log: ${LOG_FILE}"
+  if [[ "${1:-}" == "-f" ]]; then
+    echo "Following (tail -F) — Ctrl-C to stop."
+    tail -n "${lines}" -F "${LOG_FILE}"
+  else
+    tail -n "${lines}" "${LOG_FILE}"
+  fi
+}
+
 case "${1:-}" in
   start) start_server ;;
   stop) stop_server ;;
   soak) soak "${2:-150}" ;;
   health) health ;;
+  logs) logs "${2:-}" ;;
   run) run_with_deadline "${2:-60}" "${@:3}" ;;
-  *) echo "Usage: $0 {start|stop|soak [seconds]|health|run <seconds> <cmd...>}" >&2; exit 1 ;;
+  *) echo "Usage: $0 {start|stop|soak [seconds]|health|logs [-f]|run <seconds> <cmd...>}" >&2; exit 1 ;;
 esac
