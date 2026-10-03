@@ -1,7 +1,7 @@
 # BATCH 12b-NIGHT — FINAL REPORT
 
 **Repo:** github.com/texugo7badger/OLYMPUS
-**Base:** `main @ 2bab1b3` → **Branch:** `night/12b-overnight @ cc642c1` (13 commits)
+**Base:** `main @ 2bab1b3` → **Branch:** `night/12b-overnight` @ final HEAD `e3cca55` (14 commits, including this report's commit; the report body's per-phase hashes reference the code commits)
 **Push status: NEVER PUSHED.** `main` untouched at `2bab1b3`.
 **Mode:** unattended overnight long task. No questions were asked; all deviations are disclosed below.
 
