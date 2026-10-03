@@ -452,7 +452,7 @@ export default function InteractiveTerminal() {
         // Never grantDenied: a timeout is not a policy decision.
         permissionReplyRef.current(ev.requestID, 'reject');
         setMessages(prev => prev.map(m => m.permissionId === ev.requestID && m.type === 'permission'
-          ? { ...m, permissionTimedOut: true }
+          ? { ...m, permissionState: 'denied', permissionTimedOut: true }
           : m));
       }, PERMISSION_TIMEOUT_MS);
       addMessage({
