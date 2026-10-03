@@ -1,7 +1,7 @@
 # BATCH 12c — FINAL REPORT
 
 **Repo:** github.com/texugo7badger/OLYMPUS
-**Base:** merged `main` @ `10d1adc` (= 12b's audited branch, ff-merged in Phase 1) → **Branch:** `night/12c` @ final HEAD (10 commits incl. this report's commit; per-phase hashes in the table)
+**Base:** merged `main` @ `10d1adc` (= 12b's audited branch, ff-merged in Phase 1) → **Branch:** `night/12c` @ final HEAD `7ce4106` (11 commits: the 10 batch commits incl. this report's, plus the taxonomy-pass addendum; per-phase hashes in the table)
 **Push status:** `main` was pushed **EXACTLY ONCE** — the authorized Phase-1 ff-only merge `2bab1b3..10d1adc` per the embedded 12b auditor ruling. `night/12c` pushed at batch close. `night/12b-overnight` untouched (already on origin at the audited ref `10d1adc`; never re-pushed, never rewritten).
 **Mode:** day batch, phase-gated, no questions. Two Phase-0 git incidents disclosed below.
 
