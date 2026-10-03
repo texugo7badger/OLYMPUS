@@ -44,7 +44,7 @@
  * dimensions, no Vault anchor, no registry write) violates Axioms A1 (no
  * Vault anchor) and A5 (not persisted to the registry).
  *
- * Demigods are unprefixed (e.g., 'build-resolver', 'verifier-code', 'sast-scanner').
+ * Demigods are unprefixed (e.g., 'build-resolver', 'code-verifier', 'secrets-scanner').
  * The parent god is determined by the dispatch context, not by a name prefix.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
@@ -295,14 +295,14 @@ function ensureDemigodPresent(demigodName: string): {
 
 const dispatchTool: ToolDefinition = tool({
   description:
-    "Dispatch to a demigod via the Symphony protocol. Composes a VibrationalSignature from the task, broadcasts it to the target demigod, and registers the dispatch with the VaultBrain capture pipeline. Symphony is the standard language between Gods and Demigods — there is no textual dispatch path. Demigods are unprefixed (e.g., 'build-resolver', 'verifier-code'). The target demigod is AUTO-INJECTED into opencode.json if not already present (loaded from opencode.demigods.json), so dispatch works in both GO-plan and free-tier modes.",
+    "Dispatch to a demigod via the Symphony protocol. Composes a VibrationalSignature from the task, broadcasts it to the target demigod, and registers the dispatch with the VaultBrain capture pipeline. Symphony is the standard language between Gods and Demigods — there is no textual dispatch path. Demigods are unprefixed (e.g., 'build-resolver', 'code-verifier'). The target demigod is AUTO-INJECTED into opencode.json if not already present (loaded from opencode.demigods.json), so dispatch works in both GO-plan and free-tier modes.",
   args: {
     godId: tool.schema
       .string()
       .describe("Your god ID (e.g., 'hephaestus')."),
     demigod: tool.schema
       .string()
-      .describe("The demigod to dispatch to (unprefixed, e.g., 'build-resolver', 'verifier-code', 'sast-scanner'). The parent god is determined by the dispatch context. If the demigod is not yet loaded, it will be auto-injected from opencode.demigods.json."),
+      .describe("The demigod to dispatch to (unprefixed, e.g., 'build-resolver', 'code-verifier', 'secrets-scanner'). The parent god is determined by the dispatch context. If the demigod is not yet loaded, it will be auto-injected from opencode.demigods.json."),
     task: tool.schema
       .string()
       .describe("The task to delegate to the demigod. This is the task_signature used by the brain to match future dispatches to instincts."),
@@ -361,7 +361,7 @@ const dispatchTool: ToolDefinition = tool({
       return {
         output: JSON.stringify({
           ok: false,
-          error: `Invalid demigod name "${demigod}". Demigods are unprefixed (e.g., 'build-resolver', 'verifier-code'). Remove the '${demigod.split("-")[0]}-' prefix.`,
+          error: `Invalid demigod name "${demigod}". Demigods are unprefixed (e.g., 'build-resolver', 'code-verifier'). Remove the '${demigod.split("-")[0]}-' prefix.`,
         }, null, 2),
       };
     }

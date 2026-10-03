@@ -126,11 +126,11 @@ function tagSimilarity(queryTags: string[], instinctTags: string[]): number {
 
 const subAgentInstinctQueryTool: ToolDefinition = tool({
   description:
-    "Query a demigod's local instincts (seed + empirical). Demigods use this to apply the continuous-learning-v2 pattern at their own scope. Returns matching instincts filtered by tag similarity. If any instinct has confidence >= 0.85, short-circuit (apply the instinct's guidance directly). Demigods CANNOT query god-level instincts — only their own. This enforces the 'local instincts only' rule from Requirement 4. The agentName arg is the unprefixed demigod name (e.g., 'verifier-code', 'mlops-engineer').",
+    "Query a demigod's local instincts (seed + empirical). Demigods use this to apply the continuous-learning-v2 pattern at their own scope. Returns matching instincts filtered by tag similarity. If any instinct has confidence >= 0.85, short-circuit (apply the instinct's guidance directly). Demigods CANNOT query god-level instincts — only their own. This enforces the 'local instincts only' rule from Requirement 4. The agentName arg is the unprefixed demigod name (e.g., 'code-verifier', 'tdd-guide').",
   args: {
     agentName: tool.schema
       .string()
-      .describe("The demigod name (unprefixed, e.g., 'verifier-code', 'mlops-engineer', 'build-resolver'). Must match the calling demigod's own name. The parent god is determined by the dispatch context."),
+      .describe("The demigod name (unprefixed, e.g., 'code-verifier', 'tdd-guide', 'build-resolver'). Must match the calling demigod's own name. The parent god is determined by the dispatch context."),
     query: tool.schema
       .string()
       .describe("A description of the task being considered (e.g., 'React component review for prop types'). Used to match against instinct tags."),

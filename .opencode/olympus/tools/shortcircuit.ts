@@ -14,7 +14,7 @@
  *   - Emits a `shortcircuit` action event with the instinct_id + demigod so
  *     the brain-stats API can compute the short-circuit hit rate.
  *   - Symphony-native: the `demigod` arg is unprefixed (e.g., 'build-resolver',
- *     'verifier-code'); the parent god is determined by dispatch context.
+ *     'code-verifier'); the parent god is determined by dispatch context.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
@@ -39,7 +39,7 @@ const shortcircuitTool: ToolDefinition = tool({
       .describe("The instinct ID that triggered the short-circuit (from olympus-instinct-query's shortCircuitCandidate.instinct_id)."),
     demigod: tool.schema
       .string()
-      .describe("The demigod you dispatched to (unprefixed, e.g., 'build-resolver', 'verifier-code'). The parent god is determined by the dispatch context."),
+      .describe("The demigod you dispatched to (unprefixed, e.g., 'build-resolver', 'code-verifier'). The parent god is determined by the dispatch context."),
     taskSignature: tool.schema
       .string()
       .describe("The task that was dispatched (for the activity feed)."),
