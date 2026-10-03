@@ -56,3 +56,10 @@ Format: `phase | status | commit | next`. Append after every phase.
 - --since precision bug in metric found live + fixed (1780c34).
 - #54 commented with evidence; NOT closed (auditor's call).
 - Current stack state: dev server PID 900622 (real next-server, harness-managed via wrapper 900595), app-spawned warm serve 900854 on 3777 (new plugin dist, clean pidfile).
+
+## 2026-10-03T11:0xZ — Phase 4 + 4b: COMPLETE
+
+- phase 4 | DONE | 822aa87 (docs/research/RLM-MEMO.md, 386 lines) | next: Phase 4b
+- Memo built in 3 passes per protocol: outline → per-section expansion → adversarial critique with corrections folded back (economy_reduction downgraded to clamped heuristic; P4 breadth premise downgraded to unresolved tool-gating; classifier anchors re-verified). 5 DIFF-ONLY proposals tagged 12c/12d/13.
+- phase 4b | DONE | 7b3bb86 (scripts/context-distill.mjs prototype) | next: Phase 5
+- context-distill: --self-test 4/4 green against the Phase 3 fixture; real-feed smoke shows tonight's probe runs correctly (hermes/planner id-joined runs, adoptcheck runs with no dispatches).
