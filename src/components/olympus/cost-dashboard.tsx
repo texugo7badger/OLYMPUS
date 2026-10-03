@@ -142,7 +142,7 @@ async function fetchAllDispatchCatalogs(): Promise<Record<string, GodDispatchInf
 /* - Per-god rows expand to show the demigods that god can */
 /* dispatch to (static catalog from /api/olympus/god/dispatch- */
 /* graph). Sub-agent cost currently rolls up to the parent god */
-/* (the cost.jsonl schema logs `god`, not `subagent`). */
+/* (writer logs subagent (olympus-hooks.ts:190,1031), consumer readRealCosts() (olympus.ts:1124) still aggregates by god only (see #45)). */
 /* - Dropped the "Avg latency" + "Avg success" summary cards — */
 /* they weren't cost-focused. Replaced with "Sub-agent routes" */
 /* (total ECC dispatch capacity across all gods) and "Burn rate" */
