@@ -14,53 +14,120 @@ LOG_FILE="/tmp/olympus-probe-server.log"
 # Portable project root
 cd "$(git rev-parse --show-toplevel)"
 
+# Resolve the REAL listener PID on PROBE_PORT (issue #59: the pidfile
+# records the npm/npx wrapper; the actual `next-server` child is a
+# different process that survives the wrapper's death — and while it
+# lives, Next 16 auto-shifts any subsequent start to 3738 while the
+# health check passes against the STALE server on this port).
+port_listener_pid() {
+  ss -tlnp 2>/dev/null | grep ":${PROBE_PORT}" | grep -oP 'pid=\K[0-9]+' | head -1
+}
+
+assert_port_free() {
+  local waited=0
+  while [[ -n "$(port_listener_pid)" ]] && [[ ${waited} -lt 5 ]]; do
+    sleep 1
+    waited=$((waited + 1))
+  done
+  if [[ -n "$(port_listener_pid)" ]]; then
+    echo "ERROR: port ${PROBE_PORT} still has a listener after stop (issue #59 regression)" >&2
+    return 1
+  fi
+  echo "Port ${PROBE_PORT} is free"
+  return 0
+}
+
+# Issue #59 helper: is `child` a descendant of `ancestor` (up to 6 hops)?
+is_descendant_of() {
+  local child="$1" ancestor="$2" hops=0
+  while [[ -n "${child}" && "${child}" != "1" && ${hops} -lt 6 ]]; do
+    child=$(ps -o ppid= -p "${child}" 2>/dev/null | tr -d ' ')
+    [[ "${child}" == "${ancestor}" ]] && return 0
+    hops=$((hops + 1))
+  done
+  return 1
+}
+
 start_server() {
   # Clean up any existing
   stop_server >/dev/null 2>&1 || true
-  
+
   # Start server in background with nohup
   nohup npx next dev -p "${PROBE_PORT}" -H "${PROBE_HOST}" > "${LOG_FILE}" 2>&1 &
   local pid=$!
   echo "${pid}" > "${PID_FILE}"
   echo "Started server PID ${pid}"
-  
+
   # Readiness loop: 20 attempts × 1s (B3 measured 14s cold start)
   for i in {1..20}; do
     if curl -s --max-time 3 "${PROBE_URL}" >/dev/null 2>&1; then
-      echo "Server ready at ${PROBE_URL} (PID ${pid})"
+      # Issue #59: record the REAL next-server listener, not just the
+      # wrapper. If the port is shadowed by a pre-existing server, say so
+      # loudly — the health check passing against a stale server is the
+      # exact failure mode this guards against.
+      local real_pid
+      real_pid=$(port_listener_pid)
+      if [[ -n "${real_pid}" && "${real_pid}" != "${pid}" ]]; then
+        echo "${real_pid}" > "${PID_FILE}.realpid"
+        echo "Real next-server listener PID ${real_pid} recorded (${PID_FILE}.realpid)"
+        if ! is_descendant_of "${real_pid}" "${pid}"; then
+          echo "WARNING: listener ${real_pid} is NOT a descendant of wrapper ${pid} — a stale server may be shadowing the port" >&2
+        fi
+      fi
+      echo "Server ready at ${PROBE_URL} (wrapper PID ${pid}, listener PID ${real_pid:-unknown})"
       return 0
     fi
     sleep 1
   done
-  
+
   echo "ERROR: Server failed to become ready" >&2
   stop_server
   return 1
 }
 
 stop_server() {
+  # 1. TERM the recorded wrapper PID (graceful, as before).
   if [[ -f "${PID_FILE}" ]]; then
     local pid
     pid=$(cat "${PID_FILE}" 2>/dev/null || echo "")
     if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
-      echo "Stopping server PID ${pid}..."
+      echo "Stopping server wrapper PID ${pid}..."
       kill -TERM "${pid}" 2>/dev/null || true
-      # Wait up to 5s for graceful shutdown
       for i in {1..5}; do
         if ! kill -0 "${pid}" 2>/dev/null; then
-          echo "Server stopped gracefully (PID ${pid}, exit code 0)"
-          rm -f "${PID_FILE}"
-          return 0
+          echo "Wrapper stopped gracefully (PID ${pid})"
+          break
         fi
         sleep 1
       done
-      # Force kill
       kill -KILL "${pid}" 2>/dev/null || true
-      sleep 1
-      echo "Server force-killed (PID ${pid}, exit code 137)"
     fi
   fi
   rm -f "${PID_FILE}"
+
+  # 2. Issue #59: kill whatever still LISTENS on the port — the real
+  #    next-server child survives the wrapper. TERM, wait up to 5s, KILL.
+  local listener
+  listener=$(port_listener_pid)
+  if [[ -n "${listener}" ]]; then
+    echo "Killing real listener on port ${PROBE_PORT} (PID ${listener})..."
+    kill -TERM "${listener}" 2>/dev/null || true
+    for i in {1..5}; do
+      [[ -z "$(port_listener_pid)" ]] && break
+      sleep 1
+    done
+    if [[ -n "$(port_listener_pid)" ]]; then
+      kill -KILL "$(port_listener_pid)" 2>/dev/null || true
+      sleep 1
+      echo "Real listener force-killed on port ${PROBE_PORT}"
+    else
+      echo "Real listener stopped gracefully on port ${PROBE_PORT}"
+    fi
+  fi
+  rm -f "${PID_FILE}.realpid"
+
+  # 3. Final assertion: the port must be free.
+  assert_port_free
 }
 
 soak() {
