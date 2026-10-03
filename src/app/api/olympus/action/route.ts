@@ -42,6 +42,26 @@ const STARTUP_TIMEOUT_MS = 120_000; // 120 seconds
 // Total max runtime — if opencode runs longer than this, we kill it.
 const MAX_RUNTIME_MS = 10 * 60_000; // 10 minutes
 
+// Issue #51: unattended mode. When a caller declares body.unattended on a
+// prompt, the run has no human on the other end — probes, batch harnesses,
+// scheduled/automated jobs. The brainstorming skill (and siblings) enforce a
+// HARD-GATE of "present design → wait for user approval", which stalls such
+// runs forever (12a probes T5b/T6b stalled at the Q&A phase until the
+// harness deadline). This directive is prepended IN-BAND to the spawned run
+// so it overrides any skill-level gate the model loads mid-run; the
+// OLYMPUS_UNATTENDED=1 env (same pattern as OLYMPUS_MANAGED) additionally
+// lets the plugin emit an unattended_mode telemetry event (session.created
+// hook) and lets future code-side gates key off the flag. Default behavior
+// is UNCHANGED when the flag is absent.
+const UNATTENDED_DIRECTIVE = [
+  '[OLYMPUS UNATTENDED MODE]',
+  'This run is unattended: no human will read or answer anything until it finishes.',
+  '- Never ask questions and never wait for a reply — not for clarifications, approvals, design review, or spec sign-off.',
+  '- This explicitly overrides any skill-level HARD-GATE or "wait for the user" instruction (e.g. the brainstorming skill\'s interview and approval gates): satisfy those gates yourself and say you did.',
+  '- Decide and proceed with sensible defaults. State every assumption you made explicitly in your final output.',
+  '',
+].join('\n');
+
 /**
  * POST /api/olympus/action
  *
@@ -178,6 +198,12 @@ export async function POST(req: NextRequest) {
       : action === 'context'
         ? `[Additional context from user] ${text}`
         : text;
+    // Issue #51: caller-declared unattended run (probes / batch harnesses /
+    // scheduled jobs). The classifier still sees the RAW prompt so routing
+    // semantics do not shift between attended and unattended runs of the
+    // same task; the directive is prepended only to the spawned run text.
+    const unattended = action === 'prompt' && body.unattended === true;
+    const runText = unattended ? UNATTENDED_DIRECTIVE + promptText : promptText;
     const classification = classifyTask(promptText);
     const classificationEnv = serializeClassification(classification);
 
@@ -199,9 +225,11 @@ export async function POST(req: NextRequest) {
 
     return streamWarm(req, {
       conversationId,
-      text: promptText,
+      text: runText,
       agent: 'apollo',
-      extraEnv: { OLYMPUS_TASK_CLASSIFICATION: classificationEnv },
+      extraEnv: unattended
+        ? { OLYMPUS_TASK_CLASSIFICATION: classificationEnv, OLYMPUS_UNATTENDED: '1' }
+        : { OLYMPUS_TASK_CLASSIFICATION: classificationEnv },
       meta: { action, node: undefined, cli: `opencode run --format json --agent apollo <text>` },
       classification,
     });

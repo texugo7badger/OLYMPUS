@@ -794,6 +794,12 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
   // Track the last-seen agent so we can detect agent transitions
   let lastAgentId: string | null = null;
 
+  // Issue #51: sessions running in unattended mode (detected via the
+  // [OLYMPUS UNATTENDED MODE] in-band marker — see the chat.message hook
+  // below for why in-band and not env). Dedupes the telemetry event per
+  // session and lets future code-side gates key off it.
+  const unattendedSessions = new Set<string>();
+
   const log = (level: "debug" | "info" | "warn" | "error", message: string) =>
     client.app.log({ body: { service: "olympus", level, message } });
 
@@ -1164,6 +1170,52 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
     },
 
     /**
+     * Chat Message Hook — parse OLYMPUS in-band markers from incoming user
+     * messages (issues #51 / #54).
+     *
+     * WHY IN-BAND: the warm opencode server (`opencode serve`) is a single
+     * shared, already-running process. Per-request env vars passed by the
+     * action API (OLYMPUS_UNATTENDED, OLYMPUS_TASK_CLASSIFICATION) only
+     * reach ONE-SHOT spawns (`opencode run`, where extraEnv is applied at
+     * spawn time) — env cannot be delivered per-message to the warm
+     * server. The action API therefore prepends explicit markers to the
+     * message text; this hook parses them and records per-session state +
+     * telemetry, which works identically on warm and one-shot paths.
+     */
+    "chat.message": async (
+      input: { sessionID: string },
+      output: { parts?: Array<{ type?: string; text?: string }> | null },
+    ) => {
+      try {
+        const text = (output?.parts ?? [])
+          .filter((p) => p?.type === "text" && typeof p.text === "string")
+          .map((p) => p.text as string)
+          .join("\n");
+        if (!text) return;
+
+        // Issue #51: unattended-mode marker → telemetry event, deduped
+        // per session. Residual risk (disclosed): a god quoting the marker
+        // into a dispatched subtask would mark the sub-session too —
+        // cosmetic only (an extra telemetry line, no behavior gate reads
+        // this yet).
+        if (text.includes("[OLYMPUS UNATTENDED MODE]")) {
+          if (!unattendedSessions.has(input.sessionID)) {
+            unattendedSessions.add(input.sessionID);
+            appendActivityFeed({
+              ts: new Date().toISOString(),
+              god: "apollo",
+              action: "unattended_mode",
+              msg: `Unattended mode active for session ${input.sessionID}: no human will answer questions; Q&A/approval gates must be self-satisfied`,
+              meta: { session_id: input.sessionID, source: "in-band marker" },
+            });
+          }
+        }
+      } catch {
+        // Never let marker parsing break message delivery.
+      }
+    },
+
+    /**
      * Session Idle Hook — fire Callimachus heartbeat + finalize open dispatches.
      *
      * Finalizes any open dispatches before the heartbeat runs, so
@@ -1253,6 +1305,21 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         action: "session_start",
         msg: "Olympus session started (VaultBrain v3.0)",
       });
+
+      // Issue #51: unattended mode declared via env — this only fires for
+      // ONE-SHOT spawns (opencode run), where the action API's extraEnv
+      // reached this process at spawn time. The WARM server is shared and
+      // already running, so warm runs declare unattended mode in-band
+      // instead — parsed by the chat.message hook below.
+      if (process.env.OLYMPUS_UNATTENDED === '1') {
+        appendActivityFeed({
+          ts: new Date().toISOString(),
+          god: "apollo",
+          action: "unattended_mode",
+          msg: "Unattended mode active (env OLYMPUS_UNATTENDED=1): no human will answer questions; Q&A/approval gates must be self-satisfied",
+          meta: { source: "env" },
+        });
+      }
 
       // Fire-and-forget: ask the brain-stats API for a strategy recommendation.
       // The API returns a recommendation; if it differs from the current
