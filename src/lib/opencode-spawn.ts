@@ -139,6 +139,68 @@ export function findOpencodeBinary(root: string = findOlympusRoot()): string | n
  * The env is built FRESH on every call (no caching) so changes to .env
  * files are picked up without a server restart.
  */
+
+/**
+ * Issue #56 (BATCH 12d): free-strategy spawn preflight. Checks the same
+ * key sources as scripts/apply-strategy.js (OpenCode auth.json FIRST,
+ * then app env) — the old warning checked env only, a false negative for
+ * every user whose keys live in OpenCode's own provider settings.
+ * Returns a single structured message: either an INFO line (key located)
+ * or a multi-line PREFLIGHT ERROR naming the missing key, the exact
+ * remedy, and the alternative free strategies whose keys ARE present.
+ * Purely diagnostic — never blocks the spawn, never switches strategies.
+ */
+export function freeTierPreflight(strategy: string): string {
+  // Key presence, auth.json first (Priority 1) — env is checked by the
+  // caller's chain (we only reach here when NO env free key is set).
+  const present = new Set<string>();
+  for (const dir of [join(homedir(), '.local', 'share', 'opencode'), join(homedir(), '.config', 'opencode')]) {
+    const authFile = join(dir, 'auth.json');
+    if (!existsSync(authFile)) continue;
+    try {
+      const auth = JSON.parse(readFileSync(authFile, 'utf-8'));
+      const has = (v: unknown) => typeof v === 'string' ? v.length > 0 : (!!v && typeof (v as { key?: unknown }).key === 'string');
+      if (has(auth.openrouter)) present.add('openrouter');
+      if (has(auth.groq)) present.add('groq');
+      if (has(auth.nvidia)) present.add('nvidia');
+    } catch { /* unreadable auth — fall through to the guidance */ }
+  }
+
+  // Required key per strategy (same semantics as validateFreeFallbackKeys:
+  // free-nvidia-build needs NVIDIA; every other free strategy needs
+  // OpenRouter ids, which work with openrouter OR nvidia keys present).
+  const needsNvidiaOnly = strategy === 'free-nvidia-build';
+  const satisfied = needsNvidiaOnly
+    ? present.has('nvidia')
+    : present.has('openrouter') || present.has('nvidia');
+
+  if (satisfied) {
+    const source = needsNvidiaOnly ? 'nvidia' : (present.has('openrouter') ? 'openrouter' : 'nvidia');
+    return `[opencode-spawn] INFO: strategy '${strategy}' — required key found in OpenCode auth.json (${source}). No env key needed; proceeding.`;
+  }
+
+  const missing = needsNvidiaOnly ? 'NVIDIA_API_KEY' : 'OPENROUTER_API_KEY';
+  const remedy = needsNvidiaOnly
+    ? 'add NVIDIA as a provider inside OpenCode (Settings → Providers) or export NVIDIA_API_KEY — free key at https://build.nvidia.com'
+    : 'add OpenRouter as a provider inside OpenCode (Settings → Providers) or export OPENROUTER_API_KEY — free key at https://openrouter.ai/keys';
+  const alternatives: string[] = [];
+  if (needsNvidiaOnly) {
+    if (present.has('openrouter')) alternatives.push('free-openrouter / free-big-pickle (OpenRouter key present)');
+  } else if (present.has('nvidia')) {
+    alternatives.push('free-nvidia-build (NVIDIA key present)');
+  }
+  const altLine = alternatives.length
+    ? `  Alternatives whose key IS present: ${alternatives.join('; ')} — switch explicitly via: node scripts/apply-strategy.js --strategy <id>\n`
+    : '  No alternative free strategy has a key present either.\n';
+  return [
+    `[opencode-spawn] FREE-STRATEGY PREFLIGHT ERROR (strategy: ${strategy})`,
+    `  Missing: ${missing} — ${strategy} cannot make model requests without it; runs will fail with APIError.`,
+    `  Remedy: ${remedy}.`,
+    altLine.trimEnd(),
+    '  No strategy was auto-switched (no silent downgrade). The spawn proceeds and will fail until the key is added.',
+  ].join('\n');
+}
+
 export function buildOpencodeEnv(
   root: string = findOlympusRoot(),
   extraEnv: Record<string, string> = {},
@@ -222,7 +284,20 @@ export function buildOpencodeEnv(
   } else if (env.NVIDIA_API_KEY) {
     console.log('[opencode-spawn] NVIDIA_API_KEY is set (' + env.NVIDIA_API_KEY.substring(0, 8) + '...)');
   } else if (isFreeStrategy) {
-    console.log('[opencode-spawn] WARNING: No free-tier API keys found. The Free strategy will fail with APIError.');
+    // Issue #56 (BATCH 12d): the old single-line warning checked ONLY the
+    // app env — a false negative whenever the key lives in OpenCode's own
+    // auth.json (the 12b finding: 7x "No free-tier API keys found" while
+    // auth.json HAD all three). Emit ONE structured preflight that checks
+    // the same priority chain as apply-strategy (auth.json first, then
+    // env), names the exact remedy, and names the alternatives whose keys
+    // ARE present. NEVER auto-switches — explicit guidance only; the spawn
+    // proceeds (no silent downgrade, no behavior gate).
+    const preflight = freeTierPreflight(activeStrategy);
+    if (preflight.startsWith('[opencode-spawn] FREE-STRATEGY PREFLIGHT ERROR')) {
+      console.error(preflight);
+    } else {
+      console.log(preflight);
+    }
   }
 
   // Useful context for the spawned opencode process.

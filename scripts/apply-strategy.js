@@ -111,6 +111,10 @@ const OPENCODE_AUTH_DIRS = [
 // powerful free models available RIGHT NOW instead of a hardcoded list that
 // goes stale. The curated defaults below remain the offline fallback.
 const FREE_MODELS_FILE = path.join(OLYMPUS_HOME, 'free-models.json');
+
+// Issue #56 (BATCH 12d): set by --force in main() BEFORE any model-map build;
+// consulted by getModelMap's free-openrouter gate and main's validation catch.
+let FORCE_FREE_APPLY = false;
 const FREE_MODELS_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function loadFreeModelsRefresh() {
@@ -732,11 +736,27 @@ function getModelMap(strategy) {
   if (strategy === 'free-openrouter') {
     // The OpenRouter-only split of the Free config. Requires an OpenRouter
     // key — OpenRouter models cannot be requested without one.
-    const keys = validateFreeFallbackKeys('free-openrouter');
-    if (!keys.openrouter) {
+    // Issue #56 (BATCH 12d): --force (module flag set in main) is the
+    // explicit escape hatch — validateFreeFallbackKeys itself throws when
+    // NO free key exists at all, so the force path must wrap the call.
+    let keys;
+    try {
+      keys = validateFreeFallbackKeys('free-openrouter');
+    } catch (e) {
+      if (FORCE_FREE_APPLY) {
+        log(`  WARNING: free-openrouter key validation FAILED, but --force given — building the map anyway; model requests will fail with APIError until the key is added.`);
+        keys = { openrouter: false, nvidia: false };
+      } else {
+        throw e;
+      }
+    }
+    if (!keys.openrouter && !FORCE_FREE_APPLY) {
       throw new Error(
         `free-openrouter requires an OpenRouter API key — configure OpenRouter inside OpenCode (Settings → Providers) or use free-big-pickle instead.`
       );
+    }
+    if (!keys.openrouter && FORCE_FREE_APPLY) {
+      log(`  WARNING: building free-openrouter WITHOUT an OpenRouter key (--force) — model requests will fail with APIError until the key is added.`);
     }
     return buildOpenRouterMixed();
   }
@@ -1611,6 +1631,9 @@ Options:
                        custom-<id>
   --refresh-models   Re-fetch the live free model lists before applying
                      (runs scripts/refresh-free-models.js first)
+  --force            Bypass the free-tier key validation error (apply the
+                     free strategy anyway, taking responsibility for the
+                     APIError failures until the key is added). Issue #56.
   --impeccable       Force Athena's K3 upgrade (GO strategies only —
                      also upgrades Athena's UI demigods). Ignored on
                      Zen / free strategies.
@@ -1678,6 +1701,7 @@ function main() {
   let doStatus = false;
   let refreshModels = false;
   let keepOverrides = false;
+  let forceApply = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--strategy' && args[i + 1]) {
@@ -1685,6 +1709,9 @@ function main() {
       i++;
     } else if (args[i] === '--impeccable') {
       forceImpeccable = true;
+    } else if (args[i] === '--force') {
+      forceApply = true;
+      FORCE_FREE_APPLY = true;
     } else if (args[i] === '--dry-run') {
       dryRun = true;
     } else if (args[i] === '--refresh-models') {
@@ -1760,6 +1787,9 @@ function main() {
     modelMap = getModelMap(strategy);
   } catch (e) {
     log(`ERROR: ${e.message}`);
+    if (isFreeTierStrategy(strategy) && !forceApply) {
+      log(`  (Re-run with --force to apply anyway, taking responsibility for the failures.)`);
+    }
     process.exit(1);
   }
 
@@ -1769,8 +1799,27 @@ function main() {
       const keys = validateFreeFallbackKeys(strategy);
       log(`Free-tier keys present: openrouter=${keys.openrouter}, nvidia=${keys.nvidia}`);
     } catch (e) {
-      log(`ERROR: ${e.message}`);
-      process.exit(1);
+      if (forceApply) {
+        // Issue #56 (BATCH 12d): --force is the explicit escape hatch —
+        // the operator takes responsibility for a strategy whose key is
+        // missing. Loud, never silent.
+        log(`WARNING: free-tier key validation FAILED, but --force given — applying anyway.`);
+        log(`  Runs on '${strategy}' will fail with APIError until the key is added.`);
+        log(`  Guidance:\n${e.message}`);
+      } else {
+        log(`ERROR: ${e.message}`);
+        log(`  (Re-run with --force to apply anyway, taking responsibility for the failures.)`);
+        process.exit(1);
+      }
+    }
+    // Issue #56 (BATCH 12d): stale free-model cache. loadFreeModelsRefresh
+    // silently returns null when ~/.olympus/free-models.json is absent or
+    // older than 24h — the strategy then routes gods to the curated list,
+    // which may reference DEAD endpoints (the 12b finding: fetched_at was
+    // two months old). ONE loud warning naming the fix, never silent.
+    if (!loadFreeModelsRefresh()) {
+      log(`WARNING: free-models.json is missing or older than 24h — gods will be routed to the curated offline list, which may reference dead endpoints.`);
+      log(`  Refresh with: node scripts/apply-strategy.js --strategy ${strategy} --refresh-models`);
     }
   }
 

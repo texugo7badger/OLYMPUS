@@ -47,3 +47,18 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | D3-3 | post-cleanup regression: dead code removed (leftover finalRuns block + unreachable guard + redundant id checks), self-test still 10/10, eslint green | re-run + eslint | `self-test still 10/10 green` / `eslint green` |
 | D3-4 | real-feed smoke: run-mode records correct (12c P2 pair = run with planner attached) | `telemetry-slice.mjs --since 2026-10-03T16:26:00Z` | `{"ts":"2026-10-03T16:26:44.602Z","routeTo":"apollo",…,"demigods":["planner"],…}` |
 | D3-5 | event-mode smoke: live P1 dispatch event retrievable with budget fields visible | `telemetry-slice.mjs --since … --action symphony-dispatch` | event with `budget_tokens:100, output_shape:"one-line acknowledgment"` |
+
+## Phase 4 — issue #56: free-strategy preflight + explicit fallback guidance
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| D4-1 | discovery: apply-time key validation ALREADY existed incl. auth.json priority (why the user's free-openrouter apply succeeded in 12b); real gaps = no TTL check, no --force, spawn-time env-only false negative | `sed -n` of validateFreeFallbackKeys + main | priority chain auth.json → llm-providers → .env → env; hard error w/ guidance; free-models TTL silently null on stale |
+| D4-2 | spawn-time preflight: structured, auth.json-first, remedy + alternatives, never auto-switches | `git diff src/lib/opencode-spawn.ts` | freeTierPreflight() replaces the bare env-only warning |
+| D4-3 | spawn-time state matrix 9/9 (INFO when key located; ERROR block naming missing key + remedy + alternatives + no-auto-switch wording; alt-naming for free-nvidia-build w/ only-openrouter key) | `npx tsx /tmp/opencode/p4-spawn-matrix.mts` | 9× PASS, exit 0 |
+| D4-4 | apply-time M1 (real home: keys present × cache stale): keys-present log + NEW stale-cache warning with exact refresh command, exit 0 | `node scripts/apply-strategy.js --strategy free-openrouter --dry-run` (real HOME) | `Free-tier keys present: openrouter=true, nvidia=true` + `WARNING: free-models.json is missing or older than 24h…` + `Refresh with: node scripts/apply-strategy.js --strategy free-openrouter --refresh-models` |
+| D4-5 | apply-time M2 (keys absent, no force): hard ERROR + exit 1 + --force hint | `HOME=/tmp/opencode/p4-fakehome3 node … --dry-run` | exit 1; `Re-run with --force…` count 1 |
+| D4-6 | apply-time M3 (keys absent + --force): exit 0 with THREE loud warnings (map-build ×2 + validation) + stale warning + dry-run completes | same + `--force` | exit 0; all warnings present; `** DRY RUN — would have made 1 change(s). Not writing. **` |
+| D4-7 | M3 needed two iterations (getModelMap's inner validateFreeFallbackKeys throw escaped the first gate; second iteration wrapped the call site) — disclosed | m3.log vs m3c.log | first attempt exit 1 → root-caused → wrapped → exit 0 |
+| D4-8 | apply-time M4 (keys + FRESH cache): keys present, ZERO stale warnings | fake home + fresh free-models.json | exit 0; stale-warning grep count 0 |
+| D4-9 | LIVE spawn-side evidence: one-shot probe (serve killed → app-side spawn) → the new INFO preflight in the harness log; the 12b false-negative warning is GONE | kill serve → probe → `strings /tmp/olympus-probe-server.log \| grep opencode-spawn` | `[opencode-spawn] INFO: strategy 'free-openrouter' …` (full: required key found in OpenCode auth.json) |
+| D4-10 | interpretation disclosed: the spawn preflight is diagnostic (structured error + guidance; spawn proceeds — no behavior gate, no auto-switch), per the batch's "fallback is EXPLICIT guidance" framing | reasoning | — |
