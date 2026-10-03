@@ -70,6 +70,7 @@ import {
 } from "./lib/instinct-mutations.js";
 // MCP API key gate.
 import { isMcpApiKeyConfigured, mcpGateErrorMessage } from "./lib/mcp-gate.js";
+import { rememberClassificationId, getClassificationId } from "./lib/classification-context.js";
 import instinctQueryTool from "./tools/instinct-query.js";
 import subAgentInstinctQueryTool from "./tools/sub-agent-instinct-query.js";
 import shortcircuitTool from "./tools/shortcircuit.js";
@@ -1061,6 +1062,11 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         const stack = (process.env.OLYMPUS_ACTIVE_STACK || null);
         const project = (process.env.OLYMPUS_ACTIVE_PROJECT || null);
 
+        // Issue #54: stamp the run's classificationId (parsed from the
+        // in-band [OLYMPUS-CLASSIFICATION id=...] marker by the chat.message
+        // hook) onto the dispatch event + open-dispatch record.
+        const classificationId = getClassificationId(input.sessionID);
+
         registerOpenDispatch({
           dispatchId: input.callID || `${dispatchGod}-${demigod}-${Date.now()}`,
           god: dispatchGod,
@@ -1072,6 +1078,7 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           taskSignature,
           stack,
           project,
+          classificationId,
         });
 
         appendActivityFeed({
@@ -1084,6 +1091,7 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           mcp_enabled: mcp,
           instinct_id: instinctId,
           short_circuited: shortCircuited,
+          classification_id: classificationId,
           stack,
           project,
           msg: `Dispatched to ${demigod} for "${taskSignature.slice(0, 100)}"`,
@@ -1209,6 +1217,16 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
               meta: { session_id: input.sessionID, source: "in-band marker" },
             });
           }
+        }
+
+        // Issue #54: classification marker → per-session join key. The
+        // action API prepends [OLYMPUS-CLASSIFICATION id=cls_... routeTo=...]
+        // to every prompt; the dispatch writers stamp the id onto dispatch
+        // + dispatch_outcome events so agreement-metric can join exactly
+        // instead of by ts-proximity.
+        const clsMatch = text.match(/\[OLYMPUS-CLASSIFICATION id=([A-Za-z0-9_-]+)[^\]]*\]/);
+        if (clsMatch) {
+          rememberClassificationId(input.sessionID, clsMatch[1]);
         }
       } catch {
         // Never let marker parsing break message delivery.

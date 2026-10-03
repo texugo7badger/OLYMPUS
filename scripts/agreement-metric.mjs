@@ -8,14 +8,22 @@
  * measurable execution record — "NOT MEASURABLE via current telemetry".
  * This script makes it measurable from the live activity feed alone.
  *
- * JOIN KEY (see Batch 12a report section 1):
- *   Classification events and dispatch events share NO sessionID and NO
- *   conversationId today, so the only available join is ts proximity within
- *   one run: each dispatch is paired with the most recent classification
- *   that precedes it inside the --window-min window. A run boundary is
- *   therefore approximated, not recorded. When runs overlap or a dispatch
- *   fires late, pairs can be ambiguous — unjoined buckets below surface
- *   exactly that, first-class (not noise).
+ * JOIN KEY (see Batch 12a report section 1; id-join added in Batch 12b, issue #54):
+ *   1. EXACT-ID JOIN (preferred): classification events carry
+ *      meta.classificationId and dispatch events (symphony-dispatch,
+ *      dispatch, dispatch_outcome) carry classification_id — both stamped
+ *      from the in-band [OLYMPUS-CLASSIFICATION id=cls_...] marker the
+ *      action API prepends. Pairs joined this way are immune to
+ *      overlapping runs and late dispatches; each pair is tagged
+ *      join:"id".
+ *   2. TS-PROXIMITY FALLBACK (backward compatible): events without ids
+ *      (historical windows, unmarked manual runs) pair each dispatch with
+ *      the most recent classification that precedes it inside the
+ *      --window-min window, exactly as before; pairs are tagged join:"ts".
+ *   A dispatch whose id matches NO classification in the window falls back
+ *   to ts-proximity; if that also finds nothing it lands in
+ *   UNJOINED-DISPATCH. UNJOINED buckets stay first-class findings, not
+ *   noise.
  *
  * EXECUTION RECORDS (two writers, both accepted):
  *   - action "symphony-dispatch" — written by the olympus-dispatch tool
@@ -134,8 +142,20 @@ function isClassification(ev) {
     && ev.meta && typeof ev.meta.routeTo === 'string' && ev.meta.routeTo.length > 0;
 }
 
+/** Issue #54: the classification event's join key (null for pre-12b events). */
+function classificationId(ev) {
+  const id = ev.meta && (ev.meta.classificationId || ev.meta.classification_id);
+  return typeof id === 'string' && id ? id : null;
+}
+
 function isDispatch(ev) {
   return ev.action === 'dispatch' || ev.action === 'symphony-dispatch';
+}
+
+/** Issue #54: the dispatch event's join key (null for pre-12b events). */
+function dispatchClassificationId(ev) {
+  const id = ev.classification_id ?? ev.classificationId;
+  return typeof id === 'string' && id ? id : null;
 }
 
 /**
@@ -165,24 +185,46 @@ function main() {
 
   const windowMs = args.windowMin * 60_000;
 
-  // Join: each dispatch pairs with the most recent classification before it
-  // inside the window. Classifications may serve multiple dispatches (one
-  // intent, N demigod dispatches per run); a classification with no dispatch
-  // after it inside the window lands in UNJOINED-CLASSIFICATION.
+  // Index classifications by id for the exact-ID join (issue #54).
+  const classificationsById = new Map();
+  for (const c of classifications) {
+    const id = classificationId(c);
+    if (id && !classificationsById.has(id)) classificationsById.set(id, c);
+  }
+
+  // Join (issue #54):
+  //   1. Exact-ID: dispatch.classification_id === classification.meta.classificationId
+  //      → pair, join:"id". Immune to overlapping runs.
+  //   2. TS-proximity fallback (pre-12b events): most recent classification
+  //      before the dispatch inside the window → pair, join:"ts".
+  //   3. Neither → UNJOINED-DISPATCH.
+  // Classifications may serve multiple dispatches (one intent, N demigod
+  // dispatches per run); a classification with no dispatch after it inside
+  // the window lands in UNJOINED-CLASSIFICATION.
   const pairs = [];
   const joinedClassificationIdx = new Set();
   const unjoinedDispatches = [];
 
   for (const d of dispatches) {
     const dTs = new Date(d.ts).getTime();
+    const dId = dispatchClassificationId(d);
     let best = null;
-    for (let i = 0; i < classifications.length; i++) {
-      const c = classifications[i];
-      const cTs = new Date(c.ts).getTime();
-      if (cTs <= dTs && dTs - cTs <= windowMs && (!best || cTs > new Date(best.ts).getTime())) {
-        best = c;
+    let joinMode = null;
+
+    if (dId && classificationsById.has(dId)) {
+      best = classificationsById.get(dId);
+      joinMode = 'id';
+    } else {
+      for (let i = 0; i < classifications.length; i++) {
+        const c = classifications[i];
+        const cTs = new Date(c.ts).getTime();
+        if (cTs <= dTs && dTs - cTs <= windowMs && (!best || cTs > new Date(best.ts).getTime())) {
+          best = c;
+        }
       }
+      if (best) joinMode = 'ts';
     }
+
     if (best) {
       joinedClassificationIdx.add(classifications.indexOf(best));
       const intent = best.meta.routeTo;
@@ -193,6 +235,8 @@ function main() {
         executed,
         demigod: typeof d.demigod === 'string' ? d.demigod : null,
         match: intent === executed,
+        join: joinMode,
+        classification_id: dId,
         dispatch_ts: d.ts,
       });
     } else {
@@ -204,6 +248,7 @@ function main() {
 
   const matches = pairs.filter((p) => p.match).length;
   const agreementRate = pairs.length ? matches / pairs.length : null;
+  const idJoined = pairs.filter((p) => p.join === 'id').length;
 
   const summary = {
     feed: feedPath,
@@ -215,6 +260,8 @@ function main() {
     classifications: classifications.length,
     dispatches: dispatches.length,
     joined_pairs: pairs.length,
+    id_joined_pairs: idJoined,
+    ts_joined_pairs: pairs.length - idJoined,
     matches,
     mismatches: pairs.length - matches,
     agreement_rate: agreementRate === null ? null : Math.round(agreementRate * 1000) / 1000,
@@ -234,11 +281,11 @@ function main() {
   console.log(`# demigod resolution: ${demigodGodMap.size} names from ${args.demigodDir}`);
   console.log('');
   for (const p of pairs) {
-    console.log(JSON.stringify({ ts: p.ts, intent: p.intent, executed: p.executed, match: p.match }));
+    console.log(JSON.stringify({ ts: p.ts, intent: p.intent, executed: p.executed, match: p.match, join: p.join, classification_id: p.classification_id ?? null }));
   }
   console.log('');
   console.log(`classifications: ${summary.classifications}  dispatches: ${summary.dispatches}`);
-  console.log(`joined pairs: ${summary.joined_pairs}  matches: ${summary.matches}  mismatches: ${summary.mismatches}`);
+  console.log(`joined pairs: ${summary.joined_pairs} (id: ${summary.id_joined_pairs}, ts: ${summary.ts_joined_pairs})  matches: ${summary.matches}  mismatches: ${summary.mismatches}`);
   console.log(`agreement rate: ${summary.agreement_rate === null ? 'N/A (no joined pairs)' : summary.agreement_rate}`);
   console.log(`UNJOINED-CLASSIFICATION (intent, no execution record): ${summary.unjoined_classification}`);
   for (const ts of summary.unjoined_classification_ts) console.log(`  ${ts}`);

@@ -51,6 +51,8 @@ export interface OpenDispatch {
   mcp: string | null;
   /** The task signature dispatched. */
   taskSignature: string;
+  /** Issue #54 join key: the classificationId of the run that opened this dispatch (from the in-band marker). */
+  classificationId: string | null;
   /** Active stack(s) when the dispatch was opened. */
   stack: string | null;
   /** Active project slug when the dispatch was opened. */
@@ -156,6 +158,7 @@ export function registerOpenDispatch(input: {
   skill?: string | null;
   mcp?: string | null;
   taskSignature: string;
+  classificationId?: string | null;
   stack?: string | null;
   project?: string | null;
 }): void {
@@ -181,6 +184,7 @@ export function registerOpenDispatch(input: {
     skill: input.skill ?? null,
     mcp: input.mcp ?? null,
     taskSignature: input.taskSignature,
+    classificationId: input.classificationId ?? null,
     stack: input.stack ?? null,
     project: input.project ?? null,
     startTs: new Date().toISOString(),
@@ -298,6 +302,7 @@ function finalizeDispatch(
       mcp_enabled: d.mcp,
       instinct_id: d.instinctId,
       short_circuited: d.shortCircuited,
+      classification_id: d.classificationId,
       outcome,
       duration_ms: durationMs,
       tokens_used: d.tokensUsed,

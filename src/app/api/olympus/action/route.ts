@@ -198,14 +198,25 @@ export async function POST(req: NextRequest) {
       : action === 'context'
         ? `[Additional context from user] ${text}`
         : text;
+    const classification = classifyTask(promptText);
+    const classificationEnv = serializeClassification(classification);
     // Issue #51: caller-declared unattended run (probes / batch harnesses /
     // scheduled jobs). The classifier still sees the RAW prompt so routing
     // semantics do not shift between attended and unattended runs of the
     // same task; the directive is prepended only to the spawned run text.
     const unattended = action === 'prompt' && body.unattended === true;
-    const runText = unattended ? UNATTENDED_DIRECTIVE + promptText : promptText;
-    const classification = classifyTask(promptText);
-    const classificationEnv = serializeClassification(classification);
+    // Issue #54: in-band classification marker. The classification event
+    // (below) and the plugin-side dispatch writers share this id — the
+    // agreement metric gets an exact join key instead of ts-proximity.
+    // In-band because the warm opencode serve is a shared, already-running
+    // process that per-request env (OLYMPUS_TASK_CLASSIFICATION) cannot
+    // reach; the env payload still carries the id for one-shot spawns.
+    const classificationMarker = action === 'prompt'
+      ? `[OLYMPUS-CLASSIFICATION id=${classification.classificationId} routeTo=${classification.routeTo}] `
+      : '';
+    const runText = unattended
+      ? UNATTENDED_DIRECTIVE + classificationMarker + promptText
+      : classificationMarker + promptText;
 
     // R-C: appendActivity for prompt (not answer/context) — durable run-start audit.
     if (action === 'prompt') {
@@ -214,6 +225,7 @@ export async function POST(req: NextRequest) {
         action: 'classification',
         msg: classification.reason,
         meta: {
+          classificationId: classification.classificationId,
           domain: classification.domain,
           complexity: classification.complexity,
           routeTo: classification.routeTo,

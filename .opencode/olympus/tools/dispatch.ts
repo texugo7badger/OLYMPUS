@@ -75,6 +75,9 @@ import {
   type VibrationalSignature,
   type SignatureEconomyEstimate,
 } from "../../../src/lib/symphony/index.js";
+// Issue #54: per-session classificationId (in-band marker state) for the
+// symphony-dispatch event's join key.
+import { getClassificationId } from "../lib/classification-context.js";
 
 const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), "OLYMPUS-VAULT");
 const OLYMPUS_ROOT = process.env.OLYMPUS_ROOT || process.cwd();
@@ -338,7 +341,7 @@ const dispatchTool: ToolDefinition = tool({
     instinctId?: string;
     stack?: string;
     project?: string;
-  }, _context: any) => {
+  }, context: { sessionID?: string }) => {
     const {
       godId,
       demigod,
@@ -438,6 +441,12 @@ const dispatchTool: ToolDefinition = tool({
         mcp_enabled: mcp || null,
         instinct_id: instinctId || null,
         short_circuited: shortCircuit,
+        // Issue #54 join key: the classificationId of the run that opened
+        // this dispatch (parsed from the in-band [OLYMPUS-CLASSIFICATION
+        // id=...] marker by the chat.message hook). Null on unmarked
+        // sessions (e.g. manual opencode runs) — the metric falls back to
+        // ts-proximity for those.
+        classification_id: getClassificationId(context.sessionID),
         stack: resolvedStack,
         project: resolvedProject,
         signature_id: signature.id,

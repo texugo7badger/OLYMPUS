@@ -11,6 +11,15 @@
 import type { GodId } from './model-strategies';
 
 export interface TaskClassification {
+  /**
+   * Unique id for THIS classification decision (issue #54 join key).
+   * Minted at classification time, echoed through the
+   * OLYMPUS_TASK_CLASSIFICATION env payload AND the in-band
+   * [OLYMPUS-CLASSIFICATION id=...] marker so the plugin-side dispatch
+   * writers can stamp it onto dispatch/dispatch_outcome events — giving
+   * the agreement metric an exact join key instead of ts-proximity.
+   */
+  classificationId: string;
   domain: 'frontend' | 'backend' | 'security' | 'testing' | 'integrations' | 'database' | 'devops' | 'planning' | 'vault-curation';
   complexity: 'trivial' | 'simple' | 'moderate' | 'complex' | 'architectural';
   stack: string[];
@@ -225,6 +234,14 @@ function estimateComplexity(
 // ─── Main entry ───────────────────────────────────────────────────────────────
 
 /**
+ * Mint a unique classification id (issue #54): `cls_<ms-base36><rand>`.
+ * Chronologically sortable, URL-safe, zero dependencies.
+ */
+function mintClassificationId(): string {
+  return `cls_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
  * Classify a user prompt. Pure function — no LLM call, no I/O.
  *
  * Returns a TaskClassification that the action/intake API routes pass to
@@ -243,6 +260,7 @@ export function classifyTask(prompt: string): TaskClassification {
   const reason = `domain=${domain} complexity=${complexity} stacks=[${stacks.join(',')}] files=[${files.length}] planning=${needsPlanning}`;
 
   return {
+    classificationId: mintClassificationId(),
     domain,
     complexity,
     stack: stacks,
