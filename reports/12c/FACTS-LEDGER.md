@@ -78,3 +78,11 @@ re-created from the same command evidence; see WORKLOG incidents.)
 | C9-10 | machine clean: fixed harness killed wrapper AND real listener by port | probe-harness stop output | `Killing real listener on port 3737 (PID 17044)… Port 3737 is free` + serve on 3777 killed by exact PID |
 | C9-11 | opencode.json restored byte-for-byte | sha256sum | `db62995d924ab7313a66db663af7869b2e84c7f47f1a5b35eac76a09ed3c8ff3` (== snapshot) |
 | C9-12 | no listeners on 3737/3738/3740/3777 at close | ss check | `no listeners on 3737/3738/3740/3777` |
+
+## Taxonomy pass (standing rule, retroactive)
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| T-1 | 7/10 issues already on-pattern at pass time | `gh issue view` ×10 (pre-pass) | #51/#54/#55/#56/#57/#58/#59 carried type(scope) prefixes + area labels |
+| T-2 | 3 off-pattern issues fixed in one action each | `gh issue edit 23/50/60` | #23 retitled feat(dev-server)+label; #50 retitled fix(build)+created build label; #60 retitled fix(dev-server), [bug,enhancement]→[bug,dev-server] |
+| T-3 | post-pass state: all 10 issues conform (1 type label + area labels matching scope) | `gh issue view` ×10 (post-pass) | verified verbatim (see report §9) |

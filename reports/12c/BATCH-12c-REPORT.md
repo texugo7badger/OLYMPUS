@@ -222,3 +222,26 @@ bash scripts/probe-harness.sh start && bash scripts/probe-harness.sh stop   # ex
 ```
 
 **The branch + this report are the deliverables. main was pushed exactly once (the authorized Phase-1 merge). night/12c pushed at batch close.**
+
+---
+
+## 9. Taxonomy check (standing rule, applied retroactively at batch close)
+
+Rule received after the report shipped; applied retroactively per its terms. Verified all 10 issues touched by 12b/12c; 7 were already on-pattern (retitled/relabeled upstream between batches), 3 were off-pattern and fixed in the same action as this report. The `build` area label was created (was missing from the label set).
+
+| Issue | Taxonomy (post-fix) | Action taken |
+|-------|---------------------|--------------|
+| #23 | feat(dev-server): agent couldn't read its own dev server stdout [enhancement, dev-server] | RETITLED (was "Track: agent couldn't read its own dev server stdout") + added dev-server label |
+| #50 | fix(build): next build fails — TypeScript errors in motion deps [bug, build] | RETITLED (no prefix) + created+added build label |
+| #51 | feat(autonomy): Unattended runs stall at brainstorming hard-gate [enhancement, autonomy] | already on-pattern |
+| #54 | feat(telemetry): classification events carry no join key for dispatch agreement [enhancement, telemetry] | already on-pattern |
+| #55 | fix(registry): Demigod registry: dispatched names without prompt files (secrets-scanner uncommitted + phantom doc names) [bug, registry] | already on-pattern |
+| #56 | fix(free-tier): Free strategy hard-fails with no provider key: no preflight check, no fallback [bug, free-tier] | already on-pattern |
+| #57 | fix(dev-server): probeServer 401 early-return makes warm-serve adoption impossible (orphan-kill cascade) [bug, dev-server] | already on-pattern |
+| #58 | fix(dev-server): One-shot fallback: 120s startup timeout never wires firstEventAt — long runs killed mid-output [bug, dev-server, harness] | already on-pattern (dev-server scope + harness as genuine secondary area for the repro evidence) |
+| #59 | fix(harness): probe-harness stop kills the npm wrapper, not the next-server child — servers accumulate [bug, harness] | already on-pattern |
+| #60 | fix(dev-server): server-side run continues after SSE client abort; watchdog never kills [bug, dev-server] | RETITLED (no prefix) + RELABELED (was [bug, enhancement] — two type labels; enhancement removed, dev-server added) |
+
+Closure-evidence compliance (rule 4), verified retroactively: all six closures from 12b/12c (#50, #51, #54, #55, #57, #59) link commit SHAs plus test/probe outputs in their closing comments.
+
+No issues were closed or commented during the taxonomy pass itself — retitle/relabel only (pre-authorized by the rule); no state changes.
