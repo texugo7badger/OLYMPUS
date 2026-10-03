@@ -64,7 +64,7 @@ const STACK_KEYWORDS: Record<string, string[]> = {
   terraform:   ['terraform', 'tf ', 'iac', 'infrastructure as code'],
   ci_cd:       ['ci/cd', 'github actions', 'gitlab ci', 'jenkins', 'pipeline'],
   aws:         ['aws', 's3', 'ec2', 'lambda', 'iam', 'cloudwatch'],
-  graphql:     ['graphql', 'gql', 'apollo'],
+  graphql:     ['graphql', 'gql', 'apollo client', 'apollo server'],
 };
 
 /**
@@ -113,6 +113,43 @@ export function extractFilePaths(prompt: string): string[] {
 // ─── Domain + routing ─────────────────────────────────────────────────────────
 
 /**
+ * Canonical god → domain map for EXPLICITLY ADDRESSED gods (issue #54
+ * evidence / RLM memo P5, fixed in BATCH 12c). Atlas has no dedicated
+ * domain in the TaskClassification union — orchestration is closest to
+ * planning.
+ */
+const GOD_DOMAINS: Record<GodId, TaskClassification['domain']> = {
+  apollo: 'planning',
+  atlas: 'planning',
+  artemis: 'security',
+  athena: 'frontend',
+  dionysus: 'testing',
+  hephaestus: 'backend',
+  hermes: 'integrations',
+  persephone: 'database',
+  prometheus: 'devops',
+  callimachus: 'vault-curation',
+};
+
+/**
+ * God names are never stack keywords, and an EXPLICITLY ADDRESSED god
+ * (structured field: godId=apollo / god: hephaestus …) takes precedence
+ * over stack/keyword routing — a prompt that says "dispatch with
+ * godId=apollo" is about Apollo the god, not the Apollo GraphQL client
+ * (BATCH 12b evidence: such prompts were stack-routed to hermes via the
+ * bare 'apollo' keyword, deflating the agreement metric to 0.0).
+ */
+const GOD_ID_UNION = 'apollo|atlas|artemis|athena|dionysus|hephaestus|hermes|persephone|prometheus|callimachus';
+const EXPLICIT_GOD_RE = new RegExp(`\\bgod(?:Id)?\\s*[:=]\\s*["']?(${GOD_ID_UNION})\\b`, 'i');
+
+function explicitGodAddress(prompt: string): { god: GodId; domain: TaskClassification['domain'] } | null {
+  const m = prompt.match(EXPLICIT_GOD_RE);
+  if (!m) return null;
+  const god = m[1].toLowerCase() as GodId;
+  return { god, domain: GOD_DOMAINS[god] };
+}
+
+/**
  * Route the prompt to a god based on detected domain keywords + stacks.
  *
  * The routing is intentionally simple — Apollo (the master planner) is
@@ -131,6 +168,11 @@ function routeToGod(
   files: string[],
 ): { god: GodId; domain: TaskClassification['domain'] } {
   const lower = prompt.toLowerCase();
+
+  // Batch 12c (P5): an explicitly addressed god wins outright — the
+  // caller named the acting agent; stacks and keywords must not override.
+  const addressed = explicitGodAddress(prompt);
+  if (addressed) return addressed;
 
   // Vault-curation triggers — Callimachus.
   if (/\b(compact brain|vault sync|instinct promote|instinct archive|brain backup|brain restore)\b/.test(lower)) {
