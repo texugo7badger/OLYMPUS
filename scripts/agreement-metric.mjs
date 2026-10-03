@@ -173,9 +173,18 @@ function main() {
   const feedPath = path.resolve(args.positional[0]);
   const all = readEvents(feedPath);
 
+  // Window filter compares PARSED timestamps, not raw strings: `date -u`
+  // emits second precision ("…:33Z") while feed events carry milliseconds
+  // ("…:33.166Z") — a string compare misclassifies an event inside the
+  // boundary window by fractional seconds (bit for real during the 12b
+  // warm-path probe: the classification at 10:24:33.166Z was excluded by
+  // --since 10:24:33Z).
+  const sinceMs = args.since ? new Date(args.since).getTime() : null;
+  const untilMs = args.until ? new Date(args.until).getTime() : null;
   const inWindow = all.filter((ev) => {
-    if (args.since && ev.ts < args.since) return false;
-    if (args.until && ev.ts > args.until) return false;
+    const tsMs = new Date(ev.ts).getTime();
+    if (sinceMs !== null && tsMs < sinceMs) return false;
+    if (untilMs !== null && tsMs > untilMs) return false;
     return true;
   });
 
