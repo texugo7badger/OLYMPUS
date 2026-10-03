@@ -63,3 +63,12 @@ Format: `phase | status | commit | next`. Append after every phase.
 - Memo built in 3 passes per protocol: outline → per-section expansion → adversarial critique with corrections folded back (economy_reduction downgraded to clamped heuristic; P4 breadth premise downgraded to unresolved tool-gating; classifier anchors re-verified). 5 DIFF-ONLY proposals tagged 12c/12d/13.
 - phase 4b | DONE | 7b3bb86 (scripts/context-distill.mjs prototype) | next: Phase 5
 - context-distill: --self-test 4/4 green against the Phase 3 fixture; real-feed smoke shows tonight's probe runs correctly (hermes/planner id-joined runs, adoptcheck runs with no dispatches).
+
+## 2026-10-03T10:5xZ — Phase 5: COMPLETE
+
+- phase 5 | DONE | no code commits (probes + snapshot only) | next: Phase 6 (final report)
+- Soak 30 green. P1 review-only: no dispatch (bash only). P3/P4 dispatch-forced: olympus-dispatch → DONE ×2.
+- Phase-5 window: 2/2 id-joined. Full night: 7 joined (4 id / 3 ts), agreement 0.0 (all mismatches = the "apollo"→graphql classifier collision, quadruple-confirmed), 14 unjoined classifications (interactive + no-dispatch runs), 0 unjoined dispatches.
+- 12a NOTE-2 CLOSED: committed 117→118 after registry fix; metric resolves 118; discrepancy was .gitignore *secrets*.
+- All servers stopped (real next-server killed by PID, not wrapper — the harness bug is filed as #59). No strays (ss + pgrep evidence). Pidfiles removed.
+- User state restored byte-for-byte (sha256-verified): opencode.json + active-strategy.json back to free-openrouter; llm-providers.json never touched. The restored opencode.json carries the user's own uncommitted architect-entry removal — their state, not mine.

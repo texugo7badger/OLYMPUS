@@ -69,3 +69,20 @@ Raw values quoted verbatim. No ledger entry → no claim.
 | P3-10 | probe-harness stop never killed the real next-server (wrapper-vs-child) — the 05:35 dev server served ALL evening while newer starts landed on 3738 | `ss -tlnp \| grep 3737` after 4 harness stop/start cycles | `next-server (v1, pid=862427 … STARTED Sat Oct 3 05:35:02)` |
 | P3-11 | after killing the real next-server and restarting once, warm session creation works (no 401, no one-shot) | adoptcheck2 SSE | `▶ dispatching to warm session vs39fnuQ (apollo)` → text `adopted2` → action_done |
 | P3-12 | warm-path dispatch-forced probe runs clean (dispatch tool → DONE) | probe-54warm.sse | `tool.call/tool.response olympus-dispatch` → `TEXT: DONE` → `action_done` |
+
+## Phase 5 — validation soak + metric snapshot
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| P5-1 | soak 30 green before probes | `bash scripts/probe-harness.sh soak 30` | `Soak completed successfully (30s)` |
+| P5-2 | P1 review-only run dispatches NOTHING | probe-5-P1.sse tool scan | `tools called: ["bash"]` — no olympus-dispatch |
+| P5-3 | P3/P4 dispatch-forced runs call olympus-dispatch | probe-5-P3/P4.sse tool scans | `tools called: ["olympus-dispatch"]` ×2 → `TEXT: DONE` |
+| P5-4 | phase-5 window: 2/2 dispatches id-joined (100%) | metric `--since 2026-10-03T10:44:34Z --json` | `joined: 2 (id: 2 / ts: 0)`; PAIRs `"join":"id"` cls_mus9n9krcn9ej8 + cls_mus9oxwtcmcj9w |
+| P5-5 | full-night window numbers | metric `--since 2026-10-03T07:28:00Z --json` | `classifications: 20, dispatches: 7, joined_pairs: 7 (id: 4 / ts: 3), matches: 0, agreement_rate: 0, unjoined_classification: 14, unjoined_dispatch: 0` |
+| P5-6 | every id-joined mismatch is the "apollo"→graphql collision | PAIR lines + classifyTask on probe text | `intent:"hermes", executed:"apollo"/"callimachus"` ×4; classifier reason: `stacks=[graphql]` from the word "apollo" |
+| P5-7 | 12a 117/118 reconciliation CLOSED: committed == on-disk == registry = 118 | `git ls-files …demigods \| wc -l` + metric header | `118` + `demigod resolution: 118 names` (post-fix; was 117 committed / 118 on-disk) |
+| P5-8 | machine clean after run: no listeners, no stray processes | `ss -tlnp \| grep -E "3737\|3740\|3777\|3778"` + pgrep bracket patterns | `no listeners on 3737/3740/3777/3778`; no next-server/next dev/opencode serve/electron |
+| P5-9 | user state restored byte-for-byte from snapshots | sha256sum opencode.json + active-strategy.json vs snapshots | both match: `db62995d…` / `05fa2db6…`; apollo restored to `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free` |
+| P5-10 | llm-providers.json untouched by the night (mtime predates session) | `stat ~/.olympus/llm-providers.json` | `2026-10-03 04:26:07 -0300` (session began 04:31 local) |
+| P5-11 | probe-harness wrapper-vs-child bug filed | `gh issue create` | `…/issues/59` |
+| P5-12 | opencode.json left uncommitted (user's own state, 12a-style disclosure) | `git status --porcelain` | ` M opencode.json` |
