@@ -19,3 +19,18 @@ Raw values quoted verbatim. No ledger entry → no claim.
 | P0-10 | phantom doc names not in registry: verifier-code, sast-scanner, mlops-engineer | `grep -n "verifier-code\|sast-scanner\|mlops-engineer" .opencode/olympus/tools/*.ts` | matches in dispatch.ts:47,295,302,361; shortcircuit.ts:17,42; sub-agent-instinct-query.ts:129,133 |
 | P0-11 | branch created from 2bab1b3 | `git checkout -b night/12b-overnight` | `Switched to a new branch 'night/12b-overnight'` |
 | P0-12 | orphan probe server adopted (PID 795152, prior session's harness) | `ps -o pid,lstart,cmd -p 795152` + log check | `Sat Oct 3 02:15:10 2026 node .../next dev -p 3737`; log file = `/tmp/olympus-probe-server.log` |
+
+## Phase 1 — #50 build verification
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| P1-1 | `npx next build` on the committed tree exits 0 with type check passing | `npx next build > /tmp/opencode/build-before.log` | `✓ Compiled successfully in 54s` / `Running TypeScript ...` / `Finished TypeScript in 7.3s` / `EXIT: 0` |
+| P1-2 | build log contains zero motion references or errors | `grep -iE "error\|motion" /tmp/opencode/build-before.log` | (empty output) |
+| P1-3 | motion files referenced by #50 do not exist in the tree | `find . -name "use-reduced-motion*" -o -name "motion-config*" -o -name "motion-tokens*"` (excl. node_modules) | (no results; `src/hooks/` has only `use-mobile.ts`, `use-toast.ts`) |
+| P1-4 | motion files were NEVER committed on any branch | `git log --all --oneline -- '*use-reduced-motion*' '*motion-config*' '*motion-tokens*'` | (empty) |
+| P1-5 | neither `motion` nor `framer-motion` is a dependency | `node -e` over package.json | `motion: ABSENT` / `framer-motion: ABSENT` |
+| P1-6 | issue #50 filed at 2026-10-03T02:47:34Z (before tree-audit, against uncommitted WIP state) | `gh issue view 50 --json createdAt -q .createdAt` | `2026-10-03T02:47:34Z` |
+| P1-7 | full code pipeline exits 0 | `npm run build:app` → /tmp/opencode/build-app-after.log | `✓ Compiled successfully in 43s` / `Finished TypeScript in 7.1s` / `[electron-postcompile] wrote ...` / `EXIT: 0` |
+| P1-8 | electron tsconfig cannot produce the reported errors (includes only electron/**/*.ts) | `grep include electron/tsconfig.json` | `"include": ["./**/*.ts"]` under electron/ |
+| P1-9 | #50 closed with the evidence comment | `gh issue close 50 --comment ...` | `✓ Closed issue texugo7badger/OLYMPUS#50` |
+| P1-10 | first full `npm run build` attempt was killed by MY tool timeout mid-deb-packaging (not a failure) | tail of /tmp/opencode/build-after.log | `building target=deb ...` then shell timeout at 900000ms; `grep -cE "error\|Error"` → `0` |
