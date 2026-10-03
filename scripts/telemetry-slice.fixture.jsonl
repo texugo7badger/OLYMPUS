@@ -1,0 +1,8 @@
+{"ts":"2026-10-04T09:00:30.166Z","god":"system","action":"classification","msg":"fixture A — id-joinable, ms precision","meta":{"classificationId":"cls_slice_a","domain":"planning","routeTo":"apollo"}}
+{"ts":"2026-10-04T09:00:40.000Z","god":"apollo","action":"symphony-dispatch","task_signature":"fixture A","demigod":"planner","classification_id":"cls_slice_a","msg":"Dispatched to planner"}
+{"ts":"2026-10-04T09:05:00.000Z","god":"system","action":"classification","msg":"fixture B — ts-fallback, artemis","meta":{"classificationId":"cls_slice_b","domain":"security","routeTo":"artemis"}}
+{"ts":"2026-10-04T09:05:30.000Z","god":"artemis","action":"dispatch","task_signature":"fixture B","demigod":"tdd-guide","msg":"Dispatched to tdd-guide"}
+{"ts":"2026-10-04T09:10:00.000Z","god":"system","action":"classification","msg":"fixture C — has outcome + tokens","meta":{"classificationId":"cls_slice_c","domain":"backend","routeTo":"hephaestus"}}
+{"ts":"2026-10-04T09:10:20.000Z","god":"hephaestus","action":"dispatch","task_signature":"fixture C","demigod":"build-resolver","classification_id":"cls_slice_c","msg":"Dispatched to build-resolver"}
+{"ts":"2026-10-04T09:10:40.000Z","god":"hephaestus","action":"dispatch_outcome","task_signature":"fixture C","demigod":"build-resolver","classification_id":"cls_slice_c","outcome":"success","duration_ms":20000,"tokens_used":{"input":80,"output":40},"msg":"Dispatch success"}
+{"ts":"2026-10-04T09:20:00.000Z","god":"apollo","action":"symphony-dispatch","task_signature":"fixture D — orphan","demigod":"code-verifier","msg":"Dispatched to code-verifier"}

@@ -37,3 +37,13 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | D2-7 | LIVE feed event carries the fields | grep budget_tokens live.jsonl | `symphony-dispatch … budget_tokens: 100 \| output_shape: "one-line acknowledgment" \| demigod: planner` |
 | D2-8 | live dispatch_outcome deferred (subtask finalize pending server-side); outcome shape proven deterministically (D2-3) | grep dispatch_outcome (empty at poll time) | no outcome event yet — disclosed; deterministic driver covers the shape |
 | D2-9 | interpretation disclosed: the batch's "ONE attended live dispatch probe" = run it live via the harness (vs LIVE-PROBE-SKIPPED); the run used unattended:true (12c-precedented shape, avoids gate roulette) | reasoning | — |
+
+## Phase 3 — RLM P3: telemetry slicer
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| D3-1 | scripts/telemetry-slice.mjs landed (zero deps, run mode + event mode, timestamp-parsed windows) + fixture | `git show <commit> --stat` | 2 new files |
+| D3-2 | self-test 10/10 (window ms/s precision — the 12a NOTE-3 lesson; id filter; id-join + ts-fallback grouping; outcome+tokens; orphan; god filter) | `node scripts/telemetry-slice.mjs --self-test` | `All telemetry-slice self-test assertions passed` / exit 0 |
+| D3-3 | post-cleanup regression: dead code removed (leftover finalRuns block + unreachable guard + redundant id checks), self-test still 10/10, eslint green | re-run + eslint | `self-test still 10/10 green` / `eslint green` |
+| D3-4 | real-feed smoke: run-mode records correct (12c P2 pair = run with planner attached) | `telemetry-slice.mjs --since 2026-10-03T16:26:00Z` | `{"ts":"2026-10-03T16:26:44.602Z","routeTo":"apollo",…,"demigods":["planner"],…}` |
+| D3-5 | event-mode smoke: live P1 dispatch event retrievable with budget fields visible | `telemetry-slice.mjs --since … --action symphony-dispatch` | event with `budget_tokens:100, output_shape:"one-line acknowledgment"` |
