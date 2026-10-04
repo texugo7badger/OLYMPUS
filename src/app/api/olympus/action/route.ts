@@ -803,6 +803,8 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           onEvent,
           signal: req.signal,
           maxRuntimeMs: MAX_RUNTIME_MS,
+          // #62: class-scaled idle budget for the watchdog.
+          complexity: opts.classification?.complexity ?? null,
         });
         if (closed) return;
 

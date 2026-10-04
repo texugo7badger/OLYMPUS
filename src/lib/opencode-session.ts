@@ -711,6 +711,9 @@ export interface WarmRunOptions {
   signal?: AbortSignal;
   /** Hard cap on the whole message run. */
   maxRuntimeMs?: number;
+  /** #62 (BATCH 13): the run's task class — scales the watchdog's idle
+   *  budget (complex/architectural get 3x). Absent = base budget. */
+  complexity?: string | null;
 }
 
 /**
@@ -1426,6 +1429,40 @@ export function retryExhaustionGuidance(
 }
 
 /**
+ * #62 (BATCH 13): class scale for the idle budget. Architectural/complex
+ * long-form work gets 3x — the spec-writing step is exactly where PetLove
+ * F5/F6 stalled at the default budget.
+ */
+export function complexityScale(complexity?: string | null): number {
+  return complexity === 'complex' || complexity === 'architectural' ? 3 : 1;
+}
+
+/**
+ * #62 (BATCH 13): the pure watchdog decision, exported for the
+ * injected-timestamp fixture (never wall-clock). Decision table:
+ *   - silent < warnMs                        → 'quiet'
+ *   - warnMs <= silent < stallMs             → 'warn'
+ *   - silent >= stallMs, permission pending  → 'permission-pending'
+ *     (legitimate human wait: DISTINCT renderer-keyed state, never nudged,
+ *     never killed)
+ *   - silent >= stallMs, no permission wait  → 'nudge-abort' (the auto-
+ *     continue: abort with stream_idle_timeout; the #61 retry layer re-
+ *     posts against the same warm session)
+ */
+export function watchdogDecision(args: {
+  silentForMs: number;
+  warnMs: number;
+  stallMs: number;
+  permissionPending: boolean;
+}): 'quiet' | 'warn' | 'permission-pending' | 'nudge-abort' {
+  if (args.silentForMs >= args.stallMs) {
+    return args.permissionPending ? 'permission-pending' : 'nudge-abort';
+  }
+  if (args.silentForMs >= args.warnMs) return 'warn';
+  return 'quiet';
+}
+
+/**
  * One warm-message attempt. `allowRetry` reserved for future use; the retry
  * decision lives in runWarmMessage's loop (which respawns the server before
  * re-invoking this).
@@ -1459,6 +1496,9 @@ async function runWarmMessageAttempt(
     // session filtering — any frame proves the feed is alive). Drives the
     // silence watchdog.
     lastFrameAt: Date.now(),
+    // #62: starts false; the pump sets it when the latest visible part is a
+    // tool awaiting permission approval, clears it on any other event.
+    permissionPending: false,
   };
     let receivedEvents = false;
     let postStarted = false;
@@ -1485,34 +1525,63 @@ async function runWarmMessageAttempt(
       onAbort();
     }, opts.maxRuntimeMs ?? 10 * 60_000);
 
-    // Silence watchdog (freeze-class fix 2026-09-29): if NO frame of any
-    // kind arrives from the /event feed for SILENCE_WARN_MS, warn visibly;
-    // if it stays silent for SILENCE_STALL_MS, tell the user explicitly that
-    // the run is stalled and how to abort. Never auto-kills — the user keeps
-    // STOP agency (a wrongly-terminated run loses all progress).
-    const SILENCE_WARN_MS = Number(process.env.OLYMPUS_SILENCE_WARN_MS || 60_000);
-    const SILENCE_STALL_MS = Number(process.env.OLYMPUS_SILENCE_STALL_MS || 150_000);
+    // Silence watchdog (#62, BATCH 13): if NO frame of any kind arrives from
+    // the /event feed for SILENCE_WARN_MS, warn visibly; if it stays silent
+    // for SILENCE_STALL_MS, inject the auto-continue nudge — the abort with
+    // a stream_idle_timeout error that the #61 retry layer turns into an
+    // automated same-session re-post (PetLove F5/F6: manual "Continue!"
+    // always recovered; this automates it). If the latest visible part is a
+    // tool awaiting PERMISSION, the run is in a legitimate human wait: emit a
+    // DISTINCT permission_pending event (renderer-keyed), never nudge, never
+    // kill — the MAX_RUNTIME timer remains the only bound. The idle budget is
+    // CLASS-SCALED: architectural/complex long-form work gets ~3x (the
+    // spec-writing step is exactly where F5/F6 stalled).
+    const SILENCE_SCALE = complexityScale(opts.complexity);
+    const SILENCE_WARN_MS = Number(process.env.OLYMPUS_SILENCE_WARN_MS || 60_000) * SILENCE_SCALE;
+    const SILENCE_STALL_MS = Number(process.env.OLYMPUS_SILENCE_STALL_MS || 150_000) * SILENCE_SCALE;
     let warnedSilence = false;
     let stalledNotified = false;
+    let idleNudged = false;
+    let idleTimedOut = false;
     const silenceTimer = setInterval(() => {
       if (postStarted === false || eventCtrl.signal.aborted) return;
-      const silent = Date.now() - state.lastFrameAt;
-      if (silent >= SILENCE_STALL_MS && !stalledNotified) {
-        stalledNotified = true;
+      const decision = watchdogDecision({
+        silentForMs: Date.now() - state.lastFrameAt,
+        warnMs: SILENCE_WARN_MS,
+        stallMs: SILENCE_STALL_MS,
+        permissionPending: state.permissionPending,
+      });
+      if (decision === 'permission-pending') {
+        if (!stalledNotified) {
+          stalledNotified = true;
+          deliver({
+            type: 'permission_pending',
+            msg: `⏸ Awaiting your permission approval (${Math.round((Date.now() - state.lastFrameAt) / 1000)}s) — the run is paused on a permission ask, not stalled. Approve or reject in the terminal; this wait is never auto-killed.`,
+            ts: new Date().toISOString(),
+          });
+        }
+        return;
+      }
+      if (decision === 'nudge-abort' && !idleNudged) {
+        idleNudged = true;
+        idleTimedOut = true;
         deliver({
           type: 'log',
-          msg: `⚠ No stream activity for ${Math.round(silent / 1000)}s — the run looks STALLED (pending permission, provider hang, or dead tool). If this persists, click STOP and resend; nothing is being lost.`,
+          msg: `⚠ No stream activity for ${Math.round((Date.now() - state.lastFrameAt) / 1000)}s — sending the auto-continue nudge (#62): aborting this attempt with stream_idle_timeout; the retry layer re-posts against the same warm session automatically.`,
           ts: new Date().toISOString(),
         });
-      } else if (silent >= SILENCE_WARN_MS && !warnedSilence) {
+        onAbort();
+        return;
+      }
+      if (decision === 'warn' && !warnedSilence) {
         warnedSilence = true;
         deliver({
           type: 'log',
-          msg: `No stream activity for ${Math.round(silent / 1000)}s — Apollo may be thinking, waiting on a permission, or the provider may be stalled. Watching…`,
+          msg: `No stream activity for ${Math.round((Date.now() - state.lastFrameAt) / 1000)}s — Apollo may be thinking, waiting on a permission, or the provider may be stalled. Watching…`,
           ts: new Date().toISOString(),
         });
       }
-      if (silent < SILENCE_WARN_MS / 2) { warnedSilence = false; stalledNotified = false; }
+      if (decision === 'quiet') { warnedSilence = false; stalledNotified = false; }
     }, 5_000);
 
     // The wrapped onEvent also marks that we delivered at least one event.
@@ -1723,6 +1792,18 @@ async function runWarmMessageAttempt(
       if (outerSignal?.aborted) {
         return { code: -1, sessionId: opts.sessionId, receivedEvents, postStarted, error: 'aborted' };
       }
+      if (idleTimedOut) {
+        // #62: the auto-continue nudge's abort — a retryable class (#61's
+        // classifyRetry matches stream_idle_timeout), so the retry layer
+        // re-posts against the same warm session automatically.
+        return {
+          code: 1,
+          sessionId: opts.sessionId,
+          receivedEvents,
+          postStarted,
+          error: `stream_idle_timeout: no visible stream activity for ${Math.round(SILENCE_STALL_MS / 1000)}s${opts.complexity ? ` (class '${opts.complexity}', budget scaled ${SILENCE_SCALE}x)` : ''} — auto-continue nudge fired; the retry layer re-posts this run`,
+        };
+      }
       if (maxTimedOut) {
         return {
           code: 1,
@@ -1765,6 +1846,8 @@ async function openEventFeed(
     gotError: boolean;
     userMessageIds: Set<string>;
     lastFrameAt: number;
+    /** #62: the latest visible part is a tool awaiting permission approval. */
+    permissionPending: boolean;
     /** Issue #40: reasoning that arrived BEFORE the first step-start is held
      *  here instead of being dropped, then flushed with a prelude marker. */
     reasoningPre?: string;
@@ -1831,6 +1914,16 @@ async function openEventFeed(
               // after the WARN fired.
               mapEvent(ev, sessionId, state, (mapped) => {
                 state.lastFrameAt = Date.now();
+                // #62 (BATCH 13): permission-pending detection — the LATEST
+                // visible part being a tool in 'pending' state means the run
+                // is waiting for the HUMAN's permission approval: a legitimate
+                // wait, not a stall. Any other event clears the flag.
+                if (mapped?.type === 'tool_use' || mapped?.type === 'tool_call' || mapped?.part?.type === 'tool') {
+                  const st = mapped.part?.state?.status ?? mapped.part?.status;
+                  state.permissionPending = st === 'pending';
+                } else {
+                  state.permissionPending = false;
+                }
                 onEvent(mapped);
               });
             }

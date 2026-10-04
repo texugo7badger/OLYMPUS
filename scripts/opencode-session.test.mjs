@@ -68,10 +68,16 @@ const server = http.createServer((req, res) => {
     req.on('data', c => body += c);
     req.on('end', () => {
       stub.postCount++;
-      if (stub.mode === 'always-503' || stub.postCount <= 2) {
+      if (stub.mode === 'always-503' || (stub.mode === 'recover' && stub.postCount <= 2)) {
         stub.concurrent--;
         res.writeHead(503, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ data: { message: 'provider_overloaded (stub)' } }));
+      }
+      if (stub.mode === 'hang-then-recover' && stub.postCount <= stub.hangCount) {
+        // #62 stall scenario: never respond — the watchdog must fire.
+        stub.hungStreams = (stub.hungStreams || 0) + 1;
+        res.on('close', () => { stub.concurrent--; });
+        return; // hang
       }
       stub.concurrent--;
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -125,6 +131,44 @@ async function main() {
   expect('S2: alternatives line present (#56-style)', /Alternatives whose key IS present|No alternative free strategy has a key present/.test(t2), t2.slice(0, 400));
   expect('S2: guidance names the explicit switch command', t2.includes('apply-strategy'), t2.slice(0, 400));
   expect('S2: still no parallelism', stub.maxConcurrent === 1, 'max=' + stub.maxConcurrent);
+
+  // ── Scenario 3 (#62): stall → auto-continue nudge → recovery ──
+  // Injected-short watchdog windows via the env tunables (never wall-clock
+  // sleeps on production budgets): warn 1s, stall 3s. The first POST hangs
+  // (no response) — the watchdog must fire the nudge, abort with
+  // stream_idle_timeout, and the #61 retry layer re-posts (the automated
+  // "Continue!"); the second POST succeeds.
+  process.env.OLYMPUS_SILENCE_WARN_MS = '1000';
+  process.env.OLYMPUS_SILENCE_STALL_MS = '3000';
+  stub.mode = 'hang-then-recover';
+  stub.hangCount = 1;
+  stub.postCount = 0; // per-scenario reset — the counter is cumulative across S1/S2
+  transcript.length = 0;
+  const r3 = await runWarmMessage({
+    sessionId, text: 'fixture prompt 3', agent: 'apollo', onEvent, maxRuntimeMs: 60_000,
+    complexity: 'simple',
+  });
+  const t3 = transcript.map(e => e.type + ':' + (e.msg || e.part?.text || '')).join('\n');
+  expect('S3: stalled run AUTO-RESUMES (completes after the nudge)', r3.code === 0, JSON.stringify(r3).slice(0, 140));
+  expect('S3: auto-continue nudge fired EXACTLY once', (t3.match(/auto-continue nudge \(#62\)/g) || []).length === 1, t3.slice(0, 400));
+  expect('S3: nudge precedes the retry line (nudge-then-retry ordering)', t3.indexOf('auto-continue nudge') < t3.indexOf('retry 1/2'), t3.slice(0, 400));
+  expect('S3: retry line carries stream_idle_timeout', /retry 1\/2: [^\n]*stream_idle_timeout/.test(t3), t3.slice(0, 400));
+  expect('S3: stub reply delivered after auto-resume', t3.includes('stub-reply-after-retries'), t3.slice(-200));
+  expect('S3: still sequential (max concurrent POST = 1)', stub.maxConcurrent === 1, 'max=' + stub.maxConcurrent);
+  delete process.env.OLYMPUS_SILENCE_WARN_MS;
+  delete process.env.OLYMPUS_SILENCE_STALL_MS;
+
+  // ── Unit layer (#62): watchdogDecision decision table + class scale ──
+  const { watchdogDecision, complexityScale } = await import(OLYMPUS + '/src/lib/opencode-session.ts');
+  const W = { warnMs: 60_000, stallMs: 150_000, permissionPending: false };
+  expect('U: quiet below warn', watchdogDecision({ ...W, silentForMs: 30_000 }) === 'quiet', 'want quiet');
+  expect('U: warn at warnMs', watchdogDecision({ ...W, silentForMs: 70_000 }) === 'warn', 'want warn');
+  expect('U: nudge-abort at stallMs (no permission)', watchdogDecision({ ...W, silentForMs: 150_000 }) === 'nudge-abort', 'want nudge-abort');
+  expect('U: permission-pending OVERRIDES the nudge at stallMs', watchdogDecision({ ...W, silentForMs: 300_000, permissionPending: true }) === 'permission-pending', 'want permission-pending');
+  expect('U: complexityScale: architectural → 3', complexityScale('architectural') === 3, 'want 3');
+  expect('U: complexityScale: complex → 3', complexityScale('complex') === 3, 'want 3');
+  expect('U: complexityScale: simple → 1', complexityScale('simple') === 1, 'want 1');
+  expect('U: complexityScale: absent → 1', complexityScale(null) === 1, 'want 1');
 
   server.close();
 }

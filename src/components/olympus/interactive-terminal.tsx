@@ -113,7 +113,7 @@ function makeConversationId(): string {
   }
 }
 
-type MessageType = 'system' | 'user' | 'response' | 'god' | 'question' | 'todo' | 'error' | 'delegation' | 'tool' | 'context_request' | 'permission' | 'thinking';
+type MessageType = 'system' | 'user' | 'response' | 'god' | 'question' | 'todo' | 'error' | 'delegation' | 'tool' | 'context_request' | 'permission' | 'permission_pending' | 'thinking';
 
 /**
  * Issue #32 (complaint 2: "tool lines render the call but NEVER the result").
@@ -496,6 +496,19 @@ export default function InteractiveTerminal() {
       return;
     }
     if (ev.type === 'context_recorded' || ev.type === 'context_skipped') { setAwaitingContext(false); setShowContext(false); setContext(''); return; }
+    // #62 (BATCH 13): permission-pending is a DISTINCT state — the run is
+    // paused on a permission ask, not stalled. Rendered as its own message
+    // kind (never the stall wording), once per wait; cleared by the next
+    // stream event so the transcript shows the pause and the resume.
+    if (ev.type === 'permission_pending') {
+      removeThinking();
+      setMessages(prev => {
+        if (prev.some(m => m.type === 'permission_pending' && m.text === (ev.msg || ''))) return prev;
+        return [...prev, { id: `pp-${Date.now()}`, type: 'permission_pending', text: ev.msg || 'Awaiting permission approval', god: ev.god || 'apollo', ts: ev.ts || new Date().toISOString() }];
+      });
+      updateGodActivity(ev.god || 'apollo', 'working', 'Awaiting permission approval');
+      return;
+    }
     // Issue #43: one parser for every todo shape (legacy `{type,id,text}` +
     // `todo_done`, the activity-feed `{action,msg,meta.status}` envelope, and a
     // bulk `items[]` write). Rows merge by id, so the panel keeps stream
