@@ -23,3 +23,14 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | 13.1-4 | F3 inheritance proven: god/class/budget inherited, fresh id, provenance reason | test lines | `F3 answer inherits routeTo/domain/budget: PASS` + `FRESH classificationId: PASS` + `provenance: PASS` |
 | 13.1-5 | redirect + new-task + cold-session paths proven | test lines | all PASS (free-text redirect, structured godId=P5, new-task marker, cold session) |
 | 13.1-6 | test-honesty note: the PetLove prior used in fixtures classifies as hephaestus/backend (the fixture's own prompt words 'landing page/formulário' hit backend keywords) — the assertions are RELATIVE to the prior, testing inheritance semantics, not re-deriving the original incident's athena classification | test output line | `(prior classification for the F3 conversation: {"routeTo":"hephaestus","domain":"backend","tokens":80000})` |
+
+## Phase 2 — #61 auto-retry
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| 13.2-1 | retry landed: transient class extended + spec transcript format + loud exhaustion guidance + plan hoist | `git show 3ef01b5 --stat` | 2 files, +209/−7 |
+| 13.2-2 | deterministic forced-503 fixture: 11/11 green (recovery, both retry lines, exhaustion guidance + alternatives + switch command, no parallelism, pidfile restored) | `npx tsx scripts/opencode-session.test.mjs` | `All #61 retry-fixture assertions passed` exit 0 |
+| 13.2-3 | no parallel second connection asserted by the stub itself (max concurrent POST counter) | fixture S1/S2 | `max concurrent POST = 1` PASS ×2 |
+| 13.2-4 | loop mechanics live-proven previously: 12b probe A5 recovered via 'Transport failure (attempt 1/3)' | 12b FACTS-LEDGER P2 (probe-2B5.sse) | the retry line appears verbatim in the 12b capture |
+| 13.2-5 | one test-iteration fix disclosed: my assertion matched 'No strategy…' case-sensitively vs the message's 'NO strategy…' — fixed the matcher, not the message | test run 1 vs 2 | run 1: 10/11 → run 2: 11/11 |
+| 13.2-6 | real-state hygiene: the fixture saves/restores the opencode-server pidfile verbatim (absent→absent verified); the benchmark accumulator may append one metrics row per scenario on exit (same file the 12d campaign wrote) — disclosed | post-test check | `pidfile absent` after test |
