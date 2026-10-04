@@ -90,7 +90,11 @@ const __dirname = path.dirname(__filename);
 const OLYMPUS_ROOT = process.env.OLYMPUS_ROOT || process.cwd();
 const OPENCODE_JSON = path.join(OLYMPUS_ROOT, 'opencode.json');
 const DEMIGODS_JSON = path.join(OLYMPUS_ROOT, 'opencode.demigods.json');
-const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
+// MADRUGA-3 p1: OLYMPUS_HOME is env-overridable so bench lanes and fixtures
+// isolate their state (backups, active-strategy, free-models, custom
+// strategies) instead of sharing — and mutating — the operator's real
+// ~/.olympus. Default unchanged.
+const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
 const PROVIDERS_FILE = path.join(OLYMPUS_HOME, 'llm-providers.json');
 const CUSTOM_STRATEGIES_FILE = path.join(OLYMPUS_HOME, 'custom-strategies.json');
 const BACKUP_DIR = path.join(OLYMPUS_HOME, 'backups');
@@ -518,6 +522,25 @@ const FREE_CONFIG_SHAPE = {
   agent_count: 10,
   god_prompts: 'inlined_truncated',  // truncate to 1000 chars
   demigods_loaded: false,
+  // L1 (MADRUGA-3): the OLYMPUS overlay tools granted to every god by the
+  // generator — structurally, not by patch. MADRUGA-2 D9: the free configs
+  // omitted olympus-dispatch entirely, so gods could not delegate under
+  // free strategies (the D5 zero-dispatch root cause). Every god gets the
+  // full overlay set; demigod auto-injection handles the rest at dispatch
+  // time.
+  olympus_tools: [
+    'olympus-dispatch',
+    'olympus-instinct-query',
+    'olympus-shortcircuit',
+    'olympus-patterns',
+    'sub-agent-instinct-query',
+    'symphony-resonate',
+    'symphony-harmonize',
+    'symphony-decode',
+    'olympus-design-review',
+    'olympus-deploy-review',
+    'olympus-integration-review',
+  ],
   // Keep olympus-router (MCP gate) + olympus-go-cache (avoid duplicate
   // fetches). The overlay (./.opencode/olympus) MUST stay — it's the only
   // writer of ~/.olympus/metrics/cost.jsonl (tool.execute.after + event
@@ -680,10 +703,13 @@ function getNvidiaBuildModelMap() {
     return 'nvidia/nvidia/nemotron-3-ultra-550b-a55b';
   };
 
-  // Best coding free endpoint on NVIDIA Build — GLM-5.2 (1M context, the
-  // platform's highest coding benchmark index). Pinned: the coding gods stay
-  // on the best coding model even when the live list reshuffles.
-  const NV_CODING_MODEL = 'nvidia/z-ai/glm-5.2';
+  // Best coding free endpoint on NVIDIA Build — GLM-5.3 (1M context). The
+  // platform retired z-ai/glm-5.2 (the MADRUGA-2b D19 incident: subagent
+  // spawns died at model resolution with "Model not found: nvidia/z-ai/
+  // glm-5.2. Did you mean: z-ai/glm-5.3?"). Pinned so a list reshuffle
+  // never bumps the coding gods onto a general-purpose model; the L4
+  // apply-time catalogue preflight catches future retirements loudly.
+  const NV_CODING_MODEL = 'nvidia/z-ai/glm-5.3';
 
   const pickCoding = () => {
     log(`  Free Nvidia Build: coding gods (Hephaestus/Athena/Dionysus) -> ${NV_CODING_MODEL} (best coding, pinned)`);
@@ -697,7 +723,7 @@ function getNvidiaBuildModelMap() {
       log(`  Free Nvidia Build: specialist roles -> ${live} (live #2 from refresh)`);
       return live;
     }
-    return 'nvidia/z-ai/glm-5.2';
+    return 'nvidia/z-ai/glm-5.3';
   };
 
   const pickNano = () => {
@@ -1193,20 +1219,31 @@ function applyGoConfigShape(config, modelMap, forceImpeccable, family = 'GO') {
   const smallModel = isZen ? SMALL_MODEL_ZEN : GO_CONFIG_SHAPE.small_model;
 
   // --- 1. Restore god prompts to {file:...} references ---
+  // L1 (MADRUGA-3 p1): the {file:} contract is only real when the file
+  // exists. A missing god or a missing prompt file is an explicit error —
+  // never WARN + keep whatever was there (a silent placeholder contract).
   for (const [godId, filePath] of Object.entries(GOD_PROMPT_FILES)) {
     const agent = config.agent[godId];
     if (!agent) {
-      log(`  WARN: god ${godId} missing from opencode.json — cannot restore prompt`);
-      continue;
+      throw new Error(
+        `god ${godId} missing from opencode.json — the ${family} shape requires ` +
+        `all 10 gods; refusing to generate a partial pantheon.`
+      );
     }
     const expectedRef = '{file:' + filePath + '}';
+    // The referenced file must exist for EVERY god — a config that already
+    // carries the right ref STRING to a missing file is exactly the
+    // dangling-reference concession (checked even when the ref is unchanged).
+    const fullPath = path.resolve(OLYMPUS_ROOT, filePath);
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(
+        `god prompt file missing for ${godId}: ${fullPath} — the ${family} ` +
+        `shape references canonical prompt files; refusing to emit a config ` +
+        `with a dangling reference. Restore the prompt files (they live at ` +
+        `.opencode/prompts/agents/gods/) or fix opencode.json.`
+      );
+    }
     if (agent.prompt !== expectedRef) {
-      // Verify the file exists before pointing to it
-      const fullPath = path.resolve(OLYMPUS_ROOT, filePath);
-      if (!fs.existsSync(fullPath)) {
-        log(`  WARN: prompt file missing for ${godId}: ${fullPath} — leaving existing prompt`);
-        continue;
-      }
       log(`  ${godId}: prompt -> ${expectedRef}`);
       agent.prompt = expectedRef;
       changes++;
@@ -1221,8 +1258,14 @@ function applyGoConfigShape(config, modelMap, forceImpeccable, family = 'GO') {
     const parentGod = dCfg.parent_god;
     const parentModel = modelMap[parentGod];
     if (!parentModel) {
-      log(`  WARN: demigod ${name} has parent ${parentGod} with no model in map — skipping`);
-      continue;
+      // L1 (MADRUGA-3 p1): a demigod whose parent has no model in the map
+      // would be silently ABSENT from a config that claims all 128 agents —
+      // refuse instead.
+      throw new Error(
+        `demigod ${name} has parent ${parentGod} with no model in the strategy ` +
+        `map — the ${family} shape merges all 118 demigods; refusing to emit a ` +
+        `partial registry. Fix the strategy map.`
+      );
     }
     const newModel = demigodModel(name, parentGod, parentModel, athenaOnK3, false, prefix);
 
@@ -1306,70 +1349,81 @@ function applyGoConfigShape(config, modelMap, forceImpeccable, family = 'GO') {
 function applyFreeConfigShape(config, modelMap, strategy) {
   let changes = 0;
 
-  // --- 1. Inline + truncate god prompts (provider-aware limits) ---
-  // OpenRouter 128K: can use up to 1000 chars per god
+  // L1 (MADRUGA-3 p1): the free shape is a contract for all 10 gods — a
+  // config that is missing one is a partial pantheon, refused loudly
+  // (never silently granted/prompted around).
+  for (const godId of GOD_NAMES_LIST) {
+    if (!config.agent[godId]) {
+      throw new Error(
+        `god ${godId} missing from opencode.json — the free-tier shape ` +
+        `requires all 10 gods; refusing to generate a partial pantheon.`
+      );
+    }
+  }
+
+  // --- 1. Inline + truncate god prompts (the free-tier token budget) ---
+  // L1 (MADRUGA-3 p1): the 1000-char inline is a DESIGNED, loudly-logged
+  // reduction (it keeps the request inside the provider's free rate
+  // window) — never a placeholder contract. The canonical prompt file
+  // must resolve to REAL content, or the apply fails with an explicit
+  // error: a generated config that silently keeps a dangling {file:}
+  // reference (or stale text) is exactly the concession this kills.
+  const charLimit = OPENROUTER_PROMPT_CHAR_LIMIT; // single free-tier budget
   for (const godId of GOD_NAMES_LIST) {
     const agent = config.agent[godId];
     if (!agent) continue;
-
-    // Determine the char limit based on this god's model provider
-    // (OpenRouter/NVIDIA Build share the 1000-char budget; anything else
-    // falls back to the same conservative limit).
-    const model = modelMap[godId] || '';
-    const charLimit =
-      model.startsWith('openrouter/') || model.startsWith('nvidia/')
-        ? OPENROUTER_PROMPT_CHAR_LIMIT
-        : OPENROUTER_PROMPT_CHAR_LIMIT; // single free-tier budget
 
     const currentPrompt = agent.prompt || '';
     const promptMatch = currentPrompt.match(/\{file:([^}]+)\}/);
     let newPrompt;
 
     if (promptMatch) {
-      // {file:...} reference — resolve it
+      // {file:...} reference — resolve it. Unreadable/missing file = the
+      // config would carry a dangling reference: refuse, loudly.
       const filePath = path.resolve(OLYMPUS_ROOT, promptMatch[1]);
+      let fullContent;
       try {
-        const fullContent = fs.readFileSync(filePath, 'utf-8');
-        const cutIdx = fullContent.indexOf(FREE_PROMPT_CUT_MARKER);
-        const rawCore = cutIdx > 0 ? fullContent.substring(0, cutIdx).trim() : fullContent;
-        newPrompt = rawCore.length > charLimit
-          ? rawCore.substring(0, charLimit)
-          : rawCore;
-        log(`  ${godId}: inlined prompt (${newPrompt.length} chars, was file ref, limit=${charLimit})`);
+        fullContent = fs.readFileSync(filePath, 'utf-8');
       } catch (e) {
-        log(`  ${godId}: could not read prompt file (${e.message}) — using current prompt`);
-        newPrompt = currentPrompt;
+        throw new Error(
+          `god prompt file unreadable for ${godId}: ${filePath} (${e.message}) — ` +
+          `the free-tier generator inlines prompts from the canonical files and ` +
+          `refuses to emit a config with a dangling reference. Restore the file ` +
+          `or fix the prompt reference in opencode.json.`
+        );
       }
+      const cutIdx = fullContent.indexOf(FREE_PROMPT_CUT_MARKER);
+      const rawCore = cutIdx > 0 ? fullContent.substring(0, cutIdx).trim() : fullContent;
+      newPrompt = rawCore.length > charLimit
+        ? rawCore.substring(0, charLimit)
+        : rawCore;
+      log(`  ${godId}: inlined prompt (${newPrompt.length} chars, was file ref, limit=${charLimit})`);
     } else if (currentPrompt.length > charLimit) {
-      // Already inlined but too long — truncate
+      // Already inlined but too long — truncate (logged, by design).
       newPrompt = currentPrompt.substring(0, charLimit);
       log(`  ${godId}: truncated prompt (${charLimit} chars, was ${currentPrompt.length})`);
     } else {
-      // Inlined and under the limit. If a canonical prompt file exists,
-      // refresh from it — the current prompt may be a legacy 300-char stub
-      // now that the god is on an OpenRouter model (which allows the full
-      // limit). The prompt files are the source of truth
-      // for god identity (the GO strategies reference them directly).
+      // Inlined and under the limit. The canonical prompt files are the
+      // source of truth for god identity — refresh from them when the file
+      // exists. Unreadable = refuse (same doctrine as above); absent = the
+      // config already carries real content, nothing to generate.
       const canonicalPath = GOD_PROMPT_FILES[godId]
         ? path.resolve(OLYMPUS_ROOT, GOD_PROMPT_FILES[godId])
         : null;
-      if (canonicalPath && fs.existsSync(canonicalPath)) {
-        try {
-          const fullContent = fs.readFileSync(canonicalPath, 'utf-8');
-          const cutIdx = fullContent.indexOf(FREE_PROMPT_CUT_MARKER);
-          const rawCore = cutIdx > 0 ? fullContent.substring(0, cutIdx).trim() : fullContent;
-          newPrompt = rawCore.length > charLimit
-            ? rawCore.substring(0, charLimit)
-            : rawCore;
-          if (newPrompt === currentPrompt) continue;
-          log(`  ${godId}: refreshed inlined prompt (${newPrompt.length} chars, was ${currentPrompt.length})`);
-        } catch {
-          continue;
-        }
-      } else {
-        // No canonical file — keep the existing short prompt untouched.
-        continue;
+      if (!canonicalPath || !fs.existsSync(canonicalPath)) continue;
+      let fullContent;
+      try {
+        fullContent = fs.readFileSync(canonicalPath, 'utf-8');
+      } catch (e) {
+        throw new Error(`god prompt file unreadable for ${godId}: ${canonicalPath} (${e.message})`);
       }
+      const cutIdx = fullContent.indexOf(FREE_PROMPT_CUT_MARKER);
+      const rawCore = cutIdx > 0 ? fullContent.substring(0, cutIdx).trim() : fullContent;
+      newPrompt = rawCore.length > charLimit
+        ? rawCore.substring(0, charLimit)
+        : rawCore;
+      if (newPrompt === currentPrompt) continue;
+      log(`  ${godId}: refreshed inlined prompt (${newPrompt.length} chars, was ${currentPrompt.length})`);
     }
 
     if (agent.prompt !== newPrompt) {
@@ -1458,7 +1512,128 @@ function applyFreeConfigShape(config, modelMap, strategy) {
     }
   }
 
+  // --- 8. L1 (MADRUGA-3): grant the OLYMPUS overlay tools to every god ---
+  // Structural fix for D9: free configs must carry the same toolset the GO
+  // shape grants implicitly (via the overlay), so dispatch works on a
+  // freshly generated lane with zero patches.
+  for (const godId of GOD_NAMES_LIST) {
+    const agent = config.agent[godId];
+    if (!agent) continue;
+    if (!agent.tools || typeof agent.tools !== 'object') agent.tools = {};
+    for (const t of FREE_CONFIG_SHAPE.olympus_tools) {
+      if (agent.tools[t] !== true) {
+        agent.tools[t] = true;
+        changes++;
+      }
+    }
+  }
+  log(`  L1: olympus tools granted to ${GOD_NAMES_LIST.length} gods (${FREE_CONFIG_SHAPE.olympus_tools.length} tools each)`);
+
   return changes;
+}
+
+// --- L4 (MADRUGA-3): live catalogue preflight -------------------------------
+
+/**
+ * MADRUGA-3 L4 / D19: validate every model ID in the candidate config
+ * against the LIVE opencode catalogue (`opencode models <provider>`),
+ * failing fast with the catalogue's own suggestion when an ID is dead.
+ * The D19 incident: the refreshed free-models.json still mapped 3 agents
+ * to nvidia/z-ai/glm-5.2, and subagent spawns died at model resolution
+ * with "Model not found ... Did you mean: z-ai/glm-5.3?" — that error
+ * must fire at APPLY time, not at spawn time.
+ *
+ * MADRUGA-3 p1 hardening — no silent skips, ever:
+ *   - The probe is the opencode BINARY itself (node_modules/.bin/opencode
+ *     is a native executable — invoking it via `node <path>` always fails,
+ *     which made the first preflight revision silently skip every
+ *     provider). It is executed directly via the shell.
+ *   - Missing probe binary  -> explicit error (the ids cannot be
+ *     validated; the D19 class would go uncaught).
+ *   - Unqueryable provider  -> explicit error naming the provider + the
+ *     ids left UNVALIDATED.
+ *   Both escape with --force (the operator takes responsibility, loudly —
+ *   same doctrine as the #56 key validation).
+ */
+function preflightModelCatalogue(config, opts = {}) {
+  // Collect distinct model ids from the candidate config.
+  const ids = new Set();
+  if (config.model) ids.add(config.model);
+  if (config.small_model) ids.add(config.small_model);
+  for (const a of Object.values(config.agent || {})) {
+    if (a && typeof a === 'object' && typeof a.model === 'string') ids.add(a.model);
+  }
+  // Group by provider (first path segment).
+  const byProvider = new Map();
+  for (const id of ids) {
+    const provider = id.split('/')[0];
+    if (!byProvider.has(provider)) byProvider.set(provider, []);
+    byProvider.get(provider).push(id);
+  }
+  const opencodeBin = path.join(OLYMPUS_ROOT, 'node_modules', '.bin', 'opencode');
+  if (!fs.existsSync(opencodeBin)) {
+    const msg =
+      `L4 catalogue preflight: the opencode catalogue probe is missing (${opencodeBin}) — ` +
+      `model ids cannot be validated and the D19 class (dead ids breaking subagent ` +
+      `spawns at resolution time) would go uncaught. Restore node_modules, or re-run ` +
+      `with --force to apply unvalidated (taking responsibility for spawn failures).`;
+    if (opts.force) {
+      log(`WARNING: ${msg}`);
+      return { ok: true, failures: [] };
+    }
+    return { ok: false, failures: [], msg };
+  }
+  const failures = [];
+  const unvalidated = [];
+  for (const [provider, providerIds] of byProvider) {
+    let catalogue = '';
+    try {
+      // The probe is the opencode binary itself (a native executable) —
+      // invoke it directly via the shell, never through process.execPath.
+      catalogue = execSync(
+        `"${opencodeBin}" models ${provider}`,
+        { encoding: 'utf-8', timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'] },
+      );
+    } catch (e) {
+      unvalidated.push({ provider, ids: providerIds, err: String(e.message || e).slice(0, 120) });
+      continue;
+    }
+    const lines = new Set(catalogue.split('\n').map(l => l.trim()).filter(Boolean));
+    for (const id of providerIds) {
+      if (!lines.has(id)) {
+        // Suggest close matches from the live catalogue (same family).
+        const family = id.split('/').slice(0, -1).join('/');
+        const suggestions = [...lines].filter(l => l.startsWith(family + '/')).slice(0, 3);
+        failures.push({ id, provider, suggestions });
+      }
+    }
+  }
+  const problems = [];
+  if (failures.length > 0) {
+    const lines = failures.map(f =>
+      `    ${f.id}${f.suggestions.length ? `  (live suggestions: ${f.suggestions.join(', ')})` : ''}`);
+    problems.push(
+      `L4 catalogue preflight: ${failures.length} model id(s) not in the live catalogue — the D19 failure shape (stale ids break subagent spawns at resolution time):\n` +
+      lines.join('\n'));
+  }
+  if (unvalidated.length > 0) {
+    const lines = unvalidated.map(u =>
+      `    provider '${u.provider}': catalogue query failed (${u.err}) — ${u.ids.length} id(s) left UNVALIDATED`);
+    problems.push(
+      `L4 catalogue preflight: could not validate ${unvalidated.reduce((n, u) => n + u.ids.length, 0)} model id(s):\n` +
+      lines.join('\n'));
+  }
+  if (problems.length > 0) {
+    const msg =
+      problems.join('\n') +
+      `\n  Fix the strategy map, or re-run with --force to apply anyway (spawns on unvalidated/dead ids WILL fail).`;
+    if (opts.force) {
+      log(`WARNING: ${msg}`);
+      return { ok: true, failures };
+    }
+    return { ok: false, failures, msg };
+  }
+  return { ok: true, failures: [] };
 }
 
 // --- State file ------------------------------------------------------------
@@ -1870,6 +2045,17 @@ function main() {
     }
   } catch (e) {
     log(`ERROR: ${e.message}`);
+    process.exit(1);
+  }
+
+  // L4 (MADRUGA-3): live catalogue preflight BEFORE writing the config —
+  // the D19 class (dead model ids) must fail at apply time with the
+  // catalogue's own suggestion, never at spawn time. --force escapes
+  // loudly (same doctrine as the #56 key validation).
+  log('L4: validating model ids against the live catalogue…');
+  const preflight = preflightModelCatalogue(config, { force: forceApply });
+  if (!preflight.ok) {
+    log(`ERROR: ${preflight.msg}`);
     process.exit(1);
   }
 
