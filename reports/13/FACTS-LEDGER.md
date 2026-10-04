@@ -34,3 +34,14 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | 13.2-4 | loop mechanics live-proven previously: 12b probe A5 recovered via 'Transport failure (attempt 1/3)' | 12b FACTS-LEDGER P2 (probe-2B5.sse) | the retry line appears verbatim in the 12b capture |
 | 13.2-5 | one test-iteration fix disclosed: my assertion matched 'No strategy…' case-sensitively vs the message's 'NO strategy…' — fixed the matcher, not the message | test run 1 vs 2 | run 1: 10/11 → run 2: 11/11 |
 | 13.2-6 | real-state hygiene: the fixture saves/restores the opencode-server pidfile verbatim (absent→absent verified); the benchmark accumulator may append one metrics row per scenario on exit (same file the 12d campaign wrote) — disclosed | post-test check | `pidfile absent` after test |
+
+## Phase 3 — #64 round cap + autonomous parity
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| 13.3-1 | #64 landed across all four touchpoints (SKILL.md, directive, route parity, apollo prompt) | `git show 59f6de8 --stat` | 5 files, +137/−3 |
+| 13.3-2 | deterministic fixture 21/21 (intent detection campaign shapes verbatim + negatives; content assertions on all three prompt-layer files) | `npx tsx scripts/autonomy-gate.test.mjs` | `All #64 autonomy-gate fixture assertions passed` exit 0 |
+| 13.3-3 | classifier suite still green after the shared-module edits | `npx tsx scripts/task-classifier.test.mjs` | 29/29 |
+| 13.3-4 | fixture iterations disclosed: (a) MY negative-assertion usage bug (passed `false` as cond — 3 assertions); (b) case mismatch 'Present' vs lowercase regex; (c) a REAL \b-boundary bug in the don't-ask pattern (the trailing \b could never match inside 'anything') — found BY the fixture, fixed in the pattern (don'?t ask (me )?any → don'?t ask) | test runs 1→4 | 17/21 → 21/21 |
+| 13.3-5 | live-behavior evidence for the directive mechanism is pre-existing (12b probe B5 'HARD-GATE … explicitly overridden'; 12c/12d unattended probes all completed) — the #64 delta is the strengthened anti-escape clause + parity wiring, whose chain links are pinned deterministically | 12b/12c FACTS-LEDGER | — |
+| 13.3-6 | a live autoescola-veloz-shaped re-probe on free-big-pickle was considered and DEFERRED to the madruga-2 campaign (guardrail: opencode.json mutation for the strategy switch + pool latency risk mid-batch; the madruga-2 driver already plans exactly this re-run as its acceptance test) | disclosed decision | — |
