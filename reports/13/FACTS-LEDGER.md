@@ -56,3 +56,14 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | 13.4-4 | decision-table unit layer: quiet/warn/nudge-abort + permission-pending OVERRIDE + scale matrix (architectural/complex→3, simple/absent→1) | fixture U: lines | 8/8 PASS |
 | 13.4-5 | fixture iterations disclosed: (a) stub POST-counter cumulative across scenarios — the hang condition never matched (S3 initially didn't stall at all); (b) the nudge phrase appears in BOTH the log line and the error string quoted by the retry line — assertion tightened to the log-only phrasing | test runs | run A: 3 FAIL → fix → all green |
 | 13.4-6 | design interpretation disclosed: the 'auto-continue nudge' is implemented as the idle-abort + #61 retry-layer re-post (the automated manual-Continue! recovery — identical mechanics to what healed F1/F2/F4), bounded by the retry plan; permission waits are NEVER nudged/killed (distinct renderer-keyed state); MAX_RUNTIME stays the only hard bound | ledger | — |
+
+## Phase 5 — #65 decision checkpointing
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| 13.5-1 | checkpointing landed (marker on all turn types + SKILL + apollo + census detector) | `git show d8140df --stat` | 5 files, +151/−4 |
+| 13.5-2 | deterministic fixture 18/18 first-run green | `npx tsx scripts/checkpoint.test.mjs` | `All #65 checkpoint fixture assertions passed` exit 0 |
+| 13.5-3 | census shape bug found + fixed during integration check: the mapper's tool.call carries args in tool.input, not tool.args — the deliver hook now reads input first | grep + fix + re-run | all suites green post-fix |
+| 13.5-4 | kill-mid-interview resume mechanics proven at the mechanism layer: the checkpoint file survives the 'crash' and every decision recovers verbatim; the god-behavior half (append-per-round, read-on-resume) is pinned by prompt-layer content assertions — the LIVE behavioral proof is deferred to the madruga-2 resume scenarios (disclosed, consistent with the batch's deterministic-first verification note) | fixture §4 + content assertions | — |
+| 13.5-5 | scope note: cross-conversation crash recovery (new-session handoff → new conversationId → old checkpoint orphaned) is NOT covered tonight — within-conversation retries/continuations are; disclosed as a 13+ follow-up | design reasoning | — |
+| 13.5-6 | .olympus/ path verified gitignored (line 87: 'Olympus home … never commit') — checkpoint writes are runtime state, no repo pollution | .gitignore | — |
