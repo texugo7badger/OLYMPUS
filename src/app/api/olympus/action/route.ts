@@ -20,7 +20,7 @@ import {
   forgetConversation,
 } from '@/lib/opencode-session';
 // Dynamic input token routing via task classifier.
-import { classifyTask, serializeClassification, type TaskClassification } from '@/lib/task-classifier';
+import { classifyTask, classifyTurnWithInheritance, serializeClassification, type TaskClassification } from '@/lib/task-classifier';
 import { appendActivity } from '@/lib/activity-feed';
 // Issue #41: persisting an "always" grant so the next ask for the same tool
 // is settled by policy instead of by another card.
@@ -61,6 +61,21 @@ const UNATTENDED_DIRECTIVE = [
   '- Decide and proceed with sensible defaults. State every assumption you made explicitly in your final output.',
   '',
 ].join('\n');
+
+/**
+ * Issue #63 (BATCH 13): conversationId → the last APPLIED classification.
+ * Server-lifetime, bounded to 512 entries (oldest evicted); a server
+ * restart = cold session = fresh classification, by design.
+ */
+const classificationMemory = new Map<string, TaskClassification>();
+function rememberConversationClassification(conversationId: string, c: TaskClassification): void {
+  classificationMemory.delete(conversationId);
+  classificationMemory.set(conversationId, c);
+  if (classificationMemory.size > 512) {
+    const oldest = classificationMemory.keys().next();
+    if (!oldest.done) classificationMemory.delete(oldest.value);
+  }
+}
 
 /**
  * POST /api/olympus/action
@@ -111,6 +126,13 @@ export async function POST(req: NextRequest) {
     typeof body.conversationId === 'string' && body.conversationId.trim()
       ? body.conversationId.trim()
       : `anon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  // ─── #63 (BATCH 13): warm-session classification inheritance ────────────
+  // conversationId → the last APPLIED TaskClassification. Server-lifetime
+  // map (dev/prod process memory): a restart is a cold session → fresh
+  // classification, which is exactly the intended cold-session behavior.
+  // Bounded so a long-lived server can't grow it unbounded.
+  const priorClassification = classificationMemory.get(conversationId) ?? null;
 
   // ---- Permission reply ---------------------------------------------------
   // `permission` actions answer a pending OpenCode permission ask directly
@@ -193,12 +215,19 @@ export async function POST(req: NextRequest) {
 
     // Classify prompt before spawning opencode for dynamic-context routing.
     // Pure heuristic classifier — no LLM call, runs in microseconds.
+    // #63: warm-session continuation turns inherit god/class/budget from
+    // the conversation's prior classification; cold sessions, explicit
+    // redirects (structured godId=/god: or free-text "com Athena") and
+    // explicit new-task markers re-classify. PetLove F3 evidence: the
+    // approval turn "Recomendação sua pode seguir - nome PetLove" was
+    // misrouted devops·simple→prometheus by fresh classification.
     const promptText = action === 'answer'
       ? `[User answer to your question] ${text}`
       : action === 'context'
         ? `[Additional context from user] ${text}`
         : text;
-    const classification = classifyTask(promptText);
+    const classification = classifyTurnWithInheritance(action, text, priorClassification);
+    rememberConversationClassification(conversationId, classification);
     const classificationEnv = serializeClassification(classification);
     // Issue #51: caller-declared unattended run (probes / batch harnesses /
     // scheduled jobs). The classifier still sees the RAW prompt so routing

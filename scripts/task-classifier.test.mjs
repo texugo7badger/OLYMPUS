@@ -14,7 +14,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { classifyTask, detectStacks } from '../src/lib/task-classifier';
+import { classifyTask, detectStacks, classifyTurnWithInheritance, isNewTaskMarker, isFreeTextGodRedirect, inheritClassification } from '../src/lib/task-classifier';
 
 let failures = 0;
 function expect(name, actual, want) {
@@ -58,6 +58,49 @@ expect('rust build error → hephaestus', classifyTask('fix this Rust build erro
 expect('e2e test prompt → dionysus', classifyTask('run the playwright e2e coverage suite').routeTo, 'dionysus');
 expect('sql migration → persephone', classifyTask('write the SQL migration for the new table index').routeTo, 'persephone');
 expect('greeting → trivial/apollo', classifyTask('hi').complexity, 'trivial');
+
+// 8. #63 (BATCH 13): continuation-turn inheritance — the PetLove F3
+// regression. The approval turn "Recomendação sua pode seguir - nome
+// PetLove" was freshly classified devops·simple→prometheus; it must now
+// inherit the session's prior god/class/budget instead.
+const F3_MESSAGE = 'Recomendação sua pode seguir - nome PetLove';
+const petlovePrior = classifyTask('Desenvolva a landing page interativa do abrigo de pets PetLove — hero, formulário de adoção, galeria.'); // athena·frontend
+console.log('   (prior classification for the F3 conversation:', JSON.stringify({ routeTo: petlovePrior.routeTo, domain: petlovePrior.domain, tokens: petlovePrior.estimatedTokens }) + ')');
+
+// 8a. answer turn inherits god/class/budget, fresh id, provenance in reason
+const inherited = classifyTurnWithInheritance('answer', F3_MESSAGE, petlovePrior);
+expect('F3 answer inherits routeTo', inherited.routeTo, petlovePrior.routeTo);
+expect('F3 answer inherits domain', inherited.domain, petlovePrior.domain);
+expect('F3 answer inherits budget', inherited.estimatedTokens, petlovePrior.estimatedTokens);
+expect('F3 answer has FRESH classificationId', inherited.classificationId !== petlovePrior.classificationId, true);
+expect('F3 answer reason carries provenance', inherited.reason.startsWith(`inherited-from=${petlovePrior.classificationId}`), true);
+
+// 8b. warm prompt continuation inherits too
+const warmPrompt = classifyTurnWithInheritance('prompt', 'Pode seguir com a implementação do formulário.', petlovePrior);
+expect('warm prompt inherits routeTo', warmPrompt.routeTo, petlovePrior.routeTo);
+
+// 8c. explicit redirect re-classifies (free-text, pt-BR)
+const redirect = classifyTurnWithInheritance('prompt', 'Refatore isso com a Athena por favor', petlovePrior);
+expect('free-text redirect → fresh routeTo', redirect.routeTo !== petlovePrior.routeTo || redirect.classificationId !== petlovePrior.classificationId, true);
+expect('free-text redirect detected', isFreeTextGodRedirect('Refatore isso com a Athena por favor'), true);
+
+// 8d. structured godId redirect still re-classifies (12c P5 precedence)
+const structured = classifyTurnWithInheritance('prompt', 'dispatch with godId=hephaestus, demigod=build-resolver', petlovePrior);
+expect('structured redirect → hephaestus', structured.routeTo, 'hephaestus');
+
+// 8e. explicit new-task marker re-classifies
+expect('new-task marker detected (pt-BR)', isNewTaskMarker('Agora uma nova tarefa: refazer o site da padaria'), true);
+const newTask = classifyTurnWithInheritance('prompt', 'Agora uma nova tarefa: refazer o site da padaria com formulário de encomendas', petlovePrior);
+expect('new-task → fresh classification', newTask.reason.startsWith(`inherited-from=${petlovePrior.classificationId}`), false);
+
+// 8f. cold session (prior=null) → fresh classification
+const cold = classifyTurnWithInheritance('answer', F3_MESSAGE, null);
+expect('cold session → fresh classify', typeof cold.classificationId === 'string' && !cold.reason.startsWith('inherited-from='), true);
+
+// 8g. inheritance helper preserves budget + god verbatim
+const viaHelper = inheritClassification(petlovePrior);
+expect('inheritClassification preserves god', viaHelper.routeTo, petlovePrior.routeTo);
+expect('inheritClassification preserves complexity', viaHelper.complexity, petlovePrior.complexity);
 
 if (failures > 0) {
   console.error(`\n${failures} assertion(s) failed`);

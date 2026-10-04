@@ -323,6 +323,80 @@ export function serializeClassification(c: TaskClassification): string {
   return JSON.stringify(c);
 }
 
+// ─── #63: continuation-turn inheritance ─────────────────────────────────────
+
+/**
+ * Issue #63 (BATCH 13): turns inside a warm session inherit god / class /
+ * budget from the session's prior classification, unless the user
+ * explicitly redirects to another god or explicitly starts a new task.
+ * Rationale (PetLove F3): the plain approval turn "Recomendação sua pode
+ * seguir - nome PetLove" was freshly classified `devops · simple →
+ * prometheus` — a follow-up answer misrouted to an unrelated god. Only the
+ * warm-session dispatch preserved continuity; the classification layer must
+ * too. Re-classification happens for cold sessions, explicit redirects,
+ * and explicit new tasks ONLY.
+ */
+
+/** Explicit new-task markers (pt-BR + en). */
+const NEW_TASK_RE =
+  /\b(nova tarefa|novo projeto|new task|new project|come[çc]ando (um |a )?novo|starting (a )?new)\b/i;
+
+/** Explicit free-text god redirect ("com a Athena", "with Hephaestus", "switch to Prometeus"…). */
+const FREE_TEXT_REDIRECT_RE =
+  /\b(?:com|para|with|to|switch to|fale (?:com|para)|v[áa] (?:para|com))\s+(?:a\s+|o\s+|as?\s+|os?\s+)?(apollo|artemis|athena[ns]?|atlas|calimaco|callimachus|dioniso|dionysus|hefest[ou]|hephaestus|hermes|persefone|persephone|promete[uo]|prometheus)\b/i;
+
+export function isNewTaskMarker(prompt: string): boolean {
+  return NEW_TASK_RE.test(prompt);
+}
+
+export function isFreeTextGodRedirect(prompt: string): boolean {
+  return FREE_TEXT_REDIRECT_RE.test(prompt);
+}
+
+/**
+ * Inherit a prior classification for a continuation turn: same god, class,
+ * and budget; FRESH classificationId (the #54 join-key chain must stay
+ * unique per classification event) + a provenance note in the reason.
+ */
+export function inheritClassification(prior: TaskClassification): TaskClassification {
+  return {
+    ...prior,
+    classificationId: mintClassificationId(),
+    reason: `inherited-from=${prior.classificationId} · ${prior.reason}`,
+  };
+}
+
+/**
+ * Classify one turn of a conversation with warm-session inheritance
+ * (#63). `prior` is the session's last APPLIED classification (null on a
+ * cold session). Decision table:
+ *   - cold session (prior === null)              → fresh classifyTask
+ *   - answer / context turns                     → inherit (structural
+ *     continuations by definition)
+ *   - prompt with a new-task marker             → fresh (explicit reset)
+ *   - explicit redirect (structured godId=/god: per the 12c P5 precedence,
+ *     or free-text "com Athena")                  → fresh
+ *   - otherwise (warm prompt)                     → inherit
+ */
+export function classifyTurnWithInheritance(
+  action: 'prompt' | 'answer' | 'context',
+  text: string,
+  prior: TaskClassification | null,
+): TaskClassification {
+  const promptText = action === 'answer'
+    ? `[User answer to your question] ${text}`
+    : action === 'context'
+      ? `[Additional context from user] ${text}`
+      : text;
+  const structuredRedirect = explicitGodAddress(promptText) !== null;
+  const freeTextRedirect = isFreeTextGodRedirect(promptText);
+  const explicitNewTask = action === 'prompt' && isNewTaskMarker(text);
+  if (!prior || structuredRedirect || freeTextRedirect || explicitNewTask) {
+    return classifyTask(promptText);
+  }
+  return inheritClassification(prior);
+}
+
 /**
  * Parse a TaskClassification from an env var value. Returns null if the
  * value is missing or malformed (the dynamic loader falls back to loading
