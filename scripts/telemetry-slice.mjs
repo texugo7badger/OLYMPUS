@@ -53,11 +53,46 @@ import { fileURLToPath } from 'node:url';
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_FILE = path.join(os.homedir(), 'OLYMPUS-VAULT', '06_Activity_Feed', 'live.jsonl');
 
+const SCRIPT_HELP = `Usage: node scripts/telemetry-slice.mjs [options]
+
+REPL-over-context for live.jsonl: window + filter the feed into compact
+per-run JSONL records (run mode) or per-event records (event mode).
+Zero dependencies. Deterministic: a pure function of input + args.
+
+Options:
+  --file <path>      Feed file (default: ~/OLYMPUS-VAULT/06_Activity_Feed/live.jsonl)
+  --since <ISO>      Window start, inclusive. PARSED AS A TIMESTAMP — a
+                     second-precision boundary (2026-10-03T10:24:33Z)
+                     correctly includes millisecond events at the same
+                     second (never string-compared).
+  --until <ISO>      Window end, inclusive (same timestamp parsing).
+  --god <name>       Run mode: runs whose routeTo matches (the routed
+                     god). Event mode: event.god matches.
+  --action <action>  EVENT MODE selector — one record per matching event
+                     (dispatch, symphony-dispatch, dispatch_outcome,
+                     classification, unattended_mode, …). Without it,
+                     run mode applies.
+  --id <clsId>       Exact classification_id (event field or
+                     meta.classificationId) — selects one run / its events.
+  --window-min <n>   ts-proximity fallback window for run association
+                     (default 5, same semantics as agreement-metric).
+  --json             Pretty-printed aggregate (runs + orphans + counts)
+                     instead of one-line-per-record JSONL.
+  --self-test        Run against telemetry-slice.fixture.jsonl and assert
+                     window/god/action/id filtering + output shape; exit 0/1.
+  --help, -h         Show this help.
+
+Examples:
+  node scripts/telemetry-slice.mjs --since 2026-10-04T09:00:00Z
+  node scripts/telemetry-slice.mjs --action symphony-dispatch --json
+  node scripts/telemetry-slice.mjs --god apollo --since ... --until ...
+`;
+
 function parseArgs(argv) {
   const args = {
     file: DEFAULT_FILE, since: null, until: null,
     god: null, action: null, id: null,
-    windowMin: 5, json: false, selfTest: false,
+    windowMin: 5, json: false, selfTest: false, help: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -70,6 +105,7 @@ function parseArgs(argv) {
     else if (a === '--window-min') args.windowMin = Number(argv[++i] ?? 5);
     else if (a === '--json') args.json = true;
     else if (a === '--self-test') args.selfTest = true;
+    else if (a === '--help' || a === '-h') args.help = true;
     else { console.error(`unknown arg: ${a}`); process.exit(1); }
   }
   return args;
@@ -201,6 +237,7 @@ function groupRuns(events, windowMin) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.help) { console.log(SCRIPT_HELP); return; }
   const events = applyFilters(readEvents(args.file), args);
 
   if (args.action) {
