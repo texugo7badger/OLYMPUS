@@ -45,3 +45,14 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | 13.3-4 | fixture iterations disclosed: (a) MY negative-assertion usage bug (passed `false` as cond — 3 assertions); (b) case mismatch 'Present' vs lowercase regex; (c) a REAL \b-boundary bug in the don't-ask pattern (the trailing \b could never match inside 'anything') — found BY the fixture, fixed in the pattern (don'?t ask (me )?any → don'?t ask) | test runs 1→4 | 17/21 → 21/21 |
 | 13.3-5 | live-behavior evidence for the directive mechanism is pre-existing (12b probe B5 'HARD-GATE … explicitly overridden'; 12c/12d unattended probes all completed) — the #64 delta is the strengthened anti-escape clause + parity wiring, whose chain links are pinned deterministically | 12b/12c FACTS-LEDGER | — |
 | 13.3-6 | a live autoescola-veloz-shaped re-probe on free-big-pickle was considered and DEFERRED to the madruga-2 campaign (guardrail: opencode.json mutation for the strategy switch + pool latency risk mid-batch; the madruga-2 driver already plans exactly this re-run as its acceptance test) | disclosed decision | — |
+
+## Phase 4 — #62 watchdog
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| 13.4-1 | watchdog landed (nudge-abort + permission-pending + class scale + terminal renderer case) | `git show 32d8967 --stat` | 4 files, +168/−16 |
+| 13.4-2 | full stub fixture 25/25 green (11 #61 + 6 S3 integration + 8 unit) | `npx tsx scripts/opencode-session.test.mjs` | `NO FAILURES` / exit 0 |
+| 13.4-3 | S3 integration (env-tunable windows warn=1s stall=3s, hung POST): auto-resume after exactly ONE nudge; nudge precedes retry line; retry line carries stream_idle_timeout; sequential (max concurrent=1) | fixture output | all PASS |
+| 13.4-4 | decision-table unit layer: quiet/warn/nudge-abort + permission-pending OVERRIDE + scale matrix (architectural/complex→3, simple/absent→1) | fixture U: lines | 8/8 PASS |
+| 13.4-5 | fixture iterations disclosed: (a) stub POST-counter cumulative across scenarios — the hang condition never matched (S3 initially didn't stall at all); (b) the nudge phrase appears in BOTH the log line and the error string quoted by the retry line — assertion tightened to the log-only phrasing | test runs | run A: 3 FAIL → fix → all green |
+| 13.4-6 | design interpretation disclosed: the 'auto-continue nudge' is implemented as the idle-abort + #61 retry-layer re-post (the automated manual-Continue! recovery — identical mechanics to what healed F1/F2/F4), bounded by the retry plan; permission waits are NEVER nudged/killed (distinct renderer-keyed state); MAX_RUNTIME stays the only hard bound | ledger | — |
