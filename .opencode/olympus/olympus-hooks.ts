@@ -59,6 +59,7 @@ import {
 import {
   initDispatchTracker,
   registerOpenDispatch,
+  recordDispatchFinding,
   attributeToolCall,
   finalizeDispatchesForGod,
   clearAllDispatches,
@@ -1469,6 +1470,13 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         // Issue #25: record the calling agent before the step-finish filter.
         const evtInfo0 = (evt as any).properties?.info ?? evt.info ?? null;
         if (part?.type === "tool") rememberCallAgent(part.callID, evtInfo0?.agent);
+        // RLM P2 (BATCH 13): fold-back capture — the latest assistant text
+        // for a demigod's in-flight work becomes the dispatch's
+        // findings_summary at finalize (sliced ≤2000 chars on the outcome
+        // event). evtInfo.agent is the producing agent; last write wins.
+        if (part?.type === "text" && typeof part.text === "string" && part.text) {
+          recordDispatchFinding(String(evtInfo0?.agent ?? ""), part.text);
+        }
 
         if (!part || part.type !== "step-finish") return;
 

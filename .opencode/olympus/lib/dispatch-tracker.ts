@@ -53,6 +53,10 @@ export interface OpenDispatch {
   taskSignature: string;
   /** Issue #54 join key: the classificationId of the run that opened this dispatch (from the in-band marker). */
   classificationId: string | null;
+  /** RLM P2 (BATCH 13): the demigod's LAST assistant text — the findings
+   *  summary written to dispatch_outcome at finalize (sliced ≤ 2000 chars).
+   *  Lossy on material, lossless on the verdict tail. */
+  findingsSummary: string | null;
   /** RLM P1 (budgeted recursion): the requested token budget, or null when unbounded. */
   budgetTokens: number | null;
   /** RLM P1 (handoff contract): the requested output shape, or null. */
@@ -153,6 +157,27 @@ function persist(): void {
  * If there's already an open dispatch for the same god + demigod, it is
  * finalized as "superseded" before the new one is opened.
  */
+/**
+ * RLM P2 (BATCH 13): record the latest assistant text observed for a
+ * demigod's in-flight work — the message.part.updated handler calls this
+ * with (info.agent, part.text). Last write wins; attributed to the most
+ * recent OPEN dispatch for that demigod (same candidate-selection rule the
+ * tool-call attribution uses). Fold-back becomes lossy-on-material,
+ * lossless-on-verdict at finalizeDispatch.
+ */
+export function recordDispatchFinding(demigod: string, text: string): void {
+  if (!demigod || typeof text !== 'string' || !text) return;
+  initDispatchTracker();
+  for (let i = openDispatches.length - 1; i >= 0; i--) {
+    if (openDispatches[i].demigod === demigod) {
+      openDispatches[i].findingsSummary = text;
+      return;
+    }
+  }
+  // No open dispatch for this agent — the text belongs to the god itself
+  // or a completed dispatch; nothing to fold back.
+}
+
 export function registerOpenDispatch(input: {
   dispatchId: string;
   god: string;
@@ -191,6 +216,7 @@ export function registerOpenDispatch(input: {
     mcp: input.mcp ?? null,
     taskSignature: input.taskSignature,
     classificationId: input.classificationId ?? null,
+    findingsSummary: null,
     budgetTokens: input.budgetTokens ?? null,
     outputShape: input.outputShape ?? null,
     stack: input.stack ?? null,
@@ -319,6 +345,7 @@ function finalizeDispatch(
       instinct_id: d.instinctId,
       short_circuited: d.shortCircuited,
       classification_id: d.classificationId,
+      findings_summary: typeof d.findingsSummary === 'string' && d.findingsSummary ? d.findingsSummary.slice(0, 2000) : null,
       budget_tokens: d.budgetTokens,
       output_shape: d.outputShape,
       budget_adherence: budgetAdherence,
