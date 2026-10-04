@@ -13,6 +13,34 @@ Start by understanding the current project context, then ask questions one at a 
 Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
 </HARD-GATE>
 
+## Round Cap, Declared Defaults, and Unattended Override (#64)
+
+The gate is ROUND-CAPPED and CONDITION-SCALED — it is not an infinite interview:
+
+- **Simple/trivial tasks** (one page, one component, one config change — anything a
+  single focused deliverable could satisfy): at most **1–2 question rounds**, then
+  PROCEED with declared defaults. A declared default is written like
+  "Assuming X — correct me later and I'll adjust." Continuing to ask after two
+  rounds on a simple task is a defect, not diligence.
+- **Moderate tasks**: 2–4 rounds, then proceed with declared defaults.
+- **Architectural tasks**: interview fully — the cap does not apply; the user
+  asked for architecture.
+
+**No-questions parity (#64):** if the user's message explicitly says not to ask
+("no questions", "don't ask", "sem perguntas", "não me pergunte", "autonomia
+total", or equivalent), treat the run as consented-unattended: skip the interview
+entirely, proceed with declared defaults, and present the design IN your final
+output alongside the first artifact. This is the same autonomy the batch-prompt
+unattended mode grants — an interactive user who asks for it gets it.
+
+**Unattended mode is ABSOLUTE:** if your context contains `[OLYMPUS UNATTENDED
+MODE]`, this gate — including the interview, the approval wait, and the
+user-review gates in the checklist below — is fully self-satisfied. Do NOT
+present a design and end your turn waiting: that is the failure shape observed
+in the wild (a run that stops at "I'll present a design before implementing"
+with zero files written). In unattended mode you present the design, state
+your assumptions, and BUILD — all in the same run.
+
 ## Anti-Pattern: "This Is Too Simple To Need A Design"
 
 Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.

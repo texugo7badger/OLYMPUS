@@ -20,7 +20,7 @@ import {
   forgetConversation,
 } from '@/lib/opencode-session';
 // Dynamic input token routing via task classifier.
-import { classifyTask, classifyTurnWithInheritance, serializeClassification, type TaskClassification } from '@/lib/task-classifier';
+import { classifyTask, classifyTurnWithInheritance, noQuestionsIntent, serializeClassification, type TaskClassification } from '@/lib/task-classifier';
 import { appendActivity } from '@/lib/activity-feed';
 // Issue #41: persisting an "always" grant so the next ask for the same tool
 // is settled by policy instead of by another card.
@@ -58,9 +58,15 @@ const UNATTENDED_DIRECTIVE = [
   'This run is unattended: no human will read or answer anything until it finishes.',
   '- Never ask questions and never wait for a reply — not for clarifications, approvals, design review, or spec sign-off.',
   '- This explicitly overrides any skill-level HARD-GATE or "wait for the user" instruction (e.g. the brainstorming skill\'s interview and approval gates): satisfy those gates yourself and say you did.',
+  '- NEVER end your turn by presenting a design, plan, or proposal and waiting. "I\'ll present a design before implementing" followed by a stop is the known failure shape — a design presented to nobody is a stall, not progress. Present the design AND build the deliverable in the SAME run.',
   '- Decide and proceed with sensible defaults. State every assumption you made explicitly in your final output.',
   '',
 ].join('\n');
+
+/**
+ * #64 (BATCH 13): the no-questions intent detector lives in
+ * task-classifier.ts (pure-function home); see NO_QUESTIONS_RE there.
+ */
 
 /**
  * Issue #63 (BATCH 13): conversationId → the last APPLIED classification.
@@ -233,7 +239,17 @@ export async function POST(req: NextRequest) {
     // scheduled jobs). The classifier still sees the RAW prompt so routing
     // semantics do not shift between attended and unattended runs of the
     // same task; the directive is prepended only to the spawned run text.
-    const unattended = action === 'prompt' && body.unattended === true;
+    // #51: caller-declared unattended run. #64 (BATCH 13): an explicit
+    // no-questions intent in the prompt text is honored at PARITY — the
+    // campaign proved the text alone is not enough; the directive is.
+    // #51: caller-declared unattended run (probes / batch harnesses /
+    // scheduled jobs). The classifier still sees the RAW prompt so routing
+    // semantics do not shift between attended and unattended runs of the
+    // same task; the directive is prepended only to the spawned run text.
+    // #64 (BATCH 13): an explicit no-questions intent in the prompt text is
+    // honored at PARITY — the campaign proved the text alone is not enough
+    // to suppress the brainstorming gate; the directive is.
+    const unattended = action === 'prompt' && (body.unattended === true || noQuestionsIntent(text));
     // Issue #54: in-band classification marker. The classification event
     // (below) and the plugin-side dispatch writers share this id — the
     // agreement metric gets an exact join key instead of ts-proximity.

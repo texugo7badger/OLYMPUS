@@ -349,6 +349,22 @@ export function isNewTaskMarker(prompt: string): boolean {
   return NEW_TASK_RE.test(prompt);
 }
 
+/**
+ * #64 (BATCH 13): explicit no-questions intent in an INTERACTIVE prompt is
+ * honored at parity with batch-prompt unattended mode. BENCH-MADRUGA-1
+ * evidence (autoescola-veloz / FC-4): the no-questions PROMPT alone did not
+ * reliably suppress the brainstorming approval gate — the in-band directive
+ * did. So an interactive user who says "sem perguntas" / "no questions"
+ * gets the same directive strength. Pure function; the route layers it
+ * onto the unattended decision.
+ */
+const NO_QUESTIONS_RE =
+  /\b(sem perguntas?|nao pergunte|não pergunte|nao me pergunte|não me pergunte|no questions|don'?t ask|do not ask|autonomia total|total autonomy|decida voce|decida você)\b/i;
+
+export function noQuestionsIntent(text: string): boolean {
+  return NO_QUESTIONS_RE.test(text);
+}
+
 export function isFreeTextGodRedirect(prompt: string): boolean {
   return FREE_TEXT_REDIRECT_RE.test(prompt);
 }
