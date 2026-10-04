@@ -27,10 +27,10 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import { COHERENCE_FALLBACK_THRESHOLD, } from '../core/protocol.js';
 import { tagOutcome, registerResonance } from './resonance-registry.js';
 import { promoteTemplate, demoteTemplate } from './harmonic-templates.js';
+import { getVaultRoot } from '../../vault-root.js';
 /**
  * Run the tuner after a Consensus cycle.
  *
@@ -172,7 +172,7 @@ function lookupConfidence(intentHash) {
     // Re-implemented inline to avoid circular import with harmonic-templates.ts
     // (which exports both lookup and promote — promote is what we use above).
     try {
-        const vaultRoot = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+        const vaultRoot = getVaultRoot();
         const templatesPath = path.join(vaultRoot, '05_Auto_Learning', 'vibrations', 'templates.json');
         const raw = fs.readFileSync(templatesPath, 'utf-8');
         const templates = JSON.parse(raw);

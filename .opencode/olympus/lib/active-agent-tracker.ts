@@ -27,6 +27,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { getVaultRoot } from "../../../src/lib/vault-root.js";
 
 const OLYMPUS_HOME = path.join(os.homedir(), ".olympus");
 const ACTIVE_AGENT_FILE = path.join(OLYMPUS_HOME, "active-agent.json");
@@ -258,7 +259,8 @@ export function clearActiveAgent(): void {
  * Used by the permission.ask hook to scope Callimachus's writes.
  */
 export function isInsideVault(filePath: string): boolean {
-  const vaultRoot = process.env.OLYMPUS_VAULT || path.join(os.homedir(), "OLYMPUS-VAULT");
+  // D21: the single canonical resolver.
+  const vaultRoot = getVaultRoot();
   const resolved = path.resolve(filePath);
   const vaultResolved = path.resolve(vaultRoot);
   return resolved.startsWith(vaultResolved + path.sep) || resolved === vaultResolved;

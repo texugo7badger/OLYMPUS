@@ -43,7 +43,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -128,14 +128,49 @@ if (existsSync(distDir)) {
   process.exit(0);
 }
 
-// 2. Remove the Symphony .js files from dist/src/.
+// 2. SYNC the emitted src/lib artifacts back into the shipped tree, then
+//    remove dist/src/.
 //
-// These are emitted by tsc because the Symphony .ts sources are in the
-// second rootDir. They are NOT needed at runtime — the overlay's compiled
-// JS imports resolve to the pre-compiled src/lib/symphony/*.js files
-// (shipped with the package). Removing them keeps the dist clean and
-// avoids confusion about which Symphony .js is "the" one.
+// The overlay tsc (rootDirs) emits the src/lib/symphony + vault-root
+// sources it compiled into dist/src/. Those sources are ALSO shipped as
+// compiled .js artifacts next to their .ts in src/lib/ — and before
+// MADRUGA-3 p2 those artifacts could go STALE (the .ts moved to
+// getVaultRoot() while the shipped .js still read process.env directly —
+// the D22/D21 class). This sync makes every overlay:compile refresh the
+// shipped artifacts, so "works in src" and "deployed artifact" can never
+// diverge again (R12).
+//
+// Rule: only refresh files that ALREADY have a shipped counterpart — the
+// sync never invents new files in src/lib.
 if (existsSync(nestedSrcDir)) {
+  let synced = 0;
+  function syncDir(emittedDir, shippedDir) {
+    if (!existsSync(emittedDir)) return;
+    for (const entry of readdirSync(emittedDir, { withFileTypes: true })) {
+      const em = join(emittedDir, entry.name);
+      const sh = join(shippedDir, entry.name);
+      if (entry.isDirectory()) {
+        syncDir(em, sh);
+      } else if (entry.name.endsWith('.ts')) {
+        // .ts inputs are also emitted here; never overwrite a source.
+        continue;
+      } else if (existsSync(sh)) {
+        copyFileSync(em, sh);
+        synced++;
+      } else if (entry.name.endsWith('.d.ts') && existsSync(sh.replace(/\.d\.ts$/, '.js'))) {
+        // A shipped .js without its .d.ts breaks NodeNext resolution of
+        // `.js` import specifiers (vault-root pre-p2). Ship the types too.
+        copyFileSync(em, sh);
+        synced++;
+      }
+    }
+  }
+  try {
+    syncDir(join(distDir, 'src'), join(__dirname, '..', 'src'));
+    log(`Synced ${synced} shipped src/lib artifact(s) from the overlay compile.`);
+  } catch (err) {
+    warn(`Artifact sync failed: ${err.message}`);
+  }
   log(`Removing dist/src/ (Symphony runtime not needed in overlay dist).`);
   try { rmSync(nestedSrcDir, { recursive: true, force: true }); } catch {}
   log(`Removed dist/src/.`);

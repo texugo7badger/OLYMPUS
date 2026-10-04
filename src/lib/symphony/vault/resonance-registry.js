@@ -26,9 +26,9 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import * as crypto from 'crypto';
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), 'OLYMPUS-VAULT');
+import { getVaultRoot } from '../../vault-root.js';
+const VAULT_ROOT = getVaultRoot();
 const REGISTRY_DIR = path.join(VAULT_ROOT, '05_Auto_Learning', 'vibrations');
 const REGISTRY_PATH = path.join(REGISTRY_DIR, 'registry.jsonl');
 const TEMPLATES_PATH = path.join(REGISTRY_DIR, 'templates.json');

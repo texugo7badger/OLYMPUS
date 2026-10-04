@@ -39,9 +39,10 @@ import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { getVaultRoot } from "../../../src/lib/vault-root.js";
 
 const OLYMPUS_ROOT = process.env.OLYMPUS_ROOT || process.cwd();
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), "OLYMPUS-VAULT");
+const VAULT_ROOT = getVaultRoot(); // D21: the single canonical resolver
 const DEMIGODS_JSON = path.join(OLYMPUS_ROOT, "opencode.demigods.json");
 const OPENCODE_JSON = path.join(OLYMPUS_ROOT, "opencode.json");
 const REGISTRY_RELOAD_SENTINEL = path.join(os.homedir(), ".olympus", "demigods-registry.reload");

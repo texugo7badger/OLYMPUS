@@ -1,9 +1,11 @@
 /**
  * Vault Root — single source of truth for the vault directory.
  *
- * Resolution order: OLYMPUS_VAULT_DIR env var → ~/.olympus/vault-root.txt
+ * MADRUGA-3 p2 (D21): ONE canonical resolver, ONE canonical env var.
+ * Resolution order: OLYMPUS_VAULT (canonical) → OLYMPUS_VAULT_DIR
+ * (DEPRECATED — loud warning when consumed) → ~/.olympus/vault-root.txt
  * → ~/OLYMPUS-VAULT/ (default). All vault path consumers should import
- * getVaultRoot() from here.
+ * getVaultRoot() from here — never read the env vars directly.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
@@ -15,6 +17,9 @@ import { homedir } from 'node:os';
 const VAULT_ROOT_FILE = join(homedir(), '.olympus', 'vault-root.txt');
 const DEFAULT_VAULT_ROOT = join(homedir(), 'OLYMPUS-VAULT');
 
+// The D21 deprecation warning fires once per process, loudly — never silent.
+let warnedDeprecatedVaultDir = false;
+
 let cachedRoot: string | null = null;
 
 /**
@@ -25,13 +30,29 @@ let cachedRoot: string | null = null;
 export function getVaultRoot(): string {
   if (cachedRoot !== null) return cachedRoot;
 
-  // 1. Env var (highest priority — set by `olympus --vault <path>`).
+  // 1. Canonical env var (OLYMPUS-spawned processes, fixtures, lanes).
+  if (process.env.OLYMPUS_VAULT) {
+    cachedRoot = process.env.OLYMPUS_VAULT;
+    return cachedRoot;
+  }
+
+  // 2. DEPRECATED: OLYMPUS_VAULT_DIR (the pre-D21 name — its readers were
+  //    migrated to this resolver; `olympus --vault` still sets it, so it
+  //    stays honored, but every consume warns loudly until retired).
   if (process.env.OLYMPUS_VAULT_DIR) {
+    if (!warnedDeprecatedVaultDir) {
+      warnedDeprecatedVaultDir = true;
+      console.error(
+        `[vault-root] DEPRECATION: OLYMPUS_VAULT_DIR is set — the canonical ` +
+        `variable is OLYMPUS_VAULT (D21, MADRUGA-3 p2). Migrate the caller; ` +
+        `this alias will be removed.`,
+      );
+    }
     cachedRoot = process.env.OLYMPUS_VAULT_DIR;
     return cachedRoot;
   }
 
-  // 2. ~/.olympus/vault-root.txt (written by Settings → Switch Vault).
+  // 3. ~/.olympus/vault-root.txt (written by Settings → Switch Vault).
   try {
     if (existsSync(VAULT_ROOT_FILE)) {
       const custom = readFileSync(VAULT_ROOT_FILE, 'utf-8').trim();
@@ -42,7 +63,7 @@ export function getVaultRoot(): string {
     }
   } catch {}
 
-  // 3. Default.
+  // 4. Default.
   cachedRoot = DEFAULT_VAULT_ROOT;
   return cachedRoot;
 }

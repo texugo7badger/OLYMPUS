@@ -36,7 +36,6 @@
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import * as fs from "fs";
 import * as path from "path";
-import * as os from "os";
 // Import the REAL Symphony core functions. fuseHarmonics() computes the true
 // consensus coherence via a geometric mean, and decode() enforces the A4
 // fallback threshold correctly. Computing fake coherence inline (arithmetic
@@ -49,9 +48,9 @@ import {
   type VibrationalSignature,
   type HarmonicPattern,
 } from "../../../../src/lib/symphony/index.js";
+import { getVaultRoot } from "../../../../src/lib/vault-root.js";
 
-const VAULT_ROOT =
-  process.env.OLYMPUS_VAULT || path.join(os.homedir(), "OLYMPUS-VAULT");
+const VAULT_ROOT = getVaultRoot(); // D21: the single canonical resolver
 const REGISTRY_PATH = path.join(
   VAULT_ROOT,
   "05_Auto_Learning",

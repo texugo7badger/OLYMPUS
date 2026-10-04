@@ -62,9 +62,18 @@ import {
   recordDispatchFinding,
   attributeToolCall,
   finalizeDispatchesForGod,
+  hasLocalDispatchRegistrations,
   clearAllDispatches,
   getOpenDispatches,
 } from "./lib/dispatch-tracker.js";
+// ATLAS (MADRUGA-3 p2): the sync-map funnel — every prompt lands in the
+// map via Atlas before anything else happens for it.
+import {
+  atlasIngestProjectPrompt,
+  atlasMarkProjectTurnsDone,
+  atlasMarkDispatchesFinalized,
+  finalizeAtlasOnProcessExit,
+} from "./lib/atlas-sync.js";
 import {
   penalizeInstinct,
   rewardInstinct,
@@ -94,9 +103,10 @@ import integrationReviewTool from "./tools/integration-review.js";
 // index in the registry block below). This wiring makes the Symphony's
 // Composer/Orchestra/Choir endpoints reachable by the gods.
 import { SYMPHONY_TOOLS } from "./symphony/symphony-hooks.js";
+import { getVaultRoot } from "../../src/lib/vault-root.js";
 
 // ─── Paths ────────────────────────────────────────────────────────────────
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), "OLYMPUS-VAULT");
+const VAULT_ROOT = getVaultRoot(); // D21: the single canonical resolver
 const ACTIVITY_FEED = path.join(VAULT_ROOT, "06_Activity_Feed", "live.jsonl");
 const CALLIMACHUS_LOCK = path.join(os.homedir(), ".olympus", "callimachus.lock");
 // Per-god cost telemetry. Read by the cost dashboard
@@ -766,6 +776,25 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
   // The tool map is still returned: those tools are MCP-backed and useful in
   // any client, and withholding them would silently strip Zed's capabilities
   // — a change well beyond cost attribution.
+  // ─── ATLAS (MADRUGA-3 p2, E1/D18): the exit-path finalize ──────────────
+  // Registered in BOTH gate paths. MANAGED processes run the full finalize
+  // (their dispatches + their project prompts' sync-map entries). An
+  // UNMANAGED process finalizes ONLY dispatches it opened itself via the
+  // tool (the Part 1 tool-side spine doctrine); one that never dispatched
+  // writes nothing at exit — the #25 contract preserved. The handler never
+  // throws at real exit — failures are LOUD on stderr (fixtures assert the
+  // loudness by calling the API directly).
+  const isManagedProcess = process.env.OLYMPUS_MANAGED === '1';
+  const atlasExitFinalize = () => {
+    try {
+      if (!isManagedProcess && !hasLocalDispatchRegistrations()) return;
+      finalizeAtlasOnProcessExit();
+    } catch (e: any) {
+      console.error(`[olympus] ATLAS exit finalize FAILED: ${e?.message || e}`);
+    }
+  };
+  process.once("exit", atlasExitFinalize);
+
   if (process.env.OLYMPUS_MANAGED !== '1') {
     return { tool: OLYMPUS_TOOLS };
   }
@@ -1236,6 +1265,31 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
       input: { sessionID: string },
       output: { parts?: Array<{ type?: string; text?: string }> | null },
     ) => {
+      // ─── ATLAS (MADRUGA-3 p2, Phase 1): the project-side funnel FIRST ──
+      // Every user message is recorded by Atlas before anything else
+      // happens for it (before marker parsing, before the model runs).
+      // Recording failure is LOUD but never blocks message delivery.
+      try {
+        const promptText = (output?.parts ?? [])
+          .filter((p) => p?.type === "text" && typeof p.text === "string")
+          .map((p) => p.text as string)
+          .join("\n");
+        if (promptText) {
+          atlasIngestProjectPrompt({ sessionID: input.sessionID, text: promptText });
+        }
+      } catch (e: any) {
+        console.error(`[olympus] ATLAS project-prompt ingest failed: ${e?.message || e}`);
+        try {
+          appendActivityFeed({
+            ts: new Date().toISOString(),
+            god: "atlas",
+            action: "atlas_ingest_error",
+            msg: `Atlas failed to record a project prompt (session ${input.sessionID}): ${e?.message || e}`,
+            meta: { session_id: input.sessionID },
+          });
+        } catch { /* feed down too — nothing more to do loudly */ }
+      }
+
       try {
         const text = (output?.parts ?? [])
           .filter((p) => p?.type === "text" && typeof p.text === "string")
@@ -1283,7 +1337,9 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
      */
     "session.idle": async () => {
       // Finalize any open dispatches (with reward/penalty)
+      const idleFinalized: Array<{ dispatchId: string; outcome: string }> = [];
       finalizeDispatchesForGod(null, (d, outcome) => {
+        idleFinalized.push({ dispatchId: d.dispatchId, outcome });
         // Reward/penalize only short-circuited dispatches (with an instinctId).
         // Deliberate (non-short-circuited) dispatches have no instinct to
         // reward, so we DON'T call rewardInstinct/penalizeInstinct for them —
@@ -1306,7 +1362,7 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           // Log deliberate dispatch outcomes so Callimachus's RECALIBRATE
           // stage can detect recurring patterns and bootstrap new empirical
           // instincts from them.
-          appendActivityFeed({
+           appendActivityFeed({
             ts: new Date().toISOString(),
             god: d.god,
             action: "deliberate-dispatch-outcome",
@@ -1319,6 +1375,20 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           });
         }
       });
+      if (idleFinalized.length > 0) {
+        try {
+          atlasMarkDispatchesFinalized(idleFinalized);
+        } catch (e: any) {
+          console.error(`[olympus] ATLAS dispatch-finalize transition failed: ${e?.message || e}`);
+        }
+      }
+      // ATLAS (MADRUGA-3 p2): project prompts whose turn completed land
+      // 'done' — runs at every idle, dispatches or not.
+      try {
+        atlasMarkProjectTurnsDone();
+      } catch (e: any) {
+        console.error(`[olympus] ATLAS project-turn transition failed: ${e?.message || e}`);
+      }
 
       // Don't fire if a god is still active (defensive)
       const state = getActiveAgent();

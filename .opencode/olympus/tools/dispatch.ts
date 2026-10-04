@@ -59,6 +59,14 @@ import { createHash } from "crypto";
 // single-writer doctrine. An unregistrable dispatch fails loudly and never
 // reports success.
 import { registerOpenDispatch } from "../lib/dispatch-tracker.js";
+// ATLAS (MADRUGA-3 p2): the sync-map ingest — the dispatch prompt is
+// recorded by Atlas BEFORE anything else happens for it (the Part 2
+// funnel; works in every process that loads the tool, managed or not).
+import {
+  atlasIngestDispatch,
+  atlasMarkDispatchRouted,
+  atlasMarkDispatchFailed,
+} from "../lib/atlas-sync.js";
 // Import the REAL Symphony composer. composeSignature() writes the payload
 // to the Resonance Registry (zero-loss), builds a proper VaultAnchor,
 // quantizes the intent, and measures the real coherence baseline.
@@ -83,8 +91,9 @@ import {
 // Issue #54: per-session classificationId (in-band marker state) for the
 // symphony-dispatch event's join key.
 import { getClassificationId } from "../lib/classification-context.js";
+import { getVaultRoot } from "../../../src/lib/vault-root.js";
 
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), "OLYMPUS-VAULT");
+const VAULT_ROOT = getVaultRoot(); // D21: the single canonical resolver
 const OLYMPUS_ROOT = process.env.OLYMPUS_ROOT || process.cwd();
 
 // --- Self-configuring demigod loader --------------------------------------
@@ -502,6 +511,66 @@ const dispatchTool: ToolDefinition = tool({
     budgetTokens?: number;
     outputShape?: string;
   }, context: { sessionID?: string }) => {
+    // ─── ATLAS (MADRUGA-3 p2, Phase 1): the funnel comes FIRST ──────────
+    // Every dispatch prompt is recorded by Atlas before anything else
+    // happens for it — then the inner execute runs unchanged, and the
+    // sync-map entry follows the outcome (routed on ok, failed otherwise).
+    // An Atlas recording failure is LOUD but never blocks the dispatch:
+    // the Part 1 spine's own registration gate (the L2 refusal) remains
+    // the dispatch's authority — same doctrine as the chat.message ingest.
+    let syncEntry = { id: "" };
+    try {
+      syncEntry = atlasIngestDispatch({
+        godId: String(args.godId || "unknown"),
+        demigod: String(args.demigod || "unknown"),
+        task: String(args.task || ""),
+        sessionID: context.sessionID,
+      });
+    } catch (e: any) {
+      console.error(`[olympus] ATLAS dispatch-prompt ingest failed: ${e?.message || e}`);
+    }
+    let inner: { output: string };
+    try {
+      inner = await dispatchExecuteInner(args, context);
+    } catch (e: any) {
+      try {
+        atlasMarkDispatchFailed(syncEntry.id, `tool threw: ${e?.message || e}`);
+      } catch { /* never let the record path break the error */ }
+      throw e;
+    }
+    try {
+      const parsed = JSON.parse(inner.output) as Record<string, unknown>;
+      if (parsed.ok === true && typeof parsed.dispatchId === "string" && typeof parsed.parentGod === "string") {
+        if (syncEntry.id) atlasMarkDispatchRouted(syncEntry.id, {
+          dispatchId: parsed.dispatchId,
+          parentGod: parsed.parentGod,
+          demigod: String(args.demigod || "unknown"),
+        });
+      } else if (parsed.ok !== true) {
+        if (syncEntry.id) atlasMarkDispatchFailed(syncEntry.id, String(parsed.error || "dispatch refused"));
+      }
+    } catch { /* recording a failed transition never breaks the tool result */ }
+    return inner;
+  },
+});
+
+/**
+ * The pre-Part-2 execute body, unchanged (R8: the Part 1 spine is
+ * certified; the Atlas funnel wraps it without touching its logic).
+ */
+async function dispatchExecuteInner(args: {
+  godId: string;
+  demigod: string;
+  task: string;
+  skill?: string;
+  mcp?: string;
+  shortCircuit?: boolean;
+  instinctId?: string;
+  stack?: string;
+  project?: string;
+  budgetTokens?: number;
+  outputShape?: string;
+}, context: { sessionID?: string }): Promise<{ output: string }> {
     const {
       godId,
       demigod,
@@ -825,7 +894,6 @@ const dispatchTool: ToolDefinition = tool({
         nextStep: `The demigod "${demigod}" is now available. OpenCode's task system can spawn it.`,
       }, null, 2),
     };
-  },
-});
+}
 
 export default dispatchTool;

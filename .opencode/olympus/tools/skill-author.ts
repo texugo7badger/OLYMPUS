@@ -38,8 +38,9 @@ import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { getVaultRoot } from "../../../src/lib/vault-root.js";
 
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), "OLYMPUS-VAULT");
+const VAULT_ROOT = getVaultRoot(); // D21: the single canonical resolver
 const OLYMPUS_ROOT = process.env.OLYMPUS_ROOT || process.cwd();
 const RELOAD_SENTINEL = path.join(os.homedir(), ".olympus", "skills-registry.reload");
 

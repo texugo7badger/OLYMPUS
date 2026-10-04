@@ -29,13 +29,14 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import * as crypto from "crypto";
+import { getVaultRoot } from "../../../src/lib/vault-root.js";
 
 // MADRUGA-3 p1 (L2): OLYMPUS_HOME is env-overridable so bench lanes and
 // fixtures isolate their dispatch registry instead of sharing the
 // operator's real ~/.olympus. Default unchanged.
 const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), ".olympus");
 const STATE_FILE = path.join(OLYMPUS_HOME, "dispatch-state.json");
-const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), "OLYMPUS-VAULT");
+const VAULT_ROOT = getVaultRoot(); // D21: the single canonical resolver
 const LIVE_FEED = path.join(VAULT_ROOT, "06_Activity_Feed", "live.jsonl");
 
 export interface OpenDispatch {
@@ -95,6 +96,13 @@ let openDispatches: OpenDispatch[] = [];
 let initialized = false;
 
 /**
+ * MADRUGA-3 p2 (E1/D18): the dispatch ids THIS process registered via
+ * registerOpenDispatch. The exit-path finalize (finalizeLocalDispatchesOnExit)
+ * finalizes exactly these — never another live process's open dispatches.
+ */
+const locallyRegisteredIds = new Set<string>();
+
+/**
  * Initialize the tracker from the persisted state file. Called once at
  * plugin load. Stale open dispatches (older than 30 minutes) are finalized
  * as "unknown" outcome so they don't linger forever.
@@ -118,6 +126,7 @@ export function initDispatchTracker(): void {
         if (isNaN(age) || age < cutoff) {
           // Stale — finalize as unknown
           finalizeDispatch(d, "unknown");
+          locallyRegisteredIds.delete(d.dispatchId);
         } else {
           openDispatches.push(d);
         }
@@ -254,6 +263,7 @@ export function registerOpenDispatch(input: {
     toolCallCount: 0,
   };
   openDispatches.push(open);
+  locallyRegisteredIds.add(open.dispatchId);
   const p = persist();
   if (!p.ok) {
     // L2 (MADRUGA-3 p1): an unregistrable dispatch fails LOUDLY. The
@@ -346,6 +356,7 @@ export function finalizeDispatchesForGod(
     finalizeDispatch(d, outcome);
     if (finalizeFn) finalizeFn(d, outcome);
     finalized.push(d);
+    locallyRegisteredIds.delete(d.dispatchId);
   }
   openDispatches = remaining;
   persist();
@@ -353,13 +364,63 @@ export function finalizeDispatchesForGod(
 }
 
 /**
+ * MADRUGA-3 p2 (E1/D18): finalize the dispatches THIS process opened, at
+ * process exit. Mid-flight deaths (no attributed tool calls, no error
+ * evidence — the dispatch was opened but never completed its work before
+ * the process ended) land 'failed', never 'unknown': the exit is the
+ * evidence. Failures of the finalize itself (feed/state unwritable) are
+ * collected and reported — the caller turns them into a LOUD error.
+ */
+export function finalizeLocalDispatchesOnExit(): {
+  finalized: Array<{ dispatchId: string; god: string; demigod: string; outcome: string }>;
+  failures: string[];
+} {
+  initDispatchTracker();
+  const finalized: Array<{ dispatchId: string; god: string; demigod: string; outcome: string }> = [];
+  const failures: string[] = [];
+  const remaining: OpenDispatch[] = [];
+  for (const d of openDispatches) {
+    if (!locallyRegisteredIds.has(d.dispatchId)) {
+      // Another process's open dispatch — never touched from here.
+      remaining.push(d);
+      continue;
+    }
+    let outcome: "success" | "failure" | "failed";
+    if (d.hadError) outcome = "failure";
+    else if (d.toolCallCount > 0) outcome = "success";
+    else outcome = "failed"; // died mid-flight at exit — E1's contract
+    d.status = outcome;
+    const r = finalizeDispatch(d, outcome);
+    if (!r.ok) {
+      // The outcome EVENT is the record — if its write failed, the
+      // dispatch must NOT leave the open list (that would make it vanish
+      // without its record, worse than dangling). Keep it open for the
+      // stale sweep / a later process, and report the failure loudly.
+      failures.push(`${d.dispatchId}: ${r.error}`);
+      remaining.push(d);
+      continue;
+    }
+    finalized.push({ dispatchId: d.dispatchId, god: d.god, demigod: d.demigod, outcome });
+    locallyRegisteredIds.delete(d.dispatchId);
+  }
+  openDispatches = remaining;
+  const p = persist();
+  if (!p.ok) failures.push(`dispatch-state persist: ${p.error}`);
+  return { finalized, failures };
+}
+
+/**
  * Finalize a single dispatch: append the rich event to live.jsonl.
  * Does NOT remove from the open list (caller does that).
+ *
+ * MADRUGA-3 p2 (E1): returns {ok, error} — the exit-path finalize turns
+ * write failures into a LOUD error instead of swallowing them. The
+ * outcome union gains 'failed' (died mid-flight at process exit).
  */
 function finalizeDispatch(
   d: OpenDispatch,
-  outcome: "success" | "failure" | "unknown" | "superseded",
-): void {
+  outcome: "success" | "failure" | "unknown" | "superseded" | "failed",
+): { ok: boolean; error: string } {
   try {
     const dir = path.dirname(LIVE_FEED);
     if (!fs.existsSync(dir)) {
@@ -426,9 +487,22 @@ function finalizeDispatch(
     } catch {
       // Non-fatal — arsenal log is best-effort
     }
-  } catch {
-    // Non-fatal
+    return { ok: true, error: "" };
+  } catch (e: any) {
+    // MADRUGA-3 p2 (E1): the finalize outcome write FAILED — reported to
+    // the caller (the exit path turns this into a LOUD error); legacy
+    // callers (idle/stale sweep) keep their best-effort semantics.
+    return { ok: false, error: String(e?.message || e) };
   }
+}
+
+/**
+ * MADRUGA-3 p2 (E1): does THIS process hold locally-registered open
+ * dispatches? The exit-path finalize no-ops when false — preserving the
+ * #25 gate's "unmanaged foreign processes write nothing" contract.
+ */
+export function hasLocalDispatchRegistrations(): boolean {
+  return locallyRegisteredIds.size > 0;
 }
 
 /**

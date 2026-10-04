@@ -194,10 +194,10 @@ const child = (mode, env = {}) => {
     env: {
       ...process.env,
       OLYMPUS_ROOT: lane, OLYMPUS_VAULT: vault, OLYMPUS_HOME: home,
-      // getVaultRoot() (the resonance registry) resolves OLYMPUS_VAULT_DIR;
-      // dispatch.ts/tracker resolve OLYMPUS_VAULT. Both must point at the
-      // temp vault for a hermetic run.
-      OLYMPUS_VAULT_DIR: vault,
+      // D21 (closed in p2): OLYMPUS_VAULT is the ONE canonical vault
+      // variable — getVaultRoot() resolves it everywhere (the resonance
+      // registry included, via the refreshed shipped artifacts). No
+      // OLYMPUS_VAULT_DIR needed; setting it would now warn.
       ...env,
     },
   });

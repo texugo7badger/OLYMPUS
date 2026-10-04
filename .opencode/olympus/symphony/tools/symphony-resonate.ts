@@ -25,6 +25,13 @@
  */
 
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
+// ATLAS (MADRUGA-3 p2): the sync-map funnel — a broadcast prompt is
+// recorded by Atlas first.
+import {
+  atlasIngestDispatch,
+  atlasMarkDispatchFailed,
+  atlasMarkEmitComplete,
+} from "../../lib/atlas-sync.js";
 import {
   composeSignature,
   serializeSignature,
@@ -86,6 +93,15 @@ const symphonyResonateTool: ToolDefinition = tool({
     ttl?: number;
     stackHints?: string[];
   }) => {
+    // ATLAS (MADRUGA-3 p2, Phase 1): a Symphony broadcast is a god-dispatch
+    // prompt — recorded by Atlas BEFORE anything else happens for it. The
+    // lifecycle is emit-shaped: received → done (signature composed +
+    // broadcast) | failed.
+    const syncEntry = atlasIngestDispatch({
+      godId: String(args.composer || "unknown"),
+      demigod: `orchestra:${(args.targetOrchestra || []).join(",") || "none"}`,
+      task: String(args.payload || ""),
+    });
     try {
       const signature = composeSignature({
         composer: args.composer,
@@ -103,6 +119,11 @@ const symphonyResonateTool: ToolDefinition = tool({
       );
 
       const symbol = symbolicForm(signature.intentVector);
+
+      atlasMarkEmitComplete(syncEntry.id, {
+        signatureId: signature.id,
+        vaultAnchor: signature.vaultAnchor.anchorId,
+      });
 
       return {
         output: JSON.stringify(
@@ -135,6 +156,9 @@ const symphonyResonateTool: ToolDefinition = tool({
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      try {
+        atlasMarkDispatchFailed(syncEntry.id, message);
+      } catch { /* recording a failed transition never breaks the tool result */ }
       return {
         output: JSON.stringify({ ok: false, error: message }, null, 2),
       };
