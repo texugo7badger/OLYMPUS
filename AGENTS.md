@@ -103,3 +103,26 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+---
+
+## Issue Taxonomy (standing rule — effective 2026-10-03, retroactive)
+
+Every issue is complete at creation time:
+
+- **Title:** `type(scope): title` — type ∈ feat | fix | docs | refactor | test | chore;
+  scope ∈ autonomy | telemetry | permissions | harness | dev-server | free-tier |
+  registry | build | vault | cost (extend the scope set only by standing-rule update).
+- **Labels:** one type label (bug / enhancement / documentation) + area labels matching
+  the scope — set via the GitHub API at creation. Deferring labels is a batch defect.
+- **Retroactive hygiene:** before commenting on, referencing, or closing any issue,
+  verify its taxonomy; if off-pattern, retitle + relabel in the same action
+  (pre-authorized — no permission needed) and log it in the batch report.
+- **Batch reports:** every batch report carries a `## Taxonomy check` section listing
+  issues touched as `#NN type(scope): title [labels]`.
+- **Closure:** closing comments MUST link evidence (commit sha + test/probe output).
+  Closing an off-pattern issue without fixing its taxonomy first is an incomplete
+  closure.
+
+Known label areas: autonomy, telemetry, permissions, harness, dev-server, free-tier,
+registry.
