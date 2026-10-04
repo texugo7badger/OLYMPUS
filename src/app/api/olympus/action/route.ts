@@ -821,6 +821,26 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         });
         if (closed) return;
 
+        // #60 (BATCH 13): client-gone run bounded — emit the run_abandoned
+        // telemetry to the activity feed (the SSE client is gone; the FEED is
+        // the durable witness). meta carries the exact contract.
+        if (result.abandoned) {
+          try {
+            appendActivity({
+              god: 'system',
+              action: 'run_abandoned',
+              msg: `Run abandoned: client gone; server-side prompt aborted after ${result.abandoned.grace_ms}ms grace (session ${result.abandoned.session_id})`,
+              meta: {
+                session_id: result.abandoned.session_id,
+                last_event_ts: result.abandoned.last_event_ts,
+                grace_ms: result.abandoned.grace_ms,
+              },
+            });
+          } catch {
+            // Non-fatal: the feed write must never break the close path.
+          }
+        }
+
         if (result.code === 0) {
           finish(0);
           return;

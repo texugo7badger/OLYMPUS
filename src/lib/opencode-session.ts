@@ -698,6 +698,14 @@ export interface WarmRunResult {
    *  (APIError data.statusCode, or a non-2xx POST). Absent when the failure had
    *  no status — classifyRetry then falls back to matching the error string. */
   statusCode?: number;
+  /** #60 (BATCH 13): set when the client went away mid-run and the
+   *  server-side prompt was aborted after the grace window. The route emits
+   *  this as the run_abandoned telemetry event. */
+  abandoned?: {
+    session_id: string;
+    last_event_ts: string;
+    grace_ms: number;
+  };
 }
 
 export interface WarmRunOptions {
@@ -1532,7 +1540,55 @@ async function runWarmMessageAttempt(
     const postCtrl = new AbortController();
     const outerSignal = opts.signal;
 
+    // #60 (BATCH 13): bound the server-side run after the SSE client is
+    // gone. Client abort no longer only stops WATCHING — after a grace
+    // window it POSTs /session/<id>/abort so the opencode serve cancels the
+    // in-flight prompt (probe B5 kept executing 25+ min past its deadline:
+    // self-approved design doc, built artifacts, two review dispatches, all
+    // unobserved). Attended runs get the ~10s deliberate-detachment grace
+    // (OLYMPUS_ABORT_GRACE_MS); unattended_mode runs (the [OLYMPUS
+    // UNATTENDED MODE] marker in the run text) abort immediately — no human
+    // is coming back. STOP agency is untouched for CONNECTED clients: only
+    // client-gone runs become killable.
+    const ABORT_GRACE_MS = (opts.text || '').includes('[OLYMPUS UNATTENDED MODE]')
+      ? 0
+      : Number(process.env.OLYMPUS_ABORT_GRACE_MS || 10_000);
+    let clientGoneAt: number | null = null;
+    let serverAbortSent = false;
+    const sendServerAbort = async () => {
+      if (serverAbortSent) return;
+      serverAbortSent = true;
+      try {
+        const auth = server.authed ? server.password : null;
+        await apiFetch(server.port, auth, `/session/${opts.sessionId}/abort`, { method: 'POST' }, 5_000);
+      } catch {
+        // Best-effort: if the serve is already gone, there is nothing to kill.
+      }
+    };
+    let graceTimer: ReturnType<typeof setTimeout> | null = null;
+    // Kill order is load-bearing (#60 fixture): AWAIT the server-side abort
+    // BEFORE aborting the local controllers, so the /session/<id>/abort has
+    // provably landed (and been counted by any watcher) before the attempt
+    // returns — no fire-and-forget race.
+    const killServerSide = async () => {
+      await sendServerAbort();
+      eventCtrl.abort();
+      postCtrl.abort();
+    };
     const onAbort = () => {
+      if (clientGoneAt === null && outerSignal?.aborted) {
+        // Client-gone: grace first, then kill the server-side run.
+        clientGoneAt = Date.now();
+        if (ABORT_GRACE_MS <= 0) {
+          void killServerSide();
+          return;
+        }
+        graceTimer = setTimeout(() => { void killServerSide(); }, ABORT_GRACE_MS);
+        return;
+      }
+      // Watchdog / max-runtime aborts (client still connected or already gone):
+      // stop watching immediately; the server-side kill only matters for
+      // client-gone runs (the connected client still owns its session).
       eventCtrl.abort();
       postCtrl.abort();
     };
@@ -1824,6 +1880,22 @@ async function runWarmMessageAttempt(
       // re-probes and respawns if needed.
       if (!postStarted) invalidateServer();
       if (outerSignal?.aborted) {
+        // #60: client-gone — the server-side prompt was (or is being) killed
+        // after the grace window; carry the run_abandoned telemetry payload.
+        if (clientGoneAt !== null) {
+          return {
+            code: -1,
+            sessionId: opts.sessionId,
+            receivedEvents,
+            postStarted,
+            error: 'aborted',
+            abandoned: {
+              session_id: opts.sessionId,
+              last_event_ts: new Date(state.lastFrameAt).toISOString(),
+              grace_ms: ABORT_GRACE_MS,
+            },
+          };
+        }
         return { code: -1, sessionId: opts.sessionId, receivedEvents, postStarted, error: 'aborted' };
       }
       if (idleTimedOut) {
@@ -1859,6 +1931,7 @@ async function runWarmMessageAttempt(
     } finally {
       clearTimeout(maxTimer);
       clearInterval(silenceTimer);
+      if (graceTimer) clearTimeout(graceTimer);
       if (outerSignal) outerSignal.removeEventListener('abort', onAbort);
     }
 }

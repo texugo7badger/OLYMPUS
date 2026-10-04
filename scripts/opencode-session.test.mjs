@@ -26,6 +26,7 @@
 
 import http from 'node:http';
 import fs from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
@@ -40,7 +41,7 @@ function expect(name, cond, detail) {
 }
 
 // ─── Stub server ──────────────────────────────────────────────────────────────
-const stub = { mode: 'recover', postCount: 0, concurrent: 0, maxConcurrent: 0, eventStreams: 0 };
+const stub = { mode: 'recover', postCount: 0, concurrent: 0, maxConcurrent: 0, eventStreams: 0, abortsReceived: 0, hangCount: 0, hungStreams: 0 };
 
 const server = http.createServer((req, res) => {
   const auth = req.headers.authorization || '';
@@ -60,6 +61,12 @@ const server = http.createServer((req, res) => {
     const keep = setInterval(() => { try { res.write(': keepalive\n\n'); } catch {} }, 1000);
     res.on('close', () => clearInterval(keep));
     return;
+  }
+  if (req.method === 'POST' && /\/session\/[^/]+\/abort$/.test(url)) {
+    if (!authed) { res.writeHead(401); return res.end(); }
+    stub.abortsReceived++;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end('{}');
   }
   if (req.method === 'POST' && /\/session\/[^/]+\/message$/.test(url)) {
     if (!authed) { res.writeHead(401); return res.end(); }
@@ -169,6 +176,50 @@ async function main() {
   expect('U: complexityScale: complex → 3', complexityScale('complex') === 3, 'want 3');
   expect('U: complexityScale: simple → 1', complexityScale('simple') === 1, 'want 1');
   expect('U: complexityScale: absent → 1', complexityScale(null) === 1, 'want 1');
+
+  // ── Scenario 4 (#60): client gone mid-run (attended, short grace) ──
+  // The POST hangs; the CLIENT's signal aborts at +1s; the grace window
+  // (env-tuned to 1.5s) elapses; the stub then receives /session/<id>/abort;
+  // the result carries the run_abandoned payload (session_id + last_event_ts
+  // + grace_ms). No zombie: the stub abort endpoint answered, and the
+  // attempt returned.
+  process.env.OLYMPUS_ABORT_GRACE_MS = '1500';
+  stub.mode = 'hang-then-recover';
+  stub.hangCount = 99; // hang every POST in this scenario
+  stub.postCount = 0;
+  transcript.length = 0;
+  const clientSignal4 = new AbortController();
+  setTimeout(() => clientSignal4.abort(), 1000);
+  const tAbort0 = Date.now();
+  const r4 = await runWarmMessage({
+    sessionId, text: 'fixture prompt 4 (attended)', agent: 'apollo', onEvent,
+    signal: clientSignal4.signal, maxRuntimeMs: 60_000, complexity: 'simple',
+  });
+  expect('S4: client-gone run returns (no zombie watcher)', r4.code === -1 && r4.error === 'aborted', JSON.stringify(r4).slice(0, 120));
+  expect('S4: server-side /abort POST received after grace', stub.abortsReceived >= 1, 'aborts=' + stub.abortsReceived);
+  expect('S4: run_abandoned payload present', !!r4.abandoned && r4.abandoned.session_id === sessionId && r4.abandoned.grace_ms === 1500, JSON.stringify(r4.abandoned));
+  expect('S4: payload carries last_event_ts (ISO)', typeof r4.abandoned?.last_event_ts === 'string' && !Number.isNaN(Date.parse(r4.abandoned.last_event_ts)), r4.abandoned?.last_event_ts);
+  expect('S4: grace elapsed before the abort (>=1.5s wall)', Date.now() - tAbort0 >= 1500, 'too fast');
+  delete process.env.OLYMPUS_ABORT_GRACE_MS;
+
+  // ── Scenario 5 (#60): unattended_mode → abort-on-client-gone IMMEDIATE ──
+  const abortsBefore = stub.abortsReceived;
+  stub.postCount = 0;
+  transcript.length = 0;
+  const clientSignal5 = new AbortController();
+  setTimeout(() => clientSignal5.abort(), 800);
+  const r5 = await runWarmMessage({
+    sessionId,
+    text: '[OLYMPUS UNATTENDED MODE]\nThis run is unattended.\nfixture prompt 5',
+    agent: 'apollo', onEvent, signal: clientSignal5.signal, maxRuntimeMs: 60_000,
+  });
+  expect('S5: unattended client-gone → grace 0 (immediate abort)', r5.abandoned?.grace_ms === 0, JSON.stringify(r5.abandoned));
+  expect('S5: server /abort received (unattended immediate)', stub.abortsReceived > abortsBefore, `aborts=${stub.abortsReceived} (was ${abortsBefore})`);
+
+  // ── Route-side telemetry emission: content assertion (the feed write
+  // lives in streamWarm — not directly callable; its contract is pinned) ──
+  const routeSrc = readFileSync(OLYMPUS + '/src/app/api/olympus/action/route.ts', 'utf-8');
+  expect('route: run_abandoned telemetry emitted on result.abandoned', /action: 'run_abandoned'/.test(routeSrc) && /result\.abandoned\.session_id/.test(routeSrc), 'route emission missing');
 
   server.close();
 }
