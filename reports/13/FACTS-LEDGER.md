@@ -89,3 +89,13 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | 13.7-3 | agreement-metric 25/25 unaffected (schema grew additively) | metric suite | green |
 | 13.7-4 | attribution caveat disclosed: text parts are attributed by info.agent → most-recent open dispatch for that demigod (same candidate rule as tool attribution); delta-tail risk accepted per the memo's own last-write-wins spec — live-shape proof deferred to madruga-2 dispatch scenarios | design + memo §P2 | — |
 | 13.7-5 | two fixture-assertion usage bugs of mine fixed during development (boolean as got vs string want — twice); the wiring itself passed first try | test runs | — |
+
+## Phase 8 — ride-alongs
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| 13.8-a | #66 GO-limits table refreshed exactly per the issue body | `git show 74a7d85` | MODEL-STRATEGIES.md +25/−7; corrected 65,000 / 5,200 / Grok 4.7-4.6 845; added unlimited-free rows w/ expiry caveat + LongCat-2.0 + availability list + dollar-limit percentages + DeepSeek peak windows |
+| 13.8-b | telemetry-slice --help landed; self-test still 10/10 | a0f79a2 + run | usage text renders; `self-test still 10/10` |
+| 13.8-c | AGENTS.md taxonomy standing-rule section, verbatim | 1d44304 | +23 lines |
+| 13.8-d | #68 PWD pin landed in spawnOpencode + deterministic /proc dirtest PASS (parent PWD=repo, spawn cwd=/tmp/... → child env PWD=spawn cwd) | cc1b04d + dirtest | `PASS: child env PWD == spawn cwd` exit 0 |
+| 13.8-d2 | dirtest iterations disclosed: --version exited before the /proc read (race); npx-from-tmp lacked tsx context; final shape = repo-cwd parent + tmp-project child — the exact mismatch scenario | test evolution | — |
