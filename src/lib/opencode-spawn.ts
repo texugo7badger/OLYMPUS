@@ -760,6 +760,19 @@ export function spawnOpencode(
   const { executable, cwd: defaultCwd, env } = getOpencodeSpawnOptions(options.extraEnv);
   const cwd = options.cwd ?? defaultCwd;
 
+  // #68 / BENCH-MADRUGA-1 D3 (BATCH 13): pin PWD to the spawn cwd. opencode
+  // resolves its session directory from a heritable $PWD over process.cwd()
+  // when they disagree — a parent process (bench driver, harness) spawning
+  // with cwd=<project> while its own PWD=<parent> misdirected every such
+  // run one level above the intended folder (two poisoned campaign
+  // launches, preserved under ~/olympus-bench/madruga-1/aborted-run-2/).
+  // Pinning AFTER the extraEnv merge but as the LAST word on PWD; callers
+  // may still override via extraEnv.PWD when they genuinely want a
+  // different display dir — no other env semantics change.
+  if (!('PWD' in (options.extraEnv ?? {}))) {
+    env.PWD = cwd;
+  }
+
   // CRITICAL: stdin must be 'ignore', NOT 'pipe'.
   //
   // opencode is a TUI application built with Bun. When its stdin is a pipe
