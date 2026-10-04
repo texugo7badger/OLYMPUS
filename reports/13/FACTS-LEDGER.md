@@ -79,3 +79,13 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | 13.6-5 | race found by the fixture + fixed: the abort POST was fire-and-forget — the attempt could return before the stub received it; kill order now AWAITS the server abort before controller teardown | S4 fail → fix → green | aborts=0 → ≥1 |
 | 13.6-6 | the opencode abort endpoint verified in the SDK: POST /session/{id}/abort | sdk.gen.js:304 | `'Abort a session'` |
 | 13.6-7 | route-side telemetry is content-asserted (the feed write lives in streamWarm, not directly callable from the fixture); appendActivity is the app's proven feed writer (classification events) | route grep | `action: 'run_abandoned'` present |
+
+## Phase 7 — RLM P2 findings at fold-back
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| 13.7-1 | P2 landed (tracker field + recordDispatchFinding + hook capture + outcome write) | `git show 877c951 --stat` | 3 files, +96 |
+| 13.7-2 | deterministic fixture 6/6 (last-write-wins, 2000-char slice, null compat, orphan safety, hook wiring) | `npx tsx scripts/findings-foldback.test.mjs` | `All RLM P2 findings-foldback assertions passed` exit 0 |
+| 13.7-3 | agreement-metric 25/25 unaffected (schema grew additively) | metric suite | green |
+| 13.7-4 | attribution caveat disclosed: text parts are attributed by info.agent → most-recent open dispatch for that demigod (same candidate rule as tool attribution); delta-tail risk accepted per the memo's own last-write-wins spec — live-shape proof deferred to madruga-2 dispatch scenarios | design + memo §P2 | — |
+| 13.7-5 | two fixture-assertion usage bugs of mine fixed during development (boolean as got vs string want — twice); the wiring itself passed first try | test runs | — |
