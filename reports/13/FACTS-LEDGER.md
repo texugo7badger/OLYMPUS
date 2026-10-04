@@ -99,3 +99,16 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | 13.8-c | AGENTS.md taxonomy standing-rule section, verbatim | 1d44304 | +23 lines |
 | 13.8-d | #68 PWD pin landed in spawnOpencode + deterministic /proc dirtest PASS (parent PWD=repo, spawn cwd=/tmp/... → child env PWD=spawn cwd) | cc1b04d + dirtest | `PASS: child env PWD == spawn cwd` exit 0 |
 | 13.8-d2 | dirtest iterations disclosed: --version exited before the /proc read (race); npx-from-tmp lacked tsx context; final shape = repo-cwd parent + tmp-project child — the exact mismatch scenario | test evolution | — |
+
+## Phase 9 — validation, closures, push
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| 13.9-1 | all 8 suites green (146 assertions) | battery run | metric 25 · distill 4 · classifier 29 · slice 10 · autonomy-gate 21 · opencode-session 33 · checkpoint 18 · foldback 6 |
+| 13.9-2 | tsc ×3 green (root, overlay post-compile, electron) | runs | exit 0 ×3 |
+| 13.9-3 | build per EDQUOT protocol: compile+TS+static-gen 21/21 green; finalization hit the 400s tool timeout (environmental, the 12c/12d slowness); electron tsc + postcompile standalone green; next-env.d.ts flip reverted | build log + steps | disclosed verbatim in report §3 |
+| 13.9-4 | machine clean (load-bearing for #60) | ss + pgrep + ls | no listeners 3737/3738/3740/3777; pidfiles clean; no serves |
+| 13.9-5 | opencode.json untouched: sha256 == baseline at close; the Phase-0 snapshot was never consumed (no apply-strategy ran this batch) | sha256sum | `db62995d…` |
+| 13.9-6 | self-critique re-verifications: #63 route wiring :235-236; #62 scale wiring :1616; #68 PWD pin :773 — all CONFIRMED by command | greps | lines quoted in report §4 |
+| 13.9-7 | taxonomy retro-hygiene + 8 closures with evidence-linked comments | gh | #60/#61/#62/#63/#64/#65/#66/#68 all `✓ Closed`; label fixes logged in report §6 |
+| 13.9-8 | ONE session interruption disclosed: Phase-9 build killed mid-compile by tool timeout; resumed fresh; the completed run's compile/TS/static-gen green | resume check | — |
