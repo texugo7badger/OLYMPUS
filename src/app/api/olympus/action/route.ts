@@ -256,12 +256,25 @@ export async function POST(req: NextRequest) {
     // In-band because the warm opencode serve is a shared, already-running
     // process that per-request env (OLYMPUS_TASK_CLASSIFICATION) cannot
     // reach; the env payload still carries the id for one-shot spawns.
+    // Issue #54: in-band classification marker. The classification event
+    // (below) and the plugin-side dispatch writers share this id — the
+    // agreement metric gets an exact join key instead of ts-proximity.
+    // In-band because the warm opencode serve is a shared, already-running
+    // process that per-request env (OLYMPUS_TASK_CLASSIFICATION) cannot
+    // reach; the env payload still carries the id for one-shot spawns.
+    // #65 (BATCH 13): the OLYMPUS-SESSION marker carries the conversationId —
+    // the stable key for the decision-checkpoint file
+    // (.olympus/sessions/<conversationId>.decisions.md). It rides ALL turn
+    // types (approval decisions land on answer turns — PetLove FC-5 had six
+    // successful turns and zero persisted state); the classification marker
+    // stays prompt-only.
+    const sessionMarker = `[OLYMPUS-SESSION ${conversationId}] `;
     const classificationMarker = action === 'prompt'
       ? `[OLYMPUS-CLASSIFICATION id=${classification.classificationId} routeTo=${classification.routeTo}] `
       : '';
     const runText = unattended
-      ? UNATTENDED_DIRECTIVE + classificationMarker + promptText
-      : classificationMarker + promptText;
+      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + promptText
+      : sessionMarker + classificationMarker + promptText;
 
     // R-C: appendActivity for prompt (not answer/context) — durable run-start audit.
     if (action === 'prompt') {

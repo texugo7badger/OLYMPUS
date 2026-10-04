@@ -1463,6 +1463,27 @@ export function watchdogDecision(args: {
 }
 
 /**
+ * #65 (BATCH 13): decision-checkpoint census. Detects a tool call writing
+ * (or appending) to a `.decisions.md` checkpoint file — any of the shapes
+ * the gods use: write/edit with a filePath, or bash with an
+ * append/tee/redirect mentioning the path. Pure; exported for the fixture.
+ */
+export function checkpointWriteTarget(toolName: string, args: any): string | null {
+  const name = String(toolName || '').toLowerCase();
+  const a = args && typeof args === 'object' ? args : {};
+  const candidate = (s: unknown) => (typeof s === 'string' && /\.decisions\.md$/.test(s) ? s : null);
+  if (name === 'write' || name === 'edit') {
+    return candidate(a.filePath) ?? candidate(a.file_path) ?? candidate(a.path);
+  }
+  if (name === 'bash') {
+    const cmd = String(a.command ?? '');
+    const m = cmd.match(/([\w./-]+\.decisions\.md)/);
+    if (m && /(>>|tee|-a\s|append)/.test(cmd)) return m[1];
+  }
+  return null;
+}
+
+/**
  * One warm-message attempt. `allowRetry` reserved for future use; the retry
  * decision lives in runWarmMessage's loop (which respawns the server before
  * re-invoking this).
@@ -1592,6 +1613,8 @@ async function runWarmMessageAttempt(
     // about — it is what the old "Task completed (no output)" masked.
     let toolCount = 0;
     let readCount = 0;
+    // #65: decision-checkpoint writes this run (census surface).
+    let checkpointWrites = 0;
     // Prime the policy store with the legacy path allowlist so the first
     // permission ask of a cold process seeds the file with the vault rule.
     loadPermissions({ pathAlwaysPrefixes: AUTO_APPROVE_PREFIXES });
@@ -1648,6 +1671,17 @@ async function runWarmMessageAttempt(
           toolCount++;
           const name = String(ev.tool?.name || ev.name || '').toLowerCase();
           if (name === 'read' || name === 'readfile' || name === 'read_file') readCount++;
+          // #65: census counts decision-checkpoint writes — the durable state
+          // the resume path replays from (PetLove FC-5: 6 turns, 0 files).
+          const ckpt = checkpointWriteTarget(name, ev.tool?.input ?? ev.tool?.args ?? ev.args);
+          if (ckpt) {
+            checkpointWrites++;
+            opts.onEvent({
+              type: 'log',
+              msg: `[olympus-run] checkpoint_write #${checkpointWrites}: ${ckpt}`,
+              ts: new Date().toISOString(),
+            });
+          }
         }
         receivedEvents = true;
         opts.onEvent(ev);
@@ -1763,7 +1797,7 @@ async function runWarmMessageAttempt(
       if (!state.gotError && state.textEmitted.size === 0) {
         deliver({
           type: 'log',
-          msg: `[olympus-run] no_output: read_count=${readCount} tool_count=${toolCount} text_count=${state.textEmitted.size}`,
+          msg: `[olympus-run] no_output: read_count=${readCount} tool_count=${toolCount} text_count=${state.textEmitted.size} checkpoint_writes=${checkpointWrites}`,
           ts: new Date().toISOString(),
         });
       }

@@ -41,6 +41,25 @@ in the wild (a run that stops at "I'll present a design before implementing"
 with zero files written). In unattended mode you present the design, state
 your assumptions, and BUILD — all in the same run.
 
+## Decision Checkpointing (#65)
+
+Interview state must OUTLIVE the chat window. The checkpoint file is the source of truth:
+
+- If the context contains an `[OLYMPUS-SESSION <id>]` marker, the checkpoint file is
+  `.olympus/sessions/<id>.decisions.md` (create directories as needed — the `.olympus/`
+  tree is runtime state, never committed). Without a marker, use
+  `.olympus/sessions/current.decisions.md`.
+- At the END of every approval round — and at every "## Decisões"-style decision you
+  make under the round cap — APPEND a dated decisions block to that file:
+  one line per decision, `"- [HH:MM] <decision> (because <reason>)"`.
+- At the START of any resumed or continued turn, READ the checkpoint file if it exists
+  and treat it as the authoritative record of every prior decision — never re-ask,
+  never re-derive what the file already answers. The file is how a retry, a crash
+  recovery inside the same session, or a "continue" resumes without loss.
+- The run census counts these writes (`checkpoint_writes` in the no_output telemetry)
+  — a zero-checkpoint interview is a defect shape (PetLove FC-5: 6 successful turns,
+  zero persisted state).
+
 ## Anti-Pattern: "This Is Too Simple To Need A Design"
 
 Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
