@@ -67,3 +67,15 @@ Every claim needs: `claim | proving command | one-line output`. No ledger entry 
 | 13.5-4 | kill-mid-interview resume mechanics proven at the mechanism layer: the checkpoint file survives the 'crash' and every decision recovers verbatim; the god-behavior half (append-per-round, read-on-resume) is pinned by prompt-layer content assertions — the LIVE behavioral proof is deferred to the madruga-2 resume scenarios (disclosed, consistent with the batch's deterministic-first verification note) | fixture §4 + content assertions | — |
 | 13.5-5 | scope note: cross-conversation crash recovery (new-session handoff → new conversationId → old checkpoint orphaned) is NOT covered tonight — within-conversation retries/continuations are; disclosed as a 13+ follow-up | design reasoning | — |
 | 13.5-6 | .olympus/ path verified gitignored (line 87: 'Olympus home … never commit') — checkpoint writes are runtime state, no repo pollution | .gitignore | — |
+
+## Phase 6 — #60 SSE-abort bound
+
+| # | claim | proving command | one-line output |
+|---|-------|------------------|-----------------|
+| 13.6-1 | #60 landed (grace + server /abort + abandoned payload + route telemetry) | `git show d064592 --stat` | 3 files, +145/−1 |
+| 13.6-2 | full stub fixture 33/33 (25 prior + 8 new) | `npx tsx scripts/opencode-session.test.mjs` | `NO FAILURES` / `ALL GREEN exit 0` |
+| 13.6-3 | S4 (attended, grace env-tuned 1.5s): the /session/<id>/abort POST provably lands AFTER grace; abandoned payload = exact meta contract (session_id + last_event_ts ISO + grace_ms) | fixture | 5/5 PASS |
+| 13.6-4 | S5 (unattended marker in text): grace 0, immediate abort | fixture | 2/2 PASS |
+| 13.6-5 | race found by the fixture + fixed: the abort POST was fire-and-forget — the attempt could return before the stub received it; kill order now AWAITS the server abort before controller teardown | S4 fail → fix → green | aborts=0 → ≥1 |
+| 13.6-6 | the opencode abort endpoint verified in the SDK: POST /session/{id}/abort | sdk.gen.js:304 | `'Abort a session'` |
+| 13.6-7 | route-side telemetry is content-asserted (the feed write lives in streamWarm, not directly callable from the fixture); appendActivity is the app's proven feed writer (classification events) | route grep | `action: 'run_abandoned'` present |
