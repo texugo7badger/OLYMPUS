@@ -37,7 +37,7 @@ import { execSync, spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnOpencode } from '@/lib/opencode-spawn';
+import { spawnOpencode, freeTierPreflight } from '@/lib/opencode-spawn';
 import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
 import { getVaultRoot } from '@/lib/vault-root';
@@ -1260,6 +1260,13 @@ function mapPart(
  * and the message's own parts are fed through the same mapper (deduped) as
  * a belt-and-braces guarantee that text/step events always arrive.
  */
+/** #61 (BATCH 13): the warm-run retry plan — one source of truth for the
+ * loop, the transcript lines ("retry N/2"), and the exhaustion guidance. */
+const WARM_RETRY_PLAN = {
+  RETRY_BACKOFF_MS: [5_000, 15_000] as const,
+  RETRY_MAX_ATTEMPTS: 3, // 1 initial + 2 retries (RETRY_BACKOFF_MS.length + 1)
+};
+
 export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResult> {
   const server = await ensureServer();
 
@@ -1278,8 +1285,9 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
     // rollback here. The backoff is long (5s/15s) so the upstream pool can
     // recover, which also widens the window for work already in flight.
     // Retries are best-effort resumption, not a safety guarantee.
-    const RETRY_BACKOFF_MS = [5_000, 15_000];
-    const RETRY_MAX_ATTEMPTS = RETRY_BACKOFF_MS.length + 1;
+    // (#61 BATCH 13: hoisted reference — the module-level constants below
+    // keep one source of truth for the loop and the exhaustion guidance.)
+    const { RETRY_BACKOFF_MS, RETRY_MAX_ATTEMPTS } = WARM_RETRY_PLAN;
     // Issue #35/#39: snapshot the poison state BEFORE the loop. A transient
     // failure calls noteSessionError, which flags the window; if a retry then
     // succeeds we must undo that flag or the flush records outcome=error for a
@@ -1308,21 +1316,34 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
           ts: new Date().toISOString(),
         });
       }
-      if (attempt >= RETRY_MAX_ATTEMPTS - 1) return result;
+      if (attempt >= RETRY_MAX_ATTEMPTS - 1) {
+        // #61 (BATCH 13): retries exhausted — fail LOUDLY with #56-style
+        // explicit guidance naming the alternative free strategies whose
+        // keys ARE present. NO cross-strategy auto-switch (no-silent-
+        // downgrade doctrine): the guidance names alternatives; the
+        // operator switches.
+        opts.onEvent({
+          type: 'log',
+          msg: retryExhaustionGuidance(result.error, result.statusCode),
+          ts: new Date().toISOString(),
+        });
+        return result;
+      }
       // Aborts never retry (checked before every retry, per the contract).
       if (opts.signal?.aborted) return result;
       const kind = classifyRetry(result);
       if (!kind) return result;
       const delay = RETRY_BACKOFF_MS[attempt];
-      const label = typeof result.statusCode === 'number' ? `Provider ${result.statusCode}` : 'Transport failure';
+      const label = typeof result.statusCode === 'number' ? `upstream ${result.statusCode}` : 'Transport failure';
       // Issue #39: visible in the OLYMPUS terminal, never console-only.
       // Emitting BEFORE the sleep also pins firstEventAt in the route's
       // startup timer, so STARTUP_TIMEOUT_MS (action/route.ts:503, 120s —
       // it only fires while firstEventAt === null) cannot kill a retry that is
-      // deliberately waiting out a rate limit.
+        // deliberately waiting out a rate limit.
+      // #61: transcript line format "retry N/2: <label>".
       opts.onEvent({
         type: 'log',
-        msg: `${label} (attempt ${attempt + 1}/${RETRY_MAX_ATTEMPTS}) — retrying in ${Math.round(delay / 1000)}s; session context preserved${result.error ? ` [${result.error}]` : ''}`,
+        msg: `retry ${attempt + 1}/${RETRY_BACKOFF_MS.length}: ${label} — retrying in ${Math.round(delay / 1000)}s; session context preserved${result.error ? ` [${result.error}]` : ''}`,
         ts: new Date().toISOString(),
       });
       if (kind === 'transport') {
@@ -1336,6 +1357,10 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
 
 /** Transport-dead signatures (undici "fetch failed", refused/hung sockets). */
 const TRANSPORT_DEAD_RE = /fetch failed|ECONNREFUSED|ECONNRESET|socket hang up|other side closed|UND_ERR|network/i;
+/** #61: upstream overload signals (opencode's provider_overloaded + the generic form). */
+const PROVIDER_OVERLOADED_RE = /provider[ _-]?overloaded|overloaded/i;
+/** #61: stream idle timeout — the watchdog class name when an idle kill fires (#62's pre-kill path). */
+const STREAM_IDLE_TIMEOUT_RE = /stream[ _-]?idle[ _-]?timeout/i;
 
 /** Provider statuses worth re-posting: rate limits + upstream/gateway faults. */
 const RETRYABLE_PROVIDER_STATUS = new Set([429, 500, 502, 503, 504]);
@@ -1363,7 +1388,41 @@ function classifyRetry(result: WarmRunResult): RetryClass | null {
     return RETRYABLE_PROVIDER_STATUS.has(sc) ? 'provider' : null;
   }
   if (TRANSPORT_DEAD_RE.test(result.error)) return 'transport';
+  // #61: provider_overloaded and stream_idle_timeout are transient by
+  // spec — absorbed by the same retry loop as 429/5xx.
+  if (PROVIDER_OVERLOADED_RE.test(result.error)) return 'provider';
+  if (STREAM_IDLE_TIMEOUT_RE.test(result.error)) return 'provider';
   return PROVIDER_TRANSIENT_RE.test(result.error) ? 'provider' : null;
+}
+
+/**
+ * #61 (BATCH 13): the loud exhaustion message. Names the failing strategy,
+ * the last error, and — reusing the #56 preflight's key-presence chain —
+ * the ALTERNATIVE free strategies whose keys ARE present. Never
+ * auto-switches (no-silent-downgrade): guidance only, the operator
+ * decides. Exported for the deterministic fixture.
+ */
+export function retryExhaustionGuidance(
+  lastError: string | null | undefined,
+  lastStatusCode: number | undefined,
+): string {
+  const strategy = activeStrategyId();
+  const errLabel = typeof lastStatusCode === 'number' ? `upstream ${lastStatusCode}` : (lastError || 'unknown error');
+  // Key presence via the #56 spawn preflight's own chain: INFO means the
+  // strategy's required key was located; the ERROR block names what is
+  // missing. We only harvest the alternatives sentence from its text.
+  const preflight = freeTierPreflight(strategy);
+  const altMatch = preflight.match(/Alternatives whose key IS present: ([^\n]+)/i);
+  const altLine = altMatch
+    ? `  Alternatives whose key IS present: ${altMatch[1]}\n`
+    : '  No alternative free strategy has a key present either (per the spawn preflight chain).\n';
+  return [
+    `RETRY EXHAUSTED after ${WARM_RETRY_PLAN.RETRY_BACKOFF_MS.length} retries — strategy '${strategy}' failed with: ${errLabel}.`,
+    `  The run stopped. NO strategy was auto-switched (no silent downgrade).`,
+    altLine.trimEnd(),
+    `  To switch explicitly: node scripts/apply-strategy.js --strategy <id>   (free-openrouter | free-big-pickle | free-nvidia-build)`,
+    `  To absorb a rate-limited pool, simply resend — the warm session and its context are preserved.`,
+  ].join('\n');
 }
 
 /**
