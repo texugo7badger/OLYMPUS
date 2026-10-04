@@ -1074,21 +1074,52 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         // hook) onto the dispatch event + open-dispatch record.
         const classificationId = getClassificationId(input.sessionID);
 
-        registerOpenDispatch({
-          dispatchId: input.callID || `${dispatchGod}-${demigod}-${Date.now()}`,
-          god: dispatchGod,
-          demigod,
-          instinctId,
-          shortCircuited,
-          skill,
-          mcp,
-          taskSignature,
-          stack,
-          project,
-          classificationId,
-          budgetTokens,
-          outputShape,
-        });
+        // L2 (MADRUGA-3 p1): the tool now registers the dispatch itself
+        // (single writer — richer context: signature id end-to-end,
+        // directive hash, status; works even in one-shot spawns where this
+        // hook historically never finalized). Skip the duplicate
+        // registration when the tool's output carries the registration
+        // marker; keep the feed event below regardless.
+        let toolRegistered = false;
+        try {
+          const raw = (output as any)?.output;
+          const parsed = typeof raw === "string"
+            ? JSON.parse(raw)
+            : (raw && typeof raw === "object" ? raw : null);
+          toolRegistered = !!(parsed && parsed.ok === true && typeof parsed.dispatchId === "string" && parsed.dispatchId);
+        } catch {}
+        if (!toolRegistered) {
+          try {
+            registerOpenDispatch({
+              dispatchId: input.callID || `${dispatchGod}-${demigod}-${Date.now()}`,
+              god: dispatchGod,
+              demigod,
+              instinctId,
+              shortCircuited,
+              skill,
+              mcp,
+              taskSignature,
+              stack,
+              project,
+              classificationId,
+              budgetTokens,
+              outputShape,
+            });
+          } catch (e: any) {
+            // Loud, never silent — but the hook must not break the tool
+            // call it observes. The dispatch itself already refused (the
+            // tool's own registration gate) or this is a legacy path.
+            appendActivityFeed({
+              ts: new Date().toISOString(),
+              god: dispatchGod,
+              action: "dispatch_registration_error",
+              task_signature: taskSignature,
+              demigod,
+              msg: `Dispatch registry registration failed: ${e.message}`,
+              meta: { tool: input.tool, dispatch_id: input.callID },
+            });
+          }
+        }
 
         appendActivityFeed({
           ts: new Date().toISOString(),

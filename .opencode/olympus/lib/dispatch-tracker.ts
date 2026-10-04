@@ -28,8 +28,12 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import * as crypto from "crypto";
 
-const OLYMPUS_HOME = path.join(os.homedir(), ".olympus");
+// MADRUGA-3 p1 (L2): OLYMPUS_HOME is env-overridable so bench lanes and
+// fixtures isolate their dispatch registry instead of sharing the
+// operator's real ~/.olympus. Default unchanged.
+const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), ".olympus");
 const STATE_FILE = path.join(OLYMPUS_HOME, "dispatch-state.json");
 const VAULT_ROOT = process.env.OLYMPUS_VAULT || path.join(os.homedir(), "OLYMPUS-VAULT");
 const LIVE_FEED = path.join(VAULT_ROOT, "06_Activity_Feed", "live.jsonl");
@@ -65,6 +69,13 @@ export interface OpenDispatch {
   stack: string | null;
   /** Active project slug when the dispatch was opened. */
   project: string | null;
+  /** MADRUGA-3 p1 (L2): sha256 of the directive text (first 16 hex chars) —
+   *  the verifiable directive hash on the registry entry. */
+  directiveHash: string | null;
+  /** MADRUGA-3 p1 (L2): lifecycle status — "open" from registration until
+   *  finalize stamps the outcome ("success" | "failure" | "unknown" |
+   *  "superseded"). */
+  status: string;
   /** ISO timestamp when the dispatch was opened. */
   startTs: string;
   /** Tokens used so far (input + output), updated as tool calls land. */
@@ -100,6 +111,9 @@ export function initDispatchTracker(): void {
       const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8")) as PersistedState;
       const cutoff = Date.now() - 30 * 60 * 1000; // 30 minutes
       for (const d of data.openDispatches || []) {
+        // MADRUGA-3 p1: normalize pre-p1 recovered entries (additive fields).
+        if (d.directiveHash === undefined) d.directiveHash = null;
+        if (d.status === undefined) d.status = "open";
         const age = new Date(d.startTs).getTime();
         if (isNaN(age) || age < cutoff) {
           // Stale — finalize as unknown
@@ -113,10 +127,15 @@ export function initDispatchTracker(): void {
     // Corrupt state — start fresh
     openDispatches = [];
   }
-  persist();
+  const p = persist();
+  if (!p.ok) {
+    // Recovery-path persist is best-effort (must not crash plugin load),
+    // but never silent.
+    console.error(`[dispatch-tracker] state persist failed at init: ${p.error}`);
+  }
 }
 
-function persist(): void {
+function persist(): { ok: boolean; error: string } {
   try {
     if (!fs.existsSync(OLYMPUS_HOME)) {
       fs.mkdirSync(OLYMPUS_HOME, { recursive: true });
@@ -145,10 +164,9 @@ function persist(): void {
       // might still succeed on Unix.
     }
     fs.renameSync(tmpFile, STATE_FILE);
-  } catch {
-    // Non-fatal — the dispatch tracker is best-effort. If persist fails,
-    // the in-memory state is still correct for this process; only crash
-    // recovery across restarts is affected.
+    return { ok: true, error: "" };
+  } catch (e: any) {
+    return { ok: false, error: String(e?.message || e) };
   }
 }
 
@@ -192,6 +210,9 @@ export function registerOpenDispatch(input: {
   outputShape?: string | null;
   stack?: string | null;
   project?: string | null;
+  /** MADRUGA-3 p1 (L2): the directive hash (16 hex chars). Computed from
+   *  the task signature when the caller does not provide it. */
+  directiveHash?: string | null;
 }): void {
   initDispatchTracker();
 
@@ -206,6 +227,10 @@ export function registerOpenDispatch(input: {
     d => !(d.god === input.god && d.demigod === input.demigod),
   );
 
+  const directiveHash =
+    typeof input.directiveHash === "string" && /^[a-f0-9]{16}$/.test(input.directiveHash)
+      ? input.directiveHash
+      : (crypto.createHash("sha256").update(String(input.taskSignature || "")).digest("hex").slice(0, 16));
   const open: OpenDispatch = {
     dispatchId: input.dispatchId,
     god: input.god,
@@ -221,13 +246,22 @@ export function registerOpenDispatch(input: {
     outputShape: input.outputShape ?? null,
     stack: input.stack ?? null,
     project: input.project ?? null,
+    directiveHash,
+    status: "open",
     startTs: new Date().toISOString(),
     tokensUsed: { input: 0, output: 0 },
     hadError: false,
     toolCallCount: 0,
   };
   openDispatches.push(open);
-  persist();
+  const p = persist();
+  if (!p.ok) {
+    // L2 (MADRUGA-3 p1): an unregistrable dispatch fails LOUDLY. The
+    // in-memory state stays (finalize can still drain it in this process),
+    // but the caller — the dispatch tool — refuses the dispatch: an
+    // unrecorded dispatch must never report success.
+    throw new Error(`dispatch registry write failed: ${p.error}`);
+  }
 }
 
 /**
@@ -269,7 +303,12 @@ export function attributeToolCall(input: {
     candidate.tokensUsed.input += input.tokens.input ?? 0;
     candidate.tokensUsed.output += input.tokens.output ?? 0;
   }
-  persist();
+  const p = persist();
+  if (!p.ok) {
+    // Mid-flight attribution is best-effort (must not break the tool call it
+    // observes) — but never silent.
+    console.error(`[dispatch-tracker] attribution persist failed: ${p.error}`);
+  }
   return candidate;
 }
 
@@ -303,6 +342,7 @@ export function finalizeDispatchesForGod(
     if (d.hadError) outcome = "failure";
     else if (d.toolCallCount > 0) outcome = "success";
     else outcome = "unknown";
+    d.status = outcome;
     finalizeDispatch(d, outcome);
     if (finalizeFn) finalizeFn(d, outcome);
     finalized.push(d);
@@ -334,6 +374,10 @@ function finalizeDispatch(
       typeof d.budgetTokens === "number" && d.budgetTokens > 0
         ? Math.round((totalTokensUsed / d.budgetTokens) * 1000) / 1000
         : null;
+    // MADRUGA-3 p1 (L2): the status stamp + directive hash ride the
+    // outcome event — the registry entry's full contract (id, origin god,
+    // target, timestamp, directive hash, status) is auditable end-to-end.
+    d.status = outcome;
     const event = {
       ts: new Date().toISOString(),
       god: d.god,
@@ -349,6 +393,8 @@ function finalizeDispatch(
       budget_tokens: d.budgetTokens,
       output_shape: d.outputShape,
       budget_adherence: budgetAdherence,
+      directive_hash: d.directiveHash ?? null,
+      status: outcome,
       outcome,
       duration_ms: durationMs,
       tokens_used: d.tokensUsed,

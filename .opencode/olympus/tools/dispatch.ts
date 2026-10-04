@@ -54,6 +54,11 @@ import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { createHash } from "crypto";
+// L2 (MADRUGA-3 p1): the dispatch REGISTERS itself with the tracker — the
+// single-writer doctrine. An unregistrable dispatch fails loudly and never
+// reports success.
+import { registerOpenDispatch } from "../lib/dispatch-tracker.js";
 // Import the REAL Symphony composer. composeSignature() writes the payload
 // to the Resonance Registry (zero-loss), builds a proper VaultAnchor,
 // quantizes the intent, and measures the real coherence baseline.
@@ -108,8 +113,34 @@ const GOD_IDS = new Set([
   "hermes", "persephone", "prometheus", "callimachus",
 ]);
 
+// Demigod names must never carry a harness prefix (R10 / the unprefixed rule).
+const FORBIDDEN_PREFIXES = ["ecc-", "olympus-", "volt-"];
+
 const DEMIGODS_JSON = path.join(OLYMPUS_ROOT, "opencode.demigods.json");
 const OPENCODE_JSON = path.join(OLYMPUS_ROOT, "opencode.json");
+// L2 (MADRUGA-3): the repo registry — reliable fallback for lane/bench
+// contexts where OLYMPUS_ROOT points at a working dir that has the lane's
+// opencode.json (real copy, receives demigod auto-injection writes) but no
+// demigods registry of its own. The plugin lives inside the repo
+// (source: <repo>/.opencode/olympus/tools/, compiled:
+// <repo>/.opencode/olympus/dist/tools/ — one level deeper), so we walk up
+// from this module until we find the directory that actually contains
+// opencode.demigods.json. The 2b symlink bridge retires.
+function resolveRepoDemigodsJson(): string {
+  // __filename, not import.meta.url: the overlay compiles to CommonJS
+  // (TS1470 otherwise) and __filename is correct in both the compiled
+  // output and the tsx-compiled source the fixtures drive.
+  let dir = path.dirname(__filename);
+  for (let i = 0; i < 6; i++) {
+    const candidate = path.join(dir, "opencode.demigods.json");
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return "";
+}
+const REPO_DEMIGODS_JSON = resolveRepoDemigodsJson();
 const INJECTED_TRACKER = path.join(os.homedir(), ".olympus", "injected-demigods.json");
 const REGISTRY_RELOAD_SENTINEL = path.join(os.homedir(), ".olympus", "demigods-registry.reload");
 
@@ -145,14 +176,21 @@ function loadDemigodsRegistry(): DemigodRegistry {
   } catch {}
 
   if (_demigodsCache) return _demigodsCache;
-  if (!fs.existsSync(DEMIGODS_JSON)) {
-    throw new Error(
-      `opencode.demigods.json not found at ${DEMIGODS_JSON}. ` +
-      `Required for dynamic demigod loading. Run \`node scripts/apply-strategy.js --status\` to diagnose.`
-    );
+  // L2: lane-local registry first; repo registry as fallback.
+  let registryPath = DEMIGODS_JSON;
+  if (!fs.existsSync(registryPath)) {
+    if (REPO_DEMIGODS_JSON && fs.existsSync(REPO_DEMIGODS_JSON)) {
+      registryPath = REPO_DEMIGODS_JSON;
+    } else {
+      throw new Error(
+        `opencode.demigods.json not found at ${DEMIGODS_JSON}` +
+        (REPO_DEMIGODS_JSON ? ` or the repo fallback (${REPO_DEMIGODS_JSON})` : "") +
+        `. Required for dynamic demigod loading. Run \`node scripts/apply-strategy.js --status\` to diagnose.`
+      );
+    }
   }
-  const stat = fs.statSync(DEMIGODS_JSON);
-  const raw = JSON.parse(fs.readFileSync(DEMIGODS_JSON, "utf-8"));
+  const stat = fs.statSync(registryPath);
+  const raw = JSON.parse(fs.readFileSync(registryPath, "utf-8"));
   if (!raw.demigods || typeof raw.demigods !== "object") {
     throw new Error("opencode.demigods.json missing `demigods` object");
   }
@@ -204,13 +242,21 @@ function recordInjected(name: string): void {
 /**
  * Ensure the target demigod is present in opencode.json.
  *
+ * L3 (MADRUGA-3 p1): the demigods registry is consulted FIRST — the parent
+ * god is a REGISTRY FACT for every dispatch, including the already-present
+ * path. The curated directive's invoke target always comes from the
+ * registry; the generic `"apollo"` default is dead (a wrong subagent_type
+ * is worse than a refusal).
+ *
  * - If the demigod is a god ID, refuse (gods are always present).
- * - If the demigod is already in opencode.json, no-op.
- * - If the demigod is in the registry but not in opencode.json, inject it
- *   (load its config from opencode.demigods.json, write it into opencode.json,
- *   record the injection in ~/.olympus/injected-demigods.json for cleanup).
- * - If the demigod is NOT in the registry, throw with a helpful message
- *   directing the god to use the demigod-author tool.
+ * - If the demigod is not in the registry, refuse — including when it is
+ *   already present in opencode.json (a foreign agent gets no directive;
+ *   the pantheon dispatches only to registered demigods).
+ * - If the demigod's registry entry carries an invalid parent_god, refuse.
+ * - If the demigod is already in opencode.json AND registered, no-op (with
+ *   the registry-derived parent god returned).
+ * - Otherwise inject it (config from the registry, recorded in
+ *   ~/.olympus/injected-demigods.json for cleanup).
  *
  * Returns:
  *   - "already_present" — demigod was already in opencode.json (no-op)
@@ -231,17 +277,8 @@ function ensureDemigodPresent(demigodName: string): {
     };
   }
 
-  // Check if already in opencode.json
-  try {
-    if (fs.existsSync(OPENCODE_JSON)) {
-      const cfg = JSON.parse(fs.readFileSync(OPENCODE_JSON, "utf-8"));
-      if (cfg.agent && cfg.agent[demigodName]) {
-        return { status: "already_present" };
-      }
-    }
-  } catch {}
-
-  // Look up in registry
+  // Registry FIRST (L3): the parent god is curated by the registry for
+  // every dispatch — the already-present path included.
   let registry: DemigodRegistry;
   try {
     registry = loadDemigodsRegistry();
@@ -263,6 +300,31 @@ function ensureDemigodPresent(demigodName: string): {
     };
   }
 
+  const parentGod = entry.parent_god;
+  if (!parentGod || !GOD_IDS.has(parentGod)) {
+    // A corrupt registry entry must never produce a directive with an
+    // uncurated invoke target — refuse, loudly.
+    return {
+      status: "rejected_unknown",
+      reason:
+        `Demigod "${demigodName}" carries an invalid parent_god "${parentGod}" in the registry — ` +
+        `refusing to emit a directive with an uncurated invoke target. Fix opencode.demigods.json.`,
+    };
+  }
+
+  // Check if already in opencode.json
+  try {
+    if (fs.existsSync(OPENCODE_JSON)) {
+      const cfg = JSON.parse(fs.readFileSync(OPENCODE_JSON, "utf-8"));
+      if (cfg.agent && cfg.agent[demigodName]) {
+        return { status: "already_present", parent_god: parentGod, model: entry.model };
+      }
+    }
+  } catch {
+    // Unreadable config — fall through to the injection attempt, which
+    // reports the failure loudly.
+  }
+
   // Inject into opencode.json
   try {
     if (!fs.existsSync(OPENCODE_JSON)) {
@@ -282,7 +344,7 @@ function ensureDemigodPresent(demigodName: string): {
     recordInjected(demigodName);
     return {
       status: "injected",
-      parent_god: entry.parent_god,
+      parent_god: parentGod,
       model: entry.model,
     };
   } catch (e: any) {
@@ -291,6 +353,94 @@ function ensureDemigodPresent(demigodName: string): {
       reason: `Failed to inject demigod "${demigodName}" into opencode.json: ${e.message}`,
     };
   }
+}
+
+// ─── L4 (MADRUGA-3 p1): the emission record + its schema validator ─────────
+
+/**
+ * The dispatch emission record — the contract every successful dispatch
+ * must satisfy BEFORE the directive is emitted. Every field is a REAL,
+ * verifiable value (registry-derived parent god, composer-issued signature
+ * id + vault anchor, sha256 directive hash); anything less is refused.
+ */
+export interface DispatchEmissionRecord {
+  /** The dispatch registry id (the signature id — one id end-to-end). */
+  dispatchId: string;
+  /** The origin god (the god that dispatched). */
+  god: string;
+  /** The target demigod (unprefixed). */
+  demigod: string;
+  /** The demigod's parent god from the registry — the task-tool invoke target. */
+  parentGod: string;
+  /** The Symphony signature id (composer-issued). */
+  signatureId: string;
+  /** The Vault anchor id (zero-loss reconstruction path, Axiom A1). */
+  vaultAnchor: string;
+  /** The signature intent hash (composer-issued hex digest). */
+  intentHash: string;
+  /** sha256 of the directive text, first 16 hex chars (verifiable). */
+  directiveHash: string;
+  /** ISO timestamp of the emission. */
+  ts: string;
+  /** Lifecycle status at emission: "dispatched". */
+  status: string;
+  /** The curated directive text (must carry subagent_type="<parentGod>"). */
+  message: string;
+}
+
+/**
+ * Validate an emission record BEFORE the directive is emitted (L4). Pure —
+ * no I/O. Returns {ok: true} or {ok: false, violations: [...]} with the
+ * exact violation list. The tool refuses to emit an invalid directive.
+ */
+export function validateDispatchDirective(
+  record: Partial<DispatchEmissionRecord>,
+): { ok: boolean; violations: string[] } {
+  const violations: string[] = [];
+  const r = record ?? ({} as Partial<DispatchEmissionRecord>);
+  if (!r.god || !GOD_IDS.has(r.god)) {
+    violations.push(`unknown origin god "${r.god}"`);
+  }
+  if (!r.parentGod || !GOD_IDS.has(r.parentGod)) {
+    violations.push(`unknown parent god "${r.parentGod}" — the invoke target must be a real god`);
+  }
+  if (!r.demigod || typeof r.demigod !== "string") {
+    violations.push("missing demigod");
+  } else {
+    if (GOD_IDS.has(r.demigod)) violations.push(`"${r.demigod}" is a god, not a demigod`);
+    if (FORBIDDEN_PREFIXES.some(p => r.demigod!.startsWith(p))) {
+      violations.push(`demigod "${r.demigod}" carries a forbidden prefix (unprefixed names only)`);
+    }
+  }
+  if (!r.signatureId || typeof r.signatureId !== "string") {
+    violations.push("missing signature id");
+  }
+  if (!r.vaultAnchor || typeof r.vaultAnchor !== "string") {
+    violations.push("missing vault anchor (Axiom A1 — zero-loss reconstruction path)");
+  }
+  if (!/^[a-f0-9]{16,}$/i.test(r.intentHash || "")) {
+    violations.push(`intent hash "${r.intentHash}" is not a hex digest`);
+  }
+  if (!/^[a-f0-9]{16}$/.test(r.directiveHash || "")) {
+    violations.push(`directive hash "${r.directiveHash}" is not a 16-hex digest`);
+  }
+  if (!r.ts || isNaN(Date.parse(r.ts))) {
+    violations.push(`timestamp "${r.ts}" is not ISO`);
+  }
+  if (r.status !== "dispatched") {
+    violations.push(`unknown status "${r.status}" (expected "dispatched")`);
+  }
+  if (typeof r.message !== "string" || !r.message) {
+    violations.push("missing directive message");
+  } else {
+    if (!r.message.includes(`subagent_type="${r.parentGod}"`)) {
+      violations.push(`directive does not carry the curated subagent_type="${r.parentGod}"`);
+    }
+    if (r.parentGod !== "apollo" && r.message.includes('subagent_type="apollo"')) {
+      violations.push('directive carries the generic subagent_type="apollo" default');
+    }
+  }
+  return { ok: violations.length === 0, violations };
 }
 
 const dispatchTool: ToolDefinition = tool({
@@ -367,7 +517,6 @@ const dispatchTool: ToolDefinition = tool({
     } = args;
 
     // Validate the demigod name — must NOT be prefixed (no ecc-, olympus-, volt-)
-    const FORBIDDEN_PREFIXES = ["ecc-", "olympus-", "volt-"];
     const hasForbiddenPrefix = FORBIDDEN_PREFIXES.some(p => demigod.startsWith(p));
     if (hasForbiddenPrefix) {
       return {
@@ -432,11 +581,60 @@ const dispatchTool: ToolDefinition = tool({
       };
     }
 
+    // L3 (MADRUGA-3 p1): the invoke target is the registry-derived parent
+    // god — ALWAYS real (ensureDemigodPresent validated it against GOD_IDS).
+    // The generic "apollo" default is dead; a missing parent is a refusal.
+    const parentGod = injectResult.parent_god;
+    if (!parentGod || !GOD_IDS.has(parentGod)) {
+      return {
+        output: JSON.stringify({
+          ok: false,
+          error:
+            `Cannot dispatch to "${demigod}": no curated parent god for the invoke directive ` +
+            `(registry-derived parent missing or invalid: "${parentGod}"). The directive is ` +
+            `never emitted with an uncurated invoke target.`,
+        }, null, 2),
+      };
+    }
+
+    // L2 (MADRUGA-3 p1): the dispatch REGISTERS ITSELF — single writer, full
+    // rich context (signature id end-to-end, directive hash, status). An
+    // unregistrable dispatch fails loudly and NEVER reports success.
+    const directiveHash = createHash("sha256").update(task).digest("hex").slice(0, 16);
+    try {
+      registerOpenDispatch({
+        dispatchId: signature.id,
+        god: godId,
+        demigod,
+        instinctId: instinctId || null,
+        shortCircuited: shortCircuit,
+        skill: skill || null,
+        mcp: mcp || null,
+        taskSignature: task,
+        classificationId: getClassificationId(context.sessionID),
+        budgetTokens: typeof budgetTokens === "number" && Number.isFinite(budgetTokens) ? budgetTokens : null,
+        outputShape: typeof outputShape === "string" && outputShape ? outputShape : null,
+        stack: resolvedStack,
+        project: resolvedProject,
+        directiveHash,
+      });
+    } catch (err: any) {
+      return {
+        output: JSON.stringify({
+          ok: false,
+          error: `Dispatch not registered: ${err.message}`,
+          godId,
+          demigod,
+          signatureId: signature.id,
+        }, null, 2),
+      };
+    }
+
     // Log the dispatch to the activity feed — rich event for the VaultBrain
-    // capture pipeline. The tool.execute.after hook will ALSO see this call
-    // and register an open dispatch with the tracker, but we write the
-    // event here too as a redundancy in case the hook doesn't fire (e.g.,
-    // if the plugin is disabled).
+    // capture pipeline. L2 (MADRUGA-3 p1): this is the tool-side writer that
+    // works even in one-shot spawns (the MADRUGA-2b D18 evidence) — an
+    // unrecordable dispatch is REFUSED, never silently proceeded.
+    const emissionTs = new Date().toISOString();
     try {
       const feedPath = path.join(VAULT_ROOT, "06_Activity_Feed", "live.jsonl");
       const dir = path.dirname(feedPath);
@@ -444,7 +642,7 @@ const dispatchTool: ToolDefinition = tool({
         fs.mkdirSync(dir, { recursive: true });
       }
       const event = {
-        ts: new Date().toISOString(),
+        ts: emissionTs,
         god: godId,
         action: "symphony-dispatch",
         task_signature: task,
@@ -471,6 +669,12 @@ const dispatchTool: ToolDefinition = tool({
         intent_hash: signature.intentVector.intentHash,
         economy_reduction: economyEstimate.projectedReduction,
         demigod_injection: injectResult.status,
+        // L2 (MADRUGA-3 p1): the registry contract fields ride the event —
+        // id, origin god, target, timestamp, directive hash, status.
+        dispatch_id: signature.id,
+        parent_god: parentGod,
+        directive_hash: directiveHash,
+        status: "dispatched",
         msg: `Symphony dispatch to ${demigod} for "${task.slice(0, 100)}"`,
         meta: {
           skill,
@@ -507,12 +711,22 @@ const dispatchTool: ToolDefinition = tool({
             fs.writeFileSync(equipPath, JSON.stringify(existing, null, 2), 'utf-8');
           }
         } catch {
-          // Non-fatal — the dispatch still proceeds; the god may have to
-          // re-equip the MCP on the next dispatch if permission.ask denies.
+          // Non-fatal — the MCP equip is an auxiliary convenience, not a
+          // dispatch record; the god may have to re-equip the MCP on the
+          // next dispatch if permission.ask denies.
         }
       }
-    } catch {
-      // Non-fatal — the dispatch still proceeds
+    } catch (err: any) {
+      // L2 (MADRUGA-3 p1): an unrecorded dispatch never reports success.
+      return {
+        output: JSON.stringify({
+          ok: false,
+          error: `Dispatch not recorded in the live feed: ${err.message}`,
+          godId,
+          demigod,
+          dispatchId: signature.id,
+        }, null, 2),
+      };
     }
 
     // The actual demigod invocation is handled by OpenCode's native
@@ -539,6 +753,46 @@ const dispatchTool: ToolDefinition = tool({
         ? ` Budget: ${typeof budgetTokens === "number" && Number.isFinite(budgetTokens) ? `≤${budgetTokens} tokens` : "unspecified"}. Output shape: ${typeof outputShape === "string" && outputShape ? outputShape : "unspecified"}. Relay both to the subtask.`
         : "";
 
+    // L3 (MADRUGA-3, D16): the SHORT directive. The long prose form
+    // dropped the invoke instruction 3/3 on long prompts (the dilution
+    // curve: minimal 2/2, medium 2/2, long 0/3) — the fully compliant
+    // form is a compact, single-action directive. The invoke target is
+    // the registry-curated parent god (delta-1's proven shape: the
+    // madruga-2b probe-1 model composed subagent_type=<parent god>).
+    const directiveMessage =
+      `Dispatched: ${demigod} (parent: ${parentGod}).${injectMessage}${budgetMessage}` +
+      ` NEXT ACTION (the only one): invoke the task tool with subagent_type="${parentGod}" and the task prompt. Do not build anything yourself first.`;
+
+    // L4 (MADRUGA-3 p1): schema-validate the emission record BEFORE the
+    // directive is emitted. An invalid record is refused, never emitted.
+    const emission: DispatchEmissionRecord = {
+      dispatchId: signature.id,
+      god: godId,
+      demigod,
+      parentGod,
+      signatureId: signature.id,
+      vaultAnchor: signature.vaultAnchor.anchorId,
+      intentHash: signature.intentVector.intentHash,
+      directiveHash,
+      ts: emissionTs,
+      status: "dispatched",
+      message: directiveMessage,
+    };
+    const validation = validateDispatchDirective(emission);
+    if (!validation.ok) {
+      return {
+        output: JSON.stringify({
+          ok: false,
+          error:
+            `Dispatch directive failed schema validation (never emitted): ` +
+            validation.violations.join("; "),
+          godId,
+          demigod,
+          signatureId: signature.id,
+        }, null, 2),
+      };
+    }
+
     return {
       output: JSON.stringify({
         ok: true,
@@ -560,7 +814,14 @@ const dispatchTool: ToolDefinition = tool({
         intentType: signature.intentVector.intentType,
         economyReduction: economyEstimate.projectedReduction,
         demigodInjection: injectResult.status,
-        message: `Symphony signature composed + broadcast to ${demigod}. The full payload is preserved in the Vault at registry entry ${signature.vaultAnchor.anchorId} (zero-loss). The tool.execute.after hook will attribute subsequent tool calls to this dispatch and finalize it with outcome + duration + tokens when the agent changes.${injectMessage}${budgetMessage} Now invoke the demigod via the appropriate mechanism (slash command or task tool).`,
+        // L2/L3/L4 (MADRUGA-3 p1): the emission record — one id end-to-end,
+        // registry-curated parent, verifiable directive hash, status.
+        dispatchId: signature.id,
+        parentGod,
+        directiveHash,
+        ts: emissionTs,
+        status: "dispatched",
+        message: directiveMessage,
         nextStep: `The demigod "${demigod}" is now available. OpenCode's task system can spawn it.`,
       }, null, 2),
     };
