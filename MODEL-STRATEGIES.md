@@ -45,20 +45,38 @@ The OpenCode GO plan costs **$10/month** and includes:
 - **Weekly limit:** $30 of usage  
 - **Monthly limit:** $60 of usage
 
-These are dollar-value caps, not request counts. Different models consume the budget at different rates. The table below shows estimated monthly request counts per model within the $60 plan:
+These are dollar-value caps, not request counts. Different models consume the budget at different rates. **Per-model dollar limits: 5h = 20%, weekly = 50%, monthly = 100% of each model's own cap** — a model's 5h budget is one fifth of its monthly dollar cap, NOT of the global $12 (cross-checked against https://opencode.ai/docs/go/, page updated 2026-10-03; refreshed in BATCH 13 per #66).
+
+The table below shows estimated monthly request counts per model within the $60 plan:
 
 | Model | Requests/month | Best for | Cost per request |
 |---|---|---|---|
-| Hy3 | TBD | Agent orchestration, search, planning (Apollo budget) | Very low |
-| DeepSeek V4 Flash | **158,150** | Mechanical tasks (testing, DB migrations, vault) | Very low |
 | MiMo V2.5 | **150,400** | Ultra-cheap bulk tasks | Lowest |
-| DeepSeek V4 Pro | **17,150** | Code generation, backend logic | Low |
-| Qwen3.7 Plus | **21,600** | Reasoning, security, frontend, integration | Low-Medium |
-| GLM-5.3 | **1,080** | Apollo + Artemis (sacred, reserved) | Medium |
+| DeepSeek V4 Flash | **65,000** (was 158,150 — limit now $30) | Mechanical tasks (testing, DB migrations, vault) | Very low |
 | GLM-5.3-Flash | **31,580** | Workhorse — specialists, vault, background | Very low |
+| Qwen3.7 Plus | **21,600** | Reasoning, security, frontend, integration | Low-Medium |
+| DeepSeek V4 Pro | **5,200** (was 17,150 — limit now $15) | Code generation, backend logic | Low |
 | Kimi K2.7 Code | **6,750** | Specialist coding tasks | Medium |
+| GLM-5.3 | **1,080** | Apollo + Artemis (sacred, reserved) | Medium |
 | Kimi K3 | **490** | Highest-quality reasoning (Athena, Hephaestus) | High |
-| Grok 4.5 | **600** | Specialized reasoning | High |
+| Grok 4.7 / 4.6 | **845** each (replaces defunct Grok 4.5) | Specialized reasoning | High |
+| LongCat-2.0 | **57,200** ($60 tier) | Bulk long-context | Very low |
+| Space Bunny Free | **Unlimited** (limited-time, zero limit consumption) | Bulk work while offered | Free |
+| LongCat 2.5 Preview Free | **Unlimited** (limited-time, zero limit consumption) | Bulk work while offered | Free |
+
+> **Expiry caveat:** the two Free rows are promotional, limited-time
+> offerings — they consume none of the plan's per-model dollar caps while
+> active but may disappear without notice; do not build a sustainable-load
+> plan on them. Also available per the 2026-10-03 docs: Qwen3.8 generation,
+> DeepSeek V4.1 Flash, MiMo V2.6 generation, GPT 6 Luna / GPT 5.6 Luna,
+> Hy4 preview, Kimi K2.6, MiniMax M2.7, and GLM-5.2 at the $60 tier
+> (4,300 req/mo; GLM-5.2 request counts confirmed still correct).
+
+> **DeepSeek peak windows:** DeepSeek models bill their caps against
+> peak/off-peak pricing — peak is Mon–Fri 01:00–04:00 and 06:00–10:00 UTC.
+> Mechanical DeepSeek work (vault, migrations, bulk testing) is cheapest
+> outside those windows; the 5h/weekly/monthly percentages consume fastest
+> inside them.
 
 ### Sustainable 8h/day Coding
 
