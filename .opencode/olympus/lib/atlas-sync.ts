@@ -490,6 +490,8 @@ export interface PathStateResult {
   chainValid: boolean;
   tampered: string[];
   entries: SyncMapEntry[];
+  /** Phase 2 (p3): god heartbeat states, recorded by Atlas from the bus. */
+  godStates: Record<string, { state: string; ts: string }>;
 }
 
 /**
@@ -543,7 +545,7 @@ export function atlasQueryPathState(query: PathStateQuery = {}): {
   } catch { /* audit trail is best-effort */ }
   return {
     reader: query.reader || "unknown",
-    result: { chainValid, tampered, entries: filtered },
+    result: { chainValid, tampered, entries: filtered, godStates: loadState().godStates ?? {} },
   };
 }
 
