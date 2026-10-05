@@ -2,7 +2,7 @@
 
 > Companion extensions for VSCode-family editors and Zed that embed the live OLYMPUS interactive terminal inside your editor of choice.
 
-OLYMPUS v0.0.1 ships an **External Editor Launcher** (Editor Bridge) + a **Terminal Bridge** that exposes the in-app PTY sessions to external IDEs over a token-gated WebSocket.
+OLYMPUS v0.0.2 ships an **External Editor Launcher** (Editor Bridge) + a **Terminal Bridge** that exposes the in-app PTY sessions to external IDEs over a token-gated WebSocket.
 
 ## Folder structure
 

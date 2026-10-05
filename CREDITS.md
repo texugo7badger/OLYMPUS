@@ -1,6 +1,6 @@
 # CREDITS
 
-> OLYMPUS v0.0.1 — built on the shoulders of giants. This file lists the upstream projects that make OLYMPUS possible.
+> OLYMPUS v0.0.2 — built on the shoulders of giants. This file lists the upstream projects that make OLYMPUS possible.
 
 OLYMPUS is built on the shoulders of giants. This file lists the upstream projects that make OLYMPUS possible.
 

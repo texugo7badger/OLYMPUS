@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
 
-## [v0.0.2] — staged MADRUGA-FIX-1 (2026-10-05, for Monday release)
+## [v0.0.2] — 2026-10-05
 
 Every line carries its evidence pointer. The night's register: `docs/registers/ISSUES.md`;
 full reports under `reports/m3r2-p1/`, `reports/m3r2-p2/`, `reports/bench-in-1/`, `reports/fix-1/`.
@@ -44,6 +44,10 @@ full reports under `reports/m3r2-p1/`, `reports/m3r2-p2/`, `reports/bench-in-1/`
 - **E4 (live config)** — explicitly ACCEPTED as gated-generator-equivalent: the dry-run reports "No changes needed" (zero diff); `opencode.json` @ sha256 `fcaf7c13…`. Evidence: `reports/m3r2-p2/` E4.
 - **D10 cause-(c) CONFIRMED live** — the god prompts' #64 round-cap semantics read as "end the round" in one-shot runs, and turns end at the output-token limit mid-kit (`reason: 'length'` in the transcripts); minimal resumes complete in one shot (the D16 dilution curve held all night). Evidence: `reports/fix-1/` F4 (all strikes verbatim).
 
+
+### Known Issues
+
+- **D31 — one-shot generation turns can end at the output-token limit mid-kit (`reason: 'length'`) and the #64 round-cap god-prompt semantics read as "end the round" in one-shot runs** (the live-confirmed mechanical twin of D10). Mitigations shipped in this release: the single-turn override clause in the generation contract, minimal-strike automated resumes (the D16 dilution curve's compliant shape), and the exit gate as the deterministic catch-all — but a model/budget sizing fix remains open (Part 4/5 scope). Evidence: `docs/registers/ISSUES.md` D31; `reports/fix-1/` F4 (three `reason: 'length'` cuts verbatim).
 
 ## [Unreleased]
 

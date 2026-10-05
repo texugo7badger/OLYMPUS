@@ -1,8 +1,8 @@
 {
   "name": "olympus-bridge",
   "displayName": "OLYMPUS Bridge",
-  "description": "Embed the live OLYMPUS interactive terminal inside VSCode / VSCodium / Cursor. The terminal is shared with the one running in the OLYMPUS Electron app — type in either, see it in both. Only works when OLYMPUS is installed locally.",
-  "version": "0.0.1",
+  "description": "Embed the live OLYMPUS interactive terminal inside VSCode / VSCodium / Cursor. The terminal is shared with the one running in the OLYMPUS Electron app \u2014 type in either, see it in both. Only works when OLYMPUS is installed locally.",
+  "version": "0.0.2",
   "publisher": "olympus",
   "license": "AGPL-3.0-or-later",
   "repository": {

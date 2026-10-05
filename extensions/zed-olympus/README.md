@@ -2,7 +2,7 @@
 
 > Embed the live OLYMPUS interactive terminal inside Zed. The terminal is shared with the one running in the OLYMPUS Electron app — type in either, see it in both.
 
-**Version:** 0.0.1 (preview)
+**Version:** 0.0.2 (preview)
 **License:** AGPL-3.0-or-later
 
 ## What it does (today)
@@ -23,7 +23,7 @@
 
 - **OLYMPUS must be installed and running.** The `olympus terminal` CLI reads the per-install token from `~/.olympus/terminal-bridge-token` (generated when the Electron app starts) and connects to `ws://127.0.0.1:3740`.
 - **`olympus` on PATH.** The extension shells out to `olympus terminal`; if `olympus` isn't on PATH the commands will fail with a clear error.
-- **OLYMPUS v0.0.1+** required — earlier versions don't ship the Terminal Bridge or the `terminal` CLI subcommand.
+- **OLYMPUS v0.0.2+** required — earlier versions don't ship the Terminal Bridge or the `terminal` CLI subcommand.
 
 ## Install
 

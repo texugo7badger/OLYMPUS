@@ -2,7 +2,7 @@
 
 > Embed the live OLYMPUS interactive terminal inside your editor. The terminal is shared with the one running in the OLYMPUS Electron app — type in either, see it in both.
 
-**Version:** 0.0.1
+**Version:** 0.0.2
 **License:** AGPL-3.0-or-later
 
 ## What it does
@@ -17,7 +17,7 @@
 ## Requirements
 
 - **OLYMPUS must be installed and running.** The extension reads a per-install token from `~/.olympus/terminal-bridge-token` (generated when the Electron app starts) and connects to `ws://127.0.0.1:3740`. Without the token file the extension silently shows "Disconnected" in the status bar.
-- **OLYMPUS v0.0.1+** required — earlier versions don't ship the Terminal Bridge.
+- **OLYMPUS v0.0.2+** required — earlier versions don't ship the Terminal Bridge.
 
 ## Install
 
@@ -29,7 +29,7 @@ node extensions/vscode-olympus/scripts/vendor-xterm.js   # one-time: copy xterm.
 cd extensions/vscode-olympus
 npm install
 npm run compile
-npm run package    # produces olympus-bridge-0.0.1.vsix
+npm run package    # produces olympus-bridge-0.0.2.vsix
 ```
 
 Then in VSCode/VSCodium/Cursor:

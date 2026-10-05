@@ -33,7 +33,7 @@
     <rect x="24" y="17" width="46" height="18" rx="3" fill="#555" />
     <text x="47" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">version</text>
     <rect x="70" y="17" width="40" height="18" rx="3" fill="#D4A574" />
-    <text x="90" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">0.0.1</text>
+    <text x="90" y="30" text-anchor="middle" font-family="'DejaVu Sans', Verdana, sans-serif" font-size="8.5" fill="#fff" font-weight="600">0.0.2</text>
   </a>
 
   <!-- ════════════════════════════════════════════════════════════════════ -->

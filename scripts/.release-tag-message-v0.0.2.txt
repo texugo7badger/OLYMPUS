@@ -1,0 +1,27 @@
+OLYMPUS v0.0.2 — The Night of the Pantheon
+
+The dispatch spine closed end-to-end (L1-L5 dead): every god can dispatch,
+every dispatch is registered loudly with a full registry contract, invoke
+directives are registry-curated per god, emissions are schema-validated,
+and the chain fires end-to-end through the zero-loss Vault signature.
+
+Atlas is the single writer: every prompt the system receives — project
+or dispatch — lands in the hash-chained sync-map before anything else
+happens; one writer, everyone reads; mid-flight deaths land 'failed',
+never vanish.
+
+"A generated project runs on the first try" is now structural: the
+seven-check exit gate (lockfile, npm ci, build, dev+curl==200, zero
+absolute symlinks, imports-vs-deps, route composition) wired at both the
+generator's done-condition and the driver's census — the byte-counting
+census is retired.
+
+The proof (F4): one fresh cafeteria-class project ("Cafeteria Grão & Alma"),
+100% model-written, passed the exit gate with zero manual fixes — all
+seven checks green: lockfile, npm ci, build, dev+curl==HTTP 200,
+symlinks, imports-deps, composition.
+
+Also: D18/D19/D21/D22 fixed with live-verified evidence; D12/D17 register
+verdicts corrected; harness hygiene (P-E) killed at the driver; the
+delivery contract in the prompt layer; 14 suites green (~250 assertions);
+CHANGELOG v0.0.2 with every line evidence-pointered.

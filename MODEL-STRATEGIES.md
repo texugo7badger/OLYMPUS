@@ -8,7 +8,7 @@
 > enforces parity and runs in CI. Docs below are updated manually when the
 > canonical file changes.
 
-**Version:** v0.0.1
+**Version:** v0.0.2
 **License:** AGPL-3.0-or-later
 
 ## TL;DR

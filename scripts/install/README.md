@@ -1,6 +1,6 @@
 # OLYMPUS Installer
 
-> Linux installer + uninstaller for **OLYMPUS v0.0.1**.
+> Linux installer + uninstaller for **OLYMPUS v0.0.2**.
 > Other platforms: use WSL. No built-in IDE — bridges to the user's
 > preferred editor (Zed, VSCode, VSCodium, Cursor) and shared terminal.
 
@@ -131,4 +131,4 @@ After install, run:
 node scripts/olympus-doctor.js
 ```
 
-This checks ~70 installation health points. A clean v0.0.1 install reports **0 failures**. The 6 warnings a fresh install will show are all expected runtime-state items (MCP servers not configured, terminal bridge not yet spawned, short-circuit log not yet created) — they clear the first time you launch OLYMPUS.
+This checks ~70 installation health points. A clean v0.0.2 install reports **0 failures**. The 6 warnings a fresh install will show are all expected runtime-state items (MCP servers not configured, terminal bridge not yet spawned, short-circuit log not yet created) — they clear the first time you launch OLYMPUS.
