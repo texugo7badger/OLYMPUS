@@ -142,7 +142,7 @@ export function serializeFrontmatter(fm: Record<string, any>): string {
   const knownOrder = [
     "god", "id", "confidence", "scope", "stacks", "projects",
     "last_used", "samples", "successes", "failures",
-    "source", "immutable", "trigger", "action", "skill", "mcp", "demigod",
+    "source", "immutable", "trigger", "action", "skill", "mcp", "demigod", "status", "promoted_by", "promoted_at", "promotion_evidence", "curation_note", "evidence",
   ];
   const seen = new Set<string>();
   const lines: string[] = ["---"];
@@ -363,6 +363,49 @@ export function recalibrateInstinct(
  * Read all empirical instincts for a god. Returns frontmatter + path.
  * Used by the brain-stats API to compute per-god metrics.
  */
+
+// ─── MADRUGA-3 p4 (E2): THE PROMOTION GATE — candidates promote to proven
+// ONLY on >= 2 corroborating evidence pointers from DISTINCT reports/commits,
+// a written trigger/action pair, and a curation note recording who + why.
+// Never vibes at ingest; never vibes at promotion. Loud refusal otherwise.
+
+export function promoteInstinct(
+  godId: string,
+  instinctId: string,
+  evidencePointers: string[],
+  promoter: string,
+  curationNote: string,
+): { ok: boolean; file: string | null; reason?: string } {
+  if (!Array.isArray(evidencePointers) || evidencePointers.length < 2) {
+    return {
+      ok: false, file: null,
+      reason: `PROMOTION REFUSED: candidate "${instinctId}" (god ${godId}) carries ${evidencePointers?.length ?? 0} evidence pointer(s) — the promotion rule requires >= 2 corroborating pointers from DISTINCT reports/commits. Single-source candidates stay CANDIDATE.`,
+    };
+  }
+  const f = findInstinctFile(instinctId, godId);
+  if (!f) return { ok: false, file: null, reason: `PROMOTION REFUSED: empirical instinct "${instinctId}" not found for god ${godId}` };
+  const raw = fs.readFileSync(f, "utf-8");
+  const { frontmatter: fm, body } = parseFrontmatter(raw);
+  if (!fm.trigger || !fm.action) {
+    return { ok: false, file: null, reason: `PROMOTION REFUSED: candidate "${instinctId}" lacks a written trigger/action pair` };
+  }
+  if (fm.source !== "empirical") {
+    return { ok: false, file: null, reason: `PROMOTION REFUSED: "${instinctId}" is source=${fm.source} — only empirical candidates promote` };
+  }
+  if (fm.status === "proven") {
+    return { ok: true, file: f, reason: "already proven (idempotent)" };
+  }
+  fm.status = "proven";
+  fm.promoted_by = promoter;
+  fm.promoted_at = new Date().toISOString();
+  fm.promotion_evidence = evidencePointers;
+  fm.curation_note = curationNote;
+  if (typeof fm.confidence !== "number" || fm.confidence < 0.5) fm.confidence = 0.5; // proven floor, still under the 0.95 cap
+  const serialized = serializeFrontmatter(fm) + "\n" + body;
+  fs.writeFileSync(f, serialized, "utf-8");
+  return { ok: true, file: f };
+}
+
 export function loadEmpiricalInstincts(godId: string): InstinctFrontmatter[] {
   const out: InstinctFrontmatter[] = [];
   const godDir = path.join(VAULT_ROOT, "05_Auto_Learning", "instincts", godId, "empirical");
