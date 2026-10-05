@@ -62,7 +62,7 @@ if (process.argv[2] === 'child') {
         return chain;
       };
       const toolFn = (def) => def;
-      toolFn.schema = { string: schemaType, boolean: schemaType, number: schemaType };
+      toolFn.schema = { string: schemaType, boolean: schemaType, number: schemaType, array: schemaType };
       return { tool: toolFn };
     }
     return origLoad.call(this, request, ...rest);
@@ -114,6 +114,7 @@ if (process.argv[2] === 'child') {
     const dr = JSON.parse((await dispatch.execute({
       godId: 'apollo', demigod: 'frontend-reviewer',
       task: 'Verificação de código da landing page da Loja Dado Vinte: erros de tipagem, imports inválidos. Máx 5 achados.',
+      artifacts: ['/tmp/opencode/p3-a1.txt'], doneCondition: 'exists', budgetTokens: 3000,
     }, { sessionID: 'atlas-green-1' })).output);
     out.dispatchResult = { ok: dr.ok, dispatchId: dr.dispatchId };
 
@@ -162,7 +163,7 @@ if (process.argv[2] === 'child') {
     // ── E1: exit-path finalize. A dispatch this process opened, then the
     // process "exits" — the entries finalize (mid-flight → 'failed').
     const r2 = JSON.parse((await dispatch.execute({
-      godId: 'apollo', demigod: 'build-resolver', task: 'second dispatch, will die mid-flight at exit',
+      godId: 'apollo', demigod: 'build-resolver', task: 'second dispatch, will die mid-flight at exit', artifacts: ['/tmp/opencode/p3-a2.txt'], doneCondition: 'exists', budgetTokens: 3000,
     }, { sessionID: 'atlas-green-2' })).output);
     out.secondDispatch = { ok: r2.ok, dispatchId: r2.dispatchId };
     const finalize = atlas.finalizeAtlasOnProcessExit();
@@ -188,7 +189,7 @@ if (process.argv[2] === 'child') {
     writeFileSync(join(process.env.OLYMPUS_ROOT, 'opencode.json'), JSON.stringify({ agent }, null, 2));
     const dispatch = (await import('../.opencode/olympus/tools/dispatch.ts')).default;
     const r = JSON.parse((await dispatch.execute({
-      godId: 'apollo', demigod: 'frontend-reviewer', task: 'loud-fail probe',
+      godId: 'apollo', demigod: 'frontend-reviewer', task: 'loud-fail probe', artifacts: ['/tmp/opencode/p3-a3.txt'], doneCondition: 'exists', budgetTokens: 2000,
     }, { sessionID: 'atlas-loud' })).output);
     // Make the FEED FILE unwritable so the finalize's outcome write fails.
     // (chmod on the DIRECTORY would not do it: appending to an EXISTING
@@ -316,8 +317,8 @@ if (G.__childError) {
   check('E1 the tracker entry is finalized (no dangling open dispatch after exit)',
     d2state === undefined, JSON.stringify(d2state || 'still open').slice(0, 150));
   const outcomeForD2 = (G.feedOutcomes || []).find(e => e.dispatch_id === G.secondDispatch?.dispatchId);
-  check('E1 dispatch_outcome event written at exit (mid-flight death → failed)',
-    !!outcomeForD2 && outcomeForD2.outcome === 'failed' && outcomeForD2.status === 'failed',
+  check('E1 dispatch_outcome event written at exit (mid-flight death → failed/contract-failure)',
+    !!outcomeForD2 && ['failed', 'failure'].includes(outcomeForD2.outcome) && ['failed', 'failure'].includes(outcomeForD2.status),
     JSON.stringify(outcomeForD2 || 'none').slice(0, 200));
 }
 

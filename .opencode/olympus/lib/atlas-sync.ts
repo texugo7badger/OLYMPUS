@@ -78,6 +78,13 @@ interface PersistedSyncMap {
   entries: Record<string, SyncMapEntry>;
   chainHead: string;
   lastUpdated: string;
+  /** Phase 2 (p3): god heartbeat states, recorded by Atlas from the bus. */
+  godStates?: Record<string, { state: string; ts: string }>;
+}
+
+function withDefaults(raw: PersistedSyncMap): PersistedSyncMap {
+  if (!raw.godStates) raw.godStates = {};
+  return raw;
 }
 
 // ─── The single-writer token (non-exported — outsiders cannot forge it) ────
@@ -94,14 +101,27 @@ function loadState(): PersistedSyncMap {
     if (fs.existsSync(STATE_FILE)) {
       const raw = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8")) as PersistedSyncMap;
       if (raw && raw.entries && typeof raw.chainHead === "string") {
-        return raw;
+        return withDefaults(raw);
       }
     }
   } catch {
-    // Corrupt/absent — start a fresh map (never throw on READ; the guard
-    // governs WRITES).
+    // E2: CORRUPT — recover from the .bak LOUDLY, never silently fresh
+    // (the old catch was a silent data-loss path — the red fixture proved it).
+    try {
+      if (fs.existsSync(STATE_FILE + ".bak")) {
+        const bak = JSON.parse(fs.readFileSync(STATE_FILE + ".bak", "utf-8")) as PersistedSyncMap;
+        if (bak && bak.entries && typeof bak.chainHead === "string") {
+          console.error(
+            `[atlas-sync] sync-map.json CORRUPT — recovered ${Object.keys(bak.entries).length} entry(ies) from sync-map.json.bak (E2 posture); the corrupt file is preserved as sync-map.json.corrupt`,
+          );
+          try { fs.copyFileSync(STATE_FILE, STATE_FILE + ".corrupt"); } catch { /* best-effort */ }
+          return withDefaults(bak);
+        }
+      }
+    } catch { /* no recoverable .bak — fall through to the loud last resort */ }
+    console.error("[atlas-sync] sync-map.json CORRUPT and NO recoverable .bak — starting fresh (prior entries LOST; disclosed loudly, never silently).");
   }
-  return { entries: {}, chainHead: "genesis", lastUpdated: new Date().toISOString() };
+  return withDefaults({ entries: {}, chainHead: "genesis", lastUpdated: new Date().toISOString() });
 }
 
 function canonicalEntry(e: SyncMapEntry): string {
@@ -126,6 +146,12 @@ function recomputeChain(state: PersistedSyncMap): void {
 
 function persist(state: PersistedSyncMap): void {
   if (!fs.existsSync(OLYMPUS_HOME)) fs.mkdirSync(OLYMPUS_HOME, { recursive: true });
+  // E2 (MADRUGA-3 p3 — the sync-map posture: .bak-on-write, one generation,
+  // + the existing hash chain for tamper-evidence): the previous good state
+  // is preserved on every write; corruption recovery reads it back loudly.
+  try {
+    if (fs.existsSync(STATE_FILE)) fs.copyFileSync(STATE_FILE, STATE_FILE + ".bak");
+  } catch { /* best-effort recovery depth; the atomic write is the guarantee */ }
   const tmp = STATE_FILE + ".tmp";
   fs.writeFileSync(tmp, JSON.stringify(state, null, 2), "utf-8");
   try {
@@ -519,6 +545,18 @@ export function atlasQueryPathState(query: PathStateQuery = {}): {
     reader: query.reader || "unknown",
     result: { chainValid, tampered, entries: filtered },
   };
+}
+
+/**
+ * Phase 2 (p3): Atlas records a god's heartbeat state change (published on
+ * the bus, recorded in the map — the sync view of "who is doing what").
+ * States: idle | thinking | acting | done | blocked.
+ */
+export function atlasRecordHeartbeat(god: string, state: string): void {
+  const s = loadState();
+  s.godStates = s.godStates || {};
+  s.godStates[god] = { state, ts: new Date().toISOString() };
+  persist(s);
 }
 
 // Re-exported for the exit-handler wiring in olympus-hooks.ts.

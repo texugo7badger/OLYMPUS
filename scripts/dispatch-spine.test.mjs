@@ -63,7 +63,7 @@ if (process.argv[2] === 'child') {
         return chain;
       };
       const toolFn = (def) => def;
-      toolFn.schema = { string: schemaType, boolean: schemaType, number: schemaType };
+      toolFn.schema = { string: schemaType, boolean: schemaType, number: schemaType, array: schemaType };
       return { tool: toolFn };
     }
     return origLoad.call(this, request, ...rest);
@@ -93,7 +93,7 @@ if (process.argv[2] === 'child') {
     writeFileSync(join(lane, 'opencode.json'), JSON.stringify(makeLaneCfg(), null, 2));
     const dispatch = (await import('../.opencode/olympus/tools/dispatch.ts')).default;
     const out = JSON.parse((await dispatch.execute({
-      godId: 'apollo', demigod: 'frontend-reviewer', task: 'unregistrable probe',
+      godId: 'apollo', demigod: 'frontend-reviewer', task: 'unregistrable probe', artifacts: ['/tmp/opencode/p3-u.txt'], doneCondition: 'exists', budgetTokens: 2000,
     }, { sessionID: 'm3r2-neg' })).output);
     chmodSync(home, 0o755);
     process.stdout.write(JSON.stringify({ result: out }) + '\n');
@@ -108,7 +108,8 @@ if (process.argv[2] === 'child') {
 
   const mod = await import('../.opencode/olympus/tools/dispatch.ts');
   const dispatch = mod.default;
-  const run = async (args) => JSON.parse((await dispatch.execute(args, { sessionID: 'm3r2-e2e' })).output);
+  const CONTRACT = { artifacts: [join(process.env.OLYMPUS_ROOT, 'declared-artifact.txt')], doneCondition: 'the declared artifact exists', budgetTokens: 3000 };
+  const run = async (args) => JSON.parse((await dispatch.execute({ ...CONTRACT, ...args }, { sessionID: 'm3r2-e2e' })).output);
 
   const out = {};
   const task = 'Design review planejado para a landing page da Loja Dado Vinte: contraste, hierarquia visual, consistência mobile. Liste achados objetivos (máx 5).';
@@ -148,6 +149,7 @@ if (process.argv[2] === 'child') {
   // 5. schema validation (L4) — the exported validator, negative cases first.
   const base = {
     dispatchId: r1.dispatchId, god: 'apollo', demigod: 'frontend-reviewer',
+    expectedArtifacts: r1.expectedArtifacts, doneCondition: r1.doneCondition, budgetTokens: 3000,
     parentGod: 'athena', signatureId: r1.signatureId, vaultAnchor: r1.vaultAnchor,
     intentHash: r1.intentHash, directiveHash: r1.directiveHash, ts: r1.ts,
     status: r1.status, message: r1.message,

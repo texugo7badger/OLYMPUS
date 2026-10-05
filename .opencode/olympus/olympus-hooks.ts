@@ -74,6 +74,9 @@ import {
   atlasMarkDispatchesFinalized,
   finalizeAtlasOnProcessExit,
 } from "./lib/atlas-sync.js";
+// SYMPHONY BUS (MADRUGA-3 p3): the cable — heartbeats ride it; Atlas records.
+import { busPublish } from "./lib/symphony-bus.js";
+import { atlasRecordHeartbeat } from "./lib/atlas-sync.js";
 import {
   penalizeInstinct,
   rewardInstinct,
@@ -220,6 +223,10 @@ function resolveCostGod(
   }
   return { god: "global", subagent: null, priced: false };
 }
+
+// p3: a monotonic session epoch for idle dedup keys.
+let idleEpoch = 0;
+function input_sessionEpoch(): number { return ++idleEpoch; }
 
 // ─── Types ────────────────────────────────────────────────────────────────
 interface ToolArgs {
@@ -971,6 +978,23 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
      * took over.
      */
     "tool.execute.before": async (input: ToolInput) => {
+      // SYMPHONY BUS (p3, Phase 2): the acting heartbeat — every god-scoped
+      // tool call publishes state 'acting' on the cable (deduped per call;
+      // Atlas records it). Facts, not narratives.
+      try {
+        const st = getActiveAgent();
+        if (st.agentId && st.godId && st.agentId === st.godId) {
+          busPublish({
+            type: "heartbeat",
+            god: st.godId,
+            state: "acting",
+            dedupKey: `hb:${st.godId}:acting:${input.callID || input.sessionID || Date.now()}`,
+            payload: { tool: input.tool },
+            evidence: { callID: input.callID ?? null, sessionID: input.sessionID ?? null },
+          });
+          atlasRecordHeartbeat(st.godId, "acting");
+        }
+      } catch { /* the bus is observability — never blocks the tool */ }
       updateActiveAgent({
         agentId: input.agent,
         tool: input.tool,
@@ -1382,6 +1406,22 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           console.error(`[olympus] ATLAS dispatch-finalize transition failed: ${e?.message || e}`);
         }
       }
+      // SYMPHONY BUS (p3): the idle heartbeat — the turn ended; the last
+      // active god publishes 'idle' (Atlas records; a fresh god publishes
+      // 'thinking' on its first acting transition).
+      try {
+        const st = getActiveAgent();
+        if (st.godId) {
+          busPublish({
+            type: "heartbeat",
+            god: st.godId,
+            state: "idle",
+            dedupKey: `hb:${st.godId}:idle:${input_sessionEpoch()}`,
+            evidence: { sessionID: st.sessionId ?? null },
+          });
+          atlasRecordHeartbeat(st.godId, "idle");
+        }
+      } catch { /* never blocks the heartbeat path */ }
       // ATLAS (MADRUGA-3 p2): project prompts whose turn completed land
       // 'done' — runs at every idle, dispatches or not.
       try {

@@ -73,6 +73,11 @@ export interface OpenDispatch {
   /** MADRUGA-3 p1 (L2): sha256 of the directive text (first 16 hex chars) —
    *  the verifiable directive hash on the registry entry. */
   directiveHash: string | null;
+  /** MADRUGA-3 p3 (E4): the declared output contract — expected artifact
+   *  paths (absolute). Zero produced at finalize = LOUD contract violation. */
+  expectedArtifacts: string[] | null;
+  /** E4: the done-condition that proves the artifacts. */
+  doneCondition: string | null;
   /** MADRUGA-3 p1 (L2): lifecycle status — "open" from registration until
    *  finalize stamps the outcome ("success" | "failure" | "unknown" |
    *  "superseded"). */
@@ -222,6 +227,9 @@ export function registerOpenDispatch(input: {
   /** MADRUGA-3 p1 (L2): the directive hash (16 hex chars). Computed from
    *  the task signature when the caller does not provide it. */
   directiveHash?: string | null;
+  /** MADRUGA-3 p3 (E4): the declared output contract (absolute artifact paths). */
+  expectedArtifacts?: string[] | null;
+  doneCondition?: string | null;
 }): void {
   initDispatchTracker();
 
@@ -256,6 +264,8 @@ export function registerOpenDispatch(input: {
     stack: input.stack ?? null,
     project: input.project ?? null,
     directiveHash,
+    expectedArtifacts: input.expectedArtifacts ?? null,
+    doneCondition: input.doneCondition ?? null,
     status: "open",
     startTs: new Date().toISOString(),
     tokensUsed: { input: 0, output: 0 },
@@ -353,7 +363,10 @@ export function finalizeDispatchesForGod(
     else if (d.toolCallCount > 0) outcome = "success";
     else outcome = "unknown";
     d.status = outcome;
-    finalizeDispatch(d, outcome);
+    const contract = checkDispatchContract(d);
+    let violation = null as string | null;
+    if (contract.violation) { outcome = "failure"; d.status = "failure"; violation = contract.violation; }
+    finalizeDispatch(d, outcome, violation);
     if (finalizeFn) finalizeFn(d, outcome);
     finalized.push(d);
     locallyRegisteredIds.delete(d.dispatchId);
@@ -389,8 +402,11 @@ export function finalizeLocalDispatchesOnExit(): {
     if (d.hadError) outcome = "failure";
     else if (d.toolCallCount > 0) outcome = "success";
     else outcome = "failed"; // died mid-flight at exit — E1's contract
+    const contract = checkDispatchContract(d);
+    let violation = null as string | null;
+    if (contract.violation) { outcome = "failure"; violation = contract.violation; }
     d.status = outcome;
-    const r = finalizeDispatch(d, outcome);
+    const r = finalizeDispatch(d, outcome, violation);
     if (!r.ok) {
       // The outcome EVENT is the record — if its write failed, the
       // dispatch must NOT leave the open list (that would make it vanish
@@ -420,6 +436,7 @@ export function finalizeLocalDispatchesOnExit(): {
 function finalizeDispatch(
   d: OpenDispatch,
   outcome: "success" | "failure" | "unknown" | "superseded" | "failed",
+  contractViolation: string | null = null,
 ): { ok: boolean; error: string } {
   try {
     const dir = path.dirname(LIVE_FEED);
@@ -455,6 +472,8 @@ function finalizeDispatch(
       output_shape: d.outputShape,
       budget_adherence: budgetAdherence,
       directive_hash: d.directiveHash ?? null,
+      contract_violation: contractViolation,
+      expected_artifacts: d.expectedArtifacts,
       status: outcome,
       outcome,
       duration_ms: durationMs,
@@ -487,13 +506,51 @@ function finalizeDispatch(
     } catch {
       // Non-fatal — arsenal log is best-effort
     }
+    publishOutcomeOnBus(d, outcome, contractViolation);
     return { ok: true, error: "" };
+    publishOutcomeOnBus(d, outcome, contractViolation);
   } catch (e: any) {
     // MADRUGA-3 p2 (E1): the finalize outcome write FAILED — reported to
     // the caller (the exit path turns this into a LOUD error); legacy
-    // callers (idle/stale sweep) keep their best-effort semantics.
+    // callers (idle/stale sweep) keep their best-effort semantics. The
+    // bus still carries the outcome (loud where it can be).
+    publishOutcomeOnBus(d, outcome, contractViolation);
     return { ok: false, error: String(e?.message || e) };
   }
+}
+
+
+/**
+ * MADRUGA-3 p3 (E4): check a dispatch's declared output contract at
+ * finalize. Returns the violation when ZERO declared artifacts were
+ * produced (the CERT-P1 lesson: a spawn that "completes" with no declared
+ * artifact is a contract violation, status 'failed', never 'completed').
+ */
+function checkDispatchContract(d: OpenDispatch): { violation: string | null; produced: number } {
+  if (!d.expectedArtifacts || d.expectedArtifacts.length === 0) return { violation: null, produced: 0 };
+  const produced = d.expectedArtifacts.filter(p => { try { return fs.existsSync(p); } catch { return false; } }).length;
+  if (produced === 0) {
+    return {
+      violation: `CONTRACT VIOLATION: dispatch declared ${d.expectedArtifacts.length} artifact(s) and produced ZERO — declared: ${d.expectedArtifacts.join(", ")}; done-condition: ${d.doneCondition || "(none)"}. A directive that completes with zero declared artifacts produced is a contract violation (status 'failed', never 'completed')`,
+      produced: 0,
+    };
+  }
+  return { violation: null, produced };
+}
+
+/** Publish the finalize record on the Symphony bus (the cable carries the lifecycle). */
+function publishOutcomeOnBus(d: OpenDispatch, outcome: string, contractViolation: string | null): void {
+  try {
+    // Late import breaks the module cycle (bus -> tracker -> bus).
+    const { busPublish } = require("./symphony-bus.js") as typeof import("./symphony-bus.js");
+    busPublish({
+      type: "dispatch-outcome",
+      god: d.god,
+      dedupKey: `dispatch-outcome:${d.dispatchId}`,
+      payload: { dispatchId: d.dispatchId, demigod: d.demigod, outcome, contractViolation },
+      evidence: { dispatchId: d.dispatchId },
+    });
+  } catch { /* bus down never blocks the finalize */ }
 }
 
 /**

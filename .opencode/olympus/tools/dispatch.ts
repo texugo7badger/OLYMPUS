@@ -67,6 +67,9 @@ import {
   atlasMarkDispatchRouted,
   atlasMarkDispatchFailed,
 } from "../lib/atlas-sync.js";
+// SYMPHONY BUS (MADRUGA-3 p3): the cable — dispatch + ingest-failure events
+// ride it; any subscriber reconstructs the path from the log alone.
+import { busPublish } from "../lib/symphony-bus.js";
 // Import the REAL Symphony composer. composeSignature() writes the payload
 // to the Resonance Registry (zero-loss), builds a proper VaultAnchor,
 // quantizes the intent, and measures the real coherence baseline.
@@ -127,14 +130,14 @@ const FORBIDDEN_PREFIXES = ["ecc-", "olympus-", "volt-"];
 
 const DEMIGODS_JSON = path.join(OLYMPUS_ROOT, "opencode.demigods.json");
 const OPENCODE_JSON = path.join(OLYMPUS_ROOT, "opencode.json");
-// L2 (MADRUGA-3): the repo registry — reliable fallback for lane/bench
-// contexts where OLYMPUS_ROOT points at a working dir that has the lane's
-// opencode.json (real copy, receives demigod auto-injection writes) but no
-// demigods registry of its own. The plugin lives inside the repo
-// (source: <repo>/.opencode/olympus/tools/, compiled:
-// <repo>/.opencode/olympus/dist/tools/ — one level deeper), so we walk up
-// from this module until we find the directory that actually contains
-// opencode.demigods.json. The 2b symlink bridge retires.
+// THE MODULE-TREE REGISTRY ROUTE (named first-class, MADRUGA-3 p3/E3 —
+// N3 closed: a DOCUMENTED, TESTED route, not an unnamed fallback).
+// Resolution order: (1) the LANE registry (OLYMPUS_ROOT/opencode.demigods.json
+// — the lane own copy, first-class by design); then (2) the MODULE-TREE route:
+// the overlay ships inside the repo, so we walk up from THIS MODULE to the
+// directory containing opencode.demigods.json — the pantheon registry the
+// overlay itself was built with. Every dispatch, lane or not, resolves a
+// REAL registry. First-class-tested by the spine fixture (S2 repo-fallback).
 function resolveRepoDemigodsJson(): string {
   // __filename, not import.meta.url: the overlay compiles to CommonJS
   // (TS1470 otherwise) and __filename is correct in both the compiled
@@ -373,6 +376,12 @@ function ensureDemigodPresent(demigodName: string): {
  * id + vault anchor, sha256 directive hash); anything less is refused.
  */
 export interface DispatchEmissionRecord {
+  /** E4 (p3): the declared expected artifacts (absolute). */
+  expectedArtifacts: string[];
+  /** E4: the done-condition. */
+  doneCondition: string;
+  /** E4: the budget. */
+  budgetTokens: number;
   /** The dispatch registry id (the signature id — one id end-to-end). */
   dispatchId: string;
   /** The origin god (the god that dispatched). */
@@ -420,6 +429,16 @@ export function validateDispatchDirective(
     if (FORBIDDEN_PREFIXES.some(p => r.demigod!.startsWith(p))) {
       violations.push(`demigod "${r.demigod}" carries a forbidden prefix (unprefixed names only)`);
     }
+  }
+  if (!Array.isArray(r.expectedArtifacts) || r.expectedArtifacts.length === 0
+      || r.expectedArtifacts.some(a => typeof a !== "string" || !a)) {
+    violations.push("missing or empty declared artifacts (E4)");
+  }
+  if (typeof r.doneCondition !== "string" || !r.doneCondition) {
+    violations.push("missing done-condition (E4)");
+  }
+  if (typeof r.budgetTokens !== "number" || !Number.isFinite(r.budgetTokens) || r.budgetTokens <= 0) {
+    violations.push("missing or invalid budget (E4)");
   }
   if (!r.signatureId || typeof r.signatureId !== "string") {
     violations.push("missing signature id");
@@ -492,7 +511,15 @@ const dispatchTool: ToolDefinition = tool({
     budgetTokens: tool.schema
       .number()
       .optional()
-      .describe("RLM P1 (budgeted recursion): the token budget for the demigod's work — relayed to the subtask as an explicit instruction and recorded on the dispatch so dispatch_outcome can report budget adherence (budget_tokens / budget_adherence). Optional; absent = unbounded, exactly as before."),
+      .describe("RLM P1 (budgeted recursion): the token budget for the demigod's work — relayed to the subtask as an explicit instruction and recorded on the dispatch so dispatch_outcome can report budget adherence (budget_tokens / budget_adherence)."),
+    artifacts: tool.schema
+      .array(tool.schema.string())
+      .optional()
+      .describe("E4 (the directive output contract, p3): the expected artifacts — explicit paths (lane-root-relative or absolute), enforced at finalize. A dispatch that completes with ZERO declared artifacts produced is a LOUD contract violation (status 'failed', never 'completed')."),
+    doneCondition: tool.schema
+      .string()
+      .optional()
+      .describe("E4: the done-condition — the objective check that proves the artifacts. Carried on the directive + the registry entry."),
     outputShape: tool.schema
       .string()
       .optional()
@@ -510,6 +537,8 @@ const dispatchTool: ToolDefinition = tool({
     project?: string;
     budgetTokens?: number;
     outputShape?: string;
+    artifacts?: string[];
+    doneCondition?: string;
   }, context: { sessionID?: string }) => {
     // ─── ATLAS (MADRUGA-3 p2, Phase 1): the funnel comes FIRST ──────────
     // Every dispatch prompt is recorded by Atlas before anything else
@@ -528,6 +557,15 @@ const dispatchTool: ToolDefinition = tool({
       });
     } catch (e: any) {
       console.error(`[olympus] ATLAS dispatch-prompt ingest failed: ${e?.message || e}`);
+      try {
+        busPublish({
+          type: "atlas-ingest-error",
+          god: String(args.godId || "unknown"),
+          dedupKey: `atlas-ingest-error:${Date.now()}`,
+          payload: { funnel: "olympus-dispatch-entry", error: String(e?.message || e).slice(0, 300) },
+          evidence: { source: "dispatch.ts ingest catch" },
+        });
+      } catch { /* the bus itself down — stderr above is the last resort */ }
     }
     let inner: { output: string };
     try {
@@ -570,6 +608,8 @@ async function dispatchExecuteInner(args: {
   project?: string;
   budgetTokens?: number;
   outputShape?: string;
+    artifacts?: string[];
+    doneCondition?: string;
 }, context: { sessionID?: string }): Promise<{ output: string }> {
     const {
       godId,
@@ -583,6 +623,8 @@ async function dispatchExecuteInner(args: {
       project,
       budgetTokens,
       outputShape,
+      artifacts,
+      doneCondition,
     } = args;
 
     // Validate the demigod name — must NOT be prefixed (no ecc-, olympus-, volt-)
@@ -625,6 +667,50 @@ async function dispatchExecuteInner(args: {
       };
     }
 
+    // ── E4 (MADRUGA-3 p3): THE DIRECTIVE OUTPUT CONTRACT — every
+    // directive on the bus carries expected artifacts + a done-condition +
+    // a budget. Schema-validated AT EMISSION (extends the Part 1 L4 gate);
+    // enforced at finalize (zero declared artifacts produced = LOUD
+    // contract violation, status 'failed', never 'completed' — the
+    // CERT-P1 lesson).
+    if (!Array.isArray(artifacts) || artifacts.length === 0
+        || artifacts.some(a => typeof a !== "string" || !a.trim())) {
+      return {
+        output: JSON.stringify({
+          ok: false,
+          error:
+            "Directive output contract violation (E4): a dispatch on the Symphony bus MUST declare its expected artifacts — " +
+            "explicit paths the task will produce (arg: artifacts). A directive without a declared artifact contract " +
+            "cannot prove completion and is refused at emission (the CERT-P1 lesson: artifact-less 'completed' dispatches).",
+          godId, demigod,
+        }, null, 2),
+      };
+    }
+    if (typeof doneCondition !== "string" || !doneCondition.trim()) {
+      return {
+        output: JSON.stringify({
+          ok: false,
+          error:
+            "Directive output contract violation (E4): a dispatch MUST carry a done-condition — the objective check that " +
+            "proves the artifacts (arg: doneCondition). Carried on the directive and enforced at finalize.",
+          godId, demigod,
+        }, null, 2),
+      };
+    }
+    if (typeof budgetTokens !== "number" || !Number.isFinite(budgetTokens) || budgetTokens <= 0) {
+      return {
+        output: JSON.stringify({
+          ok: false,
+          error:
+            "Directive output contract violation (E4): a dispatch MUST carry a budget (arg: budgetTokens, a positive " +
+            "number of tokens for the demigod's work).",
+          godId, demigod,
+        }, null, 2),
+      };
+    }
+    // Artifacts resolve to ABSOLUTE paths at emission — unambiguous at finalize.
+    const expectedArtifacts = artifacts.map(a => path.isAbsolute(a) ? a : path.resolve(OLYMPUS_ROOT, a));
+
     // Resolve stack/project (args override env)
     const resolvedStack = stack || process.env.OLYMPUS_ACTIVE_STACK || null;
     const resolvedProject = project || process.env.OLYMPUS_ACTIVE_PROJECT || null;
@@ -649,6 +735,18 @@ async function dispatchExecuteInner(args: {
         }, null, 2),
       };
     }
+
+    // SYMPHONY BUS (p3): the dispatch lifecycle rides the cable — replay
+    // reconstructs the path from events alone.
+    try {
+      busPublish({
+        type: "dispatch",
+        god: godId,
+        dedupKey: `dispatch:${signature.id}`,
+        payload: { dispatchId: signature.id, demigod, parentGod: injectResult.parent_god, artifacts: expectedArtifacts, doneCondition, budgetTokens },
+        evidence: { dispatchId: signature.id, vaultAnchor: signature.vaultAnchor.anchorId },
+      });
+    } catch { /* bus down never blocks the dispatch */ }
 
     // L3 (MADRUGA-3 p1): the invoke target is the registry-derived parent
     // god — ALWAYS real (ensureDemigodPresent validated it against GOD_IDS).
@@ -686,6 +784,8 @@ async function dispatchExecuteInner(args: {
         stack: resolvedStack,
         project: resolvedProject,
         directiveHash,
+        expectedArtifacts,
+        doneCondition,
       });
     } catch (err: any) {
       return {
@@ -829,12 +929,17 @@ async function dispatchExecuteInner(args: {
     // the registry-curated parent god (delta-1's proven shape: the
     // madruga-2b probe-1 model composed subagent_type=<parent god>).
     const directiveMessage =
-      `Dispatched: ${demigod} (parent: ${parentGod}).${injectMessage}${budgetMessage}` +
+      `Dispatched: ${demigod} (parent: ${parentGod}).${injectMessage}` +
+      ` OUTPUT CONTRACT (E4): expected artifacts (you MUST produce these): ${expectedArtifacts.join("; ")}. Done when: ${doneCondition}. Budget: <= ${budgetTokens} tokens.` +
+      `${budgetMessage}` +
       ` NEXT ACTION (the only one): invoke the task tool with subagent_type="${parentGod}" and the task prompt. Do not build anything yourself first.`;
 
     // L4 (MADRUGA-3 p1): schema-validate the emission record BEFORE the
     // directive is emitted. An invalid record is refused, never emitted.
     const emission: DispatchEmissionRecord = {
+      expectedArtifacts,
+      doneCondition,
+      budgetTokens,
       dispatchId: signature.id,
       god: godId,
       demigod,
@@ -887,6 +992,8 @@ async function dispatchExecuteInner(args: {
         // registry-curated parent, verifiable directive hash, status.
         dispatchId: signature.id,
         parentGod,
+        expectedArtifacts,
+        doneCondition,
         directiveHash,
         ts: emissionTs,
         status: "dispatched",
