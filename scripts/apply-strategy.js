@@ -304,7 +304,7 @@ const BUILTIN_STRATEGIES = {
   // Free Nvidia Build — NVIDIA Build free endpoints (build.nvidia.com), the
   // same scheme as the other free strategies: Apollo + Atlas on the strongest
   // NVIDIA free model live right now (curated: Nemotron 3 Ultra 550B — 1M
-  // context), the coding trio (Hephaestus, Athena, Dionysus) on z-ai/glm-5.2
+  // context), the coding trio (Hephaestus, Athena, Dionysus) on z-ai/glm-5.3
   // (best coding model on the platform, also 1M context — pinned so a list
   // reshuffle never bumps the coding gods onto a general-purpose model),
   // the remaining specialists on the second-strongest, Callimachus on a fast
@@ -316,13 +316,13 @@ const BUILTIN_STRATEGIES = {
   'free-nvidia-build': {
     apollo:       'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
     atlas:        'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
-    hephaestus:   'nvidia/z-ai/glm-5.2',
-    athena:       'nvidia/z-ai/glm-5.2',
-    dionysus:     'nvidia/z-ai/glm-5.2',
-    artemis:      'nvidia/z-ai/glm-5.2',
-    hermes:       'nvidia/z-ai/glm-5.2',
-    persephone:   'nvidia/z-ai/glm-5.2',
-    prometheus:   'nvidia/z-ai/glm-5.2',
+    hephaestus:   'nvidia/z-ai/glm-5.3',
+    athena:       'nvidia/z-ai/glm-5.3',
+    dionysus:     'nvidia/z-ai/glm-5.3',
+    artemis:      'nvidia/z-ai/glm-5.3',
+    hermes:       'nvidia/z-ai/glm-5.3',
+    persephone:   'nvidia/z-ai/glm-5.3',
+    prometheus:   'nvidia/z-ai/glm-5.3',
     callimachus:  'nvidia/nvidia/nemotron-3-nano-30b-a3b',
   },
 };
@@ -335,33 +335,37 @@ const SMALL_MODEL_ZEN = 'opencode/deepseek-v4-flash';
 // model keeps those background calls off the flagship's shared pool.
 const SMALL_MODEL_FREE = 'openrouter/nvidia/nemotron-3-nano-30b-a3b:free';
 
-// Verified live free models (200 OK on 2026-07-31) with the output caps that
-// keep free-tier providers inside their rate windows. opencode 1.18 always
-// sends max_tokens=32000; these limits override that per-model so a single
-// request cannot blow the provider's window. Models discovered by the live
-// refresh (scripts/refresh-free-models.js) are merged in at runtime by
-// getFreeModelLimits() so NEW free endpoints also get capped.
+// Verified live free models with per-model output budgets. DOCTRINE
+// (MADRUGA-FIX-3, superseding the old 2048 rate-window caps): the 2048
+// mouth was the #76 root cause — a complete landing kit measures ~9,633
+// output tokens (FIX-1 F4 evidence) and turns died mid-kit at ~2,039 with
+// reason:'length' BY CONFIGURATION. The FIX-2 sizing doctrine now governs:
+// floor 8192, target 16384 (2x kit + margin), enforced by
+// scripts/budget-guard.test.mjs (the guard, never the apply's self-report).
+// Free-tier protection now lives in REQUEST DISCIPLINE (the driver's
+// single-turn contract + the exit gate) — NOT the output mouth.
+// Models discovered by the live refresh are merged in at runtime by
+// getFreeModelLimits(); curated entries win when both exist.
 const FREE_MODEL_LIMITS = {
-  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free': { context: 1000000, output: 2048 },
-  'openrouter/nvidia/nemotron-3-super-120b-a12b:free': { context: 262144, output: 2048 },
-  'openrouter/inclusionai/ling-3.0-flash:free': { context: 262144, output: 2048 },
-  'openrouter/google/gemma-4-31b-it:free': { context: 262144, output: 2048 },
-  'openrouter/google/gemma-4-26b-a4b-it:free': { context: 262144, output: 2048 },
-  'openrouter/poolside/laguna-s-2.1:free': { context: 262144, output: 2048 },
-  'openrouter/openai/gpt-oss-20b:free': { context: 131072, output: 2048 },
-  'openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': { context: 256000, output: 2048 },
-  'openrouter/poolside/laguna-xs-2.1:free': { context: 262144, output: 2048 },
-  'openrouter/cohere/north-mini-code:free': { context: 256000, output: 2048 },
-  'openrouter/nvidia/nemotron-3-nano-30b-a3b:free': { context: 256000, output: 1024 },
+  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free': { context: 1000000, output: 16384 },
+  'openrouter/nvidia/nemotron-3-super-120b-a12b:free': { context: 262144, output: 16384 },
+  'openrouter/inclusionai/ling-3.0-flash:free': { context: 262144, output: 16384 },
+  'openrouter/google/gemma-4-31b-it:free': { context: 262144, output: 16384 },
+  'openrouter/google/gemma-4-26b-a4b-it:free': { context: 262144, output: 16384 },
+  'openrouter/poolside/laguna-s-2.1:free': { context: 262144, output: 16384 },
+  'openrouter/openai/gpt-oss-20b:free': { context: 131072, output: 16384 },
+  'openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': { context: 256000, output: 16384 },
+  'openrouter/poolside/laguna-xs-2.1:free': { context: 262144, output: 16384 },
+  'openrouter/cohere/north-mini-code:free': { context: 256000, output: 16384 },
+  'openrouter/nvidia/nemotron-3-nano-30b-a3b:free': { context: 256000, output: 16384 },
   // NVIDIA Build free endpoints (nvidia/<vendor>/<model>, no `:free` suffix).
   // The /models API does not report context_length — these are the curated
   // windows (mirrors NVIDIA_CONTEXT_OVERRIDES in refresh-free-models.js).
-  'nvidia/nvidia/nemotron-3-ultra-550b-a55b': { context: 1000000, output: 2048 },
-  'nvidia/z-ai/glm-5.2': { context: 1000000, output: 2048 },
-  'nvidia/nvidia/llama-3.1-nemotron-ultra-253b-v1': { context: 131072, output: 2048 },
-  'nvidia/nvidia/nemotron-3-super-120b-a12b': { context: 262144, output: 2048 },
-  'nvidia/nvidia/nemotron-3-nano-30b-a3b': { context: 256000, output: 1024 },
-  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': { context: 256000, output: 2048 },
+  'nvidia/nvidia/nemotron-3-ultra-550b-a55b': { context: 1000000, output: 16384 },
+  'nvidia/z-ai/glm-5.3': { context: 1000000, output: 16384 },
+  'nvidia/nvidia/llama-3.1-nemotron-ultra-253b-v1': { context: 131072, output: 16384 },
+  'nvidia/nvidia/nemotron-3-super-120b-a12b': { context: 262144, output: 16384 },
+  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': { context: 256000, output: 16384 },
 };
 
 /**
@@ -681,7 +685,7 @@ function buildOpenRouterMixed() {
 /**
  * The NVIDIA Build split (free-nvidia-build): Apollo + Atlas on the strongest
  * NVIDIA free model live right now (curated: Nemotron 3 Ultra 550B — 1M
- * context), the coding trio (Hephaestus, Athena, Dionysus) on z-ai/glm-5.2
+ * context), the coding trio (Hephaestus, Athena, Dionysus) on z-ai/glm-5.3
  * (the best coding model on the platform — pinned so a list reshuffle never
  * bumps the coding gods onto a general-purpose model), the remaining
  * specialists on the second-strongest (≥ 131K context + sanity score),
@@ -737,7 +741,7 @@ function getNvidiaBuildModelMap() {
       log(`  Free Nvidia Build: Callimachus -> ${live} (live nano from refresh)`);
       return live;
     }
-    return 'nvidia/nvidia/nemotron-3-nano-30b-a3b';
+    return 'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'; // the plain nano-30b-a3b left the live catalogue (FIX-3, live-verified)
   };
 
   for (const g of ['apollo', 'atlas']) map[g] = pickPrimary();
@@ -1078,6 +1082,49 @@ function applyFreeProviderLimits(config, modelMap) {
     const curLimit = cur.limit || (cur.limit = {});
     if (curLimit.context !== limit.context) { curLimit.context = limit.context; changes++; }
     if (curLimit.output !== limit.output) { curLimit.output = limit.output; changes++; }
+  }
+  // F3 (MADRUGA-FIX-3): the modelsInUse SCOPE FIX — legacy lanes OUTSIDE the
+  // strategy's god map (groq, stale nvidia lanes, anything a previous apply
+  // left behind) must also reach the floor, or the live stays partially sick
+  // after the curative apply. Every free-provider lane present in the config
+  // with output < FLOOR gets the target. GO/Zen lanes (opencode-go/, opencode/)
+  // are different providers — untouched.
+  // F3b: dead-lane CLEANUP — a lane the strategy table no longer knows and
+  // no pin uses is residue from an OLD apply (the glm-5.2 escape class);
+  // leaving it re-trips the F4 preflight forever. Remove it, loudly.
+  const knownLimits = getFreeModelLimits();
+  for (const [pid, pcfg] of Object.entries(providers)) {
+    if (pcfg && pcfg.models && typeof pcfg.models === 'object'
+        && /^(openrouter|nvidia|groq)/.test(pid)) {
+      for (const mid of Object.keys(pcfg.models)) {
+        const fullId = `${pid}/${mid}`;
+        if (!knownLimits[fullId] && !modelsInUse.has(fullId)) {
+          delete pcfg.models[mid];
+          changes++;
+          log(`  F3b cleanup: removed dead/residual lane ${fullId} (not in the strategy's table, no pin uses it)`);
+        }
+      }
+      if (pcfg.models && Object.keys(pcfg.models).length === 0) {
+        delete providers[pid];
+        changes++;
+        log(`  F3b cleanup: removed empty provider block ${pid}`);
+      }
+    }
+  }
+  const FLOOR_OUTPUT = 8192, TARGET_OUTPUT = 16384;
+  for (const [pid, pcfg] of Object.entries(providers)) {
+    if (pcfg && pcfg.models && typeof pcfg.models === 'object'
+        && /^(openrouter|nvidia|groq)/.test(pid)) {
+      for (const [mid, mcfg] of Object.entries(pcfg.models)) {
+        if (!mcfg || typeof mcfg !== 'object') continue;
+        const lim = mcfg.limit || (mcfg.limit = {});
+        if (typeof lim.output !== 'number' || lim.output < FLOOR_OUTPUT) {
+          lim.output = TARGET_OUTPUT;
+          changes++;
+          log(`  F3 floor: ${pid}/${mid} output -> ${TARGET_OUTPUT} (legacy lane healed)`);
+        }
+      }
+    }
   }
   if (changes > 0) log(`  Applied ${changes} provider limit(s) for free models`);
   return changes;
@@ -1562,6 +1609,18 @@ function preflightModelCatalogue(config, opts = {}) {
   if (config.small_model) ids.add(config.small_model);
   for (const a of Object.values(config.agent || {})) {
     if (a && typeof a === 'object' && typeof a.model === 'string') ids.add(a.model);
+  }
+  // F4 (MADRUGA-FIX-3): LANE-SIGHT — the D19 class escaped through here: a
+  // dead lane in a provider block was INVISIBLE to this preflight (it only
+  // collected pinned models), so glm-5.2 sat in the config while every pin
+  // validated. Every id present in provider.*.models joins the set: a dead
+  // LANE fails the apply loudly with the catalogue's own suggestions.
+  for (const [pid, pcfg] of Object.entries(config.provider || {})) {
+    if (pcfg && pcfg.models && typeof pcfg.models === 'object') {
+      for (const mid of Object.keys(pcfg.models)) {
+        if (typeof mid === 'string' && mid.includes('/')) ids.add(`${pid}/${mid}`);
+      }
+    }
   }
   // Group by provider (first path segment).
   const byProvider = new Map();
@@ -2143,4 +2202,16 @@ function main() {
   }
 }
 
-main();
+// MADRUGA-FIX-3 (F2): the main-guard — importing this module (the budget
+// guard imports FREE_MODEL_LIMITS) must NEVER execute the apply. Only a
+// direct CLI invocation runs main().
+import { pathToFileURL } from 'node:url';
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+if (isDirectRun) {
+  main();
+}
+
+// F2: the curated table as GUARDABLE DATA — the budget guard reads the
+// generator's source of truth directly (N29: the guard now declares its
+// surfaces: the generator table + the working-tree config).
+export { FREE_MODEL_LIMITS };

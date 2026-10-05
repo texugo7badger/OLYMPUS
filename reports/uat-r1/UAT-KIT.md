@@ -5,7 +5,7 @@
 ## 0. PRE-CONDITIONS (the E2 gate — verify BEFORE the run)
 
 1. **The live apply is RUN** (this is the one blocker found at the UAT-R1 rehearsal, E2, verbatim): `node scripts/apply-strategy.js --strategy free-openrouter` — then verify: `npx tsx scripts/budget-guard.test.mjs` → **GREEN 12/12** (the guard reads the live surface on this box) and `grep -c "glm-5.2" opencode.json` → 0. Without this, the run reproduces #76's cuts BY CONFIGURATION.
-2. Provider/quota decision (N10): the GO plan or a budget-sized lane — the D31/#76 KNOWN behavior is fixed in the tracked config; the live apply carries it.
+2. Provider/quota decision (N10): the GO plan or a budget-sized lane. **ERRATA (FIX-3, 2026-10-06):** the earlier claim "the live apply carries it" is FALSIFIED — the generator itself carried the disease (FREE_MODEL_LIMITS @ 2048 + the dead pin written in source; the apply FALSE-GREENED). FIX-3 cured the source: the apply is now CURATIVE (heals all lanes to 16384 + removes dead residue + lane-sighted preflight). The corrected pre-condition is: **the FIX-3'd apply + guard GREEN** — exactly §0.1.
 3. The app installed + the repo at the release frontier; battery-19 green.
 
 ## 1. THE BRIEF (frozen shape — his subject stays his own: "exemplo landingpage")

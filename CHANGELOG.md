@@ -51,12 +51,18 @@ full reports under `reports/m3r2-p1/`, `reports/m3r2-p2/`, `reports/bench-in-1/`
 
 ## [Unreleased]
 
+### Fixed (MADRUGA-FIX-3 — the generator night)
+
+- **The generator carried the disease (N35, closed)** — `FREE_MODEL_LIMITS` in `scripts/apply-strategy.js` hard-coded output 2048 (1024 nano) + the dead `z-ai/glm-5.2`, with curated-wins-over-refresh merge (refresh immunity BY DESIGN) — so the live apply FALSE-GREENED over a sick config and a healthy live would be re-infected. All table lanes → 16384; the dead pin → `glm-5.3` across ALL mirrors (apply-strategy, model-strategies, olympus-hooks [R12: dist rebuilt + grep-verified], settings-dialog — found by check-strategy-sync). Evidence: `scripts/budget-guard.test.mjs` (the generator case, green 17/17).
+- **Preflight lane-blindness (N36, closed)** — `preflightModelCatalogue` collected pinned models only; provider-block LANES were invisible (how glm-5.2 escaped the D19 gate). Lanes now join the id set; a dead lane fails the apply loudly. Plus **F3**: the modelsInUse scope fix (legacy lanes healed to the floor — groq, stale nvidia lanes) + **F3b** dead-residue cleanup (the apply removes lanes the table no longer knows). Cure-path proof: a dry-run over the live tree heals 12 lanes + removes 5 dead/residual lanes + passes the lane-sighted preflight. Evidence: the FIX-3 session log.
+- **A second dead table lane found + fixed**: `nvidia/nvidia/nemotron-3-nano-30b-a3b` absent from the live catalogue (verified 2026-10-06, 57 models — only the omni-reasoning variant remains); pickNano's fallback moved to the live variant.
+
 ### Fixed
 
 - **#76/D31 — the config-level output budget (the top killer)** — every provider lane in the shipped `opencode.json` declared `limit.output` 1024–2048 while a complete landing kit measures ~9,633 output tokens; turns ended mid-kit with `reason: 'length'` BY CONFIGURATION (three cuts verbatim, 2,015–2,039 tok at death). All 12 lanes now `16384` (floor 8192, derived from the F4 evidence — the derivation is in the guard's header). The **budget-guard** joins the battery (`scripts/budget-guard.test.mjs`, red 12/12 → green 12/12). Evidence: `scripts/budget-guard.test.mjs`; issue #76 progress comment.
 - **D19 shipped-config completion** — the dead `z-ai/glm-5.2` pin (tracked `opencode.json:482`) → `z-ai/glm-5.3` (the live catalogue's own suggestion); grep-zero in the tracked config; the L4 apply-time preflight passes through the designed flow. Evidence: the p1 fixture family + the fix-2 dry-run.
 
-## [Unreleased]
+
 
 ### Added
 

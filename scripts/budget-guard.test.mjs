@@ -32,5 +32,19 @@ for (const l of lanes) {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${l.lane}: limit.output=${l.output}`);
   if (!ok) fails++;
 }
+
+// ─── F2 (MADRUGA-FIX-3): the GENERATOR surface (N29 closed — the guard
+// declares both surfaces: the working-tree config + the generator table).
+// The table is the source of truth the apply enforces; if it sickens, every
+// future apply re-infects the live config (the false-green chain).
+const genTable = (await import('./apply-strategy.js')).FREE_MODEL_LIMITS;
+console.log(`surface 2: GENERATOR table (${Object.keys(genTable).length} lanes)`);
+for (const [id, lim] of Object.entries(genTable)) {
+  const ok = lim.output >= FLOOR;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  [generator] ${id}: output=${lim.output}`);
+  if (!ok) fails++;
+}
+if ('nvidia/z-ai/glm-5.2' in genTable) { console.log('FAIL  [generator] dead pin z-ai/glm-5.2 present in the table'); fails++; }
+
 if (fails > 0) { console.error(`\n${fails}/${lanes.length} generation lanes UNDER the sizing floor — the #76 root cause is LIVE in the tracked config`); process.exit(1); }
 console.log(`\nAll ${lanes.length} generation lanes sized ≥ ${FLOOR}`);

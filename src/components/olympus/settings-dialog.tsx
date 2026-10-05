@@ -236,7 +236,7 @@ const ALL_CLASSES = [
   // built-in `nvidia` provider (no `:free` suffix; every Build endpoint is
   // free with an nvapi-... key).
   'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
-  'nvidia/z-ai/glm-5.2',
+  'nvidia/z-ai/glm-5.3',
   'nvidia/nvidia/llama-3.1-nemotron-ultra-253b-v1',
   'nvidia/nvidia/nemotron-3-super-120b-a12b',
   'nvidia/nvidia/nemotron-3-nano-30b-a3b',
@@ -362,13 +362,13 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
   'free-nvidia-build': {
     apollo: 'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
     atlas: 'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
-    hephaestus: 'nvidia/z-ai/glm-5.2',
-    athena: 'nvidia/z-ai/glm-5.2',
-    dionysus: 'nvidia/z-ai/glm-5.2',
-    artemis: 'nvidia/z-ai/glm-5.2',
-    hermes: 'nvidia/z-ai/glm-5.2',
-    persephone: 'nvidia/z-ai/glm-5.2',
-    prometheus: 'nvidia/z-ai/glm-5.2',
+    hephaestus: 'nvidia/z-ai/glm-5.3',
+    athena: 'nvidia/z-ai/glm-5.3',
+    dionysus: 'nvidia/z-ai/glm-5.3',
+    artemis: 'nvidia/z-ai/glm-5.3',
+    hermes: 'nvidia/z-ai/glm-5.3',
+    persephone: 'nvidia/z-ai/glm-5.3',
+    prometheus: 'nvidia/z-ai/glm-5.3',
     callimachus: 'nvidia/nvidia/nemotron-3-nano-30b-a3b',
   },
 };
