@@ -50,6 +50,10 @@ full reports under `reports/m3r2-p1/`, `reports/m3r2-p2/`, `reports/bench-in-1/`
 - **D31 — one-shot generation turns can end at the output-token limit mid-kit (`reason: 'length'`) and the #64 round-cap god-prompt semantics read as "end the round" in one-shot runs** (the live-confirmed mechanical twin of D10). Mitigations shipped in this release: the single-turn override clause in the generation contract, minimal-strike automated resumes (the D16 dilution curve's compliant shape), and the exit gate as the deterministic catch-all — but a model/budget sizing fix remains open (Part 4/5 scope). Evidence: `docs/registers/ISSUES.md` D31; `reports/fix-1/` F4 (three `reason: 'length'` cuts verbatim).
 
 ## [Unreleased]
+### Tested (UAT-R1·R2 — the dress rehearsal, round 2)
+
+- The convergence signal MET and re-verified: budget-guard BOTH surfaces GREEN (live 8/8 + generator 16/16, exit 0); live glm-5.2 zero — the curative apply executed by texugo (13 changes, auditor-verified). The rehearsal body ran for real: the **#76 sweep** (`reports/uat-r1/length-cut-sweep.mjs` + `#76-sweep.md`) — **zero length-cuts across both strikes** (the sized budget holds); the closure bar honestly NOT met (both turns died `reason:'unknown'` pre-write — a NEW class, N39: the skill-storm turn-death). The **UAT KIT revised by execution** (3 `[rev: executed R2]` marks): the brief-gate structural mismatch corrected (Next-shaped scaffold), the N34 single-invocation script (`SPAWN-INVOCATION.sh`), the unknown-death watch. #76 stays OPEN with the sweep evidence; the residual registered.
+
 
 ### Fixed (MADRUGA-FIX-3 — the generator night)
 

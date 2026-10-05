@@ -10,9 +10,13 @@
 
 ## 1. THE BRIEF (frozen shape — his subject stays his own: "exemplo landingpage")
 
+**[rev: executed R2]** The rehearsal proved the ROUND-1 BRIEF AND THE GATE DISAGREE structurally: "plain HTML/CSS/JS preferred" fails checks 1/2/3/4/7 (npm ci / next build / app-page.tsx are Next-shaped) — the model correctly chose HTML and the gate correctly refused it. The corrected brief line: **"SCAFFOLD: Next.js App Router (create the scaffold by hand: package.json + next + react + app/layout.tsx + app/page.tsx + npm install to generate package-lock.json) — the exit gate requires npm ci + next build + app/page.tsx."** Alternatively texugo can extend the gate with a static-HTML mode — his call; the shipped gate is Next-shaped.
+
 > Build **"<his subject>"** — a one-page landing. Sections: fixed nav (logo + two links + CTA), hero (headline, sub, CTA), three feature cards, one testimonial strip, footer. Static front-end, no backend, no framework beyond what the scaffold provides. Bar: runs first-try, zero bugs, well-built — semantic HTML, responsive, accessible (labels, contrast, focus states), one JS file for the nav toggle + CTA smooth-scroll. Clean, minimal, production-shaped.
 
 ## 2. THE COMMANDS (from zero)
+
+**[rev: executed R2 — N34 closed]** THE spawn invocation is ONE copy-pasteable script: `reports/uat-r1/SPAWN-INVOCATION.sh` (recorded verbatim from the R2 execution: lane setup + the GO apply + the runner). The runner shape (the real executed one): `opencode run --format json --auto "<brief + single-turn clause + delivery contract + gate-final>"` with `OLYMPUS_MANAGED=1 OLYMPUS_ROOT=<lane>` cwd=<lane>/project — the exact prompt lines are in the R2 report §Phase 2.
 
 ```bash
 mkdir -p ~/olympus-bench/uat-gate/projects/<slug>/project   # workspace OUTSIDE the repo
@@ -31,7 +35,7 @@ cd <the workspace lane>                                       # config + .openco
 - **Spawn census**: every god lane + every semideus lane present in the bus/census (all 10 gods).
 - **Bus**: seq strictly monotonic, zero drops, the loud-drop counter at 0.
 - **Sync-map**: his prompt (origin project) + every dispatch (origin dispatch) with lifecycle statuses.
-- **Transcripts**: zero `reason: 'length'` anywhere (the #76 bar).
+- **Transcripts**: zero `reason: 'length'` anywhere (the #76 bar) — [rev: executed R2] the sweep script is shipped (`length-cut-sweep.mjs`); ALSO watch `reason: 'unknown'` turn-deaths (the R2 residual — the skill-storm class; if a turn dies unknown, re-run the lane, do not nudge).
 - **Gate**: all 7 checks green, first-try.
 - **Page**: renders; the CTA smooth-scrolls (his real click — the live rung).
 - **Well-built rubric**: semantic HTML, responsive, accessible, clean minimal design, pt-BR real (no lorem).
