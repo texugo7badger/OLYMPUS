@@ -51,6 +51,13 @@ full reports under `reports/m3r2-p1/`, `reports/m3r2-p2/`, `reports/bench-in-1/`
 
 ## [Unreleased]
 
+### Fixed
+
+- **#76/D31 — the config-level output budget (the top killer)** — every provider lane in the shipped `opencode.json` declared `limit.output` 1024–2048 while a complete landing kit measures ~9,633 output tokens; turns ended mid-kit with `reason: 'length'` BY CONFIGURATION (three cuts verbatim, 2,015–2,039 tok at death). All 12 lanes now `16384` (floor 8192, derived from the F4 evidence — the derivation is in the guard's header). The **budget-guard** joins the battery (`scripts/budget-guard.test.mjs`, red 12/12 → green 12/12). Evidence: `scripts/budget-guard.test.mjs`; issue #76 progress comment.
+- **D19 shipped-config completion** — the dead `z-ai/glm-5.2` pin (tracked `opencode.json:482`) → `z-ai/glm-5.3` (the live catalogue's own suggestion); grep-zero in the tracked config; the L4 apply-time preflight passes through the designed flow. Evidence: the p1 fixture family + the fix-2 dry-run.
+
+## [Unreleased]
+
 ### Added
 
 - **Strategy activation gate** — strategies are blocked until the API they need is authorized inside OpenCode (see Changed).
