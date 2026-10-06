@@ -61,8 +61,8 @@ const OPENCODE_AUTH_DIRS = [
 // Default output caps per provider. opencode 1.18 always sends
 // max_tokens=32000; apply-strategy.js writes these per-model limits so a
 // single request cannot blow the provider's rate window.
-const OUTPUT_CAP_OPENROUTER = 2048;
-const OUTPUT_CAP_NVIDIA = 2048;
+const OUTPUT_CAP_OPENROUTER = 16384; // FIX-2/FIX-3 doctrine: floor 8192, target 16384 (kit ~9,633 tok; the 2048 mouth was #76's root cause)
+const OUTPUT_CAP_NVIDIA = 16384;
 
 // Excluded model ids (audio/classifier/embedding/safety/vision endpoints
 // that are "free" on the lists but cannot serve OLYMPUS god prompts).
@@ -75,7 +75,6 @@ const NVIDIA_CONTEXT_OVERRIDES = {
   'z-ai/glm-5.2': 1000000,
   'nvidia/nemotron-3-ultra-550b-a55b': 1000000,
   'nvidia/nemotron-3-super-120b-a12b': 262144,
-  'nvidia/nemotron-3-nano-30b-a3b': 256000,
   'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': 256000,
   'nvidia/llama-3.1-nemotron-ultra-253b-v1': 131072,
   'nvidia/llama-3.1-nemotron-70b-instruct': 131072,

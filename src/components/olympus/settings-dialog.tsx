@@ -239,7 +239,7 @@ const ALL_CLASSES = [
   'nvidia/z-ai/glm-5.3',
   'nvidia/nvidia/llama-3.1-nemotron-ultra-253b-v1',
   'nvidia/nvidia/nemotron-3-super-120b-a12b',
-  'nvidia/nvidia/nemotron-3-nano-30b-a3b',
+  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
   'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
   'nvidia/deepseek-ai/deepseek-v4-pro',
   'nvidia/deepseek-ai/deepseek-v4-flash',
@@ -369,7 +369,7 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     hermes: 'nvidia/z-ai/glm-5.3',
     persephone: 'nvidia/z-ai/glm-5.3',
     prometheus: 'nvidia/z-ai/glm-5.3',
-    callimachus: 'nvidia/nvidia/nemotron-3-nano-30b-a3b',
+    callimachus: 'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
   },
 };
 
@@ -422,7 +422,7 @@ function fallbackData(): SettingsData {
       // Free strategies — for users without a GO plan.
       { id: 'free-openrouter', label: 'Free OpenRouter', description: 'All gods on OpenRouter\'s strongest free models live right now — primary trio on #1, specialists on #2, Callimachus on a fast background model.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', estCostPerDay: 'free' },
       { id: 'free-big-pickle', label: 'Free Big Pickle', description: 'All 10 gods (Callimachus included) on one free model — the strongest currently live. Refreshes automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', estCostPerDay: 'free' },
-      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints (build.nvidia.com) — Apollo + Atlas on the strongest NVIDIA free model live right now, coding gods (Hephaestus/Athena/Dionysus) on GLM-5.2 (best coding), other specialists on #2, Callimachus on a fast background model. Refreshes automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia/nvidia/nemotron-3-ultra-550b-a55b', estCostPerDay: 'free' },
+      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints (build.nvidia.com) — Apollo + Atlas on the strongest NVIDIA free model live right now, coding gods (Hephaestus/Athena/Dionysus) on GLM-5.3 (best coding), other specialists on #2, Callimachus on a fast background model. Refreshes automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia/nvidia/nemotron-3-ultra-550b-a55b', estCostPerDay: 'free' },
     ],
     go_plan_last_verified: '2026-07-29',
     go_plan_docs_url: 'https://opencode.ai/docs/go/',

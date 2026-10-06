@@ -323,7 +323,7 @@ const BUILTIN_STRATEGIES = {
     hermes:       'nvidia/z-ai/glm-5.3',
     persephone:   'nvidia/z-ai/glm-5.3',
     prometheus:   'nvidia/z-ai/glm-5.3',
-    callimachus:  'nvidia/nvidia/nemotron-3-nano-30b-a3b',
+    callimachus:  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
   },
 };
 
