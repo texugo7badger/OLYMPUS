@@ -475,12 +475,6 @@
             "output": 16384
           }
         },
-        "nvidia/nemotron-3-nano-30b-a3b": {
-          "limit": {
-            "context": 256000,
-            "output": 16384
-          }
-        },
         "nvidia/llama-3.1-nemotron-ultra-253b-v1": {
           "limit": {
             "context": 131072,
