@@ -461,16 +461,6 @@
         }
       }
     },
-    "groq": {
-      "models": {
-        "openai/gpt-oss-120b": {
-          "limit": {
-            "context": 131072,
-            "output": 16384
-          }
-        }
-      }
-    },
     "nvidia": {
       "models": {
         "nvidia/nemotron-3-ultra-550b-a55b": {
