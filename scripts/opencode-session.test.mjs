@@ -29,8 +29,13 @@ import fs from 'node:fs';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 
-const OLYMPUS = '/home/texugo/Projects/olympus';
+// #70 (GAP-1-S1): derive the repo root from this file's own location — the
+// checkpoint.test.mjs pattern — so the suite runs on any box. The old
+// hardcode ('/home/texugo/Projects/olympus') made it ERR_MODULE_NOT_FOUND
+// everywhere else.
+const OLYMPUS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PIDFILE = path.join(os.homedir(), '.olympus', 'opencode-server.pid');
 const PASSWORD = 'test-' + Math.random().toString(36).slice(2, 18);
 
