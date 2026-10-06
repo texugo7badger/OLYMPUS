@@ -133,6 +133,12 @@ function makeHome({ deadPrimary = false } = {}) {
   // A fresh refresh file: top[0] drives Apollo/Atlas, top[1] the specialists.
   // Ids are in POST-normalize form (normalizeNvidiaId keeps nvidia/-prefixed
   // ids as-is) so the generated map lands exactly on the stub catalogue.
+  // N38 (GAP-1-S1): 'z-ai/glm-5.2' below is a DELIBERATE dead-id test
+  // constant — the retired D19 pin, absent from STUB_CATALOGUE by design
+  // (the deadPrimary fixture case depends on that absence). LOAD-BEARING:
+  // the day the live catalogue retires glm-5.3 and the stub catalogue moves
+  // on, swap in a fresh dead id so this datum can never accidentally
+  // resolve. Do not "fix" it to a served id.
   const top0 = deadPrimary ? 'z-ai/glm-5.2' : 'nvidia/nvidia/nemotron-3.5-lightning';
   writeFileSync(join(home, 'free-models.json'), JSON.stringify({
     fetched_at: nowIso(),
