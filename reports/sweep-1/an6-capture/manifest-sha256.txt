@@ -1,0 +1,10 @@
+9d4baf5e3686356024b6e7f8535c5872dddfd9004a6cb19790bff1e91389dab4  docs/superpowers/specs/2026-10-03-testimonial-section-design.md
+e787c978e390d4227aa79e4adbfc4fc19917a8573f60cb890ab296b81da906d5  docs/superpowers/plans/2026-10-03-testimonial-section.md
+ed26f02483efba0db14352375086283e6600e34cd7f3d1e2965cd44a731b167e  public/landing/testimonials.html
+32K	docs/superpowers
+8.0K	public/landing
+8.0K	testimonial-section.html
+  207 testimonial-section.html
+   79 docs/superpowers/specs/2026-10-03-testimonial-section-design.md
+  381 docs/superpowers/plans/2026-10-03-testimonial-section.md
+  667 total

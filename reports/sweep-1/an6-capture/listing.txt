@@ -1,0 +1,8 @@
+docs/superpowers/specs/2026-10-03-testimonial-section-design.md
+docs/superpowers/plans/2026-10-03-testimonial-section.md
+public/landing/testimonials.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -35,7 +35,7 @@ cd <the workspace lane>                                       # config + .openco
 - **Spawn census**: every god lane + every semideus lane present in the bus/census (all 10 gods).
 - **Bus**: seq strictly monotonic, zero drops, the loud-drop counter at 0.
 - **Sync-map**: his prompt (origin project) + every dispatch (origin dispatch) with lifecycle statuses.
-- **Transcripts**: zero `reason: 'length'` anywhere (the #76 bar) — [rev: executed R2] the sweep script is shipped (`length-cut-sweep.mjs`); ALSO watch `reason: 'unknown'` turn-deaths (the R2 residual — the skill-storm class; if a turn dies unknown, re-run the lane, do not nudge).
+- **Transcripts**: zero `reason: 'length'` anywhere (the #76 bar) — [rev: executed R2] the sweep script is shipped (`length-cut-sweep.mjs`); ALSO watch `reason: 'unknown'` turn-deaths — **[rev: diagnostic sweep-1]** the mechanism is PINNED to the skill-load storm: the 4-skill dump (~31.8k tokens/step) killed both R2 control turns; the skills-trimmed lane (olympus-skill-registry + olympus-dynamic-context removed from the LANE config copy) completed with ZERO unknown-deaths + the gate all-7 first-try. If a turn dies unknown: re-run the lane with the skill-data plugins trimmed (evidence: reports/sweep-1/n39/N39-VERDICT.md).
 - **Gate**: all 7 checks green, first-try.
 - **Page**: renders; the CTA smooth-scrolls (his real click — the live rung).
 - **Well-built rubric**: semantic HTML, responsive, accessible, clean minimal design, pt-BR real (no lorem).
