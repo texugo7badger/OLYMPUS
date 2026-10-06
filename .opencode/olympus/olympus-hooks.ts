@@ -746,6 +746,82 @@ const OLYMPUS_TOOLS = {
   "symphony-decode": SYMPHONY_TOOLS[2],
 };
 
+// ─── Issue #77 (GAP-1-S2R): the root-session heartbeat lane ────────────────
+// The #25 managed-process gate returns tools-only for EVERY unmanaged
+// process — correctly silencing foreign runs (Zed's ACP agent, bare CLI
+// runs), but also the user's interactive ROOT session, whose Part-3
+// heartbeat wiring therefore never fired: a session with heavy tool
+// activity and ZERO heartbeats on the bus (the #77 live evidence).
+//
+// Why OPT-IN: extending the managed gate to every unmanaged process would
+// re-open the foreign-run misattribution #25 cured — without an explicit
+// marker, the root session is mechanically indistinguishable from a
+// foreign process. The root session therefore DECLARES itself with
+// OLYMPUS_ROOT_SESSION=1 (the launching shell — `export
+// OLYMPUS_ROOT_SESSION=1` or `OLYMPUS_ROOT_SESSION=1 opencode` — or the
+// app terminal's spawn env; the app-terminal injection point is the
+// ROOT-LANE-ADOPT filing candidate).
+//
+// The lane registers EXACTLY the Part-3 wiring — acting heartbeats at
+// tool.execute.before, idle at session.idle, on the bus + Atlas — driven
+// by an IN-MEMORY session-local tracker fed by the #25-verified identity
+// sources (message.part.updated info.agent; `agent` on the tool payload
+// for future opencode versions). Heartbeats are per-GOD events: a
+// recorded agent that is not a canonical god name publishes nothing (the
+// root lane never invents gods). The #25 contract is preserved VERBATIM:
+// no cost.jsonl writes, no active-agent.json reads or writes, no
+// VaultBrain/Callimachus/dispatch registration; foreign processes (the
+// flag unset) keep the bare tools-only return.
+function buildRootSessionHooks(): Record<string, unknown> {
+  // In-memory and session-local: nothing persisted, nothing read from disk.
+  let rootAgent: string | null = null;
+  return {
+    "event": async (input: { event: any }) => {
+      try {
+        const evt = input?.event;
+        if (!evt || typeof evt !== "object") return;
+        const evtType = evt.type || (evt as any).properties?.type;
+        if (evtType !== "message.part.updated") return;
+        const part = evt.part || (evt as any).properties?.part;
+        const info = (evt as any).properties?.info ?? evt.info ?? null;
+        if (part?.type === "tool" && typeof info?.agent === "string" && info.agent) {
+          rootAgent = info.agent;
+        }
+      } catch { /* the lane is observability — never blocks */ }
+    },
+    "tool.execute.before": async (input: ToolInput) => {
+      // Future opencode versions may carry the agent on the tool payload —
+      // the same #25 source, honored when present.
+      if (typeof input.agent === "string" && input.agent) rootAgent = input.agent;
+      if (!rootAgent || !GOD_NAMES.has(rootAgent)) return;
+      try {
+        busPublish({
+          type: "heartbeat",
+          god: rootAgent,
+          state: "acting",
+          dedupKey: `hb:${rootAgent}:acting:${input.callID || input.sessionID || Date.now()}`,
+          payload: { tool: input.tool },
+          evidence: { callID: input.callID ?? null, sessionID: input.sessionID ?? null },
+        });
+        atlasRecordHeartbeat(rootAgent, "acting");
+      } catch { /* never blocks the tool */ }
+    },
+    "session.idle": async () => {
+      if (!rootAgent || !GOD_NAMES.has(rootAgent)) return;
+      try {
+        busPublish({
+          type: "heartbeat",
+          god: rootAgent,
+          state: "idle",
+          dedupKey: `hb:${rootAgent}:idle:${input_sessionEpoch()}`,
+          evidence: {},
+        });
+        atlasRecordHeartbeat(rootAgent, "idle");
+      } catch { /* never blocks the idle path */ }
+    },
+  };
+}
+
 export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
   client,
   $,
@@ -803,7 +879,13 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
   process.once("exit", atlasExitFinalize);
 
   if (process.env.OLYMPUS_MANAGED !== '1') {
-    return { tool: OLYMPUS_TOOLS };
+    // Issue #77 (GAP-1-S2R): the OPT-IN root lane — OLYMPUS_ROOT_SESSION=1
+    // registers the Part-3 heartbeat trio (buildRootSessionHooks); every
+    // other unmanaged process keeps the bare tools-only return (#25).
+    if (process.env.OLYMPUS_ROOT_SESSION !== '1') {
+      return { tool: OLYMPUS_TOOLS };
+    }
+    return { tool: OLYMPUS_TOOLS, ...buildRootSessionHooks() };
   }
 
   // Initialize the active-agent tracker + dispatch tracker
@@ -1095,10 +1177,19 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         });
       }
 
-      // Everything below attributes to the ACTIVE dispatch and still needs one;
-      // the cost line above does not — an unattributed call is worth recording
-      // under "global" rather than dropping on the floor.
-      if (!state.agentId) return;
+      // Issue #69 (GAP-1-S2R): one-shot `opencode run` spawns never fire
+      // session.created (opencode 1.18.10), so state.agentId never populates
+      // and the hard gate this block used to carry froze EVERY live.jsonl
+      // activity write for driver-spawned runs — while the cost line above
+      // kept flowing (the D8 blindness: a busy one-shot session with a rich
+      // cost.jsonl and a dead activity feed). Attribution now falls back to
+      // the SAME trusted sources the cost path already uses (#25): the
+      // call's own agent (input.agent), else the bus-recorded agent for this
+      // callID (message.part.updated → rememberCallAgent). The tracker is
+      // NEVER mutated by the fallback — activityAgent feeds attribution
+      // only; agent-less rows record under god "global" via godId (the
+      // D17/D20 convention the cost line already applies to this call).
+      const activityAgent = state.agentId || eventAgent || null;
 
       // ─── Handle olympus-dispatch: register an open dispatch ─────────
       if (input.tool === "olympus-dispatch" && input.args) {
@@ -1201,7 +1292,7 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
       // ─── Attribute this tool call to any open dispatch ──────────────
       const openDispatch = attributeToolCall({
         god: godId,
-        agentId: state.agentId,
+        agentId: activityAgent,
         tool: input.tool,
         hadError: isError,
         tokens,
@@ -1219,7 +1310,7 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           meta: {
             tool: input.tool,
             file: filePath,
-            agent: state.agentId,
+            agent: activityAgent,
             dispatch_id: openDispatch?.dispatchId ?? null,
             demigod: openDispatch?.demigod ?? null,
             error: isError,
@@ -1242,7 +1333,7 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
             meta: {
               tool: "bash",
               command: cmd.slice(0, 500),
-              agent: state.agentId,
+              agent: activityAgent,
               dispatch_id: openDispatch?.dispatchId ?? null,
               demigod: openDispatch?.demigod ?? null,
               error: isError,

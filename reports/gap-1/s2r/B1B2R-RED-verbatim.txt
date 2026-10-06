@@ -1,0 +1,19 @@
+PASS  one-shot: the crash-free child ran
+FAIL  one-shot: activity rows reach live.jsonl (the D8 blindness dead)  -- rowsTotal: 0, costRows: 2 (cost flowed, the feed stayed frozen — the pre-fix RED)
+FAIL  one-shot: the bus-known-agent row attributed hermes  -- []
+FAIL  one-shot: the agent-less row attributed global  -- []
+FAIL  one-shot: the dispatch event reached live.jsonl  -- []
+PASS  one-shot: cost rows kept flowing (the cost path untouched)
+FAIL  acceptance: telemetry-slice --action tool_call returns the rows (exit 0)  -- exit: 1, count: -1, out: 
+PASS  interactive: the crash-free child ran
+PASS  interactive: exactly ONE row per call (2 calls -> 2 rows, zero duplicates)
+PASS  interactive: both rows attributed hermes
+PASS  foreign: the crash-free child ran
+PASS  foreign: exactly the tools-only return
+PASS  foreign: zero cost rows + no active-agent.json + no bus file
+PASS  root: the crash-free child ran
+FAIL  root: the Part-3 trio registered (pre-fix: hooks.event is not a function)  -- hookKeys: ["tool"] -- hooks.event is not a function
+FAIL  root: acting + idle heartbeats on the bus (god apollo) + Atlas records godStates.apollo  -- {"heartbeats":[]}
+PASS  root: the #25 contract preserved — zero cost rows, active-agent.json ABSENT
+
+telemetry-pulse: 7 FAILURE(S), 17 checked
