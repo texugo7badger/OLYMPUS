@@ -1697,7 +1697,7 @@ function preflightModelCatalogue(config, opts = {}) {
 
 // --- State file ------------------------------------------------------------
 
-function writeStateFile(strategy, changes, backupPath) {
+function writeStateFile(strategy, changes, backupPath, noOp = false) {
   try {
     const state = {
       strategy,
@@ -1708,6 +1708,10 @@ function writeStateFile(strategy, changes, backupPath) {
       plugins_enabled: 0,
       changes,
       backup_path: backupPath,
+      // N37 (SWEEP-1): a no-op apply is a NO-OP — never recorded as a bare
+      // "applied". The state file carries the marker so the convergence
+      // signal (the guard) stays the only source of truth.
+      ...(noOp ? { noOp: true, note: 'no changes — config already matched; verify with the budget-guard, not this file' } : {}),
     };
     // Re-read the just-written opencode.json to populate state fields
     if (fs.existsSync(OPENCODE_JSON)) {
@@ -2122,7 +2126,7 @@ function main() {
     log('No changes needed -- opencode.json already matches the strategy.');
     // Still update state file (in case the strategy was applied via a
     // different mechanism and the state file is stale).
-    if (!dryRun) writeStateFile(strategy, 0, backupPath);
+    if (!dryRun) writeStateFile(strategy, 0, backupPath, true); // N37: the no-op marker
     process.exit(0);
   }
 
