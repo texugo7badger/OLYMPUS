@@ -2,11 +2,11 @@
 
 | id | gap | evidence | note |
 |---|---|---|---|
-| G1 | no learning loop has ever run in OLYMPUS (all intelligence static) | RLM verdict, MADRUGA-3 §C | Phase 5 seeds it |
-| G2 | cross-conversation crash recovery for checkpoints (#65 follow-up) | batch-13 disclosure | 14b+ |
-| G3 | #69 live.jsonl blind to one-shot session events (tool side works — leverage it) | D8 + delta-1 feat | p2 landed the tool-side exit finalize (D18 closed); the app-side session events remain Phase 2+ |
-| G4 | page-gate ruler: is 2000B the right bar? (1780B real page failed it) | madruga-2 big-pickle | Phase 3 measures with declared ruler |
-| G5 | browser automation path for Athena's click needs inventory (CDP? playwright?) | Phase 6 prep | Phase 6 |
-| G6 | no docs/callimachus/ library structure exists yet | Phase 5 scaffold | Phase 5 |
-| G7 | no fixture can drive the COMPILED dist tools standalone (the plugin SDK resolves only inside the opencode host; fixtures shim the host boundary at source level) | dispatch-spine.test.mjs shim | narrowed in p2: the postcompile artifact-sync keeps shipped src/lib artifacts compile-verified (the stale-artifact class is dead); a true host-mode probe remains future work |
-| G8 | the sync-map read path is disk-truth (no cache) — fine at current scale, but a very large map would want an index; also no retention/compaction policy yet for sync-map.json | atlas-sync.ts loadState (p2) | measure first (Phase 4/5), then decide |
+| G1 | no learning loop has ever run in OLYMPUS (all intelligence static) | RLM verdict, MADRUGA-3 §C | OPEN → GAP-1-S4 filing (run the learning loop live — instincts promoted from real sessions; rlm-metabolism 12/12 exists, zero live loops) |
+| G2 | cross-conversation crash recovery for checkpoints (#65 follow-up) | batch-13 disclosure | OPEN → GAP-1-S4 filing (dispatch journal replay as crash-recovery primitive) |
+| G3 | #69 live.jsonl blind to one-shot session events (tool side works — leverage it) | D8 + delta-1 feat | p2 landed the tool-side exit finalize (D18 closed); the app-side session events remain Phase 2+. GAP-1-S1 annotation: this gap DIES with #69's fix — GAP-1-S2's target (D-2: #69 resolves this campaign) |
+| G4 | page-gate ruler: is 2000B the right bar? (1780B real page failed it) | madruga-2 big-pickle | OPEN → GAP-1-S4 filing (page-gate ruler calibration — pairs ISSUES.md AUD-2 carry) |
+| G5 | browser automation path for Athena's click needs inventory (CDP? playwright?) | Phase 6 prep | OPEN → GAP-1-S4 filing (browser-automation path inventory — CDP vs Playwright) |
+| G6 | no docs/callimachus/ library structure exists yet | Phase 5 scaffold | GAP-1-S1 annotation: the empty placeholder dir was disposed (A2, the user's full-hygiene call; zero files, recreatable the day Callimachus ships). The library ITSELF remains future work (Callimachus scope) — candidate for the S4 discoveries lane |
+| G7 | no fixture can drive the COMPILED dist tools standalone (the plugin SDK resolves only inside the opencode host; fixtures shim the host boundary at source level) | dispatch-spine.test.mjs shim | narrowed in p2: the postcompile artifact-sync keeps shipped src/lib artifacts compile-verified (the stale-artifact class is dead); a true host-mode probe remains future work → GAP-1-S4 filing (host-mode probe — drive the compiled dist tools standalone) |
+| G8 | the sync-map read path is disk-truth (no cache) — fine at current scale, but a very large map would want an index; also no retention/compaction policy yet for sync-map.json | atlas-sync.ts loadState (p2) | OPEN → GAP-1-S4 filing (sync-map retention + compaction policy; measure-first stands) |
