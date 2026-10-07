@@ -230,18 +230,18 @@ node scripts/apply-strategy.js --strategy free-big-pickle
 
 ### `free-nvidia-build` — NVIDIA Build free endpoints (build.nvidia.com)
 
-NVIDIA hosts **GLM-5.2** and the Nemotron family (plus DeepSeek, Kimi, Mistral, etc.) on free endpoints at [build.nvidia.com](https://build.nvidia.com/models) — the same scheme as the other free strategies:
+NVIDIA hosts **GLM-5.3** and the Nemotron family (plus Kimi, Mistral, Gemma, etc.) on free endpoints at [build.nvidia.com](https://build.nvidia.com/models) — the same scheme as the other free strategies:
 
 - **Primary roles** (Apollo, Atlas) → the strongest NVIDIA free model currently live (curated default: `nvidia/nvidia/nemotron-3-ultra-550b-a55b` — 550B params, 1M context).
-- **Coding trio** (Hephaestus, Athena, Dionysus) → **pinned** `nvidia/z-ai/glm-5.2` — the best coding model on the platform (1M context), pinned so a list reshuffle never bumps the coding gods onto a general-purpose model.
-- **Specialists** (Artemis, Hermes, Persephone, Prometheus) → the second-strongest live model (fallback: `nvidia/z-ai/glm-5.2`).
+- **Coding trio** (Hephaestus, Athena, Dionysus) → **pinned** `nvidia/z-ai/glm-5.3` — the platform's current best coding model (1M context; live-verified against `https://integrate.api.nvidia.com/v1/models` on 2026-10-07 — the endpoint now serves the glm-5.3 family only; glm-5.2 is retired), pinned so a list reshuffle never bumps the coding gods onto a general-purpose model.
+- **Specialists** (Artemis, Hermes, Persephone, Prometheus) → the second-strongest live model (fallback: `nvidia/z-ai/glm-5.3`).
 - **Callimachus** → a fast nano-class background model from the live list (curated default: `nvidia/nvidia/nemotron-3-nano-30b-a3b`).
 
 Model ids use the **`nvidia/<vendor>/<model>`** prefix (OpenCode's built-in `nvidia` provider) — **no `:free` suffix**; every NVIDIA Build endpoint is free with a key. The model list is fetched live from `https://integrate.api.nvidia.com/v1/models` (public, no key needed) and refreshed automatically with the same 24-hour TTL as OpenRouter/Groq.
 
 **Requirements:** a free NVIDIA API key (`nvapi-...`) configured inside OpenCode (`olympus opencode` → Settings → add NVIDIA). Get one at https://build.nvidia.com (Sign In → API). The config still applies without the key, but model requests fail until it is added — apply-strategy.js warns about this.
 
-**When to use:** You want GLM-5.2 or the Nemotron family for free through NVIDIA's direct endpoints (no OpenRouter/Groq key needed).
+**When to use:** You want GLM-5.3 or the Nemotron family for free through NVIDIA's direct endpoints (no OpenRouter/Groq key needed).
 
 ## Custom strategies
 

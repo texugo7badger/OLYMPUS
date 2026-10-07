@@ -71,27 +71,24 @@ const EXCLUDE_IDS = /(whisper|prompt-guard|content-safety|safeguard|orpheus|alla
 // NVIDIA's /models endpoint does not report context_length, so we keep a
 // curated context map for the known chat models (the flagships get their
 // real windows; unknown models default to 131072).
+// GAP-1-S3 (2026-10-07): re-verified against the LIVE list
+// (https://integrate.api.nvidia.com/v1/models, 80 models) — every id the
+// endpoint no longer serves was REMOVED (the glm-5.2 dead key — AN11 — and
+// the llama-3.3/deepseek/minimax/mistral-medium/stepfun-era residue), and
+// the CURRENT z-ai coding family (glm-5.3 + glm-5.3-flash, both live) was
+// ADDED. Unknown ids keep the designed 131072 default.
 const NVIDIA_CONTEXT_OVERRIDES = {
-  'z-ai/glm-5.2': 1000000,
+  'z-ai/glm-5.3': 1000000,
+  'z-ai/glm-5.3-flash': 1000000,
   'nvidia/nemotron-3-ultra-550b-a55b': 1000000,
   'nvidia/nemotron-3-super-120b-a12b': 262144,
   'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': 256000,
   'nvidia/llama-3.1-nemotron-ultra-253b-v1': 131072,
   'nvidia/llama-3.1-nemotron-70b-instruct': 131072,
   'nvidia/llama-3.1-nemotron-51b-instruct': 131072,
-  'nvidia/llama-3.3-nemotron-super-49b-v1': 131072,
-  'nvidia/llama-3.3-nemotron-super-49b-v1.5': 131072,
   'nvidia/nemotron-nano-3-30b-a3b': 131072,
-  'nvidia/nvidia-nemotron-nano-9b-v2': 131072,
-  'deepseek-ai/deepseek-v4-pro': 131072,
-  'deepseek-ai/deepseek-v4-flash': 131072,
   'moonshotai/kimi-k2.6': 131072,
-  'openai/gpt-oss-120b': 131072,
   'openai/gpt-oss-20b': 131072,
-  'minimaxai/minimax-m3': 131072,
-  'minimaxai/minimax-m2.7': 131072,
-  'mistralai/mistral-medium-3.5-128b': 131072,
-  'mistralai/mistral-medium-3-instruct': 131072,
   'mistralai/mistral-large': 131072,
   'mistralai/mistral-large-2-instruct': 131072,
   'mistralai/mixtral-8x22b-v0.1': 65536,
@@ -100,9 +97,6 @@ const NVIDIA_CONTEXT_OVERRIDES = {
   'google/gemma-3-12b-it': 131072,
   'google/gemma-3-4b-it': 131072,
   'google/gemma-2b': 8192,
-  'meta/llama-3.3-70b-instruct': 131072,
-  'meta/llama-3.1-70b-instruct': 131072,
-  'meta/llama-3.1-8b-instruct': 131072,
   'meta/llama2-70b': 4096,
   'meta/codellama-70b': 16384,
   'bigcode/starcoder2-15b': 16384,
@@ -112,15 +106,11 @@ const NVIDIA_CONTEXT_OVERRIDES = {
   'ai21labs/jamba-1.5-large-instruct': 256000,
   '01-ai/yi-large': 131072,
   'databricks/dbrx-instruct': 32768,
-  'stepfun-ai/step-3.7-flash': 131072,
-  'stepfun-ai/step-3.5-flash': 131072,
-  'thinkingmachines/inkling': 131072,
   'zyphra/zamba2-7b-instruct': 131072,
   'ibm/granite-34b-code-instruct': 131072,
   'ibm/granite-3.0-8b-instruct': 131072,
   'ibm/granite-3.0-3b-a800m-instruct': 131072,
   'microsoft/phi-3.5-moe-instruct': 131072,
-  'nvidia/nemotron-mini-4b-instruct': 4096,
   'poolside/laguna-xs-2.1': 131072,
 };
 

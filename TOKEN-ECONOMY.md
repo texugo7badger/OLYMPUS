@@ -118,7 +118,7 @@ The **free strategies** run OLYMPUS entirely on free-tier providers — no plan 
 | **OpenRouter** (free) | nvidia/nemotron-3-super-120b-a12b:free (or ling-3.0-flash:free) | Artemis, Athena, Dionysus, Hermes, Persephone, Prometheus | $0 |
 | **OpenRouter** (free) | nvidia/nemotron-3-nano-30b-a3b:free | Callimachus + small_model (titles, compaction) | $0 |
 | **OpenRouter-only strategy** (`free-openrouter`) | current top OpenRouter free models (live) | Primary trio #1 / specialists #2 / Callimachus nano | $0 |
-| **NVIDIA Build** (free, `free-nvidia-build`) | z-ai/glm-5.2 (1M ctx) + Nemotron super/nano | GLM-5.2 + Nemotron family via build.nvidia.com (live) | $0 |
+| **NVIDIA Build** (free, `free-nvidia-build`) | z-ai/glm-5.3 (1M ctx) + Nemotron super/nano | GLM-5.3 + Nemotron family via build.nvidia.com (live) | $0 |
 
 NVIDIA Build's model list is **public** — `scripts/refresh-free-models.js` fetches it without any key, so the `free-nvidia-build` strategy always has a live model list. Requests still need a free NVIDIA API key (`nvapi-...`) configured inside OpenCode.
 
