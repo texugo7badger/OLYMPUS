@@ -37,7 +37,7 @@ import { execSync, spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnOpencode, freeTierPreflight } from '@/lib/opencode-spawn';
+import { spawnOpencode, freeTierPreflight, resolveWorkspaceLane } from '@/lib/opencode-spawn';
 import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
 import { getVaultRoot } from '@/lib/vault-root';
@@ -85,6 +85,11 @@ interface ServerInfo {
   password: string | null;
   /** true when the server requires basic auth (we spawned it with a password). */
   authed: boolean;
+  /** #99: the workspace lane the serve was spawned with (cold start only). */
+  workspaceDir?: string;
+  /** #99: true only on the cold start that CREATED the lane — the
+   *  first-run ask/notice fires once, never per-run. */
+  workspaceFresh?: boolean;
 }
 
 /**
@@ -383,7 +388,7 @@ export async function ensureServer(): Promise<ServerInfo> {
     // Cache hit — the server was already established by an earlier call.
     // Report it as warm (if it died since, the warm run fails fast and the
     // caller falls back / invalidates).
-    return serverPromise.then((info) => ({ ...info, warm: true }));
+    return serverPromise.then((info) => ({ ...info, warm: true, workspaceFresh: false }));
   }
   serverPromise = (async (): Promise<ServerInfo> => {
     const configured = parseInt(process.env.OLYMPUS_OPENCODE_PORT || '', 10);
@@ -462,9 +467,14 @@ async function spawnServer(port: number): Promise<ServerInfo> {
   } catch {}
 
   const logFd = fs.openSync(LOG_FILE, 'a');
+  // #99: the serve runs IN THE WORKSPACE LANE — never the repo root. The
+  // 2026-10-07 UAT created exemplo-landingpage/ inside the working tree
+  // because this spawn inherited findOlympusRoot() as cwd.
+  const lane = resolveWorkspaceLane();
   const child = spawnOpencode(
     ['serve', '--port', String(port)],
     {
+      cwd: lane.dir,
       extraEnv: {
         OPENCODE_SERVER_PASSWORD: password,
         // Tell the OLYMPUS overlay where the OLYMPUS API lives (heartbeat,
@@ -472,6 +482,10 @@ async function spawnServer(port: number): Promise<ServerInfo> {
         // overlay's own default (http://127.0.0.1:3000) points nowhere.
         OLYMPUS_API_BASE: process.env.OLYMPUS_API_BASE
           || (process.env.PORT ? `http://127.0.0.1:${process.env.PORT}` : 'http://127.0.0.1:3737'),
+        // #95 (ROOT-LANE-ADOPT): the app-spawned serve IS the root session —
+        // inject the opt-in lane so the Part-3 trio (bus + Atlas + idle)
+        // registers without the user exporting anything.
+        OLYMPUS_ROOT_SESSION: '1',
       },
       stdio: ['ignore', logFd, logFd] as const,
       detached: true,
@@ -499,7 +513,7 @@ async function spawnServer(port: number): Promise<ServerInfo> {
     if (probe.ok) {
       writePidFile(port, password, child.pid ?? process.pid);
       console.log(`[opencode-session] OpenCode server ready on port ${port} (pid ${child.pid})`);
-      return { port, warm: false, password, authed: probe.authed };
+      return { port, warm: false, password, authed: probe.authed, workspaceDir: lane.dir, workspaceFresh: lane.fresh };
     }
     consecutiveTimeouts = probe.timedOut ? consecutiveTimeouts + 1 : 0;
     // (Phase B) fast-fails for dead ports — each dead port previously
@@ -1285,6 +1299,17 @@ const WARM_RETRY_PLAN = {
 
 export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResult> {
   const server = await ensureServer();
+
+  // #99: the first-run ask seam — when THIS cold start created the workspace
+  // lane, say so loudly ONCE (the terminal renders log events): where
+  // projects land, how to override, and that the repo is never the default.
+  if (server.workspaceFresh && server.workspaceDir) {
+    opts.onEvent({
+      type: 'log',
+      msg: `Workspace lane ready at ${server.workspaceDir} — interactive projects land here, never inside the OLYMPUS repo. Set OLYMPUS_WORKSPACE to override.`,
+      ts: new Date().toISOString(),
+    });
+  }
 
   return withSessionLock(opts.sessionId, async () => {
     // Retry loop (fix d + issue #39): a TRANSPORT failure mid-run (fetch

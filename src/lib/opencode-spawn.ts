@@ -26,8 +26,8 @@
  */
 
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync, copyFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { platform, homedir } from 'node:os';
 import { decryptValue } from './env-crypto';
 import { getVaultRoot } from './vault-root';
@@ -357,6 +357,66 @@ export function getOpencodeSpawnOptions(
     cwd: root,
     env,
   };
+}
+
+// --- #99: the workspace lane -------------------------------------------------
+
+export interface WorkspaceLane {
+  /** The absolute lane directory — where interactive-session projects land. */
+  dir: string;
+  /** true ONLY on the call that created the lane (the ask/notice fires once). */
+  fresh: boolean;
+}
+
+/**
+ * #99 (UAT-BUILD-1 Batch C): resolve + bootstrap the WORKSPACE LANE — the
+ * directory interactive-session projects land in. NEVER the repo/install
+ * root: the 2026-10-07 UAT created exemplo-landingpage/ INSIDE the OLYMPUS
+ * working tree because the session serve inherited findOlympusRoot() as its
+ * cwd (DB-evidenced: the warm session's messages carry path.cwd = the repo).
+ *
+ * Resolution order:
+ *   1. OLYMPUS_WORKSPACE env — the explicit operator override, used verbatim;
+ *   2. default: ~/.local/share/olympus/workspace.
+ *
+ * The never-the-repo guard: a workspace that resolves TO the OLYMPUS root or
+ * INSIDE it (operator misconfiguration) falls back to the default — projects
+ * never silently land in the working tree.
+ *
+ * The lane is bootstrapped with the UAT-kit's proven shape
+ * (reports/uat-r1/SPAWN-INVOCATION.sh): .opencode symlinked to the root's
+ * overlay, opencode.json + opencode.demigods.json copied from the root.
+ * Copies are created-if-missing (never clobbered — refresh semantics belong
+ * to the #78 drift-detector class). Linux-first (the kit's own surface);
+ * Windows junction semantics ride the packaged-lane pass.
+ */
+export function resolveWorkspaceLane(): WorkspaceLane {
+  const root = findOlympusRoot();
+  const defaultDir = join(homedir(), '.local', 'share', 'olympus', 'workspace');
+  let dir = process.env.OLYMPUS_WORKSPACE
+    ? resolve(process.env.OLYMPUS_WORKSPACE)
+    : defaultDir;
+  if (dir === root || dir.startsWith(root + '/')) {
+    console.warn(`[opencode-spawn] OLYMPUS_WORKSPACE (${dir}) points inside the OLYMPUS root — falling back to ${defaultDir} (projects never land in the working tree)`);
+    dir = defaultDir;
+  }
+  let fresh = false;
+  if (!existsSync(dir)) {
+    fresh = true;
+    mkdirSync(dir, { recursive: true });
+  }
+  try {
+    const dotOpencode = join(dir, '.opencode');
+    if (!existsSync(dotOpencode)) symlinkSync(join(root, '.opencode'), dotOpencode);
+  } catch {}
+  for (const f of ['opencode.json', 'opencode.demigods.json']) {
+    try {
+      const src = join(root, f);
+      const dst = join(dir, f);
+      if (existsSync(src) && !existsSync(dst)) copyFileSync(src, dst);
+    } catch {}
+  }
+  return { dir, fresh };
 }
 
 // --- Strategy-aware config verification -----------------------------------

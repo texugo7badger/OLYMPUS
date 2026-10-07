@@ -176,3 +176,12 @@ Callimachus runs on `session.idle` (when the user hasn't typed for a configurabl
 7. **Stocktake** — write brain health metrics
 
 The heartbeat is lockfile-protected (only one instance runs at a time). Use the **Compact Brain** button in the status bar for on-demand deep cleanup.
+
+## The workspace lane (#99)
+
+Interactive terminal sessions run their `opencode serve` **inside the workspace lane** — never inside the OLYMPUS repo. Resolution order:
+
+1. `OLYMPUS_WORKSPACE` env — the explicit operator override, used verbatim;
+2. default: `~/.local/share/olympus/workspace`.
+
+The lane is bootstrapped with the UAT-kit's proven shape (`reports/uat-r1/SPAWN-INVOCATION.sh`): `.opencode` symlinked to the repo's overlay, `opencode.json` + `opencode.demigods.json` copied from the repo (created-if-missing; refresh semantics belong to the #78 drift-detector class). A workspace path pointing inside the OLYMPUS root falls back to the default — projects never silently land in the working tree. On the first cold start that creates the lane, the terminal shows a one-time notice (the ask seam); override it any time via `OLYMPUS_WORKSPACE`. The serve's spawn env also carries `OLYMPUS_ROOT_SESSION=1` (#95) — the app-spawned serve IS the root session, so the Part-3 heartbeat trio registers without any manual export.

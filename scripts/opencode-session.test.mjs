@@ -288,6 +288,39 @@ async function main() {
   expect('terminal: failure branch tracks the last error (runLastError)', /runLastError/.test(termSrc), 'the last-error ref is missing — the failure card is bare');
   expect('terminal: failure card names the last error + the preserved session', /last error: \$\{runLastError\.current\}/.test(termSrc) && /warm session and its context are preserved/.test(termSrc), 'the failure branch renders a bare exit code');
 
+  // ── Scenario 7 (#99): the workspace lane — interactive projects must
+  // land OUTSIDE the repo. The 2026-10-07 UAT created exemplo-landingpage/
+  // INSIDE the working tree because the serve inherited findOlympusRoot()
+  // as cwd. The cure: resolveWorkspaceLane() (OLYMPUS_WORKSPACE env → the
+  // default ~/.local/share/olympus/workspace), bootstrapped with the
+  // UAT-kit lane shape (.opencode symlink + config copies — the
+  // SPAWN-INVOCATION.sh pattern), threaded as the serve spawn cwd — plus
+  // the #95 seam (OLYMPUS_ROOT_SESSION in the spawn env).
+  const spawnMod = await import(OLYMPUS + '/src/lib/opencode-spawn.ts');
+  expect('S7: resolveWorkspaceLane is exported (#99)', typeof spawnMod.resolveWorkspaceLane === 'function', 'the workspace lane resolver is missing — interactive sessions default to the repo cwd');
+  if (typeof spawnMod.resolveWorkspaceLane === 'function') {
+    const wsTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-ws-'));
+    process.env.OLYMPUS_WORKSPACE = wsTmp;
+    const lane = spawnMod.resolveWorkspaceLane();
+    expect('S7: OLYMPUS_WORKSPACE override used verbatim', lane.dir === wsTmp, JSON.stringify(lane));
+    expect('S7: lane bootstrapped with the kit shape (.opencode symlink)', fs.existsSync(path.join(lane.dir, '.opencode')), 'the .opencode link is missing');
+    expect('S7: lane carries the opencode.json copy', fs.existsSync(path.join(lane.dir, 'opencode.json')), 'the config copy is missing');
+    expect('S7: lane carries the opencode.demigods.json copy', fs.existsSync(path.join(lane.dir, 'opencode.demigods.json')), 'the demigods copy is missing');
+    const lane2 = spawnMod.resolveWorkspaceLane();
+    expect('S7: second resolve is NOT fresh (the ask/notice fires once)', lane2.fresh === false, JSON.stringify(lane2));
+    // The never-the-repo guard: OLYMPUS_WORKSPACE pointed INSIDE the repo
+    // falls back to the default lane — never silently the repo.
+    process.env.OLYMPUS_WORKSPACE = path.join(OLYMPUS, 'inside-repo-test');
+    const lane3 = spawnMod.resolveWorkspaceLane();
+    expect('S7: a workspace pointing INSIDE the repo falls back to the default',
+      lane3.dir !== OLYMPUS && !lane3.dir.startsWith(OLYMPUS + path.sep), JSON.stringify(lane3));
+    delete process.env.OLYMPUS_WORKSPACE;
+  }
+  const sessSrc = readFileSync(OLYMPUS + '/src/lib/opencode-session.ts', 'utf-8');
+  expect('S7: the serve spawn threads the workspace lane as cwd', /cwd: lane\.dir/.test(sessSrc) && /resolveWorkspaceLane/.test(sessSrc), 'the spawn still inherits the repo root');
+  expect('S7: the spawn env carries OLYMPUS_ROOT_SESSION (#95 seam)', /OLYMPUS_ROOT_SESSION/.test(sessSrc), 'the #95 seam is not threaded');
+  expect('S7: the first-run workspace notice exists (the ask seam)', /Workspace lane/.test(sessSrc), 'no visible ask/notice for the lane');
+
   server.close();
 }
 
