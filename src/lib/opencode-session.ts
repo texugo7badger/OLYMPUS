@@ -1108,6 +1108,9 @@ function mapPart(
     /** Issue #40: reasoning that arrived BEFORE the first step-start is held
      *  here instead of being dropped, then flushed with a prelude marker. */
     reasoningPre?: string;
+    /** #98: the last in-run error text — captured here so classifyRetry and
+     *  the exhaustion guidance see the provider's own words. */
+    lastErrorText?: string;
   },
   onEvent: (ev: any) => void,
 ) {
@@ -1211,6 +1214,8 @@ function mapPart(
       // outcome=success for a dead run (observed live on Nvidia 503s).
       noteSessionError(sessionId);
       const msg = part.error?.message || part.text || 'unknown error';
+      // #98: the retry classifier must never be starved of the real text.
+      state.lastErrorText = msg;
       onEvent({ type: 'error', msg: `OpenCode error: ${msg}`, raw: part, ts });
       return;
     }
@@ -1345,7 +1350,12 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
       const kind = classifyRetry(result);
       if (!kind) return result;
       const delay = RETRY_BACKOFF_MS[attempt];
-      const label = typeof result.statusCode === 'number' ? `upstream ${result.statusCode}` : 'Transport failure';
+      // #98: the label must name the FAILURE CLASS, not default every
+      // status-less failure to "Transport failure" — an in-stream provider
+      // overload (no statusCode, real text threaded) is a PROVIDER error.
+      const label = typeof result.statusCode === 'number'
+        ? `upstream ${result.statusCode}`
+        : kind === 'provider' ? 'Provider error' : 'Transport failure';
       // Issue #39: visible in the OLYMPUS terminal, never console-only.
       // Emitting BEFORE the sleep also pins firstEventAt in the route's
       // startup timer, so STARTUP_TIMEOUT_MS (action/route.ts:503, 120s —
@@ -1519,6 +1529,15 @@ async function runWarmMessageAttempt(
     stepStarted: false,
     stepFinished: false,
     gotError: false,
+    // #98 (UAT-BUILD-1 Batch B): the LAST in-run error text, captured at
+    // every ingestion path (in-stream error parts + message-level
+    // info.error + non-2xx POSTs). Threaded into the attempt's return so
+    // classifyRetry sees the REAL provider message — the 2026-10-07 UAT
+    // death was an UnknownError "Service temporarily overloaded" collapsed
+    // to the generic 'OpenCode reported an error during the run', which
+    // matches no retry regex: no retry, no backoff, no guidance, bare
+    // exit -1.
+    lastErrorText: '',
     userMessageIds: new Set<string>(),
     reasoningPre: '',
     // Liveness: the /event pump stamps every received frame here (BEFORE
@@ -1810,16 +1829,23 @@ async function runWarmMessageAttempt(
         // opencode records these on message.error and completes the run with
         // zero parts — previously invisible (terminal showed "Task completed.").
         const infoErr = info?.error;
-        if (infoErr && !state.gotError) {
-          state.gotError = true;
-          noteSessionError(opts.sessionId);
+        if (infoErr) {
           const d = infoErr?.data ?? {};
+          const message = d?.message || infoErr?.message || infoErr?.name || 'unknown API error';
+          // #98: capture the REAL text ALWAYS — even when the UI deliver below
+          // is deduped away (a finish==='error' message already flagged
+          // gotError at :1804 and would otherwise skip this block entirely,
+          // starving the retry classifier a second way).
+          state.lastErrorText = message;
           // Issue #39: keep the structured status; the display string below is
           // lossy (it drops the code when a message is present).
           if (typeof d?.statusCode === 'number') providerStatus = d.statusCode;
-          const status = d?.statusCode != null ? `[${d.statusCode}] ` : '';
-          const message = d?.message || infoErr?.message || infoErr?.name || 'unknown API error';
-          deliver({ type: 'error', msg: `OpenCode error: ${status}${message}`, raw: info, ts: new Date().toISOString() });
+          if (!state.gotError) {
+            state.gotError = true;
+            noteSessionError(opts.sessionId);
+            const status = d?.statusCode != null ? `[${d.statusCode}] ` : '';
+            deliver({ type: 'error', msg: `OpenCode error: ${status}${message}`, raw: info, ts: new Date().toISOString() });
+          }
         }
       } else {
         // Non-2xx — surface a clear error.
@@ -1831,6 +1857,7 @@ async function runWarmMessageAttempt(
           msg = body?.data?.message || body?.message || body?.error?.message || msg;
         } catch {}
         state.gotError = true;
+        state.lastErrorText = msg; // #98: the classifier + guidance get the real text.
         noteSessionError(opts.sessionId);
         deliver({ type: 'error', msg: `OpenCode error: ${msg}`, raw: null, ts: new Date().toISOString() });
       }
@@ -1870,7 +1897,13 @@ async function runWarmMessageAttempt(
       try { await closeFeed(); } catch {}
 
       if (state.gotError) {
-        return { code: 1, sessionId: opts.sessionId, receivedEvents, postStarted, error: 'OpenCode reported an error during the run', statusCode: providerStatus };
+        // #98: the REAL in-run error text wins; the generic string stays only
+        // as the last-resort fallback. classifyRetry sees the provider's own
+        // words ("Service temporarily overloaded" → PROVIDER_OVERLOADED_RE)
+        // and the existing #61 engine takes over — retries with backoff, then
+        // the loud exhaustion guidance. The code:1 + statusCode contracts are
+        // unchanged.
+        return { code: 1, sessionId: opts.sessionId, receivedEvents, postStarted, error: state.lastErrorText || 'OpenCode reported an error during the run', statusCode: providerStatus };
       }
       return { code: 0, sessionId: opts.sessionId, receivedEvents, postStarted };
     } catch (err: any) {

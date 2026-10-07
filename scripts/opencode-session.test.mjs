@@ -85,6 +85,29 @@ const server = http.createServer((req, res) => {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ data: { message: 'provider_overloaded (stub)' } }));
       }
+      // #98: the UAT starvation class — HTTP 200, the message-level error the
+      // DB recorded verbatim on 2026-10-07 (UnknownError, NO statusCode,
+      // finish absent, zero parts — the exact shape the UAT night left in
+      // opencode.db). Pre-cure this response class collapsed to the generic
+      // string and the run died raw.
+      if (stub.mode === 'overload-part-then-recover' && stub.postCount <= 1) {
+        stub.concurrent--;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          info: { id: 'msg_ovl', sessionID: 'sess', role: 'assistant',
+            error: { name: 'UnknownError', data: { message: '"Service temporarily overloaded"' } } },
+          parts: [],
+        }));
+      }
+      if (stub.mode === 'overload-part-always') {
+        stub.concurrent--;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+          info: { id: 'msg_ovl', sessionID: 'sess', role: 'assistant',
+            error: { name: 'UnknownError', data: { message: '"Service temporarily overloaded"' } } },
+          parts: [],
+        }));
+      }
       if (stub.mode === 'hang-then-recover' && stub.postCount <= stub.hangCount) {
         // #62 stall scenario: never respond — the watchdog must fire.
         stub.hungStreams = (stub.hungStreams || 0) + 1;
@@ -221,10 +244,49 @@ async function main() {
   expect('S5: unattended client-gone → grace 0 (immediate abort)', r5.abandoned?.grace_ms === 0, JSON.stringify(r5.abandoned));
   expect('S5: server /abort received (unattended immediate)', stub.abortsReceived > abortsBefore, `aborts=${stub.abortsReceived} (was ${abortsBefore})`);
 
+  // ── Scenario 6 (#98): the UAT starvation class — an in-stream provider
+  // overload with NO statusCode (the 2026-10-07 UAT death, DB shape verbatim)
+  // must reach classifyRetry as REAL text → provider-class retry with
+  // backoff → recovery (A) or the loud exhaustion guidance carrying the real
+  // message (B). Pre-cure both died raw: the attempt return collapsed every
+  // in-run error to 'OpenCode reported an error during the run' →
+  // classifyRetry null → no retry line, no guidance, bare exit -1 (the
+  // user's "Continue!" hit the same wall instantly).
+  stub.mode = 'overload-part-then-recover';
+  stub.postCount = 0;
+  transcript.length = 0;
+  const r6 = await runWarmMessage({ sessionId, text: 'fixture prompt 6', agent: 'apollo', onEvent, maxRuntimeMs: 60_000 });
+  const t6 = transcript.map(e => e.type + ':' + (e.msg || e.part?.text || '')).join('\n');
+  expect('S6: in-stream overload (no statusCode) RECOVERS via the provider retry', r6.code === 0, JSON.stringify(r6).slice(0, 140));
+  expect('S6: the retry line fires with the REAL provider text (starvation cured)', /retry 1\/2:[^\n]*Service temporarily overloaded/.test(t6), t6.slice(0, 400));
+  expect('S6: the retry line names the PROVIDER class (not "Transport failure")', /retry 1\/2: Provider error/.test(t6), t6.slice(0, 400));
+  expect('S6: the UI error line carries the verbatim provider message', t6.includes('OpenCode error: "Service temporarily overloaded"'), t6.slice(0, 400));
+  expect('S6: still sequential (max concurrent POST = 1)', stub.maxConcurrent === 1, 'max=' + stub.maxConcurrent);
+
+  stub.mode = 'overload-part-always';
+  stub.postCount = 0;
+  transcript.length = 0;
+  const r6b = await runWarmMessage({ sessionId, text: 'fixture prompt 6b', agent: 'apollo', onEvent, maxRuntimeMs: 60_000 });
+  const t6b = transcript.map(e => e.type + ':' + (e.msg || '')).join('\n');
+  expect('S6B: permanent in-stream overload fails (non-zero)', r6b.code !== 0, JSON.stringify(r6b).slice(0, 120));
+  expect('S6B: exhaustion guidance fires on the in-stream overload path', t6b.includes('RETRY EXHAUSTED after 2 retries'), t6b.slice(0, 500));
+  expect('S6B: guidance names the REAL error text (not the generic string)', /failed with:[^\n]*Service temporarily overloaded/.test(t6b), t6b.slice(0, 500));
+  expect('S6B: no silent downgrade (explicit wording)', /no strategy was auto-switched/i.test(t6b), t6b.slice(0, 500));
+  expect('S6B: alternatives line present (#56-style)', /Alternatives whose key IS present|No alternative free strategy has a key present/.test(t6b), t6b.slice(0, 500));
+  expect('S6B: exactly 3 POSTs before the loud death', stub.postCount === 3, 'count=' + stub.postCount);
+
   // ── Route-side telemetry emission: content assertion (the feed write
   // lives in streamWarm — not directly callable; its contract is pinned) ──
   const routeSrc = readFileSync(OLYMPUS + '/src/app/api/olympus/action/route.ts', 'utf-8');
   expect('route: run_abandoned telemetry emitted on result.abandoned', /action: 'run_abandoned'/.test(routeSrc) && /result\.abandoned\.session_id/.test(routeSrc), 'route emission missing');
+
+  // ── Terminal-side failure card (#98): the bare "Task failed (exit code
+  // -1)" line must carry the last error + the preserved-session hint —
+  // content-pinned like the route check above (the .tsx render path is
+  // Electron-gated, not fixture-gated).
+  const termSrc = readFileSync(OLYMPUS + '/src/components/olympus/interactive-terminal.tsx', 'utf-8');
+  expect('terminal: failure branch tracks the last error (runLastError)', /runLastError/.test(termSrc), 'the last-error ref is missing — the failure card is bare');
+  expect('terminal: failure card names the last error + the preserved session', /last error: \$\{runLastError\.current\}/.test(termSrc) && /warm session and its context are preserved/.test(termSrc), 'the failure branch renders a bare exit code');
 
   server.close();
 }

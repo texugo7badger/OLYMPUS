@@ -203,6 +203,10 @@ export default function InteractiveTerminal() {
   const [awaitingAnswer, setAwaitingAnswer] = useState(false);
   const runHadText = useRef(false);
   const runHadError = useRef(false);
+  // #98 (UAT-BUILD-1 Batch B): the last error text seen this run, so the
+  // failure card names the CAUSE (the provider's own words — e.g. "Service
+  // temporarily overloaded") instead of a bare exit code. Reset per run.
+  const runLastError = useRef('');
   // Fix A (silent-failure UX): per-run output census. opencode can finish a
   // turn with code 0 while producing nothing at all — the model stalls right
   // after its first tool call. That is a failure, not a success, so the
@@ -694,6 +698,8 @@ export default function InteractiveTerminal() {
     }
     if (ev.type === 'error') {
       runHadError.current = true;
+      // #98: remember the cause for the failure card below.
+      runLastError.current = ev.msg || ev.text || '';
       removeThinking();
       addMessage({ type: 'error', text: ev.msg || ev.text || 'An error occurred' });
       updateGodActivity('apollo', 'error');
@@ -703,6 +709,8 @@ export default function InteractiveTerminal() {
       // Already handled by the "Routing to Apollo..." message above.
       runHadText.current = false;
       runHadError.current = false;
+      // #98: a new run starts with an empty cause.
+      runLastError.current = '';
       // Issue #32: a new run is a new permission context.
       lastPermissionId.current = '';
       // Fix A: a new run starts with an empty census.
@@ -752,7 +760,18 @@ export default function InteractiveTerminal() {
           });
         }
       } else {
-        addMessage({ type: 'error', text: `Task failed (exit code ${ev.code})` });
+        // #98 (UAT-BUILD-1 Batch B): the failure card names the CAUSE — the
+        // last error text this run (the provider's own words) — plus the
+        // resend hint, instead of a bare exit code. The loud guidance block
+        // (strategy + alternatives + the switch command, no auto-switch)
+        // already renders above as its own event lines when retries exhaust;
+        // this card ties the exit code to the cause.
+        addMessage({
+          type: 'error',
+          text: runLastError.current
+            ? `Task failed (exit code ${ev.code}) — last error: ${runLastError.current}. If the provider is rate-limited, simply resend — the warm session and its context are preserved.`
+            : `Task failed (exit code ${ev.code})`,
+        });
       }
       inputRef.current?.focus();
       return;
