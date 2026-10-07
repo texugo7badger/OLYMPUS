@@ -831,7 +831,6 @@ export const FREE_MODEL_CLASSES = [
   'nvidia/nvidia/llama-3.1-nemotron-ultra-253b-v1',
   'nvidia/nvidia/nemotron-3-super-120b-a12b',
   'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
-  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
   'nvidia/deepseek-ai/deepseek-v4-pro',
   'nvidia/deepseek-ai/deepseek-v4-flash',
   'nvidia/openai/gpt-oss-120b',
@@ -866,8 +865,19 @@ export const NVIDIA_FREE_MODELS = FREE_MODEL_CLASSES.filter(c => c.startsWith('n
  * validation in /api/olympus/providers/gods). Free strategies are
  * provider-scoped so the dropdown only shows the models that strategy can
  * actually route.
+ *
+ * #97 (UAT-BUILD-1 Batch A): the return boundary DEDUPES. A duplicated id in
+ * any source array reaches the Settings dropdown as two <option key={c}> nodes
+ * with the same key and crashes React (the 2026-10-07 UAT crash at
+ * settings-dialog.tsx:1073, free-nvidia-build active). The battery suite
+ * scripts/catalog-uniqueness.test.mjs gates both layers: the arrays themselves
+ * AND this boundary — defense in depth, the arrays should stay clean too.
  */
 export function modelClassesForStrategy(strategy: string): string[] {
+  return [...new Set(modelClassesForStrategyRaw(strategy))];
+}
+
+function modelClassesForStrategyRaw(strategy: string): string[] {
   const fam = strategyFamily(strategy);
   if (fam === 'CUSTOM') {
     // Custom strategies are FREE-ONLY — a user-pinned paid model in a custom
