@@ -23,7 +23,7 @@
 | `zen-budget` (**Zen**) | **Zen plan** | ¢ | Good | **No caps** (pay-as-you-go) | Lowest cost on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Luna, all others on GLM-5.3-Flash, Callimachus on Claude Haiku 4.5 |
 | `free-openrouter` (**Free OpenRouter**) | **None** | **Free** | Lower | Unlimited (rate-limited) | The OpenRouter-only split — primary trio on #1, specialists on #2, Callimachus on a fast background model. Refreshes automatically |
 | `free-big-pickle` (**Free Big Pickle**) | **None** | **Free** | Lower | Unlimited (rate-limited) | All 10 gods (Callimachus included) on one free model — the strongest currently live, refreshed automatically |
-| `free-nvidia-build` (**Free Nvidia Build**) | **None** | **Free** | Lower | Unlimited (rate-limited) | NVIDIA Build free endpoints (build.nvidia.com) — Apollo + Atlas on the strongest NVIDIA free model live (Nemotron 3 Ultra 550B, 1M ctx), coding gods on pinned GLM-5.2, other specialists on #2, Callimachus on a fast background model. Refreshes automatically |
+| `free-nvidia-build` (**Free Nvidia Build**) | **None** | **Free** | Lower | Unlimited (rate-limited) | NVIDIA Build free endpoints (build.nvidia.com) — Apollo + Atlas on the strongest NVIDIA free model live (Nemotron 3 Ultra 550B, 1M ctx), coding gods on pinned GLM-5.3, other specialists on #2, Callimachus on a fast background model. Refreshes automatically |
 | `custom-*` | User-defined | User-defined | User-defined | Custom | Advanced — define your own per-god model map |
 
 Switch strategies at any time:

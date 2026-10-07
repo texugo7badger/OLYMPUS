@@ -96,7 +96,7 @@ This is the feedback loop that makes OLYMPUS more efficient over time — every 
 | **zen-budget** (**ZEN**) | GLM-5.2 | Gemini 3.5 Flash | MiniMax M2.7 | MiniMax M2.7 | Low (pay-as-you-go) |
 | **free-openrouter** (**Free OpenRouter**) | strongest OpenRouter free model live | strongest OpenRouter free model live | second-strongest OpenRouter free model live | Nemotron 3 Nano (free) | **$0** |
 | **free-big-pickle** (**Free Big Pickle**) | one free flagship — all 10 gods incl. Callimachus | one free flagship | one free flagship | Nemotron 3 Nano (free) | **$0** |
-| **free-nvidia-build** (**Free Nvidia Build**) | strongest NVIDIA free model live (GLM-5.2, 1M ctx) | strongest NVIDIA free model live | second-strongest NVIDIA free model live | Nemotron 3 Nano (free) | **$0** |
+| **free-nvidia-build** (**Free Nvidia Build**) | strongest NVIDIA free model live (Nemotron 3 Ultra 550B, 1M ctx) | strongest NVIDIA free model live | second-strongest NVIDIA free model live | Nemotron 3 Nano (free) | **$0** |
 
 Apollo is always on GLM-5.2 in the GO + ZEN strategies. Atlas is on Hy3 in all GO strategies and on Gemini 3.5 Flash in the ZEN strategies (Hy3 is GO-plan-only). In the budget strategies, all gods except Apollo and Atlas drop to DeepSeek V4 Flash (GO) / MiniMax M2.7 (ZEN) for maximum savings.
 
