@@ -1,0 +1,26 @@
+{
+ "fetched": "2026-10-07",
+ "total": 465,
+ "glm_zai_ids": [
+  "z-ai/glm-5.3-prime",
+  "z-ai/glm-5.3-flashx",
+  "~z-ai/glm-flash-latest",
+  "z-ai/glm-5.3-flash",
+  "z-ai/glm-5.3-flash:batch",
+  "~z-ai/glm-latest",
+  "z-ai/glm-5.3",
+  "z-ai/glm-5.3:batch",
+  "z-ai/glm-5.2",
+  "z-ai/glm-5.1",
+  "z-ai/glm-5v-turbo",
+  "z-ai/glm-5-turbo",
+  "z-ai/glm-5",
+  "z-ai/glm-4.7-flash",
+  "z-ai/glm-4.7",
+  "z-ai/glm-4.6v",
+  "z-ai/glm-4.6",
+  "z-ai/glm-4.5v",
+  "z-ai/glm-4.5",
+  "z-ai/glm-4.5-air"
+ ]
+}

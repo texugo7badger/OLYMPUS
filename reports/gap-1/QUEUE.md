@@ -11,7 +11,7 @@ work; every close updates it. No session trusts a report header over it.
 | After S1 close | **S1 DONE** — `main @ 68fb8d2` (the ff-merge of `night/gap-1-s1`; pushed, user-verified 2026-10-07) |
 | After S2 close | **SUPERSEDED by S2R (R14).** The original S2 merged LOCALLY only on a credential-less container box; the box was RESET before the user could apply the bundle substitute — commits `d280d3b`/`2193ac4` and the bundle are LOST, origin/main never moved, the lost shas are NEVER evidence. See the S2R rows below. |
 | After S2R close | **S2R DONE** — frontier = the S2R close-out commit (the ff-merge of `night/gap-1-s2r` over `68fb8d2`; the pair commit is `db47ad5`; sha re-derived at S3 entry per protocol) |
-| After S3 close | (pending) |
+| After S3 close | **S3 DONE** — frontier = the S3 close-out commit (the ff-merge of `night/gap-1-s3`; the pair: `e629cfa` the catalogue refresh + `81828b2` the #67 scaffold; sha re-derived at S4 entry per protocol) |
 | After S4 close | (pending) |
 
 ## Session status
@@ -20,9 +20,9 @@ work; every close updates it. No session trusts a report header over it.
 |---|---|---|---|---|
 | S1 THE RESET | branch-truth + AN10/AN13 + N38 + #70 + register reconciliation | **DONE** (all must-ship: A1–A7 + close-out; #70 closed post-merge; AN10 refuted-alive-kept) | `night/gap-1-s1` (merged + deleted) | `68fb8d2` |
 | S2 THE PULSE | #69 one-shot telemetry + #77 root heartbeat | **LOST (R14)** — ran on a credential-less container box; merged locally, bundle delivered, box reset before apply; origin never moved; #69/#77 never closed | `night/gap-1-s2` (never landed) | (lost — NEVER evidence) |
-| **S2R THE PULSE, REDO** | the same #69/#77 pair, re-implemented to the recovered spec | **DONE** (red-first 7 FAILs → green 17/17; R12 dist greps; battery-21 + tsc 0; pushed; #69 + #77 closed post-merge) | `night/gap-1-s2r` (merged + deleted) | the close-out commit over `db47ad5` (re-derive at S3 E1) |
-| S3 THE FOUNDRY | #67 Apollo scaffold + catalogue refresh (AN11/AN12) | PENDING — **next** | `night/gap-1-s3` | — |
-| S4 THE FUTURE LEDGER | 15 issues filed + ROADMAP + register wiring | PENDING | `night/gap-1-s4` | — |
+| **S2R THE PULSE, REDO** | the same #69/#77 pair, re-implemented to the recovered spec | **DONE** (red-first 7 FAILs → green 17/17; R12 dist greps; battery-21 + tsc 0; pushed; #69 + #77 closed post-merge) | `night/gap-1-s2r` (merged + deleted) | `5ee2933` (re-derived) |
+| S3 THE FOUNDRY | #67 Apollo scaffold + catalogue refresh (AN11/AN12) | **DONE** (live lists recorded verbatim FIRST; AN11+AN12 dead @ e629cfa; #67 scaffold law @ 81828b2 + battery suite #22 17/17 red-first; stash-dance for the tracked inline; battery-22 + tsc 0) | `night/gap-1-s3` (merged + deleted) | the close-out commit over `e629cfa`/`81828b2` (re-derive at S4 E1) |
+| S4 THE FUTURE LEDGER | 15 issues filed + ROADMAP + register wiring | PENDING — **next** | `night/gap-1-s4` | — |
 
 ## Session ledger (R7 — every row logged immediately)
 
@@ -67,13 +67,35 @@ work; every close updates it. No session trusts a report header over it.
   (never bare node — the @/lib imports crash). The `battery` npm script pin
   is a BATT-ENV S4 filing candidate.
 
-## S3 entry gate (updated by S2R)
+## S4 entry gate (updated by S3)
 
-**S3 verifies origin/main == the S2R-recorded close sha before cutting its
-branch.** Re-derive at S3 E1: `git fetch origin && git rev-parse origin/main`
-must land at the S2R close (the S2R close-out commit, the direct child of
-`db47ad5` "fix(telemetry): the #69/#77 pulse pair, re-landed (GAP-1-S2R)",
-over `68fb8d2`). Commits ABOVE it = drift = STOP + report. S3's scope is
-untouched: #67 the Apollo project scaffold + the Nvidia/GLM-5.3 catalogue
-currency refresh (AN11/AN12 die there). Branch `night/gap-1-s3` FIRST —
-before any commit (the S2R slip's lesson).
+**S4 verifies origin/main == the S3-recorded close sha before cutting
+`night/gap-1-s4`.** Re-derive at S4 E1: `git fetch origin && git rev-parse
+origin/main` must land at the S3 close (the close-out commit, directly over
+`81828b2` "feat(apollo): #67 — the project scaffold law rides the apollo
+prompt (GAP-1-S3)" over `e629cfa` "fix(free-tier): the model-catalogue
+currency refresh — AN11 + AN12 dead in one stroke (GAP-1-S3)", over
+`5ee2933`). Commits ABOVE it = drift = STOP + report. S4's scope: the 15
+evidence-pointered issues filed (`gh label list` FIRST — existing labels
+only) + any R7 discoveries from S1–S3 (the ledger carries: GO-CARD-PROSE
+from S3; BATT-ENV + ROOT-LANE-ADOPT from S2R; the S1 battery-script idea) +
+ROADMAP.md extended + register wiring + the campaign report
+`reports/gap-1/GAP-1-CAMPAIGN-REPORT.md`. Branch cut FIRST (the S2R lesson).
+
+## S3 standing facts (re-derived 2026-10-07)
+
+- E1: main == origin/main == `5ee2933`; only `main` local + 5 dependabot
+  remotes (observe-only). Credentials present (S2R pushed in-session).
+- E2: guard exit 0 — live 8/8 + generator 16/16; live `glm-5.2` = 0.
+- E3: open issues exactly #67 + #76.
+- E4: battery-21 green at entry. **After tonight the battery is 22**
+  (apollo-scaffold joined — 19 script suites).
+- **The battery invocation of record: `npx tsx scripts/<suite>.test.mjs`.**
+- LIVE catalogue verbatims (2026-10-07, the C1 truth): NVIDIA 80 models —
+  z-ai family = glm-5.3 + glm-5.3-flash ONLY (glm-5.2 retired from the
+  endpoint); OpenRouter 465 — glm-5.2 still served there (the coding-trio
+  pin is the NVIDIA id, so the pin moved 5.2 → 5.3; the four code mirrors
+  were already 5.3 — FIX-3's work; tonight's residue was AN11 + AN12 +
+  TOKEN-ECONOMY + README).
+- Tracked opencode.json after S3: glm-5.2 count 0; the apollo inline
+  carries the scaffold law (char ~447 of the 1000-char window).
