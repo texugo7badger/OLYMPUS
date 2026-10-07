@@ -1,0 +1,19 @@
+PASS  the apollo prompt carries the Project Scaffold (#67) directive
+PASS  directive: create the project folder + README.md on a NEW project session
+PASS  directive: the README carries the project description
+PASS  directive: the stack with a ONE-LINE justification per choice
+PASS  directive: the ## Decisões block is APPENDED each approval round, never rewritten
+PASS  directive: a continuation turn NEVER re-scaffolds (distinct-project boundary)
+PASS  directive: the Auto-Creation flow cross-references the scaffold (the API path carries the law too)
+PASS  placement: the directive sits inside the free inline window (first 1000 chars)
+PASS  session: the first turn scaffolds the project folder + README
+PASS  session: the README carries the description
+PASS  session: the README carries the stack with one-line justifications
+PASS  session: the README opens the ## Decisões block
+PASS  census: exactly ONE README write on the first turn
+PASS  session: the second round keeps the README
+PASS  session: R2/R3 decisions APPENDED under ## Decisões (original lines intact)
+PASS  session: the first round's lines are intact below (never rewritten)
+PASS  census: the second turn is the same file GROWN (one more write, two total)
+
+All 17 apollo-scaffold (#67 project folder + README + append-only Decisões) assertions passed

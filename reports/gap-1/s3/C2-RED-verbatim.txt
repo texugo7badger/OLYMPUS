@@ -1,0 +1,15 @@
+FAIL  the apollo prompt carries the Project Scaffold (#67) directive  -- no "## Project Scaffold (#67)" section found in .opencode/prompts/agents/gods/apollo.txt
+FAIL  directive: create the project folder + README.md on a NEW project session  -- no directive
+FAIL  directive: the README carries the project description  -- no directive
+FAIL  directive: the stack with a ONE-LINE justification per choice  -- no directive
+FAIL  directive: the ## Decisões block is APPENDED each approval round, never rewritten  -- no directive
+FAIL  directive: a continuation turn NEVER re-scaffolds (distinct-project boundary)  -- no directive
+FAIL  directive: the Auto-Creation flow cross-references the scaffold (the API path carries the law too)  -- no directive
+FAIL  placement: the directive sits inside the free inline window (first 1000 chars)  -- no directive
+FAIL  session: the first turn scaffolds the project folder + README  -- no scaffold produced — the directive is absent (RED) or the executor found nothing to do
+FAIL  session: the second round keeps the README  -- 
+FAIL  session: R2/R3 decisions APPENDED under ## Decisões (original lines intact)  -- no README after round 2
+FAIL  session: the first round's lines are intact below (never rewritten)  -- no README after round 2
+FAIL  census: the second turn is the same file GROWN (one more write, two total)  -- no README after round 2
+
+apollo-scaffold: 13 FAILURE(S), 13 checked
