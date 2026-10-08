@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 /**
- * opencode-session.test.mjs — #61 deterministic retry fixture (BATCH 13).
+ * opencode-session.test.mjs — #61 deterministic retry fixture (BATCH 13)
+ * + #107 the retry crescendo (FLUENCY-1): class-aware, env-overridable
+ *   patience — resolveRetryPlan (default crescendo + OLYMPUS_RETRY_BACKOFF_MS
+ *   override + OLYMPUS_RETRY_RATE_LIMIT_MS + OLYMPUS_RETRY_JITTER), the finer
+ *   classifyRetry classes (429 = the key-limit path, NOT the crescendo), the
+ *   patience ledger on the exhaustion card, the retry count following the env
+ *   list. Existing scenarios ride the env override so the battery never
+ *   sleeps the (minutes-by-design) default crescendo.
  * Run: npx tsx scripts/opencode-session.test.mjs   (exit 0 = pass)
  *
  * Zero live dependencies: a local stub server plays the opencode serve
@@ -85,6 +92,13 @@ const server = http.createServer((req, res) => {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ data: { message: 'provider_overloaded (stub)' } }));
       }
+      // #107: the 429 key-limit class — a fixed cap-aware lane, distinct
+      // from the pool-contention crescendo.
+      if (stub.mode === 'always-429') {
+        stub.concurrent--;
+        res.writeHead(429, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ data: { message: 'rate limit exceeded (stub)' } }));
+      }
       // #98: the UAT starvation class — HTTP 200, the message-level error the
       // DB recorded verbatim on 2026-10-07 (UnknownError, NO statusCode,
       // finish absent, zero parts — the exact shape the UAT night left in
@@ -136,6 +150,12 @@ async function main() {
   fs.writeFileSync(PIDFILE, JSON.stringify({ pid: process.pid, port, password: PASSWORD }, null, 2));
 
   const { runWarmMessage } = await import(OLYMPUS + '/src/lib/opencode-session.ts');
+
+  // #107: the fixture injects its own patience — the default crescendo is
+  // minutes BY DESIGN (it costs $0 on free, only time); the suite rides the
+  // env override + jitter 0 so the battery stays deterministic and fast.
+  process.env.OLYMPUS_RETRY_BACKOFF_MS = '10, 10';
+  process.env.OLYMPUS_RETRY_JITTER = '0';
 
   const transcript = [];
   const onEvent = (ev) => transcript.push(ev);
@@ -275,6 +295,66 @@ async function main() {
   expect('S6B: alternatives line present (#56-style)', /Alternatives whose key IS present|No alternative free strategy has a key present/.test(t6b), t6b.slice(0, 500));
   expect('S6B: exactly 3 POSTs before the loud death', stub.postCount === 3, 'count=' + stub.postCount);
 
+  // ── #107 unit layer: resolveRetryPlan + applyRetryJitter + the finer
+  // classifyRetry classes. RED at writing: none of the three exist
+  // (classifyRetry is module-private with the coarse 2-class shape).
+  const {
+    resolveRetryPlan, applyRetryJitter, classifyRetry: classifyRetry107,
+  } = await import(OLYMPUS + '/src/lib/opencode-session.ts');
+  const crescendoReady = typeof resolveRetryPlan === 'function'
+    && typeof applyRetryJitter === 'function'
+    && typeof classifyRetry107 === 'function';
+  if (!crescendoReady) {
+    expect('U2: resolveRetryPlan exported (the crescendo resolver)', typeof resolveRetryPlan === 'function', 'missing — the 20s hard-coded WARM_RETRY_PLAN still rules (opencode-session.ts:1295)');
+    expect('U2: applyRetryJitter exported (the 0-30% spread)', typeof applyRetryJitter === 'function', 'missing');
+    expect('U2: classifyRetry exported for the fixture', typeof classifyRetry107 === 'function', 'module-private — the finer classes unassertable');
+    expect('S9: the 429 key-limit path + the patience ledger (blocked on the resolver)', false, 'blocked: the #107 surface is absent');
+  } else {
+  const planDefault = resolveRetryPlan({});
+  expect('U2: default plan = the crescendo [5s,30s,120s,300s] (#107)', JSON.stringify(planDefault.backoffMs) === JSON.stringify([5000, 30000, 120000, 300000]), JSON.stringify(planDefault));
+  expect('U2: default attempts = list length + 1 (5 — ~7.5 min patience, $0 on free)', planDefault.maxAttempts === 5, 'maxAttempts=' + planDefault.maxAttempts);
+  const planEnv = resolveRetryPlan({ OLYMPUS_RETRY_BACKOFF_MS: '10, 10' });
+  expect('U2: env override parsed (comma list, spaces tolerated)', JSON.stringify(planEnv.backoffMs) === JSON.stringify([10, 10]) && planEnv.maxAttempts === 3, JSON.stringify(planEnv));
+  const planJunk = resolveRetryPlan({ OLYMPUS_RETRY_BACKOFF_MS: 'abc' });
+  expect('U2: junk env falls back to the default crescendo', JSON.stringify(planJunk.backoffMs) === JSON.stringify([5000, 30000, 120000, 300000]), JSON.stringify(planJunk));
+  const planPartial = resolveRetryPlan({ OLYMPUS_RETRY_BACKOFF_MS: '10,abc,20' });
+  expect('U2: junk entries dropped, honest entries kept', JSON.stringify(planPartial.backoffMs) === JSON.stringify([10, 20]), JSON.stringify(planPartial));
+  const rlPlan = resolveRetryPlan({ OLYMPUS_RETRY_RATE_LIMIT_MS: '42' });
+  expect('U2: the 429 lane has its own env-tunable fixed backoff (cap-aware)', rlPlan.rateLimitBackoffMs === 42, JSON.stringify(rlPlan));
+  const jitPlan = resolveRetryPlan({ OLYMPUS_RETRY_JITTER: '0' });
+  expect('U2: jitter is env-tunable (0 = deterministic, the fixture shape)', jitPlan.jitterFraction === 0, JSON.stringify(jitPlan));
+  expect('U2: jitter(1000, 0) = 1000 (floor)', applyRetryJitter(1000, 0, 0.30) === 1000, String(applyRetryJitter(1000, 0, 0.30)));
+  expect('U2: jitter(1000, 1) = 1300 (ceiling +30%)', applyRetryJitter(1000, 1, 0.30) === 1300, String(applyRetryJitter(1000, 1, 0.30)));
+  expect('U2: jitter(1000, .5) = 1150 (mid)', applyRetryJitter(1000, 0.5, 0.30) === 1150, String(applyRetryJitter(1000, 0.5, 0.30)));
+  expect('U2: jitter(1000, 1, 0) = 1000 (off)', applyRetryJitter(1000, 1, 0) === 1000, String(applyRetryJitter(1000, 1, 0)));
+  expect('U2: classify 429 -> provider-rate-limit (the key-limit path, NOT the crescendo)', classifyRetry107({ code: -1, error: 'upstream 429', statusCode: 429 }) === 'provider-rate-limit', 'kind?');
+  expect('U2: classify 503 -> provider-overload (the crescendo class)', classifyRetry107({ code: -1, error: 'upstream 503', statusCode: 503 }) === 'provider-overload', 'kind?');
+  expect('U2: classify in-stream "Service temporarily overloaded" (no status) -> provider-overload', classifyRetry107({ code: -1, error: 'OpenCode error: "Service temporarily overloaded"', statusCode: undefined }) === 'provider-overload', 'kind?');
+  expect('U2: classify stream_idle_timeout -> provider-overload', classifyRetry107({ code: -1, error: 'stream_idle_timeout', statusCode: undefined }) === 'provider-overload', 'kind?');
+  expect('U2: classify 401 -> NEVER (the auth class untouched)', classifyRetry107({ code: -1, error: 'upstream 401', statusCode: 401 }) === null, 'kind?');
+  expect('U2: classify transport text -> transport', classifyRetry107({ code: -1, error: 'fetch failed ECONNREFUSED', statusCode: undefined }) === 'transport', 'kind?');
+
+  // ── Scenario 9 (#107): the 429 key-limit path through the REAL loop —
+  // fixed cap-aware backoff (never the crescendo element), the exhaustion
+  // count follows the ENV list, the patience ledger fires on the card.
+  process.env.OLYMPUS_RETRY_BACKOFF_MS = '5, 5, 5';
+  process.env.OLYMPUS_RETRY_RATE_LIMIT_MS = '10';
+  stub.mode = 'always-429';
+  stub.postCount = 0;
+  transcript.length = 0;
+  const r9 = await runWarmMessage({ sessionId, text: 'fixture prompt 9', agent: 'apollo', onEvent, maxRuntimeMs: 60_000 });
+  const t9 = transcript.map(e => e.type + ':' + (e.msg || '')).join('\n');
+  expect('S9: 429 run exhausts (non-zero)', r9.code !== 0, JSON.stringify(r9).slice(0, 120));
+  expect('S9: the exhaustion retry count follows the ENV list (3 entries -> 3 retries)', t9.includes('RETRY EXHAUSTED after 3 retries'), t9.slice(0, 500));
+  expect('S9: the patience ledger names the total wait + the class census', t9.includes('Patience ledger: waited 30ms across 3 retries (upstream 429 x3)'), t9.slice(0, 600));
+  expect('S9: the ledger total PROVES the fixed lane (3x10ms=30ms; the crescendo would read 15ms)', t9.includes('waited 30ms') && !t9.includes('waited 15ms'), t9.slice(0, 600));
+  expect('S9: the rate-limit retry line names the class', /retry 3\/3: [^\n]*upstream 429/.test(t9), t9.slice(0, 600));
+  expect('S9: exactly 4 POSTs (1 initial + 3 retries — the env list is the truth)', stub.postCount === 4, 'count=' + stub.postCount);
+  delete process.env.OLYMPUS_RETRY_BACKOFF_MS;
+  delete process.env.OLYMPUS_RETRY_RATE_LIMIT_MS;
+  process.env.OLYMPUS_RETRY_BACKOFF_MS = '10, 10'; // restore the fixture patience for the remaining scenarios
+  } // crescendoReady
+
   // ── Route-side telemetry emission: content assertion (the feed write
   // lives in streamWarm — not directly callable; its contract is pinned) ──
   const routeSrc = readFileSync(OLYMPUS + '/src/app/api/olympus/action/route.ts', 'utf-8');
@@ -320,6 +400,10 @@ async function main() {
   expect('S7: the serve spawn threads the workspace lane as cwd', /cwd: lane\.dir/.test(sessSrc) && /resolveWorkspaceLane/.test(sessSrc), 'the spawn still inherits the repo root');
   expect('S7: the spawn env carries OLYMPUS_ROOT_SESSION (#95 seam)', /OLYMPUS_ROOT_SESSION/.test(sessSrc), 'the #95 seam is not threaded');
   expect('S7: the first-run workspace notice exists (the ask seam)', /Workspace lane/.test(sessSrc), 'no visible ask/notice for the lane');
+
+  // #107: fixture env hygiene — never leak the injected patience.
+  delete process.env.OLYMPUS_RETRY_BACKOFF_MS;
+  delete process.env.OLYMPUS_RETRY_JITTER;
 
   server.close();
 }

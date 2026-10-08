@@ -1291,11 +1291,71 @@ function mapPart(
  * a belt-and-braces guarantee that text/step events always arrive.
  */
 /** #61 (BATCH 13): the warm-run retry plan — one source of truth for the
- * loop, the transcript lines ("retry N/2"), and the exhaustion guidance. */
-const WARM_RETRY_PLAN = {
-  RETRY_BACKOFF_MS: [5_000, 15_000] as const,
-  RETRY_MAX_ATTEMPTS: 3, // 1 initial + 2 retries (RETRY_BACKOFF_MS.length + 1)
-};
+ * loop, the transcript lines, and the exhaustion guidance.
+ * #107 (FLUENCY-1): the plan became class-aware + env-overridable — the
+ * 20s hard-coded patience died with the user's 2026-10-09 UAT run (a
+ * rush-hour burst outlived retry 2/2 at ~80% through, ~5.5 min lost). The
+ * default crescendo buys ~7.5 min of patience — it costs $0 on free;
+ * only time. Env overrides: OLYMPUS_RETRY_BACKOFF_MS (comma list, ms —
+ * the overload crescendo), OLYMPUS_RETRY_RATE_LIMIT_MS (the fixed 429
+ * lane), OLYMPUS_RETRY_JITTER (0–1, default 0.30). */
+const DEFAULT_RETRY_BACKOFF_MS = [5_000, 30_000, 120_000, 300_000] as const;
+const DEFAULT_RATE_LIMIT_BACKOFF_MS = 60_000;
+const DEFAULT_RETRY_JITTER = 0.30;
+
+export interface RetryPlan {
+  /** The overload-class crescendo — pool contention recovers on minute scales, not 15s. */
+  backoffMs: readonly number[];
+  /** The 429 key-limit lane: fixed, cap-aware, never hammering (the free
+   *  tier is ~40 requests/minute PER KEY aggregate — the honest spacing). */
+  rateLimitBackoffMs: number;
+  /** 1 + backoffMs.length — the initial attempt plus one per backoff entry. */
+  maxAttempts: number;
+  /** 0–1 fraction — the 0–30% jitter spread on overload-class delays. */
+  jitterFraction: number;
+}
+
+/** Parse a comma list of non-negative ints; junk entries dropped; empty/junk-only -> the default. */
+function parseBackoffList(raw: string | undefined, fallback: readonly number[]): number[] {
+  if (typeof raw !== 'string' || !raw.trim()) return [...fallback];
+  const parsed = raw.split(',').map((s) => Number.parseInt(s.trim(), 10))
+    .filter((n) => Number.isFinite(n) && n >= 0);
+  return parsed.length > 0 ? parsed : [...fallback];
+}
+
+/** #107: resolve the retry plan from the env — the single patience source. */
+export function resolveRetryPlan(env: NodeJS.ProcessEnv = process.env): RetryPlan {
+  const backoffMs = parseBackoffList(env.OLYMPUS_RETRY_BACKOFF_MS, DEFAULT_RETRY_BACKOFF_MS);
+  const rl = Number.parseInt(env.OLYMPUS_RETRY_RATE_LIMIT_MS ?? '', 10);
+  const rateLimitBackoffMs = Number.isFinite(rl) && rl >= 0 ? rl : DEFAULT_RATE_LIMIT_BACKOFF_MS;
+  const j = Number.parseFloat(env.OLYMPUS_RETRY_JITTER ?? '');
+  const jitterFraction = Number.isFinite(j) ? Math.min(1, Math.max(0, j)) : DEFAULT_RETRY_JITTER;
+  return { backoffMs, rateLimitBackoffMs, maxAttempts: backoffMs.length + 1, jitterFraction };
+}
+
+/** #107: the 0–30% jitter spread — the burst window is wide, not exact.
+ * Pure + injectable rand so the fixture asserts the exact transform. */
+export function applyRetryJitter(
+  ms: number,
+  rand: number = Math.random(),
+  fraction: number = DEFAULT_RETRY_JITTER,
+): number {
+  const r = Math.min(1, Math.max(0, rand));
+  return Math.round(ms * (1 + fraction * r));
+}
+
+/** #107: the patience ledger — what the exhaustion card reports it absorbed. */
+export interface RetryLedger {
+  waitedMs: number;
+  labels: string[];
+}
+
+function summarizeLedger(ledger: RetryLedger): string {
+  const counts = new Map<string, number>();
+  for (const l of ledger.labels) counts.set(l, (counts.get(l) ?? 0) + 1);
+  const parts = [...counts.entries()].map(([label, n]) => `${label}${n > 1 ? ` x${n}` : ''}`);
+  return `waited ${ledger.waitedMs}ms across ${ledger.labels.length} retries (${parts.join(', ')})`;
+}
 
 export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResult> {
   const server = await ensureServer();
@@ -1328,7 +1388,13 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
     // Retries are best-effort resumption, not a safety guarantee.
     // (#61 BATCH 13: hoisted reference — the module-level constants below
     // keep one source of truth for the loop and the exhaustion guidance.)
-    const { RETRY_BACKOFF_MS, RETRY_MAX_ATTEMPTS } = WARM_RETRY_PLAN;
+    // #107: the plan is now class-aware + env-overridable, resolved fresh
+    // per run so env changes apply without a server restart.
+    const plan = resolveRetryPlan();
+    // #107: the patience ledger — the exhaustion card reports what it
+    // waited and which classes it absorbed (the honest card, more honest).
+    const ledgerLabels: string[] = [];
+    let ledgerWaitedMs = 0;
     // Issue #35/#39: snapshot the poison state BEFORE the loop. A transient
     // failure calls noteSessionError, which flags the window; if a retry then
     // succeeds we must undo that flag or the flush records outcome=error for a
@@ -1357,15 +1423,21 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
           ts: new Date().toISOString(),
         });
       }
-      if (attempt >= RETRY_MAX_ATTEMPTS - 1) {
+      if (attempt >= plan.maxAttempts - 1) {
         // #61 (BATCH 13): retries exhausted — fail LOUDLY with #56-style
         // explicit guidance naming the alternative free strategies whose
         // keys ARE present. NO cross-strategy auto-switch (no-silent-
         // downgrade doctrine): the guidance names alternatives; the
         // operator switches.
+        // #107: the card now carries the patience ledger (what it waited,
+        // which classes it absorbed) and the retry count follows the env
+        // list — the honest card gets more honest.
         opts.onEvent({
           type: 'log',
-          msg: retryExhaustionGuidance(result.error, result.statusCode),
+          msg: retryExhaustionGuidance(result.error, result.statusCode, {
+            waitedMs: ledgerWaitedMs,
+            labels: [...ledgerLabels],
+          }),
           ts: new Date().toISOString(),
         });
         return result;
@@ -1374,22 +1446,34 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
       if (opts.signal?.aborted) return result;
       const kind = classifyRetry(result);
       if (!kind) return result;
-      const delay = RETRY_BACKOFF_MS[attempt];
+      // #107: class-aware delay — the overload class rides the crescendo
+      // (with the 0-30% jitter spread), the 429 class rides the fixed
+      // cap-aware lane, transport takes the raw element (the respawn path).
+      const base = kind === 'provider-rate-limit'
+        ? plan.rateLimitBackoffMs
+        : plan.backoffMs[attempt];
+      const delay = kind === 'provider-overload'
+        ? applyRetryJitter(base, Math.random(), plan.jitterFraction)
+        : base;
       // #98: the label must name the FAILURE CLASS, not default every
       // status-less failure to "Transport failure" — an in-stream provider
       // overload (no statusCode, real text threaded) is a PROVIDER error.
       const label = typeof result.statusCode === 'number'
         ? `upstream ${result.statusCode}`
-        : kind === 'provider' ? 'Provider error' : 'Transport failure';
+        : kind === 'provider-rate-limit' ? 'Provider rate limit'
+          : kind === 'provider-overload' ? 'Provider error' : 'Transport failure';
+      // #107: the patience ledger accumulates BEFORE the sleep.
+      ledgerLabels.push(label);
+      ledgerWaitedMs += delay;
       // Issue #39: visible in the OLYMPUS terminal, never console-only.
       // Emitting BEFORE the sleep also pins firstEventAt in the route's
       // startup timer, so STARTUP_TIMEOUT_MS (action/route.ts:503, 120s —
       // it only fires while firstEventAt === null) cannot kill a retry that is
         // deliberately waiting out a rate limit.
-      // #61: transcript line format "retry N/2: <label>".
+      // #61: transcript line format "retry N/<list-length>: <label>".
       opts.onEvent({
         type: 'log',
-        msg: `retry ${attempt + 1}/${RETRY_BACKOFF_MS.length}: ${label} — retrying in ${Math.round(delay / 1000)}s; session context preserved${result.error ? ` [${result.error}]` : ''}`,
+        msg: `retry ${attempt + 1}/${plan.backoffMs.length}: ${label} — retrying in ${Math.round(delay / 1000)}s; session context preserved${result.error ? ` [${result.error}]` : ''}`,
         ts: new Date().toISOString(),
       });
       if (kind === 'transport') {
@@ -1418,27 +1502,36 @@ const PROVIDER_TRANSIENT_RE = /\b(?:429|500|502|503|504)\b/;
 /** Conditions that must never retry regardless of any status code. */
 const NEVER_RETRY_RE = /rejected permission|permission to use|aborted|session (?:error|not found)/i;
 
-type RetryClass = 'transport' | 'provider';
+type RetryClass = 'transport' | 'provider-overload' | 'provider-rate-limit';
 
 /**
  * Classify a failed attempt. The structured `statusCode` wins outright: when it
  * is present and not transient we return null instead of falling through to
  * string parsing, so a 400/401/403/404 can never be rescued by a loose regex.
+ *
+ * #107 (FLUENCY-1): the provider class SPLIT — 429 is the key-limit lane
+ * (fixed cap-aware backoff, never the crescendo); the pool-contention class
+ * (503 / provider_overloaded / stream_idle_timeout / 5xx) rides the
+ * crescendo. Exported so the #107 fixture asserts the classes directly.
  */
-function classifyRetry(result: WarmRunResult): RetryClass | null {
+export function classifyRetry(result: WarmRunResult): RetryClass | null {
   if (result.code === 0 || !result.error) return null;
   if (NEVER_RETRY_RE.test(result.error)) return null;
   const sc = result.statusCode;
   if (typeof sc === 'number') {
     if (NEVER_RETRY_STATUS.has(sc)) return null;
-    return RETRYABLE_PROVIDER_STATUS.has(sc) ? 'provider' : null;
+    if (sc === 429) return 'provider-rate-limit';
+    return RETRYABLE_PROVIDER_STATUS.has(sc) ? 'provider-overload' : null;
   }
   if (TRANSPORT_DEAD_RE.test(result.error)) return 'transport';
+  // #107: an in-stream 429 (no statusCode threaded) takes the key-limit
+  // lane too — the display string is the only signal.
+  if (/\b429\b/.test(result.error)) return 'provider-rate-limit';
   // #61: provider_overloaded and stream_idle_timeout are transient by
-  // spec — absorbed by the same retry loop as 429/5xx.
-  if (PROVIDER_OVERLOADED_RE.test(result.error)) return 'provider';
-  if (STREAM_IDLE_TIMEOUT_RE.test(result.error)) return 'provider';
-  return PROVIDER_TRANSIENT_RE.test(result.error) ? 'provider' : null;
+  // spec — absorbed by the overload crescendo.
+  if (PROVIDER_OVERLOADED_RE.test(result.error)) return 'provider-overload';
+  if (STREAM_IDLE_TIMEOUT_RE.test(result.error)) return 'provider-overload';
+  return PROVIDER_TRANSIENT_RE.test(result.error) ? 'provider-overload' : null;
 }
 
 /**
@@ -1447,10 +1540,14 @@ function classifyRetry(result: WarmRunResult): RetryClass | null {
  * the ALTERNATIVE free strategies whose keys ARE present. Never
  * auto-switches (no-silent-downgrade): guidance only, the operator
  * decides. Exported for the deterministic fixture.
+ *
+ * #107 (FLUENCY-1): the retry count follows the env list, and the card
+ * carries the patience ledger — what it waited, which classes it absorbed.
  */
 export function retryExhaustionGuidance(
   lastError: string | null | undefined,
   lastStatusCode: number | undefined,
+  ledger?: RetryLedger,
 ): string {
   const strategy = activeStrategyId();
   const errLabel = typeof lastStatusCode === 'number' ? `upstream ${lastStatusCode}` : (lastError || 'unknown error');
@@ -1462,13 +1559,20 @@ export function retryExhaustionGuidance(
   const altLine = altMatch
     ? `  Alternatives whose key IS present: ${altMatch[1]}\n`
     : '  No alternative free strategy has a key present either (per the spawn preflight chain).\n';
-  return [
-    `RETRY EXHAUSTED after ${WARM_RETRY_PLAN.RETRY_BACKOFF_MS.length} retries — strategy '${strategy}' failed with: ${errLabel}.`,
+  const plan = resolveRetryPlan();
+  const lines = [
+    `RETRY EXHAUSTED after ${plan.backoffMs.length} retries — strategy '${strategy}' failed with: ${errLabel}.`,
+  ];
+  if (ledger && ledger.labels.length > 0) {
+    lines.push(`  Patience ledger: ${summarizeLedger(ledger)} — the plan was [${plan.backoffMs.join(', ')}] ms.`);
+  }
+  lines.push(
     `  The run stopped. NO strategy was auto-switched (no silent downgrade).`,
     altLine.trimEnd(),
     `  To switch explicitly: node scripts/apply-strategy.js --strategy <id>   (free-openrouter | free-big-pickle | free-nvidia-build)`,
     `  To absorb a rate-limited pool, simply resend — the warm session and its context are preserved.`,
-  ].join('\n');
+  );
+  return lines.join('\n');
 }
 
 /**

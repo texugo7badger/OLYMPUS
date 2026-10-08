@@ -1,0 +1,65 @@
+[opencode-session] Reusing warm OpenCode server on port 38893 (pid 53059)
+PASS  S1: run completes without human input
+PASS  S1: both retry attempts in transcript
+PASS  S1: stub reply delivered
+PASS  S1: NO parallel second connection (max concurrent POST = 1)
+PASS  S1: exactly 3 POSTs (1 initial + 2 retries)
+PASS  S2: run fails (non-zero)
+PASS  S2: exhaustion line
+PASS  S2: no silent downgrade (explicit wording)
+PASS  S2: alternatives line present (#56-style)
+PASS  S2: guidance names the explicit switch command
+PASS  S2: still no parallelism
+PASS  S3: stalled run AUTO-RESUMES (completes after the nudge)
+PASS  S3: auto-continue nudge fired EXACTLY once
+PASS  S3: nudge precedes the retry line (nudge-then-retry ordering)
+PASS  S3: retry line carries stream_idle_timeout
+PASS  S3: stub reply delivered after auto-resume
+PASS  S3: still sequential (max concurrent POST = 1)
+PASS  U: quiet below warn
+PASS  U: warn at warnMs
+PASS  U: nudge-abort at stallMs (no permission)
+PASS  U: permission-pending OVERRIDES the nudge at stallMs
+PASS  U: complexityScale: architectural → 3
+PASS  U: complexityScale: complex → 3
+PASS  U: complexityScale: simple → 1
+PASS  U: complexityScale: absent → 1
+PASS  S4: client-gone run returns (no zombie watcher)
+PASS  S4: server-side /abort POST received after grace
+PASS  S4: run_abandoned payload present
+PASS  S4: payload carries last_event_ts (ISO)
+PASS  S4: grace elapsed before the abort (>=1.5s wall)
+PASS  S5: unattended client-gone → grace 0 (immediate abort)
+PASS  S5: server /abort received (unattended immediate)
+[opencode-session] Reusing warm OpenCode server on port 38893 (pid 53059)
+PASS  S6: in-stream overload (no statusCode) RECOVERS via the provider retry
+PASS  S6: the retry line fires with the REAL provider text (starvation cured)
+PASS  S6: the retry line names the PROVIDER class (not "Transport failure")
+PASS  S6: the UI error line carries the verbatim provider message
+PASS  S6: still sequential (max concurrent POST = 1)
+PASS  S6B: permanent in-stream overload fails (non-zero)
+PASS  S6B: exhaustion guidance fires on the in-stream overload path
+PASS  S6B: guidance names the REAL error text (not the generic string)
+PASS  S6B: no silent downgrade (explicit wording)
+PASS  S6B: alternatives line present (#56-style)
+PASS  S6B: exactly 3 POSTs before the loud death
+FAIL  U2: resolveRetryPlan exported (the crescendo resolver) — missing — the 20s hard-coded WARM_RETRY_PLAN still rules (opencode-session.ts:1295)
+FAIL  U2: applyRetryJitter exported (the 0-30% spread) — missing
+FAIL  U2: classifyRetry exported for the fixture — module-private — the finer classes unassertable
+FAIL  S9: the 429 key-limit path + the patience ledger (blocked on the resolver) — blocked: the #107 surface is absent
+PASS  route: run_abandoned telemetry emitted on result.abandoned
+PASS  terminal: failure branch tracks the last error (runLastError)
+PASS  terminal: failure card names the last error + the preserved session
+PASS  S7: resolveWorkspaceLane is exported (#99)
+PASS  S7: OLYMPUS_WORKSPACE override used verbatim
+PASS  S7: lane bootstrapped with the kit shape (.opencode symlink)
+PASS  S7: lane carries the opencode.json copy
+PASS  S7: lane carries the opencode.demigods.json copy
+PASS  S7: second resolve is NOT fresh (the ask/notice fires once)
+[opencode-spawn] OLYMPUS_WORKSPACE (/home/texugo/Projects/olympus/inside-repo-test) points inside the OLYMPUS root — falling back to /home/texugo/.local/share/olympus/workspace (projects never land in the working tree)
+PASS  S7: a workspace pointing INSIDE the repo falls back to the default
+PASS  S7: the serve spawn threads the workspace lane as cwd
+PASS  S7: the spawn env carries OLYMPUS_ROOT_SESSION (#95 seam)
+PASS  S7: the first-run workspace notice exists (the ask seam)
+
+4 assertion(s) failed
