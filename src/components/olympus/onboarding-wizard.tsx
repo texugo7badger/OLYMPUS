@@ -441,7 +441,7 @@ olympus opencode`}
                         Option C: Free-tier (no plan needed)
                       </div>
                       <div className="text-[11px] font-mono text-olympus-text leading-relaxed">
-                        Get a free API key (one provider is enough — OpenRouter is the most reliable; NVIDIA Build adds the GLM-5.2 / Nemotron endpoints):
+                        Get a free API key (one provider is enough — OpenRouter is the most reliable; NVIDIA Build adds the GLM-5.3 / Nemotron endpoints):
                       </div>
                       <div className="flex gap-2">
                         <a
@@ -464,7 +464,7 @@ olympus opencode`}
                       <div className="text-[10px] font-mono text-olympus-amber-soft bg-olympus-amber-soft/5 border border-olympus-amber-soft/20 rounded p-2">
                         <strong>One key is enough.</strong> The Free strategy routes gods to the strongest free models
                         currently live (nemotron-3-ultra-550b with 1M context, super-120b, ling-3.0-flash) — refreshed
-                        automatically from the provider lists. A Groq key adds the second path; an NVIDIA Build key unlocks the free GLM-5.2 / Nemotron endpoints.
+                        automatically from the provider lists. A Groq key adds the second path; an NVIDIA Build key unlocks the free GLM-5.3 / Nemotron endpoints.
                       </div>
                       <div className="text-[10px] font-mono text-olympus-text-dim">
                         Click <strong>Next</strong> for step-by-step instructions on adding the keys inside OpenCode (Step 2).

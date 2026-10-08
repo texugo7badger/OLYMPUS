@@ -25,7 +25,7 @@
  *     OpenRouter-only split; free-big-pickle runs every god — including
  *     Callimachus — on one
  *     free flagship model; free-nvidia-build uses NVIDIA Build's free
- *     endpoints (build.nvidia.com — GLM-5.2, the Nemotron family, etc.),
+ *     endpoints (build.nvidia.com — GLM-5.3, the Nemotron family, etc.),
  *     all live-refreshed from the provider lists. Keeps the "Always free"
  *     promise from the README.
  *
@@ -94,7 +94,7 @@ export type LLMStrategy =
   | 'zen-budget'             // "ZEN Budget" — lowest cost on OpenCode Zen (MiniMax M2.7 everywhere but Apollo), still proprietary
   | 'free-openrouter'        // "Free OpenRouter" — all gods on OpenRouter's strongest free models (live-refreshed)
   | 'free-big-pickle'        // All gods on one free model (defaults to the strongest verified free model)
-  | 'free-nvidia-build'      // "Free Nvidia Build" — NVIDIA Build free endpoints (GLM-5.2 etc., live-refreshed)
+  | 'free-nvidia-build'      // "Free Nvidia Build" — NVIDIA Build free endpoints (GLM-5.3 etc., live-refreshed)
   | `custom-${string}`;      // user-defined strategy (see ~/.olympus/custom-strategies.json)
 
 /**
@@ -390,7 +390,7 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   },
   /**
    * "Free Nvidia Build" — NVIDIA Build's free endpoints (build.nvidia.com).
-   * NVIDIA hosts GLM-5.2 and the Nemotron family (plus DeepSeek, Kimi, etc.)
+   * NVIDIA hosts GLM-5.3 and the Nemotron family (plus DeepSeek, Kimi, etc.)
    * on free endpoints — the same scheme as the other free strategies:
    * primary roles on the strongest free model currently live, specialists
    * on the second-strongest, Callimachus on a fast background model. The
@@ -490,7 +490,7 @@ export const VAULT_LLM_MODEL = 'opencode-go/glm-5.3-flash';
  *   Llama 3.1, Gemma 2. Model ID format: openrouter/<vendor>/<model>:free.
  *   Rate limit: 20 req/min. Get a key at https://openrouter.ai/keys.
  * - NVIDIA Build (free tier): NVIDIA's free endpoints at
- *   https://build.nvidia.com — GLM-5.2, the Nemotron family, DeepSeek, Kimi,
+ *   https://build.nvidia.com — GLM-5.3, the Nemotron family, DeepSeek, Kimi,
  *   etc. Model ID format: nvidia/<vendor>/<model> (resolved by OpenCode's
  *   built-in `nvidia` provider; no `:free` suffix — every endpoint is free
  *   with an nvapi-... key). The model list is public
@@ -577,7 +577,7 @@ export const BUILTIN_PROVIDERS: LLMProvider[] = [
     isFree: true,
     requiresAvx2: false,
     description:
-      'NVIDIA Build free endpoints (build.nvidia.com) — GLM-5.2, the ' +
+      'NVIDIA Build free endpoints (build.nvidia.com) — GLM-5.3, the ' +
       'Nemotron family, DeepSeek, Kimi, Mistral, etc. Model format: ' +
       'nvidia/<vendor>/<model>. Requires a free nvapi-... key.',
   },

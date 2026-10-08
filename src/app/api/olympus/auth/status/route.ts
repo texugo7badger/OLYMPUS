@@ -136,7 +136,7 @@ export async function GET() {
     recommendedReason = 'Groq key detected, but the Groq free tier was removed from OLYMPUS (12K TPM window too small for the system prompt). Add an OpenRouter key (https://openrouter.ai/keys) to use the free strategies.';
   } else if (freeTier.nvidia_key) {
     recommendedStrategy = 'free-nvidia-build';
-    recommendedReason = 'NVIDIA Build key detected — the "Free Nvidia Build" strategy routes gods to NVIDIA\'s free endpoints (build.nvidia.com: GLM-5.2, the Nemotron family, etc.), refreshed automatically from the live NVIDIA model list.';
+    recommendedReason = 'NVIDIA Build key detected — the "Free Nvidia Build" strategy routes gods to NVIDIA\'s free endpoints (build.nvidia.com: GLM-5.3, the Nemotron family, etc.), refreshed automatically from the live NVIDIA model list.';
   } else {
     recommendedStrategy = '(none)';
     recommendedReason = 'No auth configured. Run `olympus opencode` and either sign in to the GO plan or add free-tier API keys (OpenRouter / NVIDIA Build) inside OpenCode.';
@@ -178,7 +178,7 @@ export async function GET() {
   } else if (!goPlan.configured && !zenPlan.configured && !freeTier.groq_key && !freeTier.openrouter_key && freeTier.nvidia_key) {
     recommendations.push({
       severity: 'info',
-      action: 'NVIDIA Build key configured — the Free Nvidia Build strategy is ready (GLM-5.2 + Nemotron family free endpoints, refreshed automatically).',
+      action: 'NVIDIA Build key configured — the Free Nvidia Build strategy is ready (GLM-5.3 + Nemotron family free endpoints, refreshed automatically).',
       command: 'https://build.nvidia.com — or run `node scripts/apply-strategy.js --strategy free-nvidia-build`.',
     });
   }

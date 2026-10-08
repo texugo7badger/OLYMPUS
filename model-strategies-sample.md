@@ -1,6 +1,6 @@
 1. The free-openrouter strategy routes all ten gods through OpenRouter's strongest free flagship model with automatic refresh.
 2. The free-big-pickle strategy assigns every god to a single 550B parameter model for unified reasoning across domains.
-3. The free-nvidia-build strategy leverages NVIDIA's free endpoints including GLM-5.2 and Nemotron families for cost-free operation.
+3. The free-nvidia-build strategy leverages NVIDIA's free endpoints including GLM-5.3 and Nemotron families for cost-free operation.
 4. The zen-max-quality strategy deploys premium models per god role with GLM-5.3 for Apollo and Artemis in maximum quality mode.
 5. The zen-balanced strategy optimizes cost-performance using GLM-5.3-Flash for Apollo and Hy3 for Atlas within reasonable budgets.
 6. The zen-budget strategy minimizes spend by routing simpler gods to smaller models while preserving Hy3 for orchestration.

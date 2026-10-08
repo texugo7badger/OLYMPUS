@@ -100,7 +100,7 @@ function fallbackData(): ProviderSettingsData {
       { id: 'zen-budget',      label: 'ZEN Budget',   description: 'Lowest cost on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.2. Atlas: Gemini 3.5 Flash. All others: MiniMax M2.7.', plan: 'ZEN', tier: 'budget', terminalModel: 'opencode/glm-5.2', estCostPerDay: 'low' },
       { id: 'free-openrouter', label: 'Free OpenRouter', description: 'All gods on OpenRouter\'s strongest free models live right now — primary trio on #1, specialists on #2, Callimachus on a fast background model.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', estCostPerDay: 'free' },
       { id: 'free-big-pickle', label: 'Free Big Pickle', description: 'All 10 gods (Callimachus included) on one free model — the strongest currently live, refreshed automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', estCostPerDay: 'free' },
-      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints (build.nvidia.com) — Apollo + Atlas on the strongest NVIDIA free model live right now, coding gods (Hephaestus/Athena/Dionysus) on GLM-5.2 (best coding), other specialists on #2, Callimachus on a fast background model. Refreshes automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia/nvidia/nemotron-3-ultra-550b-a55b', estCostPerDay: 'free' },
+      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints (build.nvidia.com) — Apollo + Atlas on the strongest NVIDIA free model live right now, coding gods (Hephaestus/Athena/Dionysus) on GLM-5.3 (best coding), other specialists on #2, Callimachus on a fast background model. Refreshes automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia/nvidia/nemotron-3-ultra-550b-a55b', estCostPerDay: 'free' },
     ],
     customStrategies: [],
     availableProviders: [
@@ -539,7 +539,7 @@ export default function ProviderSettings() {
 
         <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mb-2">
           Keys live inside OpenCode (Settings → Providers) — OLYMPUS detects what is authorized there and
-          what each key unlocks. One key is enough (OpenRouter is the most reliable); NVIDIA Build adds the free GLM-5.2 / Nemotron endpoints. Free models are picked
+          what each key unlocks. One key is enough (OpenRouter is the most reliable); NVIDIA Build adds the free GLM-5.3 / Nemotron endpoints. Free models are picked
           automatically from the live provider lists (refreshed daily or on demand).
         </div>
 
