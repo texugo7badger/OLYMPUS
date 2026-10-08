@@ -149,33 +149,70 @@ export function findOpencodeBinary(root: string = findOlympusRoot()): string | n
  * or a multi-line PREFLIGHT ERROR naming the missing key, the exact
  * remedy, and the alternative free strategies whose keys ARE present.
  * Purely diagnostic — never blocks the spawn, never switches strategies.
+ *
+ * #108 (FLUENCY-1): the key-sight — the preflight enumerates EVERY
+ * provider id present in auth.json (both paths), not just the 3
+ * historical fields. The live failure: the #98 exhaustion card said
+ * "No alternative free strategy has a key present either" while the
+ * user's auth.json carried opencode-go (the GO valve), openrouter, groq,
+ * and 4 nvidia family ids. The EYE was broken, not the vault empty.
+ * Optional `authDirs` lets the fixture inject its own auth trees.
  */
-export function freeTierPreflight(strategy: string): string {
-  // Key presence, auth.json first (Priority 1) — env is checked by the
-  // caller's chain (we only reach here when NO env free key is set).
+
+/** #108: the auth lane census — the preflight's SIGHT, pure + injectable. */
+export interface AuthLaneCensus {
+  /** Every provider id with a usable key, sorted. */
+  providerIds: string[];
+  hasOpenRouter: boolean;
+  /** Any nvidia-family id — the bare field OR the #106 family mirrors
+   *  (nvidia-glm/nvidia-deepseek/nvidia-kimi/nvidia-meta — the shipped shape). */
+  hasNvidia: boolean;
+  /** The opencode-go id — the GO plan's lane (the premium fallback valve). */
+  hasGoValve: boolean;
+}
+
+export function authLaneCensus(authDirs?: string[]): AuthLaneCensus {
+  const dirs = authDirs ?? [
+    join(homedir(), '.local', 'share', 'opencode'),
+    join(homedir(), '.config', 'opencode'),
+  ];
   const present = new Set<string>();
-  for (const dir of [join(homedir(), '.local', 'share', 'opencode'), join(homedir(), '.config', 'opencode')]) {
+  for (const dir of dirs) {
     const authFile = join(dir, 'auth.json');
     if (!existsSync(authFile)) continue;
     try {
       const auth = JSON.parse(readFileSync(authFile, 'utf-8'));
       const has = (v: unknown) => typeof v === 'string' ? v.length > 0 : (!!v && typeof (v as { key?: unknown }).key === 'string');
-      if (has(auth.openrouter)) present.add('openrouter');
-      if (has(auth.groq)) present.add('groq');
-      if (has(auth.nvidia)) present.add('nvidia');
+      for (const [id, v] of Object.entries(auth)) {
+        if (has(v)) present.add(id);
+      }
     } catch { /* unreadable auth — fall through to the guidance */ }
   }
+  const providerIds = [...present].sort();
+  return {
+    providerIds,
+    hasOpenRouter: present.has('openrouter'),
+    hasNvidia: providerIds.some((id) => id === 'nvidia' || id.startsWith('nvidia-')),
+    hasGoValve: present.has('opencode-go'),
+  };
+}
+
+export function freeTierPreflight(strategy: string, authDirs?: string[]): string {
+  // Key presence, auth.json first (Priority 1) — the FULL census (#108),
+  // never just the 3 historical fields.
+  const census = authLaneCensus(authDirs);
 
   // Required key per strategy (same semantics as validateFreeFallbackKeys:
-  // free-nvidia-build needs NVIDIA; every other free strategy needs
+  // free-nvidia-build needs a nvidia-family key (the bare id OR the family
+  // mirrors — the shipped R4 shape); every other free strategy needs
   // OpenRouter ids, which work with openrouter OR nvidia keys present).
   const needsNvidiaOnly = strategy === 'free-nvidia-build';
   const satisfied = needsNvidiaOnly
-    ? present.has('nvidia')
-    : present.has('openrouter') || present.has('nvidia');
+    ? census.hasNvidia
+    : census.hasOpenRouter || census.hasNvidia;
 
   if (satisfied) {
-    const source = needsNvidiaOnly ? 'nvidia' : (present.has('openrouter') ? 'openrouter' : 'nvidia');
+    const source = needsNvidiaOnly ? 'nvidia' : (census.hasOpenRouter ? 'openrouter' : 'nvidia');
     return `[opencode-spawn] INFO: strategy '${strategy}' — required key found in OpenCode auth.json (${source}). No env key needed; proceeding.`;
   }
 
@@ -185,18 +222,27 @@ export function freeTierPreflight(strategy: string): string {
     : 'add OpenRouter as a provider inside OpenCode (Settings → Providers) or export OPENROUTER_API_KEY — free key at https://openrouter.ai/keys';
   const alternatives: string[] = [];
   if (needsNvidiaOnly) {
-    if (present.has('openrouter')) alternatives.push('free-openrouter / free-big-pickle (OpenRouter key present)');
-  } else if (present.has('nvidia')) {
+    if (census.hasOpenRouter) alternatives.push('free-openrouter / free-big-pickle (OpenRouter key present)');
+  } else if (census.hasNvidia) {
     alternatives.push('free-nvidia-build (NVIDIA key present)');
   }
+  // #108: the SIGHT lines — the census, the alternatives, the GO valve.
+  const lanesLine = census.providerIds.length
+    ? `  Lanes with keys present: ${census.providerIds.join(', ')}\n`
+    : '  Lanes with keys present: none — no provider id in either auth.json path carries a key.\n';
   const altLine = alternatives.length
-    ? `  Alternatives whose key IS present: ${alternatives.join('; ')} — switch explicitly via: node scripts/apply-strategy.js --strategy <id>\n`
+    ? `  Alternatives whose key IS present: ${alternatives.join('; ')}\n`
     : '  No alternative free strategy has a key present either.\n';
+  const goLine = census.hasGoValve
+    ? '  GO key present: node scripts/apply-strategy.js --strategy go-balanced (premium valve)\n'
+    : '';
   return [
     `[opencode-spawn] FREE-STRATEGY PREFLIGHT ERROR (strategy: ${strategy})`,
     `  Missing: ${missing} — ${strategy} cannot make model requests without it; runs will fail with APIError.`,
     `  Remedy: ${remedy}.`,
+    lanesLine.trimEnd(),
     altLine.trimEnd(),
+    ...(goLine ? [goLine.trimEnd()] : []),
     '  No strategy was auto-switched (no silent downgrade). The spawn proceeds and will fail until the key is added.',
   ].join('\n');
 }

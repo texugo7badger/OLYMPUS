@@ -1,0 +1,6 @@
+FAIL  C: authLaneCensus exported (#108 — the sight) — missing — freeTierPreflight still reads ONLY the openrouter/groq/nvidia fields (opencode-spawn.ts:163-165)
+FAIL  C: the exhaustion card names every configured lane — blocked: the census is absent — the card is blind to every lane beyond the 3 hardcoded fields
+FAIL  C: the GO valve line — blocked: opencode-go auth is invisible to the card
+FAIL  C: the honest none on the empty vault — blocked: no census to be honest with
+
+4 assertion(s) failed

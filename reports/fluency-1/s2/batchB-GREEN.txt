@@ -1,0 +1,22 @@
+PASS  C: the real-shape 8-lane vault fully enumerated (the user's own tree shape, fake keys)
+PASS  C: the GO valve detected (opencode-go)
+PASS  C: the nvidia family detected (bare id + 4 family ids)
+PASS  C: tree B (go+openrouter): both ids named, sorted
+PASS  C: tree B: hasNvidia honest-absent
+PASS  C: empty vault -> the honest zero (no fabricated lanes)
+PASS  P: the preflight stays purely diagnostic (ERROR block shape)
+PASS  P: the block lists the auth lanes (the vault is NOT empty)
+PASS  P: the free alternative named (OpenRouter key present)
+PASS  P: the GO valve line explicit (the premium fallback, named)
+PASS  P: no silent downgrade stands
+PASS  P: empty vault -> the honest none (no lanes, no alternatives, no GO line)
+PASS  P: the GO valve appears IFF GO auth present (groq-only: absent)
+PASS  P: family-mirrored nvidia ids satisfy the nvidia check (the shipped R4 shape)
+PASS  X: the card carries the census (both lanes named)
+PASS  X: the card names the openrouter switch (a pool-contention death is a REAL reason to switch)
+PASS  X: the GO valve on the card (the explicit premium switch)
+PASS  X: the card still names the explicit switch command
+PASS  X: the card still refuses the silent downgrade
+PASS  X: empty vault -> the honest none on the card (no GO line)
+
+All #108 key-sight assertions passed

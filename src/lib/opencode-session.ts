@@ -37,7 +37,7 @@ import { execSync, spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnOpencode, freeTierPreflight, resolveWorkspaceLane } from '@/lib/opencode-spawn';
+import { spawnOpencode, freeTierPreflight, authLaneCensus, resolveWorkspaceLane } from '@/lib/opencode-spawn';
 import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
 import { getVaultRoot } from '@/lib/vault-root';
@@ -1543,22 +1543,38 @@ export function classifyRetry(result: WarmRunResult): RetryClass | null {
  *
  * #107 (FLUENCY-1): the retry count follows the env list, and the card
  * carries the patience ledger — what it waited, which classes it absorbed.
+ *
+ * #108 (FLUENCY-1): the key-sight — the card lists every REAL switch
+ * available (the full auth census, free AND paid) and names the GO valve
+ * explicitly when a GO-plan auth shape is present. The card's job is
+ * SIGHT; the no-silent-downgrade rule stands. Optional `authDirs` lets
+ * the fixture inject its own auth trees.
  */
 export function retryExhaustionGuidance(
   lastError: string | null | undefined,
   lastStatusCode: number | undefined,
   ledger?: RetryLedger,
+  authDirs?: string[],
 ): string {
   const strategy = activeStrategyId();
   const errLabel = typeof lastStatusCode === 'number' ? `upstream ${lastStatusCode}` : (lastError || 'unknown error');
-  // Key presence via the #56 spawn preflight's own chain: INFO means the
-  // strategy's required key was located; the ERROR block names what is
-  // missing. We only harvest the alternatives sentence from its text.
-  const preflight = freeTierPreflight(strategy);
-  const altMatch = preflight.match(/Alternatives whose key IS present: ([^\n]+)/i);
-  const altLine = altMatch
-    ? `  Alternatives whose key IS present: ${altMatch[1]}\n`
-    : '  No alternative free strategy has a key present either (per the spawn preflight chain).\n';
+  // #108: the full census — every configured lane, free AND paid. The
+  // card's alternatives come from the CENSUS (not the preflight harvest):
+  // a pool-contention death is a REAL reason to switch providers even when
+  // the dying strategy's own key is present (different pools entirely).
+  const census = authLaneCensus(authDirs);
+  const alternatives: string[] = [];
+  if (census.hasOpenRouter) alternatives.push('free-openrouter / free-big-pickle (OpenRouter key present)');
+  if (census.hasNvidia) alternatives.push('free-nvidia-build (NVIDIA key present)');
+  const altLine = alternatives.length
+    ? `  Alternatives whose key IS present: ${alternatives.join('; ')}\n`
+    : '  No alternative free strategy has a key present either (per the auth census).\n';
+  const lanesLine = census.providerIds.length
+    ? `  Lanes with keys present: ${census.providerIds.join(', ')}\n`
+    : '  No lane has a key present (per the auth census — both auth.json paths).\n';
+  const goLine = census.hasGoValve
+    ? '  GO key present: node scripts/apply-strategy.js --strategy go-balanced (premium valve)\n'
+    : '';
   const plan = resolveRetryPlan();
   const lines = [
     `RETRY EXHAUSTED after ${plan.backoffMs.length} retries — strategy '${strategy}' failed with: ${errLabel}.`,
@@ -1568,7 +1584,11 @@ export function retryExhaustionGuidance(
   }
   lines.push(
     `  The run stopped. NO strategy was auto-switched (no silent downgrade).`,
+    lanesLine.trimEnd(),
     altLine.trimEnd(),
+  );
+  if (goLine) lines.push(goLine.trimEnd());
+  lines.push(
     `  To switch explicitly: node scripts/apply-strategy.js --strategy <id>   (free-openrouter | free-big-pickle | free-nvidia-build)`,
     `  To absorb a rate-limited pool, simply resend — the warm session and its context are preserved.`,
   );

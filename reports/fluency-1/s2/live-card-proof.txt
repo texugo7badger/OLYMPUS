@@ -1,0 +1,8 @@
+RETRY EXHAUSTED after 4 retries — strategy 'free-nvidia-build' failed with: upstream 503.
+  Patience ledger: waited 65000ms across 2 retries (upstream 503 x2) — the plan was [5000, 30000, 120000, 300000] ms.
+  The run stopped. NO strategy was auto-switched (no silent downgrade).
+  Lanes with keys present: groq, nvidia, nvidia-deepseek, nvidia-glm, nvidia-kimi, nvidia-meta, opencode-go, openrouter
+  Alternatives whose key IS present: free-openrouter / free-big-pickle (OpenRouter key present); free-nvidia-build (NVIDIA key present)
+  GO key present: node scripts/apply-strategy.js --strategy go-balanced (premium valve)
+  To switch explicitly: node scripts/apply-strategy.js --strategy <id>   (free-openrouter | free-big-pickle | free-nvidia-build)
+  To absorb a rate-limited pool, simply resend — the warm session and its context are preserved.
