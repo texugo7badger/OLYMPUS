@@ -816,7 +816,14 @@ function getNvidiaBuildModelMap() {
   const map = { ...BUILTIN_STRATEGIES['free-nvidia-build'] };
 
   if (nvAll.length > 0) {
-    const liveIds = new Set(nvAll.map(m => m && m.id).filter(Boolean));
+    // The REAL refresh-file shape (refresh-free-models.js) writes
+    // `nvidia/`-prefixed ids + `rawId`; normalize to the bare id for the
+    // comparison (a prefix drift here = a false "not in the live list"
+    // warning on every apply — a broken verification).
+    const liveIds = new Set(nvAll.map(m => {
+      const id = (m && (m.rawId || m.id)) || '';
+      return id.replace(/^nvidia\//, '');
+    }).filter(Boolean));
     const deadAnchors = [];
     for (const [god, lane] of Object.entries(map)) {
       const bare = lane.replace(/^nvidia-[a-z]+\//, ''); // strip the family prefix

@@ -164,15 +164,18 @@ function makeHome() {
     fetched_at: nowIso(),
     nvidia: {
       top: [
-        { id: 'nvidia/nvidia/nemotron-3.5-lightning', context: 1000000, score: 90 },
-        { id: 'z-ai/glm-5.3-flash', context: 1000000, score: 85 },
+        { id: 'nvidia/nvidia/nemotron-3.5-lightning', rawId: 'nvidia/nemotron-3.5-lightning', context: 1000000, score: 90 },
+        { id: 'nvidia/z-ai/glm-5.3-flash', rawId: 'z-ai/glm-5.3-flash', context: 1000000, score: 85 },
       ],
+      // The REAL refresh-file shape (refresh-free-models.js writes
+      // `nvidia/`-prefixed ids + rawId) — the fixture must match reality or
+      // the apply-side availability check tests a fantasy.
       all: [
-        { id: 'z-ai/glm-5.3', context: 1000000, score: 99 },
-        { id: 'z-ai/glm-5.3-flash', context: 1000000, score: 98 },
-        { id: 'moonshotai/kimi-k3', context: 1048576, score: 97 },
-        { id: 'meta/muse-glimmer-30b', context: 131072, score: 96 },
-        { id: 'deepseek-ai/deepseek-v4.1-flash', context: 1000000, score: 95 },
+        { id: 'nvidia/z-ai/glm-5.3', rawId: 'z-ai/glm-5.3', context: 1000000, score: 99 },
+        { id: 'nvidia/z-ai/glm-5.3-flash', rawId: 'z-ai/glm-5.3-flash', context: 1000000, score: 98 },
+        { id: 'nvidia/moonshotai/kimi-k3', rawId: 'moonshotai/kimi-k3', context: 1048576, score: 97 },
+        { id: 'nvidia/meta/muse-glimmer-30b', rawId: 'meta/muse-glimmer-30b', context: 131072, score: 96 },
+        { id: 'nvidia/deepseek-ai/deepseek-v4.1-flash', rawId: 'deepseek-ai/deepseek-v4.1-flash', context: 1000000, score: 95 },
       ],
     },
     openrouter: { top: [{ id: 'nvidia/nemotron-3-ultra-550b-a55b:free', context: 1000000, score: 90 }] },
@@ -267,6 +270,13 @@ mkdirSync(WORK, { recursive: true });
     const probeId = (id) => id.replace(/^(nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta)\//, 'nvidia/');
     const bad = [...genIds].filter(id => id && !(STUB_CATALOGUE[probeId(id).split('/')[0]] || []).includes(probeId(id)));
     check('G1 L4: every generated model id is in the live catalogue', bad.length === 0, `dead ids: ${bad.join(', ')}`);
+    // #106: the availability check against the REAL refresh-file shape
+    // (nvidia/-prefixed ids + rawId) must verify the pinned lanes — a
+    // false-positive "not in the live refresh list" warning is a broken
+    // verification (worse than none).
+    check('G1 #106: the anchor lanes verify green against the real refresh-file shape',
+      /all anchor lanes verified live/.test(r.out),
+      `the availability check did not verify: ${(r.out.match(/ANCHOR-PIN WARNING[\s\S]{0,200}/) || ['(no warning)'])[0]}`);
   }
 }
 

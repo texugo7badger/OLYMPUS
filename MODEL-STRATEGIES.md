@@ -23,7 +23,7 @@
 | `zen-budget` (**Zen**) | **Zen plan** | ¢ | Good | **No caps** (pay-as-you-go) | Lowest cost on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Luna, all others on GLM-5.3-Flash, Callimachus on Claude Haiku 4.5 |
 | `free-openrouter` (**Free OpenRouter**) | **None** | **Free** | Lower | Unlimited (rate-limited) | The OpenRouter-only split — primary trio on #1, specialists on #2, Callimachus on a fast background model. Refreshes automatically |
 | `free-big-pickle` (**Free Big Pickle**) | **None** | **Free** | Lower | Unlimited (rate-limited) | All 10 gods (Callimachus included) on one free model — the strongest currently live, refreshed automatically |
-| `free-nvidia-build` (**Free Nvidia Build**) | **None** | **Free** | Lower | Unlimited (rate-limited) | NVIDIA Build free endpoints (build.nvidia.com) — Apollo + Atlas on the strongest NVIDIA free model live (Nemotron 3 Ultra 550B, 1M ctx), coding gods on pinned GLM-5.3, other specialists on #2, Callimachus on a fast background model. Refreshes automatically |
+| `free-nvidia-build` (**Free Nvidia Build**) | **None** | **Free** | Lower | Unlimited (rate-limited) | **The distributed pantheon (#106)** — NVIDIA Build free endpoints: per-god model lanes on the user-pinned anchors (GLM-5.3 / GLM-5.3-Flash / Kimi K3 / Muse Glimmer), per-family client pools, no single pool, NO Nemotron (the user's ban). The anchor set is pinned — the refresh verifies, never overrides |
 | `custom-*` | User-defined | User-defined | User-defined | Custom | Advanced — define your own per-god model map |
 
 Switch strategies at any time:
@@ -34,7 +34,7 @@ olympus apply-strategy free-openrouter   # or free-big-pickle / free-nvidia-buil
 
 > **Activation gate:** strategies are **blocked** until the API they need is authorized inside OpenCode — you can't switch to a plan you can't call. `go-*` needs the **GO plan** (`opencode-go` provider), `zen-*` needs the **ZEN key** (`opencode` provider), `free-openrouter` / `free-big-pickle` need an **OpenRouter key**, `free-nvidia-build` needs an **NVIDIA Build key** (`nvapi-...`). The Settings cards show a lock + what's missing; the providers API rejects blocked switches. Custom (`custom-*`) strategies have no static requirement.
 
-When a free provider's rate limit runs out, pick another free strategy (`free-openrouter`, `free-big-pickle`, `free-nvidia-build`) and continue — no plan needed, models refresh automatically from the live provider lists.
+When a free provider's rate limit runs out, pick another free strategy (`free-openrouter`, `free-big-pickle`, `free-nvidia-build`) and continue — no plan needed. `free-nvidia-build`'s anchor set is USER-PINNED (the distributed pantheon — #106); the other free strategies refresh their picks automatically from the live provider lists.
 
 
 
@@ -228,20 +228,53 @@ export OLYMPUS_BIG_PICKLE_MODEL=openrouter/<your-big-pickle-slug>
 node scripts/apply-strategy.js --strategy free-big-pickle
 ```
 
-### `free-nvidia-build` — NVIDIA Build free endpoints (build.nvidia.com)
+### `free-nvidia-build` — the DISTRIBUTED PANTHEON (#106 — NVIDIA Build free endpoints, per-god model lanes)
 
-NVIDIA hosts **GLM-5.3** and the Nemotron family (plus Kimi, Mistral, Gemma, etc.) on free endpoints at [build.nvidia.com](https://build.nvidia.com/models) — the same scheme as the other free strategies:
+NVIDIA hosts **GLM-5.3 / GLM-5.3-Flash / Kimi K3 / Muse Glimmer / DeepSeek** on free endpoints
+at [build.nvidia.com](https://build.nvidia.com/models). **NO Nemotron — the user's ban, forever**
+(low effective context + the observed contention pool behind "Service temporarily overloaded").
 
-- **Primary roles** (Apollo, Atlas) → the strongest NVIDIA free model currently live (curated default: `nvidia/nvidia/nemotron-3-ultra-550b-a55b` — 550B params, 1M context).
-- **Coding trio** (Hephaestus, Athena, Dionysus) → **pinned** `nvidia/z-ai/glm-5.3` — the platform's current best coding model (1M context; live-verified against `https://integrate.api.nvidia.com/v1/models` on 2026-10-07 — the endpoint now serves the glm-5.3 family only; glm-5.2 is retired), pinned so a list reshuffle never bumps the coding gods onto a general-purpose model.
-- **Specialists** (Artemis, Hermes, Persephone, Prometheus) → the second-strongest live model (fallback: `nvidia/z-ai/glm-5.3`).
-- **Callimachus** → a fast nano-class background model from the live list (curated default: `nvidia/nvidia/nemotron-3-nano-30b-a3b`).
+**The distribution law** (the user's directive, 2026-10-08): every god on exactly ONE user-pinned
+anchor lane; the three heaviest paths (Apollo's entry lane, Athena's frontend-kit lane,
+Hephaestus's build lane) NEVER share a pool; Callimachus + the vault + `small_model` on the
+fast lane (volume, not depth); **≤3 gods per anchor**. The anchor set is USER-PINNED — the
+refresh (`scripts/refresh-free-models.js`) verifies availability + carries renames, NEVER
+replaces an anchor with "the strongest live"; a dead anchor surfaces loudly, never silently
+swapped (and the apply refuses at the L4 preflight).
 
-Model ids use the **`nvidia/<vendor>/<model>`** prefix (OpenCode's built-in `nvidia` provider) — **no `:free` suffix**; every NVIDIA Build endpoint is free with a key. The model list is fetched live from `https://integrate.api.nvidia.com/v1/models` (public, no key needed) and refreshed automatically with the same 24-hour TTL as OpenRouter/Groq.
+**The anchor table** (probe-verified live 2026-10-08 — `reports/free-1/s0/`; the DeepSeek pool
+timed out 3× at the probe and is EXCLUDED — its family entry stays for the pinned set, zero
+gods until the pool recovers):
 
-**Requirements:** a free NVIDIA API key (`nvapi-...`) configured inside OpenCode (`olympus opencode` → Settings → add NVIDIA). Get one at https://build.nvidia.com (Sign In → API). The config still applies without the key, but model requests fail until it is added — apply-strategy.js warns about this.
+| Anchor lane | Gods | Shape (live model card — never inflated) |
+|---|---|---|
+| `nvidia-glm/z-ai/glm-5.3` | Apollo, Dionysus, Persephone | 753B text MoE, reasoning + tool calling, 1M ctx |
+| `nvidia-glm/z-ai/glm-5.3-flash` | Atlas, Athena, Callimachus + vaultLlm + small_model | 320B/18B-active multimodal MoE, fast, 1M ctx |
+| `nvidia-kimi/moonshotai/kimi-k3` | Hephaestus, Artemis, Prometheus | 2.8T MoE, 104B active, long-horizon coding + agentic, 1,048,576 ctx |
+| `nvidia-meta/meta/muse-glimmer-30b` | Hermes | 29.6B dense + ViT-G/14, multimodal reasoning + tool-calling, 131,072 ctx |
+| `nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash` | (unassigned 2026-10-08 — the dead pool, disclosed) | 552B MoE, 8B active, 1M ctx |
 
-**When to use:** You want GLM-5.3 or the Nemotron family for free through NVIDIA's direct endpoints (no OpenRouter/Groq key needed).
+**The provider split** ("different endpoints per god"): the single `nvidia` provider became
+per-family entries — `nvidia-glm` / `nvidia-deepseek` / `nvidia-kimi` / `nvidia-meta` — each
+carrying ONLY its family's models with honest limits (output 16384 — the #76 bar). Same base
+URL (`https://integrate.api.nvidia.com/v1`), same `nvapi-...` key (the apply mirrors the
+user's NVIDIA key to the family ids in OpenCode's auth.json, the standard `/connect` storage).
+One client pool per family: independent retry/backoff state + a config that expresses the
+doctrine. Symphony carries context between pools — **models are lanes, not silos**.
+
+Model ids use the **`nvidia-<family>/<vendor>/<model>`** prefix — no `:free` suffix; every
+NVIDIA Build endpoint is free with a key. The model list is fetched live from
+`https://integrate.api.nvidia.com/v1/models` (public, no key needed) and refreshed
+automatically (24-hour TTL; the refresh bans the nemotron family from the ranked lists).
+
+**Requirements:** a free NVIDIA API key (`nvapi-...`) configured inside OpenCode
+(`olympus opencode` → Settings → add NVIDIA). Get one at https://build.nvidia.com (Sign In →
+API). The config still applies without the key, but model requests fail until it is added —
+apply-strategy.js warns about this.
+
+**When to use:** the maximum of the NVIDIA free catalog with the load spread across four
+serving pools — the free tier's most resilient shape (one overloaded pool no longer kills
+the terminal; the entry god never sits on the most-contended pool again).
 
 ## Custom strategies
 

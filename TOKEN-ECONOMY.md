@@ -96,7 +96,7 @@ This is the feedback loop that makes OLYMPUS more efficient over time — every 
 | **zen-budget** (**ZEN**) | GLM-5.2 | Gemini 3.5 Flash | MiniMax M2.7 | MiniMax M2.7 | Low (pay-as-you-go) |
 | **free-openrouter** (**Free OpenRouter**) | strongest OpenRouter free model live | strongest OpenRouter free model live | second-strongest OpenRouter free model live | Nemotron 3 Nano (free) | **$0** |
 | **free-big-pickle** (**Free Big Pickle**) | one free flagship — all 10 gods incl. Callimachus | one free flagship | one free flagship | Nemotron 3 Nano (free) | **$0** |
-| **free-nvidia-build** (**Free Nvidia Build**) | strongest NVIDIA free model live (Nemotron 3 Ultra 550B, 1M ctx) | strongest NVIDIA free model live | second-strongest NVIDIA free model live | Nemotron 3 Nano (free) | **$0** |
+| **free-nvidia-build** (**Free Nvidia Build**) | **the distributed pantheon (#106)** — GLM-5.3 (753B) | GLM-5.3-Flash | Kimi K3 (2.8T) | GLM-5.3-Flash (the volume lane) | **$0** |
 
 Apollo is always on GLM-5.2 in the GO + ZEN strategies. Atlas is on Hy3 in all GO strategies and on Gemini 3.5 Flash in the ZEN strategies (Hy3 is GO-plan-only). In the budget strategies, all gods except Apollo and Atlas drop to DeepSeek V4 Flash (GO) / MiniMax M2.7 (ZEN) for maximum savings.
 
@@ -110,15 +110,24 @@ When > 70% of dispatches short-circuit AND average confidence > 0.80, Apollo sug
 
 ### Free economics ($0)
 
-The **free strategies** run OLYMPUS entirely on free-tier providers — no plan required. Models refresh automatically from the live provider lists (`scripts/refresh-free-models.js`); curated defaults verified 2026-07-31:
+The **free strategies** run OLYMPUS entirely on free-tier providers — no plan required. `free-openrouter` / `free-big-pickle` refresh their picks automatically from the live provider lists (`scripts/refresh-free-models.js`); `free-nvidia-build` is the **distributed pantheon (#106)** — a USER-PINNED anchor set (probe-verified 2026-10-08):
 
-| Provider | Model | Role | Cost |
+| Provider | Model lane | Role | Cost |
 |----------|-------|------|------|
-| **OpenRouter** (free) | nvidia/nemotron-3-ultra-550b-a55b:free (550B, 1M ctx) | Apollo, Atlas, Hephaestus | $0 |
+| **OpenRouter** (free) | nvidia/nemotron-3-ultra-550b-a55b:free (550B, 1M ctx) | Apollo, Atlas, Hephaestus (the `free-openrouter` primary trio) | $0 |
 | **OpenRouter** (free) | nvidia/nemotron-3-super-120b-a12b:free (or ling-3.0-flash:free) | Artemis, Athena, Dionysus, Hermes, Persephone, Prometheus | $0 |
 | **OpenRouter** (free) | nvidia/nemotron-3-nano-30b-a3b:free | Callimachus + small_model (titles, compaction) | $0 |
-| **OpenRouter-only strategy** (`free-openrouter`) | current top OpenRouter free models (live) | Primary trio #1 / specialists #2 / Callimachus nano | $0 |
-| **NVIDIA Build** (free, `free-nvidia-build`) | z-ai/glm-5.3 (1M ctx) + Nemotron super/nano | GLM-5.3 + Nemotron family via build.nvidia.com (live) | $0 |
+| **NVIDIA Build** (free, `free-nvidia-build`) | `nvidia-glm/z-ai/glm-5.3` (753B, 1M ctx) | Apollo, Dionysus, Persephone — the entry/reasoning lane | $0 |
+| **NVIDIA Build** (free, `free-nvidia-build`) | `nvidia-glm/z-ai/glm-5.3-flash` (320B/18B-active, 1M ctx) | Atlas, Athena, Callimachus + vaultLlm + small_model — the fast/volume lane | $0 |
+| **NVIDIA Build** (free, `free-nvidia-build`) | `nvidia-kimi/moonshotai/kimi-k3` (2.8T MoE, 104B active, 1,048,576 ctx) | Hephaestus, Artemis, Prometheus — the long-horizon coding lane | $0 |
+| **NVIDIA Build** (free, `free-nvidia-build`) | `nvidia-meta/meta/muse-glimmer-30b` (29.6B, 131,072 ctx) | Hermes — the alternate fast lane | $0 |
+| **NVIDIA Build** (free, `free-nvidia-build`) | `nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash` (552B MoE, 8B active, 1M ctx) | (unassigned — the pool timed out 3× at the 2026-10-08 probe, disclosed) | $0 |
+
+**NO Nemotron in the NVIDIA strategy — the user's ban, forever** (low effective context + the
+observed contention pool). The anchor set is USER-PINNED: the refresh verifies availability +
+carries renames, NEVER replaces an anchor with "the strongest live"; a dead anchor surfaces
+loudly, never silently swapped. Per-family provider entries (`nvidia-glm` / `nvidia-deepseek` /
+`nvidia-kimi` / `nvidia-meta`) give each lane its own client pool — same base URL, same key.
 
 NVIDIA Build's model list is **public** — `scripts/refresh-free-models.js` fetches it without any key, so the `free-nvidia-build` strategy always has a live model list. Requests still need a free NVIDIA API key (`nvapi-...`) configured inside OpenCode.
 
@@ -126,9 +135,30 @@ The output caps are set by apply-strategy.js (`provider.<id>.models.<model>.limi
 
 **Quality tradeoff:** Free-tier models are not GO-plan quality. Apollo's planning is weaker than GLM-5.2 and Hephaestus's code is below DeepSeek V4 Pro. But the instinct gate's short-circuit path mitigates this — short-circuited dispatches don't make LLM calls at all, so a mature brain (70%+ short-circuit rate) incurs zero token cost on 70% of dispatches regardless of strategy.
 
-**Rate limits:** Free tiers have per-minute caps (OpenRouter ~20 req/min, Groq ~30 req/min). Heavy parallel dispatch may hit these. The short-circuit path helps here: each short-circuited dispatch is one fewer LLM call competing for rate-limit headroom.
+**Rate limits — the free-tier shape (#106's finding):** NVIDIA Build's free tier allows
+**40 requests/minute per API key** — an AGGREGATE ceiling across ALL models on the key
+(that limit returns 429). The user's observed `Service temporarily overloaded` was NOT the
+key limit — it was **per-model serving-pool contention (503-class)**: the single most-loaded
+lane (Apollo's entry lane) sat on the most-contended pool, so one overloaded pool killed the
+whole terminal. The distributed pantheon is the cure: four anchors = four serving pools
+(per-family client pools on top), the three heaviest paths never share a pool, ≤3 gods per
+anchor. OpenRouter's free tier is ~20 req/min per key.
 
-Requirements: at least one free-tier key — Groq, OpenRouter, and/or NVIDIA — added inside OpenCode (`olympus opencode` → Settings → Providers), or legacy `OLYMPUS_GROQ_KEY` / `OLYMPUS_OPENROUTER_KEY` / `OLYMPUS_NVIDIA_KEY` env vars. **One key is enough** (OpenRouter recommended); a second adds the Groq path. Keys are configured inside OpenCode, never injected by OLYMPUS (see [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md)).
+**How 9 gods + the vault fit in 40 RPM — the Symphony compression math:** gods share context
+through the Symphony bus (`~/.olympus/symphony-bus.jsonl`), MODEL-INDEPENDENT — models are
+lanes, not silos. The 5-layer compression (caveman/strategic-compact classes, 70–90%
+transport reduction) keeps inter-god context round-trips at ~200-400 tokens instead of
+full-knowledge payloads; a dispatch wave's LLM calls are the gods' own turns, not context
+broadcasts. At the observed free-tier cadence (single-turn contracts + the instinct gate
+short-circuiting 70%+ of dispatches in a mature brain — each short-circuit is one fewer LLM
+call), a 9-god pantheon with the volume work (heartbeat, vault writes, titles/compaction) on
+the flash lane stays comfortably inside the aggregate window: the heartbeat + vault lanes
+are low-token calls, the heavy three are spread across three pools, and the request-per-minute
+ceiling is shared across four serving pools' worth of latency isolation. Heavy parallel
+dispatch may still hit the ceiling — the honest failure card (#98) reports it; the
+short-circuit path is the pressure valve.
+
+Requirements: at least one free-tier key — OpenRouter and/or NVIDIA — added inside OpenCode (`olympus opencode` → Settings → Providers), or legacy `OLYMPUS_OPENROUTER_KEY` / `OLYMPUS_NVIDIA_KEY` env vars. **One key is enough** (NVIDIA recommended for the distributed pantheon). Keys are configured inside OpenCode, never injected by OLYMPUS (see [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md)).
 
 ### Zen economics (pay-as-you-go)
 
