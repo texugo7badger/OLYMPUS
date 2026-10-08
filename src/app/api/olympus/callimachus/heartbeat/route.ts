@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 // Use spawnOpencode() for cross-platform support.
-import { spawnOpencode } from '@/lib/opencode-spawn';
+import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 // Run vault prune as part of the heartbeat.
 import { runVaultPrune, loadVaultPolicy } from '@/lib/vault-policy';
 
@@ -99,6 +99,9 @@ export async function POST(req: NextRequest) {
     if (deep) args.push('--deep');
 
     const child = spawnOpencode(args, {
+      // #104 (the complete class, SERVE-1 Batch C): one-shot dispatches run
+      // in the lane — never the repo root (the default cwd findOlympusRoot()).
+      cwd: resolveDispatchCwd(),
       extraEnv: { OLYMPUS_CALLIMACHUS_DEEP: deep ? 'true' : 'false' },
     });
 

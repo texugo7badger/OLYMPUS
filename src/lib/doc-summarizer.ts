@@ -15,7 +15,7 @@
 import fs from 'fs';
 import path from 'path';
 // Use spawnOpencode() for Windows + stdin fix.
-import { spawnOpencode } from '@/lib/opencode-spawn';
+import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 import { getVaultRoot } from './vault-root';
 
 const VAULT = getVaultRoot();
@@ -170,8 +170,10 @@ ${docContent}`;
       // cwd=extractDir (the extracted archive dir), but opencode needs
       // to find Olympus's opencode.json — so we pass cwd explicitly
       // AND set OLYMPUS_ROOT so the helper can locate the local binary.
+      // #104 (the complete class, SERVE-1 Batch C): the explicit cwd is
+      // the lane-preference resolver — never the repo root.
       // Use spawnOpencode() for Windows + stdin fix.
-      const child = spawnOpencode(['run', '--agent', 'apollo', prompt]);
+      const child = spawnOpencode(['run', '--agent', 'apollo', prompt], { cwd: resolveDispatchCwd() });
 
       const timer = setTimeout(() => {
         try { child.kill('SIGTERM'); } catch {}

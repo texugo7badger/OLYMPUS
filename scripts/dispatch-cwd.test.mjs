@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 /**
  * dispatch-cwd.test.mjs — MADRUGA-PREVIEW-1 Batch C: the one-shot dispatch
- * cwd (#104). RED-first, child-gate env pattern (per athena-click.test.mjs).
+ * cwd (#104) — EXTENDED by MADRUGA-SERVE-1 Batch C to the COMPLETE CLASS:
+ * every spawnOpencode call site in src/ carries an explicit lane-preference
+ * cwd (resolveDispatchCwd or the serve's own #99 lane), never the inherited
+ * repo-root default. RED-first, child-gate env pattern (per athena-click.test.mjs).
  *
  *   resolve mode — unit resolveDispatchCwd(projectSlug?):
  *     slug given + <lane>/<slug> exists → that dir;
@@ -11,16 +14,18 @@
  *   guard mode — OLYMPUS_WORKSPACE pointing inside a fake OLYMPUS root →
  *     the default lane (never the fake root, never the real repo).
  *
- *   Content pins (the athena/edit lane — the only lane cured tonight):
- *     the route source threads resolveDispatchCwd into the spawn's cwd
- *     option; the invariant — the route no longer spawns without an
- *     explicit cwd. The other six #104 call sites stay as-is (the issue's
- *     follow-up audit — bookkeeping lanes, changed blind = out of scope).
+ *   Content pins:
+ *     the athena/edit lane threads resolveDispatchCwd(projectSlug) (#104);
+ *     the six follow-up sites (heartbeat, action x2, intake, doc-summarizer,
+ *     compact) each carry cwd: resolveDispatchCwd(...) — the complete class;
+ *     the INVARIANT: EVERY spawnOpencode call in src/ (outside the
+ *     definition file) carries an explicit cwd: — no site anywhere spawns
+ *     with the inherited repo-root default.
  *
  * Run: npx tsx scripts/dispatch-cwd.test.mjs (exit 0)
  */
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -103,7 +108,7 @@ if (process.argv[2] === 'child') {
   }
 }
 
-// ─── content pins (the athena/edit lane — the only lane cured tonight) ────────
+// ─── content pins (#104's own lane, athena/edit) ─────────────────────────────
 {
   const route = readFileSync(join(ROOT, 'src', 'app', 'api', 'olympus', 'athena', 'edit', 'route.ts'), 'utf-8');
   check('pin: athena/edit imports resolveDispatchCwd (the lane-preference resolver)',
@@ -125,6 +130,55 @@ if (process.argv[2] === 'child') {
   }
   check('pin (invariant): the route no longer spawns without an explicit cwd (every spawnOpencode call carries cwd:)',
     callCount >= 1 && callsWithoutCwd === 0, `${callsWithoutCwd}/${callCount} calls without cwd`);
+}
+
+// ─── SERVE-1 Batch C: the COMPLETE dispatch-cwd class ─────────────────────────
+{
+  // (1) per-site pins: each of the six follow-up sites carries the
+  //     lane-preference resolver on its spawn.
+  const sites = [
+    { file: 'src/app/api/olympus/callimachus/heartbeat/route.ts', name: 'heartbeat', expect: /cwd:\s*resolveDispatchCwd\(\)/ },
+    { file: 'src/app/api/olympus/action/route.ts', name: 'action (the bookkeeping lane + the one-shot fallback)', expect: /cwd:\s*resolveDispatchCwd\(\)/, count: 2 },
+    { file: 'src/app/api/olympus/intake/route.ts', name: 'intake (the project slug threaded)', expect: /cwd:\s*resolveDispatchCwd\(result\.project\?\.slug/ },
+    { file: 'src/lib/doc-summarizer.ts', name: 'doc-summarizer', expect: /cwd:\s*resolveDispatchCwd\(\)/ },
+    { file: 'src/app/api/olympus/compact/route.ts', name: 'compact (the shim)', expect: /cwd:\s*resolveDispatchCwd\(\)/ },
+  ];
+  for (const s of sites) {
+    const src = readFileSync(join(ROOT, s.file), 'utf-8');
+    const hits = src.match(new RegExp(s.expect, 'g'))?.length ?? 0;
+    check(`class pin: ${s.name} carries cwd: resolveDispatchCwd(...) — never the inherited repo root`,
+      hits >= (s.count ?? 1), `hits=${hits} in ${s.file}`);
+  }
+
+  // (2) the GLOBAL invariant: EVERY spawnOpencode call site in src/ (outside
+  //     the definition file) carries an explicit cwd: — no site anywhere
+  //     spawns with the repo-root default getOpencodeSpawnOptions returns.
+  const walk = (dir, acc = []) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p, acc);
+      else if (e.name.endsWith('.ts') || e.name.endsWith('.tsx')) acc.push(p);
+    }
+    return acc;
+  };
+  const offenders = [];
+  let totalCalls = 0;
+  for (const f of walk(join(ROOT, 'src'))) {
+    if (f.endsWith(join('src', 'lib', 'opencode-spawn.ts'))) continue; // the definition file
+    const lines = readFileSync(f, 'utf-8').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const at = lines[i].indexOf('spawnOpencode(');
+      if (at === -1) continue;
+      const before = lines[i].slice(0, at).trim();
+      if (before.startsWith('//') || before.startsWith('*') || before.startsWith('/*')) continue;
+      totalCalls++;
+      const window = lines.slice(i, i + 20).join('\n');
+      if (!/cwd:/.test(window)) offenders.push(`${f.replace(ROOT + '/', '')}:${i + 1}`);
+    }
+  }
+  check('class pin (GLOBAL invariant): EVERY spawnOpencode call site in src/ carries an explicit cwd:',
+    totalCalls >= 8 && offenders.length === 0,
+    `${offenders.length}/${totalCalls} call sites without cwd: ${offenders.join(', ') || '(none)'}`);
 }
 
 rmSync(WORK, { recursive: true, force: true });

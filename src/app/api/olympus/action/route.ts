@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 // Uses spawnOpencode() for Windows shell:true + stdin:'ignore' + local binary resolution.
-import { spawnOpencode } from '@/lib/opencode-spawn';
+import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
 // the running server + session (no cold start, context retained).
@@ -443,7 +443,12 @@ export async function POST(req: NextRequest) {
 
   const child = spawnOpencode(
     ['run', '--format', 'json', ...args, '--agent', 'callimachus'],
-    { extraEnv: { OLYMPUS_ACTION_NODE: node?.name || '' } },
+    {
+      // #104 (the complete class, SERVE-1 Batch C): the bookkeeping lanes
+      // run in the workspace lane — never the repo root.
+      cwd: resolveDispatchCwd(),
+      extraEnv: { OLYMPUS_ACTION_NODE: node?.name || '' },
+    },
   );
 
   return streamChild(child, { action, node: node?.name, cli: `opencode run ${args.join(' ')}` }, req);
@@ -730,7 +735,10 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           text,
         ];
         send({ type: 'log', msg: `Falling back to one-shot: opencode ${args.join(' ').slice(0, 120)}…`, ts: new Date().toISOString() });
-        const child = spawnOpencode(args, { extraEnv: opts.extraEnv });
+        // #104 (the complete class, SERVE-1 Batch C): the one-shot fallback
+        // matches the warm serve's context — the workspace lane, never the
+        // repo root (the old default cwd).
+        const child = spawnOpencode(args, { cwd: resolveDispatchCwd(), extraEnv: opts.extraEnv });
         // Issue #58: route one-shot output through the SAME onEvent wrapper
         // the warm path uses, so firstEventAt is set on the first streamed
         // line and the 120s startup timer becomes a true no-OUTPUT bound.

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 // Use spawnOpencode() for cross-platform support.
-import { spawnOpencode } from '@/lib/opencode-spawn';
+import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 // Issue 1 dynamic input token routing.
 import { classifyTask, serializeClassification } from '@/lib/task-classifier';
 import { getVaultRoot } from '@/lib/vault-root';
@@ -134,6 +134,10 @@ export async function POST(req: NextRequest) {
         const child = spawnOpencode(
           ['run', '--agent', 'apollo', result.handoffPrompt || ''],
           {
+            // #104 (the complete class, SERVE-1 Batch C): the intake
+            // handoff lands in the project when one is known, else the
+            // lane — never the repo root.
+            cwd: resolveDispatchCwd(result.project?.slug || undefined),
             extraEnv: {
               OLYMPUS_PROJECT_SLUG: result.project?.slug || '',
               OLYMPUS_HANDOFF_PATH: result.handoffPath,

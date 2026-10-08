@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 // Use spawnOpencode() for cross-platform support.
-import { spawnOpencode } from '@/lib/opencode-spawn';
+import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,7 +22,9 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: NextRequest) {
   // spawnOpencode handles Windows shell:true + stdin:'ignore'.
-  const child = spawnOpencode(['run', '/callimachus-heartbeat', '--agent', 'callimachus', '--deep']);
+  // #104 (the complete class, SERVE-1 Batch C): the compact shim runs
+  // Callimachus in the workspace lane — never the repo root.
+  const child = spawnOpencode(['run', '/callimachus-heartbeat', '--agent', 'callimachus', '--deep'], { cwd: resolveDispatchCwd() });
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
