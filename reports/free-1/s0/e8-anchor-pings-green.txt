@@ -1,0 +1,4 @@
+z-ai/glm-5.3 | HTTP 200 | 834ms | content='None' | usage=16 completion tokens
+z-ai/glm-5.3-flash | HTTP 200 | 32367ms | content='None' | usage=16 completion tokens
+moonshotai/kimi-k3 | HTTP 200 | 1181ms | content='OK' | usage=16 completion tokens
+meta/muse-glimmer-30b | HTTP 200 | 1963ms | content='None' | usage=16 completion tokens

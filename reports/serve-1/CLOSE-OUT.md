@@ -3,7 +3,8 @@
 > The durable close-out packet, WRITTEN TO DISK BEFORE the chat summary (**#101**'s rule: the chat
 > message is a pointer, never the payload). The night rode exactly **5 ff-only merges**
 > (paper + A + B + C + close-paper), all pushed on origin/main:
-> `afb6cbc` → `9633fc5` → `aa16c70` → `5e5ee3f` → (this merge).
+> `afb6cbc` → `9633fc5` → `aa16c70` → `5e5ee3f` → `101d5c7` (this merge's sha filled
+> post-merge per the PREVIEW-1 cycle — it rides the next session's Stage 0 paper).
 
 ## 1. Why this session exists
 
