@@ -1,0 +1,9 @@
+(module absent — the RED guard fires below)
+FAIL  W: the hop runtime exported (src/lib/hop-runtime/walker.ts) — missing — the architectural task is still ONE 150k-token god-session (task-classifier.ts:247-273)
+FAIL  W: plan-schema validation (garbage dies loudly) — blocked: the module is absent
+FAIL  W: topological order + the concurrency cap (<= 3) — blocked
+FAIL  W: park-on-exhaustion + resume (the campaign never dies) — blocked
+FAIL  W: per-hop telemetry rows — blocked
+FAIL  W: deterministic verify, 0 tokens — blocked
+
+6 assertion(s) failed
