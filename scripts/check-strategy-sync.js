@@ -63,7 +63,7 @@ function godValue(raw, constantName) {
   // `opencode-go/` prefix leaving `-go/model` behind. `nvidia` ids are
   // double-prefixed (nvidia/nvidia/...) — stripping the FIRST nvidia/
   // prefix leaves `nvidia/<model>` which both sides normalize identically.
-  return (raw || '').replace(/^(opencode-go|opencode|groq|openrouter|nvidia)\//, '');
+  return (raw || '').replace(/^(opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia)\//, '');
 }
 
 // Extract the LLM_STRATEGIES object from model-strategies.ts.
@@ -87,10 +87,10 @@ while ((m = msStrategyRegex.exec(msContent)) !== null) {
   // Model IDs contain hyphens and slashes (e.g. openai/gpt-oss-20b:free),
   // so the character class must include '-', '/', '.', ':' and '_'.
   // `opencode-go` MUST precede `opencode` in the alternation (ordered regex).
-  const godRegex = /([a-z]+):\s*'((?:opencode-go|opencode|groq|openrouter|nvidia)\/[a-z0-9._:/-]+)'/g;
+  const godRegex = /([a-z]+):\s*'((?:opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia)\/[a-z0-9._:/-]+)'/g;
   let g;
   while ((g = godRegex.exec(godsBlock)) !== null) {
-    gods[g[1]] = g[2].replace(/^(?:opencode-go|opencode|groq|openrouter|nvidia)\//, '');
+    gods[g[1]] = g[2].replace(/^(?:opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia)\//, '');
     msStrategiesPrefixed[stratName] = msStrategiesPrefixed[stratName] || {};
     msStrategiesPrefixed[stratName][g[1]] = g[2];
   }
@@ -117,7 +117,7 @@ while ((m = asStrategyRegex.exec(asContent)) !== null) {
   const gods = {};
   // Matches either a quoted 'provider/model' value or the
   // FREE_BIG_PICKLE_MODEL constant.
-  const godRegex = /([a-z]+):\s*(?:'((?:opencode-go|opencode|groq|openrouter|nvidia)\/[a-z0-9._:/-]+)'|([A-Z_]+))/g;
+  const godRegex = /([a-z]+):\s*(?:'((?:opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia)\/[a-z0-9._:/-]+)'|([A-Z_]+))/g;
   let g;
   while ((g = godRegex.exec(godsBlock)) !== null) {
     gods[g[1]] = godValue(g[2], g[3]);
@@ -197,11 +197,11 @@ function extractStrategyMirror(content, marker, label) {
   while ((m = stratRe.exec(region)) !== null) {
     const stratName = m[1];
     const gods = {};
-    const godRe = /([a-z]+):\s*['"]((?:opencode-go|opencode|groq|openrouter|nvidia)\/[a-z0-9._:/-]+)['"]/g;
+    const godRe = /([a-z]+):\s*['"]((?:opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia)\/[a-z0-9._:/-]+)['"]/g;
     let g;
     while ((g = godRe.exec(m[2])) !== null) {
       if (GOD_NAMES.has(g[1])) {
-        gods[g[1]] = g[2].replace(/^(?:opencode-go|opencode|groq|openrouter|nvidia)\//, '');
+        gods[g[1]] = g[2].replace(/^(?:opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia)\//, '');
       }
     }
     result[stratName] = gods;
@@ -225,10 +225,10 @@ function extractDefaultPairs(content, marker, field, label) {
   const lines = {};
   const re = (field === 'model' || field === 'default_class')
     ? new RegExp(
-        '([a-z]+):\\s*\\{[^}]*?' + field + ":\\s*'(?:opencode-go|opencode|groq|openrouter|nvidia)\\/([a-z0-9._:/-]+)'",
+        '([a-z]+):\\s*\\{[^}]*?' + field + ":\\s*'(?:opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia)\\/([a-z0-9._:/-]+)'",
         'g',
       )
-    : /([a-z]+):\s*'(?:opencode-go|opencode|groq|openrouter|nvidia)\/([a-z0-9._:/-]+)'/g;
+    : /([a-z]+):\s*'(?:opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia)\/([a-z0-9._:/-]+)'/g;
   let m;
   while ((m = re.exec(region)) !== null) {
     if (!GOD_NAMES.has(m[1])) continue;

@@ -1,0 +1,49 @@
+FAIL  THE BAN: zero nemotron-* ids in the free-nvidia-build assignment (gods + vault + small)
+      the user's ban is LIVE in the assignment — offenders: apollo=nvidia/nvidia/nemotron-3-ultra-550b-a55b, atlas=nvidia/nvidia/nemotron-3-ultra-550b-a55b, callimachus=nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning, vaultLlm=nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+FAIL  THE LANES: all 10 gods on per-family provider lanes (nvidia-glm/-deepseek/-kimi/-meta)
+      gods not on a family lane: apollo=nvidia/nvidia/nemotron-3-ultra-550b-a55b, atlas=nvidia/nvidia/nemotron-3-ultra-550b-a55b, artemis=nvidia/z-ai/glm-5.3, athena=nvidia/z-ai/glm-5.3, dionysus=nvidia/z-ai/glm-5.3, hephaestus=nvidia/z-ai/glm-5.3, hermes=nvidia/z-ai/glm-5.3, persephone=nvidia/z-ai/glm-5.3, prometheus=nvidia/z-ai/glm-5.3, callimachus=nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+FAIL  THE HEAVY THREE: apollo / athena / hephaestus on three DIFFERENT anchors
+      the three heaviest paths share a pool: apollo=nvidia/nvidia/nemotron-3-ultra-550b-a55b, athena=nvidia/z-ai/glm-5.3, hephaestus=nvidia/z-ai/glm-5.3
+FAIL  THE VOLUME LANE: callimachus on the flash lane (z-ai/glm-5.3-flash)
+      callimachus=nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+FAIL  THE VOLUME LANE: vaultLlm on the flash lane
+      vaultLlm=nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+FAIL  THE VOLUME LANE: the strategy small_model on the flash lane (volume, not depth)
+      small_model(free-nvidia-build)=undefined
+FAIL  THE CAP: no more than 3 gods on any single anchor
+      anchors over the cap: nvidia/z-ai/glm-5.3=7
+PASS  THE LIVE SET: every assigned model id exists in the probe-verified live-ids snapshot
+PASS  THE MIRRORS: apply-strategy.js free-nvidia-build map == canonical
+PASS  THE MIRRORS: olympus-hooks.ts free-nvidia-build map == canonical
+PASS  THE MIRRORS: settings-dialog.tsx free-nvidia-build map == canonical
+PASS  THE MIRRORS: check-strategy-sync 9/9 green
+FAIL  THE GENERATOR: nvidia-glm/z-ai/glm-5.3 present with output 16384
+      limits[nvidia-glm/z-ai/glm-5.3]=undefined
+FAIL  THE GENERATOR: nvidia-glm/z-ai/glm-5.3 honest context (1000000)
+      context=(absent)
+FAIL  THE GENERATOR: nvidia-glm/z-ai/glm-5.3-flash present with output 16384
+      limits[nvidia-glm/z-ai/glm-5.3-flash]=undefined
+FAIL  THE GENERATOR: nvidia-glm/z-ai/glm-5.3-flash honest context (1000000)
+      context=(absent)
+FAIL  THE GENERATOR: nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash present with output 16384
+      limits[nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash]=undefined
+FAIL  THE GENERATOR: nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash honest context (1000000)
+      context=(absent)
+FAIL  THE GENERATOR: nvidia-kimi/moonshotai/kimi-k3 present with output 16384
+      limits[nvidia-kimi/moonshotai/kimi-k3]=undefined
+FAIL  THE GENERATOR: nvidia-kimi/moonshotai/kimi-k3 honest context (1048576)
+      context=(absent)
+FAIL  THE GENERATOR: nvidia-meta/meta/muse-glimmer-30b present with output 16384
+      limits[nvidia-meta/meta/muse-glimmer-30b]=undefined
+FAIL  THE GENERATOR: nvidia-meta/meta/muse-glimmer-30b honest context (131072)
+      context=(absent)
+FAIL  THE GENERATOR: the old single-provider nvidia/* lanes are GONE from the table
+      residual lanes: nvidia/nvidia/nemotron-3-ultra-550b-a55b, nvidia/z-ai/glm-5.3, nvidia/nvidia/llama-3.1-nemotron-ultra-253b-v1, nvidia/nvidia/nemotron-3-super-120b-a12b, nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+PASS  THE GENERATOR: every table lane sized >= the #76 floor (8192)
+FAIL  THE PROVIDER SPLIT: all four family entries defined in the generator
+      NVIDIA_FAMILY_PROVIDERS keys: (absent)
+PASS  THE TERMINAL: terminalModel == apollo's lane (the entry god)
+FAIL  THE DESCRIPTION: the strategy description expresses the doctrine (distributed / no Nemotron / no single pool)
+      description missing: distributed, pool
+
+free-pantheon: 20 doctrine violation(s) — the distributed pantheon is NOT in effect

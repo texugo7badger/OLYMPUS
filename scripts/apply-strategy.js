@@ -102,8 +102,12 @@ const STATE_FILE = path.join(OLYMPUS_HOME, 'active-strategy.json');
 const MAX_BACKUPS = 10;
 
 // OpenCode 1.18+ auth file — stores provider keys (both GO and free).
+// opencode's auth.json location — the same resolution opencode itself uses
+// ($XDG_DATA_HOME/opencode, falling back to ~/.local/share/opencode) plus
+// the legacy ~/.config/opencode path. Test fixtures redirect auth access
+// via XDG_DATA_HOME (the same override opencode honors).
 const OPENCODE_AUTH_DIRS = [
-  path.join(os.homedir(), '.local', 'share', 'opencode'),
+  path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'opencode'),
   path.join(os.homedir(), '.config', 'opencode'),
 ];
 
@@ -140,13 +144,6 @@ function loadFreeModelsRefresh() {
 function normalizeLiveId(id) {
   if (!id) return '';
   return id.startsWith('openrouter/') || id.startsWith('nvidia/') ? id : `openrouter/${id}`;
-}
-
-// Same guard for NVIDIA Build ids (nvidia/<vendor>/<model> — no `:free`
-// suffix; every NVIDIA Build endpoint is free with an nvapi-... key).
-function normalizeNvidiaId(id) {
-  if (!id) return '';
-  return id.startsWith('nvidia/') ? id : `nvidia/${id}`;
 }
 
 // Resolved once at module load (must stay before BUILTIN_STRATEGIES — TDZ).
@@ -301,29 +298,39 @@ const BUILTIN_STRATEGIES = {
     prometheus:   'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
     callimachus:  'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
   },
-  // Free Nvidia Build — NVIDIA Build free endpoints (build.nvidia.com), the
-  // same scheme as the other free strategies: Apollo + Atlas on the strongest
-  // NVIDIA free model live right now (curated: Nemotron 3 Ultra 550B — 1M
-  // context), the coding trio (Hephaestus, Athena, Dionysus) on z-ai/glm-5.3
-  // (best coding model on the platform, also 1M context — pinned so a list
-  // reshuffle never bumps the coding gods onto a general-purpose model),
-  // the remaining specialists on the second-strongest, Callimachus on a fast
-  // nano-class background model. Model ids use the nvidia/<vendor>/<model>
-  // prefix (OpenCode's built-in `nvidia` provider) — no `:free` suffix, every
-  // NVIDIA Build endpoint is free with an nvapi-... key. When the refresh
-  // file is fresh, getModelMap() uses the CURRENT top NVIDIA models.
-  // Mirrors free-nvidia-build in src/lib/model-strategies.ts (check-strategy-sync).
+  // Free Nvidia Build — THE DISTRIBUTED PANTHEON (#106, MADRUGA-FREE-1).
+  // The user's directive: the maximum of the NVIDIA free catalog with
+  // DIFFERENT model lanes per god, sharing context through Symphony. NO
+  // Nemotron (the user's ban: low effective context + the observed
+  // contention pool behind "Service temporarily overloaded"). The old
+  // shape — apollo+atlas on nemotron-3-ultra, 7 gods on one glm-5.3 pool —
+  // was the single point of failure.
+  //
+  // The distribution law (asserted by scripts/free-pantheon.test.mjs):
+  // every god on exactly ONE family-prefixed anchor; the three heavy paths
+  // (apollo entry / athena frontend-kit / hephaestus build) on three
+  // DISTINCT pools; callimachus + vaultLlm on the flash lane (volume, not
+  // depth); <=3 gods per anchor; every assigned id probe-verified live
+  // (2026-10-08 — glm-5.3 200/834ms, glm-5.3-flash 200, kimi-k3 200/1181ms,
+  // muse-glimmer-30b 200/1963ms; deepseek-v4.1-flash DEAD ×3 timeouts —
+  // EXCLUDED, its family entry stays for the pinned set with zero gods).
+  //
+  // Model ids are family-prefixed (nvidia-glm/<vendor>/<model> etc.) — one
+  // client pool per family (NVIDIA_FAMILY_PROVIDERS below writes the
+  // provider entries; the auth mirror copies the user's nvapi-... key to
+  // each family id in auth.json). Mirrors free-nvidia-build in
+  // src/lib/model-strategies.ts (check-strategy-sync).
   'free-nvidia-build': {
-    apollo:       'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
-    atlas:        'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
-    hephaestus:   'nvidia/z-ai/glm-5.3',
-    athena:       'nvidia/z-ai/glm-5.3',
-    dionysus:     'nvidia/z-ai/glm-5.3',
-    artemis:      'nvidia/z-ai/glm-5.3',
-    hermes:       'nvidia/z-ai/glm-5.3',
-    persephone:   'nvidia/z-ai/glm-5.3',
-    prometheus:   'nvidia/z-ai/glm-5.3',
-    callimachus:  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+    apollo:       'nvidia-glm/z-ai/glm-5.3',
+    atlas:        'nvidia-glm/z-ai/glm-5.3-flash',
+    artemis:      'nvidia-kimi/moonshotai/kimi-k3',
+    athena:       'nvidia-glm/z-ai/glm-5.3-flash',
+    dionysus:     'nvidia-glm/z-ai/glm-5.3',
+    hephaestus:   'nvidia-kimi/moonshotai/kimi-k3',
+    hermes:       'nvidia-meta/meta/muse-glimmer-30b',
+    persephone:   'nvidia-glm/z-ai/glm-5.3',
+    prometheus:   'nvidia-kimi/moonshotai/kimi-k3',
+    callimachus:  'nvidia-glm/z-ai/glm-5.3-flash',
   },
 };
 
@@ -334,6 +341,11 @@ const SMALL_MODEL_ZEN = 'opencode/deepseek-v4-flash';
 // small_model runs title generation + compaction. A cheap OpenRouter free
 // model keeps those background calls off the flagship's shared pool.
 const SMALL_MODEL_FREE = 'openrouter/nvidia/nemotron-3-nano-30b-a3b:free';
+// #106: free-nvidia-build's small_model rides the strategy's own FAST lane
+// (GLM 5.3 Flash via the nvidia-glm family entry) — volume work (titles,
+// compaction) on the volume lane, zero Nemotron (the user's ban covers the
+// whole family), zero cross-provider key requirements.
+export const SMALL_MODEL_FREE_NVIDIA = 'nvidia-glm/z-ai/glm-5.3-flash';
 
 // Verified live free models with per-model output budgets. DOCTRINE
 // (MADRUGA-FIX-3, superseding the old 2048 rate-window caps): the 2048
@@ -358,14 +370,93 @@ const FREE_MODEL_LIMITS = {
   'openrouter/poolside/laguna-xs-2.1:free': { context: 262144, output: 16384 },
   'openrouter/cohere/north-mini-code:free': { context: 256000, output: 16384 },
   'openrouter/nvidia/nemotron-3-nano-30b-a3b:free': { context: 256000, output: 16384 },
-  // NVIDIA Build free endpoints (nvidia/<vendor>/<model>, no `:free` suffix).
-  // The /models API does not report context_length — these are the curated
-  // windows (mirrors NVIDIA_CONTEXT_OVERRIDES in refresh-free-models.js).
-  'nvidia/nvidia/nemotron-3-ultra-550b-a55b': { context: 1000000, output: 16384 },
-  'nvidia/z-ai/glm-5.3': { context: 1000000, output: 16384 },
-  'nvidia/nvidia/llama-3.1-nemotron-ultra-253b-v1': { context: 131072, output: 16384 },
-  'nvidia/nvidia/nemotron-3-super-120b-a12b': { context: 262144, output: 16384 },
-  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning': { context: 256000, output: 16384 },
+  // NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON's anchor lanes
+  // (#106): family-prefixed ids (one client pool per family). The
+  // /models API does not report context_length — these are the LIVE MODEL
+  // CARD windows, verified 2026-10-08 (E8 record:
+  // reports/free-1/s0/E8-LIVE-MODEL-VERIFICATION.md): kimi-k3 1,048,576
+  // (build.nvidia.com/moonshotai/kimi-k3), muse-glimmer-30b 131,072
+  // (build.nvidia.com/meta/muse-glimmer-30b) — never inflated. The old
+  // single-provider nvidia/* lanes (the nemotron pool era) are GONE.
+  'nvidia-glm/z-ai/glm-5.3': { context: 1000000, output: 16384 },
+  'nvidia-glm/z-ai/glm-5.3-flash': { context: 1000000, output: 16384 },
+  'nvidia-kimi/moonshotai/kimi-k3': { context: 1048576, output: 16384 },
+  'nvidia-meta/meta/muse-glimmer-30b': { context: 131072, output: 16384 },
+  'nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash': { context: 1000000, output: 16384 },
+};
+
+/**
+ * #106 — the provider split: per-family provider entries for the NVIDIA
+ * Build free tier. Same base URL, same key (the auth mirror below copies the
+ * user's `nvidia` auth.json key to each family id — the standard /connect
+ * flow's storage). Each family carries ONLY its family's models: per-god
+ * client pools + independent retry/backoff state + a config that EXPRESSES
+ * the doctrine. Empirically verified end-to-end 2026-10-08 (a scratch
+ * config dispatched nvidia-glm/z-ai/glm-5.3 "OK" through exactly this
+ * shape — npm @ai-sdk/openai-compatible + options.baseURL + auth.json key).
+ *
+ * The deepseek family entry stays in the pinned anchor set but carries ZERO
+ * gods tonight — the pool was dead at the E8 probe (3× timeouts, disclosed).
+ */
+export const NVIDIA_FAMILY_PROVIDERS = {
+  'nvidia-glm': {
+    name: 'NVIDIA Build — GLM family lane',
+    npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: 'https://integrate.api.nvidia.com/v1' },
+    models: {
+      'z-ai/glm-5.3': {
+        name: 'GLM 5.3 (753B reasoner — the entry lane)',
+        limit: { context: 1000000, output: 16384 },
+        reasoning: true,
+        tool_call: true,
+      },
+      'z-ai/glm-5.3-flash': {
+        name: 'GLM 5.3 Flash (fast multimodal — the volume lane)',
+        limit: { context: 1000000, output: 16384 },
+        reasoning: true,
+        tool_call: true,
+      },
+    },
+  },
+  'nvidia-deepseek': {
+    name: 'NVIDIA Build — DeepSeek family lane (pinned anchor; pool dead at the 2026-10-08 probe — zero gods until it recovers)',
+    npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: 'https://integrate.api.nvidia.com/v1' },
+    models: {
+      'deepseek-ai/deepseek-v4.1-flash': {
+        name: 'DeepSeek V4.1 Flash (552B MoE, 8B active)',
+        limit: { context: 1000000, output: 16384 },
+        reasoning: true,
+        tool_call: true,
+      },
+    },
+  },
+  'nvidia-kimi': {
+    name: 'NVIDIA Build — Kimi family lane (long-horizon coding)',
+    npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: 'https://integrate.api.nvidia.com/v1' },
+    models: {
+      'moonshotai/kimi-k3': {
+        name: 'Kimi K3 (2.8T MoE, 104B active, agentic)',
+        limit: { context: 1048576, output: 16384 },
+        reasoning: true,
+        tool_call: true,
+      },
+    },
+  },
+  'nvidia-meta': {
+    name: 'NVIDIA Build — Meta family lane (the alternate fast)',
+    npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: 'https://integrate.api.nvidia.com/v1' },
+    models: {
+      'meta/muse-glimmer-30b': {
+        name: 'Muse Glimmer 30B (multimodal reasoning, tool-calling)',
+        limit: { context: 131072, output: 16384 },
+        reasoning: true,
+        tool_call: true,
+      },
+    },
+  },
 };
 
 /**
@@ -373,7 +464,20 @@ const FREE_MODEL_LIMITS = {
  * plus any models discovered by the live refresh. Refreshed models carry
  * their own context/output from the provider's list; curated entries win
  * when both exist (they are the verified values).
+ *
+ * #106: the nvidia refresh list merges ONLY under family prefixes for the
+ * four pinned families (z-ai → nvidia-glm, moonshotai → nvidia-kimi,
+ * meta → nvidia-meta, deepseek-ai → nvidia-deepseek) and never widens the
+ * pinnable set beyond a pinned family's lanes — the anchor set is
+ * USER-PINNED; the refresh serves the distribution, never overrides it.
+ * The old plain `nvidia/<vendor>/<model>` merge is gone with the old pool.
  */
+const NVIDIA_FAMILY_BY_VENDOR = {
+  'z-ai': 'nvidia-glm',
+  'moonshotai': 'nvidia-kimi',
+  'meta': 'nvidia-meta',
+  'deepseek-ai': 'nvidia-deepseek',
+};
 function getFreeModelLimits() {
   const limits = { ...FREE_MODEL_LIMITS };
   const refresh = loadFreeModelsRefresh();
@@ -382,8 +486,15 @@ function getFreeModelLimits() {
       const list = refresh[prov]?.all || refresh[prov]?.top || [];
       for (const m of list) {
         if (!m || !m.id) continue;
-        if (!limits[m.id]) {
-          limits[m.id] = { context: m.context || 131072, output: m.output || 1024 };
+        let fullId = m.id;
+        if (prov === 'nvidia') {
+          const vendor = m.id.split('/')[0];
+          const family = NVIDIA_FAMILY_BY_VENDOR[vendor];
+          if (!family) continue; // not a pinned family — the anchor set is user-pinned
+          fullId = `${family}/${m.id}`;
+        }
+        if (!limits[fullId]) {
+          limits[fullId] = { context: m.context || 131072, output: m.output || 1024 };
         }
       }
     }
@@ -397,7 +508,8 @@ function getFreeModelLimits() {
 const KNOWN_FREE_MODELS = new Set([
   ...Object.keys(FREE_MODEL_LIMITS),
   ...Object.entries(getFreeModelLimits())
-    .filter(([id]) => id.startsWith('openrouter/') || id.startsWith('nvidia/'))
+    .filter(([id]) => id.startsWith('openrouter/')
+      || /^(nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia)\//.test(id))
     .map(([id]) => id),
 ]);
 const KNOWN_GO_MODELS = new Set([
@@ -683,73 +795,44 @@ function buildOpenRouterMixed() {
 }
 
 /**
- * The NVIDIA Build split (free-nvidia-build): Apollo + Atlas on the strongest
- * NVIDIA free model live right now (curated: Nemotron 3 Ultra 550B — 1M
- * context), the coding trio (Hephaestus, Athena, Dionysus) on z-ai/glm-5.3
- * (the best coding model on the platform — pinned so a list reshuffle never
- * bumps the coding gods onto a general-purpose model), the remaining
- * specialists on the second-strongest (≥ 131K context + sanity score),
- * Callimachus on a fast nano-class background model from the live list (or
- * the curated Nemotron nano). NVIDIA ids have no `:free` suffix — every
- * Build endpoint is free with an nvapi-... key.
+ * The NVIDIA Build split (free-nvidia-build) — #106's ANCHOR-PIN doctrine.
+ *
+ * The distribution is USER-PINNED (the family-prefixed anchor map in
+ * BUILTIN_STRATEGIES): every god on exactly one anchor lane, zero Nemotron
+ * (the user's ban), the three heavy paths on three distinct pools,
+ * callimachus + vault on the flash lane, <=3 gods per anchor. The live
+ * refresh NEVER overrides the assignment — the old "strongest live #1 for
+ * apollo+atlas" logic was the #106 root cause (the scorer optimized
+ * per-model capability, never pool distribution, and parked the entry lane
+ * on the most-contended pool).
+ *
+ * The refresh's only powers here: VERIFY each anchor's availability (a dead
+ * anchor surfaces LOUDLY — never silently swapped) and carry renamed ids
+ * (Batch B's refresh doctrine updates the pinned ids when NVIDIA renames).
  */
 function getNvidiaBuildModelMap() {
   const refresh = loadFreeModelsRefresh(); // re-read so a mid-run refresh is picked up
-  const nvTop = refresh?.nvidia?.top || [];
+  const nvAll = refresh?.nvidia?.all || refresh?.nvidia?.top || [];
   const map = { ...BUILTIN_STRATEGIES['free-nvidia-build'] };
 
-  const pickPrimary = () => {
-    const live = normalizeNvidiaId(nvTop[0]?.id);
-    if (live) {
-      log(`  Free Nvidia Build: Apollo/Atlas -> ${live} (live #1 from refresh)`);
-      return live;
+  if (nvAll.length > 0) {
+    const liveIds = new Set(nvAll.map(m => m && m.id).filter(Boolean));
+    const deadAnchors = [];
+    for (const [god, lane] of Object.entries(map)) {
+      const bare = lane.replace(/^nvidia-[a-z]+\//, ''); // strip the family prefix
+      if (!liveIds.has(bare)) deadAnchors.push(`${god}=${lane} (bare id ${bare} not in the live list)`);
     }
-    return 'nvidia/nvidia/nemotron-3-ultra-550b-a55b';
-  };
-
-  // Best coding free endpoint on NVIDIA Build — GLM-5.3 (1M context). The
-  // platform retired z-ai/glm-5.2 (the MADRUGA-2b D19 incident: subagent
-  // spawns died at model resolution with "Model not found: nvidia/z-ai/
-  // glm-5.2. Did you mean: z-ai/glm-5.3?"). Pinned so a list reshuffle
-  // never bumps the coding gods onto a general-purpose model; the L4
-  // apply-time catalogue preflight catches future retirements loudly.
-  const NV_CODING_MODEL = 'nvidia/z-ai/glm-5.3';
-
-  const pickCoding = () => {
-    log(`  Free Nvidia Build: coding gods (Hephaestus/Athena/Dionysus) -> ${NV_CODING_MODEL} (best coding, pinned)`);
-    return NV_CODING_MODEL;
-  };
-
-  const pickSpecialist = () => {
-    const second = nvTop[1];
-    if (second && second.context >= 131072 && second.score >= 30) {
-      const live = normalizeNvidiaId(second.id);
-      log(`  Free Nvidia Build: specialist roles -> ${live} (live #2 from refresh)`);
-      return live;
+    if (deadAnchors.length > 0) {
+      log(`  Free Nvidia Build: ANCHOR-PIN WARNING — ${deadAnchors.length} lane(s) not in the live refresh list:`);
+      for (const d of deadAnchors) log(`    ${d}`);
+      log(`    The anchor set is USER-PINNED — no silent replacement. If NVIDIA renamed a model,`);
+      log(`    run scripts/refresh-free-models.js (the anchor-pin update path) and re-apply.`);
+    } else {
+      log(`  Free Nvidia Build: all anchor lanes verified live (${liveIds.size} models in the refresh list)`);
     }
-    return 'nvidia/z-ai/glm-5.3';
-  };
-
-  const pickNano = () => {
-    // Search the FULL list (top is sliced to 10 — the nano background models
-    // score low and rarely make the top-10 slice). `all` is sorted by score,
-    // so find() returns the highest-scoring nano-class model.
-    const nanoList = refresh?.nvidia?.all || refresh?.nvidia?.top || [];
-    const nano = nanoList.find(m => /nano/.test(m.id));
-    if (nano) {
-      const live = normalizeNvidiaId(nano.id);
-      log(`  Free Nvidia Build: Callimachus -> ${live} (live nano from refresh)`);
-      return live;
-    }
-    return 'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning'; // the plain nano-30b-a3b left the live catalogue (FIX-3, live-verified)
-  };
-
-  for (const g of ['apollo', 'atlas']) map[g] = pickPrimary();
-  for (const g of ['hephaestus', 'athena', 'dionysus']) map[g] = pickCoding();
-  for (const g of ['artemis', 'hermes', 'persephone', 'prometheus']) {
-    map[g] = pickSpecialist();
+  } else {
+    log(`  Free Nvidia Build: no fresh refresh list — the pinned anchor map stands (probe-verified 2026-10-08, #105's law: availability claims carry probe evidence — reports/free-1/s0/E8-LIVE-MODEL-VERIFICATION.md)`);
   }
-  map.callimachus = pickNano();
   return map;
 }
 
@@ -1128,6 +1211,91 @@ function applyFreeProviderLimits(config, modelMap) {
   }
   if (changes > 0) log(`  Applied ${changes} provider limit(s) for free models`);
   return changes;
+}
+
+// --- #106: the provider split (free-nvidia-build) ----------------------------
+
+/**
+ * Write the per-family provider entries (nvidia-glm / nvidia-deepseek /
+ * nvidia-kimi / nvidia-meta) into the config — one client pool per family,
+ * each carrying ONLY its family's models with honest limits. Empirically
+ * verified end-to-end 2026-10-08: a scratch config with exactly this shape
+ * (npm @ai-sdk/openai-compatible + options.baseURL + an auth.json key per
+ * family id) dispatched nvidia-glm/z-ai/glm-5.3 "OK" through the real
+ * opencode binary. The F3b cleanup in applyFreeProviderLimits then removes
+ * the old single-`nvidia` block's dead lanes (they left the generator
+ * table with the old pool era).
+ */
+function applyNvidiaFamilyProviders(config) {
+  let changes = 0;
+  const providers = config.provider || (config.provider = {});
+  for (const [family, fp] of Object.entries(NVIDIA_FAMILY_PROVIDERS)) {
+    const pcfg = providers[family] || (providers[family] = {});
+    if (pcfg.npm !== fp.npm) { pcfg.npm = fp.npm; changes++; }
+    if (pcfg.name !== fp.name) { pcfg.name = fp.name; changes++; }
+    pcfg.options = pcfg.options || {};
+    if (pcfg.options.baseURL !== fp.options.baseURL) {
+      pcfg.options.baseURL = fp.options.baseURL;
+      changes++;
+    }
+    pcfg.models = pcfg.models || {};
+    for (const [mid, mc] of Object.entries(fp.models)) {
+      const cur = pcfg.models[mid] || (pcfg.models[mid] = {});
+      if (cur.name !== mc.name) { cur.name = mc.name; changes++; }
+      if (cur.reasoning !== mc.reasoning) { cur.reasoning = mc.reasoning; changes++; }
+      if (cur.tool_call !== mc.tool_call) { cur.tool_call = mc.tool_call; changes++; }
+      cur.limit = cur.limit || {};
+      if (cur.limit.context !== mc.limit.context) { cur.limit.context = mc.limit.context; changes++; }
+      if (cur.limit.output !== mc.limit.output) { cur.limit.output = mc.limit.output; changes++; }
+    }
+  }
+  log(`  provider split: ${Object.keys(NVIDIA_FAMILY_PROVIDERS).length} NVIDIA family lanes written (per-family client pools)`);
+  return changes;
+}
+
+/**
+ * Mirror the user's `nvidia` auth.json key to the four family provider ids
+ * (nvidia-glm / nvidia-deepseek / nvidia-kimi / nvidia-meta) — the standard
+ * /connect flow's storage, keyed by provider id. NO new secrets are
+ * introduced (the same nvapi-... key, under aliases); auth.json is never
+ * tracked by git. Absent family entries are written; existing ones are
+ * never overwritten. A missing `nvidia` key is a soft warning (same
+ * doctrine as validateFreeFallbackKeys for this strategy).
+ */
+function mirrorNvidiaFamilyAuthKeys() {
+  const FAMILIES = Object.keys(NVIDIA_FAMILY_PROVIDERS);
+  for (const dir of OPENCODE_AUTH_DIRS) {
+    const authFile = path.join(dir, 'auth.json');
+    if (!fs.existsSync(authFile)) continue;
+    let auth;
+    try {
+      auth = JSON.parse(fs.readFileSync(authFile, 'utf-8'));
+    } catch (e) {
+      log(`  WARNING: could not parse ${authFile} — family key mirror skipped (${e.message})`);
+      continue;
+    }
+    const nvidia = auth.nvidia;
+    const key = !nvidia ? '' : typeof nvidia === 'string' ? nvidia
+      : typeof nvidia.key === 'string' ? nvidia.key
+      : typeof nvidia.apiKey === 'string' ? nvidia.apiKey : '';
+    if (!key) {
+      log(`  WARNING: no NVIDIA key in ${authFile} — the family lanes will dispatch APIError until one is added (Settings → Providers → NVIDIA).`);
+      continue;
+    }
+    let written = 0;
+    for (const f of FAMILIES) {
+      if (!auth[f] || !(typeof auth[f] === 'object' ? (auth[f].key || auth[f].apiKey) : auth[f])) {
+        auth[f] = { type: 'api', key };
+        written++;
+      }
+    }
+    if (written > 0) {
+      fs.writeFileSync(authFile, JSON.stringify(auth, null, 2) + '\n', 'utf-8');
+      log(`  provider split: mirrored the NVIDIA key to ${written} family auth entr${written === 1 ? 'y' : 'ies'} in ${authFile} (${FAMILIES.join(', ')})`);
+    } else {
+      log(`  provider split: family auth entries already present in ${authFile} (${FAMILIES.join(', ')})`);
+    }
+  }
 }
 
 // --- Backup / Restore ------------------------------------------------------
@@ -1533,9 +1701,15 @@ function applyFreeConfigShape(config, modelMap, strategy) {
   }
 
   // --- 5. small_model ---
-  if (config.small_model !== FREE_CONFIG_SHAPE.small_model) {
-    log(`  small_model: ${config.small_model || '(none)'} -> ${FREE_CONFIG_SHAPE.small_model}`);
-    config.small_model = FREE_CONFIG_SHAPE.small_model;
+  // #106: free-nvidia-build's small_model rides the strategy's own flash
+  // lane (volume work on the volume lane, zero Nemotron, zero cross-provider
+  // key needs). The other free strategies keep the OpenRouter nano default.
+  const expectedSmallModel = strategy === 'free-nvidia-build'
+    ? SMALL_MODEL_FREE_NVIDIA
+    : FREE_CONFIG_SHAPE.small_model;
+  if (config.small_model !== expectedSmallModel) {
+    log(`  small_model: ${config.small_model || '(none)'} -> ${expectedSmallModel}`);
+    config.small_model = expectedSmallModel;
     changes++;
   }
 
@@ -1622,12 +1796,20 @@ function preflightModelCatalogue(config, opts = {}) {
       }
     }
   }
-  // Group by provider (first path segment).
+  // Group by provider (first path segment). #106: family-prefixed lanes
+  // (nvidia-glm/z-ai/glm-5.3 etc.) validate against the BUILT-IN `nvidia`
+  // catalogue — the family entry is the same model on the same NVIDIA
+  // Build endpoint, routed through a per-family client pool; before the
+  // first apply writes the family providers, `opencode models nvidia-glm`
+  // would report "Provider not found" (the probe reads the on-disk config).
+  const FAMILY_PROVIDER_RE = /^(nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta)$/;
   const byProvider = new Map();
   for (const id of ids) {
-    const provider = id.split('/')[0];
-    if (!byProvider.has(provider)) byProvider.set(provider, []);
-    byProvider.get(provider).push(id);
+    const family = id.split('/')[0];
+    const probeProvider = FAMILY_PROVIDER_RE.test(family) ? 'nvidia' : family;
+    const probeId = probeProvider !== family ? id.replace(/^nvidia-[a-z]+\//, 'nvidia/') : id;
+    if (!byProvider.has(probeProvider)) byProvider.set(probeProvider, []);
+    byProvider.get(probeProvider).push(probeId);
   }
   const opencodeBin = path.join(OLYMPUS_ROOT, 'node_modules', '.bin', 'opencode');
   if (!fs.existsSync(opencodeBin)) {
@@ -2030,6 +2212,12 @@ function main() {
     }
     process.exit(1);
   }
+  // #106: the provider split's key plumbing — mirror the user's nvidia key
+  // to the family ids BEFORE the config carries family lanes (the dispatch
+  // path reads auth.json per provider id). Skipped on --dry-run (no writes).
+  if (strategy === 'free-nvidia-build' && !dryRun) {
+    mirrorNvidiaFamilyAuthKeys();
+  }
 
   // Validate free-tier API keys before applying any free strategy.
   if (isFreeTierStrategy(strategy)) {
@@ -2098,6 +2286,12 @@ function main() {
     const family = strategyFamily(strategy);
     if (family === 'FREE') {
       changes = applyFreeConfigShape(config, modelMap, strategy);
+      // #106: the per-family provider entries (one client pool per family)
+      // for the distributed pantheon — BEFORE the limit harmonizer, so the
+      // family lanes exist when it runs.
+      if (strategy === 'free-nvidia-build') {
+        changes += applyNvidiaFamilyProviders(config);
+      }
       // Output caps for the free providers (max_tokens override) + strip
       // any leftover debug proxy baseURL.
       changes += applyFreeProviderLimits(config, modelMap);
@@ -2153,13 +2347,21 @@ function main() {
       console.log('    - 10 gods only (demigods removed)');
       console.log('    - God prompts inlined (OpenRouter/NVIDIA: 1000 chars)');
       console.log('    - Plugins trimmed to overlay + router + cache');
-      console.log('    - Gods routed to the strongest free models live right now');
-      console.log('      (curated defaults when ~/.olympus/free-models.json is stale/absent)');
+      if (strategy === 'free-nvidia-build') {
+        console.log('    - The DISTRIBUTED PANTHEON (#106): per-god model lanes on the');
+        console.log('      user-pinned NVIDIA anchors — no single pool, no Nemotron (the');
+        console.log('      user\'s ban). The anchor set is pinned; the refresh verifies');
+        console.log('      availability, never replaces.');
+      } else {
+        console.log('    - Gods routed to the strongest free models live right now');
+        console.log('      (curated defaults when ~/.olympus/free-models.json is stale/absent)');
+      }
       console.log('    - Per-god overrides from Settings merged in (stale ones dropped)');
       console.log('');
       console.log('  To configure free API keys: run `olympus opencode`, open Settings,');
       console.log('  and add your OpenRouter and/or NVIDIA API keys as providers');
-      console.log('  (free-nvidia-build uses NVIDIA — key starts with nvapi-).');
+      console.log('  (free-nvidia-build uses NVIDIA — key starts with nvapi-; the apply');
+      console.log('  mirrors it to the per-family provider ids automatically).');
       console.log('');
       console.log('  To refresh the free model list from the live providers:');
       console.log('    node scripts/refresh-free-models.js');

@@ -232,19 +232,16 @@ const ALL_CLASSES = [
   'openrouter/poolside/laguna-xs-2.1:free',
   'openrouter/cohere/north-mini-code:free',
   'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
-  // NVIDIA Build free endpoints (build.nvidia.com) — resolved by OpenCode's
-  // built-in `nvidia` provider (no `:free` suffix; every Build endpoint is
-  // free with an nvapi-... key).
-  'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
-  'nvidia/z-ai/glm-5.3',
-  'nvidia/nvidia/llama-3.1-nemotron-ultra-253b-v1',
-  'nvidia/nvidia/nemotron-3-super-120b-a12b',
-  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
-  'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
-  'nvidia/deepseek-ai/deepseek-v4-pro',
-  'nvidia/deepseek-ai/deepseek-v4-flash',
-  'nvidia/openai/gpt-oss-120b',
-  'nvidia/moonshotai/kimi-k2.6',
+  // NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON's anchor lanes
+  // (#106): family-prefixed ids, one client pool per family (nvidia-glm /
+  // nvidia-deepseek / nvidia-kimi / nvidia-meta — same base URL, same
+  // nvapi-... key). The anchor set is USER-PINNED; NO Nemotron (the user's
+  // ban). Probe-verified 2026-10-08 (reports/free-1/s0/).
+  'nvidia-glm/z-ai/glm-5.3',
+  'nvidia-glm/z-ai/glm-5.3-flash',
+  'nvidia-kimi/moonshotai/kimi-k3',
+  'nvidia-meta/meta/muse-glimmer-30b',
+  'nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash',
 ];
 
 // Curated per-strategy per-god model maps — the canonical defaults shown in
@@ -360,16 +357,16 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     callimachus: 'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
   },
   'free-nvidia-build': {
-    apollo: 'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
-    atlas: 'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
-    hephaestus: 'nvidia/z-ai/glm-5.3',
-    athena: 'nvidia/z-ai/glm-5.3',
-    dionysus: 'nvidia/z-ai/glm-5.3',
-    artemis: 'nvidia/z-ai/glm-5.3',
-    hermes: 'nvidia/z-ai/glm-5.3',
-    persephone: 'nvidia/z-ai/glm-5.3',
-    prometheus: 'nvidia/z-ai/glm-5.3',
-    callimachus: 'nvidia/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning',
+    apollo: 'nvidia-glm/z-ai/glm-5.3',
+    atlas: 'nvidia-glm/z-ai/glm-5.3-flash',
+    artemis: 'nvidia-kimi/moonshotai/kimi-k3',
+    athena: 'nvidia-glm/z-ai/glm-5.3-flash',
+    dionysus: 'nvidia-glm/z-ai/glm-5.3',
+    hephaestus: 'nvidia-kimi/moonshotai/kimi-k3',
+    hermes: 'nvidia-meta/meta/muse-glimmer-30b',
+    persephone: 'nvidia-glm/z-ai/glm-5.3',
+    prometheus: 'nvidia-kimi/moonshotai/kimi-k3',
+    callimachus: 'nvidia-glm/z-ai/glm-5.3-flash',
   },
 };
 
@@ -378,7 +375,7 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
 const FALLBACK_CLASS_FAMILIES: Record<'GO' | 'ZEN' | 'FREE', string[]> = {
   GO: ALL_CLASSES.filter(c => c.startsWith('opencode-go/')),
   ZEN: ALL_CLASSES.filter(c => c.startsWith('opencode/')),
-  FREE: ALL_CLASSES.filter(c => c.startsWith('openrouter/') || c.startsWith('nvidia/')),
+  FREE: ALL_CLASSES.filter(c => c.startsWith('openrouter/') || /^(nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia)\//.test(c)),
 };
 
 // Map a strategy entry to the family whose models it may use. GO strategies
@@ -422,7 +419,7 @@ function fallbackData(): SettingsData {
       // Free strategies — for users without a GO plan.
       { id: 'free-openrouter', label: 'Free OpenRouter', description: 'All gods on OpenRouter\'s strongest free models live right now — primary trio on #1, specialists on #2, Callimachus on a fast background model.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', estCostPerDay: 'free' },
       { id: 'free-big-pickle', label: 'Free Big Pickle', description: 'All 10 gods (Callimachus included) on one free model — the strongest currently live. Refreshes automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', estCostPerDay: 'free' },
-      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints (build.nvidia.com) — Apollo + Atlas on the strongest NVIDIA free model live right now, coding gods (Hephaestus/Athena/Dionysus) on GLM-5.3 (best coding), other specialists on #2, Callimachus on a fast background model. Refreshes automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia/nvidia/nemotron-3-ultra-550b-a55b', estCostPerDay: 'free' },
+      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchors (GLM-5.3 / GLM-5.3-Flash / Kimi K3 / Muse Glimmer), per-family client pools, no single pool, NO Nemotron (the user\'s ban). The anchor set is pinned — the refresh verifies availability, never replaces.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
     ],
     go_plan_last_verified: '2026-07-29',
     go_plan_docs_url: 'https://opencode.ai/docs/go/',

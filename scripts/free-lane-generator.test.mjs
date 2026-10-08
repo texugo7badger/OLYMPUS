@@ -17,8 +17,15 @@
  *
  * Deterministic: the lane gets a STUB opencode binary whose catalogue is
  * fixed by this fixture; OLYMPUS_HOME is redirected to a temp dir so the
- * real ~/.olympus is never touched; the REAL repo opencode.json is
- * hash-guarded before/after (R4).
+ * real ~/.olympus is never touched; XDG_DATA_HOME is redirected so the
+ * #106 auth.json family mirror NEVER touches the real opencode auth store;
+ * the REAL repo opencode.json is hash-guarded before/after (R4).
+ *
+ * #106 (MADRUGA-FREE-1) doctrine updates: the generator's nvidia map is
+ * USER-PINNED (the anchor-pin) — the fixture's fake "stronger nemotron
+ * live #1" must NOT override it (the old concentration logic was the
+ * defect); a RETIRED anchor (a catalogue that drops a pinned id) fails
+ * LOUDLY at apply time with the D19 shape — never a silent swap.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
@@ -43,12 +50,15 @@ const OLYMPUS_TOOLS = [
 ];
 
 // The stub catalogue (what `opencode models <provider>` prints in the lane).
+// #106: the family lanes (nvidia-glm/…) validate against the base `nvidia`
+// catalogue (the preflight's family remap) — the stub carries the bare ids.
 const STUB_CATALOGUE = {
   nvidia: [
     'nvidia/z-ai/glm-5.3', 'nvidia/z-ai/glm-5.3-flash',
     'nvidia/nvidia/nemotron-3-ultra-550b-a55b',
     'nvidia/nvidia/nemotron-3.5-lightning',
     'nvidia/moonshotai/kimi-k3', 'nvidia/deepseek-ai/deepseek-v4.1-flash',
+    'nvidia/meta/muse-glimmer-30b',
     'nvidia/nvidia/nemotron-3-nano-30b-a3b',
   ],
   'opencode-go': [
@@ -66,7 +76,14 @@ const STUB_CATALOGUE = {
 const STUB_OPENCODE = `#!/usr/bin/env node
 // MADRUGA-3 p1 fixture stub — deterministic stand-in for the opencode
 // catalogue probe. Prints the fixture's fixed catalogue for \`models\`.
-const cat = ${JSON.stringify(STUB_CATALOGUE)};
+// A lane may plant its OWN catalogue at node_modules/.bin/stub-catalogue.json
+// (the retired-anchor fixture G3) — that file wins when present.
+const fs = require('fs');
+const path = require('path');
+let cat = ${JSON.stringify(STUB_CATALOGUE)};
+try {
+  cat = JSON.parse(fs.readFileSync(path.join(__dirname, 'stub-catalogue.json'), 'utf-8'));
+} catch {}
 const provider = process.argv[3];
 if (provider && cat[provider]) process.stdout.write(cat[provider].join('\\n') + '\\n');
 else if (provider) { process.stderr.write('unknown provider: ' + provider + '\\n'); process.exit(1); }
@@ -94,7 +111,7 @@ function applyStrategy(args, env) {
   return { status: r.status, out: (r.stdout || '') + (r.stderr || '') };
 }
 
-function makeLane({ withPrompts = true, withStubBinary = true } = {}) {
+function makeLane({ withPrompts = true, withStubBinary = true, stubCatalogue = null } = {}) {
   const lane = join(WORK, `lane-${Math.random().toString(36).slice(2, 9)}`);
   mkdirSync(join(lane, '.opencode', 'prompts', 'agents', 'gods'), { recursive: true });
   if (withStubBinary) {
@@ -102,6 +119,10 @@ function makeLane({ withPrompts = true, withStubBinary = true } = {}) {
     const stub = join(lane, 'node_modules', '.bin', 'opencode');
     writeFileSync(stub, STUB_OPENCODE);
     chmodSync(stub, 0o755);
+    if (stubCatalogue) {
+      writeFileSync(join(lane, 'node_modules', '.bin', 'stub-catalogue.json'),
+        JSON.stringify(stubCatalogue));
+    }
   }
   const agent = {};
   for (const g of GODS) {
@@ -127,28 +148,31 @@ function makeLane({ withPrompts = true, withStubBinary = true } = {}) {
   return lane;
 }
 
-function makeHome({ deadPrimary = false } = {}) {
+function makeHome() {
   const home = join(WORK, `home-${Math.random().toString(36).slice(2, 9)}`);
   mkdirSync(home, { recursive: true });
-  // A fresh refresh file: top[0] drives Apollo/Atlas, top[1] the specialists.
-  // Ids are in POST-normalize form (normalizeNvidiaId keeps nvidia/-prefixed
-  // ids as-is) so the generated map lands exactly on the stub catalogue.
-  // N38 (GAP-1-S1): 'z-ai/glm-5.2' below is a DELIBERATE dead-id test
-  // constant — the retired D19 pin, absent from STUB_CATALOGUE by design
-  // (the deadPrimary fixture case depends on that absence). LOAD-BEARING:
-  // the day the live catalogue retires glm-5.3 and the stub catalogue moves
-  // on, swap in a fresh dead id so this datum can never accidentally
-  // resolve. Do not "fix" it to a served id.
-  const top0 = deadPrimary ? 'z-ai/glm-5.2' : 'nvidia/nvidia/nemotron-3.5-lightning';
+  // A fresh refresh file. #106's ANCHOR-PIN doctrine: the pinned map in
+  // BUILTIN_STRATEGIES stands; the refresh list only VERIFIES availability.
+  // top[0] is a DELIBERATE "stronger nemotron live #1" — the negative
+  // fixture: the old concentration logic parked apollo+atlas on exactly
+  // this id (the #106 defect). The new doctrine must leave the pinned map
+  // untouched, the fake #1 appearing NOWHERE in the generated config.
+  // `all` carries the five anchors so the availability check verifies green
+  // (the retired-anchor loud-failure fixture G3 plants its own stub
+  // CATALOGUE at the lane — the refresh file here stays honest).
   writeFileSync(join(home, 'free-models.json'), JSON.stringify({
     fetched_at: nowIso(),
     nvidia: {
       top: [
-        { id: top0, context: 1000000, score: 90 },
+        { id: 'nvidia/nvidia/nemotron-3.5-lightning', context: 1000000, score: 90 },
         { id: 'z-ai/glm-5.3-flash', context: 1000000, score: 85 },
       ],
       all: [
-        { id: 'nvidia/nvidia/nemotron-3-nano-30b-a3b', context: 1000000, score: 10 },
+        { id: 'z-ai/glm-5.3', context: 1000000, score: 99 },
+        { id: 'z-ai/glm-5.3-flash', context: 1000000, score: 98 },
+        { id: 'moonshotai/kimi-k3', context: 1048576, score: 97 },
+        { id: 'meta/muse-glimmer-30b', context: 131072, score: 96 },
+        { id: 'deepseek-ai/deepseek-v4.1-flash', context: 1000000, score: 95 },
       ],
     },
     openrouter: { top: [{ id: 'nvidia/nemotron-3-ultra-550b-a55b:free', context: 1000000, score: 90 }] },
@@ -175,7 +199,7 @@ mkdirSync(WORK, { recursive: true });
   const lane = makeLane();
   const home = makeHome();
   const r = applyStrategy(['--strategy', 'free-nvidia-build'],
-    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home });
+    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
   check('G1 apply exits 0', r.status === 0, `status=${r.status} out=${r.out.slice(-500)}`);
   if (r.status === 0) {
     const cfg = readLaneCfg(lane);
@@ -207,40 +231,79 @@ mkdirSync(WORK, { recursive: true });
     check('G1 shape: free plugin preset (nvidia build: cache plugins stripped)',
       JSON.stringify(cfg.plugin) === JSON.stringify(['./.opencode/olympus', './.opencode/plugins/olympus-router']),
       JSON.stringify(cfg.plugin));
+    // #106 THE ANCHOR-PIN: the pinned family-lane map lands VERBATIM — the
+    // fake "stronger nemotron live #1" from the refresh appears NOWHERE
+    // (the old concentration logic parked apollo+atlas on it — the defect).
+    const PINNED = {
+      apollo: 'nvidia-glm/z-ai/glm-5.3', atlas: 'nvidia-glm/z-ai/glm-5.3-flash',
+      artemis: 'nvidia-kimi/moonshotai/kimi-k3', athena: 'nvidia-glm/z-ai/glm-5.3-flash',
+      dionysus: 'nvidia-glm/z-ai/glm-5.3', hephaestus: 'nvidia-kimi/moonshotai/kimi-k3',
+      hermes: 'nvidia-meta/meta/muse-glimmer-30b', persephone: 'nvidia-glm/z-ai/glm-5.3',
+      prometheus: 'nvidia-kimi/moonshotai/kimi-k3', callimachus: 'nvidia-glm/z-ai/glm-5.3-flash',
+    };
+    const pinDrift = GODS.filter(g => cfg.agent[g]?.model !== PINNED[g]);
+    check('G1 #106: the pinned anchor map lands verbatim (no silent drift)',
+      pinDrift.length === 0, pinDrift.map(g => `${g}: ${cfg.agent[g]?.model} != ${PINNED[g]}`).join(', '));
+    check('G1 #106: the fake stronger-nemotron live #1 appears NOWHERE in the config',
+      JSON.stringify(cfg).includes('nemotron-3.5-lightning') === false,
+      'the refresh overrode the pin — the concentration defect is back');
+    // #106 THE PROVIDER SPLIT: the family entries exist in the generated
+    // config, each carrying ONLY its family's models + the NVIDIA base URL.
+    const famOk = ['nvidia-glm', 'nvidia-deepseek', 'nvidia-kimi', 'nvidia-meta'].every(f =>
+      cfg.provider?.[f]?.npm === '@ai-sdk/openai-compatible' &&
+      cfg.provider?.[f]?.options?.baseURL === 'https://integrate.api.nvidia.com/v1' &&
+      Object.keys(cfg.provider[f].models).length > 0);
+    check('G1 #106: all four family provider entries generated (npm + baseURL + models)', famOk,
+      `families present: ${Object.keys(cfg.provider || {}).join(',')}`);
+    const flashLimit = cfg.provider?.['nvidia-glm']?.models?.['z-ai/glm-5.3-flash']?.limit;
+    check('G1 #106: the flash lane carries the honest limits (1M / 16384)',
+      flashLimit?.context === 1000000 && flashLimit?.output === 16384, JSON.stringify(flashLimit));
+    check('G1 #106: the old single-provider nvidia block is GONE from the generated config',
+      cfg.provider?.nvidia === undefined, `provider.nvidia still present: ${JSON.stringify(cfg.provider?.nvidia)?.slice(0, 120)}`);
     // L4: every model id in the generated config is in the stub catalogue
-    // for ITS provider.
+    // for ITS probe provider (family lanes remap to the base `nvidia`
+    // catalogue — the preflight's family handling).
     const genIds = new Set([cfg.model, cfg.small_model, ...Object.values(cfg.agent).map(a => a.model)]);
-    const bad = [...genIds].filter(id => id && !(STUB_CATALOGUE[id.split('/')[0]] || []).includes(id));
+    const probeId = (id) => id.replace(/^(nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta)\//, 'nvidia/');
+    const bad = [...genIds].filter(id => id && !(STUB_CATALOGUE[probeId(id).split('/')[0]] || []).includes(probeId(id)));
     check('G1 L4: every generated model id is in the live catalogue', bad.length === 0, `dead ids: ${bad.join(', ')}`);
-    check('G1 L4: coding gods pinned to the LIVE z-ai/glm-5.3 (D19 pin retired)',
-      cfg.agent.hephaestus.model === 'nvidia/z-ai/glm-5.3' && cfg.agent.athena.model === 'nvidia/z-ai/glm-5.3' && cfg.agent.dionysus.model === 'nvidia/z-ai/glm-5.3',
-      `hephaestus=${cfg.agent.hephaestus.model} athena=${cfg.agent.athena.model}`);
   }
 }
 
-// ─── G3: the D19 shape — a dead id in the map fails LOUDLY at apply time ──
+// ─── G3: a RETIRED ANCHOR fails LOUDLY at apply time (#105's law applied ────
+// to models: a dead anchor surfaces loudly, never a silent swap). The lane's
+// stub catalogue drops the pinned glm-5.3 — the anchor-pin refuses to
+// substitute a "stronger" model; L4 fails the apply with the D19 shape. ────
 {
-  const lane = makeLane();
-  const home = makeHome({ deadPrimary: true }); // top[0] = z-ai/glm-5.2 (dead)
+  const retiredAnchor = {
+    ...STUB_CATALOGUE,
+    nvidia: STUB_CATALOGUE.nvidia.filter(id => id !== 'nvidia/z-ai/glm-5.3'),
+  };
+  const lane = makeLane({ stubCatalogue: retiredAnchor });
+  const home = makeHome();
   const r = applyStrategy(['--strategy', 'free-nvidia-build'],
-    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home });
-  check('G3 L4: dead model id fails the apply (exit 1)', r.status === 1, `status=${r.status}`);
-  check('G3 L4: error names the dead id + the live suggestion (D19 verbatim shape)',
-    /L4 catalogue preflight/.test(r.out) && r.out.includes('nvidia/z-ai/glm-5.2') && r.out.includes('nvidia/z-ai/glm-5.3'),
+    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
+  check('G3 L4: a retired anchor fails the apply (exit 1)', r.status === 1, `status=${r.status} out=${r.out.slice(-300)}`);
+  check('G3 L4: the error names the dead anchor + the live suggestion (D19 verbatim shape)',
+    /L4 catalogue preflight/.test(r.out) && r.out.includes('nvidia/z-ai/glm-5.3') && r.out.includes('nvidia/z-ai/glm-5.3-flash'),
     r.out.slice(-400));
-  check('G3 L1: dead-id apply wrote NO config (lane opencode.json untouched)',
+  check('G3 L1: dead-anchor apply wrote NO config (lane opencode.json untouched)',
     readLaneCfg(lane).agent.apollo.prompt.startsWith('{file:'));
 }
 
 // ─── G4: --force is the loud escape hatch ─────────────────────────────────
 {
-  const lane = makeLane();
-  const home = makeHome({ deadPrimary: true });
+  const retiredAnchor = {
+    ...STUB_CATALOGUE,
+    nvidia: STUB_CATALOGUE.nvidia.filter(id => id !== 'nvidia/z-ai/glm-5.3'),
+  };
+  const lane = makeLane({ stubCatalogue: retiredAnchor });
+  const home = makeHome();
   const r = applyStrategy(['--strategy', 'free-nvidia-build', '--force'],
-    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home });
+    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
   check('G4 L4: --force applies with a WARNING (exit 0)', r.status === 0, `status=${r.status}`);
-  check('G4 L4: the warning names the dead id (loud, never silent)',
-    r.status === 0 && /WARNING/.test(r.out) && r.out.includes('nvidia/z-ai/glm-5.2'), r.out.slice(-300));
+  check('G4 L4: the warning names the dead anchor (loud, never silent)',
+    r.status === 0 && /WARNING/.test(r.out) && r.out.includes('nvidia/z-ai/glm-5.3'), r.out.slice(-300));
 }
 
 // ─── G5: L1 loud-fail — unreadable god prompt file is an explicit error ───
@@ -249,7 +312,7 @@ mkdirSync(WORK, { recursive: true });
   rmSync(join(lane, '.opencode', 'prompts', 'agents', 'gods', 'apollo.txt'));
   const home = makeHome();
   const r = applyStrategy(['--strategy', 'free-nvidia-build'],
-    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home });
+    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
   check('G5 L1: unreadable prompt file fails the apply (exit 1)', r.status === 1, `status=${r.status} out=${r.out.slice(-300)}`);
   check('G5 L1: the error names the god + the file (never a silent keep-old)',
     r.status === 1 && /apollo/.test(r.out) && /prompt file/.test(r.out), r.out.slice(-300));
@@ -260,7 +323,7 @@ mkdirSync(WORK, { recursive: true });
   const lane = makeLane({ withStubBinary: false });
   const home = makeHome();
   const r = applyStrategy(['--strategy', 'free-nvidia-build'],
-    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home });
+    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
   check('G6 L4: missing catalogue tooling fails the apply (exit 1)', r.status === 1, `status=${r.status} out=${r.out.slice(-300)}`);
   check('G6 L4: the error is explicit about the missing probe binary (never a silent skip)',
     r.status === 1 && /preflight/.test(r.out) && /opencode/.test(r.out), r.out.slice(-300));
@@ -271,7 +334,7 @@ mkdirSync(WORK, { recursive: true });
   const lane = makeLane({ withPrompts: false });
   const home = makeHome();
   const r = applyStrategy(['--strategy', 'go-balanced'],
-    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home });
+    { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
   check('G7 L1: GO apply with missing prompt files fails (exit 1)', r.status === 1, `status=${r.status} out=${r.out.slice(-300)}`);
   check('G7 L1: the error names the missing prompt file (never WARN+continue)',
     r.status === 1 && /prompt file/.test(r.out), r.out.slice(-300));
