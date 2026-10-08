@@ -126,3 +126,21 @@ Every issue is complete at creation time:
 
 Known label areas: autonomy, telemetry, permissions, harness, dev-server, free-tier,
 registry.
+
+---
+
+## Probe-verified claims (standing rule — #105, effective 2026-10-08)
+
+No agent narrates a live process — a dev server above all — as "running" from captured
+output alone. Captured stdout proves a process STARTED; it says nothing about whether it is
+STILL RUNNING (the #105 specimen: 31s of captured banner + "Ready" + "Compiled" text,
+the process already dead by return time — the narration sent the user to a panel that
+could never go green). The claim path, in order: probe first (the dev-server manager's
+status — `probeDevServer` under the hood, `src/lib/dev-server-manager.ts`), quote the
+probe result (host/port/latency), or say honestly that you could not verify. A claim about
+live state carries probe evidence or it is not made; the no-probe form is the explicit
+refusal "unverified — no probe evidence". The failure card follows the same law (#98's
+card + the `/api/olympus/dev-server/status` route): probe evidence when green, the refusal
+when there is no probe. The interactive lane cannot host a durable process — the
+dev-server manager (#86) is the host; its status is the single source of truth for
+"running".

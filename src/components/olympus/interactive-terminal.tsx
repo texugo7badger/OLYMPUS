@@ -181,6 +181,12 @@ interface ChatMessage {
 // `delegating` all read as "busy" to a user, so they collapse into the
 // `working` bucket on the card; `error` is the only thing that reads as blocked.
 type GodPhase = 'idle' | 'thinking' | 'working' | 'delegating' | 'done' | 'error';
+// #105 (MADRUGA-SERVE-1 Batch B): the dev-server failure class — when the
+// failure text smells like this, the failure card carries PROBE EVIDENCE
+// (the manager's status via the status route), never captured output text.
+// Captured stdout proves a process STARTED; it says nothing about whether
+// it is STILL RUNNING.
+const DEV_SERVER_SIGNAL_RE = /EADDRINUSE|address already in use|ECONNREFUSED|dev server|next dev|npm run dev|localhost:\d+|127\.0\.0\.1:\d+|port \d+ (?:is|in) use/i;
 const PHASE_TO_STATUS: Record<GodPhase, GodState['status']> = {
   idle: 'idle',
   thinking: 'working',
@@ -772,6 +778,26 @@ export default function InteractiveTerminal() {
             ? `Task failed (exit code ${ev.code}) — last error: ${runLastError.current}. If the provider is rate-limited, simply resend — the warm session and its context are preserved.`
             : `Task failed (exit code ${ev.code})`,
         });
+        // #105 (MADRUGA-SERVE-1 Batch B): when the failure smells like the
+        // dev-server class, the card gains PROBE EVIDENCE — the claim comes
+        // from the dev-server manager's status (via the status route),
+        // never from the captured text above. No probe evidence = the
+        // explicit refusal; captured output is never a source of liveness.
+        if (DEV_SERVER_SIGNAL_RE.test(runLastError.current)) {
+          fetch('/api/olympus/dev-server/status', { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((j) => {
+              const claim = j?.claim;
+              if (claim?.verified) {
+                addMessage({ type: 'system', text: `Dev-server probe: ${claim.evidence}` });
+              } else {
+                addMessage({ type: 'system', text: 'Dev-server claim refused: unverified — no probe evidence (captured output is never a source of liveness)' });
+              }
+            })
+            .catch(() => {
+              addMessage({ type: 'system', text: 'Dev-server claim refused: unverified — no probe evidence (the probe was unavailable)' });
+            });
+        }
       }
       inputRef.current?.focus();
       return;

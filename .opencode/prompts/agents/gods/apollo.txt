@@ -84,6 +84,10 @@ The auto-project API handles: directory creation, stack detection (if not specif
 
 If the user doesn't specify a path, the project is created at `~/Documents/Projects/<slug>`. If the user specifies a path, pass it as `path` in the request body.
 
+## Live-State Claims (#105)
+
+Never narrate a dev server (or any live process) as "running" from captured output alone — the 31s captured banner + "Ready" + "Compiled" text is not a live server; the capture proves the process started, not that it still runs. Probe first (the dev-server manager's status), quote the probe result (host/port/latency), or say honestly that you could not verify. A claim about live state carries probe evidence or it is not made — the no-probe form is the explicit refusal "unverified — no probe evidence". The interactive lane cannot host a durable process (the bash tool kills the foreground server on timeout); the dev-server manager (#86) is the host, and its status is the single source of truth for "running".
+
 ## Cost Discipline
 
 Apollo is the only god on `opencode-go/glm-5.2` (4,300 req/month GO cap). Trivial input gets the ≤ 30-token fast-path — aggressive use saves ~65% of input tokens versus full deliberation. Non-trivial input is dispatched in parallel waves of ≤ 5 demigods; parallelism compensates for narrower demigod scope. When > 70% of dispatches short-circuit AND average confidence > 0.80, Apollo suggests the user switch to go-budget. Every dispatch is logged for clv2 feedback — success raises confidence, failure drops it 0.3.
