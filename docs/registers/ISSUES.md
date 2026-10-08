@@ -103,3 +103,37 @@
   carries the DONE record with the four merge shas + the pilot outcome; the box-side claims
   (battery-23-at-close, R4 restored, ports) were re-derived clean by CLOSE-1's own runs, not inherited
   from the degenerated tail; the specimen itself is tracked as **#101** with the durable-packet rule.
+
+## The PREVIEW-1 reconciliation (2026-10-08 the preview truth night — zero divergence)
+
+- **Tracker:** #102/#103/#104 **CLOSED** with merge-sha evidence (`cd46fb0` / `b3575ac` / `880dcc8`,
+  ff-only, all pushed); **#105 OPEN** (the phantom-success doctrine filing — the close-out's own
+  specimen class; cure rides #86's arc, cross-linked both ways); #86 carries the concretized-scope
+  comment `6050338268` (the durable dev-server manager + the honest-claim rule) + the original two
+  (recon + FLIGHT LOG) and stays OPEN; #76 untouched (the user's UAT bar). Open set at PREVIEW-1
+  entry: #76 + #78–#96 + #100 + #101 = **22** (re-derived via gh before any mutation, twice — E3 +
+  the pre-filing E-5); at close: **23** (the +1 is #105; #102/#103/#104 filed AND closed same night).
+- **The night:** the user's UAT blocker (the Live Preview panel never green, ANY build/port) root-caused
+  as the dead probe call (`/status` suffix → 404 → HTML → r.json() throws → catch → offline forever,
+  since the initial import) + cured live: the fetch path, the dual-stack probe
+  (`dev-server-probe.ts`), the note/lane reconciliation (`workspaceLaneDir()` + `reconcileProjectPath`),
+  the dispatch cwd (`resolveDispatchCwd` on the athena/edit lane). The live exit gate GREEN on this
+  box: 404-stays-dead / 200-`running:true` (3–8ms), the iframe src serving the landing page, the lane
+  path + `note-stale` surfaced, the dispatch session DB record in the PROJECT dir, zero new repo files.
+- **Machine:** battery **26** from the merges onward (23 at entry + dev-server-probe 16/16 +
+  project-context 17/17 + dispatch-cwd 9/9; RED-first 8/10, 7/7, 5/5); guard both surfaces exit 0;
+  sync 9/9; tsc 0; R4 `5534ceab…` byte-identical at entry + close. Serve states honestly recorded:
+  :3777 DOWN all night; the user's :3015 dev server alive at entry, GREEN under the fixed probe at
+  02:32:59Z, ended externally mid-gate (never touched by the session).
+- **Register rows:** 69 + **2 PREVIEW-1 rows** (the CLOSE-OUT-close note rides the next session's
+  Stage 0 paper, which lands this reconciliation + the QUEUE row + the filled CLOSE-OUT) — the
+  4-merge discipline (paper + A + B + C) held exactly; the close-out paper lands on disk per #101's
+  rule and the next session commits it.
+- **#101 rider (a) — the rule saved the night a SECOND consecutive time:** the PREVIEW-1 chat tail
+  collapsed again mid-delivery, and the close-out packet survived because it was already ON DISK
+  (`reports/preview-1/CLOSE-OUT.md` written before the summary, per the rule) — the successor flow
+  re-anchored from the disk, never from the tail.
+- **#101 rider (b) — the auditor-side twin, same night:** the auditor's own session died
+  pre-delivery, and the durable worklog carried the verdict the same way — the successor session
+  only re-anchored against the disk and delivered. Two collapses, two survivals: the FILE rule is
+  now proven in both directions (agent side + auditor side).
