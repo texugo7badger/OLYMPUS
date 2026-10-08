@@ -216,6 +216,17 @@ async function main() {
     /laneProjectDir\?: string/.test(intakeSrc) && /request\.laneProjectDir \|\| extraction/.test(intakeSrc), 'the lane-dir threading is missing');
   check('W: quickIntake accepts manualStacks (the classifier hints before any file exists)',
     /manualStacks: opts\.manualStacks/.test(intakeSrc), 'stack hints not threaded');
+
+  // ── 5. Content pins: the action-route wiring ────────────────────────────
+  const routeSrc = readFileSync(ROOT + '/src/app/api/olympus/action/route.ts', 'utf-8');
+  check('W: the route runs the intent stage on prompt (non-blocking, trivial-gated)',
+    /resolveAndRegisterIntent\(promptText/.test(routeSrc) && /classification\.complexity !== 'trivial'/.test(routeSrc),
+    'the route never asks the first-prompt question');
+  check('W: the intent result rides the stream (streamWarm opts + log event)',
+    /intent: intentStage/.test(routeSrc) && /opts\.intent\b/.test(routeSrc), 'the intent result is invisible');
+  check('W: the post-success dev-server trigger fires on the routed slug (probe-first)',
+    /maybeStartDevServer\(opts\.intent\.slug/.test(routeSrc) && /reconcileProjectPath\(opts\.intent\.slug\)/.test(routeSrc),
+    'no trigger after a successful run');
 }
 
 main().then(() => {

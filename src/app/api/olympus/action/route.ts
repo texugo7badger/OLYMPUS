@@ -6,6 +6,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 // Uses spawnOpencode() for Windows shell:true + stdin:'ignore' + local binary resolution.
 import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
+import { resolveAndRegisterIntent } from '@/lib/project-intent';
+import { maybeStartDevServer } from '@/lib/dev-server-trigger';
+import { reconcileProjectPath } from '@/lib/project-context';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
 // the running server + session (no cold start, context retained).
@@ -300,6 +303,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // #110 (FLUENCY-1): the autonomous first-prompt intake — OLYMPUS opens
+    // with NO folder selected; the prompt decides: new | existing:<slug> |
+    // ask. Deterministic + non-blocking: a failed intake never breaks the
+    // run (the stage result rides the stream as a log event).
+    let intentStage: { slug?: string; message: string } | undefined;
+    if (classification.complexity !== 'trivial') {
+      try {
+        const intent = await resolveAndRegisterIntent(promptText, classification.stack ?? []);
+        intentStage = { slug: intent.slug, message: intent.message };
+      } catch (e) {
+        intentStage = { message: `Intake stage failed (non-fatal): ${e instanceof Error ? e.message : String(e)}` };
+      }
+    }
+
     return streamWarm(req, {
       conversationId,
       text: runText,
@@ -309,6 +326,7 @@ export async function POST(req: NextRequest) {
         : { OLYMPUS_TASK_CLASSIFICATION: classificationEnv },
       meta: { action, node: undefined, cli: `opencode run --format json --agent apollo <text>` },
       classification,
+      intent: intentStage,
     });
   }
 
@@ -653,6 +671,9 @@ interface WarmStreamOptions {
   extraEnv?: Record<string, string>;
   meta: { action: string; node?: string; cli: string };
   classification?: TaskClassification;
+  /** #110: the autonomous intake stage result — emitted as a log event and
+   *  used to fire the dev-server trigger after a successful frontend run. */
+  intent?: { slug?: string; message: string };
 }
 
 /**
@@ -790,6 +811,12 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           });
         }
 
+        // #110: the autonomous intake stage — the created/routed/ask message
+        // is visible in the session before any dispatch.
+        if (opts.intent) {
+          send({ type: 'log', msg: opts.intent.message, ts: new Date().toISOString() });
+        }
+
         // 1. Warm server (only cold start). Failure → one-shot without session.
         let server;
         try {
@@ -857,6 +884,28 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         }
 
         if (result.code === 0) {
+          // #110: a frontend artifact lands -> the deterministic dev-server
+          // trigger (the #105 doctrine: probe evidence or the honest
+          // refusal — never a narrated "running"). Non-fatal, bounded.
+          if (opts.intent?.slug) {
+            try {
+              const laneRoot = reconcileProjectPath(opts.intent.slug)?.path ?? resolveDispatchCwd(opts.intent.slug);
+              const t = await maybeStartDevServer(opts.intent.slug, laneRoot);
+              send({
+                type: 'log',
+                msg: t.triggered
+                  ? `Live preview ready: ${t.status?.url} — ${t.reason}`
+                  : `Dev server: ${t.reason}`,
+                ts: new Date().toISOString(),
+              });
+            } catch (e) {
+              send({
+                type: 'log',
+                msg: `Dev-server trigger failed (non-fatal): ${e instanceof Error ? e.message : String(e)}`,
+                ts: new Date().toISOString(),
+              });
+            }
+          }
           finish(0);
           return;
         }
