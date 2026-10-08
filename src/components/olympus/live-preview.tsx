@@ -20,7 +20,7 @@ import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
 const DEFAULT_PORT = 3000;
 const PROBE_INTERVAL_MS = 3000;
 
-interface ProbeStatus { running: boolean; port: number; url: string; responseTimeMs: number; }
+interface ProbeStatus { running: boolean; port: number; url: string; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; }
 
 export default function LivePreview() {
   const activeProject = useOlympus(s => s.activeProject);
@@ -35,17 +35,23 @@ export default function LivePreview() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const port = activeProject?.livePreviewPort || DEFAULT_PORT;
+  // #102: the pre-first-probe guess ONLY — once a probe settles, effectiveUrl
+  // below is the server-verified REACHABLE url (dual-stack, bracketed for IPv6).
   const previewUrl = `http://127.0.0.1:${port}`;
   const projectSlug = activeProject?.slug || null;
 
   const probe = useCallback(async () => {
     try {
       const params = projectSlug ? `?project=${encodeURIComponent(projectSlug)}` : '';
-      const r = await fetch(`/api/olympus/live-preview/status${params}`);
+      // #102: the route serves /api/olympus/live-preview — the old /status
+      // suffix 404'd (no route, no rewrites), r.json() threw on the HTML
+      // error page, and the catch set offline forever. The dead call was
+      // the panel's real defect; no client-side workaround could fix it.
+      const r = await fetch(`/api/olympus/live-preview${params}`);
       const d = await r.json();
-      setStatus({ running: d.running, port: d.port, url: d.url, responseTimeMs: d.responseTimeMs });
+      setStatus({ running: d.running, port: d.port, url: d.url, host: d.host ?? null, responseTimeMs: d.responseTimeMs });
       setProbing(false);
-    } catch { setStatus({ running: false, port, url: previewUrl, responseTimeMs: 0 }); setProbing(false); }
+    } catch { setStatus({ running: false, port, url: previewUrl, host: null, responseTimeMs: 0 }); setProbing(false); }
   }, [projectSlug, port, previewUrl]);
 
   useEffect(() => { setIframeLoaded(false); setProbing(true); probe(); const iv = setInterval(probe, PROBE_INTERVAL_MS); return () => clearInterval(iv); }, [probe]);
@@ -97,6 +103,9 @@ export default function LivePreview() {
   }, [pendingMark, instruction, pushEvent, activeProject]);
 
   const isRunning = status?.running ?? false;
+  // #102: the server-verified REACHABLE url once probing settles; the local
+  // guess is only the pre-first-probe fallback.
+  const effectiveUrl = status?.url ?? previewUrl;
   const showOverlay = !isRunning || probing || !iframeLoaded;
 
   return (
@@ -118,7 +127,7 @@ export default function LivePreview() {
           <OlympusTooltip content="Refresh probe" side="bottom">
             <button onClick={() => { setIframeLoaded(false); probe(); }} className="text-olympus-text-dim hover:text-olympus-gold transition-colors p-1"><RefreshCw size={11} /></button>
           </OlympusTooltip>
-          <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="text-olympus-gold hover:text-olympus-gold/80 text-[10px] font-mono px-1.5">open ↗</a>
+          <a href={effectiveUrl} target="_blank" rel="noopener noreferrer" className="text-olympus-gold hover:text-olympus-gold/80 text-[10px] font-mono px-1.5">open ↗</a>
         </div>
       </div>
 
@@ -153,7 +162,7 @@ export default function LivePreview() {
 
       <div ref={containerRef} className={cn('flex-1 min-h-0 relative', markMode && 'cursor-crosshair')} onClick={handleContainerClick}>
         {isRunning && (
-          <iframe src={previewUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
+          <iframe src={effectiveUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
         )}
         {showOverlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-olympus-bg">
