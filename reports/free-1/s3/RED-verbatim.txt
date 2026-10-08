@@ -1,0 +1,14 @@
+FAIL  module: resolveNvidiaAnchors exported (pure, testable)
+      refresh-free-models.js must export the pure anchor resolver
+FAIL  module: NVIDIA_ANCHOR_PINS exported
+      the pinned anchor set must be data (user-pinned, expressed in code)
+FAIL  ban: the refresh source carries the nemotron ban (the list filter)
+      no NEMOTRON_BAN marker in refresh-free-models.js
+FAIL  ban: the ban is applied to the nvidia list (top + all)
+      the ban filter is not wired into the nvidia list build
+FAIL  loud: a dead anchor surfaces on stderr + a non-zero exit (the refresh refuses to whisper)
+      the dead-anchor loud path (stderr + exit 1) not found
+FAIL  docs: the header expresses the anchor-pin doctrine
+      the header does not express the doctrine
+
+refresh-anchor-pin: 6 doctrine violation(s) — the scorer does not serve the distribution

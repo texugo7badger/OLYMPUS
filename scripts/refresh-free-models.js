@@ -3,17 +3,36 @@
  * refresh-free-models.js
  *
  * Fetches the LIVE free-model lists from OpenRouter and NVIDIA Build
- * (build.nvidia.com), scores the free endpoints by capability (context
- * length + model-tier heuristics + recency), and writes the result to
- * ~/.olympus/free-models.json.
+ * (build.nvidia.com), and writes the result to ~/.olympus/free-models.json.
  *
- * apply-strategy.js consumes this file when it is fresh (TTL ≤ 24 hours) so
- * the "Free OpenRouter", "Free Big Pickle" and
- * "Free Nvidia Build" strategies always use the most powerful free models
- * available right now — "updated in real time" instead of a hardcoded list
- * that goes stale. (Groq's free tier is NOT included — its 12K TPM window
- * cannot serve the OLYMPUS system prompt, so the free-groq strategy was
- * removed and groq/* models are never offered.)
+ * #106 (MADRUGA-FREE-1) — THE ANCHOR-PIN DOCTRINE. The free-nvidia-build
+ * anchor set is USER-PINNED (the four anchors + the alternate fast, on their
+ * per-family lanes). This script SERVES the distribution, never overrides it:
+ *   - it VERIFIES each anchor's availability against the live list;
+ *   - it UPDATES ids when NVIDIA renames (the curated NVIDIA_RENAMES table —
+ *     a human-supplied mapping when a vendor renames, never a heuristic
+ *     guess);
+ *   - it RECORDS the honest context windows;
+ *   - it NEVER auto-replaces an anchor with "the strongest live" (the same
+ *     law as no-silent-downgrade, applied to models — the old scorer
+ *     optimized per-model capability, never pool distribution, and parked
+ *     the entry god on the most-contended pool: the #106 defect);
+ *   - a DEAD anchor surfaces LOUDLY (stderr + exit 1), never silently
+ *     swapped;
+ *   - the nemotron family is on the BAN LIST, forever (the user's ban: low
+ *     effective context + the observed contention pool) — banned ids never
+ *     enter the ranked lists, never get suggested as replacements.
+ * The scorer ranks WITHIN the anchor set (the fast-lane alternate choice),
+ * never across it.
+ *
+ * apply-strategy.js consumes this file when it is fresh (TTL ≤ 24 hours):
+ * the pinned map stands (the anchor-pin at apply time); the file's nvidia
+ * `all` list feeds the availability verification, and the `anchors` section
+ * records the verified state. The OpenRouter section still feeds the
+ * free-openrouter / free-big-pickle strategies unchanged. (Groq's free tier
+ * is NOT included — its 12K TPM window cannot serve the OLYMPUS system
+ * prompt, so the free-groq strategy was removed and groq/* models are never
+ * offered.)
  *
  * The NVIDIA model list (https://integrate.api.nvidia.com/v1/models) is
  * public — it is fetched unconditionally, no API key needed. The OpenRouter
@@ -21,7 +40,7 @@
  *
  * Output shape (~/.olympus/free-models.json):
  *   {
- *     "fetched_at": "2026-07-31T...Z",
+ *     "fetched_at": "2026-10-08T...Z",
  *     "sources": { "openrouter": true, "nvidia": true },
  *     "openrouter": {
  *       "top": [
@@ -30,7 +49,15 @@
  *       ],
  *       "all": [ ... same shape, full free list ... ]
  *     },
- *     "nvidia": { "top": [...], "all": [...] }
+ *     "nvidia": {
+ *       "top": [...],            // the general live list MINUS the ban — informational
+ *       "all": [...],
+ *       "anchors": [            // #106: the pinned set, verified + ranked within itself
+ *         { "lane": "nvidia-glm/z-ai/glm-5.3", "family": "nvidia-glm", "id": "z-ai/glm-5.3",
+ *           "context": 1000000, "verified": true, "score": 99.5, "role": "the entry lane" }
+ *       ],
+ *       "dead_anchors": []      // #106: loud, never silently swapped
+ *     }
  *   }
  *
  * Usage:
@@ -142,6 +169,71 @@ function scoreModel(m) {
   return Math.round(s * 10) / 10;
 }
 
+// ── #106: THE ANCHOR-PIN DOCTRINE ───────────────────────────────────────────
+// The user-pinned anchor set (the four anchors + the alternate fast), keyed
+// by their FAMILY LANES. The refresh verifies / renames / records — never
+// replaces. Probe-verified 2026-10-08 (reports/free-1/s0/); honest contexts
+// per the live model cards (kimi-k3 1,048,576; muse-glimmer-30b 131,072).
+export const NVIDIA_ANCHOR_PINS = {
+  'nvidia-glm/z-ai/glm-5.3': { family: 'nvidia-glm', id: 'z-ai/glm-5.3', context: 1000000, role: 'the entry/reasoning lane (apollo, dionysus, persephone)' },
+  'nvidia-glm/z-ai/glm-5.3-flash': { family: 'nvidia-glm', id: 'z-ai/glm-5.3-flash', context: 1000000, role: 'the fast/volume lane (atlas, athena, callimachus + vault + small)' },
+  'nvidia-kimi/moonshotai/kimi-k3': { family: 'nvidia-kimi', id: 'moonshotai/kimi-k3', context: 1048576, role: 'the long-horizon coding lane (hephaestus, artemis, prometheus)' },
+  'nvidia-meta/meta/muse-glimmer-30b': { family: 'nvidia-meta', id: 'meta/muse-glimmer-30b', context: 131072, role: 'the alternate fast lane (hermes)' },
+  'nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash': { family: 'nvidia-deepseek', id: 'deepseek-ai/deepseek-v4.1-flash', context: 1000000, role: 'the pinned deepseek anchor (unassigned 2026-10-08 — pool dead at the E8 probe, disclosed)' },
+};
+
+// Curated renames: old bare id -> new bare id, human-supplied the day NVIDIA
+// renames a pinned anchor (the resolver applies the mapping ONLY when the
+// old id left the live list AND the new id is live — never a heuristic guess).
+export const NVIDIA_RENAMES = {};
+
+// THE BAN LIST (the user's ban, forever): the nemotron family never enters
+// the NVIDIA ranked lists, never gets suggested as a replacement.
+export const NEMOTRON_BAN_RE = /nemotron/i;
+
+/**
+ * The pure anchor resolver (#106). Given the LIVE nvidia model list (objects
+ * with `id`, `created` — bare ids) and the curated RENAMES table, returns
+ * { anchors, dead }:
+ *   - anchors: the pinned set with resolved ids (renames applied), verified
+ *     flags against the live list, the honest contexts, and the WITHIN-SET
+ *     scores (the fast-lane alternate ranking). NO id outside the pin set
+ *     ever enters — "the strongest live" is never a substitute.
+ *   - dead: the pinned anchors absent from the live list (post-rename) — the
+ *     loud set: the caller surfaces them on stderr + a non-zero exit,
+ *     never a silent swap.
+ */
+export function resolveNvidiaAnchors(liveList, renames = NVIDIA_RENAMES) {
+  const liveIds = new Set((liveList || [])
+    .map(m => m && (m.rawId || m.id))
+    .filter(id => typeof id === 'string'));
+  const anchors = [];
+  const dead = [];
+  for (const [pinnedLane, pin] of Object.entries(NVIDIA_ANCHOR_PINS)) {
+    let id = pin.id;
+    // The rename path: the curated mapping, only when it resolves live.
+    if (!liveIds.has(id) && renames[id] && liveIds.has(renames[id])) {
+      id = renames[id];
+    }
+    const verified = liveIds.has(id);
+    const entry = {
+      lane: `${pin.family}/${id}`,
+      family: pin.family,
+      id,
+      pinnedLane,
+      context: pin.context,
+      verified,
+      role: pin.role,
+      // The within-set score (the fast-lane alternate ranking) — scored on
+      // the honest context, never inflated.
+      score: scoreModel({ id, context_length: pin.context, created: 0 }),
+    };
+    if (verified) anchors.push(entry);
+    else dead.push({ lane: entry.lane, family: pin.family, id, pinnedLane, role: pin.role });
+  }
+  return { anchors, dead };
+}
+
 function extractKey(obj) {
   if (!obj) return '';
   if (typeof obj === 'string') return obj;
@@ -211,9 +303,17 @@ async function fetchNvidia() {
   const res = await fetch('https://integrate.api.nvidia.com/v1/models');
   if (!res.ok) throw new Error(`NVIDIA /models HTTP ${res.status}`);
   const data = await res.json();
-  const free = (data.data || [])
+  const all = data.data || [];
+  // #106: THE BAN — the nemotron family never enters the NVIDIA ranked
+  // lists (top + all). Loud, never silent.
+  const banned = all.filter(m => typeof m.id === 'string' && NEMOTRON_BAN_RE.test(m.id));
+  if (banned.length > 0) {
+    console.log(`NVIDIA ban: ${banned.length} nemotron id(s) excluded from the ranked lists (the user's ban — forever)`);
+  }
+  const free = all
     .filter(m => typeof m.id === 'string')
     .filter(m => !EXCLUDE_IDS.test(m.id))
+    .filter(m => !NEMOTRON_BAN_RE.test(m.id))
     .map(m => normalizeModel(m, 'nvidia'))
     .sort((a, b) => b.score - a.score);
   return free;
@@ -296,9 +396,24 @@ async function main() {
     const list = await fetchNvidia();
     result.nvidia = { top: list.slice(0, 10), all: list };
     result.sources.nvidia = true;
-    console.log(`NVIDIA Build: ${list.length} chat models fetched (public list)`);
+    console.log(`NVIDIA Build: ${list.length} chat models fetched (public list, nemotron banned)`);
     for (const m of list.slice(0, 5)) {
       console.log(`  #${list.indexOf(m) + 1} ${m.id}  (ctx ${m.context}, score ${m.score})`);
+    }
+    // #106 THE ANCHOR-PIN: verify the pinned set against the live list.
+    // NEVER auto-replace — a dead anchor surfaces LOUDLY (stderr + exit 1
+    // after the write), a rename rides the curated table.
+    const resolved = resolveNvidiaAnchors(list);
+    result.nvidia.anchors = resolved.anchors;
+    result.nvidia.dead_anchors = resolved.dead;
+    for (const a of resolved.anchors) {
+      console.log(`  anchor OK ${a.lane}  (ctx ${a.context}, within-set score ${a.score} — ${a.role})`);
+    }
+    for (const d of resolved.dead) {
+      console.error(`DEAD ANCHOR: ${d.lane} (${d.role}) is NOT in the live NVIDIA list.`);
+      console.error(`  The anchor set is USER-PINNED — no silent replacement. If NVIDIA renamed it,`);
+      console.error(`  add the curated mapping to NVIDIA_RENAMES in scripts/refresh-free-models.js and re-run.`);
+      console.error(`  If it retired, the free-nvidia-build apply refuses loudly at the L4 preflight until the pin is updated.`);
     }
   } catch (e) {
     errors.push(`NVIDIA: ${e.message}`);
@@ -315,9 +430,22 @@ async function main() {
   if (errors.length > 0) {
     console.warn(`Warnings (kept previous data for the failed provider? no — omitted):\n  ${errors.join('\n  ')}`);
   }
+  // #106: a dead anchor makes the refresh LOUD — the file is written (the
+  // verified state is data), then the exit code surfaces the problem.
+  const deadCount = result.nvidia?.dead_anchors?.length || 0;
+  if (deadCount > 0) {
+    console.error(`\nDEAD ANCHOR summary: ${deadCount} pinned anchor(s) absent from the live list — never silently swapped.`);
+    process.exit(1);
+  }
 }
 
-main().catch(e => {
-  console.error(`refresh-free-models: ${e.message}`);
-  process.exit(1);
-});
+// Import-safe (the same doctrine as apply-strategy.js): the pure exports
+// (NVIDIA_ANCHOR_PINS, NVIDIA_RENAMES, NEMOTRON_BAN_RE, resolveNvidiaAnchors)
+// are consumable by the test battery; main() only runs as a direct call.
+const isDirectRun = process.argv[1] && import.meta.url === `file://${path.resolve(process.argv[1])}`;
+if (isDirectRun) {
+  main().catch(e => {
+    console.error(`refresh-free-models: ${e.message}`);
+    process.exit(1);
+  });
+}
