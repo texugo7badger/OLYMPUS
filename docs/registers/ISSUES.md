@@ -137,3 +137,46 @@
   pre-delivery, and the durable worklog carried the verdict the same way — the successor session
   only re-anchored against the disk and delivered. Two collapses, two survivals: the FILE rule is
   now proven in both directions (agent side + auditor side).
+
+## The SERVE-1 reconciliation (2026-10-08 the durable manager night)
+
+- **Tracker:** **#105 CLOSED** @ `aa16c70` (MADRUGA-SERVE-1 Batch B — the probe-verified-claim
+  doctrine; taxonomy verified in-pattern before the close; the close comment links sha + suite
+  output + the live doctrine surfaces). **#86 OPEN with the honest scope-split** (progress
+  comment `6054918924`): the manager half DONE @ `9633fc5` — the durable dev-server manager
+  (start/stop/status/list; DETACHED spawn in the project's lane, never the repo; state at
+  `~/.local/share/olympus/dev-servers/<slug>.json` with exactly `{pid,port,host,projectPath,
+  startedAt,logFile,lastProbe}`; status = probe-verified truth only, the dead-pid self-heal;
+  the group-stop ladder; idempotent start; the foreign-port refusal) — the **journal-replay
+  half remains** (the issue's original F4/G2 scope; #86 does NOT close). #104 carries the
+  class-completion pointer `6055414983` (stays closed at its own sha). #76 and #100 UNTOUCHED.
+  Open set at SERVE-1 entry: #76 + #78–#96 + #100 + #101 + #105 = **23**; at close:
+  **exactly 22** (#76 + #78–#96 + #100 + #101).
+- **The night:** five ff-only merges, all pushed (`afb6cbc` paper → `9633fc5` #86 manager →
+  `aa16c70` #105 doctrine → `5e5ee3f` the complete dispatch-cwd class → close paper). PREVIEW-1's
+  own close-out committed (Stage 0 — the 4-merge discipline's design) + the two #101 riders.
+  The #105 surfaces: the pure claim gate (`dev-server-claim.ts` — the phantom specimen's claim
+  is EXACTLY `unverified — no probe evidence`, captured text never quoted as evidence), the
+  additive `/api/olympus/dev-server/status` route (the frozen live-preview route untouched —
+  the panel↔manager UI integration is #100's, after the UAT), the #98 failure card's
+  probe-evidence/refusal path, the rule in AGENTS.md (the standing rule) + apollo.txt (the
+  narrator). The dispatch-cwd class: the six sites (`heartbeat:101`, `action:444`/`:733`,
+  `intake:134` with the project slug threaded, `doc-summarizer:174`, `compact:25`) each carry
+  `cwd: resolveDispatchCwd(...)`; the GLOBAL invariant (every `spawnOpencode` call in src/
+  carries an explicit cwd) holds — RED proven by stash against pre-cure code (6/8 sites named).
+- **The live exit gates GREEN on this box** (the user's live test is tomorrow afternoon):
+  his exact scenario re-run on post-night code (the dead path stays 404; the panel route 200 +
+  `running:true` in 5ms; the iframe serving the Nexus landing) + the manager's double proof
+  (start → the panel green BY ITSELF in 3ms with ZERO panel-code diffs — the manager serves the
+  note port; the claim route probe-verified; stop; port free). The frozen pair zero-diff across
+  the night.
+- **Machine:** battery **28** at close (25 suites + context-distill 4/4 + telemetry-slice 10/10
+  + tsc 0) — green on the session's OWN runs at entry, per batch, and at close; suites added:
+  `dev-server-manager.test.mjs` (25/25, RED 7/7 — real npm-spawned fixture lifecycles, zero
+  orphans with PIDs listed) + `probe-claim.test.mjs` (23/23, RED 11/11); `dispatch-cwd.test.mjs`
+  grew the class (15/15, RED 6/15 by stash). Guard both surfaces exit 0; sync 9/9; glm-5.2 = 0;
+  R4 `5534ceab…` byte-identical at entry + close; zero CJK in the night's total diff; zero
+  orphans. A worktree environment finding recorded honestly (the gitignored
+  `.opencode/package.json` keeps overlay .ts in tsx's CJS mode; a fresh worktree without the
+  gitignored runtime artifacts fails 6 suites on `__filename` — healed by copying them,
+  gitignored, never committed).
