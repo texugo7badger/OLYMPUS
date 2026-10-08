@@ -25,9 +25,13 @@ the four S4 paper erratas.
 | E3 | open set exactly **#76 + #78–#96 + #100 = 21** (gh re-derived before any mutation); #97/#98/#99 CLOSED with merge-sha evidence (`b95c765`/`8a0b3ab`/`7584752`; #97's close comment carries the in-place backtick-slip correction, disclosed); #86 exactly TWO comments (the recon evidence + the FLIGHT LOG — the pilot WON) |
 | E4 | **battery-23 green — this session's own run** (the degenerated close-out re-proven clean): 20 suites via `npx tsx` all exit 0 (catalog-uniqueness 26/26, opencode-session incl. the #99 guards, budget-guard both surfaces) + context-distill self-test 4/4 + telemetry-slice self-test 10/10 + `npx tsc --noEmit` exit 0. Logs: `/tmp/opencode/close-1-battery/` |
 
-Machine facts re-derived, not inherited: the **:3777 warm serve is ALIVE** (PID 993264,
-`opencode serve --port 3777`, up since 13:46 BRT — the #86 pilot asset, honored, never killed);
-the stray's disposition landed — `~/.local/share/olympus/workspace/exemplo-landingpage` exists
+Machine facts re-derived, not inherited: the **:3777 warm serve** — the original (PID 993264, up
+since 13:46 BRT) was alive at CLOSE-1 entry (~20:39 box, ps-verified) and **ended mid-session**;
+a successor `opencode serve --port 3777` (PID 1156052, started 21:13:10 box) holds the port —
+the pilot asset still serves. CLOSE-1 ran no kill (no kill/pkill in any session command; the
+battery's generation-contract suite itself asserts the R6 port-untouched discipline —
+3737/3738/3740/3777); the handoff happened outside the session's commands (see §7); the
+stray's disposition landed — `~/.local/share/olympus/workspace/exemplo-landingpage` exists
 (the Batch C move; exit gate 7/7 per #86's FLIGHT LOG).
 
 ## 3. The work
@@ -97,7 +101,9 @@ pointer, never the payload. **This file is the rule's first practice.**
 - **Machine:** battery-23 green ×2 runs this session (entry + at-close, both its own runs);
   guard both surfaces exit 0; sync 9/9; tsc 0. R4 sha `5534ceab…` — byte-identical at entry
   and close.
-- **The :3777 warm serve:** ALIVE (PID 993264, up since 13:46 BRT) — honored, never killed.
+- **The :3777 warm serve:** ALIVE at the port (successor PID 1156052, started 21:13:10 box;
+  the original PID 993264 — up since 13:46 BRT, entry-verified — ended mid-session outside the
+  session's commands; no kill from CLOSE-1, the R6 discipline held) — honored, never killed.
 - **Never-staged user dirt (present in the porcelain below, excluded from the commit):**
   `opencode.json` (R4 live config — NEVER committed) + `reports/uat-r1/SPAWN-INVOCATION.sh`
   (the user's own edit).
@@ -137,3 +143,18 @@ Small, clean, truthful — paid. The queue file no longer lies; the degeneration
 finding with a durable-packet rule (practiced here); the errata debt is dead; the machine's
 green is this session's own run. **The user's manual UAT (issue #76's bar) is THE gate — no
 internal night before it.**
+
+## 7. ADDENDUM — the serve handoff, caught and disclosed (committed ~21:30 box, after the merge)
+
+The first merge of this night (a458290) carried this file's serve claim as "ALIVE (PID
+993264)" — written from the entry evidence, not re-derived at write time. The W6 re-derivation
+(sha-compare + ps + ss, immediately post-merge) caught it: the original serve had ended and a
+successor (PID 1156052, started 21:13:10 — during CLOSE-1's at-close battery run) had taken
+the port. The claim was false at commit time by ~9 minutes. This addendum is the correction,
+paid the moment it was found, per the house precedent (#91's backtick slip, #97's close-comment
+sha slip — fixed immediately, disclosed loudly). The lesson is the night's own doctrine turned
+inward: **re-derive at write time, never inherit** — even for a fact verified 40 minutes
+earlier in the same session. CLOSE-1 killed nothing; the generation-contract suite's own F1
+assertion proves the port discipline (3737/3738/3740/3777 untouched); the handoff was external
+to the session. The one-commit plan of the charter took its one honest exception — a committed
+lie in the night's own truth-artifact was the worse crime.
