@@ -1,0 +1,20 @@
+OpenRouter: 14 free chat models fetched
+  #1 openrouter/nvidia/nemotron-3-ultra-550b-a55b:free  (ctx 1000000, score 184.8)
+  #2 openrouter/nvidia/nemotron-3.5-lightning:free  (ctx 1000000, score 112.6)
+  #3 openrouter/thinkingmachines/inkling:free  (ctx 1048576, score 111.6)
+  #4 openrouter/nvidia/nemotron-3-super-120b-a12b:free  (ctx 262144, score 87.5)
+  #5 openrouter/thinkingmachines/inkling-small:free  (ctx 1048576, score 82.1)
+NVIDIA ban: 16 nemotron id(s) excluded from the ranked lists (the user's ban — forever)
+NVIDIA Build: 41 chat models fetched (public list, nemotron banned)
+  #1 nvidia/z-ai/glm-5.3-flash  (ctx 1000000, score 105)
+  #2 nvidia/z-ai/glm-5.3  (ctx 1000000, score 100)
+  #3 nvidia/writer/palmyra-creative-122b  (ctx 131072, score 43.6)
+  #4 nvidia/nvidia/llama3-chatqa-1.5-70b  (ctx 131072, score 30.6)
+  #5 nvidia/writer/palmyra-med-70b  (ctx 131072, score 30.6)
+  anchor OK nvidia-glm/z-ai/glm-5.3  (ctx 1000000, within-set score 100 — the entry/reasoning lane (apollo, dionysus, persephone))
+  anchor OK nvidia-glm/z-ai/glm-5.3-flash  (ctx 1000000, within-set score 105 — the fast/volume lane (atlas, athena, callimachus + vault + small))
+  anchor OK nvidia-kimi/moonshotai/kimi-k3  (ctx 1048576, within-set score 100 — the long-horizon coding lane (hephaestus, artemis, prometheus))
+  anchor OK nvidia-meta/meta/muse-glimmer-30b  (ctx 131072, within-set score 20.6 — the alternate fast lane (hermes))
+  anchor OK nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash  (ctx 1000000, within-set score 105 — the pinned deepseek anchor (unassigned 2026-10-08 — pool dead at the E8 probe, disclosed))
+
+Wrote /home/texugo/.olympus/free-models.json

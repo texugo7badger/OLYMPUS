@@ -1,0 +1,42 @@
+PASS  THE BAN: zero nemotron-* ids in the free-nvidia-build assignment (gods + vault + small)
+PASS  THE LANES: all 10 gods on per-family provider lanes (nvidia-glm/-deepseek/-kimi/-meta)
+PASS  THE HEAVY THREE: apollo / athena / hephaestus on three DIFFERENT anchors
+PASS  THE VOLUME LANE: callimachus on the flash lane (z-ai/glm-5.3-flash)
+PASS  THE VOLUME LANE: vaultLlm on the flash lane
+PASS  THE VOLUME LANE: the strategy small_model on the flash lane (volume, not depth)
+PASS  THE CAP: no more than 3 gods on any single anchor
+PASS  THE LIVE SET: every assigned model id exists in the probe-verified live-ids snapshot
+PASS  THE MIRRORS: apply-strategy.js free-nvidia-build map == canonical
+PASS  THE MIRRORS: olympus-hooks.ts free-nvidia-build map == canonical
+PASS  THE MIRRORS: settings-dialog.tsx free-nvidia-build map == canonical
+PASS  THE MIRRORS: check-strategy-sync 9/9 green
+PASS  THE GENERATOR: nvidia-glm/z-ai/glm-5.3 present with output 16384
+PASS  THE GENERATOR: nvidia-glm/z-ai/glm-5.3 honest context (1000000)
+PASS  THE GENERATOR: nvidia-glm/z-ai/glm-5.3-flash present with output 16384
+PASS  THE GENERATOR: nvidia-glm/z-ai/glm-5.3-flash honest context (1000000)
+PASS  THE GENERATOR: nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash present with output 16384
+PASS  THE GENERATOR: nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash honest context (1000000)
+PASS  THE GENERATOR: nvidia-kimi/moonshotai/kimi-k3 present with output 16384
+PASS  THE GENERATOR: nvidia-kimi/moonshotai/kimi-k3 honest context (1048576)
+PASS  THE GENERATOR: nvidia-meta/meta/muse-glimmer-30b present with output 16384
+PASS  THE GENERATOR: nvidia-meta/meta/muse-glimmer-30b honest context (131072)
+PASS  THE GENERATOR: the old single-provider nvidia/* lanes are GONE from the table
+PASS  THE GENERATOR: every table lane sized >= the #76 floor (8192)
+PASS  THE PROVIDER SPLIT: all four family entries defined in the generator
+PASS  THE PROVIDER SPLIT: nvidia-glm carries the NVIDIA base URL + openai-compatible npm
+PASS  THE PROVIDER SPLIT: nvidia-glm carries ONLY its family's models (z-ai/glm-5.3, z-ai/glm-5.3-flash)
+PASS  THE PROVIDER SPLIT: nvidia-glm/z-ai/glm-5.3 honest limits (ctx 1000000, out 16384)
+PASS  THE PROVIDER SPLIT: nvidia-glm/z-ai/glm-5.3-flash honest limits (ctx 1000000, out 16384)
+PASS  THE PROVIDER SPLIT: nvidia-deepseek carries the NVIDIA base URL + openai-compatible npm
+PASS  THE PROVIDER SPLIT: nvidia-deepseek carries ONLY its family's models (deepseek-ai/deepseek-v4.1-flash)
+PASS  THE PROVIDER SPLIT: nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash honest limits (ctx 1000000, out 16384)
+PASS  THE PROVIDER SPLIT: nvidia-kimi carries the NVIDIA base URL + openai-compatible npm
+PASS  THE PROVIDER SPLIT: nvidia-kimi carries ONLY its family's models (moonshotai/kimi-k3)
+PASS  THE PROVIDER SPLIT: nvidia-kimi/moonshotai/kimi-k3 honest limits (ctx 1048576, out 16384)
+PASS  THE PROVIDER SPLIT: nvidia-meta carries the NVIDIA base URL + openai-compatible npm
+PASS  THE PROVIDER SPLIT: nvidia-meta carries ONLY its family's models (meta/muse-glimmer-30b)
+PASS  THE PROVIDER SPLIT: nvidia-meta/meta/muse-glimmer-30b honest limits (ctx 131072, out 16384)
+PASS  THE TERMINAL: terminalModel == apollo's lane (the entry god)
+PASS  THE DESCRIPTION: the strategy description expresses the doctrine (distributed / no Nemotron / no single pool)
+
+free-pantheon: the distributed doctrine holds on every surface (gods, vault, small, mirrors, generator, provider split)
