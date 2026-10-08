@@ -432,6 +432,27 @@ export function resolveWorkspaceLane(): WorkspaceLane {
   return { dir, fresh };
 }
 
+/**
+ * #104 (MADRUGA-PREVIEW-1 Batch C): the cwd for one-shot `opencode run`
+ * dispatches. #99's cure reached ONLY the serve spawn; every one-shot
+ * dispatch still inherited findOlympusRoot() as its cwd (getOpencodeSpawnOptions'
+ * default) — so the athena/edit "Mark for editing" lane would have edited
+ * INSIDE THE REPO.
+ *
+ * Lane preference, never the repo:
+ *   - slug given + <lane>/<slug> exists → that project dir;
+ *   - slug given, dir missing → the lane dir;
+ *   - null/undefined slug → the lane dir.
+ * workspaceLaneDir()'s never-the-repo guard makes every branch land outside
+ * the OLYMPUS root — a dispatch can never write into the working tree.
+ */
+export function resolveDispatchCwd(projectSlug?: string | null): string {
+  const laneDir = workspaceLaneDir();
+  if (!projectSlug) return laneDir;
+  const projectDir = join(laneDir, projectSlug);
+  return existsSync(projectDir) ? projectDir : laneDir;
+}
+
 // --- Strategy-aware config verification -----------------------------------
 
 const OLYMPUS_HOME = join(homedir(), '.olympus');

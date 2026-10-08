@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 // Use spawnOpencode() for cross-platform support.
-import { spawnOpencode } from '@/lib/opencode-spawn';
+import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
@@ -115,9 +115,14 @@ Use context7 MCP if you need library documentation.`;
     // Dispatch to Athena via opencode run (async — don't block the response)
     // Use spawnOpencode() for Windows shell:true + stdin:'ignore'.
     // Spawn Athena asynchronously (fire and forget) — stdio:'ignore' + detached.
+    // #104: the dispatch cwd is the PROJECT dir via resolveDispatchCwd — the
+    // lane-preference resolver (never the repo root, never inside it); without
+    // this, Athena's edits would land inside the OLYMPUS working tree (#99's
+    // defect class, on the one-shot lane).
     const child = spawnOpencode(
       ['run', '--agent', 'athena', athenaInstruction],
       {
+        cwd: resolveDispatchCwd(projectSlug),
         extraEnv: {
           OLYMPUS_DISPATCH_ID: dispatchId,
           OLYMPUS_PROJECT_SLUG: projectSlug || '',
