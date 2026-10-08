@@ -1,0 +1,15 @@
+probe time: 2026-10-08T20:40:32Z  key: nvapi-XRaF… (the user's own key)
+z-ai/glm-5.3 | HTTP 200 | 709ms | content=null (reasoning-first) usage=16 finish=length
+z-ai/glm-5.3-flash | HTTP 200 | 30989ms | content=null (reasoning-first) usage=16 finish=length
+moonshotai/kimi-k3 | HTTP 200 | 1042ms | content="<|close|>şaningRosnaturalaringOperation (reasoning-first) usage=16 finish=length
+meta/muse-glimmer-30b | HTTP 200 | 1864ms | content=null (reasoning-first) usage=16 finish=length
+deepseek-ai/deepseek-v4.1-flash | HTTP 000 | 60024ms | NO BODY (curl --max-time 60 expired; the detail column was stale-body noise from the prior run — corrected)
+
+VERDICT: glm-5.3 ALIVE (709ms — the pool that killed the user's 16:23Z run is serving again);
+flash ALIVE (30989ms — variable latency, recorded honestly, same shape as FREE-1's 32s ping);
+kimi-k3 ALIVE (1042ms; the 16-token truncated content is tokenizer-salad-class on a min-budget
+ask — usage=16 served); muse-glimmer ALIVE (1864ms); deepseek-v4.1-flash DEAD AGAIN — HTTP 000
+at 60s, the second consecutive night, 3+ consecutive timeouts total. It carries ZERO god
+assignments in R4 (its family entry stays in the pinned set, disclosed — recovery is a
+refresh + apply away). No reassignment needed tonight: the R4 distribution already assigns
+zero gods to the dead pool.
