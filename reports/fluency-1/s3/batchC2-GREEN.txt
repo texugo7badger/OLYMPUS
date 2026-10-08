@@ -1,0 +1,42 @@
+PASS  S: MAX_HOP_BUDGET_TOKENS = 16384 (the #76 bar)
+PASS  S: the valid plan passes
+PASS  S: garbage dies loudly — not an object
+PASS  S: garbage dies loudly — version != 1
+PASS  S: garbage dies loudly — hops not an array
+PASS  S: garbage dies loudly — hops empty
+PASS  S: garbage dies loudly — laneRoot missing
+PASS  S: garbage dies loudly — hop.id missing
+PASS  S: garbage dies loudly — hop.id duplicate
+PASS  S: garbage dies loudly — hop.god missing
+PASS  S: garbage dies loudly — hop.prompt missing
+PASS  S: garbage dies loudly — artifacts not an array
+PASS  S: garbage dies loudly — budgetTokens over the #76 bar
+PASS  S: garbage dies loudly — after references a missing hop
+PASS  S: garbage dies loudly — after cycle
+PASS  S: garbage dies loudly — verify.review not in the enum
+PASS  S: garbage dies loudly — resumePoint references a missing hop
+PASS  S: defaults honest — budget 16384, review deterministic, checks []
+PASS  W: MAX_HOP_CONCURRENCY = 3 (the #106 law)
+PASS  W: the cap held (4 roots runnable, never 4 in flight)
+PASS  W: the cap USED (the roots actually ran concurrently)
+PASS  W: topological order — the sink last, after every root
+PASS  W: all hops completed
+PASS  P: exhaustion PARKS (h2 parked, h3 never ran, h1 completed)
+PASS  P: the state file records the park (hop + reason)
+PASS  P: h1 in the state (completed hops survive the park)
+PASS  P: resume skips completed hops (h1 never re-dispatched)
+PASS  P: resume re-runs the parked hop then its dependents
+PASS  P: the resumed walk completes everything
+PASS  T: one row per attempted hop (h1 + h2-parked + h2 + h3)
+PASS  T: the row shape {ts, hop, god, lane, tokensIn/out, durationMs, retriesAbsorbed, status}
+PASS  T: the parked row carries the absorbed retries (the #107 ledger, per-hop)
+PASS  V: file-exists verify passes on the real artifact (v-ok completed)
+PASS  V: file-exists verify FAILS the liar hop (missing artifact -> parked, not completed)
+PASS  V: verify burned ZERO dispatches (deterministic-first — the dispatcher ran once per hop, verify itself 0 LLM)
+PASS  PL: needsPlanning gates the planner marker (the contract rides the classification)
+PASS  PL: the marker names dispatch-plan.json + the hop runtime + the doctrine
+PASS  PL: the marker rides AFTER the prompt (the session marker still leads every turn type)
+PASS  PL: the doctrine sentence in AGENTS.md (sessions are lanes; the disk carries the campaign)
+PASS  PL: the hop-runtime economics in TOKEN-ECONOMY.md (bursts fit BETWEEN peaks; the park survives)
+
+All #109 hop-runtime assertions passed

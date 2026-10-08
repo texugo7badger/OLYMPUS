@@ -272,9 +272,16 @@ export async function POST(req: NextRequest) {
     const classificationMarker = action === 'prompt'
       ? `[OLYMPUS-CLASSIFICATION id=${classification.classificationId} routeTo=${classification.routeTo}] `
       : '';
+    // #109 (FLUENCY-1): the planner contract — when the classifier says
+    // needsPlanning (architectural/complex), Apollo's output is THE PLAN,
+    // not monolithic code. The smallest honest change on the Apollo prompt
+    // surface: the contract rides the classification that already flows.
+    const plannerMarker = action === 'prompt' && classification.needsPlanning
+      ? '[OLYMPUS-PLANNER] This task is architectural/complex. Your deliverable for this turn is THE PLAN, not monolithic code: write dispatch-plan.json to the project lane root — a DAG of small hops per the schema in src/lib/hop-runtime/plan-schema.ts (each hop: id, god, prompt — the spec SLICE only, artifacts[], optional after[] edges, budgetTokens <= 16384; one god per hop; artifacts on disk carry the campaign between hops). The hop runtime (src/lib/hop-runtime/walker.ts) walks it: per-hop dispatch on the god\'s own model lane (concurrency <= 3), deterministic verify (file-exists/build/lint, 0 tokens), park-on-exhaustion with resume. Sessions are lanes; the disk carries the campaign. '
+      : '';
     const runText = unattended
-      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + promptText
-      : sessionMarker + classificationMarker + promptText;
+      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + promptText + plannerMarker
+      : sessionMarker + classificationMarker + promptText + plannerMarker;
 
     // R-C: appendActivity for prompt (not answer/context) — durable run-start audit.
     if (action === 'prompt') {

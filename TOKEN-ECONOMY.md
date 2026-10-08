@@ -158,6 +158,21 @@ ceiling is shared across four serving pools' worth of latency isolation. Heavy p
 dispatch may still hit the ceiling — the honest failure card (#98) reports it; the
 short-circuit path is the pressure valve.
 
+**Sessions are lanes; the disk carries the campaign — the hop runtime (#109's shape):** an
+architectural task is no longer ONE long god-session (the 150k-token monolith needed the
+pool healthy for its FULL length — the user's 2026-10-09 run died at ~80%, ~5.5 min lost).
+It is a DETERMINISTIC SPINE (a script, zero LLM tokens) walking SMALL LLM HOPS
+(`src/lib/hop-runtime/`): Apollo emits `dispatch-plan.json` (a DAG of ≤16,384-output-token
+hops, one god each, artifacts on disk), the walker dispatches per hop on the god's own lane
+(concurrency ≤ 3, the #106 law), verifies DETERMINISTIC-FIRST (file-exists / build / lint —
+0 tokens, 0 pools), and PARKS on exhaustion with `--resume` (the session id + artifacts
+preserved). Why this wins on free: a ≤16k hop needs ~30–60s of pool availability — bursts
+fit BETWEEN peaks; monoliths don't. Blast radius shrinks from "lose a 5.5-minute run" to
+"lose one hop — resume costs one prompt". The retry crescendo (#107) absorbs the bursts
+that fit; the park survives the ones that don't. Per-hop telemetry (tokensIn/out, lane,
+duration, retries absorbed — `<lane>/.olympus-hop-telemetry.jsonl`) is the measured
+free-token economy the #83 sizing matrix will cite.
+
 Requirements: at least one free-tier key — OpenRouter and/or NVIDIA — added inside OpenCode (`olympus opencode` → Settings → Providers), or legacy `OLYMPUS_OPENROUTER_KEY` / `OLYMPUS_NVIDIA_KEY` env vars. **One key is enough** (NVIDIA recommended for the distributed pantheon). Keys are configured inside OpenCode, never injected by OLYMPUS (see [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md)).
 
 ### Zen economics (pay-as-you-go)

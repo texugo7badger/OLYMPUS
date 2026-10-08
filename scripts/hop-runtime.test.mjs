@@ -220,6 +220,24 @@ async function main() {
     JSON.stringify(walk4).slice(0, 240));
   expect('V: verify burned ZERO dispatches (deterministic-first — the dispatcher ran once per hop, verify itself 0 LLM)',
     verifyDispCalls === 2, 'calls=' + verifyDispCalls);
+
+  // ── 6. The planner contract: the Apollo prompt surface ──────────────────
+  const routeSrc = fs.readFileSync(OLYMPUS + '/src/app/api/olympus/action/route.ts', 'utf-8');
+  expect('PL: needsPlanning gates the planner marker (the contract rides the classification)',
+    /classification\.needsPlanning\s*\? '\[OLYMPUS-PLANNER\]/.test(routeSrc),
+    'the planner marker is not gated on needsPlanning');
+  expect('PL: the marker names dispatch-plan.json + the hop runtime + the doctrine',
+    /OLYMPUS-PLANNER/.test(routeSrc) && /dispatch-plan\.json/.test(routeSrc) && /hop-runtime/.test(routeSrc) && /the disk carries the campaign/.test(routeSrc),
+    'the planner contract block is incomplete');
+  expect('PL: the marker rides AFTER the prompt (the session marker still leads every turn type)',
+    /: sessionMarker \+ classificationMarker \+ promptText \+ plannerMarker/.test(routeSrc),
+    'the composition broke the #65 marker-order pin');
+  const agentsSrc = fs.readFileSync(OLYMPUS + '/AGENTS.md', 'utf-8');
+  expect('PL: the doctrine sentence in AGENTS.md (sessions are lanes; the disk carries the campaign)',
+    /Sessions are lanes; the disk carries the campaign/.test(agentsSrc), 'the standing note is missing');
+  const econSrc = fs.readFileSync(OLYMPUS + '/TOKEN-ECONOMY.md', 'utf-8');
+  expect('PL: the hop-runtime economics in TOKEN-ECONOMY.md (bursts fit BETWEEN peaks; the park survives)',
+    /burst/i.test(econSrc) && /PARKS on exhaustion/.test(econSrc), 'the hop economics section is missing');
 }
 
 main().then(() => {
