@@ -29,6 +29,7 @@ import path from 'path';
 import os from 'os';
 import { detectStacksWithFs, type StackDetection, type FsAdapter } from './stack-detector';
 import { getVaultRoot } from './vault-root';
+import { workspaceLaneDir, findOlympusRoot } from './opencode-spawn';
 
 export interface ProjectNote {
   slug: string;
@@ -140,6 +141,88 @@ export function getProject(slug: string): ProjectNote | null {
     vscodium_workspace: fm.vscodium_workspace,
     livePreviewPort: typeof fm.livePreviewPort === 'number' ? fm.livePreviewPort : (typeof fm.live_preview_port === 'number' ? fm.live_preview_port : undefined),
   };
+}
+
+// --- #103: the note/lane reconciliation (MADRUGA-PREVIEW-1 Batch B) ------------
+
+/**
+ * The reconciled project path — what consumers should display/use.
+ *
+ *   source 'note'       — the note's own path is healthy (alive, not inside
+ *                         the OLYMPUS root, or no lane copy exists to
+ *                         prefer); displayed verbatim.
+ *   source 'note-stale' — the note's path is ALIVE but points elsewhere than
+ *                         the lane copy (the pre-#99 bench fossil shape):
+ *                         the LANE path is returned + the staleness is
+ *                         surfaced; the note is NOT written (never clobbered).
+ *   source 'lane'       — the lane copy is the truth: either the note path
+ *                         is dead on disk (self-heal — the note is repointed,
+ *                         noteUpdated true) or the note path points inside
+ *                         the OLYMPUS root (the #99 incident shape — same
+ *                         self-heal when a lane copy exists; otherwise the
+ *                         lane dir itself is returned, never the repo).
+ */
+export interface ReconciledProjectPath {
+  path: string;
+  source: 'note' | 'note-stale' | 'lane';
+  noteUpdated: boolean;
+}
+
+/**
+ * #103: reconcile a project note's path against the workspace lane.
+ *
+ * The vault note is the registry surface; the lane is where #99 moved the
+ * interactive-session projects. They diverged on the move and nothing
+ * reconciled — the Live Preview tip told the user to cd into a dead pre-#99
+ * bench path. Rules (the registry is trusted, but never blindly):
+ *   - never resolve INTO the OLYMPUS root (the #99 never-the-repo guard);
+ *   - self-heal ONLY when the note path is dead on disk (or inside the root)
+ *     and a lane copy exists — a write, so read-only consumers must call
+ *     this knowing it can repoint the note;
+ *   - staleness is SURFACED (source 'note-stale'), never clobbered;
+ *   - null-safe: no slug / no note → null.
+ */
+export function reconcileProjectPath(slug: string | null | undefined): ReconciledProjectPath | null {
+  if (!slug) return null;
+  const project = getProject(slug);
+  if (!project) return null;
+
+  const root = findOlympusRoot();
+  const insideRoot = (p: string): boolean => !!p && (p === root || p.startsWith(root + '/'));
+  const laneDir = workspaceLaneDir();
+  const laneProjectDir = path.join(laneDir, slug);
+  const laneCopyExists = fs.existsSync(laneProjectDir);
+
+  const notePath = project.path || '';
+
+  // the #99 incident shape: a note pointing into the OLYMPUS root is never
+  // resolved into — the lane is the only acceptable answer.
+  if (insideRoot(notePath)) {
+    if (laneCopyExists) {
+      try { updateProject(slug, { path: laneProjectDir }); return { path: laneProjectDir, source: 'lane', noteUpdated: true }; }
+      catch { return { path: laneProjectDir, source: 'lane', noteUpdated: false }; }
+    }
+    return { path: laneDir, source: 'lane', noteUpdated: false };
+  }
+
+  const notePathAlive = notePath ? fs.existsSync(notePath) : false;
+
+  if (laneCopyExists) {
+    if (!notePathAlive) {
+      // self-heal: the note path is dead on disk; the lane copy is the truth.
+      try { updateProject(slug, { path: laneProjectDir }); return { path: laneProjectDir, source: 'lane', noteUpdated: true }; }
+      catch { return { path: laneProjectDir, source: 'lane', noteUpdated: false }; }
+    }
+    if (notePath && notePath !== laneProjectDir) {
+      // the fossil is alive elsewhere (the pre-#99 bench): surfaced, never clobbered.
+      return { path: laneProjectDir, source: 'note-stale', noteUpdated: false };
+    }
+    return { path: laneProjectDir, source: 'note', noteUpdated: false };
+  }
+
+  // no lane copy: the note is the only truth there is (alive or not, it is
+  // the registry's own claim — displayed verbatim).
+  return { path: notePath, source: 'note', noteUpdated: false };
 }
 
 export interface CreateProjectInput {

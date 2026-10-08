@@ -20,7 +20,7 @@ import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
 const DEFAULT_PORT = 3000;
 const PROBE_INTERVAL_MS = 3000;
 
-interface ProbeStatus { running: boolean; port: number; url: string; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; }
+interface ProbeStatus { running: boolean; port: number; url: string; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; }
 
 export default function LivePreview() {
   const activeProject = useOlympus(s => s.activeProject);
@@ -49,7 +49,7 @@ export default function LivePreview() {
       // the panel's real defect; no client-side workaround could fix it.
       const r = await fetch(`/api/olympus/live-preview${params}`);
       const d = await r.json();
-      setStatus({ running: d.running, port: d.port, url: d.url, host: d.host ?? null, responseTimeMs: d.responseTimeMs });
+      setStatus({ running: d.running, port: d.port, url: d.url, host: d.host ?? null, responseTimeMs: d.responseTimeMs, path: d.path ?? null, pathSource: d.pathSource ?? null });
       setProbing(false);
     } catch { setStatus({ running: false, port, url: previewUrl, host: null, responseTimeMs: 0 }); setProbing(false); }
   }, [projectSlug, port, previewUrl]);
@@ -106,6 +106,9 @@ export default function LivePreview() {
   // #102: the server-verified REACHABLE url once probing settles; the local
   // guess is only the pre-first-probe fallback.
   const effectiveUrl = status?.url ?? previewUrl;
+  // #103: the RESOLVED project path (note/lane reconciliation) for the tip —
+  // the raw note path only as the pre-first-probe fallback.
+  const resolvedPath = status?.path ?? activeProject?.path;
   const showOverlay = !isRunning || probing || !iframeLoaded;
 
   return (
@@ -178,8 +181,11 @@ export default function LivePreview() {
             </p>
             {!probing && !isRunning && (
               <div className="text-[10px] font-mono text-[#5A5A5A] bg-olympus-card px-3 py-1.5 rounded-md border border-olympus-gold/10">
-                <span className="text-olympus-gold">tip:</span> run <code className="text-olympus-green">cd "{activeProject?.path || '<project>'}" && npm run dev</code>
+                <span className="text-olympus-gold">tip:</span> run <code className="text-olympus-green">cd "{resolvedPath ?? '<project>'}" && npm run dev</code>
               </div>
+            )}
+            {!probing && !isRunning && status?.pathSource === 'note-stale' && (
+              <p className="text-[10px] font-mono text-[#5A5A5A]">note path is stale — the project lives at {status?.path}</p>
             )}
             {isRunning && !iframeLoaded && !probing && <p className="text-[10px] font-mono text-olympus-text-dim">Dev server is up — loading preview…</p>}
           </div>

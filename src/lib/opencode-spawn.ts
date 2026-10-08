@@ -369,11 +369,10 @@ export interface WorkspaceLane {
 }
 
 /**
- * #99 (UAT-BUILD-1 Batch C): resolve + bootstrap the WORKSPACE LANE — the
- * directory interactive-session projects land in. NEVER the repo/install
- * root: the 2026-10-07 UAT created exemplo-landingpage/ INSIDE the OLYMPUS
- * working tree because the session serve inherited findOlympusRoot() as its
- * cwd (DB-evidenced: the warm session's messages carry path.cwd = the repo).
+ * #103 (MADRUGA-PREVIEW-1 Batch B): the PURE lane resolver — no mkdir, no
+ * symlink, no copies. The GET probe path (the Live Preview status route and
+ * any read-only consumer) must never create anything on disk; only
+ * resolveWorkspaceLane() bootstraps.
  *
  * Resolution order:
  *   1. OLYMPUS_WORKSPACE env — the explicit operator override, used verbatim;
@@ -382,15 +381,8 @@ export interface WorkspaceLane {
  * The never-the-repo guard: a workspace that resolves TO the OLYMPUS root or
  * INSIDE it (operator misconfiguration) falls back to the default — projects
  * never silently land in the working tree.
- *
- * The lane is bootstrapped with the UAT-kit's proven shape
- * (reports/uat-r1/SPAWN-INVOCATION.sh): .opencode symlinked to the root's
- * overlay, opencode.json + opencode.demigods.json copied from the root.
- * Copies are created-if-missing (never clobbered — refresh semantics belong
- * to the #78 drift-detector class). Linux-first (the kit's own surface);
- * Windows junction semantics ride the packaged-lane pass.
  */
-export function resolveWorkspaceLane(): WorkspaceLane {
+export function workspaceLaneDir(): string {
   const root = findOlympusRoot();
   const defaultDir = join(homedir(), '.local', 'share', 'olympus', 'workspace');
   let dir = process.env.OLYMPUS_WORKSPACE
@@ -400,6 +392,27 @@ export function resolveWorkspaceLane(): WorkspaceLane {
     console.warn(`[opencode-spawn] OLYMPUS_WORKSPACE (${dir}) points inside the OLYMPUS root — falling back to ${defaultDir} (projects never land in the working tree)`);
     dir = defaultDir;
   }
+  return dir;
+}
+
+/**
+ * #99 (UAT-BUILD-1 Batch C): resolve + bootstrap the WORKSPACE LANE — the
+ * directory interactive-session projects land in. NEVER the repo/install
+ * root: the 2026-10-07 UAT created exemplo-landingpage/ INSIDE the OLYMPUS
+ * working tree because the session serve inherited findOlympusRoot() as its
+ * cwd (DB-evidenced: the warm session's messages carry path.cwd = the repo).
+ *
+ * The lane is bootstrapped with the UAT-kit's proven shape
+ * (reports/uat-r1/SPAWN-INVOCATION.sh): .opencode symlinked to the root's
+ * overlay, opencode.json + opencode.demigods.json copied from the root.
+ * Copies are created-if-missing (never clobbered — refresh semantics belong
+ * to the #78 drift-detector class); Windows junction semantics ride the
+ * packaged-lane pass. The pure resolution is workspaceLaneDir() (one root
+ * of truth — #103).
+ */
+export function resolveWorkspaceLane(): WorkspaceLane {
+  const root = findOlympusRoot();
+  const dir = workspaceLaneDir();
   let fresh = false;
   if (!existsSync(dir)) {
     fresh = true;
