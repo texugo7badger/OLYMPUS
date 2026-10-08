@@ -1,0 +1,13 @@
+FAIL  I: project-intent.ts exported (classifyFirstPrompt)  -- missing — the first prompt decides nothing; intake stays manual
+FAIL  I: extractProjectName (quoted / called / derived)  -- blocked
+FAIL  D: dev-server-trigger.ts exported (maybeStartDevServer)  -- missing — npm run dev never auto-starts; no live preview
+FAIL  D: the deterministic gate (dev script + frontend marker)  -- blocked
+FAIL  D: the trigger end-to-end (green + refusals)  -- blocked
+FAIL  W: the lane-project-dir threading (never process.cwd())  -- blocked
+
+6 assertion(s) failed
+npm notice
+npm notice New minor version of npm available! 12.0.1 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

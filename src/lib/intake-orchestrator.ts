@@ -68,6 +68,10 @@ export interface IntakeRequest {
   targetTui: TargetTui;
   /** Optional: override stack detection */
   manualStacks?: string[];
+  /** #110: the project lane dir for autonomous conversational intake — the
+   *  project is created HERE (never process.cwd(), which for API routes is
+   *  the OLYMPUS repo — the #99 shape). */
+  laneProjectDir?: string;
   /** Optional: additional context lines for the handoff prompt */
   additionalContext?: string[];
 }
@@ -185,7 +189,9 @@ export async function runIntake(request: IntakeRequest): Promise<IntakeResult> {
     }
 
     // ── Stage 3: Detect tech stack ────────────────────────────────
-    const detectPath = extraction?.extractDir || request.archivePath || process.cwd();
+    // #110: autonomous intake lands in the explicit lane project dir when
+    // given (never process.cwd() — an API route's cwd is the repo).
+    const detectPath = request.laneProjectDir || extraction?.extractDir || request.archivePath || process.cwd();
     const detection: StackDetection | null = await runStage('detect-stack', async () => {
       const fsAdapter: FsAdapter = {
         existsSync: (p) => fs.existsSync(p),
@@ -200,7 +206,7 @@ export async function runIntake(request: IntakeRequest): Promise<IntakeResult> {
     result.stacks = stacks;
 
     // ── Stage 4: Create project note ──────────────────────────────
-    const projectPath = extraction?.extractDir || detectPath;
+    const projectPath = request.laneProjectDir || extraction?.extractDir || detectPath;
     const projectResult: CreateProjectResult | null = await runStage('create-project', async () => {
       // createProject requires a valid directory path
       const createPath = fs.existsSync(projectPath) && fs.statSync(projectPath).isDirectory()
@@ -284,6 +290,8 @@ export async function quickIntake(opts: {
   userRequest: string;
   projectName: string;
   targetTui: TargetTui;
+  manualStacks?: string[];
+  laneProjectDir?: string;
   additionalContext?: string[];
 }): Promise<IntakeResult> {
   return runIntake({
@@ -291,6 +299,8 @@ export async function quickIntake(opts: {
     userRequest: opts.userRequest,
     projectName: opts.projectName,
     targetTui: opts.targetTui,
+    manualStacks: opts.manualStacks,
+    laneProjectDir: opts.laneProjectDir,
     additionalContext: opts.additionalContext,
   });
 }
