@@ -1,0 +1,110 @@
+
+=== INTAKE (second-prompt routing -> EXISTING, zero duplicates) ===
+{
+  "intent": {
+    "kind": "existing",
+    "slug": "fluency-smoke",
+    "score": 0.5,
+    "reason": "prompt matches project 'Fluency Smoke' (score 0.50 >= 0.42)"
+  },
+  "laneNoteExists": true,
+  "projectsBefore": [
+    "fluency-smoke",
+    "exemplo-landingpage1",
+    "exemplo-landingpage",
+    "petshop-landingpage",
+    "aime"
+  ],
+  "active": {
+    "slug": "fluency-smoke",
+    "ts": "2026-10-09T01:49:57.227Z"
+  }
+}
+INTAKE ROUTED-EXISTING: OK
+
+=== LANE KIT ===
+{
+  "lane": "/home/texugo/OLYMPUS-VAULT/02_Projects/fluency-smoke",
+  "files": [
+    ".olympus-context.json",
+    ".opencode",
+    "_delegations",
+    "_handoff.md",
+    "node_modules",
+    "opencode.demigods.json",
+    "opencode.json",
+    "project.md"
+  ],
+  "hopTimeoutMs": "1800000"
+}
+
+=== WALK START (2026-10-09T06:12:06.279Z, live R4 lanes, FREE) ===
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+
+=== WALK RESULT ===
+{
+  "completed": [
+    "hop-landing",
+    "hop-interactive"
+  ],
+  "parked": null,
+  "rows": [
+    {
+      "ts": "2026-10-09T06:15:16.609Z",
+      "hop": "hop-landing",
+      "god": "apollo",
+      "lane": "/home/texugo/OLYMPUS-VAULT/02_Projects/fluency-smoke",
+      "tokensIn": 51022,
+      "tokensOut": 3445,
+      "durationMs": 190329,
+      "retriesAbsorbed": 0,
+      "status": "completed"
+    },
+    {
+      "ts": "2026-10-09T06:16:31.573Z",
+      "hop": "hop-interactive",
+      "god": "hephaestus",
+      "lane": "/home/texugo/OLYMPUS-VAULT/02_Projects/fluency-smoke",
+      "tokensIn": 53937,
+      "tokensOut": 2254,
+      "durationMs": 74964,
+      "retriesAbsorbed": 0,
+      "status": "completed"
+    }
+  ]
+}
+
+=== PER-HOP TELEMETRY (markdown, verbatim from the lane JSONL) ===
+| hop | god | lane | tokIn | tokOut | dur | retries | status |
+|---|---|---|---|---|---|---|---|
+| hop-landing | apollo | lane | 51022 | 3445 | 190s | 0 | completed |
+| hop-interactive | hephaestus | lane | 53937 | 2254 | 75s | 0 | completed |
+
+=== ZERO-TERMINAL-DEATH LEDGER (absorbed + parked events — the FEATURE working) ===
+none — the window held
+
+WALK GREEN: all hops completed.
+
+=== PREVIEW: npm install vite (harness step) ===
+vite installed
+
+=== TRIGGER RESULT ===
+{
+  "triggered": false,
+  "reason": "start refused — no lane project directory at /home/texugo/.local/share/olympus/workspace/fluency-smoke — the manager spawns dev servers only in the workspace lane (#99), never the repo (pid ?)"
+}
+PREVIEW NOT GREEN — the honest refusal above stands (#105)
+
+=== STOP (zero orphans — the manager is the host on the real flow) ===
+{
+  "ok": true,
+  "alreadyStopped": true,
+  "slug": "fluency-smoke",
+  "pid": null,
+  "port": null,
+  "portFree": true,
+  "escalatedToSigkill": false
+}
+
+=== SMOKE DONE ===

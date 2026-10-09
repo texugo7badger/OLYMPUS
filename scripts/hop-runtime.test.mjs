@@ -252,8 +252,12 @@ async function main() {
     expect('R3: zero/negative env tolerated (falls back to the default)', mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: '0' }) === 900000, '?');
   }
   const walkerSrc = fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/walker.ts', 'utf-8');
-  expect('R3: spawnHopDispatcher threads the resolved knob into runSpawn (the hard-coded 15-min literal gone)',
-    /resolveHopTimeoutMs\(\)/.test(walkerSrc) && !/15 \* 60_000/.test(walkerSrc), 'the hard-coded ceiling still rules');
+  // The contract: the runSpawn CALL SITE threads the resolved knob (a named
+  // DEFAULT constant elsewhere in the file is the sane-default home, not a
+  // violation).
+  expect('R3: spawnHopDispatcher threads the resolved knob into runSpawn (no hard-coded ceiling at the call site)',
+    /resolveHopTimeoutMs\(\)/.test(walkerSrc) && /runSpawn\(\s*\[\s*'run',[\s\S]{0,140}?resolveHopTimeoutMs\(\)/.test(walkerSrc) && !/runSpawn\(\s*\[[\s\S]{0,160}?\d+ \* 60_000/.test(walkerSrc),
+    'the call site still hard-codes the ceiling');
 }
 
 main().then(() => {
