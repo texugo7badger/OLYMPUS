@@ -1,0 +1,56 @@
+
+=== HYGIENE snapshot ===
+{
+  "activeBefore": "{\n  \"slug\": \"fluency-smoke\",\n  \"ts\": \"2026-10-09T01:49:57.227Z\"\n}",
+  "lanePreExisted": false,
+  "removed": true
+}
+
+=== INTENT (fresh slug, deterministic path — 0 LLM) ===
+{
+  "kind": "new",
+  "slug": "preview-two-origin-check",
+  "message": "Created project 'Preview Two Origin Check' (preview-two-origin-check) at /home/texugo/OLYMPUS-VAULT/02_Projects/preview-two-origin-check — no project matches; the prompt names 'Preview Two Origin Check' — creating it"
+}
+
+=== SAMPLE-1 (immediately post-create) ===
+{
+  "line": "stacks: [html, css, javascript]",
+  "hex": "73 74 61 63 6b 73 3a 20 5b 68 74 6d 6c 2c 20 63 73 73 2c 20 6a 61 76 61 73 63 72 69 70 74 5d",
+  "byteCount": 31
+}
+
+=== SAMPLE-2 (+250ms — any deferred rewrite would have run) ===
+{
+  "line": "stacks: [html, css, javascript]",
+  "hex": "73 74 61 63 6b 73 3a 20 5b 68 74 6d 6c 2c 20 63 73 73 2c 20 6a 61 76 61 73 63 72 69 70 74 5d",
+  "byteCount": 31
+}
+
+=== SAMPLE-3 (after a read-back classification pass) ===
+{
+  "line": "stacks: [html, css, javascript]",
+  "hex": "73 74 61 63 6b 73 3a 20 5b 68 74 6d 6c 2c 20 63 73 73 2c 20 6a 61 76 61 73 63 72 69 70 74 5d",
+  "byteCount": 31,
+  "rereadKind": "existing",
+  "rereadSlug": "preview-two-origin-check"
+}
+
+=== CONSUMER READ-BACK (project-context.getProject) ===
+{
+  "stacks": [
+    "html",
+    "css",
+    "javascript"
+  ],
+  "anomalies": "(check project.md __anomalies via parseFrontmatter if line corrupt)"
+}
+
+=== VERDICT ===
+CORRECT on all three samples — the FLUENCY-1 specimen was TRANSIENT (the rider-era mid-fix tree state), not a live code defect; the OLD note keeps the eaten shape and the R1 __anomalies surface now flags exactly that class loudly
+
+=== HYGIENE restore ===
+{
+  "activeRestored": true,
+  "laneRemoved": true
+}

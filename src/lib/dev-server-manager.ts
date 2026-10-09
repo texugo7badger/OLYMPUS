@@ -134,6 +134,22 @@ function insideOlympusRoot(p: string): boolean {
   return !!p && !!root && (p === root || p.startsWith(root + '/'));
 }
 
+/**
+ * #112 follow-on (PREVIEW-2 live garnish): the port argv must match the dev
+ * server's CLI. The vite class rejects the next-class's bare `-p` (vite's
+ * CACError killed the first live preview — served-dir, right lane, dead
+ * argv); `--strictPort` additionally keeps vite on the PROBED port (without
+ * it vite silently hops on a busy port and the probe would name a lie).
+ * The next class (`next dev`) and bare `node` fixtures keep `-p`.
+ */
+export function devServerPortArgs(devScript: string, port: number): string[] {
+  // Evidence-bounded: only the vite class is PROVEN to need the long flag
+  // (tonight's CACError); every other dev script keeps the SERVE-1 shape
+  // (`-p`) — unproven flag dialects are not invented here (the PORT env is
+  // also threaded at spawn as the vendor-neutral channel).
+  return /\bvite\b/.test(devScript) ? ['--port', String(port), '--strictPort'] : ['-p', String(port)];
+}
+
 function isPidAlive(pid: number | null | undefined): boolean {
   if (typeof pid !== 'number' || pid <= 0) return false;
   try { process.kill(pid, 0); return true; }
@@ -261,11 +277,17 @@ export async function start(projectSlug: string, port?: number): Promise<DevServ
   const logFile = join(logDir, `${projectSlug}-${Date.now()}.log`);
   const outFd = openSync(logFile, 'a');
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const child = spawn(npmCmd, ['run', 'dev', '--', '-p', String(resolvedPort)], {
+  // #112 follow-on: the port argv matches the dev script's CLI class
+  // (vite gets --port/--strictPort; the next/node classes keep -p).
+  let devScript = '';
+  try {
+    devScript = String(JSON.parse(readFileSync(join(projectPath, 'package.json'), 'utf-8'))?.scripts?.dev ?? '');
+  } catch { /* an unreadable package.json keeps the default argv class */ }
+  const child = spawn(npmCmd, ['run', 'dev', '--', ...devServerPortArgs(devScript, resolvedPort)], {
     cwd: projectPath,
     detached: true,          // the durable lane: a new process group, immune to the spawning session's death
     stdio: ['ignore', outFd, outFd],
-    env: process.env,
+    env: { ...process.env, PORT: String(resolvedPort) }, // belt-and-braces for env-port servers
   });
   child.unref();             // the manager's session does not wait for the server
 

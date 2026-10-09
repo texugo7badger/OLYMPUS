@@ -1,0 +1,43 @@
+PASS  A1 start → ok, not alreadyRunning, pid > 0
+PASS  A1 start → port === the note livePreviewPort (panel parity)
+PASS  A2 the state file exists with EXACTLY {pid,port,host,projectPath,startedAt,logFile,lastProbe}
+PASS  A2 the state pid + projectPath are the spawn truth
+PASS  A3 status(slug) polled green — running via the probe
+PASS  A3 status carries host + the reachable url
+PASS  A4 status(port) — the by-port lookup finds the slug
+PASS  A5 HTTP GET the served page → 200 + the fixture marker
+PASS  A6 idempotence — start again → alreadyRunning, SAME pid + port
+PASS  A7 stop → ok + port free
+PASS  A8 zero orphans — pid reaped (ESRCH) + port not listening
+PASS  A9 the state file is removed by stop
+PASS  A10 the crash-orphan: status is honest down (stale state, pid dead) — never a false running
+PASS  A10 the stale state file self-heals (removed)
+PASS  A11 the clean restart after the heal → green → stop
+PASS  A11 the restarted pid is reaped too (zero orphans)
+PASS  A12 the sweep — the note port is silent when the child ends
+      lifecycle fixture pids (created + killed by this suite): [115573,115573,115603]
+PASS  B1 the guard: start lands in the HOME-default lane fallback — NEVER the fake root
+PASS  B3 the guard-mode server is real (polled green) + stops clean
+PASS  B2 zero orphans in guard mode (pid reaped + sweep silent)
+      guard fixture pids (created + killed by this suite): [115656,115656]
+PASS  A13/#112 the fixture is honestly legless: NO workspace-lane copy exists (the intake shape)
+PASS  A13/#112 start ACCEPTS the intake-registered project (reconcile-aware resolution)
+PASS  A13/#112 the spawn lands in the 02_Projects project dir (the note path — never the legacy empty workspace derivation)
+PASS  A13/#112 probe-green end-to-end (running + latency + url)
+PASS  A13/#112 the served page answers HTTP 200 with the fixture marker
+PASS  A13/#112 clean stop, state file gone, zero orphans (the port silent)
+PASS  A14/#112 refusal preserved: the unknown slug gets the honest no-lane refusal (never a narrated spawn)
+PASS  C1 the spawn is DETACHED (detached: true) — the interactive lane cannot host a durable process
+PASS  C2 the spawned child is unref()d — the server survives the spawning session
+PASS  C3 the insideOlympusRoot guard runs before spawn (the #99 never-the-repo shape)
+PASS  C4 status truth is probeDevServer (the #102 dual-stack probe, reused — the only source of "running")
+PASS  C5 the stop ladder: SIGTERM first, SIGKILL the disclosed last resort
+PASS  C6/#112 the manager resolves the project dir through reconcileProjectPath (the #103 lane-aware truth) — never the bare lane root
+PASS  C7/port-args: the spawn argv is dev-script-shape-aware (the vite class gets --port --strictPort; the next class keeps -p) — the live garnish's CACError class pinned
+PASS  U-port/#112b devServerPortArgs exported
+PASS  U-port/#112b vite dev script -> --port N --strictPort (Never the bare -p; the port stays the probe's truth)
+PASS  U-port/#112b the next/default class keeps -p N (the SERVE-1 shape untouched)
+PASS  U-port/#112b a bare node dev script keeps -p N (the suite fixtures' shape)
+FAIL  U-port/#112b react-scripts/astro/nuxt also ride --port (the argv-flag class, not the next class)  -- ["--port","3000","--strictPort"]
+
+1/39 dev-server-manager assertion(s) FAILED

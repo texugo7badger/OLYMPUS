@@ -1,0 +1,92 @@
+
+=== INTAKE (fresh slug, real vault, 0 LLM) ===
+{
+  "kind": "new",
+  "slug": "preview-two-live",
+  "message": "Created project 'Preview Two Live' (preview-two-live) at /home/texugo/OLYMPUS-VAULT/02_Projects/preview-two-live — no project matches; the prompt names 'Preview Two Live' — creating it"
+}
+
+=== WALK START (2026-10-09T08:34:25.111Z, live R4 lanes, FREE) ===
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+
+=== WALK RESULT ===
+{
+  "completed": [
+    "hop-preview"
+  ],
+  "parked": null,
+  "rows": [
+    {
+      "ts": "2026-10-09T08:37:25.390Z",
+      "hop": "hop-preview",
+      "god": "apollo",
+      "lane": "/home/texugo/OLYMPUS-VAULT/02_Projects/preview-two-live",
+      "tokensIn": 49903,
+      "tokensOut": 1877,
+      "durationMs": 180278,
+      "retriesAbsorbed": 0,
+      "status": "completed"
+    }
+  ]
+}
+
+=== ARTIFACTS ON DISK ===
+[
+  "_delegations",
+  "_handoff.md",
+  "index.html",
+  "opencode.demigods.json",
+  "opencode.json",
+  "package.json",
+  "project.md",
+  "styles.css",
+  "vite.config.js"
+]
+
+=== npm install vite (harness step) ===
+
+=== RECONCILE (the lane-aware truth) ===
+{
+  "path": "/home/texugo/OLYMPUS-VAULT/02_Projects/preview-two-live",
+  "source": "note",
+  "noteUpdated": false
+}
+
+=== TRIGGER RESULT (through the cured seam) ===
+{
+  "triggered": true,
+  "reason": "probe-green ipv4 :3078 in 1ms — the live preview can open http://127.0.0.1:3078",
+  "status": {
+    "running": true,
+    "host": "ipv4",
+    "port": 3078,
+    "url": "http://127.0.0.1:3078",
+    "responseTimeMs": 1,
+    "note": "running (probe-verified on ipv4, 1ms) — pid 117025 on port 3078"
+  }
+}
+
+=== PREVIEW GREEN — THE LIVE PROOF ===
+{
+  "url": "http://127.0.0.1:3078",
+  "http": 200,
+  "bytes": 1527,
+  "marker": true,
+  "responseTimeMs": 1,
+  "note": "the status route (/api/olympus/dev-server/status) surfaces THIS SAME manager.status output (the suite-pinned #105 path) — the panel reads it"
+}
+
+=== STOP (zero orphans) ===
+{
+  "stopOk": true,
+  "afterRunning": false,
+  "portFree": true
+}
+
+=== HYGIENE ===
+{
+  "activeRestored": true,
+  "liveProofProject": "/home/texugo/OLYMPUS-VAULT/02_Projects/preview-two-live kept (disclosed)"
+}
+
+=== LIVE PREVIEW PROOF DONE ===

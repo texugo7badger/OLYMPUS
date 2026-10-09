@@ -382,6 +382,26 @@ if (process.argv[2] !== 'child') {
   check('C5 the stop ladder: SIGTERM first, SIGKILL the disclosed last resort', /SIGTERM/.test(src) && /SIGKILL/.test(src), '');
   check('C6/#112 the manager resolves the project dir through reconcileProjectPath (the #103 lane-aware truth) — never the bare lane root',
     /reconcileProjectPath\(/.test(src) && /reconciled\.path !== laneDirRoot|reconciled!?\.\s*path/.test(src), 'the workspaceLaneDir()-only derivation is still the only source (the #112 seam intact)');
+  check('C7/port-args: the spawn argv is dev-script-shape-aware (the vite class gets --port --strictPort; the next class keeps -p) — the live garnish\'s CACError class pinned',
+    /devServerPortArgs/.test(src) && /--strictPort/.test(src), 'the one-flag-fits-all -p spawn is still the only shape (vite rejects it — live evidence preview-2/s4)');
+}
+
+// ─── devServerPortArgs unit table (PREVIEW-2 garnish cure) — RED pre-fix ────
+{
+  let mod2 = null;
+  try { mod2 = await import(MODULE); } catch { /* RED */ }
+  const f = mod2?.devServerPortArgs;
+  check('U-port/#112b devServerPortArgs exported', typeof f === 'function', 'missing — the vite-class argv has no shape resolver');
+  if (typeof f === 'function') {
+    check("U-port/#112b vite dev script -> --port N --strictPort (Never the bare -p; the port stays the probe's truth)",
+      JSON.stringify(f('vite --host 127.0.0.1', 3080)) === JSON.stringify(['--port', '3080', '--strictPort']), JSON.stringify(f('vite --host 127.0.0.1', 3080)));
+    check("U-port/#112b the next/default class keeps -p N (the SERVE-1 shape untouched)",
+      JSON.stringify(f('next dev', 3080)) === JSON.stringify(['-p', '3080']), JSON.stringify(f('next dev', 3080)));
+    check("U-port/#112b a bare node dev script keeps -p N (the suite fixtures' shape)",
+      JSON.stringify(f('node fixture-server.js', 3080)) === JSON.stringify(['-p', '3080']), JSON.stringify(f('node fixture-server.js', 3080)));
+    check("U-port/#112b unproven dialects keep the SERVE-1 shape (-p + the threaded PORT env) — no invented flags",
+      JSON.stringify(f('react-scripts start', 3000)) === JSON.stringify(['-p', '3000']), JSON.stringify(f('react-scripts start', 3000)));
+  }
 }
 
 if (fails > 0) { console.error(`\n${fails}/${checked} dev-server-manager assertion(s) FAILED`); process.exit(1); }
