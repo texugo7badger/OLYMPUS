@@ -1,0 +1,106 @@
+probe time: 2026-10-09T04:55:06Z  nvidia key: nvapi-XRaF…  openrouter key: sk-or-v1… (the user's own vault keys, redacted)
+recipe: curl -sS -i --max-time 70 -w 'HTTP_CODE/TIME' -H 'Authorization: Bearer <key>' -H 'Content-Type: application/json' -d '{"model":M,"messages":[{"role":"user","content":"ping"}],"max_tokens":16}' <endpoint>
+
+===== NVIDIA z-ai/glm-5.3 =====
+HTTP/2 429 
+date: Fri, 09 Oct 2026 04:55:06 GMT
+content-type: application/problem+json
+content-length: 42
+vary: Origin
+
+{"status":429,"title":"Too Many Requests"}
+=== HTTP_CODE:429 TIME_TOTAL:0.635070s ===
+
+===== NVIDIA z-ai/glm-5.3-flash =====
+HTTP/2 200 
+date: Fri, 09 Oct 2026 04:55:51 GMT
+content-type: application/json
+access-control-expose-headers: nvcf-reqid
+nvcf-reqid: 077ea6c7-a498-424f-94cd-f9d46f4437ce
+nvcf-status: fulfilled
+vary: Origin
+
+{"id":"chatcmpl-18fb7404-4d3f-439b-b25b-8d5e844512ce","choices":[{"index":0,"message":{"content":null,"role":"assistant","reasoning_content":"The user sent \"ping\" - a simple message, likely testing connectivity or just"},"finish_reason":"length","logprobs":null}],"created":1791521745,"model":"z-ai/glm-5.3-flash","service_tier":null,"system_fingerprint":null,"object":"chat.completion","usage":{"prompt_tokens":13,"completion_tokens":16,"total_tokens":29,"prompt_tokens_details":{"audio_tokens":null,"cached_tokens":0},"completion_tokens_details":{"accepted_prediction_tokens":null,"audio_tokens":null,"reasoning_tokens":16,"rejected_prediction_tokens":null}}}
+=== HTTP_CODE:200 TIME_TOTAL:44.794099s ===
+
+===== NVIDIA moonshotai/kimi-k3 =====
+HTTP/2 200 
+date: Fri, 09 Oct 2026 04:55:53 GMT
+content-type: application/json
+access-control-expose-headers: nvcf-reqid
+nvcf-reqid: a5eac084-9741-4544-875b-9c7dee97279d
+nvcf-status: fulfilled
+vary: Origin
+
+{"id":"chatcmpl-e9a364cd-978f-4110-b894-101cc3aa883e","choices":[{"index":0,"message":{"content":"Pong! 🏓\n\n","refusal":null,"role":"assistant","reasoning_content":"Simple ping."},"finish_reason":"length","logprobs":null}],"created":1791521752,"model":"moonshotai/kimi-k3","object":"chat.completion","usage":{"prompt_tokens":87,"completion_tokens":16,"total_tokens":103,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens_details":{"reasoning_tokens":6}}}
+=== HTTP_CODE:200 TIME_TOTAL:1.606420s ===
+
+===== NVIDIA meta/muse-glimmer-30b =====
+HTTP/2 200 
+date: Fri, 09 Oct 2026 04:55:57 GMT
+content-type: application/json
+access-control-expose-headers: nvcf-reqid
+nvcf-reqid: 2a5a98ff-0abe-4322-b3aa-c1b7e73d9260
+nvcf-status: fulfilled
+vary: Origin
+
+{"id":"b11798ba46553eb5","choices":[{"index":0,"message":{"content":null,"role":"assistant","reasoning_content":"ping\n\nUser says \"ping\". Probably just ping? Might be"},"finish_reason":"length","logprobs":null}],"created":1791521756,"model":"meta/muse-glimmer-30b","service_tier":null,"system_fingerprint":null,"object":"chat.completion","usage":{"prompt_tokens":57,"completion_tokens":16,"total_tokens":73,"prompt_tokens_details":{"audio_tokens":null,"cached_tokens":0}}}
+=== HTTP_CODE:200 TIME_TOTAL:3.967076s ===
+
+===== NVIDIA deepseek-ai/deepseek-v4.1-flash =====
+curl: (28) Operation timed out after 70000 milliseconds with 0 bytes received
+
+=== HTTP_CODE:000 TIME_TOTAL:70.000569s ===
+
+===== OPENROUTER google/gemma-4-31b-it:free =====
+HTTP/2 429 
+date: Fri, 09 Oct 2026 04:57:08 GMT
+content-type: application/json
+access-control-allow-origin: *
+access-control-expose-headers: X-Generation-Id,X-Provider-Name,request-id,cf-ray
+x-generation-id: gen-1791521827-1Pz4ozx8jYmiaVRoZvD5
+set-cookie: __cf_bm=16U7XJLJCiaPY0qz0Ah6LcC56VOUL_fQDzf23ys.Gng-1791521827.3715112-1.0.1.1-zVcXXJ3a3F91nLR_7dzmFwJhuyOFDR03JtncjDr5eV3S4DfjEvtw28lEFX4qtdbJng4jCyySh3xDwOWkbyzLE3GVftcK4u7flqkTm._O2SWnLgzeBBrqL5m8qHe6LTRL; HttpOnly; SameSite=None; Secure; Path=/; Domain=openrouter.ai; Expires=Fri, 09 Oct 2026 05:27:08 GMT
+permissions-policy: payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+referrer-policy: no-referrer, strict-origin-when-cross-origin
+x-content-type-options: nosniff
+server: cloudflare
+cf-ray: a47acd7d1d3d2c68-GIG
+
+{"error":{"message":"Provider returned error","code":429,"metadata":{"raw":"google/gemma-4-31b-it:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations","provider_name":"Google AI Studio","is_byok":false,"provider_error_code":"429","limit_source":"upstream_provider_shared_pool","remedy_hint":"Retry shortly, add your own provider key (https://openrouter.ai/settings/integrations), or route to another provider with provider routing: https://openrouter.ai/docs/features/provider-routing"}},"user_id":"user_3BcsQtObuUMWkxKCp8Y4FtQtjo0"}
+=== HTTP_CODE:429 TIME_TOTAL:1.225151s ===
+
+===== OPENROUTER openai/gpt-oss-20b:free =====
+HTTP/2 404 
+date: Fri, 09 Oct 2026 04:57:08 GMT
+content-type: application/json
+access-control-allow-origin: *
+access-control-expose-headers: X-Generation-Id,X-Provider-Name,request-id,cf-ray
+x-generation-id: gen-1791521828-l8yNpNGoYxr0Z9hsW108
+set-cookie: __cf_bm=zKeHadsIeEyw5u0jrVrkA_JjamTsbht_k1eu2QJHPaA-1791521828.6286147-1.0.1.1-E.aeDlOEdqC8AXF11VK7ewFj4Uy8fBbg53m6f9_rtz_fpFfxjcyJRFmtJ8tbI7TCiCxHritWkkkjI6JIA1t31ixKPdCtkU0btKk.wFhPoonxMpE0F41yFqp34orJPGDp; HttpOnly; SameSite=None; Secure; Path=/; Domain=openrouter.ai; Expires=Fri, 09 Oct 2026 05:27:08 GMT
+permissions-policy: payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+referrer-policy: no-referrer, strict-origin-when-cross-origin
+x-content-type-options: nosniff
+server: cloudflare
+cf-ray: a47acd84e81d9522-GIG
+
+{"error":{"message":"This model is unavailable for free. The paid version is available now - use this slug instead: openai/gpt-oss-20b","code":404},"user_id":"user_3BcsQtObuUMWkxKCp8Y4FtQtjo0"}
+=== HTTP_CODE:404 TIME_TOTAL:0.083316s ===
+
+===== OPENROUTER inclusionai/ling-3.0-flash:free =====
+HTTP/2 404 
+date: Fri, 09 Oct 2026 04:57:08 GMT
+content-type: application/json
+access-control-allow-origin: *
+access-control-expose-headers: X-Generation-Id,X-Provider-Name,request-id,cf-ray
+x-generation-id: gen-1791521828-gosmaL1cywJrASoZKc2U
+set-cookie: __cf_bm=HEDWDYbvM5FZiOqDW9Izwm7R5ESaedy0Xdo2269WVqE-1791521828.728013-1.0.1.1-WEvF6OWGbvigFsBmbnUM_f9uZAhzHJclCzUpTuuZ4UBVUR1rNITcvqPpANFUW7O7BddkfxPkGP9VunzGA9relmZROnKj8fpBSez88phQqI10is_VNPnpu9tvR7sE.tta; HttpOnly; SameSite=None; Secure; Path=/; Domain=openrouter.ai; Expires=Fri, 09 Oct 2026 05:27:08 GMT
+permissions-policy: payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")
+referrer-policy: no-referrer, strict-origin-when-cross-origin
+x-content-type-options: nosniff
+server: cloudflare
+cf-ray: a47acd858e12cb21-GIG
+
+{"error":{"message":"This model is unavailable for free. The paid version is available now - use this slug instead: inclusionai/ling-3.0-flash","code":404},"user_id":"user_3BcsQtObuUMWkxKCp8Y4FtQtjo0"}
+=== HTTP_CODE:404 TIME_TOTAL:0.067941s ===
+
+probe end: 2026-10-09T04:57:08Z

@@ -300,6 +300,7 @@ async function main() {
   // (classifyRetry is module-private with the coarse 2-class shape).
   const {
     resolveRetryPlan, applyRetryJitter, classifyRetry: classifyRetry107,
+    retryExhaustionGuidance: guidance107,
   } = await import(OLYMPUS + '/src/lib/opencode-session.ts');
   const crescendoReady = typeof resolveRetryPlan === 'function'
     && typeof applyRetryJitter === 'function'
@@ -353,6 +354,50 @@ async function main() {
   delete process.env.OLYMPUS_RETRY_BACKOFF_MS;
   delete process.env.OLYMPUS_RETRY_RATE_LIMIT_MS;
   process.env.OLYMPUS_RETRY_BACKOFF_MS = '10, 10'; // restore the fixture patience for the remaining scenarios
+
+  // ── Scenario 10 (SMOKE-1 rider R2): the exhaustion card's arithmetic must
+  // SELF-RECONCILE — the headline count, the ledger count, and the printed
+  // plan all describe the SAME run. The auditor's specimen (the FLUENCY-1
+  // live card, s2/live-card-proof.txt): "RETRY EXHAUSTED after 4 retries …
+  // waited 65000ms across 2 retries … the plan was [5000, 30000, 120000,
+  // 300000]" — 4 ≠ 2, and 65000 (5s+60s) is no prefix of the printed plan.
+  // The card must print the plan the loop USED, and the counts must agree
+  // ON the card. Fixture auth tree, never the real vault.
+  expect('S10/R2: retryExhaustionGuidance exported (the card composer)', typeof guidance107 === 'function', 'missing');
+  if (typeof guidance107 === 'function') {
+    const authDir = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-r2-auth-'));
+    // Reproduce the specimen exactly: the card composed with NO env patience
+    // in process.env (today's code re-resolves the DEFAULT plan) against the
+    // env-shaped run's ledger. The cured signature takes the plan the loop
+    // USED as a parameter, so env state stops mattering.
+    delete process.env.OLYMPUS_RETRY_BACKOFF_MS;
+    delete process.env.OLYMPUS_RETRY_RATE_LIMIT_MS;
+    fs.writeFileSync(path.join(authDir, 'auth.json'), JSON.stringify({ nvidia: 'fixture-key', 'opencode-go': { key: 'fixture' } }));
+    // The specimen inputs: an env-shaped plan (5000,60000) + its 2-retry ledger.
+    const specimenPlan = resolveRetryPlan({ OLYMPUS_RETRY_BACKOFF_MS: '5000,60000' });
+    const specimenLedger = { waitedMs: 65000, labels: ['upstream 503', 'upstream 503'] };
+    const card = guidance107('fetch failed', 503, specimenLedger, [authDir], specimenPlan);
+    const head = card.match(/RETRY EXHAUSTED after (\d+) retries/);
+    const ledg = card.match(/across (\d+) retries/);
+    const planLine = card.match(/the plan was \[([0-9,\s]+)\]/);
+    expect('S10/R2: the plan PRINTED is the plan USED (the env override, not a fresh default re-resolution)',
+      !!planLine && planLine[1].replace(/\s+/g, '') === '5000,60000', card.split('\n').slice(0, 2).join(' | '));
+    expect('S10/R2: the headline count === the ledger count (2 === 2; the specimen was 4 ≠ 2)',
+      !!head && !!ledg && head[1] === ledg[1] && head[1] === '2', `headline=${head?.[1]} ledger=${ledg?.[1]}`);
+    expect('S10/R2: the ledger total (65000ms) is echoed — the numbers explain themselves ON the card',
+      /waited 65000ms across 2 retries \(upstream 503 x2\)/.test(card), card.split('\n')[1] || '');
+    // A 429-class ledger under a mixed run: the fixed lane must be NAMED on
+    // the card, or the total (3 x the fixed lane) can never be reconciled
+    // against the printed crescendo list.
+    const card429 = guidance107('upstream 429', 429,
+      { waitedMs: 30000, labels: ['upstream 429', 'upstream 429', 'upstream 429'] },
+      [authDir], resolveRetryPlan({ OLYMPUS_RETRY_BACKOFF_MS: '5,5,5', OLYMPUS_RETRY_RATE_LIMIT_MS: '10000' }));
+    expect('S10/R2: a 429-class ledger names the fixed key-limit lane ON the card (10000ms fixed per retry)',
+      /429[^\n]*key-limit lane[^\n]*10000\s*ms/i.test(card429) || /key-limit lane[^\n]*10000\s*ms/i.test(card429),
+      card429.split('\n').slice(0, 3).join(' | '));
+    fs.rmSync(authDir, { recursive: true, force: true });
+    process.env.OLYMPUS_RETRY_BACKOFF_MS = '10, 10'; // restore the fixture patience for the remaining scenarios
+  }
   } // crescendoReady
 
   // ── Route-side telemetry emission: content assertion (the feed write

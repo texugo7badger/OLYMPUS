@@ -133,6 +133,25 @@ if (process.argv[2] === 'child') {
     out.inRootHealNoteAfter = notePathNow('case-inroot2');
   }
 
+  if (mode === 'stacks-pin') {
+    // SMOKE-1 rider R1: the intake note's frontmatter stacks serialization.
+    const { parseFrontmatter, getProject } = await import('../src/lib/project-context.ts');
+    // (a) the round-trip: the writer template line must parse back IDENTICAL
+    mkdirSync(join(projectsDir, 'roundtrip'), { recursive: true });
+    const stacks = ['html', 'css', 'javascript'];
+    writeFileSync(join(projectsDir, 'roundtrip', 'project.md'),
+      `---\ntype: project\nslug: roundtrip\nname: Roundtrip\npath: ${join(lane, 'roundtrip')}\nstacks: [${stacks.join(', ')}]\ncreated: 2026-10-09T00:00:00.000Z\nlast_active: 2026-10-09T00:00:00.000Z\nlivePreviewPort: 3001\n---\n\nbody\n`);
+    const fm = parseFrontmatter(join(projectsDir, 'roundtrip', 'project.md'));
+    out.roundtrip = { parsedStacks: fm.stacks ?? null, anomalies: fm.__anomalies ?? null, viaGet: getProject('roundtrip')?.stacks ?? null };
+    // (b) the auditor's specimen: a bracket-eaten line must be SURFACED as an
+    // anomaly, never degraded silently to []
+    mkdirSync(join(projectsDir, 'corrupt'), { recursive: true });
+    writeFileSync(join(projectsDir, 'corrupt', 'project.md'),
+      `---\ntype: project\nslug: corrupt\nname: Corrupt\npath: /tmp/x\nstacks: tml, css, javascript]\ncreated: 2026-10-09T00:00:00.000Z\nlast_active: 2026-10-09T00:00:00.000Z\n---\n\nbody\n`);
+    const fm2 = parseFrontmatter(join(projectsDir, 'corrupt', 'project.md'));
+    out.corrupt = { parsedStacks: fm2.stacks ?? null, anomalies: fm2.__anomalies ?? null };
+  }
+
   process.stdout.write(JSON.stringify(out) + '\n');
   process.exit(0);
 }
@@ -205,6 +224,34 @@ if (process.argv[2] === 'child') {
     /cd\s+"\{resolvedPath\s*\?\?/.test(comp) || /cd\s+"\{resolvedPath\}/.test(comp) || /resolvedPath\s*\?\?\s*'<project>'/.test(comp), '');
   check('pin: the one dim stale-note line exists (a line, not a modal)',
     /note path is stale — the project lives at/.test(comp) && /note-stale/.test(comp), '');
+}
+
+// ─── stacks-pin mode (SMOKE-1 rider R1: the round-trip + the loud sentinel) ──
+// The auditor's specimen ("stacks: tml, css, javascript]" — the leading '['
+// eaten) is NOT reproducible on any durable surface (byte-verified at
+// reports/smoke-1/s0/ENTRY-GATES.md); the pins below lock the invariant
+// forever and make the corrupted class LOUD instead of silently empty.
+{
+  const S = child('stacks-pin');
+  if (S.__err) { check('R1: the stacks-pin child ran', false, S.__err); }
+  else {
+    check('R1: write -> read is IDENTICAL (the [html, css, javascript] flow sequence round-trips through parseFrontmatter AND getProject)',
+      JSON.stringify(S.roundtrip?.parsedStacks) === JSON.stringify(['html', 'css', 'javascript'])
+        && JSON.stringify(S.roundtrip?.viaGet) === JSON.stringify(['html', 'css', 'javascript']),
+      JSON.stringify(S.roundtrip).slice(0, 240));
+    check('R1: the healthy line flags NO anomaly',
+      !S.roundtrip?.anomalies || S.roundtrip.anomalies.length === 0, JSON.stringify(S.roundtrip?.anomalies));
+    check('R1: the bracket-eaten specimen (stacks: tml, css, javascript]) is SURFACED as an anomaly — never silently emptied',
+      Array.isArray(S.corrupt?.anomalies) && S.corrupt.anomalies.some((a) => a && a.key === 'stacks'),
+      JSON.stringify(S.corrupt).slice(0, 300));
+    check('R1: ...and the corrupted value itself still degrades to [] (tolerant, but now LOUD)',
+      Array.isArray(S.corrupt?.parsedStacks) === false || S.corrupt?.parsedStacks === null || S.corrupt.parsedStacks.length === 0,
+      JSON.stringify(S.corrupt?.parsedStacks));
+  }
+  const pcSrc = readFileSync(join(ROOT, 'src', 'lib', 'project-context.ts'), 'utf-8');
+  check('R1: the writer emits a bracket-closed flow sequence for stacks at BOTH sites (the serializer shape, pinned)',
+    (pcSrc.match(/stacks: \[\$\{[a-zA-Z_.]*stacks\.join\(', '\)\}\]/g) || []).length === 2,
+    'the writer template changed shape');
 }
 
 rmSync(WORK, { recursive: true, force: true });

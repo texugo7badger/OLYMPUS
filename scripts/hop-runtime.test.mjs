@@ -238,6 +238,22 @@ async function main() {
   const econSrc = fs.readFileSync(OLYMPUS + '/TOKEN-ECONOMY.md', 'utf-8');
   expect('PL: the hop-runtime economics in TOKEN-ECONOMY.md (bursts fit BETWEEN peaks; the park survives)',
     /burst/i.test(econSrc) && /PARKS on exhaustion/.test(econSrc), 'the hop economics section is missing');
+
+  // ── 7. SMOKE-1 rider R3: the per-hop ceiling is env-tunable ─────────────
+  // FLUENCY-1's resume was killed at the hard-coded 15-min ceiling SECONDS
+  // after the artifacts landed. The knob: OLYMPUS_HOP_TIMEOUT_MS, default
+  // 900000, junk/negative tolerated (falls back to the default).
+  expect('R3: resolveHopTimeoutMs exported (the per-hop ceiling knob)', !!mod && typeof mod.resolveHopTimeoutMs === 'function',
+    'absent — walker.ts spawns every hop with a hard-coded 15 * 60_000');
+  if (mod && typeof mod.resolveHopTimeoutMs === 'function') {
+    expect('R3: the default ceiling is 15 min (900000ms)', mod.resolveHopTimeoutMs({}) === 900000, JSON.stringify(mod.resolveHopTimeoutMs({})));
+    expect('R3: OLYMPUS_HOP_TIMEOUT_MS overrides (30000 -> 30000)', mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: '30000' }) === 30000, JSON.stringify(mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: '30000' })));
+    expect('R3: junk env tolerated (falls back to the default)', mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: 'abc' }) === 900000, '?');
+    expect('R3: zero/negative env tolerated (falls back to the default)', mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: '0' }) === 900000, '?');
+  }
+  const walkerSrc = fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/walker.ts', 'utf-8');
+  expect('R3: spawnHopDispatcher threads the resolved knob into runSpawn (the hard-coded 15-min literal gone)',
+    /resolveHopTimeoutMs\(\)/.test(walkerSrc) && !/15 \* 60_000/.test(walkerSrc), 'the hard-coded ceiling still rules');
 }
 
 main().then(() => {

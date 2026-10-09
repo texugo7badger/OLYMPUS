@@ -1,0 +1,89 @@
+[opencode-session] Reusing warm OpenCode server on port 38431 (pid 45397)
+PASS  S1: run completes without human input
+PASS  S1: both retry attempts in transcript
+PASS  S1: stub reply delivered
+PASS  S1: NO parallel second connection (max concurrent POST = 1)
+PASS  S1: exactly 3 POSTs (1 initial + 2 retries)
+PASS  S2: run fails (non-zero)
+PASS  S2: exhaustion line
+PASS  S2: no silent downgrade (explicit wording)
+PASS  S2: alternatives line present (#56-style)
+PASS  S2: guidance names the explicit switch command
+PASS  S2: still no parallelism
+PASS  S3: stalled run AUTO-RESUMES (completes after the nudge)
+PASS  S3: auto-continue nudge fired EXACTLY once
+PASS  S3: nudge precedes the retry line (nudge-then-retry ordering)
+PASS  S3: retry line carries stream_idle_timeout
+PASS  S3: stub reply delivered after auto-resume
+PASS  S3: still sequential (max concurrent POST = 1)
+PASS  U: quiet below warn
+PASS  U: warn at warnMs
+PASS  U: nudge-abort at stallMs (no permission)
+PASS  U: permission-pending OVERRIDES the nudge at stallMs
+PASS  U: complexityScale: architectural → 3
+PASS  U: complexityScale: complex → 3
+PASS  U: complexityScale: simple → 1
+PASS  U: complexityScale: absent → 1
+PASS  S4: client-gone run returns (no zombie watcher)
+PASS  S4: server-side /abort POST received after grace
+PASS  S4: run_abandoned payload present
+PASS  S4: payload carries last_event_ts (ISO)
+PASS  S4: grace elapsed before the abort (>=1.5s wall)
+PASS  S5: unattended client-gone → grace 0 (immediate abort)
+PASS  S5: server /abort received (unattended immediate)
+[opencode-session] Reusing warm OpenCode server on port 38431 (pid 45397)
+PASS  S6: in-stream overload (no statusCode) RECOVERS via the provider retry
+PASS  S6: the retry line fires with the REAL provider text (starvation cured)
+PASS  S6: the retry line names the PROVIDER class (not "Transport failure")
+PASS  S6: the UI error line carries the verbatim provider message
+PASS  S6: still sequential (max concurrent POST = 1)
+PASS  S6B: permanent in-stream overload fails (non-zero)
+PASS  S6B: exhaustion guidance fires on the in-stream overload path
+PASS  S6B: guidance names the REAL error text (not the generic string)
+PASS  S6B: no silent downgrade (explicit wording)
+PASS  S6B: alternatives line present (#56-style)
+PASS  S6B: exactly 3 POSTs before the loud death
+PASS  U2: default plan = the crescendo [5s,30s,120s,300s] (#107)
+PASS  U2: default attempts = list length + 1 (5 — ~7.5 min patience, $0 on free)
+PASS  U2: env override parsed (comma list, spaces tolerated)
+PASS  U2: junk env falls back to the default crescendo
+PASS  U2: junk entries dropped, honest entries kept
+PASS  U2: the 429 lane has its own env-tunable fixed backoff (cap-aware)
+PASS  U2: jitter is env-tunable (0 = deterministic, the fixture shape)
+PASS  U2: jitter(1000, 0) = 1000 (floor)
+PASS  U2: jitter(1000, 1) = 1300 (ceiling +30%)
+PASS  U2: jitter(1000, .5) = 1150 (mid)
+PASS  U2: jitter(1000, 1, 0) = 1000 (off)
+PASS  U2: classify 429 -> provider-rate-limit (the key-limit path, NOT the crescendo)
+PASS  U2: classify 503 -> provider-overload (the crescendo class)
+PASS  U2: classify in-stream "Service temporarily overloaded" (no status) -> provider-overload
+PASS  U2: classify stream_idle_timeout -> provider-overload
+PASS  U2: classify 401 -> NEVER (the auth class untouched)
+PASS  U2: classify transport text -> transport
+PASS  S9: 429 run exhausts (non-zero)
+PASS  S9: the exhaustion retry count follows the ENV list (3 entries -> 3 retries)
+PASS  S9: the patience ledger names the total wait + the class census
+PASS  S9: the ledger total PROVES the fixed lane (3x10ms=30ms; the crescendo would read 15ms)
+PASS  S9: the rate-limit retry line names the class
+PASS  S9: exactly 4 POSTs (1 initial + 3 retries — the env list is the truth)
+PASS  S10/R2: retryExhaustionGuidance exported (the card composer)
+FAIL  S10/R2: the plan PRINTED is the plan USED (the env override, not a fresh default re-resolution) — RETRY EXHAUSTED after 4 retries — strategy 'free-nvidia-build' failed with: upstream 503. |   Patience ledger: waited 65000ms across 2 retries (upstream 503 x2)
+FAIL  S10/R2: the headline count === the ledger count (2 === 2; the specimen was 4 ≠ 2) — headline=4 ledger=2
+PASS  S10/R2: the ledger total (65000ms) is echoed — the numbers explain themselves ON the card
+FAIL  S10/R2: a 429-class ledger names the fixed key-limit lane ON the card (10000ms fixed per retry) — RETRY EXHAUSTED after 4 retries — strategy 'free-nvidia-build' failed with: upstream 429. |   Patience ledger: waited 30000ms across 3 retries (upstream 429 x3)
+PASS  route: run_abandoned telemetry emitted on result.abandoned
+PASS  terminal: failure branch tracks the last error (runLastError)
+PASS  terminal: failure card names the last error + the preserved session
+PASS  S7: resolveWorkspaceLane is exported (#99)
+PASS  S7: OLYMPUS_WORKSPACE override used verbatim
+PASS  S7: lane bootstrapped with the kit shape (.opencode symlink)
+PASS  S7: lane carries the opencode.json copy
+PASS  S7: lane carries the opencode.demigods.json copy
+PASS  S7: second resolve is NOT fresh (the ask/notice fires once)
+[opencode-spawn] OLYMPUS_WORKSPACE (/home/texugo/Projects/olympus/inside-repo-test) points inside the OLYMPUS root — falling back to /home/texugo/.local/share/olympus/workspace (projects never land in the working tree)
+PASS  S7: a workspace pointing INSIDE the repo falls back to the default
+PASS  S7: the serve spawn threads the workspace lane as cwd
+PASS  S7: the spawn env carries OLYMPUS_ROOT_SESSION (#95 seam)
+PASS  S7: the first-run workspace notice exists (the ask seam)
+
+3 assertion(s) failed
