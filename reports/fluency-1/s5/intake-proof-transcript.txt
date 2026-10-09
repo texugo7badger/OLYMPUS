@@ -1,0 +1,49 @@
+
+=== BEFORE ===
+{
+  "projects": [
+    "exemplo-landingpage1",
+    "exemplo-landingpage",
+    "petshop-landingpage",
+    "aime"
+  ],
+  "laneExists": false,
+  "active": "fluency-smoke"
+}
+
+=== INTENT-1 (no folder selected -> new) ===
+{
+  "kind": "new",
+  "slug": "fluency-smoke",
+  "message": "Created project 'Fluency Smoke' (fluency-smoke) at /home/texugo/OLYMPUS-VAULT/02_Projects/fluency-smoke — no project matches; the prompt names 'Fluency Smoke' — creating it"
+}
+
+=== PROJECT NOTE ===
+{
+  "notePath": "/home/texugo/OLYMPUS-VAULT/02_Projects/fluency-smoke/project.md",
+  "exists": true,
+  "frontmatter": "type: project\nslug: fluency-smoke\nname: Fluency Smoke\npath: /home/texugo/OLYMPUS-VAULT/02_Projects/fluency-smoke\nstacks: [html, css, javascript]\ncreated: 2026-10-09T01:49:57.224Z\nlast_active: 2026-10-09T01:49:57.228Z\nvscodium_workspace: /home/texugo/.olympus/workspaces/fluency-smoke.code-workspace\nlivePreviewPort: 3080"
+}
+
+=== ACTIVE PROJECT ===
+"fluency-smoke"
+
+=== INTENT-2 (second prompt -> existing, no duplicate) ===
+{
+  "intent2": {
+    "kind": "existing",
+    "slug": "fluency-smoke",
+    "score": 0.5,
+    "reason": "prompt matches project 'Fluency Smoke' (score 0.50 >= 0.42)"
+  },
+  "afterCreate": [
+    "fluency-smoke",
+    "exemplo-landingpage1",
+    "exemplo-landingpage",
+    "petshop-landingpage",
+    "aime"
+  ],
+  "createdDelta": 1
+}
+
+CREATED: OK  |  ROUTED-EXISTING: OK

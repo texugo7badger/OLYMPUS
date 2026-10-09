@@ -25,6 +25,7 @@ export { STACK_CATALOG, stackLabel, stackColor } from './stack-catalog';
 export type { StackMarker, StackDetection } from './stack-catalog';
 
 import type { StackMarker, StackDetection } from './stack-catalog';
+import path from 'node:path';
 
 /** Filesystem interface — injectable for testability. */
 export interface FsAdapter {
@@ -109,7 +110,6 @@ export function detectStacksWithFs(
   projectPath: string,
   fs: FsAdapter,
 ): StackDetection {
-  const path = require('path') as typeof import('path');
   const stacks = new Set<string>();
   const markers: StackMarker[] = [];
 

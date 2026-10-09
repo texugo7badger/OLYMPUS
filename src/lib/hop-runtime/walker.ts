@@ -125,9 +125,13 @@ interface JsonEventParse {
   tokensOut: number;
 }
 
-/** Parse `opencode run --format json` events: text parts + step-finish tokens. */
+/** Parse `opencode run --format json` events: text parts + step-finish tokens.
+ *  The CLI emits two shapes (probe-verified 2026-10-09): the wrapped
+ *  `{type, part}` events and bare `{type:'step-finish', tokens}` lines —
+ *  both are honored. */
 function parseJsonEvents(raw: string): JsonEventParse {
   const acc: JsonEventParse = { textOut: '', tokensIn: 0, tokensOut: 0 };
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
   for (const line of raw.split('\n')) {
     const t = line.trim();
     if (!t.startsWith('{')) continue;
@@ -135,10 +139,12 @@ function parseJsonEvents(raw: string): JsonEventParse {
       const ev = JSON.parse(t);
       const part = ev?.data?.part ?? ev?.part ?? ev;
       if (part?.type === 'text' && typeof part.text === 'string') acc.textOut += part.text;
-      if (part?.type === 'step-finish' && part.tokens) {
-        const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
-        acc.tokensIn += n(part.tokens.input);
-        acc.tokensOut += n(part.tokens.output);
+      if (part?.type === 'step-finish' || ev?.type === 'step-finish' || ev?.type === 'step_finish') {
+        const tokens = part?.tokens ?? ev?.tokens;
+        if (tokens) {
+          acc.tokensIn += n(tokens.input);
+          acc.tokensOut += n(tokens.output);
+        }
       }
     } catch { /* not a JSON line — ignore */ }
   }

@@ -249,7 +249,12 @@ export function createProject(input: CreateProjectInput): CreateProjectResult {
   if (!slug) throw new Error('Project name must produce a non-empty slug');
 
   const projectDir = path.join(PROJECTS_DIR, slug);
-  if (fs.existsSync(projectDir)) {
+  // #110 rider (FLUENCY-1): "already exists" means a real PROJECT (its
+  // project.md), not a bare directory. The autonomous intake's lane lives
+  // at 02_Projects/<slug> and is mkdir'd before this call (note + code
+  // co-located per the user's pinned directive) — the old guard rejected
+  // its own lane. A duplicate create of a REAL project still throws.
+  if (fs.existsSync(projectDir) && fs.existsSync(path.join(projectDir, 'project.md'))) {
     throw new Error(`Project "${slug}" already exists. Use updateProject() or pick a different name.`);
   }
   if (!fs.existsSync(input.path) || !fs.statSync(input.path).isDirectory()) {

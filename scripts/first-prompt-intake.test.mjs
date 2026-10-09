@@ -227,6 +227,10 @@ async function main() {
   check('W: the post-success dev-server trigger fires on the routed slug (probe-first)',
     /maybeStartDevServer\(opts\.intent\.slug/.test(routeSrc) && /reconcileProjectPath\(opts\.intent\.slug\)/.test(routeSrc),
     'no trigger after a successful run');
+  const intentSrc = readFileSync(ROOT + '/src/lib/project-intent.ts', 'utf-8');
+  check('W: resolveAndRegisterIntent passes laneProjectDir (02_Projects/<slug> — NEVER process.cwd())',
+    /laneProjectDir/.test(intentSrc) && /PROJECTS_DIR, slug/.test(intentSrc),
+    'regression: the autonomous intake would point the note at the repo (the #99 shape)');
 }
 
 main().then(() => {

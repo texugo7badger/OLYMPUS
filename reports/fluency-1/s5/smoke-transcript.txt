@@ -1,0 +1,83 @@
+
+=== INTAKE-1 (new project, no folder selected) ===
+{
+  "kind": "skipped",
+  "message": "Intake failed (Project \"fluency-smoke\" already exists. Use updateProject() or pick a different name.) — proceeding without a registered project"
+}
+
+=== INTAKE-1 note ===
+{
+  "notePath": "/home/texugo/OLYMPUS-VAULT/02_Projects/fluency-smoke/project.md",
+  "noteExists": false,
+  "frontmatter": ""
+}
+
+=== INTAKE-2 (second prompt -> existing, no duplicate) ===
+{
+  "intent2": {
+    "kind": "new",
+    "projectName": "Contact Section Fluency Smoke",
+    "reason": "no project matches; deriving the name 'Contact Section Fluency Smoke' from the prompt"
+  },
+  "projectsBefore": [
+    "exemplo-landingpage1",
+    "exemplo-landingpage",
+    "petshop-landingpage",
+    "aime"
+  ],
+  "projectsAfter": [
+    "exemplo-landingpage1",
+    "exemplo-landingpage",
+    "petshop-landingpage",
+    "aime"
+  ],
+  "noDuplicate": true
+}
+INTAKE-2 ROUTED-EXISTING: FAIL
+INTAKE-1 CREATED: FAIL
+
+=== LANE KIT ===
+{
+  "lane": "/home/texugo/OLYMPUS-VAULT/02_Projects/fluency-smoke",
+  "files": [
+    ".opencode",
+    "node_modules",
+    "opencode.demigods.json",
+    "opencode.json"
+  ]
+}
+
+=== WALK START (live R4 lanes, FREE) ===
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+
+=== WALK RESULT ===
+{
+  "completed": [],
+  "parked": {
+    "hopId": "hop-landing",
+    "reason": "dispatch-failed",
+    "ts": "2026-10-09T00:12:34.418Z",
+    "error": "exit null"
+  },
+  "rows": [
+    {
+      "ts": "2026-10-09T00:12:34.418Z",
+      "hop": "hop-landing",
+      "god": "apollo",
+      "lane": "/home/texugo/OLYMPUS-VAULT/02_Projects/fluency-smoke",
+      "tokensIn": null,
+      "tokensOut": null,
+      "durationMs": 900142,
+      "retriesAbsorbed": 0,
+      "status": "parked-dispatch-failed"
+    }
+  ]
+}
+
+=== PER-HOP TELEMETRY (markdown) ===
+| hop | god | lane | tokIn | tokOut | dur | retries | status |
+|---|---|---|---|---|---|---|---|
+| hop-landing | apollo | lane | - | - | 900s | 0 | parked-dispatch-failed |
+
+=== PARKED — RUNNING THE RESUME PROOF ===
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.

@@ -15,7 +15,8 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { listProjects, getActiveProjectSlug, setActiveProject, type ProjectNote } from './project-context';
+import { listProjects, getActiveProjectSlug, setActiveProject, slugify, PROJECTS_DIR, type ProjectNote } from './project-context';
+import { join } from 'node:path';
 
 export type FirstPromptIntent =
   | { kind: 'new'; projectName: string; reason: string }
@@ -157,12 +158,21 @@ export async function resolveAndRegisterIntent(
   }
   // new: register BEFORE any file exists — name + description + the
   // classifier's stack hints (honest: hints from the prompt's intent).
+  // #110 rider (FLUENCY-1): the lane project dir is EXPLICIT — 02_Projects/
+  // <slug>, the user's pinned directive. Without it, runIntake's createPath
+  // falls back to process.cwd() — an API route's cwd is the OLYMPUS repo
+  // (the #99 shape: the note would point at the working tree). NOTE: we do
+  // NOT pre-create the dir — createProject owns creation (its existence
+  // check would else collide).
   const { quickIntake } = await import('./intake-orchestrator');
+  const slug = slugify(intent.projectName);
+  const laneProjectDir = join(PROJECTS_DIR, slug);
   const result = await quickIntake({
     userRequest,
     projectName: intent.projectName,
     targetTui: opts.targetTui ?? 'opencode',
     manualStacks: stacks,
+    laneProjectDir,
   });
   if (!result.ok || !result.project) {
     return { kind: 'skipped', message: `Intake failed (${result.error ?? 'unknown'}) — proceeding without a registered project` };
