@@ -1,0 +1,3 @@
+PASS  R1: the writer emits a bracket-closed flow sequence for stacks at BOTH sites (the serializer shape, pinned)
+
+All 22 project-context assertions passed

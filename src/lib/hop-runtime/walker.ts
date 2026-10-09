@@ -167,6 +167,19 @@ function runSpawn(args: string[], hopCwd: string, timeoutMs: number): Promise<{ 
 }
 
 /**
+ * SMOKE-1 rider R3: the per-hop ceiling, env-tunable. FLUENCY-1's resume
+ * was killed at the hard-coded 15-min ceiling SECONDS after the artifacts
+ * landed — the knob now exists (OLYMPUS_HOP_TIMEOUT_MS), the default
+ * unchanged (15 min: the hop is SMALL by doctrine, <= 16k out, so the
+ * ceiling stays generous wall-clock, never the monolith's minutes).
+ */
+export const DEFAULT_HOP_TIMEOUT_MS = 15 * 60_000;
+export function resolveHopTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number.parseInt(env.OLYMPUS_HOP_TIMEOUT_MS ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_HOP_TIMEOUT_MS;
+}
+
+/**
  * The default hop dispatcher: one fresh one-shot session per hop on the
  * god's live model lane (the FREE-1 §6.2 transport — sessions are lanes),
  * with the #107 crescendo INSIDE the dispatcher: an overload burst is
@@ -185,12 +198,12 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
   let retriesAbsorbed = 0;
   let last: { code: number | null; stdout: string; stderr: string } = { code: null, stdout: '', stderr: '' };
   for (let attempt = 0; ; attempt++) {
-    // The per-hop runtime budget: the hop is SMALL by doctrine (<= 16k out),
-    // so the ceiling is generous wall-clock, not the monolith's minutes.
+    // The per-hop runtime budget (#R3: env-tunable — OLYMPUS_HOP_TIMEOUT_MS;
+    // the default stays 15 min).
     last = await runSpawn(
       ['run', '--model', lane, '--format', 'json', ctx.prompt],
       ctx.laneRoot,
-      15 * 60_000,
+      resolveHopTimeoutMs(),
     );
     const ok = last.code === 0;
     const errText = (last.stderr || '').slice(-2000) || (ok ? '' : `exit ${last.code}`);

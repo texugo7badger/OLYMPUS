@@ -1,0 +1,24 @@
+PASS  (1) missing note path + lane copy → returns the LANE path
+PASS  (1) the note is repointed (noteUpdated true) and the note on disk now carries the lane path
+PASS  (2) alive fossil + lane copy → returns the LANE path with source note-stale
+PASS  (2) the fossil is surfaced, never clobbered (noteUpdated false, the note on disk unchanged)
+PASS  (3) no note → null (null-safe)
+PASS  (3b) null slug → null (null-safe)
+PASS  (4) healthy note (path == lane) → the note path, source note, no write
+PASS  the lane resolution never created the lane at import (the pure resolver — no side effects on the GET probe path)
+PASS  guard: workspaceLaneDir refuses OLYMPUS_WORKSPACE inside the OLYMPUS root (falls back, never the repo)
+PASS  guard: reconcileProjectPath never returns a path inside the OLYMPUS root (no lane copy → the lane dir itself, no write)
+PASS  inroot: a note pointing into the root + a lane copy → self-healed to the lane (outside the root)
+PASS  inroot: the note on disk was repointed to the lane (the fossil no longer points into the repo)
+PASS  pin: the status route calls reconcileProjectPath (the lane-aware truth, not the raw note path)
+PASS  pin: the route response carries path + pathSource
+PASS  pin: the component derives the tip path from the RESOLVED status path (note raw path only as fallback)
+PASS  pin: the tip renders the resolved path in the cd command
+PASS  pin: the one dim stale-note line exists (a line, not a modal)
+PASS  R1: write -> read is IDENTICAL (the [html, css, javascript] flow sequence round-trips through parseFrontmatter AND getProject)
+PASS  R1: the healthy line flags NO anomaly
+PASS  R1: the bracket-eaten specimen (stacks: tml, css, javascript]) is SURFACED as an anomaly — never silently emptied
+PASS  R1: ...and the corrupted value itself still degrades to [] (tolerant, but now LOUD)
+PASS  R1: the writer emits a bracket-closed flow sequence for stacks at BOTH sites (the serializer shape, pinned)
+
+All 22 project-context assertions passed

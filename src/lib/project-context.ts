@@ -70,13 +70,22 @@ function ensureDirs() {
   }
 }
 
-/** Permissive YAML-ish frontmatter parser (matches olympus.ts style). */
+/** Permissive YAML-ish frontmatter parser (matches olympus.ts style).
+ *
+ * R1 (SMOKE-1, the auditor's rider): a bracket-eaten flow sequence (one of
+ * `[`/`]` missing — the #101 tokenizer-salad class, a hand-edit slip, or a
+ * partial write) previously landed as a plain STRING, so array consumers
+ * (`Array.isArray(fm.stacks) ? … : []`) degraded it to [] SILENTLY. The
+ * parser now records that class under `__anomalies` (only present when at
+ * least one anomaly fired) so every read path can surface it loudly. The
+ * tolerant value itself is unchanged. */
 export function parseFrontmatter(file: string): Record<string, any> {
   try {
     const raw = fs.readFileSync(file, 'utf-8');
     const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     if (!m) return {};
     const fm: Record<string, any> = {};
+    const anomalies: Array<{ key: string; raw: string; reason: string }> = [];
     for (const line of m[1].split(/\r?\n/)) {
       const kv = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
       if (!kv) continue;
@@ -85,6 +94,11 @@ export function parseFrontmatter(file: string): Record<string, any> {
       if (val.startsWith('[') && val.endsWith(']')) {
         const inner = val.slice(1, -1);
         fm[key] = inner.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+      } else if (val.includes('[') || val.includes(']')) {
+        // R1: a MALFORMED flow sequence (exactly one bracket present, or
+        // brackets misplaced) — surface it, never silently empty it.
+        anomalies.push({ key, raw: val, reason: 'malformed flow sequence (bracket mismatch)' });
+        fm[key] = val;
       } else if (val === 'true' || val === 'false') {
         fm[key] = val === 'true';
       } else if (/^-?\d+(\.\d+)?$/.test(val)) {
@@ -95,6 +109,7 @@ export function parseFrontmatter(file: string): Record<string, any> {
         fm[key] = val;
       }
     }
+    if (anomalies.length > 0) fm.__anomalies = anomalies;
     return fm;
   } catch { return {}; }
 }

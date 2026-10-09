@@ -1,0 +1,9 @@
+PASS  R3: resolveHopTimeoutMs exported (the per-hop ceiling knob)
+PASS  R3: the default ceiling is 15 min (900000ms)
+PASS  R3: OLYMPUS_HOP_TIMEOUT_MS overrides (30000 -> 30000)
+PASS  R3: junk env tolerated (falls back to the default)
+PASS  R3: zero/negative env tolerated (falls back to the default)
+FAIL  R3: spawnHopDispatcher threads the resolved knob into runSpawn (the hard-coded 15-min literal gone) — the hard-coded ceiling still rules
+1 assertion(s) failed
+
+All #109 hop-runtime assertions passed

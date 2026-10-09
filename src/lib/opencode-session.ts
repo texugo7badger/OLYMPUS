@@ -1437,7 +1437,9 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
           msg: retryExhaustionGuidance(result.error, result.statusCode, {
             waitedMs: ledgerWaitedMs,
             labels: [...ledgerLabels],
-          }),
+            // #R2: the card prints the plan THIS loop resolved (the env
+            // override included) — the self-reconciling card.
+          }, undefined, plan),
           ts: new Date().toISOString(),
         });
         return result;
@@ -1555,6 +1557,12 @@ export function retryExhaustionGuidance(
   lastStatusCode: number | undefined,
   ledger?: RetryLedger,
   authDirs?: string[],
+  // #R2 (SMOKE-1, the auditor's rider): the plan the LOOP resolved. Default
+  // re-resolves for legacy callers — but the loop passes its own, so the
+  // card's printed plan can never diverge from the plan that ran (the
+  // FLUENCY-1 live-proof specimen printed the DEFAULT list against an
+  // env-shaped ledger: "after 4 retries … across 2 retries … [5,30,120,300]s").
+  plan: RetryPlan = resolveRetryPlan(),
 ): string {
   const strategy = activeStrategyId();
   const errLabel = typeof lastStatusCode === 'number' ? `upstream ${lastStatusCode}` : (lastError || 'unknown error');
@@ -1575,12 +1583,20 @@ export function retryExhaustionGuidance(
   const goLine = census.hasGoValve
     ? '  GO key present: node scripts/apply-strategy.js --strategy go-balanced (premium valve)\n'
     : '';
-  const plan = resolveRetryPlan();
+  // #R2: the self-reconciling card — the headline count IS the ledger count
+  // whenever a ledger exists (they describe the same run by construction),
+  // and the printed plan is the plan the loop passed in.
+  const retryCount = ledger && ledger.labels.length > 0 ? ledger.labels.length : plan.backoffMs.length;
   const lines = [
-    `RETRY EXHAUSTED after ${plan.backoffMs.length} retries — strategy '${strategy}' failed with: ${errLabel}.`,
+    `RETRY EXHAUSTED after ${retryCount} retries — strategy '${strategy}' failed with: ${errLabel}.`,
   ];
   if (ledger && ledger.labels.length > 0) {
-    lines.push(`  Patience ledger: ${summarizeLedger(ledger)} — the plan was [${plan.backoffMs.join(', ')}] ms.`);
+    // #R2: when any absorbed retry rode the 429 key-limit lane (the FIXED
+    // rateLimitBackoffMs, not a crescendo element), the card names it — else
+    // the ledger total can never be reconciled against the printed list.
+    const hasRateLimited = ledger.labels.some((l) => /429|rate limit/i.test(l));
+    const laneNote = hasRateLimited ? `; the 429 key-limit lane: ${plan.rateLimitBackoffMs}ms fixed per retry` : '';
+    lines.push(`  Patience ledger: ${summarizeLedger(ledger)} — the plan was [${plan.backoffMs.join(', ')}] ms${laneNote}.`);
   }
   lines.push(
     `  The run stopped. NO strategy was auto-switched (no silent downgrade).`,
