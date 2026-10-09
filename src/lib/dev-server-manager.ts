@@ -40,7 +40,7 @@ import { join } from 'node:path';
 import net from 'node:net';
 import { probeDevServer, type DevServerProbe } from './dev-server-probe';
 import { workspaceLaneDir, findOlympusRoot } from './opencode-spawn';
-import { getProject } from './project-context';
+import { getProject, reconcileProjectPath } from './project-context';
 
 export interface DevServerState {
   /** The spawned process's pid (the process-group leader — detached). */
@@ -185,13 +185,25 @@ function baseStatus(slug: string): DevServerStatus {
  * this manager does not own is an honest refusal, never a double-spawn.
  */
 export async function start(projectSlug: string, port?: number): Promise<DevServerStartResult> {
-  const laneDir = workspaceLaneDir();
-  const projectPath = join(laneDir, projectSlug);
+  const laneDirRoot = workspaceLaneDir();
+  // #112 (PREVIEW-2): the lane-aware truth. The #110 autonomous intake
+  // registers projects at 02_Projects/<slug> (the user's pinned directive);
+  // a workspaceLaneDir()-only derivation refused ALL of them (SMOKE-1's
+  // live refusal, reproduced in the A13 fixture). reconcileProjectPath()
+  // answers the ONLY acceptable spawn dir per the #99/#103 doctrine: the
+  // note path when alive outside the repo, the lane copy when present, the
+  // lane (never the repo) when the note points inside the root. A note-less
+  // slug keeps the legacy derivation; reconcile's lane-ROOT placeholder
+  // answer (inside-repo note + no lane copy) NEVER hands a spawn the bare
+  // workspace root — that shape degrades to the legacy refusal below.
+  const reconciled = reconcileProjectPath(projectSlug);
+  const legacyPath = join(laneDirRoot, projectSlug);
+  const projectPath = reconciled && reconciled.path !== laneDirRoot ? reconciled.path : legacyPath;
   if (!existsSync(projectPath)) {
     return {
       ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: null,
       projectPath: null, state: null,
-      error: `no lane project directory at ${projectPath} — the manager spawns dev servers only in the workspace lane (#99), never the repo`,
+      error: `no lane project directory at ${projectPath} — the manager spawns dev servers only in a real project lane (the workspace lane, or the reconciled project note path for intake-registered projects — #99/#112), never the repo`,
     };
   }
   // The #99 incident shape, defense in depth: even a misresolved lane can

@@ -1,0 +1,39 @@
+PASS  I: quoted name, empty table -> new with THAT name
+PASS  I: called name -> new with THAT name
+PASS  I: no name -> derived from significant words
+PASS  I: candidate name matches an existing project -> existing
+PASS  I: candidate partial name (Lumina) -> existing via token overlap
+PASS  I: description overlap -> existing
+PASS  I: weak overlap -> new (the threshold is honest)
+PASS  I: two strong matches -> ask (never a silent guess)
+PASS  I: trivial prompt -> still non-empty new (the route gates trivial separately)
+PASS  I: the threshold is a named export (tunable, honest)
+PASS  I: extractProjectName quoted form
+PASS  I: extractProjectName called form
+PASS  I: extractProjectName null when unnamed
+PASS  I: deriveProjectName skips stopwords
+PASS  D: no package.json -> not triggered
+PASS  D: no dev script -> not triggered
+PASS  D: dev script without a frontend marker -> not triggered
+PASS  D: dev script + next dep -> triggered
+PASS  D: dev script mentioning vite -> triggered
+PASS  D: the marker list is exported + includes the big five
+PASS  D: e2e green — triggered with PROBE evidence (running + latency + url)
+PASS  D: e2e green — the served page answers HTTP 200 with the marker
+PASS  D: e2e green — stop is clean (probe down, state file removed)
+PASS  D: e2e refusal — start issued but no green probe -> the HONEST refusal (#105)
+PASS  D: e2e refusal — no frontend marker -> not triggered, reason names the marker
+PASS  D: e2e refusal — no dev script -> not triggered, reason names the script
+PASS  #112: the autonomous intake creates the project, 0 LLM (kind new, slug preview-two-smoke, the note in 02_Projects)
+PASS  #112: reconcile answers the intake note path (source note — no lane copy exists)
+PASS  #112: the trigger FIRES green — probe evidence (running + url + latency), never a narrated claim
+PASS  #112: the served page answers HTTP 200 with the fixture marker (the URL is real)
+PASS  #112: clean stop, state file gone, the port silent (zero orphans)
+PASS  W: laneProjectDir rides the intake request (never process.cwd() for API intake)
+PASS  W: quickIntake accepts manualStacks (the classifier hints before any file exists)
+PASS  W: the route runs the intent stage on prompt (non-blocking, trivial-gated)
+PASS  W: the intent result rides the stream (streamWarm opts + log event)
+PASS  W: the post-success dev-server trigger fires on the routed slug (probe-first)
+PASS  W: resolveAndRegisterIntent passes laneProjectDir (02_Projects/<slug> — NEVER process.cwd())
+
+All #110 first-prompt-intake assertions passed
