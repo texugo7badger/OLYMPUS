@@ -107,6 +107,56 @@ if (process.argv[2] === 'child') {
     s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => res(p)); });
   });
 
+  // ── #112 (PREVIEW-2): the intake-registered project shape — the note's
+  // path IS the 02_Projects/<slug> dir itself (the #110 intake), no
+  // workspace-lane copy anywhere. The manager must spawn THERE. RED before
+  // the cure: the workspaceLaneDir()-only derivation refuses outright
+  // (SMOKE-1's live refusal, reproduced in a fixture).
+  if (mode === 'intake02') {
+    const slug2 = 'fixture-intake02';
+    const intakeDir = join(vault, '02_Projects', slug2);
+    mkdirSync(intakeDir, { recursive: true });
+    writeFileSync(join(intakeDir, 'package.json'), JSON.stringify({ name: slug2, scripts: { dev: 'node fixture-server.js' } }, null, 2));
+    writeFileSync(join(intakeDir, 'fixture-server.js'), FIXTURE_SERVER_JS);
+    const p = await freePort();
+    writeFileSync(join(intakeDir, 'project.md'), `---\ntype: project\nslug: ${slug2}\nname: ${slug2}\npath: ${intakeDir}\nstacks: [html]\ncreated: 2026-10-09T00:00:00.000Z\nlast_active: 2026-10-09T00:00:00.000Z\nlivePreviewPort: ${p}\n---\n\nbody\n`);
+    out.steps.intakeDir = intakeDir;
+    out.steps.laneCopyExists = existsSync(join(lane, slug2));
+    const started = await mgr.start(slug2);
+    out.steps.started = started;
+    out.pids.push(started?.pid);
+    if (started?.ok) {
+      const st = await (async () => {
+        const t0 = Date.now();
+        for (;;) {
+          const s = await mgr.status(slug2);
+          if (s.running || Date.now() - t0 > 30_000) return s;
+          await new Promise((r) => setTimeout(r, 250));
+        }
+      })();
+      out.steps.status = st;
+      if (st.running && st.url) {
+        try { const page = await fetch(st.url); const body = await page.text(); out.steps.http = { status: page.status, marker: body.includes('fixture dev server ok') }; } catch (e) { out.steps.http = { status: 0, error: e.message }; }
+      }
+      await mgr.stop(slug2);
+      out.steps.afterStop = await mgr.status(slug2);
+      out.steps.stateGone = !existsSync(join(home, '.local', 'share', 'olympus', 'dev-servers', `${slug2}.json`));
+      const silent = await probeDevServer(p, 800);
+      out.steps.portSilent = silent.running === false;
+    }
+    console.log(JSON.stringify(out));
+    process.exit(0);
+  }
+
+  // ── #112 refusal preservation: an UNKNOWN slug (no note, no lane dir)
+  // still earns the honest refusal — the #105 doctrine is scoped, not weakened.
+  if (mode === 'unknownslug') {
+    out.steps.unknown = await mgr.start('fixture-no-such-project');
+    console.log(JSON.stringify(out));
+    process.exit(0);
+  }
+
+
   // the lane project dir the manager must spawn in (#99: lane, never the repo)
   const effectiveLane = mode === 'guard'
     ? join(home, '.local', 'share', 'olympus', 'workspace')
@@ -286,6 +336,42 @@ if (process.argv[2] !== 'child') {
   }
   console.log(`      guard fixture pids (created + killed by this suite): ${JSON.stringify(guard.pids ?? [])}`);
 
+  // ─── intake02 mode (#112, PREVIEW-2): the intake-created project (the
+  // note's path IS 02_Projects/<slug>, no workspace-lane copy) must start,
+  // probe green, and stop clean. RED before the cure: the workspace-lane-only
+  // derivation refused — SMOKE-1's live refusal reproduced in a fixture. ────
+  {
+    const I = child('intake02');
+    if (I.__err) { check('A13/#112 the intake02 child ran', false, I.__err); }
+    else {
+      const s = I.steps;
+      check('A13/#112 the fixture is honestly legless: NO workspace-lane copy exists (the intake shape)',
+        s.laneCopyExists === false, `laneCopyExists=${s.laneCopyExists}`);
+      check('A13/#112 start ACCEPTS the intake-registered project (reconcile-aware resolution)',
+        s.started?.ok === true, JSON.stringify(s.started).slice(0, 280));
+      check('A13/#112 the spawn lands in the 02_Projects project dir (the note path — never the legacy empty workspace derivation)',
+        s.started?.projectPath === s.intakeDir, `projectPath=${s.started?.projectPath} intakeDir=${s.intakeDir}`);
+      check('A13/#112 probe-green end-to-end (running + latency + url)',
+        s.status?.running === true && typeof s.status?.responseTimeMs === 'number' && !!s.status?.url, JSON.stringify(s.status ?? null).slice(0, 240));
+      check('A13/#112 the served page answers HTTP 200 with the fixture marker',
+        s.http?.status === 200 && s.http?.marker === true, JSON.stringify(s.http ?? null));
+      check('A13/#112 clean stop, state file gone, zero orphans (the port silent)',
+        s.afterStop?.running === false && s.stateGone === true && s.portSilent === true,
+        JSON.stringify({ afterStop: s.afterStop?.running, stateGone: s.stateGone, portSilent: s.portSilent }));
+    }
+  }
+
+  // ─── unknownslug mode (#112 refusal preservation): an UNKNOWN slug (no
+  // note, no lane dir) still earns the honest refusal — the doctrine is
+  // scoped by the fix, never weakened. ─────────────────────────────────────
+  {
+    const U = child('unknownslug');
+    check('A14/#112 refusal preserved: the unknown slug gets the honest no-lane refusal (never a narrated spawn)',
+      !U.__err && U.steps?.unknown?.ok === false && /no lane project directory at/.test(U.steps?.unknown?.error || ''),
+      JSON.stringify(U).slice(0, 280));
+  }
+
+
   // ─── content pins (the module source) ────────────────────────────────────
   let src = '';
   try { src = readFileSync(MODULE, 'utf-8'); } catch {}
@@ -294,6 +380,8 @@ if (process.argv[2] !== 'child') {
   check('C3 the insideOlympusRoot guard runs before spawn (the #99 never-the-repo shape)', /insideOlympusRoot/.test(src), 'the manager must refuse any project path inside the OLYMPUS root');
   check('C4 status truth is probeDevServer (the #102 dual-stack probe, reused — the only source of "running")', /probeDevServer\(/.test(src), '');
   check('C5 the stop ladder: SIGTERM first, SIGKILL the disclosed last resort', /SIGTERM/.test(src) && /SIGKILL/.test(src), '');
+  check('C6/#112 the manager resolves the project dir through reconcileProjectPath (the #103 lane-aware truth) — never the bare lane root',
+    /reconcileProjectPath\(/.test(src) && /reconciled\.path !== laneDirRoot|reconciled!?\.\s*path/.test(src), 'the workspaceLaneDir()-only derivation is still the only source (the #112 seam intact)');
 }
 
 if (fails > 0) { console.error(`\n${fails}/${checked} dev-server-manager assertion(s) FAILED`); process.exit(1); }

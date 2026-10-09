@@ -112,6 +112,44 @@ if (process.argv[2] === 'child') {
       writeFileSync(join(projectDir, 'package.json'), JSON.stringify({ name: slug, scripts: { build: 'echo x' }, dependencies: { next: '15.0.0' } }, null, 2));
       out.result = await trigger.maybeStartDevServer(slug, projectDir);
     }
+    if (mode === 'green-intake-02') {
+      // #112 (PREVIEW-2): the USER'S exact scenario, deterministic (0 LLM):
+      // the autonomous intake (no folder selected) creates the project in the
+      // 02_Projects shape -> the frontend artifact + dev script land -> the
+      // trigger fires with the reconciled lane root (the real route shape) ->
+      // manager.start -> probe-green -> HTTP 200 + marker -> clean stop,
+      // zero orphans. RED pre-cure: the manager's workspace-lane-only
+      // derivation refuses every intake project (SMOKE-1's live refusal).
+      const { resolveAndRegisterIntent } = await import('../src/lib/project-intent.ts');
+      const { reconcileProjectPath } = await import('../src/lib/project-context.ts');
+      const slug = 'preview-two-smoke';
+      out.intent = await resolveAndRegisterIntent('Build a "Preview Two Smoke" landing page for a design studio', ['html', 'css']);
+      out.noteExists = null;
+      const dir = join(vault, '02_Projects', slug);
+      out.noteExists = existsSync(join(dir, 'project.md'));
+      // the deterministic stand-in for the hop's output (the artifact files)
+      writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: slug, scripts: { dev: 'node fixture-server.js' }, dependencies: { next: '15.0.0' } }, null, 2));
+      writeFileSync(join(dir, 'fixture-server.js'), FIXTURE_SERVER_JS);
+      writeFileSync(join(dir, 'index.html'), '<title>preview two smoke</title>');
+      out.reconciled = reconcileProjectPath(slug);
+      const r = await trigger.maybeStartDevServer(slug, out.reconciled?.path ?? dir);
+      out.result = r;
+      if (r.triggered && r.status?.url) {
+        try {
+          const page = await fetch(r.status.url);
+          const body = await page.text();
+          out.http = { status: page.status, marker: body.includes('fixture frontend ok') };
+        } catch (e) { out.http = { status: 0, error: e.message }; }
+      }
+      await mgr.stop(slug);
+      out.afterStop = await mgr.status(slug);
+      out.stateGone = !existsSync(join(home, '.local', 'share', 'olympus', 'dev-servers', `${slug}.json`));
+      if (r.status?.port) {
+        const { probeDevServer } = await import('../src/lib/dev-server-probe.ts');
+        const silent = await probeDevServer(r.status.port, 800);
+        out.portSilent = silent.running === false;
+      }
+    }
     console.log(JSON.stringify(out));
   } catch (e) {
     console.log(JSON.stringify({ mode, __err: e.message }));
@@ -209,6 +247,31 @@ async function main() {
   check('D: e2e refusal — no frontend marker -> not triggered, reason names the marker', !noMarker.__err && noMarker.result?.triggered === false && /frontend marker/.test(noMarker.result?.reason || ''), JSON.stringify(noMarker).slice(0, 200));
   const noDev = childRun('refuse-no-dev');
   check('D: e2e refusal — no dev script -> not triggered, reason names the script', !noDev.__err && noDev.result?.triggered === false && /dev.? script/i.test(noDev.result?.reason || ''), JSON.stringify(noDev).slice(0, 200));
+
+  // ── #112 (PREVIEW-2): the USER'S exact scenario, GREEN, from cold — the
+  // autonomous intake creates the project (no folder selected), the
+  // frontend artifact lands, the trigger fires, the manager starts it,
+  // probe-green, the URL surfaces. RED pre-cure: the manager's
+  // workspace-lane-only derivation refused ALL intake-registered projects
+  // (SMOKE-1's live refusal). ──────────────────────────────────────────────
+  const seam = childRun('green-intake-02');
+  if (seam.__err) { check('#112: the green-intake-02 child ran', false, seam.__err); }
+  else {
+    check('#112: the autonomous intake creates the project, 0 LLM (kind new, slug preview-two-smoke, the note in 02_Projects)',
+      seam.intent?.kind === 'new' && seam.intent?.slug === 'preview-two-smoke' && seam.noteExists === true,
+      JSON.stringify({ intent: seam.intent, noteExists: seam.noteExists }).slice(0, 240));
+    check('#112: reconcile answers the intake note path (source note — no lane copy exists)',
+      seam.reconciled?.source === 'note' && /02_Projects\/preview-two-smoke$/.test(seam.reconciled?.path || ''),
+      JSON.stringify(seam.reconciled));
+    check('#112: the trigger FIRES green — probe evidence (running + url + latency), never a narrated claim',
+      seam.result?.triggered === true && seam.result?.status?.running === true && !!seam.result?.status?.url && typeof seam.result?.status?.responseTimeMs === 'number',
+      JSON.stringify(seam.result).slice(0, 280));
+    check('#112: the served page answers HTTP 200 with the fixture marker (the URL is real)',
+      seam.http?.status === 200 && seam.http?.marker === true, JSON.stringify(seam.http));
+    check('#112: clean stop, state file gone, the port silent (zero orphans)',
+      seam.afterStop?.running === false && seam.stateGone === true && seam.portSilent === true,
+      JSON.stringify({ afterStop: seam.afterStop?.running, stateGone: seam.stateGone, portSilent: seam.portSilent }));
+  }
 
   // ── 4. Content pins: the lane-project-dir threading ─────────────────────
   const intakeSrc = readFileSync(ROOT + '/src/lib/intake-orchestrator.ts', 'utf-8');
