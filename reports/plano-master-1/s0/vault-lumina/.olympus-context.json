@@ -1,0 +1,23 @@
+{
+  "slug": "lumina-crm",
+  "name": "Lumina CRM",
+  "path": "/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm",
+  "stacks": [
+    "javascript",
+    "python",
+    "ci_cd"
+  ],
+  "livePreviewPort": 3011,
+  "vscodiumWorkspace": "/home/texugo/.olympus/workspaces/lumina-crm.code-workspace",
+  "createdAt": "2026-10-09T16:41:29.633Z",
+  "brainScopeRules": {
+    "instinctsMinConfidence": 0.6,
+    "knowledgeCategories": [
+      "backend"
+    ],
+    "activeGods": [
+      "apollo",
+      "hephaestus"
+    ]
+  }
+}

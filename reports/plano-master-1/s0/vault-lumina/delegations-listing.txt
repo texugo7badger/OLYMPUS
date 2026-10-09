@@ -1,0 +1,28 @@
+/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm/_delegations:
+total 24
+drwxrwxr-x  6 texugo texugo 4096 Oct  9 13:41 .
+drwxrwxr-x  6 texugo texugo 4096 Oct  9 14:41 ..
+drwxrwxr-x  2 texugo texugo 4096 Oct  9 13:41 done
+drwxrwxr-x  2 texugo texugo 4096 Oct  9 13:41 escalated
+drwxrwxr-x  2 texugo texugo 4096 Oct  9 13:41 inbox
+drwxrwxr-x  2 texugo texugo 4096 Oct  9 13:41 processing
+
+/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm/_delegations/done:
+total 8
+drwxrwxr-x  2 texugo texugo 4096 Oct  9 13:41 .
+drwxrwxr-x  6 texugo texugo 4096 Oct  9 13:41 ..
+
+/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm/_delegations/escalated:
+total 8
+drwxrwxr-x  2 texugo texugo 4096 Oct  9 13:41 .
+drwxrwxr-x  6 texugo texugo 4096 Oct  9 13:41 ..
+
+/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm/_delegations/inbox:
+total 8
+drwxrwxr-x  2 texugo texugo 4096 Oct  9 13:41 .
+drwxrwxr-x  6 texugo texugo 4096 Oct  9 13:41 ..
+
+/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm/_delegations/processing:
+total 8
+drwxrwxr-x  2 texugo texugo 4096 Oct  9 13:41 .
+drwxrwxr-x  6 texugo texugo 4096 Oct  9 13:41 ..

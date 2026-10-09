@@ -1,0 +1,224 @@
+{
+  "version": 1,
+  "laneRoot": "/home/texugo/.local/share/olympus/workspace/lumina-crm",
+  "hops": [
+    {
+      "id": "core-components",
+      "god": "hephaestus",
+      "prompt": "Create the core UI component library in src/components/ui/: Button.tsx (variants: primary, secondary, ghost, outline; sizes: sm, md, lg), Input.tsx (with floating label support, error state, icon slots), Label.tsx, Card.tsx (Card, CardHeader, CardTitle, CardContent, CardFooter), Badge.tsx (status variants using statusLabels from fixtures), Table.tsx (Table, TableHeader, TableRow, TableCell, TableBody with pagination support), Select.tsx, Textarea.tsx. All components use the design tokens from globals.css (--accent, --card, --border, --radius-*, --shadow-*). Export all from src/components/ui/index.ts.",
+      "artifacts": [
+        "src/components/ui/Button.tsx",
+        "src/components/ui/Input.tsx",
+        "src/components/ui/Label.tsx",
+        "src/components/ui/Card.tsx",
+        "src/components/ui/Badge.tsx",
+        "src/components/ui/Table.tsx",
+        "src/components/ui/Select.tsx",
+        "src/components/ui/Textarea.tsx",
+        "src/components/ui/index.ts"
+      ],
+      "budgetTokens": 8192,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/ui/index.ts", "build"] }
+    },
+    {
+      "id": "layout-shell",
+      "god": "hephaestus",
+      "prompt": "Update src/app/layout.tsx: replace Geist with Inter font (already in globals.css), update metadata for Lumina CRM, add providers wrapper if needed. Create src/components/layout/Navbar.tsx (logo, nav links, CTA buttons, mobile menu). Create src/components/layout/Footer.tsx (links, social, copyright). Create src/components/layout/Sidebar.tsx (collapsible, nav items: Dashboard, Leads, Pipeline, Settings with icons, active state, user avatar at bottom). Export from src/components/layout/index.ts.",
+      "artifacts": [
+        "src/app/layout.tsx",
+        "src/components/layout/Navbar.tsx",
+        "src/components/layout/Footer.tsx",
+        "src/components/layout/Sidebar.tsx",
+        "src/components/layout/index.ts"
+      ],
+      "budgetTokens": 6144,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/layout/index.ts", "build"] }
+    },
+    {
+      "id": "landing-hero",
+      "god": "athena",
+      "prompt": "Create src/components/landing/Hero.tsx: dark hero section with headline 'Feche mais negócios com o CRM que entende sua pipeline', subheadline, primary CTA 'Começar grátis' (link to /signup), secondary CTA 'Ver demo', animated background gradient using --accent-muted, trust indicators (logos placeholder). Responsive: mobile stacked, desktop side-by-side with illustration placeholder. Use motion tokens from globals.css (animate-slide-up).",
+      "artifacts": [
+        "src/components/landing/Hero.tsx"
+      ],
+      "budgetTokens": 4096,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/landing/Hero.tsx", "build"] },
+      "after": ["core-components"]
+    },
+    {
+      "id": "landing-logos",
+      "god": "athena",
+      "prompt": "Create src/components/landing/LogoBar.tsx: horizontal scrolling marquee of company logos (use placeholder SVGs or text), grayscale filter, hover to color, pause on hover. Use animate-shimmer for subtle motion. Section divider with 'Confiado por equipes inovadoras' label.",
+      "artifacts": [
+        "src/components/landing/LogoBar.tsx"
+      ],
+      "budgetTokens": 2048,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/landing/LogoBar.tsx", "build"] },
+      "after": ["core-components"]
+    },
+    {
+      "id": "landing-features",
+      "god": "athena",
+      "prompt": "Create src/components/landing/FeaturesGrid.tsx: 3x2 grid of feature cards from fixtures.features. Each card: icon (map icon string to lucide-react or inline SVG), title, description, hover-lift animation. Use Card component. Responsive: 1 col mobile, 2 col tablet, 3 col desktop. Stagger animate-slide-up entrance.",
+      "artifacts": [
+        "src/components/landing/FeaturesGrid.tsx"
+      ],
+      "budgetTokens": 4096,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/landing/FeaturesGrid.tsx", "build"] },
+      "after": ["core-components"]
+    },
+    {
+      "id": "landing-testimonials",
+      "god": "athena",
+      "prompt": "Create src/components/landing/Testimonials.tsx: carousel/slider of fixtures.testimonials. Each card: avatar, quote, name, role, company. Auto-advance every 5s, pause on hover, dot navigation, keyboard accessible. Card uses glass effect from globals.css. Responsive: 1 card mobile, 2 tablet, 3 desktop.",
+      "artifacts": [
+        "src/components/landing/Testimonials.tsx"
+      ],
+      "budgetTokens": 4096,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/landing/Testimonials.tsx", "build"] },
+      "after": ["core-components"]
+    },
+    {
+      "id": "landing-pricing",
+      "god": "athena",
+      "prompt": "Create src/components/landing/Pricing.tsx: 3-column pricing cards from fixtures.pricingPlans. Highlighted plan (Professional) with gradient-border, larger scale, 'Mais popular' badge. Each card: name, price/period, description, feature list (check icons), CTA button. Annual/monthly toggle (UI only, no backend). FAQ accordion below using fixtures.faqItems.",
+      "artifacts": [
+        "src/components/landing/Pricing.tsx"
+      ],
+      "budgetTokens": 6144,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/landing/Pricing.tsx", "build"] },
+      "after": ["core-components"]
+    },
+    {
+      "id": "landing-faq",
+      "god": "athena",
+      "prompt": "Create src/components/landing/FAQ.tsx: accordion list from fixtures.faqItems. Single open at a time, smooth height animation (use CSS grid trick or framer-motion if available, otherwise CSS max-height transition). Keyboard accessible (Enter/Space to toggle).",
+      "artifacts": [
+        "src/components/landing/FAQ.tsx"
+      ],
+      "budgetTokens": 3072,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/landing/FAQ.tsx", "build"] },
+      "after": ["core-components"]
+    },
+    {
+      "id": "landing-page",
+      "god": "athena",
+      "prompt": "Update src/app/page.tsx: compose landing page using Navbar, Hero, LogoBar, FeaturesGrid, Testimonials, Pricing, FAQ, Footer. Proper semantic HTML (header, main, sections, footer). Add JSON-LD structured data for SaaS product. Ensure dark theme throughout. SEO metadata: title 'Lumina CRM - Pipeline Inteligente para Equipes de Vendas', description, og:image placeholder.",
+      "artifacts": [
+        "src/app/page.tsx"
+      ],
+      "budgetTokens": 4096,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/app/page.tsx", "build"] },
+      "after": ["layout-shell", "landing-hero", "landing-logos", "landing-features", "landing-testimonials", "landing-pricing", "landing-faq"]
+    },
+    {
+      "id": "auth-form-utils",
+      "god": "hephaestus",
+      "prompt": "Create src/lib/auth.ts: validation schemas using zod (email, password min 8 chars, confirm password match). Create src/components/auth/AuthForm.tsx: reusable form wrapper with floating labels, inline validation (show error on blur/submit), submit loading state, accessibility (aria-describedby for errors, proper label association). Export validation helpers.",
+      "artifacts": [
+        "src/lib/auth.ts",
+        "src/components/auth/AuthForm.tsx"
+      ],
+      "budgetTokens": 5120,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/auth/AuthForm.tsx", "build"] },
+      "after": ["core-components"]
+    },
+    {
+      "id": "login-page",
+      "god": "athena",
+      "prompt": "Create src/app/login/page.tsx: split layout (left: branding with logo, tagline, illustration; right: login form in Card). Form: email, password, remember me, forgot password link, submit 'Entrar', divider, 'Não tem conta? Cadastre-se' link to /signup. Use AuthForm wrapper. Floating labels, inline validation. Dark theme consistent. Responsive: stacked on mobile, side-by-side desktop.",
+      "artifacts": [
+        "src/app/login/page.tsx"
+      ],
+      "budgetTokens": 4096,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/app/login/page.tsx", "build"] },
+      "after": ["layout-shell", "auth-form-utils"]
+    },
+    {
+      "id": "signup-page",
+      "god": "athena",
+      "prompt": "Create src/app/signup/page.tsx: split layout mirroring /login. Form: name, email, password, confirm password, terms checkbox, submit 'Criar conta', divider, 'Já tem conta? Entre' link to /login. Same validation patterns. Password strength indicator (visual bar). Responsive: stacked mobile, side-by-side desktop.",
+      "artifacts": [
+        "src/app/signup/page.tsx"
+      ],
+      "budgetTokens": 4096,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/app/signup/page.tsx", "build"] },
+      "after": ["layout-shell", "auth-form-utils"]
+    },
+    {
+      "id": "dashboard-shell",
+      "god": "athena",
+      "prompt": "Create src/app/dashboard/layout.tsx: dashboard shell with Sidebar (from layout components), header bar (hamburger menu toggle, search input with command+k hint, notifications bell, user avatar dropdown). Main content area with proper padding. Mobile: sidebar as slide-over sheet. Use glass effect for header. Client component for interactivity.",
+      "artifacts": [
+        "src/app/dashboard/layout.tsx"
+      ],
+      "budgetTokens": 4096,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/app/dashboard/layout.tsx", "build"] },
+      "after": ["layout-shell"]
+    },
+    {
+      "id": "kpi-cards",
+      "god": "athena",
+      "prompt": "Create src/components/dashboard/KPICards.tsx: grid of 4 cards from fixtures.kpiCards. Each card: icon (map to lucide), title, value, change with trend arrow (up=green, down=red), changeLabel. Card uses hover-lift. Responsive: 1 col mobile, 2 col tablet, 4 col desktop. Animate value on mount (count-up).",
+      "artifacts": [
+        "src/components/dashboard/KPICards.tsx"
+      ],
+      "budgetTokens": 4096,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/dashboard/KPICards.tsx", "build"] },
+      "after": ["core-components"]
+    },
+    {
+      "id": "leads-table",
+      "god": "athena",
+      "prompt": "Create src/components/dashboard/LeadsTable.tsx: rich table using Table component. Columns: Avatar+Name, Company, Status (Badge), Score (with progress bar), Source, Value (formatted BRL), Last Interaction (relative time), Actions (menu). Features: column sorting, multi-select rows, status filter (multi-select dropdown), source filter, search (debounced), pagination (10/25/50 per page), row hover highlight. Use fixtures.leads data. Server component with client interactivity for filters/pagination.",
+      "artifacts": [
+        "src/components/dashboard/LeadsTable.tsx"
+      ],
+      "budgetTokens": 8192,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/dashboard/LeadsTable.tsx", "build"] },
+      "after": ["core-components"]
+    },
+    {
+      "id": "pipeline-board",
+      "god": "athena",
+      "prompt": "Create src/components/dashboard/PipelineBoard.tsx: Kanban-style board with 4 columns from fixtures.statusOrder (Novo, Contatado, Qualificado, Cliente). Each column: header with count, scrollable list of lead cards (name, company, value, score). Drag-and-drop between columns (use @dnd-kit or native HTML5 DnD). Lead card click navigates to /leads/[id]. Empty state illustration. Responsive: horizontal scroll on mobile.",
+      "artifacts": [
+        "src/components/dashboard/PipelineBoard.tsx"
+      ],
+      "budgetTokens": 8192,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/components/dashboard/PipelineBoard.tsx", "build"] },
+      "after": ["core-components"]
+    },
+    {
+      "id": "dashboard-page",
+      "god": "athena",
+      "prompt": "Create src/app/dashboard/page.tsx: compose dashboard with KPICards, then tabs (Leads Table | Pipeline) using LeadsTable and PipelineBoard. Tab state in URL search params (?tab=leads|pipeline). Header: 'Dashboard' title, 'Novo Lead' button (links to /leads/new placeholder). Proper loading states. Server component with client components for interactive parts.",
+      "artifacts": [
+        "src/app/dashboard/page.tsx"
+      ],
+      "budgetTokens": 4096,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/app/dashboard/page.tsx", "build"] },
+      "after": ["dashboard-shell", "kpi-cards", "leads-table", "pipeline-board"]
+    },
+    {
+      "id": "lead-detail",
+      "god": "athena",
+      "prompt": "Create src/app/leads/[id]/page.tsx: lead detail page. Fetch lead from fixtures by id (not found -> 404). Layout: sidebar with lead avatar, name, company, status badge, score, value, tags, quick actions (edit, call, email). Main area: tabs (Timeline | Details | Activity). Timeline: vertical timeline of fixtures.interactions filtered for this lead (mock: all interactions for lead 1). Each timeline item: icon by type, title, description, date, author avatar. Details tab: all lead fields in formatted sections. Activity tab: placeholder for future. Breadcrumb: Dashboard > Leads > Lead Name.",
+      "artifacts": [
+        "src/app/leads/[id]/page.tsx"
+      ],
+      "budgetTokens": 8192,
+      "verify": { "review": "deterministic", "checks": ["file-exists:src/app/leads/[id]/page.tsx", "build"] },
+      "after": ["core-components", "layout-shell"]
+    },
+    {
+      "id": "final-build-verify",
+      "god": "prometheus",
+      "prompt": "Run npm run build to verify the entire application compiles without errors. Run npm run lint to check for linting issues. Confirm all pages render: /, /login, /signup, /dashboard, /leads/1. Report any errors or warnings.",
+      "artifacts": [],
+      "budgetTokens": 2048,
+      "verify": { "review": "deterministic", "checks": ["build", "lint"] },
+      "after": ["landing-page", "login-page", "signup-page", "dashboard-page", "lead-detail"]
+    }
+  ]
+}

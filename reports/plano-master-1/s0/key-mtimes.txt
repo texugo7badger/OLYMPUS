@@ -1,0 +1,4 @@
+/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm | birth=2026-10-09 13:41:29.630646947 -0300 | mtime=2026-10-09 14:41:40.137143464 -0300
+/home/texugo/.local/share/olympus/workspace/lumina-crm | birth=2026-10-08 16:18:33.823250815 -0300 | mtime=2026-10-09 13:45:40.242286435 -0300
+/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm/dispatch-plan.json | birth=2026-10-09 14:24:58.758633275 -0300 | mtime=2026-10-09 14:36:41.443065683 -0300
+/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm/node_modules | birth=2026-10-09 14:25:08.213645373 -0300 | mtime=2026-10-09 14:25:27.377549209 -0300

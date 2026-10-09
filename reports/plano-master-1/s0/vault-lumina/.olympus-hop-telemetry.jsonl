@@ -1,0 +1,2 @@
+{"ts":"2026-10-09T17:41:40.137Z","hop":"layout-shell","god":"hephaestus","lane":"/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm","tokensIn":null,"tokensOut":null,"durationMs":4285,"retriesAbsorbed":0,"status":"parked-dispatch-failed"}
+{"ts":"2026-10-09T17:41:40.172Z","hop":"core-components","god":"hephaestus","lane":"/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm","tokensIn":null,"tokensOut":null,"durationMs":4330,"retriesAbsorbed":0,"status":"parked-dispatch-failed"}

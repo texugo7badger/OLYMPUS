@@ -1,0 +1,17 @@
+total 304
+drwxrwxr-x       6 texugo texugo   4096 Oct  9 13:45 .
+drwxrwxr-x       4 texugo texugo   4096 Oct  8 16:44 ..
+drwxrwxr-x       7 texugo texugo   4096 Oct  8 16:19 .git
+-rw-rw-r--       1 texugo texugo    480 Oct  8 16:18 .gitignore
+drwxrwxr-x       4 texugo texugo   4096 Oct  8 16:42 .next
+-rw-rw-r--       1 texugo texugo    679 Oct  8 16:19 AGENTS.md
+-rw-rw-r--       1 texugo texugo   1450 Oct  8 16:18 README.md
+-rw-rw-r--       1 texugo texugo  14305 Oct  9 13:45 dispatch-plan.json
+-rw-rw-r--       1 texugo texugo    465 Oct  8 16:18 eslint.config.mjs
+-rw-rw-r--       1 texugo texugo    296 Oct  8 16:42 next-env.d.ts
+-rw-rw-r--       1 texugo texugo    318 Oct  8 16:18 next.config.ts
+-rw-rw-r--       1 texugo texugo 235810 Oct  8 16:19 package-lock.json
+-rw-rw-r--       1 texugo texugo    534 Oct  8 16:18 package.json
+drwxrwxr-x       2 texugo texugo   4096 Oct  8 16:18 public
+drwxrwxr-x       5 texugo texugo   4096 Oct  8 16:19 src
+-rw-rw-r--       1 texugo texugo    670 Oct  8 16:18 tsconfig.json

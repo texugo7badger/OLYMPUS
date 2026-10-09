@@ -1,0 +1,13 @@
+file:///home/texugo/OLYMPUS-VAULT/02_Projects/preview-two-live/node_modules/vite/dist/node/cli.js:445
+          throw new CACError(`Unknown option \`${name.length > 1 ? `--${name}` : `-${name}`}\``);
+                ^
+
+CACError: Unknown option `-p`
+    at Command.checkUnknownOptions (file:///home/texugo/OLYMPUS-VAULT/02_Projects/preview-two-live/node_modules/vite/dist/node/cli.js:445:17)
+    at CAC.runMatchedCommand (file:///home/texugo/OLYMPUS-VAULT/02_Projects/preview-two-live/node_modules/vite/dist/node/cli.js:643:13)
+    at CAC.parse (file:///home/texugo/OLYMPUS-VAULT/02_Projects/preview-two-live/node_modules/vite/dist/node/cli.js:582:12)
+    at file:///home/texugo/OLYMPUS-VAULT/02_Projects/preview-two-live/node_modules/vite/dist/node/cli.js:915:5
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+
+Node.js v22.23.1
