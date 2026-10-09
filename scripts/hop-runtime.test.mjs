@@ -258,6 +258,77 @@ async function main() {
   expect('R3: spawnHopDispatcher threads the resolved knob into runSpawn (no hard-coded ceiling at the call site)',
     /resolveHopTimeoutMs\(\)/.test(walkerSrc) && /runSpawn\(\s*\[\s*'run',[\s\S]{0,140}?resolveHopTimeoutMs\(\)/.test(walkerSrc) && !/runSpawn\(\s*\[[\s\S]{0,160}?\d+ \* 60_000/.test(walkerSrc),
     'the call site still hard-codes the ceiling');
+
+  // ── 8. PLANO-MASTER-1 B3 (#117): the PRODUCT FLOW walks the plan ────────
+  // The user's UAT, verbatim: 19 planned hops -> 0 walked -> "Task completed.
+  // writes 1" (the 1 write WAS the plan file). The cure: the route's post-run
+  // flow walks dispatch-plan.json INSIDE the stream — hops narrated live
+  // (who + where), honest parks with the resume contract printed, and the
+  // completion line tells the truth (walked/parked — never "completed").
+  let postRun = null;
+  try { postRun = await import(OLYMPUS + '/src/lib/hop-runtime/post-run.ts'); } catch { /* RED below */ }
+  expect('B3: the post-run walk module exported (src/lib/hop-runtime/post-run.ts)',
+    !!postRun && typeof postRun.maybeWalkThePlan === 'function',
+    "absent — the plan is still the turn's deliverable; 19 hops die on paper");
+
+  if (postRun && typeof postRun.maybeWalkThePlan === 'function') {
+    // The behavioral fixture: a 2-hop plan; hop-1 GREEN, hop-2 dies exhausted
+    // -> PARK + the resume contract. Then the RESUME walk with a healed
+    // dispatcher -> the honest walked line.
+    const laneB3 = tempLane();
+    fs.writeFileSync(path.join(laneB3, 'dispatch-plan.json'), JSON.stringify(validPlan(laneB3, [
+      { id: 'b3-1', god: 'hephaestus', prompt: 'write the shell', artifacts: ['shell.txt'], verify: { review: 'deterministic', checks: ['file-exists:shell.txt'] } },
+      { id: 'b3-2', god: 'athena', prompt: 'write the dashboard', artifacts: ['dash.txt'], verify: { review: 'deterministic', checks: ['file-exists:dash.txt'] }, after: ['b3-1'] },
+    ])));
+    const eventsB3 = [];
+    const sendB3 = (ev) => eventsB3.push(ev);
+    const dyingDispatcher = async (hop) => {
+      if (hop.id === 'b3-1') {
+        fs.writeFileSync(path.join(laneB3, 'shell.txt'), 'the shell');
+        return { ok: true, exitCode: 0, output: '', tokensIn: 10, tokensOut: 20, retriesAbsorbed: 0, exhausted: false };
+      }
+      return { ok: false, exitCode: 1, output: '', tokensIn: null, tokensOut: null, retriesAbsorbed: 4, exhausted: true, error: 'provider overload — all lanes dead' };
+    };
+    const outB3 = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneB3, send: sendB3, dispatcher: dyingDispatcher });
+    expect('B3: the walk runs in the product flow (walked true, 1/2 completed)',
+      outB3.walked === true && outB3.completed === 1 && outB3.total === 2, JSON.stringify(outB3).slice(0, 240));
+    expect('B3: the park is honest (hop b3-2, retry-exhausted)',
+      outB3.parked?.hopId === 'b3-2' && /retry-exhausted/.test(outB3.parked?.reason || ''), JSON.stringify(outB3.parked));
+    expect('B3: the summary line NAMES the park + PRINTS the resume contract (never "Task completed")',
+      /b3-2/.test(outB3.summaryLine || '') && /RESUME/i.test(outB3.summaryLine || '') && !/Task completed/i.test(outB3.summaryLine || ''),
+      outB3.summaryLine);
+    expect('B3: the hops narrated live in the stream (hop_start + hop_done + hop_parked + walk_summary)',
+      eventsB3.some((e) => e.type === 'hop_start' && e.hop === 'b3-1') &&
+      eventsB3.some((e) => e.type === 'hop_done' && e.hop === 'b3-1') &&
+      eventsB3.some((e) => e.type === 'hop_parked' && e.hop === 'b3-2') &&
+      eventsB3.some((e) => e.type === 'walk_summary'), JSON.stringify(eventsB3.map((e) => e.type)));
+    // the resume: the state landed on disk during the park -> the next call
+    // resumes, the healed dispatcher finishes b3-2 -> the walked line.
+    const healedDispatcher = async () => {
+      fs.writeFileSync(path.join(laneB3, 'dash.txt'), 'the dash');
+      return { ok: true, exitCode: 0, output: '', tokensIn: 5, tokensOut: 6, retriesAbsorbed: 0, exhausted: false };
+    };
+    const outB3b = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneB3, send: sendB3, dispatcher: healedDispatcher });
+    expect('B3: the RESUME walk completes the campaign (2/2 walked, the state carried on disk)',
+      outB3b.completed === 2 && outB3b.total === 2 && outB3b.parked === null && /2\/2/.test(outB3b.summaryLine || ''),
+      JSON.stringify(outB3b).slice(0, 240));
+    // the no-plan lane: the honest skip (most turns are not planning turns)
+    const laneB3c = tempLane();
+    const outB3c = await postRun.maybeWalkThePlan({ slug: 'b3-noplan', laneRoot: laneB3c, send: sendB3 });
+    expect('B3: no plan on disk -> the honest skip (walked false, no invented narration)',
+      outB3c.walked === false && !outB3c.summaryLine, JSON.stringify(outB3c).slice(0, 200));
+  }
+
+  // The wiring pins (RED until the cure): the route CALLS the walk in the
+  // post-run flow; the client renders the walk + suppresses the bare census.
+  expect('B3: the route walks the plan post-run (await maybeWalkThePlan in the streamWarm close path)',
+    /maybeWalkThePlan\(/.test(routeSrc) && /await maybeWalkThePlan/.test(routeSrc),
+    "the plan is still the turn's deliverable — the UAT's 19 hops died on paper");
+  const termSrc = fs.readFileSync(OLYMPUS + '/src/components/olympus/interactive-terminal.tsx', 'utf-8');
+  expect('B3: the client renders the walk live (walk_summary + hop events handled)',
+    /walk_summary/.test(termSrc) && /hop_start/.test(termSrc), 'the walk is invisible in the terminal');
+  expect('B3: THE INVARIANT — a walked/parked plan NEVER reports the bare "Task completed" census',
+    /runWalkSummary/.test(termSrc), "the census line still masks the walk's truth");
 }
 
 main().then(() => {

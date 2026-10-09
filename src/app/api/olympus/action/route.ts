@@ -8,6 +8,7 @@ import { requireAuth } from '@/lib/auth';
 import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 import { resolveAndRegisterIntent } from '@/lib/project-intent';
 import { maybeStartDevServer } from '@/lib/dev-server-trigger';
+import { maybeWalkThePlan } from '@/lib/hop-runtime/post-run';
 import { reconcileProjectPath } from '@/lib/project-context';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
@@ -895,9 +896,15 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           // #110: a frontend artifact lands -> the deterministic dev-server
           // trigger (the #105 doctrine: probe evidence or the honest
           // refusal — never a narrated "running"). Non-fatal, bounded.
+          // #117 (PLANO-MASTER-1 B3): THEN THE PLAN IS WALKED — the planner
+          // turn emitted dispatch-plan.json; the walk runs here, inside the
+          // stream, hops narrated live (concurrency <= 3, deterministic
+          // verify, park-on-exhaustion with the resume contract printed).
+          // A parked plan resumes on the next successful prompt in the
+          // project (the state carries the campaign). Non-fatal both.
           if (opts.intent?.slug) {
+            const laneRoot = reconcileProjectPath(opts.intent.slug)?.path ?? resolveDispatchCwd(opts.intent.slug);
             try {
-              const laneRoot = reconcileProjectPath(opts.intent.slug)?.path ?? resolveDispatchCwd(opts.intent.slug);
               const t = await maybeStartDevServer(opts.intent.slug, laneRoot);
               send({
                 type: 'log',
@@ -910,6 +917,15 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
               send({
                 type: 'log',
                 msg: `Dev-server trigger failed (non-fatal): ${e instanceof Error ? e.message : String(e)}`,
+                ts: new Date().toISOString(),
+              });
+            }
+            try {
+              await maybeWalkThePlan({ slug: opts.intent.slug, laneRoot, send });
+            } catch (e) {
+              send({
+                type: 'log',
+                msg: `Plan walk failed (non-fatal): ${e instanceof Error ? e.message : String(e)}`,
                 ts: new Date().toISOString(),
               });
             }

@@ -246,6 +246,14 @@ export interface WalkResult {
   rows: HopTelemetryRow[];
 }
 
+/** #117 (PLANO-MASTER-1 B3): the live narration events — the product flow
+ * bridges these to the terminal stream (WHO the god is, WHERE the lane is,
+ * what happened) so the walk is visible while it runs. */
+export type HopWalkEvent =
+  | { type: 'hop_start'; hop: string; god: string }
+  | { type: 'hop_done'; hop: string; god: string; durationMs: number; tokensIn: number | null; tokensOut: number | null; retriesAbsorbed: number }
+  | { type: 'hop_parked'; hop: string; god: string; reason: string; error?: string };
+
 export interface WalkOptions {
   plan: DispatchPlan | unknown;
   /** Injected dispatcher (fixtures). Defaults to the live spawn dispatcher. */
@@ -254,6 +262,8 @@ export interface WalkOptions {
   resume?: boolean;
   /** Where the state + telemetry live. Defaults to the plan's laneRoot. */
   stateDir?: string;
+  /** #117: the live narration bridge (optional — the battery fixtures omit it). */
+  onEvent?: (ev: HopWalkEvent) => void;
 }
 
 interface WalkTask {
@@ -319,6 +329,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         const startedAt = Date.now();
         const task: WalkTask = { hop: next, startedAt, done: false, promise: Promise.resolve() };
         inFlight.set(next.id, task);
+        opts.onEvent?.({ type: 'hop_start', hop: next.id, god: next.god });
         task.promise = (async () => {
           let result: HopDispatchResult;
           try {
@@ -335,6 +346,11 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
             if (verify.ok) {
               completed.add(next.id);
               telemetryRow(next, result, 'completed', startedAt);
+              opts.onEvent?.({
+                type: 'hop_done', hop: next.id, god: next.god,
+                durationMs: Date.now() - startedAt, tokensIn: result.tokensIn,
+                tokensOut: result.tokensOut, retriesAbsorbed: result.retriesAbsorbed,
+              });
             } else {
               if (!stopped) {
                 stopped = true;
@@ -345,6 +361,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
                 };
               }
               telemetryRow(next, result, 'parked-verify-failed', startedAt);
+              opts.onEvent?.({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'verify-failed', error: verify.checks.find((c) => !c.ok)?.detail });
             }
           } else if (result.exhausted) {
             if (!stopped) {
@@ -355,6 +372,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
               };
             }
             telemetryRow(next, result, 'parked-retry-exhausted', startedAt);
+            opts.onEvent?.({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'retry-exhausted', error: result.error });
           } else {
             if (!stopped) {
               stopped = true;
@@ -364,6 +382,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
               };
             }
             telemetryRow(next, result, 'parked-dispatch-failed', startedAt);
+            opts.onEvent?.({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'dispatch-failed', error: result.error });
           }
           task.done = true;
         })();

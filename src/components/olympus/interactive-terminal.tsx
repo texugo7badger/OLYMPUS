@@ -231,6 +231,12 @@ export default function InteractiveTerminal() {
   const runEditCount = useRef(0);
   const runCommandCount = useRef(0);
   const runReadCount = useRef(0);
+  // #117 (PLANO-MASTER-1 B3): the walk's truth for THIS run — set when the
+  // server streams walk_summary (the plan was walked or parked with the
+  // resume contract). When set, the completion line is the WALK's truth and
+  // the bare "Task completed" census verdict is suppressed: a turn whose
+  // plan has unwalked hops must never read as completed.
+  const runWalkSummary = useRef<string | null>(null);
   // Issue #32 (task 3): addMessage appends unconditionally, so a redelivered
   // permission_ask renders a second identical card. Single slot, so only
   // CONSECUTIVE duplicates collapse — keyed on permissionId rather than the
@@ -657,6 +663,21 @@ export default function InteractiveTerminal() {
       return;
     }
 
+    if (ev.type === 'hop_start' || ev.type === 'hop_done' || ev.type === 'hop_parked') {
+      // #117 (PLANO-MASTER-1 B3): the plan walks live — every hop narrates
+      // WHO (the god) + WHERE (the lane) + what happened, in the stream.
+      if (ev.msg) { removeThinking(); addMessage({ type: 'system', text: ev.msg }); }
+      return;
+    }
+    if (ev.type === 'walk_summary') {
+      // #117 (PLANO-MASTER-1 B3): the walk's truth — the honest completion
+      // line (walked N/M or parked with the resume contract). It gates the
+      // action_done census below: unwalked hops never read as "completed".
+      removeThinking();
+      runWalkSummary.current = ev.msg || 'the plan walk ended';
+      addMessage({ type: 'system', text: ev.msg || 'The plan walk ended.' });
+      return;
+    }
     if (ev.type === 'project_created') {
       // #113 (PLANO-MASTER-1 B2): the panel LEARNS the intake's home — the
       // list + the active pointer re-read (the pointer was already set
@@ -738,13 +759,20 @@ export default function InteractiveTerminal() {
       runEditCount.current = 0;
       runCommandCount.current = 0;
       runReadCount.current = 0;
+      runWalkSummary.current = null;
       return;
     }
     if (ev.type === 'action_done') {
       removeThinking();
       setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false); updateGodActivity('apollo', 'idle');
       if (ev.code === 0) {
-        if (runTextCount.current > 0) {
+        if (runWalkSummary.current) {
+          // #117 (PLANO-MASTER-1 B3): the walk's truth already rendered
+          // (walk_summary — walked N/M, or parked with the resume
+          // contract). A turn whose plan has unwalked hops NEVER prints
+          // the bare "Task completed" census verdict: the hops are the
+          // truth, and this run's plan said exactly where it stopped.
+        } else if (runTextCount.current > 0) {
           // Issue #32: report the census, not a verdict. A code-0 exit with
           // zero write/edit calls changed nothing on disk, and calling that
           // "Task completed." is what let a read-only turn read as real work.
