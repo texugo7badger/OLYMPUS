@@ -148,6 +148,58 @@ if (process.argv[2] === 'child') {
     process.exit(0);
   }
 
+  // ── #113 (PLANO-MASTER-1 B2): the ORPHAN-LANE COLLISION — the user's exact
+  // UAT shape at the manager seam: the intake home in 02_Projects (alive, with
+  // content) + a WORKSPACE-LANE copy with divergent content (a dead UAT's
+  // leftover). The manager must spawn in the HOME. RED pre-cure: the
+  // note-stale decision hands the spawn (and the served page!) to the orphan.
+  if (mode === 'orphanlane') {
+    const slug2 = 'fixture-orphanlane';
+    const intakeDir = join(vault, '02_Projects', slug2);
+    mkdirSync(intakeDir, { recursive: true });
+    writeFileSync(join(intakeDir, 'package.json'), JSON.stringify({ name: slug2, scripts: { dev: 'node fixture-server.js' } }, null, 2));
+    writeFileSync(join(intakeDir, 'fixture-server.js'), FIXTURE_SERVER_JS);
+    const p = await freePort();
+    writeFileSync(join(intakeDir, 'project.md'), `---\ntype: project\nslug: ${slug2}\nname: ${slug2}\npath: ${intakeDir}\nstacks: [html]\ncreated: 2026-10-09T00:00:00.000Z\nlast_active: 2026-10-09T00:00:00.000Z\nlivePreviewPort: ${p}\n---\n\nbody\n`);
+    // the orphan lane copy: a FULL dev-server-capable copy whose server serves
+    // a DIFFERENT marker — if the spawn lands there, the page proves it.
+    const orphanDir = join(lane, slug2);
+    mkdirSync(orphanDir, { recursive: true });
+    writeFileSync(join(orphanDir, 'package.json'), JSON.stringify({ name: slug2, scripts: { dev: 'node fixture-server.js' } }, null, 2));
+    writeFileSync(join(orphanDir, 'fixture-server.js'), FIXTURE_SERVER_JS.replace('fixture dev server ok', 'THE ORPHAN LANE MARKER'));
+    writeFileSync(join(orphanDir, 'orphan-artifact.txt'), 'leftover from a dead UAT');
+    out.steps.intakeDir = intakeDir;
+    out.steps.orphanDir = orphanDir;
+    out.steps.orphanCopyExists = existsSync(orphanDir);
+    const started = await mgr.start(slug2);
+    out.steps.started = started;
+    out.pids.push(started?.pid);
+    if (started?.ok) {
+      const st = await (async () => {
+        const t0 = Date.now();
+        for (;;) {
+          const s = await mgr.status(slug2);
+          if (s.running || Date.now() - t0 > 30_000) return s;
+          await new Promise((r) => setTimeout(r, 250));
+        }
+      })();
+      out.steps.status = st;
+      if (st.running && st.url) {
+        try {
+          const page = await fetch(st.url); const body = await page.text();
+          out.steps.http = { status: page.status, homeMarker: body.includes('fixture dev server ok'), orphanMarker: body.includes('THE ORPHAN LANE MARKER') };
+        } catch (e) { out.steps.http = { status: 0, error: e.message }; }
+      }
+      await mgr.stop(slug2);
+      out.steps.afterStop = await mgr.status(slug2);
+      out.steps.stateGone = !existsSync(join(home, '.local', 'share', 'olympus', 'dev-servers', `${slug2}.json`));
+      const silent = await probeDevServer(p, 800);
+      out.steps.portSilent = silent.running === false;
+    }
+    console.log(JSON.stringify(out));
+    process.exit(0);
+  }
+
   // ── #112 refusal preservation: an UNKNOWN slug (no note, no lane dir)
   // still earns the honest refusal — the #105 doctrine is scoped, not weakened.
   if (mode === 'unknownslug') {
@@ -356,6 +408,34 @@ if (process.argv[2] !== 'child') {
       check('A13/#112 the served page answers HTTP 200 with the fixture marker',
         s.http?.status === 200 && s.http?.marker === true, JSON.stringify(s.http ?? null));
       check('A13/#112 clean stop, state file gone, zero orphans (the port silent)',
+        s.afterStop?.running === false && s.stateGone === true && s.portSilent === true,
+        JSON.stringify({ afterStop: s.afterStop?.running, stateGone: s.stateGone, portSilent: s.portSilent }));
+    }
+  }
+
+  // ─── orphanlane mode (#113, PLANO-MASTER-1 B2): the user's UAT shape — the
+  // intake home in 02_Projects + an orphan lane copy with content. The spawn
+  // must land in the HOME and serve THE HOME's page; the orphan is never the
+  // spawn dir. RED pre-cure: the note-stale decision serves the orphan. ────
+  {
+    const O = child('orphanlane');
+    if (O.__err) { check('A15/#113 the orphanlane child ran', false, O.__err); }
+    else {
+      const s = O.steps;
+      check('A15/#113 the fixture is honest: the orphan lane copy EXISTS with divergent content',
+        s.orphanCopyExists === true, `orphanCopyExists=${s.orphanCopyExists}`);
+      check('A15/#113 start accepts the project (the collision does not refuse)',
+        s.started?.ok === true, JSON.stringify(s.started).slice(0, 280));
+      check('A15/#113 THE HOME WINS: the spawn lands in 02_Projects — NEVER the orphan lane (the user\'s UAT case)',
+        s.started?.projectPath === s.intakeDir && s.started?.projectPath !== s.orphanDir,
+        `projectPath=${s.started?.projectPath} intakeDir=${s.intakeDir}`);
+      check('A15/#113 probe-green end-to-end (running + latency + url)',
+        s.status?.running === true && typeof s.status?.responseTimeMs === 'number' && !!s.status?.url,
+        JSON.stringify(s.status ?? null).slice(0, 240));
+      check('A15/#113 the served page is THE HOME\'S (the home marker, never the orphan marker)',
+        s.http?.status === 200 && s.http?.homeMarker === true && s.http?.orphanMarker === false,
+        JSON.stringify(s.http ?? null));
+      check('A15/#113 clean stop, state file gone, zero orphans (the port silent)',
         s.afterStop?.running === false && s.stateGone === true && s.portSilent === true,
         JSON.stringify({ afterStop: s.afterStop?.running, stateGone: s.stateGone, portSilent: s.portSilent }));
     }

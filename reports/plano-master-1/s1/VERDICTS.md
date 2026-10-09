@@ -102,6 +102,24 @@ carries where/who/why — the recovery line learns to name its provenance). NOT 
 | (c) mixed build, invisible | **B6a** (the banner names BOTH halves' revs) |
 | (d) honest-but-unexplained copy | **B6b** (narration provenance) |
 
+---
+
+## ADDENDUM (at B2, 2026-10-09) — verdict (b), CORRECTED with evidence
+
+The B2 cure work found the verdict above OVERSTATED one half of the gap: the #110 intake
+DOES set the active pointer server-side — `src/lib/project-intent.ts:148` (existing-routed)
+and `:180` (newly-created) both call `setActiveProject()`. The sentence "the #110 intake
+wires into none of them" was wrong about the pointer. The CORRECT verdict: the server half
+was always wired; the gap was (1) the CLIENT's mount-once read — the store's
+`refreshProjects()` runs only on component mount (`olympus-store.ts:450-461`,
+`project-switcher.tsx:35`), so the panel never re-read the pointer the intake had just
+written — and (2) the pointer file is GLOBAL state that another concurrent session can
+re-point (the 14:51:03 `continue` write — a second session's activity, timestamped evidence
+above). The B2 cure wires the typed `project_created` event (route) + the client's
+`refreshProjects()` on it, and pins the server half BEHAVIORALLY (the first-prompt-intake
+suite) so this correction is permanent. Honest self-correction, disclosed in the same merge
+that fixes the gap it misdescribed.
+
 The orphan-lane collision itself (F1) was already evidenced at Stage 0 (`s0/README.md`) and
 cures in B2 proper. **Zero code changed in B1.** 4 of the 12-merge cap spent after this
 paper (Phase 1 `0bd4a56`, B0 safe-set `07a34b5`, B0 park `6ff1933`, this B1 paper).

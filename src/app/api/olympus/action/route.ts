@@ -307,11 +307,11 @@ export async function POST(req: NextRequest) {
     // with NO folder selected; the prompt decides: new | existing:<slug> |
     // ask. Deterministic + non-blocking: a failed intake never breaks the
     // run (the stage result rides the stream as a log event).
-    let intentStage: { slug?: string; message: string } | undefined;
+    let intentStage: { slug?: string; kind?: string; message: string } | undefined;
     if (classification.complexity !== 'trivial') {
       try {
         const intent = await resolveAndRegisterIntent(promptText, classification.stack ?? []);
-        intentStage = { slug: intent.slug, message: intent.message };
+        intentStage = { slug: intent.slug, kind: intent.kind, message: intent.message };
       } catch (e) {
         intentStage = { message: `Intake stage failed (non-fatal): ${e instanceof Error ? e.message : String(e)}` };
       }
@@ -673,7 +673,7 @@ interface WarmStreamOptions {
   classification?: TaskClassification;
   /** #110: the autonomous intake stage result — emitted as a log event and
    *  used to fire the dev-server trigger after a successful frontend run. */
-  intent?: { slug?: string; message: string };
+  intent?: { slug?: string; kind?: string; message: string };
 }
 
 /**
@@ -814,7 +814,15 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         // #110: the autonomous intake stage — the created/routed/ask message
         // is visible in the session before any dispatch.
         if (opts.intent) {
-          send({ type: 'log', msg: opts.intent.message, ts: new Date().toISOString() });
+          if (opts.intent.slug) {
+            // #113 (PLANO-MASTER-1 B2): the TYPED panel event — the client
+            // refreshes the project list + the active pointer on it (the
+            // intake already set the pointer server-side; the panel was
+            // mount-once blind, the B1 verdict (b) gap).
+            send({ type: 'project_created', slug: opts.intent.slug, kind: opts.intent.kind ?? null, msg: opts.intent.message, ts: new Date().toISOString() });
+          } else {
+            send({ type: 'log', msg: opts.intent.message, ts: new Date().toISOString() });
+          }
         }
 
         // 1. Warm server (only cold start). Failure → one-shot without session.

@@ -179,8 +179,12 @@ export function getProject(slug: string): ProjectNote | null {
  */
 export interface ReconciledProjectPath {
   path: string;
-  source: 'note' | 'note-stale' | 'lane';
+  source: 'note' | 'note-stale' | 'lane' | 'note-home';
   noteUpdated: boolean;
+  /** #113 (PLANO-MASTER-1 B2): when the intake home in 02_Projects wins over a
+   * divergent lane copy, the orphan's path — surfaced as CONTENT to absorb
+   * (announced to callers, never silenced, never clobbered). */
+  lanePath?: string;
 }
 
 /**
@@ -229,6 +233,15 @@ export function reconcileProjectPath(slug: string | null | undefined): Reconcile
       catch { return { path: laneProjectDir, source: 'lane', noteUpdated: false }; }
     }
     if (notePath && notePath !== laneProjectDir) {
+      // #113 (PLANO-MASTER-1 B2): the intake home inside 02_Projects is the
+      // USER's territory — a live home NEVER loses to a divergent lane (the
+      // orphan-lane collision that shadowed the user's UAT: the lane stole
+      // the dev server at :3011 while the vault never saw a byte). The
+      // orphan is CONTENT to absorb: its path surfaces via lanePath for
+      // callers to announce; the note itself is never rewritten here.
+      if (notePath === PROJECTS_DIR || notePath.startsWith(PROJECTS_DIR + '/')) {
+        return { path: notePath, source: 'note-home', noteUpdated: false, lanePath: laneProjectDir };
+      }
       // the fossil is alive elsewhere (the pre-#99 bench): surfaced, never clobbered.
       return { path: laneProjectDir, source: 'note-stale', noteUpdated: false };
     }

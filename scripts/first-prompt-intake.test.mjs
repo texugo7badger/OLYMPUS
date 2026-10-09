@@ -124,6 +124,11 @@ if (process.argv[2] === 'child') {
       const { reconcileProjectPath } = await import('../src/lib/project-context.ts');
       const slug = 'preview-two-smoke';
       out.intent = await resolveAndRegisterIntent('Build a "Preview Two Smoke" landing page for a design studio', ['html', 'css']);
+      // #113 rider (PLANO-MASTER-1 B2): the intake sets the ACTIVE pointer —
+      // the B1 verdict (b) correction: the server half was ALWAYS wired
+      // (project-intent.ts:148/:180); the gap was the client's mount-once
+      // read. Pin the server half so it never regresses.
+      try { out.activePointer = JSON.parse(readFileSync(join(home, '.olympus', 'active-project.json'), 'utf-8')); } catch { out.activePointer = null; }
       out.noteExists = null;
       const dir = join(vault, '02_Projects', slug);
       out.noteExists = existsSync(join(dir, 'project.md'));
@@ -263,6 +268,9 @@ async function main() {
     check('#112: reconcile answers the intake note path (source note — no lane copy exists)',
       seam.reconciled?.source === 'note' && /02_Projects\/preview-two-smoke$/.test(seam.reconciled?.path || ''),
       JSON.stringify(seam.reconciled));
+    check('#113 rider: the intake sets the ACTIVE pointer (the B1 (b) correction — the server half was always wired, pinned)',
+      seam.activePointer?.slug === 'preview-two-smoke',
+      JSON.stringify(seam.activePointer));
     check('#112: the trigger FIRES green — probe evidence (running + url + latency), never a narrated claim',
       seam.result?.triggered === true && seam.result?.status?.running === true && !!seam.result?.status?.url && typeof seam.result?.status?.responseTimeMs === 'number',
       JSON.stringify(seam.result).slice(0, 280));
@@ -294,6 +302,19 @@ async function main() {
   check('W: resolveAndRegisterIntent passes laneProjectDir (02_Projects/<slug> — NEVER process.cwd())',
     /laneProjectDir/.test(intentSrc) && /PROJECTS_DIR, slug/.test(intentSrc),
     'regression: the autonomous intake would point the note at the repo (the #99 shape)');
+
+  // ── 6. Content pins: the #113 rider (PLANO-MASTER-1 B2) — the panel must
+  // LEARN about the intake's home. The server half (the active pointer) is
+  // pinned behaviorally in the seam child above; here: the typed event the
+  // route emits + the client's refresh on it (the mount-once blindness dies).
+  check('W/#113: the route carries the intent KIND (new|existing) into the stream opts',
+    /kind: intent\.kind/.test(routeSrc), 'the intent kind never reaches the stream');
+  check('W/#113: the intake result rides the stream as the TYPED project_created event (slug + kind)',
+    /type: 'project_created'/.test(routeSrc), 'the panel never learns a project was created/routed');
+  const termSrc = readFileSync(ROOT + '/src/components/olympus/interactive-terminal.tsx', 'utf-8');
+  check('W/#113: the client REFRESHES the panel on project_created (the list + the active pointer re-read)',
+    /project_created/.test(termSrc) && /refreshProjects\(\)/.test(termSrc),
+    'the panel stays mount-once blind — the B1 (b) gap');
 }
 
 main().then(() => {

@@ -109,6 +109,20 @@ if (process.argv[2] === 'child') {
     note('case-healthy', join(lane, 'case-healthy'));
     const r4 = reconcileProjectPath('case-healthy');
     out.healthy = { result: r4, noteAfter: notePathNow('case-healthy') };
+
+    // (#113/PLANO-MASTER-1 B2) THE USER'S UAT CASE: the live intake home in
+    // 02_Projects (note + code co-located — #110's pinned shape) + an ORPHAN
+    // lane copy WITH content (a dead UAT's leftover, born earlier). Today the
+    // note-stale decision hands the run to the orphan — the home must win,
+    // the lane surfaced as absorbable content (lanePath), the note untouched.
+    const uatHome = join(projectsDir, 'case-uat-home');
+    mkdirSync(uatHome, { recursive: true });
+    writeFileSync(join(uatHome, 'project.md'), `---\ntype: project\nslug: case-uat-home\nname: case-uat-home\npath: ${uatHome}\nstacks: []\ncreated: 2026-10-09T16:41:29.000Z\nlast_active: 2026-10-09T16:41:29.000Z\nlivePreviewPort: 3011\n---\n\nbody\n`);
+    writeFileSync(join(uatHome, 'index.html'), 'THE HOME MARKER');
+    mkdirSync(join(lane, 'case-uat-home'), { recursive: true });
+    writeFileSync(join(lane, 'case-uat-home', 'orphan-artifact.txt'), 'leftover from a dead UAT');
+    const rUat = reconcileProjectPath('case-uat-home');
+    out.uat = { result: rUat, noteAfter: notePathNow('case-uat-home') };
   }
 
   if (mode === 'guard') {
@@ -178,6 +192,13 @@ if (process.argv[2] === 'child') {
     check('(4) healthy note (path == lane) → the note path, source note, no write',
       R.healthy?.result?.path === join(lane, 'case-healthy') && R.healthy?.result?.source === 'note' && R.healthy?.result?.noteUpdated === false,
       JSON.stringify(R.healthy?.result).slice(0, 200));
+    const uatHomePath = join(WORK, 'vault-reconcile', '02_Projects', 'case-uat-home');
+    check('(#113) THE UAT CASE: live intake home in 02_Projects + orphan lane → the HOME wins (never the orphan)',
+      R.uat?.result?.path === uatHomePath && R.uat?.result?.source === 'note-home',
+      JSON.stringify(R.uat?.result).slice(0, 240));
+    check('(#113) the divergent lane is SURFACED as absorbable content (lanePath named) + the note never rewritten',
+      R.uat?.result?.lanePath === join(lane, 'case-uat-home') && R.uat?.result?.noteUpdated === false && R.uat?.noteAfter === uatHomePath,
+      JSON.stringify(R.uat).slice(0, 240));
     check('the lane resolution never created the lane at import (the pure resolver — no side effects on the GET probe path)',
       existsSync(lane), `lane=${lane}`);
   }

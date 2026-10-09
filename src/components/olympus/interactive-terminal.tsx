@@ -657,6 +657,17 @@ export default function InteractiveTerminal() {
       return;
     }
 
+    if (ev.type === 'project_created') {
+      // #113 (PLANO-MASTER-1 B2): the panel LEARNS the intake's home — the
+      // list + the active pointer re-read (the pointer was already set
+      // server-side by the intake; this kills the mount-once blindness that
+      // hid Lumina from the user's whole UAT — the B1 verdict (b) gap).
+      useOlympus.getState().refreshProjects();
+      removeThinking();
+      addMessage({ type: 'system', text: ev.msg || 'Project updated' });
+      return;
+    }
+
     if (ev.type === 'response' || ev.type === 'cli' || ev.type === 'log') {
       const msg = ev.msg || ev.cli || ev.text || '';
       if (msg) {
