@@ -34,7 +34,7 @@ nvcf-reqid: 40e8bcbb-45d5-45ba-acff-56590b2ca269
 nvcf-status: fulfilled
 vary: Origin
 
-{"id":"chatcmpl-750e3155-caab-40b9-9d92-0bf4bbf7f132","choices":[{"index":0,"message":{"content":null,"refusal":null,"role":"assistant","reasoning_content":"Respond区域headers想要的kknowCSYSTEMPING, reactsCaption/Podsimgroup"},"finish_reason":"length","logprobs":null}],"created":1791531925,"model":"moonshotai/kimi-k3","object":"chat.completion","usage":{"prompt_tokens":87,"completion_tokens":16,"total_tokens":103,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens_details":{"reasoning_tokens":16}}}
+{"id":"chatcmpl-750e3155-caab-40b9-9d92-0bf4bbf7f132","choices":[{"index":0,"message":{"content":null,"refusal":null,"role":"assistant","reasoning_content":"Respond[declared-redaction: CJK tokenizer-salad bytes from the model's own reasoning_content; raw capture preserved at /tmp/opencode/preview-2/binary-strings-keep/raw-e8-probe-t074445Z.txt]headers[declared-redaction: CJK tokenizer-salad bytes from the model's own reasoning_content; raw capture preserved at /tmp/opencode/preview-2/binary-strings-keep/raw-e8-probe-t074445Z.txt]kknowCSYSTEMPING, reactsCaption/Podsimgroup"},"finish_reason":"length","logprobs":null}],"created":1791531925,"model":"moonshotai/kimi-k3","object":"chat.completion","usage":{"prompt_tokens":87,"completion_tokens":16,"total_tokens":103,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens_details":{"reasoning_tokens":16}}}
 === HTTP_CODE:200 TIME_TOTAL:0.947526s ===
 
 ===== NVIDIA meta/muse-glimmer-30b =====
