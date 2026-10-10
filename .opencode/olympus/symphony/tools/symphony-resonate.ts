@@ -38,6 +38,10 @@ import {
   estimateSignatureEconomy,
   symbolicForm,
 } from "../../../../src/lib/symphony/index.js";
+// #84 (HIGIENIA-2 H3b / F1): the instinct RAG — the composer's PROVEN
+// instincts matching the payload ride as SHORT prior-context blocks (the
+// D16 shape: trust but verify, never prompt essays).
+import { instinctPriorContext } from "../../../../src/lib/instinct-rag.js";
 
 const symphonyResonateTool: ToolDefinition = tool({
   description:
@@ -103,9 +107,14 @@ const symphonyResonateTool: ToolDefinition = tool({
       task: String(args.payload || ""),
     });
     try {
+      // #84: the RAG block composes INTO the dispatched payload — what the
+      // demigod actually receives (the registry records the dispatched
+      // payload; the sync-map entry above keeps the user's original task).
+      const priorContext84 = instinctPriorContext(String(args.composer || "apollo"), String(args.payload || ""));
+      const effectivePayload84 = priorContext84 ? `${args.payload}\n\n${priorContext84}` : args.payload;
       const signature = composeSignature({
         composer: args.composer,
-        payload: args.payload,
+        payload: effectivePayload84,
         targetOrchestra: args.targetOrchestra,
         broadcastMode: args.broadcastMode ?? "parallel",
         parentSignature: args.parentSignature,

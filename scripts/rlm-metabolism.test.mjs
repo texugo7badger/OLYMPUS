@@ -97,6 +97,43 @@ const g3 = spawnSync(process.execPath, [join(ROOT, 'scripts', 'brain-backup.mjs'
 check('E6 tamper: a flipped byte in the backup FAILS LOUD (refuses to restore corruption)',
   g3.status === 1 && /TAMPERED BACKUP — refusing/.test(g3.stderr || g3.stdout || ''), (g3.stderr || '').split('\n').slice(-3).join(' ').slice(0, 200));
 
+// ── #84 (HIGIENIA-2 H3b / F1): the instinct RAG — proven instincts as
+// prior-context blocks in dispatches (the D16 shape). Behavioral: a temp
+// vault with matching + non-matching + below-confidence instincts; the
+// wiring: the resonate tool composes the block INTO the payload.
+{
+  const rag = await import(new URL('../src/lib/instinct-rag.ts', import.meta.url).pathname);
+  check('F-#84: instinctPriorContext exported (the RAG composer)',
+    typeof rag.instinctPriorContext === 'function', 'absent — dispatches never consult the instinct store');
+  if (typeof rag.instinctPriorContext === 'function') {
+    const vault84 = join(WORK, 'vault-rag');
+    const apolloSeed = join(vault84, '05_Auto_Learning', 'instincts', 'apollo', 'seed');
+    const apolloEmp = join(vault84, '05_Auto_Learning', 'instincts', 'apollo', 'empirical');
+    mkdirSync(apolloSeed, { recursive: true });
+    mkdirSync(apolloEmp, { recursive: true });
+    writeFileSync(join(apolloSeed, 'plan-first.md'),
+      `---\ngod: apollo\nconfidence: 0.95\nsource: seed\ntrigger: Any architectural build task or complex web app request\naction: Emit a dispatch plan first; never monolithic single-turn code.\n---\n\nbody`);
+    writeFileSync(join(apolloSeed, 'weak.md'),
+      `---\ngod: apollo\nconfidence: 0.5\nsource: seed\ntrigger: Any architectural build task request\naction: Too unsure to matter.\n---\n\nbody`);
+    writeFileSync(join(apolloEmp, 'hop-sizing.md'),
+      `---\ngod: apollo\nconfidence: 0.85\nsource: empirical\ntrigger: Free-tier multi-file component hops planning\naction: Keep hops to five artifacts or fewer; route volume work to the flash lane.\n---\n\nbody`);
+    const match84 = rag.instinctPriorContext('apollo', 'Build a complex web app with architectural multi-file component hops', { vaultRoot: vault84 });
+    check('F-#84: a matching proven instinct RIDES as a prior-context block (the action text verbatim)',
+      typeof match84 === 'string' && /dispatch plan first/.test(match84) && /PRIOR CONTEXT/.test(match84),
+      String(match84).slice(0, 160));
+    const none84 = rag.instinctPriorContext('apollo', 'Write a haiku about the sea', { vaultRoot: vault84 });
+    check('F-#84: no match — NO block (the dispatch stays lean, never padded)',
+      none84 === null, `a padded block appeared: ${String(none84).slice(0, 120)}`);
+    const weak84 = rag.instinctPriorContext('apollo', 'Build task request', { vaultRoot: vault84 });
+    check('F-#84: below-confidence instincts NEVER ride (the 0.5 weak one excluded)',
+      weak84 === null || !/Too unsure/.test(weak84), String(weak84).slice(0, 120));
+  }
+  const resonateSrc84 = readFileSync(join(ROOT, '.opencode', 'olympus', 'symphony', 'tools', 'symphony-resonate.ts'), 'utf-8');
+  check('F-#84: the resonate tool composes the RAG block INTO the dispatched payload (the wiring)',
+    /instinctPriorContext\(/.test(resonateSrc84) && /effectivePayload84/.test(resonateSrc84),
+    'the dispatch never consults the instinct store — the RAG stays a lib without a caller');
+}
+
 rmSync(WORK, { recursive: true, force: true });
 if (fails > 0) { console.error(`\n${fails}/${checked} metabolism assertion(s) FAILED`); process.exit(1); }
 console.log(`\nAll ${checked} rlm-metabolism assertions passed`);

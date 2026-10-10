@@ -1,0 +1,3 @@
+LIVE RAG (the promoted instinct rides):
+[PRIOR CONTEXT — proven instincts for this god, matching this task. Trust but verify.]
+- trigger: Free-tier multi-file component hop planning on OLYMPUS (dispatch-plan composition with several component artifacts per hop) → Keep multi-file hops to five artifacts or fewer; route volume-shaped component work to the flash lane. The strong lane's default thinking consumed the single-run output budget twice on a 9-file hop and once on a 5-file hop (~20 min each, zero artifacts written); the flash lane completed a 3-file hop in 337s/3.1k-out and the split hops walked green. Split large component batches; never dispatch a 9-artifact single hop on the free tier. (confidence 0.85, empirical)

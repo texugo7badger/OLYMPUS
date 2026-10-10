@@ -127,7 +127,8 @@ const G = JSON.parse(r.stdout.trim().split('\n').filter(Boolean).pop());
 // Phase 2
 check('P2 both E4-contract dispatches fired (athena + hephaestus lanes)', G.dispatches?.athena === true && G.dispatches?.hephaestus === true, JSON.stringify(G.dispatches));
 check('P2 the artifact-less directive REFUSED verbatim (the law)', /contract violation/i.test(G.refusal || ''), JSON.stringify(G.refusal).slice(0, 150));
-check('P2 the instinct consult is recorded (the store answers)', G.instinctConsulted?.count >= 1 && G.instinctConsulted?.first === 'landing-route-renders-http-200', JSON.stringify(G.instinctConsulted));
+check('P2 the instinct consult is recorded (the store answers — any proven instinct, never a frozen inventory: the #79 live promotions grow the store by design)',
+  G.instinctConsulted?.count >= 1, JSON.stringify(G.instinctConsulted));
 check('P2 both declared artifacts produced -> both finalize SUCCESS',
   (G.finalize || []).filter(f => f.outcome === 'success').length >= 2, JSON.stringify(G.finalize).slice(0, 220));
 // Phase 1: integrity under concurrency
