@@ -232,6 +232,18 @@ async function main() {
   expect('PL: the marker rides AFTER the prompt (the session marker still leads every turn type)',
     /: sessionMarker \+ classificationMarker \+ promptText \+ plannerMarker/.test(routeSrc),
     'the composition broke the #65 marker-order pin');
+
+  // ── 8. #119 (PLANO-MASTER-1 B5/F4): the contract rides INLINE — the
+  // planner stops diving into source. The user's UAT: Apollo opened the
+  // orchestrator source at 13:43 to learn the JSON shape the prompt should
+  // have carried. RED pre-cure: the marker points at plan-schema.ts and
+  // carries no canonical example.
+  expect('PL/#119 (F4): the planner contract rides INLINE — a minimal canonical plan example in the marker',
+    /\{"version":1,"laneRoot"/.test(routeSrc) && /file-exists:/.test(routeSrc) && /"budgetTokens":8192/.test(routeSrc),
+    'the planner still has to OPEN the source to learn the JSON shape (the 13:43 source dive)');
+  expect('PL/#119 (F4): the marker no longer points the planner at source files (the schema/walker path refs die)',
+    !/\[OLYMPUS-PLANNER\][^']*\.ts\b/.test(routeSrc),
+    'the marker still tells the planner to read the schema in source — the F4 defect verbatim');
   const agentsSrc = fs.readFileSync(OLYMPUS + '/AGENTS.md', 'utf-8');
   expect('PL: the doctrine sentence in AGENTS.md (sessions are lanes; the disk carries the campaign)',
     /Sessions are lanes; the disk carries the campaign/.test(agentsSrc), 'the standing note is missing');
