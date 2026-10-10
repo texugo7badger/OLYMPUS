@@ -21,6 +21,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const OLYMPUS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -47,6 +48,87 @@ function validPlan(laneRoot, hops) {
 }
 
 async function main() {
+  // ── 9. PLANO-MASTER-1 B3+B6 (#117/#120): the post-run behavior rides a
+  // CHILD process — the plan-walk approval gate persists in the VAULT
+  // (hitl-gates.json), so the fake vault env must bind at module import;
+  // an in-process fixture would touch the real vault. The child runs all
+  // four cycles: the park->resume campaign, the gate approve, the gate
+  // abort, and the no-plan honest skip.
+  if (process.argv[2] === 'child-post-run') {
+    const vault = process.env.OLYMPUS_VAULT;
+    fs.mkdirSync(path.join(vault, '05_Auto_Learning'), { recursive: true });
+    // the fake OLYMPUS root config carries the god model lanes — the POOL
+    // threading evidence (B6b: the narration names WHO + WHERE + THE POOL).
+    fs.writeFileSync(path.join(process.env.OLYMPUS_ROOT, 'opencode.json'), JSON.stringify({
+      agent: { hephaestus: { model: 'nvidia-deepseek/deepseek-v4.1-flash' }, athena: { model: 'nvidia-kimi/moonshotai/kimi-k3' } },
+    }));
+    const postRun = await import(OLYMPUS + '/src/lib/hop-runtime/post-run.ts');
+    const hitl = await import(OLYMPUS + '/src/lib/hitl-gates.ts');
+    const out = { events: [], disp: [] };
+    const send = (ev) => out.events.push({ type: ev.type, hop: ev.hop ?? null, god: ev.god ?? null, pool: ev.pool ?? null });
+    const mkPlan = (lane, hops) => fs.writeFileSync(path.join(lane, 'dispatch-plan.json'), JSON.stringify(validPlan(lane, hops)));
+    const gateFor = (lane) => hitl.getPendingGates().find((g) => g.targetFile === path.join(lane, 'dispatch-plan.json'));
+
+    // CYCLE A (#117/B3): the park -> resume campaign, now behind the gate.
+    const laneA = tempLane();
+    mkPlan(laneA, [
+      { id: 'b3-1', god: 'hephaestus', prompt: 'shell', artifacts: ['shell.txt'], verify: { review: 'deterministic', checks: ['file-exists:shell.txt'] } },
+      { id: 'b3-2', god: 'athena', prompt: 'dash', artifacts: ['dash.txt'], verify: { review: 'deterministic', checks: ['file-exists:dash.txt'] }, after: ['b3-1'] },
+    ]);
+    const dying = async (hop) => {
+      out.disp.push(`A:${hop.id}`);
+      if (hop.id === 'b3-1') { fs.writeFileSync(path.join(laneA, 'shell.txt'), 'x'); return { ok: true, exitCode: 0, output: '', tokensIn: 10, tokensOut: 20, retriesAbsorbed: 0, exhausted: false }; }
+      return { ok: false, exitCode: 1, output: '', tokensIn: null, tokensOut: null, retriesAbsorbed: 4, exhausted: true, error: 'provider overload — all lanes dead' };
+    };
+    const a1 = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneA, send, dispatcher: dying, sessionId: 'ses-b6' });
+    out.a1 = { walked: a1.walked, awaiting: !!a1.awaitingApproval?.gate?.id };
+    out.dispAfterA1 = out.disp.length;
+    hitl.resolveGate(gateFor(laneA).id, 'approve');
+    const a2 = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneA, send, dispatcher: dying, sessionId: 'ses-b6' });
+    out.a2 = {
+      walked: a2.walked, completed: a2.completed, total: a2.total,
+      parked: a2.parked ? { hopId: a2.parked.hopId, reason: a2.parked.reason } : null,
+      summaryLine: a2.summaryLine,
+    };
+    const healed = async (hop) => { out.disp.push(`R:${hop.id}`); fs.writeFileSync(path.join(laneA, hop.artifacts[0]), 'x'); return { ok: true, exitCode: 0, output: '', tokensIn: 5, tokensOut: 6, retriesAbsorbed: 0, exhausted: false }; };
+    const a3 = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneA, send, dispatcher: healed, sessionId: 'ses-b6' });
+    out.a3 = { completed: a3.completed, total: a3.total, parked: a3.parked ? a3.parked.hopId : null, summaryLine: a3.summaryLine };
+
+    // CYCLE B (#120/B6): the gate IS the HITL record; approve -> 2/2 walked.
+    const laneB = tempLane();
+    mkPlan(laneB, [
+      { id: 'g-1', god: 'hephaestus', prompt: 'a', artifacts: ['a.txt'], verify: { review: 'deterministic', checks: ['file-exists:a.txt'] } },
+      { id: 'g-2', god: 'athena', prompt: 'b', artifacts: ['b.txt'], verify: { review: 'deterministic', checks: ['file-exists:b.txt'] }, after: ['g-1'] },
+    ]);
+    const ok2 = async (hop) => { out.disp.push(`B:${hop.id}`); fs.writeFileSync(path.join(laneB, hop.artifacts[0]), 'x'); return { ok: true, exitCode: 0, output: '', tokensIn: 1, tokensOut: 1, retriesAbsorbed: 0, exhausted: false }; };
+    const b1 = await postRun.maybeWalkThePlan({ slug: 'gates-proj', laneRoot: laneB, send, dispatcher: ok2, sessionId: 'ses-b6' });
+    out.b1 = { awaiting: !!b1.awaitingApproval?.gate?.id, walked: b1.walked };
+    out.dispAfterB1 = out.disp.filter((d) => d.startsWith('B:')).length;
+    const pg = gateFor(laneB);
+    out.pendingGate = pg ? { phase: pg.phase, target: pg.targetFile } : null;
+    hitl.resolveGate(pg.id, 'approve');
+    const b2 = await postRun.maybeWalkThePlan({ slug: 'gates-proj', laneRoot: laneB, send, dispatcher: ok2, sessionId: 'ses-b6' });
+    out.b2 = { walked: b2.walked, completed: b2.completed, total: b2.total, parked: b2.parked ? b2.parked.hopId : null };
+
+    // CYCLE C (#120): abort withholds the walk honestly.
+    const laneC = tempLane();
+    mkPlan(laneC, [ { id: 'a-1', god: 'hephaestus', prompt: 'x', artifacts: ['x.txt'], verify: { review: 'deterministic', checks: ['file-exists:x.txt'] } } ]);
+    await postRun.maybeWalkThePlan({ slug: 'abort-proj', laneRoot: laneC, send, dispatcher: ok2, sessionId: 'ses-b6' });
+    hitl.resolveGate(gateFor(laneC).id, 'abort');
+    const c2 = await postRun.maybeWalkThePlan({ slug: 'abort-proj', laneRoot: laneC, send, dispatcher: ok2, sessionId: 'ses-b6' });
+    out.c2 = { walked: c2.walked, reason: c2.reason ?? null, summaryHead: (c2.summaryLine || '').slice(0, 90) };
+
+    // CYCLE D: no plan on disk -> the honest skip.
+    const laneD = tempLane();
+    const d1 = await postRun.maybeWalkThePlan({ slug: 'noplan', laneRoot: laneD, send, sessionId: 'ses-b6' });
+    out.d1 = { walked: d1.walked, summary: d1.summaryLine };
+
+    // the POOL evidence: the hop_start events carry the god model lanes
+    out.pools = out.events.filter((e) => e.type === 'hop_start').map((e) => `${e.god}=${e.pool}`);
+    console.log(JSON.stringify(out));
+    process.exit(0);
+  }
+
   let mod = null;
   try {
     mod = await import(OLYMPUS + '/src/lib/hop-runtime/walker.ts');
@@ -283,53 +365,11 @@ async function main() {
     !!postRun && typeof postRun.maybeWalkThePlan === 'function',
     "absent — the plan is still the turn's deliverable; 19 hops die on paper");
 
-  if (postRun && typeof postRun.maybeWalkThePlan === 'function') {
-    // The behavioral fixture: a 2-hop plan; hop-1 GREEN, hop-2 dies exhausted
-    // -> PARK + the resume contract. Then the RESUME walk with a healed
-    // dispatcher -> the honest walked line.
-    const laneB3 = tempLane();
-    fs.writeFileSync(path.join(laneB3, 'dispatch-plan.json'), JSON.stringify(validPlan(laneB3, [
-      { id: 'b3-1', god: 'hephaestus', prompt: 'write the shell', artifacts: ['shell.txt'], verify: { review: 'deterministic', checks: ['file-exists:shell.txt'] } },
-      { id: 'b3-2', god: 'athena', prompt: 'write the dashboard', artifacts: ['dash.txt'], verify: { review: 'deterministic', checks: ['file-exists:dash.txt'] }, after: ['b3-1'] },
-    ])));
-    const eventsB3 = [];
-    const sendB3 = (ev) => eventsB3.push(ev);
-    const dyingDispatcher = async (hop) => {
-      if (hop.id === 'b3-1') {
-        fs.writeFileSync(path.join(laneB3, 'shell.txt'), 'the shell');
-        return { ok: true, exitCode: 0, output: '', tokensIn: 10, tokensOut: 20, retriesAbsorbed: 0, exhausted: false };
-      }
-      return { ok: false, exitCode: 1, output: '', tokensIn: null, tokensOut: null, retriesAbsorbed: 4, exhausted: true, error: 'provider overload — all lanes dead' };
-    };
-    const outB3 = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneB3, send: sendB3, dispatcher: dyingDispatcher });
-    expect('B3: the walk runs in the product flow (walked true, 1/2 completed)',
-      outB3.walked === true && outB3.completed === 1 && outB3.total === 2, JSON.stringify(outB3).slice(0, 240));
-    expect('B3: the park is honest (hop b3-2, retry-exhausted)',
-      outB3.parked?.hopId === 'b3-2' && /retry-exhausted/.test(outB3.parked?.reason || ''), JSON.stringify(outB3.parked));
-    expect('B3: the summary line NAMES the park + PRINTS the resume contract (never "Task completed")',
-      /b3-2/.test(outB3.summaryLine || '') && /RESUME/i.test(outB3.summaryLine || '') && !/Task completed/i.test(outB3.summaryLine || ''),
-      outB3.summaryLine);
-    expect('B3: the hops narrated live in the stream (hop_start + hop_done + hop_parked + walk_summary)',
-      eventsB3.some((e) => e.type === 'hop_start' && e.hop === 'b3-1') &&
-      eventsB3.some((e) => e.type === 'hop_done' && e.hop === 'b3-1') &&
-      eventsB3.some((e) => e.type === 'hop_parked' && e.hop === 'b3-2') &&
-      eventsB3.some((e) => e.type === 'walk_summary'), JSON.stringify(eventsB3.map((e) => e.type)));
-    // the resume: the state landed on disk during the park -> the next call
-    // resumes, the healed dispatcher finishes b3-2 -> the walked line.
-    const healedDispatcher = async () => {
-      fs.writeFileSync(path.join(laneB3, 'dash.txt'), 'the dash');
-      return { ok: true, exitCode: 0, output: '', tokensIn: 5, tokensOut: 6, retriesAbsorbed: 0, exhausted: false };
-    };
-    const outB3b = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneB3, send: sendB3, dispatcher: healedDispatcher });
-    expect('B3: the RESUME walk completes the campaign (2/2 walked, the state carried on disk)',
-      outB3b.completed === 2 && outB3b.total === 2 && outB3b.parked === null && /2\/2/.test(outB3b.summaryLine || ''),
-      JSON.stringify(outB3b).slice(0, 240));
-    // the no-plan lane: the honest skip (most turns are not planning turns)
-    const laneB3c = tempLane();
-    const outB3c = await postRun.maybeWalkThePlan({ slug: 'b3-noplan', laneRoot: laneB3c, send: sendB3 });
-    expect('B3: no plan on disk -> the honest skip (walked false, no invented narration)',
-      outB3c.walked === false && !outB3c.summaryLine, JSON.stringify(outB3c).slice(0, 200));
-  }
+  // #120: the post-run BEHAVIORAL fixtures (the park->resume cycle, the
+  // approval gate lifecycle, the abort, the no-plan skip, the pool
+  // narration) moved to the child-post-run process below — the gate state
+  // persists in the VAULT, and an in-process fixture would touch the real
+  // one. The in-process import above stays as the export check.
 
   // The wiring pins (RED until the cure): the route CALLS the walk in the
   // post-run flow; the client renders the walk + suppresses the bare census.
@@ -341,6 +381,69 @@ async function main() {
     /walk_summary/.test(termSrc) && /hop_start/.test(termSrc), 'the walk is invisible in the terminal');
   expect('B3: THE INVARIANT — a walked/parked plan NEVER reports the bare "Task completed" census',
     /runWalkSummary/.test(termSrc), "the census line still masks the walk's truth");
+
+  // ── 10. PLANO-MASTER-1 B3+B6 (#117/#120): the post-run behavior — the
+  // park->resume cycle behind the approval gate, the gate's HITL record,
+  // the abort, the no-plan skip, the pool narration. ─────────────────────
+  {
+    const work = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-b6-'));
+    for (const d of ['vault', 'root', 'home']) fs.mkdirSync(path.join(work, d), { recursive: true });
+    const env = {
+      ...process.env,
+      OLYMPUS_VAULT: path.join(work, 'vault'),
+      OLYMPUS_ROOT: path.join(work, 'root'),
+      HOME: path.join(work, 'home'),
+    };
+    const r = spawnSync('npx', ['tsx', OLYMPUS + '/scripts/hop-runtime.test.mjs', 'child-post-run'], {
+      encoding: 'utf-8', cwd: OLYMPUS, timeout: 180_000, env,
+    });
+    let C = null;
+    try { C = JSON.parse(String(r.stdout).trim().split('\n').filter(Boolean).pop()); } catch { C = null; }
+    expect('B3+B6: the child-post-run fixture ran (the fake vault bound at module import)',
+      !!C && !C.__err, `${r.status} ${String(r.stdout).slice(-160)} ${String(r.stderr).slice(-240)}`);
+    if (C) {
+      expect('B3/#117: a fresh plan opens the approval gate BEFORE the walk (awaitingApproval, zero dispatches)',
+        C.a1?.awaiting === true && C.a1?.walked === false && C.dispAfterA1 === 0, JSON.stringify(C.a1).slice(0, 200));
+      expect('B3/#117: after approval the walk runs — and parks honestly at the dead lane (1/2, retry-exhausted)',
+        C.a2?.walked === true && C.a2?.completed === 1 && C.a2?.total === 2 && C.a2?.parked?.hopId === 'b3-2' && /retry-exhausted/.test(C.a2?.parked?.reason || ''),
+        JSON.stringify(C.a2).slice(0, 240));
+      expect('B3/#117: the parked summary line NAMES the park + PRINTS the resume contract (never "Task completed")',
+        /b3-2/.test(C.a2?.summaryLine || '') && /RESUME/i.test(C.a2?.summaryLine || '') && !/Task completed/i.test(C.a2?.summaryLine || ''),
+        C.a2?.summaryLine);
+      expect('B3/#117: the hops narrated live in the stream (hop_start + hop_done + hop_parked + walk_summary)',
+        Array.isArray(C.events) &&
+        C.events.some((e) => e.type === 'hop_start' && e.hop === 'b3-1') &&
+        C.events.some((e) => e.type === 'hop_done' && e.hop === 'b3-1') &&
+        C.events.some((e) => e.type === 'hop_parked' && e.hop === 'b3-2') &&
+        C.events.some((e) => e.type === 'walk_summary'),
+        JSON.stringify((C.events || []).map((e) => e.type)));
+      expect('B3/#117: the RESUME walk completes the campaign (2/2, the state carried on disk)',
+        C.a3?.completed === 2 && C.a3?.total === 2 && C.a3?.parked === null && /2\/2/.test(C.a3?.summaryLine || ''),
+        JSON.stringify(C.a3).slice(0, 240));
+      expect('B3/#117: no plan on disk -> the honest skip (walked false, no invented narration)',
+        C.d1?.walked === false && !C.d1?.summary, JSON.stringify(C.d1).slice(0, 200));
+      expect('B6/#120: the gate IS the HITL record (phase plan-walk, targetFile = the plan — the Pantheon toast surface)',
+        C.pendingGate?.phase === 'plan-walk' && /dispatch-plan\.json$/.test(C.pendingGate?.target || ''), JSON.stringify(C.pendingGate));
+      expect("B6/#120: a fresh plan's gate withholds the walk (awaiting, zero dispatches on that lane)",
+        C.b1?.awaiting === true && C.b1?.walked === false && C.dispAfterB1 === 0, JSON.stringify(C.b1).slice(0, 200));
+      expect('B6/#120: APPROVE resolves the SAME gate -> the walk runs (2/2 GREEN)',
+        C.b2?.walked === true && C.b2?.completed === 2 && C.b2?.total === 2 && C.b2?.parked === null, JSON.stringify(C.b2));
+      expect('B6/#120: ABORT withholds the walk honestly (walked false, reason plan-aborted)',
+        C.c2?.walked === false && C.c2?.reason === 'plan-aborted', JSON.stringify(C.c2).slice(0, 200));
+      expect('B6/#120: the hop narration carries the POOL (the god model lanes from the config)',
+        Array.isArray(C.pools) && C.pools.some((p) => p === 'hephaestus=nvidia-deepseek/deepseek-v4.1-flash'),
+        JSON.stringify(C.pools));
+    }
+  }
+  const postRunSrc = fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/post-run.ts', 'utf-8');
+  expect('B6/#120: the POOL is threaded into the hop narration (resolveGodModelLane in post-run)',
+    /resolveGodModelLane/.test(postRunSrc) && /pool/.test(postRunSrc), 'the narration names the god but not the model lane');
+  expect('B6/#120: the hop activity publish is OPT-IN (publishActivity -> appendActivity; the route opts in)',
+    /publishActivity/.test(postRunSrc) && /appendActivity/.test(postRunSrc) && /publishActivity: true/.test(routeSrc),
+    'the walk states never reach the durable feed — the Pantheon stays blind across sessions');
+  expect('B6/#120: the route ASKS through the question flow + the s/n short-circuit resolves the SAME gate in-turn',
+    /awaitingApproval/.test(routeSrc) && /resolvePlanWalkAnswer/.test(routeSrc),
+    'the gate is created but never asked / never resolvable from the terminal');
 }
 
 main().then(() => {

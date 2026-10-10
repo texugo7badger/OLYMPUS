@@ -108,6 +108,16 @@ export function getPendingGates(): HitlGate[] {
 }
 
 /**
+ * List ALL gates (pending + resolved), oldest first. #120 (PLANO-MASTER-1
+ * B6): the plan-walk flow looks up its gate's RESOLVED decision too (an
+ * approved walk must not re-ask; an aborted plan stays withheld) — the
+ * pending-only view cannot answer "what did the user decide".
+ */
+export function listGates(): HitlGate[] {
+  return loadState().gates;
+}
+
+/**
  * Get a gate by ID.
  */
 export function getGate(id: string): HitlGate | null {

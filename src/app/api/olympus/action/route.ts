@@ -3,12 +3,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { basename, dirname } from 'node:path';
 import { requireAuth } from '@/lib/auth';
 // Uses spawnOpencode() for Windows shell:true + stdin:'ignore' + local binary resolution.
 import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 import { resolveAndRegisterIntent } from '@/lib/project-intent';
 import { maybeStartDevServer } from '@/lib/dev-server-trigger';
-import { maybeWalkThePlan } from '@/lib/hop-runtime/post-run';
+import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
 import { reconcileProjectPath } from '@/lib/project-context';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
@@ -221,6 +222,21 @@ export async function POST(req: NextRequest) {
   if (action === 'prompt' || action === 'answer' || action === 'context') {
     if (!text || typeof text !== 'string') {
       return NextResponse.json({ error: 'missing text' }, { status: 400 });
+    }
+
+    // #120 (PLANO-MASTER-1 B6c): the plan-walk gate answer — 's'/'n' typed
+    // here resolves the SAME HITL gate the Pantheon toast shows (one state,
+    // no bifurcation), and the approving turn WALKS the plan inline without
+    // burning an LLM turn on the approval word.
+    if (action === 'prompt' || action === 'answer') {
+      const gateAnswer = resolvePlanWalkAnswer(text);
+      if (gateAnswer) {
+        return gateAnswerStream({
+          resolution: gateAnswer,
+          conversationId,
+          action,
+        });
+      }
     }
 
     // Classify prompt before spawning opencode for dynamic-context routing.
@@ -696,6 +712,49 @@ interface WarmStreamOptions {
  *      still retained).
  *   5. action_done.
  */
+/**
+ * #120 (PLANO-MASTER-1 B6c): the gate-answer mini stream — resolve the
+ * plan-walk gate (already resolved by resolvePlanWalkAnswer; this stream
+ * NARRATES + walks) without an LLM turn. Approve -> the walk runs inline
+ * (the hop events + the honest summary stream as usual); abort -> the
+ * honest abort line. The action_done closes the turn.
+ */
+function gateAnswerStream(opts: {
+  resolution: { gateId: string; decision: 'approve' | 'abort'; planPath: string; approvalPrompt: string };
+  conversationId: string;
+  action: string;
+}): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      let closed = false;
+      const send = (ev: Record<string, unknown>) => {
+        if (closed) return;
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(ev)}\n\n`)); } catch { closed = true; }
+      };
+      const finish = () => { if (closed) return; try { controller.close(); } catch {} closed = true; };
+      try {
+        if (opts.resolution.decision === 'approve' && opts.resolution.planPath) {
+          const laneRoot = dirname(opts.resolution.planPath);
+          const slug = basename(laneRoot);
+          send({ type: 'log', msg: `Plan walk approved (gate ${opts.resolution.gateId}) — walking ${slug} now.`, ts: new Date().toISOString() });
+          await maybeWalkThePlan({ slug, laneRoot, send, sessionId: opts.conversationId, publishActivity: true });
+        } else {
+          send({ type: 'log', msg: `Plan walk ABORTED (gate ${opts.resolution.gateId}) — the plan stays on disk; ask for a replan to start over.`, ts: new Date().toISOString() });
+        }
+        send({ type: 'action_done', action: opts.action, node: undefined, code: 0, ts: new Date().toISOString() });
+      } catch (e: any) {
+        send({ type: 'log', msg: `Gate resolution failed (non-fatal): ${e?.message || String(e)}`, ts: new Date().toISOString() });
+        send({ type: 'action_done', action: opts.action, node: undefined, code: 1, ts: new Date().toISOString() });
+      }
+      finish();
+    },
+  });
+  return new Response(stream, {
+    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' },
+  });
+}
+
 function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -925,7 +984,14 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
               });
             }
             try {
-              await maybeWalkThePlan({ slug: opts.intent.slug, laneRoot, send });
+              const walk = await maybeWalkThePlan({ slug: opts.intent.slug, laneRoot, send, sessionId: opts.conversationId, publishActivity: true });
+              if (walk.awaitingApproval?.gate) {
+                // #120 (PLANO-MASTER-1 B6c): the SAME gate the Pantheon
+                // toast polls, asked through the existing question flow —
+                // approve from EITHER surface; 's'/'n' typed here resolve
+                // it in-turn (resolvePlanWalkAnswer, above).
+                send({ type: 'question', id: walk.awaitingApproval.gate.id, msg: walk.awaitingApproval.gate.approvalPrompt, choices: ['s — approve the walk', 'n — abort the plan'], ts: new Date().toISOString() });
+              }
             } catch (e) {
               send({
                 type: 'log',

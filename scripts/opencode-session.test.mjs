@@ -413,6 +413,18 @@ async function main() {
   expect('terminal: failure branch tracks the last error (runLastError)', /runLastError/.test(termSrc), 'the last-error ref is missing — the failure card is bare');
   expect('terminal: failure card names the last error + the preserved session', /last error: \$\{runLastError\.current\}/.test(termSrc) && /warm session and its context are preserved/.test(termSrc), 'the failure branch renders a bare exit code');
 
+  // ── PLANO-MASTER-1 B6 (#120): the BUILD BANNER — "which build is serving"
+  // never again costs a mission. The B1 verdict (c): the user's 13:40 app
+  // was a MIXED build (an Oct-3 Electron main + a live-source renderer) and
+  // NO surface said so. The banner names BOTH halves at terminal startup.
+  expect('B6/#120: the build-info route exists (the git rev + the main compile date — BOTH halves)',
+    fs.existsSync(OLYMPUS + '/src/app/api/olympus/build-info/route.ts') &&
+    /rev/.test(fs.readFileSync(OLYMPUS + '/src/app/api/olympus/build-info/route.ts', 'utf-8')) &&
+    /mainBuiltAt/.test(fs.readFileSync(OLYMPUS + '/src/app/api/olympus/build-info/route.ts', 'utf-8')),
+    'the route is missing — the build stays invisible');
+  expect('B6/#120: the terminal renders the banner at startup (fetch /api/olympus/build-info)',
+    /\/api\/olympus\/build-info/.test(termSrc), 'the terminal never names the build it is running');
+
   // ── Scenario 7 (#99): the workspace lane — interactive projects must
   // land OUTSIDE the repo. The 2026-10-07 UAT created exemplo-landingpage/
   // INSIDE the working tree because the serve inherited findOlympusRoot()

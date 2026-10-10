@@ -664,9 +664,12 @@ export default function InteractiveTerminal() {
     }
 
     if (ev.type === 'hop_start' || ev.type === 'hop_done' || ev.type === 'hop_parked') {
-      // #117 (PLANO-MASTER-1 B3): the plan walks live — every hop narrates
-      // WHO (the god) + WHERE (the lane) + what happened, in the stream.
+      // #117/#120 (PLANO-MASTER-1 B3/B6): the plan walks live — every hop
+      // narrates WHO (the god) + WHERE (the lane) + WHICH pool, and the
+      // god panel tracks the walking state (this terminal) while the durable
+      // feed carries it across sessions (publishActivity, the #85 base).
       if (ev.msg) { removeThinking(); addMessage({ type: 'system', text: ev.msg }); }
+      updateGodActivity(ev.god || 'hephaestus', ev.type === 'hop_done' ? 'done' : ev.type === 'hop_parked' ? 'idle' : 'working', ev.msg || '');
       return;
     }
     if (ev.type === 'walk_summary') {
@@ -865,6 +868,23 @@ export default function InteractiveTerminal() {
   }, []);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, godStates]);
+  // #120 (PLANO-MASTER-1 B6a): the BUILD BANNER — "which build is serving"
+  // never again costs a mission. The B1 verdict (c): the user's 13:40 app
+  // was a MIXED build (an Oct-3 Electron main + a live-source renderer) and
+  // no surface said so. The banner names BOTH halves, once, at startup.
+  useEffect(() => {
+    fetch('/api/olympus/build-info', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return;
+        const parts = [`OLYMPUS build — renderer rev ${d.rev ?? 'unknown'}`];
+        if (d.mainBuiltAt) parts.push(`Electron main compiled ${new Date(d.mainBuiltAt).toLocaleString()}`);
+        if (d.version) parts.push(`v${d.version}`);
+        addMessage({ type: 'system', text: parts.join(' · ') });
+      })
+      .catch(() => { /* the banner never breaks the terminal */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once at mount; addMessage is stable
+  }, []);
   // Issue #46: a pending timeout that outlives its component would answer a
   // permission after the terminal is gone.
   useEffect(() => () => {
