@@ -123,6 +123,13 @@ async function main() {
     const d1 = await postRun.maybeWalkThePlan({ slug: 'noplan', laneRoot: laneD, send, sessionId: 'ses-b6' });
     out.d1 = { walked: d1.walked, summary: d1.summaryLine };
 
+    // #121 (B7's live finding): the lane config bootstrap — the intake home
+    // carries NO opencode.json; without the copy every hop dies ProviderModel
+    // NotFound (the acceptance-test specimen, verbatim). The walk bootstraps
+    // the config into the lane BEFORE any dispatch.
+    out.laneConfigA = fs.existsSync(path.join(laneA, 'opencode.json'));
+    out.laneConfigRoot = (() => { try { return JSON.parse(fs.readFileSync(path.join(laneA, 'opencode.json'), 'utf-8')).agent?.hephaestus?.model ?? null; } catch { return null; } })();
+
     // the POOL evidence: the hop_start events carry the god model lanes
     out.pools = out.events.filter((e) => e.type === 'hop_start').map((e) => `${e.god}=${e.pool}`);
     console.log(JSON.stringify(out));
@@ -433,6 +440,9 @@ async function main() {
       expect('B6/#120: the hop narration carries the POOL (the god model lanes from the config)',
         Array.isArray(C.pools) && C.pools.some((p) => p === 'hephaestus=nvidia-deepseek/deepseek-v4.1-flash'),
         JSON.stringify(C.pools));
+      expect('B7/#121: the walk BOOTSTRAPS the lane config (the intake home carries the copy the #99 lanes always had)',
+        C.laneConfigA === true && C.laneConfigRoot === 'nvidia-deepseek/deepseek-v4.1-flash',
+        JSON.stringify({ laneConfigA: C.laneConfigA, laneConfigRoot: C.laneConfigRoot }));
     }
   }
   const postRunSrc = fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/post-run.ts', 'utf-8');

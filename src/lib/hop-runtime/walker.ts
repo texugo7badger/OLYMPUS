@@ -22,7 +22,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
@@ -237,6 +237,27 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
   }
 };
 
+/**
+ * #121 (PLANO-MASTER-1 B7): the lane config bootstrap — the #99 lane
+ * doctrine EXTENDED to the intake home. opencode resolves its config from
+ * the CWD; a hop spawned in an intake-created 02_Projects home dies
+ * `ProviderModelNotFound` (the live acceptance-test specimen: the walk's
+ * first dispatch parked 0/19 with exactly that error, and the UAT
+ * afternoon's two "dispatch-failed exit 1" hops in the s0 telemetry were
+ * THIS class). The #99 workspace lanes always carried the config copy —
+ * the intake homes never got the same bootstrap. Idempotent: the copy
+ * lands once per lane; the dispatch's own error path names any residual
+ * failure.
+ */
+export function ensureLaneConfig(laneRoot: string): void {
+  const dst = join(laneRoot, 'opencode.json');
+  if (existsSync(dst)) return;
+  try {
+    const src = join(findOlympusRoot(), 'opencode.json');
+    if (existsSync(src)) copyFileSync(src, dst);
+  } catch { /* the dispatch itself will name the failure */ }
+}
+
 // ─── The spine ────────────────────────────────────────────────────────────────
 
 export interface WalkResult {
@@ -289,6 +310,11 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   const laneRoot = plan.laneRoot;
   const stateDir = opts.stateDir ?? laneRoot;
   const dispatch = opts.dispatcher ?? spawnHopDispatcher;
+
+  // #121: the lane config bootstrap BEFORE any dispatch — the intake home
+  // must carry the config copy the #99 lanes always had, or every hop dies
+  // ProviderModelNotFound (the B7 live specimen).
+  ensureLaneConfig(laneRoot);
 
   // State: resume honors the disk; a fresh walk resets it. The parked hop
   // (if any) is NOT in `completed`, so the DAG naturally re-runs it.
