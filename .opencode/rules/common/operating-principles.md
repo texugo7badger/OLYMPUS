@@ -13,7 +13,7 @@
 ## 2. Cost & Strategy Discipline
 
 - The default is the OpenCode GO plan ($10/mo flat subscription). Zen strategies (`zen-*`) are pay-as-you-go with no request caps; free strategies (`free-*`) run on the OpenRouter / NVIDIA Build free tiers. The active strategy is set via `olympus apply-strategy <id>`.
-- GLM-5.2 (`opencode-go/glm-5.2`) is reserved EXCLUSIVELY for Apollo on GO strategies. No other agent may use it on the GO plan.
+- GLM-5.3 (`opencode-go/glm-5.3`) is reserved EXCLUSIVELY for Apollo on GO strategies. No other agent may use it on the GO plan.
 - GO plan limits: $12/5hr, $30/week, $60/month. Treat these as hard caps.
 - Free-tier ZEN models are FORBIDDEN in GO/Zen configs (data-retention risk during their trial period). Want free models? Switch to a dedicated free strategy (`free-openrouter` / `free-big-pickle` / `free-nvidia-build`) — never mix free-tier models into a GO or Zen config.
 - No automatic model fallbacks — when a model's cap is hit, switch strategies manually.
@@ -22,7 +22,7 @@
 
 ## 3. Cascading Compression
 
-- **Layer 1** (User ↔ Apollo): GLM-5.2, no compression. Full natural language.
+- **Layer 1** (User ↔ Apollo): GLM-5.3, no compression. Full natural language.
 - **Layer 2** (Apollo ↔ Specialist God): Kimi/DeepSeek/Qwen + caveman (per god's level).
 - **Layer 3** (God ↔ ECC Sub-Agent): DeepSeek Pro/Flash + ECC's strategic-compact (untouched).
 - **Layer 4** (ECC ↔ Tools): No LLM. Direct tool execution.

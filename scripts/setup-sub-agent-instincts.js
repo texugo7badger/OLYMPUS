@@ -93,7 +93,7 @@ const SEED_INSTINCTS = {
   ],
   "sub-agent-author": [
     { id: "01-check-existing", tags: ["meta","dedup"], body: "Query existing catalog first. Don't create duplicates." },
-    { id: "02-cheapest-model", tags: ["meta","cost"], body: "Pick cheapest model tier. Flash > inherit > GLM-5.2." },
+    { id: "02-cheapest-model", tags: ["meta","cost"], body: "Pick cheapest model tier. Flash > inherit > GLM-5.3." },
     { id: "03-five-seeds", tags: ["meta","instincts"], body: "Always create 5 seed instincts." },
     { id: "04-register", tags: ["meta","routing"], body: "Always register in agent index." },
     { id: "05-prompt-defense", tags: ["meta","security"], body: "Every sub-agent inherits Prompt Defense Baseline." },

@@ -14,7 +14,7 @@
 
 | Model | req/5hr | req/week | req/month |
 |-------|---------|----------|-----------|
-| GLM-5.2 (Apollo only) | 880 | 2,150 | 4,300 |
+| GLM-5.3 (Apollo only) | 880 | 2,150 | 4,300 |
 | Kimi K2.7 Code | 1,350 | 4,630 | 9,250 |
 | DeepSeek V4 Pro | 3,450 | 8,550 | 17,150 |
 | Qwen3.7 Plus | 4,300 | 10,800 | 21,600 |
@@ -22,7 +22,7 @@
 
 ## Strategy Allocation (go-balanced, the default)
 
-- **Apollo**: GLM-5.2 — protected by 80/20 fast-path discipline. 80% of prompts cost ~few hundred output tokens (single DISPATCH line). 20% cost 5-15K tokens (spec-interview + plan).
+- **Apollo**: GLM-5.3 — protected by 80/20 fast-path discipline. 80% of prompts cost ~few hundred output tokens (single DISPATCH line). 20% cost 5-15K tokens (spec-interview + plan).
 - **Specialist gods (backend/QA/DB)**: DeepSeek V4 Pro — 17,150 req/month, enough for autonomous loops.
 - **Specialist gods (security/frontend/integrations/devops)**: Qwen3.7 Plus — 21,600 req/month.
 - **Callimachus**: DeepSeek V4 Flash — 158,150 req/month, effectively unlimited for background vault curation.
@@ -41,7 +41,7 @@
 
 ## Forbidden
 
-- GLM-5.2 for any agent other than Apollo.
+- GLM-5.3 for any agent other than Apollo.
 - Free-tier ZEN models (Big Pickle, DeepSeek V4 Flash Free, MiMo-V2.5 Free, etc.) — data-retention risk during their trial period; the zero-retention exception on Zen does not cover them. Want free models? Use the dedicated free strategies (`free-openrouter` / `free-big-pickle` / `free-nvidia-build`) — never mix free-tier ZEN models into a GO config.
 - Zen pay-as-you-go models — Zen models belong in Zen strategies (`zen-max-quality` / `zen-balanced` / `zen-budget`). Don't mix them into a GO config; switch to a Zen strategy instead.
 - BYO-key providers (OpenAI, Anthropic direct) — Olympus runs on OpenCode providers only (GO plan, OpenCode Zen, or the free-tier providers).

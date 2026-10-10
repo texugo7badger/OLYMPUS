@@ -26,9 +26,12 @@
  *                     untouched — the ephemeral range is 21000+).
  *   5 symlinks        zero ABSOLUTE symlinks under the dir (P-E)
  *   6 imports-deps    every imported bare package is declared (P-B)
- *   7 composition     app/page.tsx exists and is non-trivial (>= 2000 bytes,
- *                     the bench-proven floor; pairs with check 4 — the page
- *                     must exist AND the route must render) (P-A)
+ *   7 composition     app/page.tsx exists and COMPOSES the kit (imports the
+ *                     built sections/components — the D30 composition
+ *                     metric; NO byte ruler: the retired 2000-byte bar
+ *                     false-positived a real 1780B page, the G4 specimen).
+ *                     Pairs with check 4 — the page must exist, compose,
+ *                     and render (P-A)
  *
  * Exit codes: 0 all-pass; 1 any fail; 2 usage error. The structured report
  * (project-named, per-check status + detail) always prints.

@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 const VAULT = getVaultRoot();
 
 // God metadata. Models match the go-balanced strategy in model-strategies.ts.
-// GLM-5.2 is reserved for Apollo alone.
+// GLM-5.3 is reserved for Apollo alone.
 const GOD_META: Record<string, { icon: string; domain: string; model: string; caveman: string; army: number }> = {
   apollo:      { icon: 'apollo',     domain: 'Planner — Architecture, Spec',       model: 'opencode-go/glm-5.2',         caveman: 'never', army: 8 },
   atlas:       { icon: 'git-fork',   domain: 'Orchestrator — Dispatch, Execution', model: 'opencode-go/hy3',              caveman: 'never', army: 6 },

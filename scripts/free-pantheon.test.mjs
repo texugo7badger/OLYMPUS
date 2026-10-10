@@ -195,6 +195,43 @@ try {
 } catch (e) { syncOut = String(e.stdout || e.message); }
 check('THE MIRRORS: check-strategy-sync 9/9 green', syncOk, syncOut.slice(0, 400));
 
+// ── HIGIENIA-1 H1b ────────────────────────────────────────────────────────────
+// #93 (GO-CARD-PROSE): every GO/Zen PROSE surface names the model the apply
+// maps pin (glm-5.3 family per apply-strategy.js:172-255 + MODEL-STRATEGIES.md,
+// the source of truth); the live-provider ID lists stay semantically intact.
+// #80 (N29): the budget-guard declares its surface (LIVE + the path).
+const ROOTP = new URL('..', import.meta.url).pathname;
+const read93 = (p) => readFileSync(path.join(ROOTP, p), 'utf-8');
+const settingsSrc93 = read93('src/components/olympus/settings-dialog.tsx');
+const providerSrc93 = read93('src/components/olympus/provider-settings.tsx');
+const econSrc93 = read93('TOKEN-ECONOMY.md');
+const principlesSrc93 = read93('.opencode/rules/common/operating-principles.md');
+const cardRows = (src) => (src.match(/\{ id: '(?:go|zen)-[^']+'.*?\}/g) || []).join('\n');
+check('#93: the GO/Zen card prose names the pinned model (no retired default in the card rows)',
+  !/GLM-5\.2/.test(cardRows(settingsSrc93)) && !/GLM-5\.2/.test(cardRows(providerSrc93))
+  && !/terminalModel: 'glm-5\.2'/.test(settingsSrc93) && !/terminalModel: 'opencode\/glm-5\.2'/.test(settingsSrc93)
+  && !/terminalModel: 'glm-5\.2'/.test(providerSrc93) && !/terminalModel: 'opencode\/glm-5\.2'/.test(providerSrc93),
+  'the strategy cards still tell the pre-rotation story (the GO-CARD-PROSE drift)');
+check('#93: the GO/Zen provider-catalogue ID lists stay SEMANTICALLY INTACT (the reconciliation never edits the id lists)',
+  /'opencode-go\/glm-5\.2'/.test(settingsSrc93) && /'opencode\/glm-5\.2'/.test(settingsSrc93),
+  'the id lists were touched — out of scope');
+check('#93: TOKEN-ECONOMY + the operating principles name the pinned model (the GO tables + the reserved-lane clause)',
+  !/GLM-5\.2/.test(econSrc93) && !/GLM-5\.2 \(opencode-go\/glm-5\.2\)/.test(principlesSrc93) && /GLM-5\.3/.test(principlesSrc93),
+  'the docs tables + the reserved-lane clause still name the retired default');
+const syncSrc93 = read93('scripts/check-strategy-sync.js');
+check('#93: the prose class is LINTED (check-strategy-sync carries the GO-CARD-PROSE guard — prose drift can never recur silently)',
+  /GO-CARD-PROSE/.test(syncSrc93) && /settings-dialog/.test(syncSrc93),
+  'nothing checks the card prose — the drift class has no tripwire');
+{
+  let guardOut93 = '';
+  let guardStatus93 = -1;
+  try { guardOut93 = execFileSync('npx', ['tsx', path.join(ROOTP, 'scripts', 'budget-guard.test.mjs')], { encoding: 'utf-8', cwd: ROOTP, timeout: 120_000 }); guardStatus93 = 0; }
+  catch (e) { guardOut93 = String(e?.stdout || ''); guardStatus93 = e?.status ?? -1; }
+  check('#80: the budget-guard DECLARES its surface (LIVE + the inspected path — the N29 unambiguous verdict)',
+    guardStatus93 === 0 && /surface 1: .*(LIVE|TRACKED)/.test(guardOut93) && /opencode\.json/.test(guardOut93),
+    `the guard's verdict is still path-dependent and undeclared (exit ${guardStatus93})`);
+}
+
 // --- 8. THE GENERATOR: family lanes only, honest limits ---------------------
 const familyLaneIds = FAMILIES.flatMap(f =>
   Object.keys(HONEST_CONTEXT).filter(m => {

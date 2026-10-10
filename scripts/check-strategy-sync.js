@@ -344,6 +344,39 @@ if (missingPrices.size > 0) {
   mirrorDrift = true;
 }
 
+// 7. GO-CARD-PROSE (#93 / HIGIENIA-1 H1b): the strategy PROSE must name the
+// models the code maps pin — the rotation incident's drift class (the
+// retired GLM-5.2 default survived in card prose, docs tables, rule
+// clauses, and route strings while the MODEL-ID mirrors stayed synced, so
+// nothing failed). The provider-catalogue id lists are exempt by
+// construction: the lint matches the UPPERCASE prose name + the
+// terminalModel field shape, never the lowercase catalogue ids.
+{
+  const proseFiles = [
+    'src/components/olympus/settings-dialog.tsx',
+    'src/components/olympus/provider-settings.tsx',
+    'src/lib/model-strategies.ts',
+    'TOKEN-ECONOMY.md',
+    'MODEL-STRATEGIES.md',
+    '.opencode/rules/common/operating-principles.md',
+    '.opencode/rules/common/cost-discipline.md',
+    '.opencode/commands/OLYMPUS/cost-report.md',
+    'src/app/api/olympus/auth/status/route.ts',
+    'src/app/api/olympus/snapshot/route.ts',
+    'scripts/setup-sub-agent-instincts.js',
+  ];
+  let proseDrift93 = false;
+  for (const f of proseFiles) {
+    let src = '';
+    try { src = fs.readFileSync(path.join(ROOT, f), 'utf-8'); } catch { continue; }
+    if (/GLM-5\.2/.test(src) || /terminalModel:\s*'[^']*glm-5\.2'/.test(src)) {
+      console.error(`  DRIFT  GO-CARD-PROSE: ${f} still names the retired default (GLM-5.2) in strategy prose`);
+      proseDrift93 = true;
+    }
+  }
+  if (proseDrift93) mirrorDrift = true;
+}
+
 if (mirrorDrift) {
   fail('strategy mirrors drifted from src/lib/model-strategies.ts — update the canonical file, not the mirrors (see MIRROR header comments).');
 }

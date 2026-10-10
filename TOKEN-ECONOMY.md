@@ -88,21 +88,21 @@ This is the feedback loop that makes OLYMPUS more efficient over time — every 
 
 | Strategy | Apollo | Atlas | Specialists | Vault | Est. cost/day |
 |----------|--------|-------|-------------|-------|---------------|
-| **go-max-quality** | GLM-5.2 | Hy3 | Kimi K3 / K2.7 Code | DeepSeek V4 Flash | Higher |
-| **go-balanced** (default) | GLM-5.2 | Hy3 | DeepSeek V4 Pro / Qwen3.7 Plus | DeepSeek V4 Flash | Moderate |
-| **go-budget** | GLM-5.2 (sacred) | Hy3 | DeepSeek V4 Flash | DeepSeek V4 Flash | Low |
-| **zen-max-quality** (**ZEN**) | GLM-5.2 | Gemini 3.5 Flash | Claude Sonnet 5 / GPT-5.4 | Gemini 3.5 Flash | Higher (pay-as-you-go) |
-| **zen-balanced** (**ZEN**) | GLM-5.2 | Gemini 3.5 Flash | Claude Sonnet 5 / Kimi K2.7 Code | MiniMax M2.7 | Moderate (pay-as-you-go) |
-| **zen-budget** (**ZEN**) | GLM-5.2 | Gemini 3.5 Flash | MiniMax M2.7 | MiniMax M2.7 | Low (pay-as-you-go) |
+| **go-max-quality** | GLM-5.3 | Hy3 | Kimi K3 / K2.7 Code | DeepSeek V4 Flash | Higher |
+| **go-balanced** (default) | GLM-5.3 | Hy3 | DeepSeek V4 Pro / Qwen3.7 Plus | DeepSeek V4 Flash | Moderate |
+| **go-budget** | GLM-5.3 (sacred) | Hy3 | DeepSeek V4 Flash | DeepSeek V4 Flash | Low |
+| **zen-max-quality** (**ZEN**) | GLM-5.3 | Gemini 3.5 Flash | Claude Sonnet 5 / GPT-5.4 | Gemini 3.5 Flash | Higher (pay-as-you-go) |
+| **zen-balanced** (**ZEN**) | GLM-5.3 | Gemini 3.5 Flash | Claude Sonnet 5 / Kimi K2.7 Code | MiniMax M2.7 | Moderate (pay-as-you-go) |
+| **zen-budget** (**ZEN**) | GLM-5.3 | Gemini 3.5 Flash | MiniMax M2.7 | MiniMax M2.7 | Low (pay-as-you-go) |
 | **free-openrouter** (**Free OpenRouter**) | strongest OpenRouter free model live | strongest OpenRouter free model live | second-strongest OpenRouter free model live | Nemotron 3 Nano (free) | **$0** |
 | **free-big-pickle** (**Free Big Pickle**) | one free flagship — all 10 gods incl. Callimachus | one free flagship | one free flagship | Nemotron 3 Nano (free) | **$0** |
 | **free-nvidia-build** (**Free Nvidia Build**) | **the distributed pantheon (#106)** — GLM-5.3 (753B) | GLM-5.3-Flash | Kimi K3 (2.8T) | GLM-5.3-Flash (the volume lane) | **$0** |
 
-Apollo is always on GLM-5.2 in the GO + ZEN strategies. Atlas is on Hy3 in all GO strategies and on Gemini 3.5 Flash in the ZEN strategies (Hy3 is GO-plan-only). In the budget strategies, all gods except Apollo and Atlas drop to DeepSeek V4 Flash (GO) / MiniMax M2.7 (ZEN) for maximum savings.
+Apollo is always on GLM-5.3 in the GO + ZEN strategies. Atlas is on Hy3 in all GO strategies and on Gemini 3.5 Flash in the ZEN strategies (Hy3 is GO-plan-only). In the budget strategies, all gods except Apollo and Atlas drop to DeepSeek V4 Flash (GO) / MiniMax M2.7 (ZEN) for maximum savings.
 
 ### GO plan budget
 
-- **GLM-5.2**: 4,300 requests/month (Apollo alone)
+- **GLM-5.3**: 4,300 requests/month (Apollo alone)
 - **DeepSeek V4 Pro / Qwen3.7 Plus**: shared specialist pool
 - **DeepSeek V4 Flash**: vault + Callimachus (cheapest, highest volume)
 
@@ -133,7 +133,7 @@ NVIDIA Build's model list is **public** — `scripts/refresh-free-models.js` fet
 
 The output caps are set by apply-strategy.js (`provider.<id>.models.<model>.limit.output`) — opencode 1.18 sends `max_tokens=32000` by default, which alone would blow the free rate windows.
 
-**Quality tradeoff:** Free-tier models are not GO-plan quality. Apollo's planning is weaker than GLM-5.2 and Hephaestus's code is below DeepSeek V4 Pro. But the instinct gate's short-circuit path mitigates this — short-circuited dispatches don't make LLM calls at all, so a mature brain (70%+ short-circuit rate) incurs zero token cost on 70% of dispatches regardless of strategy.
+**Quality tradeoff:** Free-tier models are not GO-plan quality. Apollo's planning is weaker than GLM-5.3 and Hephaestus's code is below DeepSeek V4 Pro. But the instinct gate's short-circuit path mitigates this — short-circuited dispatches don't make LLM calls at all, so a mature brain (70%+ short-circuit rate) incurs zero token cost on 70% of dispatches regardless of strategy.
 
 **Rate limits — the free-tier shape (#106's finding):** NVIDIA Build's free tier allows
 **40 requests/minute per API key** — an AGGREGATE ceiling across ALL models on the key

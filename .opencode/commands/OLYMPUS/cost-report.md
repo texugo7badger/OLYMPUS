@@ -31,7 +31,7 @@ $ARGUMENTS
 
 Model              Requests     Input Tokens     Output Tokens      Est. Cost
 ─────────────────────────────────────────────────────────────────────────────
-GLM-5.2               1,234         4.2M             120K            $2.10
+GLM-5.3               1,234         4.2M             120K            $2.10
 DeepSeek V4 Pro         567         1.1M              45K            $0.55
 DeepSeek V4 Flash     3,456         2.3M             890K            $0.92
 Hy3                     234         0.8M              23K            $0.18

@@ -69,8 +69,8 @@ The table below shows estimated monthly request counts per model within the $60 
 > active but may disappear without notice; do not build a sustainable-load
 > plan on them. Also available per the 2026-10-03 docs: Qwen3.8 generation,
 > DeepSeek V4.1 Flash, MiMo V2.6 generation, GPT 6 Luna / GPT 5.6 Luna,
-> Hy4 preview, Kimi K2.6, MiniMax M2.7, and GLM-5.2 at the $60 tier
-> (4,300 req/mo; GLM-5.2 request counts confirmed still correct).
+> Hy4 preview, Kimi K2.6, MiniMax M2.7, and GLM-5.3 at the $60 tier
+> (4,300 req/mo; GLM-5.3 request counts confirmed still correct).
 
 > **DeepSeek peak windows:** DeepSeek models bill their caps against
 > peak/off-peak pricing — peak is Mon–Fri 01:00–04:00 and 06:00–10:00 UTC.
@@ -116,7 +116,7 @@ OLYMPUS minimizes unnecessary API calls through:
 
 Despite optimization, you may hit a model's monthly cap during heavy usage:
 
-- **GLM-5.2 (Apollo):** Never downgraded. Apollo is sacred — if the 4,300 req/month cap is hit, Apollo stops planning until the monthly reset. This prevents silent quality degradation.
+- **GLM-5.3 (Apollo):** Never downgraded. Apollo is sacred — if the 4,300 req/month cap is hit, Apollo stops planning until the monthly reset. This prevents silent quality degradation.
 - **Kimi K3 (Athena, Hephaestus):** Tightest cap at 490/month. Switch to `go-balanced` (Qwen3.7 Plus / DeepSeek V4 Pro) or to a Zen strategy — Zen is pay-as-you-go with no request caps.
 - **Any model:** Switch to a free strategy (`free-openrouter`, `free-big-pickle`, `free-nvidia-build`) in Settings to continue working with free-tier models (lower quality, zero cost, no cap). When one free provider's rate limit runs out, pick another free strategy and keep going.
 

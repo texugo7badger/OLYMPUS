@@ -118,9 +118,27 @@ if (existsSync(FIXTURES[0].src) && existsSync(FIXTURES[1].src)) {
     const g = runGate(dir, 'red-phantom-manifest');
     const byId = Object.fromEntries((g.report?.checks || []).map(c => [c.id, c]));
     check('RED2 gate verdict FAIL on the phantom-manifest shape', g.status === 1 && g.report?.verdict === 'FAIL', `${g.status} ${g.report?.verdict}`);
-    check('RED2 check 2 (npm ci) FIRES — the phantom version dies deterministically', byId['2']?.status === 'fail', JSON.stringify(byId['2']).slice(0, 200));
-    console.log('      RED2 verbatim (check 2 head):');
-    console.log(`        ${String(byId['2']?.detail).split('\n').slice(0, 2).join('\n        ').slice(0, 300)}`);
+      check('RED2 check 2 (npm ci) FIRES — the phantom version dies deterministically', byId['2']?.status === 'fail', JSON.stringify(byId['2']).slice(0, 200));
+      console.log('      RED2 verbatim (check 2 head):');
+      console.log(`        ${String(byId['2']?.detail).split('\n').slice(0, 2).join('\n        ').slice(0, 300)}`);
+  }
+
+  // ─── #87 (HIGIENIA-1 H1b) — the G4 ruler, PRESERVED-BY-CONSTRUCTION:
+  // the byte-counting ruler was RETIRED at FIX-1 (D30 — "the byte-counting
+  // census is dead"); check 7 is the COMPOSITION metric (the page must
+  // import the built kit), which carries NO size bar — so the 1780B REAL
+  // page (the big-pickle specimen that once tripped a 2000B bar) passes BY
+  // CONSTRUCTION, and the kit-less shapes still fail. The pins below make
+  // that construction structural so the ruler can never silently return.
+  {
+    const gateSrc87 = readFileSync(join(ROOT, 'scripts', 'project-exit-gate.mjs'), 'utf-8');
+    const check7Region = (gateSrc87.split("add('7'")[1] || '').slice(0, 1200);
+    check('#87: check 7 carries NO size bar (the composition metric only — the 1780B real page passes by construction)',
+      !/>=\s*2000/.test(check7Region) && !/\.size\s*[<>]/.test(check7Region),
+      'a byte ruler rides check 7 again — the G4 false-positive class returns');
+    check('#87: the gate header documents the COMPOSITION doctrine (the stale 2000-byte comment is dead)',
+      !/>=\s*2000 bytes/.test(gateSrc87),
+      'the header still claims a 2000-byte floor the code no longer enforces');
   }
 
   // ─── GREEN 1: escola — the original jewel, F2 deliverable shape ──────────

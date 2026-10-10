@@ -18,6 +18,11 @@ const ROOT = new URL('..', import.meta.url).pathname;
 const FLOOR = 8192;
 
 const c = JSON.parse(readFileSync(`${ROOT}opencode.json`, 'utf-8'));
+// #80 (N29 / HIGIENIA-1 H1b): the surface declaration — the guard's verdict
+// was path-dependent and UNSAID (LIVE working-tree config on this box vs
+// the TRACKED clone on a fresh one; the UAT-R1 E2/E4 confusion). The
+// declaration makes the verdict unambiguous on any box.
+const GUARD_SURFACE = `surface 1: ${ROOT}opencode.json (LIVE — the working-tree config; a fresh clone reads its TRACKED copy)`;
 const lanes = [];
 for (const [pid, b] of Object.entries(c.provider || {})) {
   for (const [mid, mc] of Object.entries(b.models || {})) {
@@ -27,6 +32,7 @@ for (const [pid, b] of Object.entries(c.provider || {})) {
 }
 let fails = 0;
 console.log(`budget-guard: FLOOR=${FLOOR} (derived: kit ≈9,633 tok; cuts died 2,015–2,039)`);
+console.log(`budget-guard ${GUARD_SURFACE}`);
 for (const l of lanes) {
   const ok = l.output !== null && l.output >= FLOOR;
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${l.lane}: limit.output=${l.output}`);

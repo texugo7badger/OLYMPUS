@@ -160,7 +160,7 @@ export async function GET() {
   } else if (!goPlan.configured && !zenPlan.configured && freeTier.both_keys) {
     recommendations.push({
       severity: 'info',
-      action: 'Free-tier mode ready (free-openrouter / free-big-pickle / free-nvidia-build). Consider signing up for the GO plan for better quality (Apollo on GLM-5.2, specialists on Kimi K3).',
+      action: 'Free-tier mode ready (free-openrouter / free-big-pickle / free-nvidia-build). Consider signing up for the GO plan for better quality (Apollo on GLM-5.3, specialists on Kimi K3).',
       command: 'https://opencode.ai/docs/go/',
     });
   } else if (!goPlan.configured && freeTier.groq_key && !freeTier.openrouter_key) {

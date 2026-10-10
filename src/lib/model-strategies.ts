@@ -502,7 +502,7 @@ export const VAULT_LLM_MODEL = 'opencode-go/glm-5.3-flash';
  *   Pricing/limits/caps are subject to change — see GO_PLAN_DOCS_URL and
  *   GO_PLAN_LAST_VERIFIED for the date we last verified the plan details.
  * - OpenCode Zen: curated pay-as-you-go gateway for tested/verified coding
- *   models (GLM-5.2, Kimi K3 / K2.7 Code, DeepSeek V4 Pro/Flash, Qwen3.7,
+ *   models (GLM-5.3, Kimi K3 / K2.7 Code, DeepSeek V4 Pro/Flash, Qwen3.7,
  *   MiniMax, Grok 4.5, Claude Sonnet 5, GPT 5.x, Gemini 3.x + free trial
  *   models). Model ID format: opencode/<model-id>. Zero-retention (except
  *   the free-on-Zen trial models). Sign in via `olympus opencode` →
@@ -548,7 +548,7 @@ export const BUILTIN_PROVIDERS: LLMProvider[] = [
     requiresAvx2: false,
     description:
       'OpenCode GO plan — paid subscription for open-weight coding models ' +
-      '(Hy3, GLM-5.2, Kimi K3 / K2.7 Code, DeepSeek V4 Pro/Flash, Qwen3.7 Plus, ' +
+      '(Hy3, GLM-5.3, Kimi K3 / K2.7 Code, DeepSeek V4 Pro/Flash, Qwen3.7 Plus, ' +
       'MiMo V2.5, Grok 4.5, MiniMax M3/M2.7). Model format: opencode-go/<id>. ' +
       'Zero-retention. Pricing/limits verified ' + GO_PLAN_LAST_VERIFIED + ' — ' +
       'see ' + GO_PLAN_DOCS_URL + ' for current details.',
@@ -567,7 +567,7 @@ export const BUILTIN_PROVIDERS: LLMProvider[] = [
     requiresAvx2: false,
     description:
       'OpenCode Zen — curated pay-as-you-go AI gateway for tested coding ' +
-      'models (GLM-5.2, Kimi K3 / K2.7 Code, DeepSeek V4 Pro/Flash, Qwen3.7, ' +
+      'models (GLM-5.3, Kimi K3 / K2.7 Code, DeepSeek V4 Pro/Flash, Qwen3.7, ' +
       'MiniMax M3/M2.7, Grok 4.5, Claude Sonnet 5, GPT 5.x, Gemini 3.x + free ' +
       'trial models). Model format: opencode/<id>. Zero-retention. Pricing ' +
       'verified ' + ZEN_PLAN_LAST_VERIFIED + ' — see ' + ZEN_PLAN_DOCS_URL +
