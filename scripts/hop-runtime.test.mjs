@@ -454,6 +454,26 @@ async function main() {
   expect('B6/#120: the route ASKS through the question flow + the s/n short-circuit resolves the SAME gate in-turn',
     /awaitingApproval/.test(routeSrc) && /resolvePlanWalkAnswer/.test(routeSrc),
     'the gate is created but never asked / never resolvable from the terminal');
+
+  // ── 11. #111 part 2 (HIGIENIA-1 H1a): the ceiling-kill classification —
+  // the SMOKE-1 forensics (reports/smoke-1/s2/429-forensics.md): the
+  // per-hop ceiling's SIGKILL surfaced as a classless `exit null` park; a
+  // provider-erroring hang must count as provider-overload WITHIN the
+  // crescendo budget (absorbed, retried), and a pure hang parks NAMED —
+  // never classless.
+  expect('#111: classifyCeilingKill exported (the ceiling-kill classifier)',
+    typeof mod?.classifyCeilingKill === 'function', 'absent — the ceiling parks classless (exit null)');
+  if (typeof mod?.classifyCeilingKill === 'function') {
+    const ckProv = mod.classifyCeilingKill('stderr tail: AI_APICallError: Service temporarily overloaded');
+    expect('#111: a provider-erroring hang classifies provider-overload (absorbed by the crescendo, retried)',
+      ckProv.kind === 'provider-overload', JSON.stringify(ckProv).slice(0, 160));
+    const ckHang = mod.classifyCeilingKill('');
+    expect('#111: a pure hang parks NAMED (ceiling-kill + the knob, never a bare exit null)',
+      ckHang.kind === 'hang' && /ceiling-kill/.test(ckHang.error), JSON.stringify(ckHang).slice(0, 200));
+  }
+  expect('#111: the dispatcher consults the classifier on the signal-kill path (code === null)',
+    /classifyCeilingKill\(/.test(walkerSrc) && /last\.code === null/.test(walkerSrc),
+    'the ceiling still parks classless');
 }
 
 main().then(() => {

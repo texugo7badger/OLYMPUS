@@ -413,6 +413,43 @@ async function main() {
   expect('terminal: failure branch tracks the last error (runLastError)', /runLastError/.test(termSrc), 'the last-error ref is missing — the failure card is bare');
   expect('terminal: failure card names the last error + the preserved session', /last error: \$\{runLastError\.current\}/.test(termSrc) && /warm session and its context are preserved/.test(termSrc), 'the failure branch renders a bare exit code');
 
+  // ── #82 (HIGIENIA-1 H1a): the whitespace-only text channel — the observed
+  // specimen (the madruga barbearia transcript, a text part carrying 21
+  // newlines) must never reach a reader: the text channel carries real
+  // content or nothing.
+  const sessMod82 = await import(OLYMPUS + '/src/lib/opencode-session.ts');
+  expect('#82: isEmittableText exported (the emission-point gate)',
+    typeof sessMod82.isEmittableText === 'function', 'absent — every truthy string emits, whitespace included');
+  if (typeof sessMod82.isEmittableText === 'function') {
+    expect('#82: whitespace-only text is NOT emittable (the 21-newline specimen dies at the gate)',
+      sessMod82.isEmittableText('\n'.repeat(21)) === false && sessMod82.isEmittableText('   \n\t  ') === false,
+      'the observed class still emits');
+    expect('#82: real text is emittable (the gate never overfilters)',
+      sessMod82.isEmittableText('ok — here is the answer') === true && sessMod82.isEmittableText(' a ') === true,
+      'the gate eats real content');
+  }
+  expect('#82: the text emission consults the gate (mapPart, the belt-and-braces path)',
+    /isEmittableText\(text\)/.test(readFileSync(OLYMPUS + '/src/lib/opencode-session.ts', 'utf-8')),
+    'the emission still takes any truthy string');
+
+  // ── #111 part 1 (HIGIENIA-1 H1a): the exhaustion card's window honesty —
+  // the SMOKE-1 forensics: the machine class when the provider body carries
+  // it (OpenRouter: limit_source / provider_error_code / remedy_hint), the
+  // honest "signals nothing" line for the bare class (NVIDIA's RFC7807).
+  if (typeof guidance107 === 'function' && typeof resolveRetryPlan === 'function') {
+    const authDir111 = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-111-auth-'));
+    const plan111 = resolveRetryPlan({ OLYMPUS_RETRY_BACKOFF_MS: '10, 10' });
+    const cardOR = guidance107('upstream 429 {"error":{"metadata":{"limit_source":"upstream_provider_shared_pool","provider_error_code":"429"},"remedy_hint":"try later"}}', 429, { waitedMs: 65000, labels: ['upstream 429 x2'] }, [authDir111], plan111);
+    expect('#111: the card surfaces the provider machine class verbatim when the body carries it',
+      /upstream_provider_shared_pool/.test(cardOR) && /provider_error_code/.test(cardOR) && /remedy_hint/.test(cardOR),
+      cardOR.split('\n').slice(0, 3).join(' | '));
+    const cardBare = guidance107('upstream 429 {"status":429,"title":"Too Many Requests"}', 429, { waitedMs: 65000, labels: ['upstream 429 x2'] }, [authDir111], plan111);
+    expect('#111: the bare-429 class gets the HONEST nothing line (no invented window)',
+      /signals nothing about the window/.test(cardBare),
+      cardBare.split('\n').slice(0, 3).join(' | '));
+    fs.rmSync(authDir111, { recursive: true, force: true });
+  }
+
   // ── PLANO-MASTER-1 B6 (#120): the BUILD BANNER — "which build is serving"
   // never again costs a mission. The B1 verdict (c): the user's 13:40 app
   // was a MIXED build (an Oct-3 Electron main + a live-source renderer) and

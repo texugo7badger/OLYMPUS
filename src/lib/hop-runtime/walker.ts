@@ -179,6 +179,37 @@ export function resolveHopTimeoutMs(env: NodeJS.ProcessEnv = process.env): numbe
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_HOP_TIMEOUT_MS;
 }
 
+// ─── #111 (HIGIENIA-1 H1a): the ceiling-kill classification ───────────────────
+
+export interface CeilingKillClassification {
+  kind: 'provider-overload' | 'hang';
+  error: string;
+}
+
+/**
+ * #111: the ceiling-kill classifier — the SMOKE-1 forensics finding
+ * (reports/smoke-1/s2/429-forensics.md): the per-hop ceiling's SIGKILL
+ * surfaced as a classless `exit null` park, and FLUENCY-1's 900s specimen
+ * parked `dispatch-failed` with `retriesAbsorbed: 0` while an inner retry
+ * loop held the process. The layered design composes only if the
+ * ceiling-kill CLASSIFIES: a hang whose stderr carries a provider-error
+ * class counts as provider-overload WITHIN the crescendo budget (absorbed,
+ * retried); a pure hang parks NAMED (the knob + the ceiling), never
+ * classless.
+ */
+export function classifyCeilingKill(stderrText: string): CeilingKillClassification {
+  const errHead = (stderrText || '').slice(-2000);
+  const kind: CeilingKillClassification['kind'] =
+    classifyRetry({ code: -1, error: errHead, statusCode: undefined } as never) === 'provider-overload'
+      ? 'provider-overload'
+      : 'hang';
+  if (kind === 'provider-overload') return { kind, error: errHead };
+  return {
+    kind,
+    error: `ceiling-kill (OLYMPUS_HOP_TIMEOUT_MS ${resolveHopTimeoutMs()}ms): the stream hung with no provider error${errHead ? ` — ${errHead.slice(-400)}` : ''}`,
+  };
+}
+
 /**
  * The default hop dispatcher: one fresh one-shot session per hop on the
  * god's live model lane (the FREE-1 §6.2 transport — sessions are lanes),
@@ -214,6 +245,23 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
         tokensIn: parsed.tokensIn || null, tokensOut: parsed.tokensOut || null,
         retriesAbsorbed, exhausted: false,
       };
+    }
+    // #111 (HIGIENIA-1 H1a): the ceiling-kill — classified, never
+    // classless. A provider-erroring hang counts as provider-overload
+    // WITHIN the crescendo budget (absorbed, retried within maxAttempts);
+    // a pure hang parks NAMED with the knob + the ceiling.
+    if (last.code === null) {
+      const ck = classifyCeilingKill(last.stderr);
+      if (ck.kind === 'hang') {
+        return { ok: false, exitCode: last.code, output: last.stdout.slice(0, 4000), tokensIn: null, tokensOut: null, retriesAbsorbed, exhausted: false, error: ck.error };
+      }
+      if (attempt >= plan.maxAttempts - 1) {
+        return { ok: false, exitCode: last.code, output: last.stdout.slice(0, 4000), tokensIn: null, tokensOut: null, retriesAbsorbed, exhausted: true, error: ck.error };
+      }
+      retriesAbsorbed++;
+      const delay = applyRetryJitter(plan.backoffMs[attempt] ?? plan.backoffMs[plan.backoffMs.length - 1], Math.random(), plan.jitterFraction);
+      await new Promise((r) => setTimeout(r, Math.min(delay, 10_000)));
+      continue;
     }
     if (attempt >= plan.maxAttempts - 1) {
       return {

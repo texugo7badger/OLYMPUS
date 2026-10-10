@@ -1108,6 +1108,17 @@ function mapEvent(
   }
 }
 
+/**
+ * #82 (HIGIENIA-1 H1a): the emission-point gate — the text channel carries
+ * real content or nothing. The observed specimen: a text part carrying 21
+ * newlines (the madruga barbearia transcript, D11) polluted the channel —
+ * readers saw a text event with zero content. Whitespace-only parts die
+ * here; real content (any non-blank string) passes untouched.
+ */
+export function isEmittableText(text: string): boolean {
+  return typeof text === 'string' && text.trim().length > 0;
+}
+
 function mapPart(
   part: any,
   state: {
@@ -1163,7 +1174,7 @@ function mapPart(
       if (part.messageID && state.userMessageIds.has(part.messageID)) return;
       const accumulated = state.textBuf.get(part.id);
       const text = typeof part.text === 'string' && part.text.length > 0 ? part.text : accumulated;
-      if (text) {
+      if (isEmittableText(text)) {
         state.textEmitted.add(part.id);
         state.textBuf.delete(part.id);
         onEvent({ type: 'text', timestamp: Date.now(), sessionID: sessionId, part: { type: 'text', text } });
@@ -1552,6 +1563,28 @@ export function classifyRetry(result: WarmRunResult): RetryClass | null {
  * SIGHT; the no-silent-downgrade rule stands. Optional `authDirs` lets
  * the fixture inject its own auth trees.
  */
+/**
+ * #111 (HIGIENIA-1 H1a): the provider window signals — the machine class
+ * from the response body when it carries one (OpenRouter-class:
+ * limit_source / provider_error_code / remedy_hint — surfaced VERBATIM so
+ * the card never invents a window). Returns null when the body carries no
+ * machine-marked fields (the bare RFC7807 class) — the caller prints the
+ * honest nothing-line instead.
+ */
+export function providerWindowSignals(errText: string | null | undefined): string | null {
+  const t = errText || '';
+  if (!t) return null;
+  const fields: string[] = [];
+  const ls = t.match(/"limit_source"\s*:\s*"[^"]+"/);
+  if (ls) fields.push(ls[0]);
+  const pec = t.match(/"provider_error_code"\s*:\s*"?[A-Za-z0-9_.-]+"?/);
+  if (pec) fields.push(pec[0]);
+  const rh = t.match(/"remedy_hint"\s*:\s*"[^"]+"/);
+  if (rh) fields.push(rh[0]);
+  if (fields.length === 0) return null;
+  return `  Provider window signals (machine class, verbatim): ${fields.join(' · ')}`;
+}
+
 export function retryExhaustionGuidance(
   lastError: string | null | undefined,
   lastStatusCode: number | undefined,
@@ -1590,6 +1623,15 @@ export function retryExhaustionGuidance(
   const lines = [
     `RETRY EXHAUSTED after ${retryCount} retries — strategy '${strategy}' failed with: ${errLabel}.`,
   ];
+  // #111 (HIGIENIA-1 H1a): the window honesty — the SMOKE-1 forensics
+  // (reports/smoke-1/s2/429-forensics.md). The machine class surfaced
+  // verbatim when the provider body carries it (OpenRouter: limit_source /
+  // provider_error_code / remedy_hint); the honest nothing-line for the
+  // bare class (NVIDIA's RFC7807 429 carries NO Retry-After, no quota
+  // fields — "respect Retry-After" stays an instrumentation note until a
+  // provider ever sends one).
+  lines.push(providerWindowSignals(lastError)
+    ?? '  The provider body signals nothing about the window (no Retry-After, no quota/reset fields — the window length is unknowable from the response).');
   if (ledger && ledger.labels.length > 0) {
     // #R2: when any absorbed retry rode the 429 key-limit lane (the FIXED
     // rateLimitBackoffMs, not a crescendo element), the card names it — else
