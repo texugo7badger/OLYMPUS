@@ -1292,6 +1292,28 @@ if (fs.existsSync(activityFeedPath)) {
     `${sizeMB.toFixed(1)} MB / ${cap} MB cap ${sizeMB > cap * 0.8 ? '— approaching cap, will roll over on next prune' : ''}`);
 }
 
+// --- #78 (HIGIENIA-2 H4): the model-catalogue drift detector ---
+// The D19 rotation class: a dead/retired model id living on in the live
+// config broke applies silently. The detector is case-INSENSITIVE across
+// every assignment surface (agents, small_model, terminalModel, provider
+// tables) + the free lanes validate against the refreshed catalogue.
+try {
+  const drift = await import("../src/lib/model-drift.ts");
+  const liveCfg = JSON.parse(fs.readFileSync(path.join(OLYMPUS_ROOT, "opencode.json"), "utf-8"));
+  let freeCat = null;
+  try { freeCat = JSON.parse(fs.readFileSync(path.join(os.homedir(), ".olympus", "free-models.json"), "utf-8")); } catch {}
+  const findings = drift.detectModelDrift(liveCfg, freeCat);
+  if (findings.length === 0) {
+    check("Model-catalogue drift (retired anchors + dead free-lane ids, case-insensitive)", "ok", "clean — every assignment live or GO/Zen");
+  } else {
+    for (const f of findings) {
+      check(`Model-catalogue drift: ${f.lane} = ${f.modelId} (${f.kind})`, "fail", f.detail);
+    }
+  }
+} catch (e) {
+  check("Model-catalogue drift detector", "warn", `could not run: ${e?.message || e}`);
+}
+
 // --- Summary ---
 section("Summary");
 console.log(`  ${c.bold}Passed:${c.reset}   ${results.length - failures - warnings}`);

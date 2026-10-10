@@ -232,6 +232,35 @@ check('#93: the prose class is LINTED (check-strategy-sync carries the GO-CARD-P
     `the guard's verdict is still path-dependent and undeclared (exit ${guardStatus93})`);
 }
 
+// ── #78 (HIGIENIA-2 H4): the model-catalogue drift detector — the D19
+// rotation class tripwired at doctor time, case-insensitive across every
+// assignment surface; the free lanes validate against the refreshed
+// catalogue snapshot.
+{
+  const drift78 = await import(path.join(ROOTP, 'src', 'lib', 'model-drift.ts'));
+  check('#78: detectModelDrift exported (the D19-class tripwire)',
+    typeof drift78.detectModelDrift === 'function', 'absent — a dead id breaks applies silently again');
+  if (typeof drift78.detectModelDrift === 'function') {
+    const cfg78 = {
+      agent: { apollo: { model: 'nvidia-glm/z-ai/glm-5.3' }, athena: { model: 'NVIDIA-Glm/Z-Ai/GLM-5.2' }, dionysus: { model: 'nvidia-glm/z-ai/glm-5.3-pro' } },
+      small_model: 'nvidia-glm/z-ai/glm-5.3-flash',
+      terminalModel: 'nvidia-glm/z-ai/glm-5.3',
+    };
+    const findings78 = drift78.detectModelDrift(cfg78, { data: [{ id: 'nvidia-glm/z-ai/glm-5.3' }, { id: 'nvidia-glm/z-ai/glm-5.3-flash' }] });
+    check('#78: a CASE-SHIFTED retired id still trips (the D19 lesson — case-insensitive)',
+      findings78.some((f) => f.kind === 'retired' && f.lane === 'agent.athena'), JSON.stringify(findings78).slice(0, 200));
+    check('#78: a dead free-lane id (absent from the catalogue) is flagged',
+      findings78.some((f) => f.kind === 'not-in-catalogue'), JSON.stringify(findings78).slice(0, 240));
+    const clean78 = drift78.detectModelDrift({ agent: { apollo: { model: 'nvidia-glm/z-ai/glm-5.3' } } }, { data: [{ id: 'nvidia-glm/z-ai/glm-5.3' }] });
+    check('#78: a live config is CLEAN (no false positives)',
+      clean78.length === 0, JSON.stringify(clean78).slice(0, 200));
+  }
+  const doctorSrc78 = readFileSync(path.join(ROOTP, 'scripts', 'olympus-doctor.js'), 'utf-8');
+  check('#78: the doctor consults the detector (the apply/doctor-time tripwire)',
+    /detectModelDrift/.test(doctorSrc78) && /Model-catalogue drift/.test(doctorSrc78),
+    'the doctor never validates the model ids — D19 recurs silently');
+}
+
 // --- 8. THE GENERATOR: family lanes only, honest limits ---------------------
 const familyLaneIds = FAMILIES.flatMap(f =>
   Object.keys(HONEST_CONTEXT).filter(m => {
