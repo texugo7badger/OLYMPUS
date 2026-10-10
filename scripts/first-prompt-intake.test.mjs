@@ -39,7 +39,8 @@ const check = (n, ok, d = '') => { checked++; console.log(`${ok ? 'PASS' : 'FAIL
 const FIXTURE_SERVER_JS = `const http = require('http');
 const fs = require('fs');
 const i = process.argv.indexOf('-p');
-const port = Number(process.argv[i + 1] || process.env.PORT || 0);
+const portArg = i >= 0 ? process.argv[i + 1] : null;
+const port = Number(portArg || process.env.PORT || 0);
 const srv = http.createServer((req, res) => {
   res.writeHead(200, { 'content-type': 'text/html' });
   res.end('<title>Cafeteria Grão & Alma</title><h1>fixture frontend ok</h1>');
@@ -77,7 +78,10 @@ if (process.argv[2] === 'child') {
     if (mode === 'green') {
       const slug = 'fixture-intake';
       const { projectDir } = await noteFor(slug);
-      writeFileSync(join(projectDir, 'package.json'), JSON.stringify({ name: slug, scripts: { dev: 'node fixture-server.js' }, dependencies: { next: '15.0.0' } }, null, 2));
+      // #118: the marker rides the dev script — a declared `next` dependency
+      // would now trigger a REAL install in the dignity step (not this
+      // fixture's intent; the server itself needs zero deps).
+      writeFileSync(join(projectDir, 'package.json'), JSON.stringify({ name: slug, scripts: { dev: 'node fixture-server.js # next' } }, null, 2));
       writeFileSync(join(projectDir, 'fixture-server.js'), FIXTURE_SERVER_JS);
       const r = await trigger.maybeStartDevServer(slug, projectDir);
       out.result = r;
@@ -96,8 +100,19 @@ if (process.argv[2] === 'child') {
     if (mode === 'refuse-no-probe') {
       const slug = 'fixture-intake-refuse';
       const { projectDir } = await noteFor(slug);
-      writeFileSync(join(projectDir, 'package.json'), JSON.stringify({ name: slug, scripts: { dev: 'node -e "process.exit(1)"' }, dependencies: { next: '15.0.0' } }, null, 2));
+      // #118 (PLANO-MASTER-1 B4): the frontend marker rides the dev script
+      // (a DECLARED `next` dependency would now be a real install — the
+      // dignity step's rule). The dying server is LOUD — a real death
+      // writes stderr (the s0 `next: not found` shape) — so the fast
+      // refusal's log tail is faithful, not an npm-notice quirk.
+      writeFileSync(join(projectDir, 'package.json'), JSON.stringify({ name: slug, scripts: { dev: 'node dying-server.js # next' } }, null, 2));
+      writeFileSync(join(projectDir, 'dying-server.js'), "console.error('fixture dev server: dying on purpose (exit 1)');\nprocess.exit(1);\n");
+      // #118: the env-tuned fast window — the dead child refuses in ~2s
+      // NAMING the death + the log tail (never 15s of silence over a corpse).
+      process.env.OLYMPUS_DEV_FAST_SILENCE_MS = '1500';
+      const t0 = Date.now();
       out.result = await trigger.maybeStartDevServer(slug, projectDir);
+      out.elapsedMs = Date.now() - t0;
       await mgr.stop(slug);
     }
     if (mode === 'refuse-no-marker') {
@@ -133,7 +148,7 @@ if (process.argv[2] === 'child') {
       const dir = join(vault, '02_Projects', slug);
       out.noteExists = existsSync(join(dir, 'project.md'));
       // the deterministic stand-in for the hop's output (the artifact files)
-      writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: slug, scripts: { dev: 'node fixture-server.js' }, dependencies: { next: '15.0.0' } }, null, 2));
+      writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: slug, scripts: { dev: 'node fixture-server.js # next' } }, null, 2));
       writeFileSync(join(dir, 'fixture-server.js'), FIXTURE_SERVER_JS);
       writeFileSync(join(dir, 'index.html'), '<title>preview two smoke</title>');
       out.reconciled = reconcileProjectPath(slug);
@@ -192,7 +207,7 @@ async function main() {
   }
 
   const { classifyFirstPrompt, extractProjectName, deriveProjectName, INTENT_MATCH_THRESHOLD } = intent;
-  const { detectFrontendDevScript, maybeStartDevServer, FRONTEND_MARKERS } = triggerMod;
+  const { detectFrontendDevScript, maybeStartDevServer, FRONTEND_MARKERS, resolveDevProbePatienceMs, resolveDevFastSilenceMs } = triggerMod;
 
   // ── 1. The classification table (pure, injected projects) ───────────────
   const proj = (slug, name, description) => ({ slug, name, description, path: '/tmp/' + slug, stacks: [], created: '', last_active: '' });
@@ -233,6 +248,25 @@ async function main() {
   check('D: dev script mentioning vite -> triggered', detectFrontendDevScript(g('vite', { scripts: { dev: 'vite --port 3000' } })).ok === true, 'wanted true');
   check('D: the marker list is exported + includes the big five', ['next', 'vite', 'react-scripts', 'astro', 'svelte'].every((m) => FRONTEND_MARKERS.includes(m)), JSON.stringify(FRONTEND_MARKERS));
 
+  // ── #118 (PLANO-MASTER-1 B4): the growing patience — the flat 15s dies ──
+  check('D/#118: resolveDevProbePatienceMs + resolveDevFastSilenceMs exported (the staged patience knobs)',
+    typeof resolveDevProbePatienceMs === 'function' && typeof resolveDevFastSilenceMs === 'function',
+    'absent — the trigger still waits a flat 15s (cold next + Tailwind does not fit; a dead child gets 15s of silence)');
+  if (typeof resolveDevProbePatienceMs === 'function' && typeof resolveDevFastSilenceMs === 'function') {
+    check('D/#118: the defaults (patience 90s — a cold next fits; fast window 15s)',
+      resolveDevProbePatienceMs({}) === 90000 && resolveDevFastSilenceMs({}) === 15000,
+      `${resolveDevProbePatienceMs({})}/${resolveDevFastSilenceMs({})}`);
+    check('D/#118: OLYMPUS_DEV_PROBE_PATIENCE_MS overrides (120000 -> 120000)',
+      resolveDevProbePatienceMs({ OLYMPUS_DEV_PROBE_PATIENCE_MS: '120000' }) === 120000, '?');
+    check('D/#118: OLYMPUS_DEV_FAST_SILENCE_MS overrides (2000 -> 2000)',
+      resolveDevFastSilenceMs({ OLYMPUS_DEV_FAST_SILENCE_MS: '2000' }) === 2000, '?');
+    check('D/#118: junk env tolerated on both knobs (falls back to the defaults)',
+      resolveDevProbePatienceMs({ OLYMPUS_DEV_PROBE_PATIENCE_MS: 'abc' }) === 90000 && resolveDevFastSilenceMs({ OLYMPUS_DEV_FAST_SILENCE_MS: 'x' }) === 15000, '?');
+  }
+  const triggerSrc118 = readFileSync(ROOT + '/src/lib/dev-server-trigger.ts', 'utf-8');
+  check('D/#118: THE FLAT DEADLINE IS GONE (no Date.now() + 15_000 in the trigger source)',
+    !/Date\.now\(\) \+ 15_000/.test(triggerSrc118), 'the flat 15s still governs the wait');
+
   // ── 3. The trigger end-to-end (real servers through the real manager) ───
   const green = childRun('green');
   if (green.__err) {
@@ -247,6 +281,11 @@ async function main() {
     check('D: e2e refusal (no probe) run completed', false, noProbe.__err);
   } else {
     check('D: e2e refusal — start issued but no green probe -> the HONEST refusal (#105)', noProbe.result?.triggered === false && /no probe evidence|not green/i.test(noProbe.result?.reason || ''), JSON.stringify(noProbe.result).slice(0, 240));
+    check('D/#118: the DEAD-CHILD fast refusal — the death NAMED + the log tail surfaced (the s0 next-not-found class, legible in the terminal)',
+      noProbe.result?.triggered === false && /died/i.test(noProbe.result?.reason || '') && /log tail/i.test(noProbe.result?.reason || ''),
+      JSON.stringify(noProbe.result?.reason || '').slice(0, 260));
+    check('D/#118: the fast window is env-tunable (the dead-child refusal came in seconds, not the flat 15)',
+      typeof noProbe.elapsedMs === 'number' && noProbe.elapsedMs < 8000, `elapsedMs=${noProbe.elapsedMs}`);
   }
   const noMarker = childRun('refuse-no-marker');
   check('D: e2e refusal — no frontend marker -> not triggered, reason names the marker', !noMarker.__err && noMarker.result?.triggered === false && /frontend marker/.test(noMarker.result?.reason || ''), JSON.stringify(noMarker).slice(0, 200));

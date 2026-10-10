@@ -66,6 +66,40 @@ export interface DevServerTriggerResult {
   };
 }
 
+// ─── #118 (PLANO-MASTER-1 B4): the growing patience — the flat 15s dies ────────
+
+/** The total probe patience. Default 90s: a cold next + Tailwind on a slow
+ *  disk does not fit the old flat 15s (the s0 lesson — and my own battery
+ *  harness's flat 300s killed the exit-gate suite at its tail once). */
+export const DEFAULT_DEV_PROBE_PATIENCE_MS = 90_000;
+/** The dead-child fast window. Once it elapses, a DEAD pid refuses fast,
+ *  NAMING the death + the log tail — the s0 specimen (`sh: 1: next: not
+ *  found`) died in ~1s and the terminal still showed 15s of silence. */
+export const DEFAULT_DEV_FAST_SILENCE_MS = 15_000;
+
+export function resolveDevProbePatienceMs(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number.parseInt(env.OLYMPUS_DEV_PROBE_PATIENCE_MS ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_DEV_PROBE_PATIENCE_MS;
+}
+
+export function resolveDevFastSilenceMs(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number.parseInt(env.OLYMPUS_DEV_FAST_SILENCE_MS ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_DEV_FAST_SILENCE_MS;
+}
+
+function isPidAlive(pid: number): boolean {
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
+
+/** The log tail, surfaced INTO the refusal — the death is legible in the
+ *  terminal (the s0 `next: not found` the user never saw). */
+function readLogTail(logFile: string, maxChars = 240): string {
+  try {
+    const raw = readFileSync(logFile, 'utf-8');
+    return (raw.length > maxChars ? raw.slice(-maxChars) : raw).replace(/\s+/g, ' ').trim();
+  } catch { return ''; }
+}
+
 /**
  * The trigger: gate -> start -> PROBE. The claim carries probe evidence
  * (#105) or the honest refusal. Never throws — a trigger failure must
@@ -81,20 +115,37 @@ export async function maybeStartDevServer(projectSlug: string, laneRoot: string)
       return { triggered: false, reason: `start refused — ${started.error ?? 'unknown error'} (pid ${started.pid ?? '?'})` };
     }
 
-    // The server needs a moment to boot — poll the probe briefly. Bounded
-    // and deterministic-first: the probe is the truth both ways, and the
-    // refusal names the wait honestly.
-    const deadline = Date.now() + 15_000;
+    // #118 (PLANO-MASTER-1 B4): the GROWING patience, staged:
+    //   - the FAST window (default 15s, env-tunable): once it elapses, a
+    //     DEAD pid refuses fast — the death NAMED + the log tail surfaced
+    //     (the s0 specimen died in ~1s; the old flat wait showed 15s of
+    //     silence over the corpse);
+    //   - the PATIENCE ceiling (default 90s, env-tunable): a LIVE pid
+    //     compiling a cold next + Tailwind gets the full window.
+    // The #105 doctrine governs both refusals: probe evidence or the
+    // honest "unverified — no probe evidence" — never a narrated "running".
+    const patienceMs = resolveDevProbePatienceMs();
+    const fastWindowMs = resolveDevFastSilenceMs();
+    const t0 = Date.now();
     let status = await devServerManager.status(projectSlug);
-    while (!status.running && Date.now() < deadline) {
+    while (!status.running) {
+      const waited = Date.now() - t0;
+      const pid = started.state?.pid ?? started.pid ?? null;
+      if (pid !== null && waited >= fastWindowMs && !isPidAlive(pid)) {
+        const tail = readLogTail(String(started.state?.logFile ?? ''));
+        return {
+          triggered: false,
+          reason: `start issued (pid ${pid}) but the dev process DIED after ${Math.round(waited / 1000)}s — unverified — no probe evidence (#105)${tail ? `; log tail: ${tail}` : ''}`,
+        };
+      }
+      if (waited >= patienceMs) {
+        return {
+          triggered: false,
+          reason: `start issued (pid ${started.pid ?? '?'}) but the probe stayed silent for :${started.port ?? '?'} after ${Math.round(patienceMs / 1000)}s — unverified — no probe evidence (#105)`,
+        };
+      }
       await new Promise((r) => setTimeout(r, 500));
       status = await devServerManager.status(projectSlug);
-    }
-    if (!status.running) {
-      return {
-        triggered: false,
-        reason: `start issued (pid ${started.pid ?? '?'}) but the probe stayed silent for :${started.port ?? '?'} after 15s — unverified — no probe evidence (#105)`,
-      };
     }
     return {
       triggered: true,

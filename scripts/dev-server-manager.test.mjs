@@ -82,7 +82,8 @@ if (process.argv[2] !== 'child') { rmSync(WORK, { recursive: true, force: true }
 const FIXTURE_SERVER_JS = `const http = require('http');
 const fs = require('fs');
 const i = process.argv.indexOf('-p');
-const port = Number(process.argv[i + 1] || process.env.PORT || 0);
+const portArg = i >= 0 ? process.argv[i + 1] : null;
+const port = Number(portArg || process.env.PORT || 0);
 const srv = http.createServer((req, res) => {
   res.writeHead(200, { 'content-type': 'text/html' });
   res.end('<title>fixture dev server ok</title>');
@@ -196,6 +197,67 @@ if (process.argv[2] === 'child') {
       const silent = await probeDevServer(p, 800);
       out.steps.portSilent = silent.running === false;
     }
+    console.log(JSON.stringify(out));
+    process.exit(0);
+  }
+
+  // ── #118 (PLANO-MASTER-1 B4): THE DIGNITY STEP — deps BEFORE the spawn.
+  // The user's UAT died on it verbatim (s0 log: `next dev -p 3011` ->
+  // `sh: 1: next: not found` — the spawn ran with NO deps installed, and the
+  // terminal saw 15s of silence instead of the death). RED pre-cure: start()
+  // spawns without any install (node_modules never appears), and a broken
+  // package.json still "succeeds" at spawn time.
+  if (mode === 'dignity-deps') {
+    const slug2 = 'fixture-dignity-deps';
+    const intakeDir = join(vault, '02_Projects', slug2);
+    mkdirSync(intakeDir, { recursive: true });
+    // a REAL declared dependency (tiny) — the dignity step must install it
+    // BEFORE the spawn; the observable: node_modules exists after start.
+    writeFileSync(join(intakeDir, 'package.json'), JSON.stringify({ name: slug2, scripts: { dev: 'node fixture-server.js' }, dependencies: { ms: 'latest' } }, null, 2));
+    writeFileSync(join(intakeDir, 'fixture-server.js'), FIXTURE_SERVER_JS);
+    const p = await freePort();
+    writeFileSync(join(intakeDir, 'project.md'), `---\ntype: project\nslug: ${slug2}\nname: ${slug2}\npath: ${intakeDir}\nstacks: [html]\ncreated: 2026-10-09T00:00:00.000Z\nlast_active: 2026-10-09T00:00:00.000Z\nlivePreviewPort: ${p}\n---\n\nbody\n`);
+    out.steps.nodeModulesBefore = existsSync(join(intakeDir, 'node_modules'));
+    const started = await mgr.start(slug2);
+    out.steps.started = started;
+    out.pids.push(started?.pid);
+    out.steps.nodeModulesAfter = existsSync(join(intakeDir, 'node_modules'));
+    if (started?.ok) {
+      const st = await (async () => {
+        const t0 = Date.now();
+        for (;;) {
+          const s = await mgr.status(slug2);
+          if (s.running || Date.now() - t0 > 30_000) return s;
+          await new Promise((r) => setTimeout(r, 250));
+        }
+      })();
+      out.steps.status = st;
+      if (st.running && st.url) {
+        try { const page = await fetch(st.url); const body = await page.text(); out.steps.http = { status: page.status, marker: body.includes('fixture dev server ok') }; } catch (e) { out.steps.http = { status: 0, error: e.message }; }
+      }
+      await mgr.stop(slug2);
+      out.steps.afterStop = await mgr.status(slug2);
+      out.steps.portSilent = true;
+    }
+    console.log(JSON.stringify(out));
+    process.exit(0);
+  }
+
+  // ── #118 (PLANO-MASTER-1 B4): the honest refusal — a package.json the
+  // deps step cannot install NEVER reaches a spawn (never a silent probe
+  // over a corpse). RED pre-cure: start() returns ok:true (the spawn
+  // "succeeded") and the failure surfaces only as probe silence.
+  if (mode === 'dignity-refuse') {
+    const slug2 = 'fixture-dignity-refuse';
+    const intakeDir = join(vault, '02_Projects', slug2);
+    mkdirSync(intakeDir, { recursive: true });
+    writeFileSync(join(intakeDir, 'package.json'), 'this is { not valid json');
+    writeFileSync(join(intakeDir, 'fixture-server.js'), FIXTURE_SERVER_JS);
+    const p = await freePort();
+    writeFileSync(join(intakeDir, 'project.md'), `---\ntype: project\nslug: ${slug2}\nname: ${slug2}\npath: ${intakeDir}\nstacks: [html]\ncreated: 2026-10-09T00:00:00.000Z\nlast_active: 2026-10-09T00:00:00.000Z\nlivePreviewPort: ${p}\n---\n\nbody\n`);
+    const started = await mgr.start(slug2);
+    out.steps.started = started;
+    out.pids.push(started?.pid);
     console.log(JSON.stringify(out));
     process.exit(0);
   }
@@ -439,6 +501,53 @@ if (process.argv[2] !== 'child') {
         s.afterStop?.running === false && s.stateGone === true && s.portSilent === true,
         JSON.stringify({ afterStop: s.afterStop?.running, stateGone: s.stateGone, portSilent: s.portSilent }));
     }
+  }
+
+  // ─── dignity modes (#118, PLANO-MASTER-1 B4): deps BEFORE the spawn. ────
+  {
+    const Dp = child('dignity-deps');
+    if (Dp.__err) { check('A16/#118 the dignity-deps child ran', false, Dp.__err); }
+    else {
+      const s = Dp.steps;
+      check('A16/#118 the fixture is honest: NO node_modules before start (the UAT shape)',
+        s.nodeModulesBefore === false, `nodeModulesBefore=${s.nodeModulesBefore}`);
+      check('A16/#118 THE DIGNITY STEP: deps installed BEFORE the spawn (node_modules exists after start)',
+        s.nodeModulesAfter === true, `nodeModulesAfter=${s.nodeModulesAfter}`);
+      check('A16/#118 the server still spawns green after the install (probe + HTTP marker)',
+        s.status?.running === true && s.http?.status === 200 && s.http?.marker === true,
+        JSON.stringify({ status: s.status?.running, http: s.http }).slice(0, 240));
+      check('A16/#118 clean stop after the dignified start',
+        s.afterStop?.running === false, JSON.stringify(s.afterStop ?? null).slice(0, 160));
+    }
+  }
+  {
+    const Dr = child('dignity-refuse');
+    if (Dr.__err) { check('A17/#118 the dignity-refuse child ran', false, Dr.__err); }
+    else {
+      const s = Dr.steps;
+      check('A17/#118 a package.json the deps step cannot install = the HONEST REFUSAL (never a spawned corpse)',
+        s.started?.ok === false, JSON.stringify(s.started).slice(0, 240));
+      check('A17/#118 the refusal NAMES the deps step + the log (the failure is legible, never silent probe silence)',
+        /deps|install/i.test(s.started?.error || '') && /\.log/.test(s.started?.error || ''),
+        s.started?.error || '');
+      check('A17/#118 NO pid was ever spawned (the refusal precedes the spawn)',
+        s.started?.pid === null, `pid=${s.started?.pid}`);
+    }
+  }
+  // R-deps (the #107/R3 knob family): the install ceiling is env-tunable.
+  // Imported IN THE DRIVER (pure function, explicit env params — no process
+  // state touched); the child's `mgr` binding is child-scope only.
+  let mgrMod = null;
+  try { mgrMod = await import(ROOT + '/src/lib/dev-server-manager.ts'); } catch { /* RED below */ }
+  check('R-deps/#118: resolveDepsTimeoutMs exported (the deps ceiling knob)',
+    !!mgrMod && typeof mgrMod.resolveDepsTimeoutMs === 'function', 'absent — the install runs unbounded');
+  if (mgrMod && typeof mgrMod.resolveDepsTimeoutMs === 'function') {
+    check('R-deps/#118: the default ceiling is 300s (a cold next + Tailwind fits)',
+      mgrMod.resolveDepsTimeoutMs({}) === 300000, String(mgrMod.resolveDepsTimeoutMs({})));
+    check('R-deps/#118: OLYMPUS_DEPS_TIMEOUT_MS overrides (20000 -> 20000)',
+      mgrMod.resolveDepsTimeoutMs({ OLYMPUS_DEPS_TIMEOUT_MS: '20000' }) === 20000, '?');
+    check('R-deps/#118: junk env tolerated (falls back to the default)',
+      mgrMod.resolveDepsTimeoutMs({ OLYMPUS_DEPS_TIMEOUT_MS: 'abc' }) === 300000, '?');
   }
 
   // ─── unknownslug mode (#112 refusal preservation): an UNKNOWN slug (no

@@ -33,7 +33,7 @@
 
 import { spawn } from 'node:child_process';
 import {
-  existsSync, mkdirSync, openSync, readFileSync, readdirSync, unlinkSync, writeFileSync, appendFileSync,
+  existsSync, mkdirSync, openSync, readFileSync, readdirSync, unlinkSync, writeFileSync, appendFileSync, closeSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -132,6 +132,76 @@ function writeStateFile(slug: string, state: DevServerState): void {
 function insideOlympusRoot(p: string): boolean {
   const root = findOlympusRoot();
   return !!p && !!root && (p === root || p.startsWith(root + '/'));
+}
+
+// ─── #118 (PLANO-MASTER-1 B4): the dignity step — deps BEFORE the spawn ─────
+
+/** The install ceiling, env-tunable (the #107/R3 knob family). Default
+ *  300s: a cold next + Tailwind fits; a stuck registry dies at the bound. */
+export const DEFAULT_DEPS_TIMEOUT_MS = 300_000;
+export function resolveDepsTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number.parseInt(env.OLYMPUS_DEPS_TIMEOUT_MS ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_DEPS_TIMEOUT_MS;
+}
+
+interface DepsStepResult {
+  ok: boolean;
+  skipped: boolean;
+  detail?: string;
+}
+
+/**
+ * #118: THE DIGNITY STEP. The user's UAT died on its absence verbatim
+ * (s0 log: `next dev -p 3011` -> `sh: 1: next: not found` — the spawn ran
+ * with the deps never installed, and the terminal saw 15s of silence
+ * instead of the death). Deterministic (0 LLM), BOUNDED
+ * (OLYMPUS_DEPS_TIMEOUT_MS), LOGGED to the same trigger log; an install
+ * failure is the HONEST REFUSAL naming the step — never a silent probe
+ * over a corpse. Skips when node_modules already exists (idempotent) and
+ * when the project declares zero dependencies (nothing to install — npm
+ * would not even create the dir; verified empirically on this box).
+ */
+function ensureProjectDeps(projectPath: string, outFd: number, npmCmd: string): Promise<DepsStepResult> {
+  if (existsSync(join(projectPath, 'node_modules'))) {
+    return Promise.resolve({ ok: true, skipped: true, detail: 'node_modules present — install skipped' });
+  }
+  let pkg: { dependencies?: Record<string, unknown>; devDependencies?: Record<string, unknown> } | null = null;
+  try {
+    pkg = JSON.parse(readFileSync(join(projectPath, 'package.json'), 'utf-8'));
+  } catch {
+    return Promise.resolve({ ok: false, skipped: false, detail: 'package.json unreadable — the deps step cannot even attempt an install' });
+  }
+  const depCount = Object.keys({ ...(pkg?.dependencies ?? {}), ...(pkg?.devDependencies ?? {}) }).length;
+  if (depCount === 0) {
+    return Promise.resolve({ ok: true, skipped: true, detail: 'no dependencies declared — nothing to install' });
+  }
+  return new Promise<DepsStepResult>((resolveStep) => {
+    const child = spawn(npmCmd, ['install', '--no-audit', '--no-fund'], {
+      cwd: projectPath,
+      stdio: ['ignore', outFd, outFd],
+    });
+    let settled = false;
+    const ceilingMs = resolveDepsTimeoutMs();
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try { child.kill('SIGKILL'); } catch { /* already gone */ }
+      resolveStep({ ok: false, skipped: false, detail: `deps install exceeded ${ceilingMs}ms (OLYMPUS_DEPS_TIMEOUT_MS) — the installer was killed` });
+    }, ceilingMs);
+    child.on('error', (e) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolveStep({ ok: false, skipped: false, detail: `deps install failed to start: ${e.message}` });
+    });
+    child.on('close', (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code === 0) resolveStep({ ok: true, skipped: false, detail: 'npm install exit 0' });
+      else resolveStep({ ok: false, skipped: false, detail: `deps install failed (npm install exit ${code}) — the dev server is NOT spawned` });
+    });
+  });
 }
 
 /**
@@ -277,6 +347,21 @@ export async function start(projectSlug: string, port?: number): Promise<DevServ
   const logFile = join(logDir, `${projectSlug}-${Date.now()}.log`);
   const outFd = openSync(logFile, 'a');
   const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
+  // #118 (PLANO-MASTER-1 B4): THE DIGNITY STEP — deps BEFORE the spawn.
+  // Deterministic (0 LLM), bounded (OLYMPUS_DEPS_TIMEOUT_MS), logged to
+  // this trigger log; a failed install = the honest refusal naming the
+  // step + the log — never a spawned corpse, never a silent probe.
+  const depsStep = await ensureProjectDeps(projectPath, outFd, npmCmd);
+  if (!depsStep.ok) {
+    try { closeSync(outFd); } catch { /* already closed */ }
+    return {
+      ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: resolvedPort,
+      projectPath, state: null,
+      error: `deps step failed: ${depsStep.detail ?? 'unknown install failure'} — see ${logFile}`,
+    };
+  }
+
   // #112 follow-on: the port argv matches the dev script's CLI class
   // (vite gets --port/--strictPort; the next/node classes keep -p).
   let devScript = '';
