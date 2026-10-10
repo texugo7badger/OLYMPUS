@@ -462,6 +462,40 @@ async function main() {
   expect('B6/#120: the terminal renders the banner at startup (fetch /api/olympus/build-info)',
     /\/api\/olympus\/build-info/.test(termSrc), 'the terminal never names the build it is running');
 
+  // ── #95 (HIGIENIA-1 H1c / ROOT-LANE-ADOPT): the app-spawned serve IS the
+  // root session — the injection landed with #99's batch (7584752) but was
+  // NEVER PINNED and never got the kill-switch the filing demands. This
+  // batch: the preservation pin + the opt-out (a flag file the user can
+  // touch — the lane is opt-in by design; the kill-switch makes the
+  // opt-out structural too).
+  const sessSrc95 = readFileSync(OLYMPUS + '/src/lib/opencode-session.ts', 'utf-8');
+  expect('#95: the root-session lane is INJECTED at the app serve spawn (preserved — landed at 7584752, now pinned)',
+    /OLYMPUS_ROOT_SESSION: '1'/.test(sessSrc95),
+    'the #77 heartbeat lane is dormant — the user must export the flag by hand');
+  expect('#95: the kill-switch exists (the flag file check at the spawn site — the user can opt out structurally)',
+    /root-session-lane-off/.test(sessSrc95),
+    'no opt-out — the lane cannot be disabled without editing code');
+
+  // ── #94 (HIGIENIA-1 H1c / BATT-ENV): the battery contract, pinned and
+  // declared — the invocation of record (npx tsx, NEVER bare node), the
+  // 600s per-suite patience (the flat-300s lesson), the declared
+  // prerequisites with NAMED skips (a fresh clone reads a pointer, not a
+  // stack trace).
+  const batterySrc94 = fs.existsSync(OLYMPUS + '/scripts/battery.mjs')
+    ? fs.readFileSync(OLYMPUS + '/scripts/battery.mjs', 'utf-8') : '';
+  expect('#94: the battery script exists (scripts/battery.mjs — the pinned invocation)',
+    batterySrc94.length > 0, 'absent — the battery stays tribal knowledge');
+  expect('#94: the contract pins the invocation (npx tsx, never bare node) + the 600s per-suite patience',
+    /tsx/.test(batterySrc94) && /600[_\s]?000|600_000/.test(batterySrc94),
+    'the invocation is not pinned — a fresh clone crashes cryptically');
+  expect('#94: the environment prerequisites are DECLARED with named skips (the bench corpus + the opencode-run state + the vault surface)',
+    /olympus-bench/.test(batterySrc94) && /\.opencode\/package\.json|opencode-run state/.test(batterySrc94) && /SKIP/.test(batterySrc94),
+    'the environment-dependent suites crash instead of declaring their prerequisites');
+  const pkgSrc94 = JSON.parse(fs.readFileSync(OLYMPUS + '/package.json', 'utf-8'));
+  expect('#94: npm run battery is wired (the one-command sweep)',
+    pkgSrc94?.scripts?.battery === 'node scripts/battery.mjs',
+    `the npm script is absent (got: ${pkgSrc94?.scripts?.battery ?? 'none'})`);
+
   // ── Scenario 7 (#99): the workspace lane — interactive projects must
   // land OUTSIDE the repo. The 2026-10-07 UAT created exemplo-landingpage/
   // INSIDE the working tree because the serve inherited findOlympusRoot()

@@ -60,6 +60,7 @@
     "skill-index:watch": "node scripts/incremental-skill-index.js",
     "skill-index:once": "node scripts/incremental-skill-index.js --once",
     "test-demigod": "node scripts/test-demigod.js",
+    "battery": "node scripts/battery.mjs",
     "fix-types": "node scripts/fix-types.js",
     "electron:compile": "tsc -p electron/tsconfig.json && node scripts/electron-postcompile.js",
     "overlay:compile": "tsc -p .opencode/olympus/tsconfig.json && node scripts/olympus-overlay-postcompile.js",

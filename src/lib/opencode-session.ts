@@ -484,8 +484,13 @@ async function spawnServer(port: number): Promise<ServerInfo> {
           || (process.env.PORT ? `http://127.0.0.1:${process.env.PORT}` : 'http://127.0.0.1:3737'),
         // #95 (ROOT-LANE-ADOPT): the app-spawned serve IS the root session —
         // inject the opt-in lane so the Part-3 trio (bus + Atlas + idle)
-        // registers without the user exporting anything.
-        OLYMPUS_ROOT_SESSION: '1',
+        // registers without the user exporting anything. The KILL-SWITCH
+        // (HIGIENIA-1 H1c): `~/.olympus/root-session-lane-off` — the user's
+        // structural opt-out; the lane is opt-in by design, and the opt-out
+        // is now structural too (touch the file, restart, the lane is off).
+        ...(fs.existsSync(path.join(os.homedir(), '.olympus', 'root-session-lane-off'))
+          ? {}
+          : { OLYMPUS_ROOT_SESSION: '1' }),
       },
       stdio: ['ignore', logFd, logFd] as const,
       detached: true,
