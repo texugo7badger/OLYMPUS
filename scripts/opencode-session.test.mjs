@@ -496,6 +496,37 @@ async function main() {
     pkgSrc94?.scripts?.battery === 'node scripts/battery.mjs',
     `the npm script is absent (got: ${pkgSrc94?.scripts?.battery ?? 'none'})`);
 
+  // ── #91 (HIGIENIA-2 H3a): the one-shot lane gets BOTH covers — the D13
+  // filing predates the walker's dispatcher (whose hops ALREADY carry the
+  // #107 crescendo post-B3 + the R3 ceiling + the #111 classification);
+  // the remaining gap was the route's fallback one-shot: single attempt,
+  // no stall watchdog once output started. The cure: the S3 watchdog
+  // decision consults on the fallback's stream (nudge-abort fires ONE
+  // re-attempt — the parity), and a fast provider-class failure retries
+  // once (the #107 classification, one-shot-shaped).
+  expect('#91: the fallback one-shot consults the watchdog (watchdogDecision in the route — the stall is bounded, the nudge fires)',
+    /watchdogDecision\(/.test(routeSrc),
+    'the one-shot fallback can hang mid-stream forever — the watchdog is warm-only');
+  expect('#91: the fallback retries ONCE on the provider class (classifyRetry in the route one-shot close path)',
+    /classifyRetry\(/.test(routeSrc),
+    'a fast provider failure on the fallback is terminal — the #107 class never reaches the one-shot lane');
+
+  // ── #86 (HIGIENIA-2 H3a): the dispatch journal replay as the named
+  // crash-recovery primitive — the P3 replay-parity + the E1 exit-finalize
+  // are the foundations; the READER makes recovery a first-class surface:
+  // which dispatches stood open at the crash, what the walk parks hold,
+  // where the true frontier is.
+  const atlasMod86 = await import(OLYMPUS + '/.opencode/olympus/lib/atlas-sync.ts');
+  expect('#86: recoveryReport exported (the crash-recovery reader over the journal surfaces)',
+    typeof atlasMod86?.recoveryReport === 'function',
+    'absent — recovery stays an implicit property, not a primitive');
+  if (typeof atlasMod86?.recoveryReport === 'function') {
+    const rep86 = atlasMod86.recoveryReport();
+    expect('#86: the report carries the three truths (open dispatches, walk parks, chain validity)',
+      rep86 && typeof rep86 === 'object' && 'openDispatches' in rep86 && 'walkParks' in rep86 && 'chainValid' in rep86,
+      JSON.stringify(rep86).slice(0, 200));
+  }
+
   // ── Scenario 7 (#99): the workspace lane — interactive projects must
   // land OUTSIDE the repo. The 2026-10-07 UAT created exemplo-landingpage/
   // INSIDE the working tree because the serve inherited findOlympusRoot()

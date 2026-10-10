@@ -10,6 +10,7 @@ import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 import { resolveAndRegisterIntent } from '@/lib/project-intent';
 import { maybeStartDevServer } from '@/lib/dev-server-trigger';
 import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
+import { watchdogDecision, classifyRetry } from '@/lib/opencode-session';
 import { reconcileProjectPath } from '@/lib/project-context';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
@@ -816,7 +817,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
       };
 
       // One-shot fallback: spawn `opencode run --format json` and stream it.
-      const fallbackOneShot = (sessionId?: string) => {
+      const fallbackOneShot = (sessionId?: string, attempt: number = 0) => {
         // Prepend the authoritative strategy block (same as the warm path) so
         // the model never infers the strategy from model IDs.
         const text = `${buildStrategyContextBlock()}\n\n${opts.text}`;
@@ -826,7 +827,11 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           '--agent', opts.agent,
           text,
         ];
-        send({ type: 'log', msg: `Falling back to one-shot: opencode ${args.join(' ').slice(0, 120)}…`, ts: new Date().toISOString() });
+        if (attempt > 0) {
+          send({ type: 'log', msg: `One-shot re-attempt ${attempt} (the #91 lane cover — the nudge/class retry fires at most once).`, ts: new Date().toISOString() });
+        } else {
+          send({ type: 'log', msg: `Falling back to one-shot: opencode ${args.join(' ').slice(0, 120)}…`, ts: new Date().toISOString() });
+        }
         // #104 (the complete class, SERVE-1 Batch C): the one-shot fallback
         // matches the warm serve's context — the workspace lane, never the
         // repo root (the old default cwd).
@@ -837,26 +842,71 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         // Previously this passed `send` directly — firstEventAt stayed null
         // and the timer killed one-shot runs mid-output (12b probes B1/B2
         // died at exactly 120s while the process was streaming).
-        const handler = makeOpenCodeLineHandler(onEvent);
+        // #91 (HIGIENIA-2 H3a): the stall watchdog state rides the same
+        // wrapper — lastOutputAt for the silence clock, permissionPending
+        // for the S3 override (a pending permission ask is NOT a stall).
+        let lastOutputAt = Date.now();
+        let permissionPending = false;
+        const handler = makeOpenCodeLineHandler((ev: any) => {
+          if (ev?.type === 'permission_ask') permissionPending = true;
+          else if (ev?.type === 'permission_replied') permissionPending = false;
+          onEvent(ev);
+        });
+        // #91 (HIGIENIA-2 H3a): the ONE-SHOT WATCHDOG — the S3 decision
+        // function (the warm path's own machinery) consulted on the
+        // fallback's stream: silence past stallMs (no permission pending)
+        // = nudge-abort — the child is killed and ONE re-attempt fires (the
+        // S3 parity: the nudge fires exactly once). The 15s tick matches
+        // the warm watchdog's cadence.
+        let nudged = false;
+        const stallTimer = setInterval(() => {
+          if (closed) return;
+          const decision = watchdogDecision({
+            silentForMs: Date.now() - lastOutputAt,
+            warnMs: 60_000,
+            stallMs: 150_000,
+            permissionPending,
+          });
+          if (decision === 'nudge-abort' && !nudged && attempt === 0) {
+            nudged = true;
+            send({ type: 'log', msg: 'One-shot stalled mid-stream (150s silent) — nudge-abort, re-attempting once.', ts: new Date().toISOString() });
+            try { child.kill('SIGTERM'); } catch { /* already gone */ }
+          }
+        }, 15_000);
         const lineBuf: string[] = [];
         child.stdout?.on('data', (chunk) => {
+          lastOutputAt = Date.now();
           lineBuf.push(...chunk.toString().split('\n'));
           while (lineBuf.length > 1) handler.onLine(lineBuf.shift()!);
         });
-        child.stderr?.on('data', (chunk) => { handler.onStderr(chunk.toString()); });
+        child.stderr?.on('data', (chunk) => { lastOutputAt = Date.now(); handler.onStderr(chunk.toString()); });
         child.on('close', (code) => {
+          clearInterval(stallTimer);
           if (lineBuf.length) handler.onLine(lineBuf.shift()!);
-          if (code !== 0 && handler.getStderr().length > 0 && !handler.receivedOutput) {
+          if (code !== 0 && !handler.receivedOutput) {
+            // #91 (HIGIENIA-2 H3a): the fast-fail retry — a provider-error
+            // class on the close (the #107 classification, one-shot-shaped)
+            // re-attempts ONCE; anything else stays terminal (honest).
+            if (attempt === 0) {
+              const kind = classifyRetry({ code: code ?? -1, error: handler.getStderr().slice(-2000), statusCode: undefined } as never);
+              if (kind || nudged) {
+                send({ type: 'log', msg: `One-shot ${nudged ? 'nudge' : kind} path — one re-attempt.`, ts: new Date().toISOString() });
+                fallbackOneShot(sessionId, 1);
+                return;
+              }
+            }
             const stderrText = handler.getStderr().trim();
             if (stderrText) send({ type: 'error', msg: `OpenCode failed: ${stderrText.slice(0, 500)}`, ts: new Date().toISOString() });
           }
           finish(code ?? -1);
         });
         child.on('error', (err: any) => {
+          clearInterval(stallTimer);
           fail(`spawn error: ${err.message}`);
         });
         req.signal.addEventListener('abort', () => {
           closed = true;
+          clearInterval(stallTimer);
           try { child.kill('SIGTERM'); } catch {}
         });
       };

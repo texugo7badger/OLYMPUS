@@ -563,3 +563,68 @@ export function atlasRecordHeartbeat(god: string, state: string): void {
 
 // Re-exported for the exit-handler wiring in olympus-hooks.ts.
 export { getOpenDispatches };
+
+// ── #86 (HIGIENIA-2 H3a): the crash-recovery reader ─────────────────────────
+
+export interface RecoveryReport {
+  /** Dispatches still routed/received in the map — the open ones a crash
+   *  would leave mid-flight (E1's exit-finalize handles the process's own;
+   *  this reader reports whatever stands open NOW). */
+  openDispatches: Array<{ id: string; status?: string; intent?: string; ts?: string; god?: string }>;
+  /** The walk frontier: every vault project with a parked hop — where the
+   *  campaign stopped, and what a resume would pick up. */
+  walkParks: Array<{ project: string; hopId: string; reason: string; completed: number; total: number | null }>;
+  /** The map's tamper verdict (any entry without a valid chain stamp). */
+  chainValid: boolean;
+  generatedAt: string;
+}
+
+/**
+ * #86: the dispatch journal replay as the crash-recovery READER — the named
+ * primitive over the journal surfaces. The foundations: the P3 replay-parity
+ * (the log alone reconstructs godStates) + the E1 exit-finalize (a dying
+ * process closes its own opens). This reader makes "recover from the true
+ * frontier" a first-class call: which dispatches stand open, which walks are
+ * parked and where, and whether the map's chain still verifies.
+ */
+export function recoveryReport(): RecoveryReport {
+  const state = loadState();
+  const openDispatches: RecoveryReport["openDispatches"] = [];
+  let chainValid = true;
+  for (const e of Object.values(state.entries)) {
+    if (typeof e.chainHash !== "string" || typeof e.seq !== "number") chainValid = false;
+    if (e.origin === "dispatch" && (e.status === "received" || e.status === "routed")) {
+      openDispatches.push({
+        id: e.id, status: e.status, intent: e.intent, ts: e.ts,
+        god: typeof e.meta?.godId === "string" ? e.meta.godId : undefined,
+      });
+    }
+  }
+  const walkParks: RecoveryReport["walkParks"] = [];
+  try {
+    const projectsDir = path.join(getVaultRoot(), "02_Projects");
+    if (fs.existsSync(projectsDir)) {
+      for (const proj of fs.readdirSync(projectsDir)) {
+        const hopStatePath = path.join(projectsDir, proj, ".olympus-hop-state.json");
+        try {
+          if (!fs.existsSync(hopStatePath)) continue;
+          const hs = JSON.parse(fs.readFileSync(hopStatePath, "utf-8"));
+          if (hs && hs.parked && typeof hs.parked.hopId === "string") {
+            let total: number | null = null;
+            try {
+              const plan = JSON.parse(fs.readFileSync(path.join(projectsDir, proj, "dispatch-plan.json"), "utf-8"));
+              if (Array.isArray(plan?.hops)) total = plan.hops.length;
+            } catch { /* no readable plan — the total is honestly null */ }
+            walkParks.push({
+              project: proj, hopId: hs.parked.hopId,
+              reason: String(hs.parked.reason ?? "unknown"),
+              completed: Array.isArray(hs.completed) ? hs.completed.length : 0,
+              total,
+            });
+          }
+        } catch { /* one unreadable hop-state never breaks the report */ }
+      }
+    }
+  } catch { /* the vault scan never breaks the report */ }
+  return { openDispatches, walkParks, chainValid, generatedAt: new Date().toISOString() };
+}
