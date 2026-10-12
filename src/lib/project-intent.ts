@@ -181,7 +181,7 @@ export async function resolveAndRegisterIntent(
   return {
     kind: 'new',
     slug: result.project.slug,
-    message: `Created project '${result.project.name}' (${result.project.slug}) at ${result.projectDir ?? result.project.path} — ${intent.reason}`,
+    message: `Created project '${result.project.name}' (${result.project.slug}) at ${result.projectDir ?? result.project.path} — ALL project files (the scaffold, dispatch-plan.json, and every artifact) belong at THIS absolute path, NEVER the session cwd or any workspace lane — ${intent.reason}`,
   };
 }
 

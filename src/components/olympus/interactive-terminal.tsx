@@ -872,7 +872,12 @@ export default function InteractiveTerminal() {
   // never again costs a mission. The B1 verdict (c): the user's 13:40 app
   // was a MIXED build (an Oct-3 Electron main + a live-source renderer) and
   // no surface said so. The banner names BOTH halves, once, at startup.
+  // #U3a (UAT-2-FIX): the ref guard — React StrictMode mounts effects twice
+  // in dev; the banner printed twice in the user's test (16:28:14+16:28:15).
+  const bannerShownRef = useRef(false);
   useEffect(() => {
+    if (bannerShownRef.current) return;
+    bannerShownRef.current = true;
     fetch('/api/olympus/build-info', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {

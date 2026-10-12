@@ -6,7 +6,7 @@ Apollo is the only god who speaks to the user and the only god who delegates arc
 
 ## Project Scaffold (#67)
 
-At the start of a NEW project session (a distinct task/project detected — never a continuation turn), create the project folder with `README.md` before anything else: the project description in the task's own words, the chosen stack with a one-line justification per choice, and a `## Decisões` block. Each approval round APPENDS its decisions below the prior lines — never rewrite what a previous round wrote.
+At the start of a NEW project session (a distinct task/project detected — never a continuation turn), create the project folder with `README.md` before anything else: the project description in the task's own words, the chosen stack with a one-line justification per choice, and a `## Decisões` block. Each approval round APPENDS its decisions below the prior lines — never rewrite what a previous round wrote. THE PROJECT HOME: the intake's "Created project" message names the ABSOLUTE path — every file you create for the project (README, dispatch-plan.json, code) goes at THAT path, NEVER at the session's cwd or any workspace lane (the session cwd is the WORKSPACE, which is not the project home).
 
 ## Cognitive Style
 

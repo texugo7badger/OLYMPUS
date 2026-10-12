@@ -313,7 +313,7 @@ async function main() {
   // ── 6. The planner contract: the Apollo prompt surface ──────────────────
   const routeSrc = fs.readFileSync(OLYMPUS + '/src/app/api/olympus/action/route.ts', 'utf-8');
   expect('PL: needsPlanning gates the planner marker (the contract rides the classification)',
-    /classification\.needsPlanning\s*\? '\[OLYMPUS-PLANNER\]/.test(routeSrc),
+    /classification\.needsPlanning\s*\n?\s*\? `?\[?OLYMPUS-PLANNER\]/.test(routeSrc) || /classification\.needsPlanning\s*\? '\[OLYMPUS-PLANNER\]/.test(routeSrc),
     'the planner marker is not gated on needsPlanning');
   expect('PL: the marker names dispatch-plan.json + the hop runtime + the doctrine',
     /OLYMPUS-PLANNER/.test(routeSrc) && /dispatch-plan\.json/.test(routeSrc) && /hop-runtime/.test(routeSrc) && /the disk carries the campaign/.test(routeSrc),
@@ -447,8 +447,7 @@ async function main() {
   }
   const postRunSrc = fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/post-run.ts', 'utf-8');
   expect('B6/#120: the POOL is threaded into the hop narration (resolveGodModelLane in post-run)',
-    /resolveGodModelLane/.test(postRunSrc) && /pool/.test(postRunSrc), 'the narration names the god but not the model lane');
-  expect('B6/#120: the hop activity publish is OPT-IN (publishActivity -> appendActivity; the route opts in)',
+    /resolveGodModelLane/.test(postRunSrc) && /pool/.test(postRunSrc), 'the narration names the god but not the model lane');  expect('B6/#120: the hop activity publish is OPT-IN (publishActivity -> appendActivity; the route opts in)',
     /publishActivity/.test(postRunSrc) && /appendActivity/.test(postRunSrc) && /publishActivity: true/.test(routeSrc),
     'the walk states never reach the durable feed — the Pantheon stays blind across sessions');
   expect('B6/#120: the route ASKS through the question flow + the s/n short-circuit resolves the SAME gate in-turn',
@@ -474,6 +473,31 @@ async function main() {
   expect('#111: the dispatcher consults the classifier on the signal-kill path (code === null)',
     /classifyCeilingKill\(/.test(walkerSrc) && /last\.code === null/.test(walkerSrc),
     'the ceiling still parks classless');
+
+  // ── 12. UAT-2-FIX (U1): the lane-root pin + the honest no-plan —
+  // the 16:29 specimen: Apollo wrote the scaffold + dispatch-plan.json to
+  // the WORKSPACE (his cwd) because the marker said "the project lane
+  // root" without the absolute path; the walk looked in the vault home,
+  // found nothing, and skipped SILENTLY — "Task completed" printed over
+  // a 25-hop plan that would never walk.
+  expect('U1: the [OLYMPUS-PLANNER] marker carries the ABSOLUTE lane-root path (resolved from the intake — never the session cwd)',
+    /intentLaneRoot/.test(routeSrc) && /NEVER the session cwd/.test(routeSrc) && /THIS ABSOLUTE PATH/.test(routeSrc),
+    "the planner still guesses where the project home is — the 16:29 workspace write recurs");
+  expect('U1: the route passes expectPlan to the walk (needsPlanning threads through)',
+    /expectPlan: opts\.classification\?\.needsPlanning === true/.test(routeSrc),
+    'the walk cannot know a plan was expected — the no-plan silence stays');
+  expect('U1d: the honest no-plan fires when expectPlan + no plan (the walk_summary names the expected path)',
+    /no-plan-expected/.test(postRunSrc) && /NOTHING will walk/.test(postRunSrc),
+    'the silence-by-omission class is alive — a wrong-place plan sits invisible');
+  expect('U1e: the RAG rides BOTH dispatch paths (the olympus-dispatch tool composes prior context too — not just resonate)',
+    /instinctPriorContext/.test(fs.readFileSync(OLYMPUS + '/.opencode/olympus/tools/dispatch.ts', 'utf-8')) && /effectiveTask84/.test(fs.readFileSync(OLYMPUS + '/.opencode/olympus/tools/dispatch.ts', 'utf-8')),
+    'half the dispatch surface is instinct-blind');
+  expect('U2: the conversation-project continuity exists (a follow-up turn inherits the project — never a new-project derivation from meta-text)',
+    /getConversationProject/.test(routeSrc) && /rememberConversationProject/.test(routeSrc) && /isNewTaskMarker\(text\)/.test(routeSrc),
+    "the 16:59 specimen recurs — 'Perfeito, só me retorne quando finalizar' becomes a new project");
+  expect('U3a: the banner effect is StrictMode-guarded (the ref — the banner prints once)',
+    /bannerShownRef/.test(fs.readFileSync(OLYMPUS + '/src/components/olympus/interactive-terminal.tsx', 'utf-8')),
+    'the banner prints twice in dev (the 16:28:14+16:28:15 specimen)');
 }
 
 main().then(() => {

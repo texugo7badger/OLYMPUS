@@ -1435,7 +1435,7 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
           type: 'log',
           msg: cleared
             ? `Run recovered after ${n} — benchmark window recorded as success`
-            : `Run recovered after ${n} — benchmark window still flagged from an earlier error`,
+            : `Run recovered after ${n} — benchmark window still flagged from an earlier turn's error (the earlier error is preserved by design: recovery clears only what THIS turn poisoned)`,
           ts: new Date().toISOString(),
         });
       }

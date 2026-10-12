@@ -26,7 +26,7 @@ import {
   forgetConversation,
 } from '@/lib/opencode-session';
 // Dynamic input token routing via task classifier.
-import { classifyTask, classifyTurnWithInheritance, noQuestionsIntent, serializeClassification, type TaskClassification } from '@/lib/task-classifier';
+import { classifyTask, classifyTurnWithInheritance, isNewTaskMarker, noQuestionsIntent, serializeClassification, type TaskClassification } from '@/lib/task-classifier';
 import { appendActivity } from '@/lib/activity-feed';
 // Issue #41: persisting an "always" grant so the next ask for the same tool
 // is settled by policy instead of by another card.
@@ -87,6 +87,25 @@ function rememberConversationClassification(conversationId: string, c: TaskClass
     const oldest = classificationMemory.keys().next();
     if (!oldest.done) classificationMemory.delete(oldest.value);
   }
+}
+
+// #U2 (UAT-2-FIX): the conversation-project continuity — a conversation
+// that created or routed a project REMEMBERS it; a follow-up turn
+// inherits it (never a new-project derivation from a control message,
+// the 16:59 specimen: "Perfeito, só me retorne quando finalizar" became
+// the project 'perfeito-retorne-quando-finalizar'). New-project turns
+// are explicit (the classifier's new-task markers), never meta-text.
+const conversationProjectMemory = new Map<string, string>();
+function rememberConversationProject(conversationId: string, slug: string): void {
+  conversationProjectMemory.delete(conversationId);
+  conversationProjectMemory.set(conversationId, slug);
+  if (conversationProjectMemory.size > 512) {
+    const oldestP = conversationProjectMemory.keys().next();
+    if (!oldestP.done) conversationProjectMemory.delete(oldestP.value);
+  }
+}
+function getConversationProject(conversationId: string): string | null {
+  return conversationProjectMemory.get(conversationId) ?? null;
 }
 
 /**
@@ -293,21 +312,6 @@ export async function POST(req: NextRequest) {
     const classificationMarker = action === 'prompt'
       ? `[OLYMPUS-CLASSIFICATION id=${classification.classificationId} routeTo=${classification.routeTo}] `
       : '';
-    // #109 (FLUENCY-1): the planner contract — when the classifier says
-    // needsPlanning (architectural/complex), Apollo's output is THE PLAN,
-    // not monolithic code. The smallest honest change on the Apollo prompt
-    // surface: the contract rides the classification that already flows.
-    // #119 (PLANO-MASTER-1 B5/F4): the contract rides INLINE — a minimal
-    // canonical plan example carried in the prompt itself. The user's UAT:
-    // Apollo opened the orchestrator source at 13:43 to learn the JSON
-    // shape this marker should have carried; the source-dive dies here.
-    const plannerMarker = action === 'prompt' && classification.needsPlanning
-      ? '[OLYMPUS-PLANNER] This task is architectural/complex. Your deliverable for this turn is THE PLAN, not monolithic code: write dispatch-plan.json to the project lane root — a DAG of small hops. THE CONTRACT IS INLINE (a minimal canonical plan — do NOT open any source to learn it): {"version":1,"laneRoot":"<the ABSOLUTE path of this project lane root>","hops":[{"id":"shell","god":"hephaestus","prompt":"<the spec SLICE for this hop — never the full context>","artifacts":["app/layout.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/layout.tsx"]},"budgetTokens":8192},{"id":"landing","god":"athena","prompt":"<its own slice>","artifacts":["app/page.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/page.tsx"]},"budgetTokens":8192,"after":["shell"]}]} — the hard rules: version is exactly 1; hop ids unique; one god per hop; artifacts are real deliverable paths relative to the laneRoot; after-edges must stay acyclic; budgetTokens at most 16384 (8192 is the sane default); verify.review is "deterministic" with checks like file-exists:<path>. The hop runtime walks the plan: per-hop dispatch on the god\'s own model lane (concurrency at most 3), deterministic verify (0 tokens), park-on-exhaustion with resume. Sessions are lanes; the disk carries the campaign. '
-      : '';
-    const runText = unattended
-      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + promptText + plannerMarker
-      : sessionMarker + classificationMarker + promptText + plannerMarker;
-
     // R-C: appendActivity for prompt (not answer/context) — durable run-start audit.
     if (action === 'prompt') {
       appendActivity({
@@ -331,13 +335,41 @@ export async function POST(req: NextRequest) {
     // run (the stage result rides the stream as a log event).
     let intentStage: { slug?: string; kind?: string; message: string } | undefined;
     if (classification.complexity !== 'trivial') {
-      try {
-        const intent = await resolveAndRegisterIntent(promptText, classification.stack ?? []);
-        intentStage = { slug: intent.slug, kind: intent.kind, message: intent.message };
-      } catch (e) {
-        intentStage = { message: `Intake stage failed (non-fatal): ${e instanceof Error ? e.message : String(e)}` };
+      // #U2 (UAT-2-FIX): the CONVERSATION CONTINUITY — a follow-up turn in
+      // a conversation that already created/routed a project inherits it;
+      // never derive a NEW project from a control/meta message (the user's
+      // specimen: "Perfeito, só me retorne quando finalizar" became the
+      // project 'perfeito-retorne-quando-finalizar' at the 16:59 turn).
+      const convoProject = getConversationProject(conversationId);
+      if (convoProject && !isNewTaskMarker(text)) {
+        intentStage = { slug: convoProject, kind: 'existing', message: `Routed to the conversation's project '${convoProject}' (continuity — a follow-up turn never forks a new project)` };
+        rememberConversationProject(conversationId, convoProject);
+      } else {
+        try {
+          const intent = await resolveAndRegisterIntent(promptText, classification.stack ?? []);
+          intentStage = { slug: intent.slug, kind: intent.kind, message: intent.message };
+          if (intent.slug) rememberConversationProject(conversationId, intent.slug);
+        } catch (e) {
+          intentStage = { message: `Intake stage failed (non-fatal): ${e instanceof Error ? e.message : String(e)}` };
+        }
       }
     }
+
+    // #U1 (UAT-2-FIX): THE LANE-ROOT PIN — the planner marker carries the
+    // ABSOLUTE home path resolved from the intake, so the plan lands in
+    // the vault home, never the warm session's cwd (the 16:29 specimen:
+    // Apollo wrote the scaffold + dispatch-plan.json to the WORKSPACE
+    // because the marker said "the project lane root" and his cwd WAS
+    // the workspace).
+    const intentLaneRoot = intentStage?.slug
+      ? reconcileProjectPath(intentStage.slug)?.path ?? null
+      : null;
+    const plannerMarker = action === 'prompt' && classification.needsPlanning
+      ? `[OLYMPUS-PLANNER] This task is architectural/complex. Your deliverable for this turn is THE PLAN, not monolithic code: write dispatch-plan.json${intentLaneRoot ? ` to THIS ABSOLUTE PATH: ${intentLaneRoot}/dispatch-plan.json — at that exact path, NEVER the session cwd or any workspace lane` : ' to the project lane root'} — a DAG of small hops. THE CONTRACT IS INLINE (a minimal canonical plan — do NOT open any source to learn it): {"version":1,"laneRoot":"${intentLaneRoot ?? '<the ABSOLUTE path of this project lane root>'}","hops":[{"id":"shell","god":"hephaestus","prompt":"<the spec SLICE for this hop — never the full context>","artifacts":["app/layout.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/layout.tsx"]},"budgetTokens":8192},{"id":"landing","god":"athena","prompt":"<its own slice>","artifacts":["app/page.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/page.tsx"]},"budgetTokens":8192,"after":["shell"]}]} — the hard rules: version is exactly 1; hop ids unique; one god per hop; artifacts are real deliverable paths relative to the laneRoot; after-edges must stay acyclic; budgetTokens at most 16384 (8192 is the sane default); verify.review is "deterministic" with checks like file-exists:<path>. The hop runtime walks the plan: per-hop dispatch on the god\'s own model lane (concurrency at most 3), deterministic verify (0 tokens), park-on-exhaustion with resume. Sessions are lanes; the disk carries the campaign. `
+      : '';
+    const runText = unattended
+      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + promptText + plannerMarker
+      : sessionMarker + classificationMarker + promptText + plannerMarker;
 
     return streamWarm(req, {
       conversationId,
@@ -1034,7 +1066,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
               });
             }
             try {
-              const walk = await maybeWalkThePlan({ slug: opts.intent.slug, laneRoot, send, sessionId: opts.conversationId, publishActivity: true });
+              const walk = await maybeWalkThePlan({ slug: opts.intent.slug, laneRoot, send, sessionId: opts.conversationId, publishActivity: true, expectPlan: opts.classification?.needsPlanning === true });
               if (walk.awaitingApproval?.gate) {
                 // #120 (PLANO-MASTER-1 B6c): the SAME gate the Pantheon
                 // toast polls, asked through the existing question flow —

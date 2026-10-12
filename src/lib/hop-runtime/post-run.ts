@@ -127,12 +127,27 @@ export async function maybeWalkThePlan(opts: {
   dispatcher?: HopDispatcher;
   /** #120: the conversation id riding the gate record (routing + audit). */
   sessionId?: string;
+  /** #U1d (UAT-2-FIX): when the caller expects a plan (the classification
+   *  said needsPlanning), the no-plan case is NOT silent — the honest note
+   *  names the expected path so a plan-in-the-wrong-place surfaces in
+   *  seconds (the 16:29 specimen sat invisible for 27 minutes). */
+  expectPlan?: boolean;
   /** #120 (B6d): publish hop events to the durable activity feed. The
    *  product flow opts in; fixtures never touch the real vault. */
   publishActivity?: boolean;
 }): Promise<PostRunWalkOutcome> {
   const planPath = join(opts.laneRoot, DISPATCH_PLAN_FILENAME);
   if (!existsSync(planPath)) {
+    // #U1d (UAT-2-FIX): the honest no-plan — when a plan was EXPECTED, the
+    // silence is a lie by omission (the 16:29 specimen: the planner wrote
+    // elsewhere; the walk skipped silently; "Task completed" printed over
+    // a 25-hop plan that would never walk). The note names the expected
+    // path so the wrong-place plan surfaces in seconds.
+    if (opts.expectPlan) {
+      const msg = `No dispatch-plan.json found at ${planPath} — this task was classified as needing a plan, so NOTHING will walk. If the plan was written elsewhere, move it to that exact path and resend any prompt.`;
+      opts.send?.({ type: 'walk_summary', completed: 0, total: 0, parked: null, msg, ts: new Date().toISOString() });
+      return { walked: false, reason: 'no-plan-expected', completed: 0, total: 0, parked: null, summaryLine: msg };
+    }
     return { walked: false, reason: 'no plan', completed: 0, total: 0, parked: null, summaryLine: '' };
   }
   let plan: unknown;

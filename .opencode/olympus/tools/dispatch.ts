@@ -548,11 +548,22 @@ const dispatchTool: ToolDefinition = tool({
     // the Part 1 spine's own registration gate (the L2 refusal) remains
     // the dispatch's authority — same doctrine as the chat.message ingest.
     let syncEntry = { id: "" };
+    // #U1e (UAT-2-FIX): the RAG parity — the olympus-dispatch tool composes
+    // the composer god's proven instincts into the dispatched task the SAME
+    // way symphony-resonate does (the #84 wiring covered only resonate;
+    // the 16:59 specimen dispatched a 25-hop plan with no instinct context).
+    // The block is short (D16), lean on no-match, never an essay.
+    let ragPriorContext: string | null = null;
+    try {
+      const { instinctPriorContext } = await import("../../src/lib/instinct-rag.js");
+      ragPriorContext = instinctPriorContext(String(args.godId || "apollo"), String(args.task || ""));
+    } catch { /* the RAG never breaks the dispatch */ }
+    const effectiveTask84 = ragPriorContext ? `${args.task}\n\n${ragPriorContext}` : args.task;
     try {
       syncEntry = atlasIngestDispatch({
         godId: String(args.godId || "unknown"),
         demigod: String(args.demigod || "unknown"),
-        task: String(args.task || ""),
+        task: String(effectiveTask84 || ""),
         sessionID: context.sessionID,
       });
     } catch (e: any) {
@@ -569,7 +580,7 @@ const dispatchTool: ToolDefinition = tool({
     }
     let inner: { output: string };
     try {
-      inner = await dispatchExecuteInner(args, context);
+      inner = await dispatchExecuteInner({ ...args, task: effectiveTask84 }, context);
     } catch (e: any) {
       try {
         atlasMarkDispatchFailed(syncEntry.id, `tool threw: ${e?.message || e}`);
