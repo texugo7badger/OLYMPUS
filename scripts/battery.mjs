@@ -41,7 +41,7 @@ const OPENCODE_RUN_STATE = join(ROOT, '.opencode', 'package.json');
  *  DECLARED reason a fresh clone would see as a named skip. */
 const ENV_DEPENDENT = new Map([
   ['project-exit-gate.test.mjs', `needs ${BENCH_DIR} (the FIXTURES corpus: madruga-1/cafeteria + madruga-2/escola)`],
-  ['generation-contract.test.mjs', 'reads REAL vault state (the LIVE-VS-VAULT surface — N29 class; green on the user\'s box by design)'],
+  ['generation-contract.test.mjs', `needs ${BENCH_DIR} (the F2 sandbox driver: madruga-2/driver.mjs — the bench generator) + reads REAL vault state (the LIVE-VS-VAULT surface — N29 class; green on the user's box by design)`],
   ['parallel-pantheon.test.mjs', 'reads REAL vault state (the LIVE-VS-VAULT surface — N29 class; green on the user\'s box by design)'],
 ]);
 
@@ -57,7 +57,7 @@ console.log('');
 
 for (const suite of suites) {
   const envReason = ENV_DEPENDENT.get(suite) ?? null;
-  if (envReason && suite === 'project-exit-gate.test.mjs' && !existsSync(BENCH_DIR)) {
+  if (envReason && /olympus-bench/.test(envReason) && !existsSync(BENCH_DIR)) {
     console.log(`SKIP  ${suite} — ${envReason}`);
     skipped++;
     continue;
