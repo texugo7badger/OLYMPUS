@@ -399,6 +399,17 @@ export function classifyTurnWithInheritance(
   text: string,
   prior: TaskClassification | null,
 ): TaskClassification {
+  // UAT-3-FIX (B1): the trivial guard — a 1-2 character message (an
+  // approval word, a choice click, a bare "ok") is NEVER architectural,
+  // no matter what the prior classification says. The 18:13:03 specimen:
+  // "s" inherited "frontend · complex → athena · planning=yes" and
+  // dispatched a 150k-token turn to the model for a single word.
+  const rawTrim = (text || '').trim();
+  if (rawTrim.length > 0 && rawTrim.length <= 3) {
+    const trivial = classifyTask(rawTrim);
+    if (trivial.complexity === 'trivial') return trivial;
+  }
+
   const promptText = action === 'answer'
     ? `[User answer to your question] ${text}`
     : action === 'context'

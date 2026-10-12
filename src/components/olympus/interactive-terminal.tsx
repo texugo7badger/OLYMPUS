@@ -763,6 +763,10 @@ export default function InteractiveTerminal() {
       runCommandCount.current = 0;
       runReadCount.current = 0;
       runWalkSummary.current = null;
+      // UAT-3-FIX (B2): the god panel reflects the warm dispatch — the
+      // terminal is Apollo's surface; a running turn shows him WORKING,
+      // never "0 gods".
+      updateGodActivity('apollo', 'working', 'Processing your prompt…');
       return;
     }
     if (ev.type === 'action_done') {

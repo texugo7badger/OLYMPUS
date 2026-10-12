@@ -123,6 +123,45 @@ async function main() {
     const d1 = await postRun.maybeWalkThePlan({ slug: 'noplan', laneRoot: laneD, send, sessionId: 'ses-b6' });
     out.d1 = { walked: d1.walked, summary: d1.summaryLine };
 
+    // ── UAT-3-FIX (A2/A4): the gate answer robustness — the regex matching
+    // and the already-resolved path. Tested in-process (no vault isolation
+    // needed — these call the pure resolvePlanWalkAnswer).
+    const ragMod = postRun; // same import, has resolvePlanWalkAnswer
+
+    // ── UAT-3-FIX (A2/A4) behavioral: the gate answer robustness.
+    // Uses the existing gate from Cycle B (approved) + the gate from
+    // Cycle C (aborted). For the behavioral we need a PENDING gate:
+    const laneE = tempLane();
+    mkPlan(laneE, [
+      { id: 'e-1', god: 'hephaestus', prompt: 'x', artifacts: ['e.txt'], verify: { review: 'deterministic', checks: ['file-exists:e.txt'] } },
+    ]);
+    const e1 = await postRun.maybeWalkThePlan({ slug: 'gate-label', laneRoot: laneE, send, dispatcher: ok2, sessionId: 'ses-u3' });
+    const eGate = hitl.getPendingGates().find((g) => g.targetFile === path.join(laneE, 'dispatch-plan.json'));
+    out.e1 = { awaiting: !!e1.awaitingApproval?.gate?.id, gateId: eGate?.id ?? null };
+    // Test A2: the regex matching on the choice label
+    const labelRes = postRun.resolvePlanWalkAnswer('s — approve the walk');
+    out.labelMatch = labelRes !== null && labelRes.decision === 'approve' ? true : false;
+    // Test A2: the bare "s" still matches
+    const sRes2 = postRun.resolvePlanWalkAnswer('s');
+    out.sMatch = sRes2 !== null ? true : false;
+    // Test A2: a non-approval word does NOT match
+    out.noMatch = postRun.resolvePlanWalkAnswer('hello world') === null;
+    // Test A2: 'n' matches abort
+    // (need a new pending gate for this)
+    const laneF = tempLane();
+    mkPlan(laneF, [
+      { id: 'f-1', god: 'athena', prompt: 'x', artifacts: ['f.txt'], verify: { review: 'deterministic', checks: ['file-exists:f.txt'] } },
+    ]);
+    await postRun.maybeWalkThePlan({ slug: 'gate-abort', laneRoot: laneF, send, dispatcher: ok2, sessionId: 'ses-u3' });
+    const nRes = postRun.resolvePlanWalkAnswer('n');
+    out.nMatch = nRes !== null && nRes.decision === 'abort' ? true : false;
+    // Test A4: the already-resolved path (no pending gate, but a recent approve)
+    // After the 'n' abort, there should be no pending gates for the e lane.
+    // Try 's' on laneE's slug — the gate from laneE was resolved by labelMatch/sMatch.
+    // So a new 's' should hit path 2 (already resolved).
+    const sRes3 = postRun.resolvePlanWalkAnswer('s');
+    out.sAlreadyResolved = sRes3 !== null && sRes3.decision === 'approve' ? true : false;
+
     // #121 (B7's live finding): the lane config bootstrap — the intake home
     // carries NO opencode.json; without the copy every hop dies ProviderModel
     // NotFound (the acceptance-test specimen, verbatim). The walk bootstraps
@@ -429,6 +468,16 @@ async function main() {
         JSON.stringify(C.a3).slice(0, 240));
       expect('B3/#117: no plan on disk -> the honest skip (walked false, no invented narration)',
         C.d1?.walked === false && !C.d1?.summary, JSON.stringify(C.d1).slice(0, 200));
+      expect('UAT3-A2: the choice button label matches (regex "s — approve the walk" -> approve)',
+        C.labelMatch === true, `labelMatch=${C.labelMatch}`);
+      expect('UAT3-A2: the bare "s" matches (the normal approval word)',
+        C.sMatch === true, `sMatch=${C.sMatch}`);
+      expect('UAT3-A2: a non-approval text does NOT match (the lean skip)',
+        C.noMatch === true, `noMatch=${C.noMatch}`);
+      expect('UAT3-A2: the abort word "n" matches (abort)',
+        C.nMatch === true, `nMatch=${C.nMatch}`);
+      expect('UAT3-A4: an already-approved gate (the Pantheon path) returns the resolution — the walk can fire',
+        C.sAlreadyResolved === true, `sAlreadyResolved=${C.sAlreadyResolved}`);
       expect('B6/#120: the gate IS the HITL record (phase plan-walk, targetFile = the plan — the Pantheon toast surface)',
         C.pendingGate?.phase === 'plan-walk' && /dispatch-plan\.json$/.test(C.pendingGate?.target || ''), JSON.stringify(C.pendingGate));
       expect("B6/#120: a fresh plan's gate withholds the walk (awaiting, zero dispatches on that lane)",
@@ -498,6 +547,26 @@ async function main() {
   expect('U3a: the banner effect is StrictMode-guarded (the ref — the banner prints once)',
     /bannerShownRef/.test(fs.readFileSync(OLYMPUS + '/src/components/olympus/interactive-terminal.tsx', 'utf-8')),
     'the banner prints twice in dev (the 16:28:14+16:28:15 specimen)');
+
+  // ── 13. UAT-3-FIX: the gate short-circuit + the trivial guard + the
+  // Pantheon walk trigger — the 18:12:49 specimen: the Pantheon resolved
+  // the gate (approve) but NOBODY walked; the user's "s" found no PENDING
+  // gate, fell through to the warm dispatch, and timed out at 120s.
+  expect('UAT3-A2: the gate matching is a REGEX at the start (choice labels match)',
+    /APPROVE_RE/.test(postRunSrc) && /APPROVE_RE\.test/.test(postRunSrc),
+    'the exact-word Set still misses "s — approve the walk" — the choice button is broken');
+  expect('UAT3-A4: the gate answer checks ALREADY-RESOLVED gates (the Pantheon path)',
+    /lastResolved/.test(postRunSrc) && /FRESH_WINDOW_MS/.test(postRunSrc),
+    'a Pantheon-approved gate is left dangling — the walk never fires');
+  expect('UAT3-A3: the hitl-gates POST triggers the walk (the Pantheon approval walks the plan)',
+    /maybeWalkThePlan/.test(fs.readFileSync(OLYMPUS + '/src/app/api/olympus/hitl/gates/route.ts', 'utf-8')),
+    'the Pantheon resolves but never walks — the design gap');
+  expect('UAT3-B1: the classifier trivial guard (1-3 char messages never inherit complex)',
+    /rawTrim\.length > 0 && rawTrim\.length <= 3/.test(fs.readFileSync(OLYMPUS + '/src/lib/task-classifier.ts', 'utf-8')),
+    '"s" inherits frontend·complex·planning=yes — a 150k-token turn for one word');
+  expect('UAT3-B2: the god panel reflects the warm dispatch (action_start sets Apollo working)',
+    /updateGodActivity\('apollo', 'working'/.test(fs.readFileSync(OLYMPUS + '/src/components/olympus/interactive-terminal.tsx', 'utf-8')),
+    'the panel shows 0 gods while Apollo processes a prompt');
 }
 
 main().then(() => {

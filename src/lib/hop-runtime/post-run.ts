@@ -213,8 +213,13 @@ export async function maybeWalkThePlan(opts: {
 
 // ─── #120 (B6c): the terminal answers resolve the SAME gate ──────────────────
 
-const APPROVE_WORDS = new Set(['s', 'sim', 'y', 'yes', 'ok', 'approve', 'aprovar', 'seguir', 'continua', 'continuar', 'start', 'go']);
-const ABORT_WORDS = new Set(['n', 'nao', 'não', 'no', 'abort', 'abortar', 'parar', 'stop', 'cancela', 'cancelar']);
+/**
+ * UAT-3-FIX (A2): the regex matches at the START of the text — so the
+ * choice button labels ("s — approve the walk") match exactly like a
+ * bare "s". The old exact-word Set missed every multi-word approval.
+ */
+const APPROVE_RE = /^(s\b|sim\b|y\b|yes\b|ok\b|approve\b|aprovar\b|seguir\b|continua[r]?\b|start\b|go\b)/i;
+const ABORT_RE = /^(n\b|nao\b|não\b|no\b|abort\b|abortar\b|parar\b|stop\b|cancela[r]?\b)/i;
 
 export interface PlanWalkAnswerResolution {
   gateId: string;
@@ -224,21 +229,47 @@ export interface PlanWalkAnswerResolution {
 }
 
 /**
- * #120: 's'/'n' typed in the terminal (PT-BR included) resolves the SAME HITL
- * gate the Pantheon toast shows — one state, no bifurcation. Resolves the
- * OLDEST pending plan-walk gate when several plans await; the caller names
- * it in the resolution line. Returns null when the text is not an approval
- * word or no plan-walk gate is pending (the normal turn flow proceeds).
+ * #120 + UAT-3-FIX (A2/A4): 's'/'n' typed in the terminal (PT-BR included)
+ * resolves the SAME HITL gate the Pantheon toast shows — one state, no
+ * bifurcation. The regex matches at the START of the text, so the choice
+ * button labels match.
+ *
+ * #UAT3-A4: when no PENDING gate exists but a plan-walk gate was ALREADY
+ * RESOLVED as approve (typically by the Pantheon toast — which resolves
+ * but never walks, the 18:12:49 design gap), this ALSO returns the
+ * resolution — the gateAnswerStream then walks the plan the Pantheon
+ * left dangling. A 10-minute freshness window prevents old approved
+ * gates from hijacking every future "s" message.
  */
 export function resolvePlanWalkAnswer(text: string): PlanWalkAnswerResolution | null {
   const t = (text || '').trim().toLowerCase();
   if (!t) return null;
+
+  const isApprove = APPROVE_RE.test(t);
+  const isAbort = ABORT_RE.test(t);
+  if (!isApprove && !isAbort) return null;
+  const decision: 'approve' | 'abort' = isApprove ? 'approve' : 'abort';
+
+  // Path 1: a PENDING gate — resolve it and return (the normal case).
   const pending = getPendingGates().filter((g) => g.phase === PLAN_WALK_PHASE);
-  if (pending.length === 0) return null;
-  const decision: 'approve' | 'abort' | null = APPROVE_WORDS.has(t) ? 'approve' : ABORT_WORDS.has(t) ? 'abort' : null;
-  if (!decision) return null;
-  const gate = pending[0];
-  const resolved = resolveGate(gate.id, decision);
-  if (!resolved) return null;
-  return { gateId: resolved.id, decision, planPath: resolved.targetFile ?? '', approvalPrompt: resolved.approvalPrompt };
+  if (pending.length > 0) {
+    const resolved = resolveGate(pending[0].id, decision);
+    if (!resolved) return null;
+    return { gateId: resolved.id, decision, planPath: resolved.targetFile ?? '', approvalPrompt: resolved.approvalPrompt };
+  }
+
+  // #UAT3-A4: Path 2 — no PENDING gate, but an APPROVED one exists (the
+  // Pantheon resolved it but nobody walked). Return it so the
+  // gateAnswerStream walks the plan the Pantheon left dangling.
+  const all = listGates().filter((g) => g.phase === PLAN_WALK_PHASE && g.decision === 'approve' && g.targetFile);
+  const lastResolved = all.length > 0 ? all[all.length - 1] : null;
+  if (lastResolved) {
+    const decidedAtMs = lastResolved.decidedAt ? new Date(lastResolved.decidedAt).getTime() : 0;
+    const FRESH_WINDOW_MS = 10 * 60_000; // 10 minutes
+    if (Date.now() - decidedAtMs < FRESH_WINDOW_MS) {
+      return { gateId: lastResolved.id, decision: 'approve', planPath: lastResolved.targetFile, approvalPrompt: lastResolved.approvalPrompt };
+    }
+  }
+
+  return null;
 }

@@ -4,6 +4,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getPendingGates, resolveGate, getGate } from '@/lib/hitl-gates';
+import { maybeWalkThePlan } from '@/lib/hop-runtime/post-run';
+import { appendActivity } from '@/lib/activity-feed';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,11 +57,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: `Gate "${gateId}" not found` }, { status: 404 });
     }
 
+    // UAT-3-FIX (A3): the Pantheon approval triggers the walk — the
+    // 18:12:49 specimen: the Pantheon resolved the plan-walk gate as
+    // approve but NOBODY walked (the design gap; the user's next "s"
+    // found no pending gate and fell through to the warm dispatch which
+    // timed out). The walk runs fire-and-forget (the POST response
+    // returns immediately; the walk narrates to the durable activity feed
+    // so ANY terminal sees it).
+    if (gate.phase === 'plan-walk' && decision === 'approve' && gate.targetFile) {
+      try {
+        const laneRoot = gate.targetFile.replace(/\/dispatch-plan\.json$/, '');
+        const slug = laneRoot.split('/').pop() ?? '';
+        if (slug && laneRoot) {
+          // Fire-and-forget: the response returns immediately; the walk
+          // publishes every hop to the durable feed (publishActivity).
+          void (async () => {
+            try {
+              await maybeWalkThePlan({ slug, laneRoot, sessionId: gate.sessionId, publishActivity: true });
+            } catch (e: any) {
+              try { appendActivity({ god: 'apollo', action: 'walk', msg: `Pantheon-triggered walk failed (non-fatal): ${e?.message || String(e)}` }); } catch {}
+            }
+          })();
+        }
+      } catch { /* the walk trigger never breaks the gate resolution */ }
+    }
+
     return NextResponse.json({
       ok: true,
       gate,
       message: decision === 'approve'
-        ? 'Gate approved — dispatch will resume.'
+        ? gate.phase === 'plan-walk'
+          ? 'Gate approved — the plan walk is starting (watch any terminal or the activity feed for the hop narration).'
+          : 'Gate approved — dispatch will resume.'
         : decision === 'patch'
         ? 'Gate patched — dispatch will resume with your modifications.'
         : 'Gate aborted — dispatch cancelled.',
