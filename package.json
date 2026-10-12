@@ -91,7 +91,7 @@
     "@electron/rebuild": "latest",
     "@fission-ai/openspec": "latest",
     "@opencode-ai/plugin": "latest",
-    "@radix-ui/react-checkbox": "^1.3.11",
+    "@radix-ui/react-checkbox": "^1.3.12",
     "@radix-ui/react-dialog": "latest",
     "@radix-ui/react-label": "latest",
     "@radix-ui/react-select": "latest",
