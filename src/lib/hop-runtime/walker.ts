@@ -22,7 +22,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { appendFileSync, copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, copyFileSync, existsSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
@@ -286,23 +286,41 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
 };
 
 /**
- * #121 (PLANO-MASTER-1 B7): the lane config bootstrap — the #99 lane
- * doctrine EXTENDED to the intake home. opencode resolves its config from
- * the CWD; a hop spawned in an intake-created 02_Projects home dies
- * `ProviderModelNotFound` (the live acceptance-test specimen: the walk's
- * first dispatch parked 0/19 with exactly that error, and the UAT
- * afternoon's two "dispatch-failed exit 1" hops in the s0 telemetry were
- * THIS class). The #99 workspace lanes always carried the config copy —
- * the intake homes never got the same bootstrap. Idempotent: the copy
- * lands once per lane; the dispatch's own error path names any residual
- * failure.
+ * #121 (PLANO-MASTER-1 B7) + UAT-4-FIX (E1): the lane config bootstrap —
+ * the #99 lane doctrine EXTENDED to the intake home. opencode resolves its
+ * config from the CWD; a hop spawned in an intake-created 02_Projects home
+ * dies `ProviderModelNotFound` (the live acceptance-test specimen) — and
+ * even WITH the config copy, the CLI dies on the `{file:.opencode/...}`
+ * references unless the `.opencode` symlink exists (the UAT-4 specimen:
+ * `Configuration is invalid ... bad file reference`). The #99 workspace
+ * lanes ALWAYS get the symlink; the intake homes now do too.
  */
 export function ensureLaneConfig(laneRoot: string): void {
   const dst = join(laneRoot, 'opencode.json');
-  if (existsSync(dst)) return;
+  const dstDemigods = join(laneRoot, 'opencode.demigods.json');
+  const dstDotOpenCode = join(laneRoot, '.opencode');
   try {
-    const src = join(findOlympusRoot(), 'opencode.json');
-    if (existsSync(src)) copyFileSync(src, dst);
+    const root = findOlympusRoot();
+    // (a) the config copy — the model lanes + the strategy context
+    if (!existsSync(dst)) {
+      const src = join(root, 'opencode.json');
+      if (existsSync(src)) copyFileSync(src, dst);
+    }
+    // (b) the demigods copy — the dispatch registry
+    if (!existsSync(dstDemigods)) {
+      const srcDemigods = join(root, 'opencode.demigods.json');
+      if (existsSync(srcDemigods)) copyFileSync(srcDemigods, dstDemigods);
+    }
+    // (c) THE .opencode SYMLINK — the piece the #99 lanes always had and
+    // the UAT-4 specimen proved is load-bearing: the config's `{file:...}`
+    // references resolve through this symlink to the repo's prompts,
+    // skills, and agents. Without it every `{file:.opencode/...}` dies.
+    if (!existsSync(dstDotOpenCode)) {
+      const srcDotOpenCode = join(root, '.opencode');
+      if (existsSync(srcDotOpenCode)) {
+        symlinkSync(srcDotOpenCode, dstDotOpenCode, 'dir');
+      }
+    }
   } catch { /* the dispatch itself will name the failure */ }
 }
 

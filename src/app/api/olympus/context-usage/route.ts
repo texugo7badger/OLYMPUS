@@ -536,7 +536,11 @@ export async function GET(req: NextRequest) {
   const dbResult = readUsageFromDb(mappedSessionId || undefined);
   if (dbResult) {
     const pct = dbResult.limit > 0 ? dbResult.used / dbResult.limit : 0;
-    const percentage = Math.round(pct * 100);
+    // UAT-4-FIX (E4): cap the display percentage at 100 — the raw ratio
+    // can exceed 1.0 when the warm session accumulates past the limit
+    // (the user's "ctx 156%" specimen; the session genuinely IS over, the
+    // bar just shouldn't render absurd numbers).
+    const percentage = Math.min(100, Math.round(pct * 100));
     const quality: ContextUsageResponse['quality'] =
       pct > CRIT_PCT ? 'critical' :
       pct > WARN_PCT ? 'warning' :
@@ -589,7 +593,7 @@ export async function GET(req: NextRequest) {
 
   const { used, limit, model, sessionId } = extractUsage(parsed);
   const pct = limit > 0 ? used / limit : 0;
-  const percentage = Math.round(pct * 100);
+  const percentage = Math.min(100, Math.round(pct * 100));
   const quality: ContextUsageResponse['quality'] =
     pct > CRIT_PCT ? 'critical' :
     pct > WARN_PCT ? 'warning' :

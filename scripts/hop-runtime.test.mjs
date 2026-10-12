@@ -59,9 +59,13 @@ async function main() {
     fs.mkdirSync(path.join(vault, '05_Auto_Learning'), { recursive: true });
     // the fake OLYMPUS root config carries the god model lanes — the POOL
     // threading evidence (B6b: the narration names WHO + WHERE + THE POOL).
+    // UAT-4: the fake root also carries the .opencode directory (the
+    // symlink source) + the demigods registry.
     fs.writeFileSync(path.join(process.env.OLYMPUS_ROOT, 'opencode.json'), JSON.stringify({
       agent: { hephaestus: { model: 'nvidia-deepseek/deepseek-v4.1-flash' }, athena: { model: 'nvidia-kimi/moonshotai/kimi-k3' } },
     }));
+    fs.mkdirSync(path.join(process.env.OLYMPUS_ROOT, '.opencode', 'prompts'), { recursive: true });
+    fs.writeFileSync(path.join(process.env.OLYMPUS_ROOT, 'opencode.demigods.json'), JSON.stringify({ demigods: {} }));
     const postRun = await import(OLYMPUS + '/src/lib/hop-runtime/post-run.ts');
     const hitl = await import(OLYMPUS + '/src/lib/hitl-gates.ts');
     const out = { events: [], disp: [] };
@@ -168,6 +172,9 @@ async function main() {
     // the config into the lane BEFORE any dispatch.
     out.laneConfigA = fs.existsSync(path.join(laneA, 'opencode.json'));
     out.laneConfigRoot = (() => { try { return JSON.parse(fs.readFileSync(path.join(laneA, 'opencode.json'), 'utf-8')).agent?.hephaestus?.model ?? null; } catch { return null; } })();
+    // UAT-4-FIX (E1): the .opencode symlink — the {file:...} references resolve
+    out.laneSymlinkA = fs.existsSync(path.join(laneA, '.opencode'));
+    out.laneDemigodsA = fs.existsSync(path.join(laneA, 'opencode.demigods.json'));
 
     // the POOL evidence: the hop_start events carry the god model lanes
     out.pools = out.events.filter((e) => e.type === 'hop_start').map((e) => `${e.god}=${e.pool}`);
@@ -492,6 +499,10 @@ async function main() {
       expect('B7/#121: the walk BOOTSTRAPS the lane config (the intake home carries the copy the #99 lanes always had)',
         C.laneConfigA === true && C.laneConfigRoot === 'nvidia-deepseek/deepseek-v4.1-flash',
         JSON.stringify({ laneConfigA: C.laneConfigA, laneConfigRoot: C.laneConfigRoot }));
+      expect('UAT4-E1: the .opencode SYMLINK exists in the lane (the {file:...} references resolve)',
+        C.laneSymlinkA === true, `laneSymlinkA=${C.laneSymlinkA}`);
+      expect('UAT4-E1: the opencode.demigods.json exists in the lane (the dispatch registry)',
+        C.laneDemigodsA === true, `laneDemigodsA=${C.laneDemigodsA}`);
     }
   }
   const postRunSrc = fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/post-run.ts', 'utf-8');
@@ -567,6 +578,28 @@ async function main() {
   expect('UAT3-B2: the god panel reflects the warm dispatch (action_start sets Apollo working)',
     /updateGodActivity\('apollo', 'working'/.test(fs.readFileSync(OLYMPUS + '/src/components/olympus/interactive-terminal.tsx', 'utf-8')),
     'the panel shows 0 gods while Apollo processes a prompt');
+
+  // ── 14. UAT-4-FIX: the .opencode symlink + the execution law + the ctx cap.
+  // The 19:07:13 specimen: the config copy without the .opencode symlink
+  // died on the {file:...} references; the 19:16-19:26 specimen: Apollo
+  // hand-built 8 component files in a 10-minute monolith turn instead of
+  // letting the walker execute the plan.
+  expect('UAT4-E1: ensureLaneConfig creates THE .OPENCODE SYMLINK (the {file:...} references resolve)',
+    /symlinkSync/.test(walkerSrc) && /\.opencode/.test(walkerSrc),
+    'the config copy without the symlink dies on {file:.opencode/...} references — the 19:07:13 specimen');
+  expect('UAT4-E1: ensureLaneConfig also copies opencode.demigods.json (the dispatch registry)',
+    /opencode\.demigods\.json/.test(walkerSrc),
+    'the demigods registry is missing from the lane bootstrap');
+  expect('UAT4-E2: the planner marker carries THE EXECUTION LAW (NEVER write code yourself)',
+    /NEVER write code files yourself/.test(routeSrc) && /MUST NOT.*execute hops/.test(routeSrc),
+    'Apollo still hand-builds components when the walk parks — the monolith class');
+  const apolloTxtU4 = fs.readFileSync(OLYMPUS + '/.opencode/prompts/agents/gods/apollo.txt', 'utf-8');
+  expect('UAT4-E2: the apollo.txt carries the same execution law (NEVER write component code)',
+    /NEVER write component code/.test(apolloTxtU4) && /ONLY execution engine/.test(apolloTxtU4),
+    'the god prompt still allows the monolith path');
+  expect('UAT4-E4: the context-usage percentage is CAPPED at 100 (the ctx 156% specimen)',
+    /Math\.min\(100,/.test(fs.readFileSync(OLYMPUS + '/src/app/api/olympus/context-usage/route.ts', 'utf-8')),
+    'the ctx bar can show absurd numbers past the limit');
 }
 
 main().then(() => {

@@ -267,7 +267,7 @@ export function resolvePlanWalkAnswer(text: string): PlanWalkAnswerResolution | 
     const decidedAtMs = lastResolved.decidedAt ? new Date(lastResolved.decidedAt).getTime() : 0;
     const FRESH_WINDOW_MS = 10 * 60_000; // 10 minutes
     if (Date.now() - decidedAtMs < FRESH_WINDOW_MS) {
-      return { gateId: lastResolved.id, decision: 'approve', planPath: lastResolved.targetFile, approvalPrompt: lastResolved.approvalPrompt };
+      return { gateId: lastResolved.id, decision: 'approve', planPath: lastResolved.targetFile ?? '', approvalPrompt: lastResolved.approvalPrompt };
     }
   }
 
