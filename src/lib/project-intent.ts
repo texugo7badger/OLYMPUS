@@ -143,9 +143,17 @@ export interface IntentStageResult {
  *  detected and NO project matches, the intake returns 'ask' (the honest
  *  "not found") instead of creating a garbage-named project from a
  *  continuation instruction. */
-const CONTINUATION_RE = /\b(continue|continua[r]?|prosseguir|retomar|resume|keep going|keep working|seguindo|o projeto|the project|esse projeto|aquele projeto)\b/i;
+const CONTINUATION_RE = /^(continue|continua[r]?|prosseguir|retomar|resume|keep going|keep working|sig[aau]\b|segue|seguindo)\b/i;
 export function isContinuationMessage(prompt: string): boolean {
-  return CONTINUATION_RE.test(prompt);
+  // UAT-5 refinement: the guard must be CONSERVATIVE — only trigger on
+  // SHORT messages that READ as continuation instructions (the 09:10:09
+  // specimen: "Continue o projeto Lumina..." at ~60 chars). A full project
+  // description (600+ chars) that happens to contain "o projeto" in its
+  // DoD clause must NEVER be misclassified (the self-test specimen: the
+  // original Lumina prompt contains "o projeto registrado" in its
+  // Definition of Done and was caught by the aggressive regex).
+  const p = (prompt || '').trim();
+  return p.length <= 200 && CONTINUATION_RE.test(p);
 }
 
 export async function resolveAndRegisterIntent(
