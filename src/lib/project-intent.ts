@@ -138,6 +138,16 @@ export interface IntentStageResult {
  * routes, ask emits the HITL question. Never throws into the dispatch path
  * (the caller wraps; a failed intake must not block the user's run).
  */
+/** UAT-5: the continuation detector — phrases that signal the user is
+ *  trying to CONTINUE an existing project, not start a new one. When
+ *  detected and NO project matches, the intake returns 'ask' (the honest
+ *  "not found") instead of creating a garbage-named project from a
+ *  continuation instruction. */
+const CONTINUATION_RE = /\b(continue|continua[r]?|prosseguir|retomar|resume|keep going|keep working|seguindo|o projeto|the project|esse projeto|aquele projeto)\b/i;
+export function isContinuationMessage(prompt: string): boolean {
+  return CONTINUATION_RE.test(prompt);
+}
+
 export async function resolveAndRegisterIntent(
   userRequest: string,
   stacks: string[],
@@ -154,6 +164,18 @@ export async function resolveAndRegisterIntent(
       kind: 'ask',
       candidates: intent.candidates,
       message: `Which project should this run in? Candidates: ${names}. No project was created; answer with the project name to route there.`,
+    };
+  }
+  // UAT-5 (the continuation guard): when the message reads as a CONTINUATION
+  // instruction ("continue o projeto Lumina") and no project matched, the
+  // honest response is ASK, never a garbage-named creation. The 09:10:09
+  // specimen: "Continue o projeto Lumina seguindo todo o planejamento!"
+  // became the project 'continue-projeto-lumina-seguindo'.
+  if (intent.kind === 'new' && isContinuationMessage(userRequest)) {
+    return {
+      kind: 'ask',
+      candidates: [],
+      message: `This looks like a continuation of an existing project, but I can't find a match. Which project? (Or re-send the original prompt to start fresh.)`,
     };
   }
   // new: register BEFORE any file exists — name + description + the

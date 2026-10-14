@@ -46,7 +46,14 @@ export const dynamic = 'force-dynamic';
 // terminal on 2026-07-31).
 const STARTUP_TIMEOUT_MS = 120_000; // 120 seconds
 // Total max runtime — if opencode runs longer than this, we kill it.
-const MAX_RUNTIME_MS = 10 * 60_000; // 10 minutes
+// UAT-5 (the peak-hour evolution): the max-runtime ceiling is now
+// env-tunable — the 10-minute default was the UAT-4/5 specimen: a peak-hour
+// planning turn legitimately needs more wall-clock. OLYMPUS_MAX_RUNTIME_MS
+// (default 15 min — generous for planning, short enough to catch real hangs).
+const MAX_RUNTIME_MS = (() => {
+  const n = Number.parseInt(process.env.OLYMPUS_MAX_RUNTIME_MS ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : 15 * 60_000;
+})();
 
 // Issue #51: unattended mode. When a caller declares body.unattended on a
 // prompt, the run has no human on the other end — probes, batch harnesses,

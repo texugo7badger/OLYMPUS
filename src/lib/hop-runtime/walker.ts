@@ -173,10 +173,25 @@ function runSpawn(args: string[], hopCwd: string, timeoutMs: number): Promise<{ 
  * unchanged (15 min: the hop is SMALL by doctrine, <= 16k out, so the
  * ceiling stays generous wall-clock, never the monolith's minutes).
  */
-export const DEFAULT_HOP_TIMEOUT_MS = 15 * 60_000;
+export const DEFAULT_HOP_TIMEOUT_MS = 25 * 60_000;
 export function resolveHopTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
   const n = Number.parseInt(env.OLYMPUS_HOP_TIMEOUT_MS ?? '', 10);
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_HOP_TIMEOUT_MS;
+}
+
+// ─── UAT-5 (the peak-hour evolution): the VARIANT wiring ─────────────────────
+
+/**
+ * UAT-5 (the peak-hour evolution): the VARIANT knob — the B5 OBS's measured
+ * finding wired as an env-tunable per-hop flag. `--variant low` cuts the
+ * model's thinking tokens ~83% (161→28 tok on the same prompt, the B5 wire
+ * probe) — the single biggest speed lever for peak-hour survival. The
+ * walker's dispatcher threads it when OLYMPUS_HOP_VARIANT is set.
+ */
+export const KNOWN_HOP_VARIANTS = new Set(['low', 'high', 'max', 'minimal']);
+export function resolveHopVariant(env: NodeJS.ProcessEnv = process.env): string | null {
+  const v = (env.OLYMPUS_HOP_VARIANT ?? '').trim().toLowerCase();
+  return KNOWN_HOP_VARIANTS.has(v) ? v : null;
 }
 
 // ─── #111 (HIGIENIA-1 H1a): the ceiling-kill classification ───────────────────
@@ -232,7 +247,7 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
     // The per-hop runtime budget (#R3: env-tunable — OLYMPUS_HOP_TIMEOUT_MS;
     // the default stays 15 min).
     last = await runSpawn(
-      ['run', '--model', lane, '--format', 'json', ctx.prompt],
+      ['run', '--model', lane, '--format', 'json', ...(resolveHopVariant() ? ['--variant', resolveHopVariant()!] : []), ctx.prompt],
       ctx.laneRoot,
       resolveHopTimeoutMs(),
     );

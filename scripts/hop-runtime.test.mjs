@@ -391,19 +391,19 @@ async function main() {
   // after the artifacts landed. The knob: OLYMPUS_HOP_TIMEOUT_MS, default
   // 900000, junk/negative tolerated (falls back to the default).
   expect('R3: resolveHopTimeoutMs exported (the per-hop ceiling knob)', !!mod && typeof mod.resolveHopTimeoutMs === 'function',
-    'absent — walker.ts spawns every hop with a hard-coded 15 * 60_000');
+    'absent — walker.ts spawns every hop with a hard-coded 25 * 60_000');
   if (mod && typeof mod.resolveHopTimeoutMs === 'function') {
-    expect('R3: the default ceiling is 15 min (900000ms)', mod.resolveHopTimeoutMs({}) === 900000, JSON.stringify(mod.resolveHopTimeoutMs({})));
+    expect('R3: the default ceiling is 25 min (1500000ms)', mod.resolveHopTimeoutMs({}) === 1500000, JSON.stringify(mod.resolveHopTimeoutMs({})));
     expect('R3: OLYMPUS_HOP_TIMEOUT_MS overrides (30000 -> 30000)', mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: '30000' }) === 30000, JSON.stringify(mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: '30000' })));
-    expect('R3: junk env tolerated (falls back to the default)', mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: 'abc' }) === 900000, '?');
-    expect('R3: zero/negative env tolerated (falls back to the default)', mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: '0' }) === 900000, '?');
+    expect('R3: junk env tolerated (falls back to the default)', mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: 'abc' }) === 1500000, '?');
+    expect('R3: zero/negative env tolerated (falls back to the default)', mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: '0' }) === 1500000, '?');
   }
   const walkerSrc = fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/walker.ts', 'utf-8');
   // The contract: the runSpawn CALL SITE threads the resolved knob (a named
   // DEFAULT constant elsewhere in the file is the sane-default home, not a
   // violation).
   expect('R3: spawnHopDispatcher threads the resolved knob into runSpawn (no hard-coded ceiling at the call site)',
-    /resolveHopTimeoutMs\(\)/.test(walkerSrc) && /runSpawn\(\s*\[\s*'run',[\s\S]{0,140}?resolveHopTimeoutMs\(\)/.test(walkerSrc) && !/runSpawn\(\s*\[[\s\S]{0,160}?\d+ \* 60_000/.test(walkerSrc),
+    /resolveHopTimeoutMs\(\)/.test(walkerSrc) && /runSpawn\(\s*\[\s*'run',[\s\S]{0,220}?resolveHopTimeoutMs\(\)/.test(walkerSrc) && !/runSpawn\(\s*\[[\s\S]{0,240}?\d+ \* 60_000/.test(walkerSrc),
     'the call site still hard-codes the ceiling');
 
   // ── 8. PLANO-MASTER-1 B3 (#117): the PRODUCT FLOW walks the plan ────────
@@ -600,6 +600,22 @@ async function main() {
   expect('UAT4-E4: the context-usage percentage is CAPPED at 100 (the ctx 156% specimen)',
     /Math\.min\(100,/.test(fs.readFileSync(OLYMPUS + '/src/app/api/olympus/context-usage/route.ts', 'utf-8')),
     'the ctx bar can show absurd numbers past the limit');
+
+  // ── 15. UAT-5 (the peak-hour evolution): the variant wiring + the
+  // env-tunable max-runtime + the continuation guard.
+  expect('UAT5: the variant knob is wired (resolveHopVariant + the dispatcher threads --variant)',
+    /resolveHopVariant/.test(walkerSrc) && /--variant/.test(walkerSrc),
+    'the B5 OBS measured an ~83% thinking-token cut with --variant low — the biggest peak-hour lever is unwired');
+  expect('UAT5: the hop ceiling default is 25 min (the B7 evidence: a 21-min green hop)',
+    /25 \* 60_000/.test(walkerSrc),
+    'the 15-min default kills green hops during peak hours');
+  expect('UAT5: the max-runtime is env-tunable (OLYMPUS_MAX_RUNTIME_MS, default 15 min)',
+    /OLYMPUS_MAX_RUNTIME_MS/.test(routeSrc) && /15 \* 60_000/.test(routeSrc),
+    'the 10-min hardcoded ceiling kills peak-hour planning turns');
+  const intentSrcU5 = fs.readFileSync(OLYMPUS + '/src/lib/project-intent.ts', 'utf-8');
+  expect('UAT5: the continuation guard exists (a continuation message never creates a garbage project)',
+    /isContinuationMessage/.test(intentSrcU5) && /CONTINUATION_RE/.test(intentSrcU5),
+    "the 09:10:09 specimen recurs — 'Continue o projeto Lumina' becomes 'continue-projeto-lumina-seguindo'");
 }
 
 main().then(() => {
