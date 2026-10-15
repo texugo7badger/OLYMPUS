@@ -1,0 +1,29 @@
+[plan] 14 hops written
+[hop_start] Hop 'landing-hero' started — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, lane /home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+[hop_start] Hop 'dashboard-page' started — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, lane /home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+[hop_start] Hop 'leads-table' started — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, lane /home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+[hop_done] Hop 'landing-hero' GREEN — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, 106s, 51375 in / 1142 out
+[hop_start] Hop 'footer-page' started — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, lane /home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+[hop_done] Hop 'footer-page' GREEN — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, 99s, 2151 in / 1064 out
+[hop_start] Hop 'pipeline-board' started — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, lane /home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+[hop_done] Hop 'leads-table' GREEN — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, 282s, 54714 in / 2824 out
+[hop_start] Hop 'lead-detail' started — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, lane /home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+[hop_done] Hop 'dashboard-page' GREEN — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, 318s, 53996 in / 3051 out
+[hop_done] Hop 'pipeline-board' GREEN — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, 352s, 9600 in / 1723 out
+[hop_done] Hop 'lead-detail' GREEN — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, 1259s, 47592 in / 4131 out
+[hop_start] Hop 'build-verify' started — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, lane /home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm
+[opencode-spawn] INFO: strategy 'free-nvidia-build' — required key found in OpenCode auth.json (nvidia). No env key needed; proceeding.
+[hop_done] Hop 'build-verify' GREEN — god hephaestus · pool nvidia-kimi/moonshotai/kimi-k3, 205s, 1751 in / 279 out
+[walk_summary] The plan is walked: 14/14 hops GREEN — the deliverables are on disk at /home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm.
+[walk] {
+  "walked": true,
+  "completed": 14,
+  "total": 14,
+  "parked": null
+}

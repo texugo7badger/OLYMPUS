@@ -79,16 +79,24 @@ async function main() {
       { id: 'b3-1', god: 'hephaestus', prompt: 'shell', artifacts: ['shell.txt'], verify: { review: 'deterministic', checks: ['file-exists:shell.txt'] } },
       { id: 'b3-2', god: 'athena', prompt: 'dash', artifacts: ['dash.txt'], verify: { review: 'deterministic', checks: ['file-exists:dash.txt'] }, after: ['b3-1'] },
     ]);
-    const dying = async (hop) => {
+    // Check the lane artifacts DURING the walk (before the residue cleanup
+    // removes them — the #121 bootstrap fires at walkPlan start; the D3
+    // cleanup fires after ALL hops complete).
+    const dying2 = async (hop) => {
       out.disp.push(`A:${hop.id}`);
+      if (hop.id === 'b3-1') {
+        out.laneConfigMidWalk = fs.existsSync(path.join(laneA, 'opencode.json'));
+        out.laneSymlinkMidWalk = fs.existsSync(path.join(laneA, '.opencode'));
+        out.laneDemigodsMidWalk = fs.existsSync(path.join(laneA, 'opencode.demigods.json'));
+      }
       if (hop.id === 'b3-1') { fs.writeFileSync(path.join(laneA, 'shell.txt'), 'x'); return { ok: true, exitCode: 0, output: '', tokensIn: 10, tokensOut: 20, retriesAbsorbed: 0, exhausted: false }; }
       return { ok: false, exitCode: 1, output: '', tokensIn: null, tokensOut: null, retriesAbsorbed: 4, exhausted: true, error: 'provider overload — all lanes dead' };
     };
-    const a1 = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneA, send, dispatcher: dying, sessionId: 'ses-b6' });
+    const a1 = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneA, send, dispatcher: dying2, sessionId: 'ses-b6' });
     out.a1 = { walked: a1.walked, awaiting: !!a1.awaitingApproval?.gate?.id };
     out.dispAfterA1 = out.disp.length;
     hitl.resolveGate(gateFor(laneA).id, 'approve');
-    const a2 = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneA, send, dispatcher: dying, sessionId: 'ses-b6' });
+    const a2 = await postRun.maybeWalkThePlan({ slug: 'b3-fixture', laneRoot: laneA, send, dispatcher: dying2, sessionId: 'ses-b6' });
     out.a2 = {
       walked: a2.walked, completed: a2.completed, total: a2.total,
       parked: a2.parked ? { hopId: a2.parked.hopId, reason: a2.parked.reason } : null,
@@ -496,13 +504,12 @@ async function main() {
       expect('B6/#120: the hop narration carries the POOL (the god model lanes from the config)',
         Array.isArray(C.pools) && C.pools.some((p) => p === 'hephaestus=nvidia-deepseek/deepseek-v4.1-flash'),
         JSON.stringify(C.pools));
-      expect('B7/#121: the walk BOOTSTRAPS the lane config (the intake home carries the copy the #99 lanes always had)',
-        C.laneConfigA === true && C.laneConfigRoot === 'nvidia-deepseek/deepseek-v4.1-flash',
-        JSON.stringify({ laneConfigA: C.laneConfigA, laneConfigRoot: C.laneConfigRoot }));
-      expect('UAT4-E1: the .opencode SYMLINK exists in the lane (the {file:...} references resolve)',
-        C.laneSymlinkA === true, `laneSymlinkA=${C.laneSymlinkA}`);
-      expect('UAT4-E1: the opencode.demigods.json exists in the lane (the dispatch registry)',
-        C.laneDemigodsA === true, `laneDemigodsA=${C.laneDemigodsA}`);
+      expect('B7/#121: the walk BOOTSTRAPS the lane config (checked MID-WALK — before the D3 residue cleanup removes it)',
+        C.laneConfigMidWalk === true, `laneConfigMidWalk=${C.laneConfigMidWalk}`);
+      expect('UAT4-E1: the .opencode SYMLINK exists during the walk (the {file:...} references resolve)',
+        C.laneSymlinkMidWalk === true, `laneSymlinkMidWalk=${C.laneSymlinkMidWalk}`);
+      expect('UAT4-E1: the opencode.demigods.json exists during the walk (the dispatch registry)',
+        C.laneDemigodsMidWalk === true, `laneDemigodsMidWalk=${C.laneDemigodsMidWalk}`);
     }
   }
   const postRunSrc = fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/post-run.ts', 'utf-8');
@@ -616,6 +623,28 @@ async function main() {
   expect('UAT5: the continuation guard exists (a continuation message never creates a garbage project)',
     /isContinuationMessage/.test(intentSrcU5) && /CONTINUATION_RE/.test(intentSrcU5),
     "the 09:10:09 specimen recurs — 'Continue o projeto Lumina' becomes 'continue-projeto-lumina-seguindo'");
+
+  // ── 16. DESIGN-INTELLIGENCE (D1-D4): the anti-AI-slop evolution —
+  // the design directives in the marker, the cultural context, the
+  // design-score verify, the self-correction loop, the residue cleanup.
+  expect('D1: the [OLYMPUS-DESIGN] marker exists in the route (the visual quality directives)',
+    /OLYMPUS-DESIGN/.test(routeSrc) && /FORBIDDEN/.test(routeSrc) && /PERSONALITY/.test(routeSrc),
+    'the plan carries only file lists, not design law — the output defaults to AI slop');
+  expect('D1: the cultural context detection (PT-BR → Brazilian fixtures)',
+    /CULTURAL CONTEXT/.test(routeSrc) && /Brazilian/.test(routeSrc),
+    'a PT-BR prompt produces Norwegian names — the cultural context is blind');
+  expect('D2: the design-score check exists in the verify (the review gate)',
+    /design-score:/.test(fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/verify.ts', 'utf-8')),
+    'the verify only checks file-exists + build — nothing gates the visual quality');
+  expect('D3: the self-correction loop (the fix hops from the review)',
+    /fixInstructions/.test(postRunSrc) && /design-fix-/.test(postRunSrc) && /_designIterations/.test(postRunSrc),
+    'the design review parks but nobody repairs — the anti-slop gate has no teeth');
+  expect('D3: the residue cleanup (the deliverable contains ONLY deliverable files)',
+    /runtimeArtifacts/.test(postRunSrc) && /\.gitignore/.test(postRunSrc),
+    'opencode.json and .opencode symlinks pollute the deliverable');
+  expect('D1: the plan template includes the design-review hop instruction',
+    /design-review hop/.test(routeSrc) && /design-score:7/.test(routeSrc),
+    'no design review fires — the machine never critiques its own work');
 }
 
 main().then(() => {

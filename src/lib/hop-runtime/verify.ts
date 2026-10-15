@@ -86,6 +86,28 @@ export function verifyHopDeterministic(hop: PlanHop, laneRoot: string): HopVerif
       if (!hop.artifacts.includes(rel)) checks.push(fileExistsCheck(laneRoot, rel));
     } else if (c === 'build' || c === 'lint') {
       checks.push(scriptCheck(laneRoot, c));
+    } else if (c.startsWith('design-score:')) {
+      // #DESIGN-INTELLIGENCE D2: the design-review gate — reads
+      // design-review.json and checks the overall score against the
+      // threshold. The review is a real critique by a design god; the
+      // gate is deterministic (0 tokens — just reads the JSON).
+      const threshold = Number.parseFloat(c.slice('design-score:'.length));
+      if (!Number.isFinite(threshold)) {
+        checks.push({ check: c, ok: false, detail: 'invalid threshold in the check spec' });
+      } else {
+        try {
+          const review = JSON.parse(readFileSync(join(laneRoot, 'design-review.json'), 'utf-8'));
+          const ok = typeof review.overall === 'number' && review.overall >= threshold;
+          checks.push({
+            check: c, ok,
+            detail: ok
+              ? `design review: overall ${review.overall} >= ${threshold} — PASS`
+              : `design review: overall ${review.overall} < ${threshold} — FAIL (issues: ${(review.issues || []).slice(0, 2).join('; ')})`,
+          });
+        } catch (e: any) {
+          checks.push({ check: c, ok: false, detail: `design-review.json not found or unparseable: ${e?.message || e}` });
+        }
+      }
     } else {
       checks.push({ check: c, ok: false, detail: 'unknown check (supported: file-exists:<rel> | build | lint)' });
     }

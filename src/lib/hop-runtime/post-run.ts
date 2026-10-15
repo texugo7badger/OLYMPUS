@@ -20,10 +20,10 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, unlinkSync, rmSync, lstatSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { walkPlan, resolveGodModelLane, type HopDispatcher, type HopWalkEvent } from './walker';
-import { hopStatePath } from './hop-state';
+import { hopStatePath, saveHopState } from './hop-state';
 import { createGate, getPendingGates, listGates, resolveGate } from '@/lib/hitl-gates';
 import { appendActivity } from '@/lib/activity-feed';
 
@@ -208,6 +208,81 @@ export async function maybeWalkThePlan(opts: {
   const parked = result.parked ? { hopId: result.parked.hopId, reason: result.parked.reason } : null;
   const summaryLine = buildWalkSummaryLine({ completed, total: totalHops, parked, laneRoot: opts.laneRoot, slug: opts.slug });
   opts.send?.({ type: 'walk_summary', completed, total: totalHops, parked, msg: summaryLine, ts: new Date().toISOString() });
+
+  // #DESIGN-INTELLIGENCE D3: THE SELF-CORRECTION LOOP — when the walk
+  // parks on a design-review hop (score < threshold), the machine reads
+  // the review's fixInstructions and generates targeted fix hops. This is
+  // the anti-AI-slop mechanism: the machine CRITIQUES its own output and
+  // REPAIRS it. Max 2 design iterations (the third parks honest for the
+  // human's judgment).
+  if (parked && parked.reason === 'verify-failed' && parked.hopId.includes('design-review')) {
+    const reviewPath = join(opts.laneRoot, 'design-review.json');
+    try {
+      const review = JSON.parse(readFileSync(reviewPath, 'utf-8'));
+      if (Array.isArray(review.fixInstructions) && review.fixInstructions.length > 0 && (review._designIterations || 0) < 2) {
+        const iterations = (review._designIterations || 0) + 1;
+        const fixHops = review.fixInstructions.slice(0, 5).map((fix: string, i: number) => ({
+          id: `design-fix-${iterations}-${i + 1}`,
+          god: 'athena',
+          prompt: `DESIGN FIX (iteration ${iterations}): ${fix}. Read the current file(s), apply the fix, write back. The design tokens are in globals.css — respect them.`,
+          artifacts: [],
+          verify: { review: 'deterministic', checks: [] },
+          budgetTokens: 4096,
+        }));
+        // Append the fix hops + a re-review hop to the plan
+        const planObj = JSON.parse(readFileSync(join(opts.laneRoot, DISPATCH_PLAN_FILENAME), 'utf-8')) as { hops: Array<Record<string, unknown>> };
+        const completedIds = new Set(result.completed);
+        planObj.hops = planObj.hops.filter((h) => !completedIds.has(h.id as string));
+        planObj.hops.push(...fixHops);
+        planObj.hops.push({
+          id: `design-review-${iterations}`,
+          god: 'athena',
+          prompt: `DESIGN REVIEW (iteration ${iterations}): Re-read the key components and re-score. Write design-review.json with the SAME structure (scores, overall, issues, fixInstructions). If overall >= 7, the review passes.`,
+          artifacts: ['design-review.json'],
+          verify: { review: 'deterministic', checks: ['file-exists:design-review.json', 'design-score:7'] },
+          budgetTokens: 4096,
+        });
+        review._designIterations = iterations;
+        writeFileSync(reviewPath, JSON.stringify(review, null, 2));
+        writeFileSync(join(opts.laneRoot, DISPATCH_PLAN_FILENAME), JSON.stringify(planObj, null, 2));
+        // Clear the parked hop state so the resume picks up the fix hops
+        saveHopState(opts.laneRoot, {
+          version: 1,
+          completed: [...completedIds].filter((id) => id !== parked.hopId),
+          parked: null,
+          updatedAt: new Date().toISOString(),
+        });
+        opts.send?.({ type: 'log', msg: `Design review failed (score ${review.overall} < 7) — self-correcting with ${fixHops.length} fix hops (iteration ${iterations} of 2).`, ts: new Date().toISOString() });
+        // Recurse: walk the fix hops + re-review
+        const fixResult = await maybeWalkThePlan({ ...opts, expectPlan: true });
+        return fixResult;
+      }
+    } catch { /* the self-correction never breaks the summary */ }
+  }
+
+  // #DESIGN-INTELLIGENCE: THE RESIDUE CLEANUP — after a FULLY COMPLETED
+  // walk, the machine removes its own runtime artifacts from the
+  // deliverable. The project root must contain ONLY deliverable files.
+  if (!parked && completed === totalHops) {
+    const runtimeArtifacts = [
+      join(opts.laneRoot, '.opencode'),
+      join(opts.laneRoot, 'opencode.json'),
+      join(opts.laneRoot, 'opencode.demigods.json'),
+    ];
+    for (const p of runtimeArtifacts) {
+      try { if (existsSync(p)) { const stat = lstatSync(p); if (stat.isDirectory()) rmSync(p, { recursive: true }); else unlinkSync(p); } } catch { /* never breaks the walk */ }
+    }
+    // Ensure .gitignore covers the machine's runtime files
+    const gitignorePath = join(opts.laneRoot, '.gitignore');
+    const gitignoreEntries = ['.olympus-*', 'design-review.json', 'worklog/', '.opencode', 'opencode.json', 'opencode.demigods.json', 'node_modules/', '.next/', 'tsconfig.tsbuildinfo'];
+    try {
+      let existing = '';
+      if (existsSync(gitignorePath)) existing = readFileSync(gitignorePath, 'utf-8');
+      const missing = gitignoreEntries.filter((e) => !existing.includes(e));
+      if (missing.length > 0) writeFileSync(gitignorePath, existing + (existing && !existing.endsWith('\n') ? '\n' : '') + missing.join('\n') + '\n');
+    } catch { /* never breaks the walk */ }
+  }
+
   return { walked: true, completed, total: totalHops, parked, summaryLine };
 }
 

@@ -668,8 +668,15 @@ export default function InteractiveTerminal() {
       // narrates WHO (the god) + WHERE (the lane) + WHICH pool, and the
       // god panel tracks the walking state (this terminal) while the durable
       // feed carries it across sessions (publishActivity, the #85 base).
+      // #DESIGN-INTELLIGENCE D4: the PROGRESS CARD — a structured walk
+      // summary line (the user sees a dashboard, not a linear log).
       if (ev.msg) { removeThinking(); addMessage({ type: 'system', text: ev.msg }); }
       updateGodActivity(ev.god || 'hephaestus', ev.type === 'hop_done' ? 'done' : ev.type === 'hop_parked' ? 'idle' : 'working', ev.msg || '');
+      // D4: the hop counter line (compact, non-intrusive)
+      if (ev.type === 'hop_done' && ev.msg) {
+        const m = ev.msg.match(/Hop '([^']+)'/);
+        if (m) addMessage({ type: 'system', text: `  ✓ ${m[1]} — done` });
+      }
       return;
     }
     if (ev.type === 'walk_summary') {
