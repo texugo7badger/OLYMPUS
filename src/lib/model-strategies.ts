@@ -141,7 +141,7 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'go-max-quality': {
     label: 'GO Max Quality',
     description:
-      'Best quality within GO caps. Apollo: GLM-5.3 (sacred). Atlas: Hy3 (sacred). Hephaestus+Hermes: Kimi K2.7 Code. Athena/Dionysus/Persephone/Callimachus: GLM-5.3-Flash. Prometheus: MiniMax M3. Artemis: GLM-5.3. NOTE: GLM-5.3 has a $3/5h rolling cap shared by Apollo+Artemis — switch to go-balanced when exhausted.',
+      'Best quality within GO caps (the 2026-10-16 upgrade). Apollo: GLM-5.3 (sacred). Atlas: Hy3 (sacred). Artemis: Kimi K3. Athena/Dionysus/Persephone: GLM-5.3. Hephaestus+Hermes: Kimi K2.7 Code. Prometheus: MiniMax M3. Callimachus: GLM-5.3-Flash. NOTE: GLM-5.3\'s $3/5h rolling cap is now shared by FOUR gods — this tier burns caps for quality; switch to go-balanced when exhausted.',
     plan: 'GO',
     tier: 'quality',
     reasoningModel: 'glm-5.3',
@@ -155,13 +155,13 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
       // multi-god duty. GLM-5.3 is reserved for Apollo (sacred) + Artemis
       // (security). See https://opencode.ai/docs/go/ — verified 2026-09-28.
       hephaestus:  'opencode-go/kimi-k2.7-code',
-      athena:      'opencode-go/glm-5.3-flash',
+      athena:      'opencode-go/glm-5.3',
       // GLM-5.3-Flash ($60/mo → $12/5h rolling, 31,580 req/mo) is the
       // workhorse for the high-volume roles.
-      artemis:     'opencode-go/glm-5.3',
-      dionysus:    'opencode-go/glm-5.3-flash',
+      artemis:     'opencode-go/kimi-k3',
+      dionysus:    'opencode-go/glm-5.3',
       hermes:      'opencode-go/kimi-k2.7-code',
-      persephone:  'opencode-go/glm-5.3-flash',
+      persephone:  'opencode-go/glm-5.3',
       prometheus:  'opencode-go/minimax-m3',
       callimachus: 'opencode-go/glm-5.3-flash',
     },
@@ -171,14 +171,14 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'go-balanced': {
     label: 'GO Balanced',
     description:
-      'Default — sustainable 5h/day (cap-aware). Apollo: GLM-5.3-Flash. Atlas: Hy3 (orchestration). Hephaestus/Hermes: Kimi K2.7 Code. Athena/Persephone: Qwen3.7 Plus. Prometheus: MiniMax M3. Dionysus/Artemis/Callimachus: GLM-5.3-Flash.',
+      'Default — sustainable 5h/day (the 2026-10-16 upgrade: Apollo rides FULL GLM-5.3 — the planner is the quality bottleneck; the hop runtime\'s small-burst request shape stretches the $3/5h rolling cap much further than the old interactive turns. When the cap blows, switch to go-budget). Atlas: Hy3 (orchestration). Hephaestus/Hermes: Kimi K2.7 Code. Athena/Persephone: Qwen3.7 Plus. Prometheus: MiniMax M3. Dionysus/Artemis/Callimachus: GLM-5.3-Flash.',
     plan: 'GO',
     tier: 'balanced',
     reasoningModel: 'glm-5.3-flash',
     codeModel: 'kimi-k2.7-code',
-    terminalModel: 'opencode-go/glm-5.3-flash',
+    terminalModel: 'opencode-go/glm-5.3',
     gods: {
-      apollo:      'opencode-go/glm-5.3-flash',
+      apollo:      'opencode-go/glm-5.3',
       atlas:       'opencode-go/hy3',
       hephaestus:  'opencode-go/kimi-k2.7-code',
       athena:      'opencode-go/qwen3.7-plus',
@@ -343,25 +343,25 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'free-openrouter': {
     label: 'Free OpenRouter',
     description:
-      'All gods on OpenRouter\'s strongest free models live right now — primary trio on #1 (550B / 1M context), specialists on #2, Callimachus on a fast background model. Refreshed automatically. Requires an OpenRouter key.',
+      'All 10 gods on OpenRouter\'s strongest free model live right now (cohere/north-mini-code:free — probe-verified 2026-10-16, 256K context, 64K output). One pool, zero cost, one key. Refreshed automatically. Requires an OpenRouter key.',
     plan: 'CUSTOM',
     tier: 'free',
-    reasoningModel: 'nvidia/nemotron-3-ultra-550b-a55b:free',
-    codeModel: 'nvidia/nemotron-3-super-120b-a12b:free',
-    terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
+    reasoningModel: 'cohere/north-mini-code:free',
+    codeModel: 'cohere/north-mini-code:free',
+    terminalModel: 'openrouter/cohere/north-mini-code:free',
     gods: {
-      apollo:      'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      atlas:       'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      artemis:     'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-      athena:      'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-      dionysus:    'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-      hephaestus:  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      hermes:      'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-      persephone:  'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-      prometheus:  'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-      callimachus: 'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
+      apollo: 'openrouter/cohere/north-mini-code:free',
+      atlas: 'openrouter/cohere/north-mini-code:free',
+      artemis: 'openrouter/cohere/north-mini-code:free',
+      athena: 'openrouter/cohere/north-mini-code:free',
+      dionysus: 'openrouter/cohere/north-mini-code:free',
+      hephaestus: 'openrouter/cohere/north-mini-code:free',
+      hermes: 'openrouter/cohere/north-mini-code:free',
+      persephone: 'openrouter/cohere/north-mini-code:free',
+      prometheus: 'openrouter/cohere/north-mini-code:free',
+      callimachus: 'openrouter/cohere/north-mini-code:free',
     },
-    vaultLlm: 'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
+    vaultLlm: 'openrouter/cohere/north-mini-code:free',
     estCostPerDay: 'free',
   },
   'free-big-pickle': {
@@ -370,22 +370,22 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
       'All 10 gods on a single free model — the strongest one currently live (550B / 1M context as of 2026-07-31), refreshed automatically. Callimachus included. Override the model with OLYMPUS_BIG_PICKLE_MODEL.',
     plan: 'CUSTOM',
     tier: 'free',
-    reasoningModel: 'nvidia/nemotron-3-ultra-550b-a55b:free',
-    codeModel: 'nvidia/nemotron-3-ultra-550b-a55b:free',
-    terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
+    reasoningModel: 'nvidia-glm/z-ai/glm-5.3',
+    codeModel: 'nvidia-glm/z-ai/glm-5.3',
+    terminalModel: 'nvidia-glm/z-ai/glm-5.3',
     gods: {
-      apollo:      'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      atlas:       'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      artemis:     'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      athena:      'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      dionysus:    'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      hephaestus:  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      hermes:      'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      persephone:  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      prometheus:  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-      callimachus: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
+      apollo: 'nvidia-glm/z-ai/glm-5.3',
+      atlas: 'nvidia-glm/z-ai/glm-5.3',
+      artemis: 'nvidia-glm/z-ai/glm-5.3',
+      athena: 'nvidia-glm/z-ai/glm-5.3',
+      dionysus: 'nvidia-glm/z-ai/glm-5.3',
+      hephaestus: 'nvidia-glm/z-ai/glm-5.3',
+      hermes: 'nvidia-glm/z-ai/glm-5.3',
+      persephone: 'nvidia-glm/z-ai/glm-5.3',
+      prometheus: 'nvidia-glm/z-ai/glm-5.3',
+      callimachus: 'nvidia-glm/z-ai/glm-5.3',
     },
-    vaultLlm: 'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
+    vaultLlm: 'nvidia-glm/z-ai/glm-5.3',
     estCostPerDay: 'free',
   },
   /**
@@ -426,25 +426,25 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'free-nvidia-build': {
     label: 'Free Nvidia Build',
     description:
-      'NVIDIA Build free endpoints (build.nvidia.com) — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchor set, no single pool, NO Nemotron (the user\'s ban). Apollo+Dionysus+Persephone on GLM-5.3 (753B reasoner), Atlas+Athena+Callimachus on GLM-5.3-Flash (fast multimodal lane), Artemis+Hephaestus+Prometheus on Kimi K3 (2.8T long-horizon coder), Hermes on Muse Glimmer 30B (fast multimodal). Per-family provider entries (nvidia-glm/-deepseek/-kimi/-meta) give each lane its own client pool. The anchor set is user-pinned — the refresh verifies availability, never replaces. Symphony carries context between pools — models are lanes, not silos.',
+      'NVIDIA Build free endpoints (build.nvidia.com) — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchor set, no single pool, NO Nemotron (the user\'s ban). The 2026-10-16 rotation (kimi-k3 410\'d, glm-5.3-flash died): Apollo+Dionysus+Persephone on GLM-5.3 (753B reasoner), Athena+Hephaestus on Step 5 Preview (1M-ctx coder — the frontend+build lane; the strongest code anchor), Atlas+Callimachus on Gemma 4 31B (the volume lane), Artemis+Hermes on Muse Glimmer 30B, Prometheus on GPT-OSS-20B. Apollo\'s entry lane is never shared with Athena or Hephaestus — one dead pool can never take the entry god down with a heavy code lane. Per-family provider entries (nvidia-glm/-google/-step/-meta/-openai) give each lane its own client pool. The anchor set is user-pinned — the refresh verifies availability, never replaces. Symphony carries context between pools — models are lanes, not silos.',
     plan: 'CUSTOM',
     tier: 'free',
     reasoningModel: 'z-ai/glm-5.3',
-    codeModel: 'moonshotai/kimi-k3',
+    codeModel: 'stepfun-ai/step-5-preview',
     terminalModel: 'nvidia-glm/z-ai/glm-5.3',
     gods: {
       apollo:      'nvidia-glm/z-ai/glm-5.3',
-      atlas:       'nvidia-glm/z-ai/glm-5.3-flash',
-      artemis:     'nvidia-kimi/moonshotai/kimi-k3',
-      athena:      'nvidia-glm/z-ai/glm-5.3-flash',
+      atlas:       'nvidia-google/google/gemma-4-31b-it',
+      artemis:     'nvidia-meta/meta/muse-glimmer-30b',
+      athena:      'nvidia-step/stepfun-ai/step-5-preview',
       dionysus:    'nvidia-glm/z-ai/glm-5.3',
-      hephaestus:  'nvidia-kimi/moonshotai/kimi-k3',
+      hephaestus:  'nvidia-step/stepfun-ai/step-5-preview',
       hermes:      'nvidia-meta/meta/muse-glimmer-30b',
       persephone:  'nvidia-glm/z-ai/glm-5.3',
-      prometheus:  'nvidia-kimi/moonshotai/kimi-k3',
-      callimachus: 'nvidia-glm/z-ai/glm-5.3-flash',
+      prometheus:  'nvidia-openai/openai/gpt-oss-20b',
+      callimachus: 'nvidia-google/google/gemma-4-31b-it',
     },
-    vaultLlm: 'nvidia-glm/z-ai/glm-5.3-flash',
+    vaultLlm: 'nvidia-google/google/gemma-4-31b-it',
     estCostPerDay: 'free',
   },
 };
@@ -829,42 +829,42 @@ export const ZEN_MODEL_CLASSES = [
   'opencode/mimo-v2.6-flash-free',
   'opencode/mimo-v2.5-free',
   'opencode/ling-3.0-flash-fin-free',
-  'opencode/nemotron-3-ultra-free',
-  'opencode/nemotron-3.5-lightning-free',
   'opencode/muse-spark-1.3-contributor-free',
 ];
 
 export const FREE_MODEL_CLASSES = [
   // OpenRouter free — every id carries the `:free` suffix (the bare slug is
-  // paid; only the `:free` variant is $0, confirmed via pricing in the live
-  // /api/v1/models list, fetched 2026-08-01). Sorted by live score.
-  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-  'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-  'openrouter/inclusionai/ling-3.0-flash:free',
+  // paid; only the `:free` variant is $0). Probe-verified live 2026-10-16
+  // against /api/v1/models (the honest windows below are from the live
+  // model cards). Nemotron ids are GONE (the user's ban) — the 5 live
+  // nemotron:free variants on OpenRouter are excluded forever. Dead ids
+  // removed: inclusionai/ling-3.0-flash:free, openai/gpt-oss-20b:free.
+  'openrouter/cohere/north-mini-code:free',
+  'openrouter/thinkingmachines/inkling:free',
+  'openrouter/thinkingmachines/inkling-small:free',
   'openrouter/google/gemma-4-31b-it:free',
   'openrouter/google/gemma-4-26b-a4b-it:free',
   'openrouter/poolside/laguna-s-2.1:free',
-  'openrouter/openai/gpt-oss-20b:free',
-  'openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
   'openrouter/poolside/laguna-xs-2.1:free',
-  'openrouter/cohere/north-mini-code:free',
-  'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
   // NVIDIA Build free endpoints — THE DISTRIBUTED PANTHEON's anchor lanes
   // (#106): per-family provider entries (nvidia-glm / nvidia-deepseek /
-  // nvidia-kimi / nvidia-meta), each carrying ONLY its family's models.
+  // nvidia-kimi / nvidia-meta / nvidia-google / nvidia-step /
+  // nvidia-openai), each carrying ONLY its family's models.
   // Same base URL (https://integrate.api.nvidia.com/v1), same nvapi-... key
   // (auth.json per-family entries, mirrored from the user's NVIDIA key by
   // apply-strategy.js). The anchor set is USER-PINNED — the refresh
   // verifies availability, never replaces. The Nemotron family is banned
   // by the user (low effective context) — zero gods, forever. Probe-verified
-  // 2026-10-08: reports/free-1/s0/E8-LIVE-MODEL-VERIFICATION.md (kimi-k3
-  // context 1,048,576 and muse-glimmer-30b 131,072 per the live model
-  // cards — honest windows, never inflated).
+  // 2026-10-16: glm-5.3, gemma-4-31b-it, gpt-oss-20b, muse-glimmer-30b and
+  // step-5-preview (1M ctx, code-test passed) all 200; glm-5.3-flash,
+  // kimi-k3 and deepseek-v4.1-flash are DEAD (30s timeouts / 410 Gone) —
+  // excluded from every assignment, family entries kept only for the
+  // pinned set with zero gods.
   'nvidia-glm/z-ai/glm-5.3',
-  'nvidia-glm/z-ai/glm-5.3-flash',
-  'nvidia-kimi/moonshotai/kimi-k3',
+  'nvidia-google/google/gemma-4-31b-it',
+  'nvidia-step/stepfun-ai/step-5-preview',
   'nvidia-meta/meta/muse-glimmer-30b',
-  'nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash',
+  'nvidia-openai/openai/gpt-oss-20b',
 ];
 
 /** All model classes, keyed by family. */
@@ -891,7 +891,7 @@ export const OPENROUTER_FREE_MODELS = FREE_MODEL_CLASSES.filter(c => c.startsWit
 // nvidia-kimi/ nvidia-meta/) — one client pool per family. The prefix set
 // must stay in sync with NVIDIA_FAMILY_PROVIDERS in apply-strategy.js.
 export const NVIDIA_FREE_MODELS = FREE_MODEL_CLASSES.filter(c =>
-  /^(nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta)\//.test(c));
+  /^(nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia-google|nvidia-step|nvidia-openai)\//.test(c));
 
 /**
  * Returns the model classes offered for a given strategy — the strategy's

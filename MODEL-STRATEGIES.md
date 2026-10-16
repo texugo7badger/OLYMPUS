@@ -23,7 +23,7 @@
 | `zen-budget` (**Zen**) | **Zen plan** | ¢ | Good | **No caps** (pay-as-you-go) | Lowest cost on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Luna, all others on GLM-5.3-Flash, Callimachus on Claude Haiku 4.5 |
 | `free-openrouter` (**Free OpenRouter**) | **None** | **Free** | Lower | Unlimited (rate-limited) | The OpenRouter-only split — primary trio on #1, specialists on #2, Callimachus on a fast background model. Refreshes automatically |
 | `free-big-pickle` (**Free Big Pickle**) | **None** | **Free** | Lower | Unlimited (rate-limited) | All 10 gods (Callimachus included) on one free model — the strongest currently live, refreshed automatically |
-| `free-nvidia-build` (**Free Nvidia Build**) | **None** | **Free** | Lower | Unlimited (rate-limited) | **The distributed pantheon (#106)** — NVIDIA Build free endpoints: per-god model lanes on the user-pinned anchors (GLM-5.3 / GLM-5.3-Flash / Kimi K3 / Muse Glimmer), per-family client pools, no single pool, NO Nemotron (the user's ban). The anchor set is pinned — the refresh verifies, never overrides |
+| `free-nvidia-build` (**Free Nvidia Build**) | **None** | **Free** | Lower | Unlimited (rate-limited) | **The distributed pantheon (#106)** — NVIDIA Build free endpoints: per-god model lanes on the user-pinned anchors (GLM-5.3 / Step 5 Preview / Gemma 4 31B / Muse Glimmer / GPT-OSS-20B — the 2026-10-16 rotation), per-family client pools, no single pool, NO Nemotron (the user's ban). The anchor set is pinned — the refresh verifies, never overrides |
 | `custom-*` | User-defined | User-defined | User-defined | Custom | Advanced — define your own per-god model map |
 
 Switch strategies at any time:
@@ -57,8 +57,8 @@ The table below shows estimated monthly request counts per model within the $60 
 | Qwen3.7 Plus | **21,600** | Reasoning, security, frontend, integration | Low-Medium |
 | DeepSeek V4 Pro | **5,200** (was 17,150 — limit now $15) | Code generation, backend logic | Low |
 | Kimi K2.7 Code | **6,750** | Specialist coding tasks | Medium |
-| GLM-5.3 | **1,080** | Apollo + Artemis (sacred, reserved) | Medium |
-| Kimi K3 | **490** | Highest-quality reasoning (Athena, Hephaestus) | High |
+| GLM-5.3 | **1,080** | Apollo (sacred) + Athena/Dionysus/Persephone in go-max-quality + go-balanced's planner lane | Medium |
+| Kimi K3 | **490** | Artemis in go-max-quality (security reasoning) | High |
 | Grok 4.7 / 4.6 | **845** each (replaces defunct Grok 4.5) | Specialized reasoning | High |
 | LongCat-2.0 | **57,200** ($60 tier) | Bulk long-context | Very low |
 | Space Bunny Free | **Unlimited** (limited-time, zero limit consumption) | Bulk work while offered | Free |
@@ -116,8 +116,8 @@ OLYMPUS minimizes unnecessary API calls through:
 
 Despite optimization, you may hit a model's monthly cap during heavy usage:
 
-- **GLM-5.3 (Apollo):** Never downgraded. Apollo is sacred — if the 4,300 req/month cap is hit, Apollo stops planning until the monthly reset. This prevents silent quality degradation.
-- **Kimi K3 (Athena, Hephaestus):** Tightest cap at 490/month. Switch to `go-balanced` (Qwen3.7 Plus / DeepSeek V4 Pro) or to a Zen strategy — Zen is pay-as-you-go with no request caps.
+- **GLM-5.3 (Apollo):** Never downgraded. Apollo is sacred — if the rolling/monthly cap is hit, Apollo stops planning until the reset. This prevents silent quality degradation.
+- **Kimi K3 (Artemis, go-max-quality):** Tightest cap at 490/month. Switch to `go-balanced` (GLM-5.3-Flash) or to a Zen strategy — Zen is pay-as-you-go with no request caps.
 - **Any model:** Switch to a free strategy (`free-openrouter`, `free-big-pickle`, `free-nvidia-build`) in Settings to continue working with free-tier models (lower quality, zero cost, no cap). When one free provider's rate limit runs out, pick another free strategy and keep going.
 
 See [opencode.ai/docs/go](https://opencode.ai/docs/go) for the latest plan details.
@@ -129,7 +129,7 @@ OLYMPUS now has **10 gods** (9 original + Atlas):
 
 | God | Role | Model (balanced) |
 |-----|------|------------------|
-| Apollo | Planning & architecture | GLM-5.3-Flash |
+| Apollo | Planning & architecture | GLM-5.3 |
 | **Atlas** | Orchestration & dispatch execution | Hy3 |
 | Hephaestus | Backend code | Kimi K2.7 Code |
 | Athena | Frontend | Qwen3.7 Plus |
@@ -144,13 +144,13 @@ OLYMPUS now has **10 gods** (9 original + Atlas):
 
 ### `go-max-quality` — best models, highest cost
 
-Apollo gets GLM-5.3 (sacred — shared only with Artemis). Atlas keeps Hy3 (sacred, $12/5h rolling). Hephaestus + Hermes get Kimi K2.7 Code (6,750 req/month). Athena, Dionysus, Persephone and Callimachus get GLM-5.3-Flash ($12/5h rolling, 31,580 req/month). Prometheus gets MiniMax M3. No god runs on the tight-cap flagships (Kimi K3 / Grok 4.7 / GLM-5.3 beyond Apollo+Artemis).
+The 2026-10-16 upgrade: Apollo gets GLM-5.3 (sacred). Atlas keeps Hy3 (sacred, $12/5h rolling). Artemis gets Kimi K3 (490 req/month — security reasoning). Athena, Dionysus and Persephone get GLM-5.3 (the $3/5h rolling cap is now shared by FOUR gods — this tier deliberately burns caps for quality). Hephaestus + Hermes get Kimi K2.7 Code (6,750 req/month). Prometheus gets MiniMax M3. Callimachus gets GLM-5.3-Flash.
 
 **When to use:** Production work where quality matters more than cost. Watch the GLM-5.3 cap (1,080 req/month, shared Apollo+Artemis) — when it's exhausted, switch to `go-balanced` (or a Zen strategy — no request caps).
 
 ### `go-balanced` (default) — great models, moderate cost
 
-Apollo gets GLM-5.3-Flash (cap-aware — GLM-5.3's $3/5h rolling cap is reserved for go-max-quality). Specialists get Kimi K2.7 Code (backend/integrations), Qwen3.7 Plus (frontend/data), MiniMax M3 (DevOps), and GLM-5.3-Flash (QA/security/vault).
+Apollo rides FULL GLM-5.3 (the 2026-10-16 upgrade — the planner is the quality bottleneck, and the hop runtime's small-burst request shape stretches the $3/5h rolling cap far past the old interactive-turn economics; when the cap blows, go-budget keeps Apollo on Flash). Specialists get Kimi K2.7 Code (backend/integrations), Qwen3.7 Plus (frontend/data), MiniMax M3 (DevOps), and GLM-5.3-Flash (QA/security/vault).
 
 **When to use:** Day-to-day work. This is the right default for 90% of users.
 
@@ -212,7 +212,7 @@ Groq's free tier was removed from OLYMPUS. Its **12K TPM window** (prompt + max_
 
 ### `free-openrouter` — the OpenRouter-only split
 
-The provider-specific OpenRouter split: primary trio (Apollo, Atlas, Hephaestus) on the strongest OpenRouter free model currently live, specialists on the second-strongest, and Callimachus on a fast background model (`openrouter/nvidia/nemotron-3-nano-30b-a3b:free`). Live-refreshed from the OpenRouter provider list.
+All 10 gods on the strongest OpenRouter free model currently live (probe-verified 2026-10-16: `openrouter/cohere/north-mini-code:free` — 256K context, 64K output). One pool, zero cost, one key. Live-refreshed from the OpenRouter provider list; `small_model` rides the same cohere:free lane.
 
 **Requirements:** an OpenRouter API key configured inside OpenCode (Settings → add OpenRouter). Get one free at https://openrouter.ai/keys.
 
@@ -220,7 +220,7 @@ The provider-specific OpenRouter split: primary trio (Apollo, Atlas, Hephaestus)
 
 ### `free-big-pickle` — every god (including Callimachus) on one free model
 
-All **10 gods** — Apollo through Callimachus — run on a single model: the strongest free model currently live (as of 2026-07-31: `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free` — 550B params, 1M context). "Free: Big Pickle" is the user's session model; it is **not** a public OpenRouter slug, so the strategy defaults to the strongest verified live free model and reads the `OLYMPUS_BIG_PICKLE_MODEL` env var so you can point it at the real provider once its slug is known. `small_model` and `vaultLlm` stay on `openrouter/nvidia/nemotron-3-nano-30b-a3b:free` — they are background workers (title generation, vault writes), not gods, and would burn the flagship's shared pool.
+All **10 gods** — Apollo through Callimachus — run on a single model: the strongest free model currently live (2026-10-16: `nvidia-glm/z-ai/glm-5.3` — the 753B reasoner on the NVIDIA Build free tier, probe-verified). The strategy reads the `OLYMPUS_BIG_PICKLE_MODEL` env var so you can point it at another provider. `small_model` and `vaultLlm` ride the NVIDIA volume lane (`nvidia-google/google/gemma-4-31b-it`) — they are background workers (title generation, vault writes), not gods, and would burn the flagship's shared pool.
 
 ```bash
 # Point at your real Big Pickle provider once you have the slug:
@@ -230,37 +230,40 @@ node scripts/apply-strategy.js --strategy free-big-pickle
 
 ### `free-nvidia-build` — the DISTRIBUTED PANTHEON (#106 — NVIDIA Build free endpoints, per-god model lanes)
 
-NVIDIA hosts **GLM-5.3 / GLM-5.3-Flash / Kimi K3 / Muse Glimmer / DeepSeek** on free endpoints
+NVIDIA hosts **GLM-5.3 / Step 5 Preview / Gemma 4 31B / Muse Glimmer / GPT-OSS-20B** on free endpoints
 at [build.nvidia.com](https://build.nvidia.com/models). **NO Nemotron — the user's ban, forever**
 (low effective context + the observed contention pool behind "Service temporarily overloaded").
 
-**The distribution law** (the user's directive, 2026-10-08): every god on exactly ONE user-pinned
-anchor lane; the three heaviest paths (Apollo's entry lane, Athena's frontend-kit lane,
-Hephaestus's build lane) NEVER share a pool; Callimachus + the vault + `small_model` on the
-fast lane (volume, not depth); **≤3 gods per anchor**. The anchor set is USER-PINNED — the
-refresh (`scripts/refresh-free-models.js`) verifies availability + carries renames, NEVER
-replaces an anchor with "the strongest live"; a dead anchor surfaces loudly, never silently
-swapped (and the apply refuses at the L4 preflight).
+**The distribution law** (the user's directive, 2026-10-08; revised 2026-10-16 after kimi-k3 410'd
+end-of-life and the glm-5.3-flash pool died): every god on exactly ONE user-pinned anchor lane;
+Apollo's entry lane NEVER shared with Athena or Hephaestus (a dead pool can never take the entry
+god down together with a heavy code lane) and the heavy three span ≥2 pools — Athena + Hephaestus
+deliberately share Step 5 Preview, the strongest code anchor, because demoting either to a ≤31B
+small would trade the build/frontend quality bar for a reliability nicety; Callimachus + the vault
++ `small_model` on the fast lane (volume, not depth); **≤3 gods per anchor**. The anchor set is
+USER-PINNED — the refresh (`scripts/refresh-free-models.js`) verifies availability + carries
+renames, NEVER replaces an anchor with "the strongest live"; a dead anchor surfaces loudly, never
+silently swapped (and the apply refuses at the L4 preflight).
 
-**The anchor table** (probe-verified live 2026-10-08 — `reports/free-1/s0/`; the DeepSeek pool
-timed out 3× at the probe and is EXCLUDED — its family entry stays for the pinned set, zero
-gods until the pool recovers):
+**The anchor table** (chat-probe-verified live 2026-10-16 — every id was sent a real completion,
+not merely catalog-listed; the dead lanes glm-5.3-flash / kimi-k3 / deepseek-v4.1-flash are
+REMOVED, family entries and all):
 
 | Anchor lane | Gods | Shape (live model card — never inflated) |
 |---|---|---|
 | `nvidia-glm/z-ai/glm-5.3` | Apollo, Dionysus, Persephone | 753B text MoE, reasoning + tool calling, 1M ctx |
-| `nvidia-glm/z-ai/glm-5.3-flash` | Atlas, Athena, Callimachus + vaultLlm + small_model | 320B/18B-active multimodal MoE, fast, 1M ctx |
-| `nvidia-kimi/moonshotai/kimi-k3` | Hephaestus, Artemis, Prometheus | 2.8T MoE, 104B active, long-horizon coding + agentic, 1,048,576 ctx |
-| `nvidia-meta/meta/muse-glimmer-30b` | Hermes | 29.6B dense + ViT-G/14, multimodal reasoning + tool-calling, 131,072 ctx |
-| `nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash` | (unassigned 2026-10-08 — the dead pool, disclosed) | 552B MoE, 8B active, 1M ctx |
+| `nvidia-step/stepfun-ai/step-5-preview` | Athena, Hephaestus | 1M-ctx coder, code-test passed 2026-10-15 — the frontend+build lane |
+| `nvidia-google/google/gemma-4-31b-it` | Atlas, Callimachus + vaultLlm + small_model | 31B multimodal instruct — the volume lane, 262K ctx |
+| `nvidia-meta/meta/muse-glimmer-30b` | Artemis, Hermes | 29.6B dense + ViT-G/14, multimodal reasoning + tool-calling, 131,072 ctx |
+| `nvidia-openai/openai/gpt-oss-20b` | Prometheus | 20B MoE (3.6B active), open-weights, 131,072 ctx |
 
 **The provider split** ("different endpoints per god"): the single `nvidia` provider became
-per-family entries — `nvidia-glm` / `nvidia-deepseek` / `nvidia-kimi` / `nvidia-meta` — each
-carrying ONLY its family's models with honest limits (output 16384 — the #76 bar). Same base
-URL (`https://integrate.api.nvidia.com/v1`), same `nvapi-...` key (the apply mirrors the
-user's NVIDIA key to the family ids in OpenCode's auth.json, the standard `/connect` storage).
-One client pool per family: independent retry/backoff state + a config that expresses the
-doctrine. Symphony carries context between pools — **models are lanes, not silos**.
+per-family entries — `nvidia-glm` / `nvidia-google` / `nvidia-step` / `nvidia-meta` /
+`nvidia-openai` — each carrying ONLY its family's models with honest limits (output 16384 —
+the #76 bar). Same base URL (`https://integrate.api.nvidia.com/v1`), same `nvapi-...` key (the
+apply mirrors the user's NVIDIA key to the family ids in OpenCode's auth.json, the standard
+`/connect` storage). One client pool per family: independent retry/backoff state + a config that
+expresses the doctrine. Symphony carries context between pools — **models are lanes, not silos**.
 
 Model ids use the **`nvidia-<family>/<vendor>/<model>`** prefix — no `:free` suffix; every
 NVIDIA Build endpoint is free with a key. The model list is fetched live from
@@ -327,8 +330,8 @@ Per-god overrides set in the Settings dialog **do route** for free strategies: a
 
 There are **no automatic model fallbacks** — OLYMPUS never silently downgrades a god's model. When a model's monthly cap is exhausted, you switch strategies:
 
-- **Kimi K3 / Grok 4.7 not used in any strategy:** their GO caps ($15/mo → $3/5h rolling) are too tight for multi-god duty. GLM-5.3 is reserved for go-max-quality (Apollo + Artemis) only. Switch to `go-balanced` for more headroom, or a **Zen** strategy (`zen-max-quality` keeps frontier quality with Claude Sonnet 5 / GPT 6 Sol; `zen-balanced`/`zen-budget` use GPT 5.6 Terra/Luna / GLM-5.3-Flash — pay-as-you-go, **no request caps**).
-- **GLM-5.3 (go-max-quality only) capped (1,080 req/month, shared Apollo + Artemis):** the daily strategies are unaffected — they run Apollo on GLM-5.3-Flash. If GLM-5.3 runs out on go-max-quality, switch to `go-balanced`, a Zen strategy (Apollo stays on `opencode/glm-5.3`, pay-as-you-go) or a free strategy.
+- **Kimi K3 (Artemis in go-max-quality only):** its GO cap ($15/mo → $3/5h rolling, 490/month) is too tight for multi-god duty — that is why only ONE god rides it. Grok 4.7 stays unused. Switch to `go-balanced` for more headroom, or a **Zen** strategy (`zen-max-quality` keeps frontier quality with Claude Sonnet 5 / GPT 6 Sol; `zen-balanced`/`zen-budget` use GPT 5.6 Terra/Luna / GLM-5.3-Flash — pay-as-you-go, **no request caps**).
+- **GLM-5.3 capped (1,080 req/month; four gods in go-max-quality, Apollo in go-balanced):** the hop runtime's small-burst shape stretches the cap, but when it runs out switch to `go-budget` (Apollo on Flash), a Zen strategy (Apollo stays on `opencode/glm-5.3`, pay-as-you-go) or a free strategy.
 - **Any GO model capped:** switch to a free strategy in Settings (`free-openrouter`, `free-big-pickle`, `free-nvidia-build`) and keep working at zero cost. When one free provider's rate limit runs out, pick another free strategy and continue.
 
 ## Why no OpenAI/Anthropic direct providers?

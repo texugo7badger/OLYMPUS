@@ -106,7 +106,7 @@ const GOD_DOMAINS: Record<string, string> = {
 // Do NOT edit by hand — update the canonical file and run `npm run check-strategy-sync`.
 // Enforced by scripts/check-strategy-sync.js in CI.
 const DEFAULT_CLASSES: Record<string, string> = {
-  apollo: 'opencode-go/glm-5.3-flash',
+  apollo: 'opencode-go/glm-5.3',
   atlas: 'opencode-go/hy3',
   artemis: 'opencode-go/glm-5.3-flash',
   athena: 'opencode-go/qwen3.7-plus',
@@ -215,33 +215,32 @@ const ALL_CLASSES = [
   'opencode/mimo-v2.6-flash-free',
   'opencode/mimo-v2.5-free',
   'opencode/ling-3.0-flash-fin-free',
-  'opencode/nemotron-3-ultra-free',
-  'opencode/nemotron-3.5-lightning-free',
   'opencode/muse-spark-1.3-contributor-free',
-  // Free-tier models (verified live 2026-07-31 — mirrors the model list in
-  // scripts/apply-strategy.js so overrides always route). The refresh script
+  // Free-tier models (probe-verified live 2026-10-16 — mirrors the catalog in
+  // src/lib/model-strategies.ts so overrides always route; the dead ids
+  // ling-3.0-flash:free + gpt-oss-20b:free are GONE, the nemotron:free
+  // variants excluded forever by the user's ban). The refresh script
   // (scripts/refresh-free-models.js) may add more at runtime.
-  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-  'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-  'openrouter/inclusionai/ling-3.0-flash:free',
+  'openrouter/cohere/north-mini-code:free',
+  'openrouter/thinkingmachines/inkling:free',
+  'openrouter/thinkingmachines/inkling-small:free',
   'openrouter/google/gemma-4-31b-it:free',
   'openrouter/google/gemma-4-26b-a4b-it:free',
   'openrouter/poolside/laguna-s-2.1:free',
-  'openrouter/openai/gpt-oss-20b:free',
-  'openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
   'openrouter/poolside/laguna-xs-2.1:free',
-  'openrouter/cohere/north-mini-code:free',
-  'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
-  // NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON's anchor lanes
-  // (#106): family-prefixed ids, one client pool per family (nvidia-glm /
-  // nvidia-deepseek / nvidia-kimi / nvidia-meta — same base URL, same
-  // nvapi-... key). The anchor set is USER-PINNED; NO Nemotron (the user's
-  // ban). Probe-verified 2026-10-08 (reports/free-1/s0/).
+  // NVIDIA Build free endpoints — THE DISTRIBUTED PANTHEON's anchor lanes
+  // (#106, the 2026-10-16 rotation): family-prefixed ids, one client pool
+  // per family (nvidia-glm / nvidia-google / nvidia-step / nvidia-meta /
+  // nvidia-openai — same base URL, same nvapi-... key). The anchor set is
+  // USER-PINNED; NO Nemotron (the user's ban). Chat-probe-verified
+  // 2026-10-16 (glm-5.3 / gemma-4-31b-it / step-5-preview / muse-glimmer-30b
+  // / gpt-oss-20b all 200; glm-5.3-flash, kimi-k3, deepseek-v4.1-flash
+  // dead — removed).
   'nvidia-glm/z-ai/glm-5.3',
-  'nvidia-glm/z-ai/glm-5.3-flash',
-  'nvidia-kimi/moonshotai/kimi-k3',
+  'nvidia-google/google/gemma-4-31b-it',
+  'nvidia-step/stepfun-ai/step-5-preview',
   'nvidia-meta/meta/muse-glimmer-30b',
-  'nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash',
+  'nvidia-openai/openai/gpt-oss-20b',
 ];
 
 // Curated per-strategy per-god model maps — the canonical defaults shown in
@@ -260,16 +259,16 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     apollo: 'opencode-go/glm-5.3',
     atlas: 'opencode-go/hy3',
     hephaestus: 'opencode-go/kimi-k2.7-code',
-    athena: 'opencode-go/glm-5.3-flash',
-    artemis: 'opencode-go/glm-5.3',
-    dionysus: 'opencode-go/glm-5.3-flash',
+    athena: 'opencode-go/glm-5.3',
+    artemis: 'opencode-go/kimi-k3',
+    dionysus: 'opencode-go/glm-5.3',
     hermes: 'opencode-go/kimi-k2.7-code',
-    persephone: 'opencode-go/glm-5.3-flash',
+    persephone: 'opencode-go/glm-5.3',
     prometheus: 'opencode-go/minimax-m3',
     callimachus: 'opencode-go/glm-5.3-flash',
   },
   'go-balanced': {
-    apollo: 'opencode-go/glm-5.3-flash',
+    apollo: 'opencode-go/glm-5.3',
     atlas: 'opencode-go/hy3',
     hephaestus: 'opencode-go/kimi-k2.7-code',
     athena: 'opencode-go/qwen3.7-plus',
@@ -333,40 +332,40 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     callimachus: 'opencode/claude-haiku-4-5',
   },
   'free-big-pickle': {
-    apollo: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    atlas: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    artemis: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    athena: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    dionysus: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    hephaestus: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    hermes: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    persephone: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    prometheus: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    callimachus: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
+    apollo: 'nvidia-glm/z-ai/glm-5.3',
+    atlas: 'nvidia-glm/z-ai/glm-5.3',
+    artemis: 'nvidia-glm/z-ai/glm-5.3',
+    athena: 'nvidia-glm/z-ai/glm-5.3',
+    dionysus: 'nvidia-glm/z-ai/glm-5.3',
+    hephaestus: 'nvidia-glm/z-ai/glm-5.3',
+    hermes: 'nvidia-glm/z-ai/glm-5.3',
+    persephone: 'nvidia-glm/z-ai/glm-5.3',
+    prometheus: 'nvidia-glm/z-ai/glm-5.3',
+    callimachus: 'nvidia-glm/z-ai/glm-5.3',
   },
   'free-openrouter': {
-    apollo: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    atlas: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    artemis: 'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    athena: 'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    dionysus: 'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    hephaestus: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    hermes: 'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    persephone: 'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    prometheus: 'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    callimachus: 'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
+    apollo: 'openrouter/cohere/north-mini-code:free',
+    atlas: 'openrouter/cohere/north-mini-code:free',
+    artemis: 'openrouter/cohere/north-mini-code:free',
+    athena: 'openrouter/cohere/north-mini-code:free',
+    dionysus: 'openrouter/cohere/north-mini-code:free',
+    hephaestus: 'openrouter/cohere/north-mini-code:free',
+    hermes: 'openrouter/cohere/north-mini-code:free',
+    persephone: 'openrouter/cohere/north-mini-code:free',
+    prometheus: 'openrouter/cohere/north-mini-code:free',
+    callimachus: 'openrouter/cohere/north-mini-code:free',
   },
   'free-nvidia-build': {
     apollo: 'nvidia-glm/z-ai/glm-5.3',
-    atlas: 'nvidia-glm/z-ai/glm-5.3-flash',
-    artemis: 'nvidia-kimi/moonshotai/kimi-k3',
-    athena: 'nvidia-glm/z-ai/glm-5.3-flash',
+    atlas: 'nvidia-google/google/gemma-4-31b-it',
+    artemis: 'nvidia-meta/meta/muse-glimmer-30b',
+    athena: 'nvidia-step/stepfun-ai/step-5-preview',
     dionysus: 'nvidia-glm/z-ai/glm-5.3',
-    hephaestus: 'nvidia-kimi/moonshotai/kimi-k3',
+    hephaestus: 'nvidia-step/stepfun-ai/step-5-preview',
     hermes: 'nvidia-meta/meta/muse-glimmer-30b',
     persephone: 'nvidia-glm/z-ai/glm-5.3',
-    prometheus: 'nvidia-kimi/moonshotai/kimi-k3',
-    callimachus: 'nvidia-glm/z-ai/glm-5.3-flash',
+    prometheus: 'nvidia-openai/openai/gpt-oss-20b',
+    callimachus: 'nvidia-google/google/gemma-4-31b-it',
   },
 };
 
@@ -409,7 +408,7 @@ function fallbackData(): SettingsData {
     availableStrategies: [
       // shortened descriptions to prevent text overflow.
       // The old descriptions were too long for the 3-column card layout.
-	      { id: 'go-max-quality',  label: 'GO Max Quality',  description: 'Best models. Apollo: GLM-5.3. Specialists: Kimi K3 / K2.7 Code. Vault: Flash.', plan: 'GO', tier: 'quality',  terminalModel: 'glm-5.3',           estCostPerDay: 'higher' },
+	      { id: 'go-max-quality',  label: 'GO Max Quality',  description: 'Best quality (2026-10-16 upgrade). Apollo+Dionysus+Persephone: GLM-5.3. Athena: GLM-5.3. Artemis: Kimi K3. Hephaestus+Hermes: K2.7 Code. Atlas: Hy3. Prometheus: MiniMax M3. Vault: Flash — switch to go-balanced when the GLM-5.3 cap blows.', plan: 'GO', tier: 'quality',  terminalModel: 'glm-5.3',           estCostPerDay: 'higher' },
 	      { id: 'go-balanced',     label: 'GO Balanced',     description: 'Default. Apollo: GLM-5.3. Specialists: DeepSeek V4 Pro / Qwen3.7 Plus.',     plan: 'GO', tier: 'balanced', terminalModel: 'glm-5.3',           estCostPerDay: 'moderate' },
 	      { id: 'go-budget',       label: 'GO Budget',       description: 'Lowest cost. Apollo: GLM-5.3. Atlas: Hy3 (orchestration). All others: DeepSeek V4 Flash.',       plan: 'GO',  tier: 'budget',   terminalModel: 'hy3',            estCostPerDay: 'low' },
       // Zen — full 128-agent OLYMPUS on OpenCode Zen (pay-as-you-go).
@@ -417,9 +416,9 @@ function fallbackData(): SettingsData {
       { id: 'zen-balanced',    label: 'ZEN Balanced', description: 'Full OLYMPUS on OpenCode Zen — pay-as-you-go, no request caps. Apollo: GLM-5.3. Athena+Hephaestus: Claude Sonnet 5. Specialists: Kimi K2.7 Code.', plan: 'ZEN', tier: 'balanced', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'moderate' },
       { id: 'zen-budget',      label: 'ZEN Budget',   description: 'Lowest cost on OpenCode Zen — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. All others: MiniMax M2.7.', plan: 'ZEN', tier: 'budget', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'low' },
       // Free strategies — for users without a GO plan.
-      { id: 'free-openrouter', label: 'Free OpenRouter', description: 'All gods on OpenRouter\'s strongest free models live right now — primary trio on #1, specialists on #2, Callimachus on a fast background model.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', estCostPerDay: 'free' },
-      { id: 'free-big-pickle', label: 'Free Big Pickle', description: 'All 10 gods (Callimachus included) on one free model — the strongest currently live. Refreshes automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', estCostPerDay: 'free' },
-      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchors (GLM-5.3 / GLM-5.3-Flash / Kimi K3 / Muse Glimmer), per-family client pools, no single pool, NO Nemotron (the user\'s ban). The anchor set is pinned — the refresh verifies availability, never replaces.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
+      { id: 'free-openrouter', label: 'Free OpenRouter', description: 'All 10 gods on OpenRouter\'s strongest free model live right now (cohere/north-mini-code:free — probe-verified 2026-10-16, 256K ctx, 64K output). One pool, zero cost, one key.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/cohere/north-mini-code:free', estCostPerDay: 'free' },
+      { id: 'free-big-pickle', label: 'Free Big Pickle', description: 'All 10 gods (Callimachus included) on one free model — the strongest currently live. Refreshes automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
+      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchors (GLM-5.3 / Step 5 Preview / Gemma 4 31B / Muse Glimmer / GPT-OSS-20B — the 2026-10-16 rotation), per-family client pools, no single pool, NO Nemotron (the user\'s ban). The anchor set is pinned — the refresh verifies availability, never replaces.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
     ],
     go_plan_last_verified: '2026-07-29',
     go_plan_docs_url: 'https://opencode.ai/docs/go/',

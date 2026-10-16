@@ -45,7 +45,7 @@ const ROOT_PROVIDERS = path.join(process.cwd(), '.opencode', 'llm-providers.json
 // The `default_class` field is a legacy hint kept for backward-compat with
 // the Settings dialog's per-god override table.
 const GOD_META: Record<string, { icon: string; default_class: string }> = {
-  apollo:      { icon: 'apollo',     default_class: 'opencode-go/glm-5.3-flash' },
+  apollo:      { icon: 'apollo',     default_class: 'opencode-go/glm-5.3' },
   atlas:       { icon: 'git-fork',   default_class: 'opencode-go/hy3' },
   hephaestus:  { icon: 'hephaestus', default_class: 'opencode-go/kimi-k2.7-code' },
   athena:      { icon: 'athena',     default_class: 'opencode-go/qwen3.7-plus' },

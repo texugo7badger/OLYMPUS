@@ -92,15 +92,15 @@ function fallbackData(): ProviderSettingsData {
   return {
     strategy: 'go-balanced',
     availableStrategies: [
-	      { id: 'go-max-quality',  label: 'GO Max Quality',  description: 'Best quality. Apollo: GLM-5.3. Athena+Hephaestus: Kimi K3 (490/mo). Others: K2.7 Code. Vault: Flash. — switch to go-balanced when exhausted.', plan: 'GO',  tier: 'quality',  terminalModel: 'glm-5.3',           estCostPerDay: 'higher' },
+	      { id: 'go-max-quality',  label: 'GO Max Quality',  description: 'Best quality (2026-10-16 upgrade). Apollo+Dionysus+Persephone: GLM-5.3. Athena: GLM-5.3. Artemis: Kimi K3. Hephaestus+Hermes: K2.7 Code. Atlas: Hy3. Prometheus: MiniMax M3. Vault: Flash — switch to go-balanced when the GLM-5.3 cap blows.', plan: 'GO',  tier: 'quality',  terminalModel: 'glm-5.3',           estCostPerDay: 'higher' },
 	      { id: 'go-balanced',     label: 'GO Balanced',     description: 'Sustainable 8h/day. Apollo: GLM-5.3 (4,300/mo). Specialists: Qwen3.7 Plus (21,600/mo) + DeepSeek V4 Pro (17,150/mo).',     plan: 'GO',  tier: 'balanced', terminalModel: 'glm-5.3',           estCostPerDay: 'moderate' },
 	      { id: 'go-budget',       label: 'GO Budget',       description: 'Apollo: GLM-5.3. Atlas: Hy3. All others: DeepSeek V4 Flash.',                                        plan: 'GO',  tier: 'budget',   terminalModel: 'hy3',              estCostPerDay: 'low' },
       { id: 'zen-max-quality', label: 'ZEN Max Quality', description: 'Frontier quality on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. Athena+Hephaestus: Claude Sonnet 5. Others: GPT-5.4. Vault: Gemini 3.5 Flash.', plan: 'ZEN', tier: 'quality', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'higher' },
       { id: 'zen-balanced',    label: 'ZEN Balanced', description: 'Full OLYMPUS on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. Athena+Hephaestus: Claude Sonnet 5. Specialists: Kimi K2.7 Code. Vault: MiniMax M2.7.', plan: 'ZEN', tier: 'balanced', terminalModel: 'opencode/glm-5.3',  estCostPerDay: 'moderate' },
       { id: 'zen-budget',      label: 'ZEN Budget',   description: 'Lowest cost on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. All others: MiniMax M2.7.', plan: 'ZEN', tier: 'budget', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'low' },
-      { id: 'free-openrouter', label: 'Free OpenRouter', description: 'All gods on OpenRouter\'s strongest free models live right now — primary trio on #1, specialists on #2, Callimachus on a fast background model.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', estCostPerDay: 'free' },
-      { id: 'free-big-pickle', label: 'Free Big Pickle', description: 'All 10 gods (Callimachus included) on one free model — the strongest currently live, refreshed automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free', estCostPerDay: 'free' },
-      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchors (GLM-5.3 / GLM-5.3-Flash / Kimi K3 / Muse Glimmer), per-family client pools, no single pool, NO Nemotron (the user\'s ban). The anchor set is pinned — the refresh verifies availability, never replaces.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
+      { id: 'free-openrouter', label: 'Free OpenRouter', description: 'All 10 gods on OpenRouter\'s strongest free model live right now (cohere/north-mini-code:free — probe-verified 2026-10-16, 256K ctx, 64K output). One pool, zero cost, one key.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/cohere/north-mini-code:free', estCostPerDay: 'free' },
+      { id: 'free-big-pickle', label: 'Free Big Pickle', description: 'All 10 gods (Callimachus included) on one free model — the strongest currently live, refreshed automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
+      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchors (GLM-5.3 / Step 5 Preview / Gemma 4 31B / Muse Glimmer / GPT-OSS-20B — the 2026-10-16 rotation), per-family client pools, no single pool, NO Nemotron (the user\'s ban). The anchor set is pinned — the refresh verifies availability, never replaces.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
     ],
     customStrategies: [],
     availableProviders: [
@@ -539,7 +539,7 @@ export default function ProviderSettings() {
 
         <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mb-2">
           Keys live inside OpenCode (Settings → Providers) — OLYMPUS detects what is authorized there and
-          what each key unlocks. One key is enough (OpenRouter is the most reliable); NVIDIA Build adds the free GLM-5.3 / Nemotron endpoints. Free models are picked
+          what each key unlocks. One key is enough (OpenRouter is the most reliable); NVIDIA Build adds the free distributed pantheon endpoints (GLM-5.3 / Step 5 / Gemma 4 / Muse / GPT-OSS — zero Nemotron, the user ban). Free models are picked
           automatically from the live provider lists (refreshed daily or on demand).
         </div>
 

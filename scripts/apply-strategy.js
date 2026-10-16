@@ -158,30 +158,29 @@ const FREE_MODELS_REFRESH = loadFreeModelsRefresh();
 // a newly released flagship in the same run.
 const FREE_BIG_PICKLE_MODEL =
   process.env.OLYMPUS_BIG_PICKLE_MODEL ||
-  normalizeLiveId(FREE_MODELS_REFRESH?.openrouter?.top?.[0]?.id) ||
-  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free';
+  'nvidia-glm/z-ai/glm-5.3';
 
 function getBigPickleModel() {
   if (process.env.OLYMPUS_BIG_PICKLE_MODEL) return process.env.OLYMPUS_BIG_PICKLE_MODEL;
   const live = normalizeLiveId(loadFreeModelsRefresh()?.openrouter?.top?.[0]?.id);
-  return live || 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free';
+  return live || 'openrouter/cohere/north-mini-code:free';
 }
 
 const BUILTIN_STRATEGIES = {
   'go-max-quality': {
     apollo:       'opencode-go/glm-5.3',
     atlas:        'opencode-go/hy3',
-    artemis:      'opencode-go/glm-5.3',
-    athena:       'opencode-go/glm-5.3-flash',
-    dionysus:     'opencode-go/glm-5.3-flash',
+    artemis:      'opencode-go/kimi-k3',
+    athena:       'opencode-go/glm-5.3',
+    dionysus:     'opencode-go/glm-5.3',
     hephaestus:   'opencode-go/kimi-k2.7-code',
     hermes:       'opencode-go/kimi-k2.7-code',
-    persephone:   'opencode-go/glm-5.3-flash',
+    persephone:   'opencode-go/glm-5.3',
     prometheus:   'opencode-go/minimax-m3',
     callimachus:  'opencode-go/glm-5.3-flash',
   },
   'go-balanced': {
-    apollo:       'opencode-go/glm-5.3-flash',
+    apollo:       'opencode-go/glm-5.3',
     atlas:        'opencode-go/hy3',
     artemis:      'opencode-go/glm-5.3-flash',
     athena:       'opencode-go/qwen3.7-plus',
@@ -287,16 +286,16 @@ const BUILTIN_STRATEGIES = {
   // CURRENT top models from the live OpenRouter list.
   // Mirrors free-openrouter in src/lib/model-strategies.ts (check-strategy-sync).
   'free-openrouter': {
-    apollo:       'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    atlas:        'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    artemis:      'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    athena:       'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    dionysus:     'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    hephaestus:   'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-    hermes:       'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    persephone:   'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    prometheus:   'openrouter/nvidia/nemotron-3-super-120b-a12b:free',
-    callimachus:  'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
+    apollo:       'openrouter/cohere/north-mini-code:free',
+    atlas:        'openrouter/cohere/north-mini-code:free',
+    artemis:      'openrouter/cohere/north-mini-code:free',
+    athena:       'openrouter/cohere/north-mini-code:free',
+    dionysus:     'openrouter/cohere/north-mini-code:free',
+    hephaestus:   'openrouter/cohere/north-mini-code:free',
+    hermes:       'openrouter/cohere/north-mini-code:free',
+    persephone:   'openrouter/cohere/north-mini-code:free',
+    prometheus:   'openrouter/cohere/north-mini-code:free',
+    callimachus:  'openrouter/cohere/north-mini-code:free',
   },
   // Free Nvidia Build — THE DISTRIBUTED PANTHEON (#106, MADRUGA-FREE-1).
   // The user's directive: the maximum of the NVIDIA free catalog with
@@ -306,14 +305,23 @@ const BUILTIN_STRATEGIES = {
   // shape — apollo+atlas on nemotron-3-ultra, 7 gods on one glm-5.3 pool —
   // was the single point of failure.
   //
-  // The distribution law (asserted by scripts/free-pantheon.test.mjs):
-  // every god on exactly ONE family-prefixed anchor; the three heavy paths
-  // (apollo entry / athena frontend-kit / hephaestus build) on three
-  // DISTINCT pools; callimachus + vaultLlm on the flash lane (volume, not
-  // depth); <=3 gods per anchor; every assigned id probe-verified live
-  // (2026-10-08 — glm-5.3 200/834ms, glm-5.3-flash 200, kimi-k3 200/1181ms,
-  // muse-glimmer-30b 200/1963ms; deepseek-v4.1-flash DEAD ×3 timeouts —
-  // EXCLUDED, its family entry stays for the pinned set with zero gods).
+  // THE 2026-10-16 ROTATION: kimi-k3 died (410 end-of-life) and
+  // glm-5.3-flash died (30s timeouts) — the two anchors the old law leaned
+  // on. The catalog now has exactly TWO strong anchors (glm-5.3 and
+  // step-5-preview, both probe-verified) and three fast smalls. The
+  // distribution law (asserted by scripts/free-pantheon.test.mjs):
+  // every god on exactly ONE family-prefixed anchor; apollo's entry lane
+  // NEVER shared with athena or hephaestus (one dead pool can never kill
+  // the entry god together with a heavy code lane — the heavy three span
+  // >=2 pools; athena+hephaestus deliberately SHARE step-5, the strongest
+  // code anchor, because demoting either to a <=31B small would trade the
+  // build/frontend quality bar for a reliability nicety); callimachus +
+  // vaultLlm + small_model on the gemma-4-31b-it volume lane (glm-5.3-flash
+  // is dead — volume, not depth); <=3 gods per anchor; every assigned id
+  // chat-probed live 2026-10-16 (glm-5.3 200, step-5-preview 200,
+  // gemma-4-31b-it 200, muse-glimmer-30b 200, gpt-oss-20b 200; kimi-k3
+  // 410, glm-5.3-flash timeout, deepseek-v4.1-flash dead — all EXCLUDED
+  // and their family entries REMOVED).
   //
   // Model ids are family-prefixed (nvidia-glm/<vendor>/<model> etc.) — one
   // client pool per family (NVIDIA_FAMILY_PROVIDERS below writes the
@@ -322,15 +330,15 @@ const BUILTIN_STRATEGIES = {
   // src/lib/model-strategies.ts (check-strategy-sync).
   'free-nvidia-build': {
     apollo:       'nvidia-glm/z-ai/glm-5.3',
-    atlas:        'nvidia-glm/z-ai/glm-5.3-flash',
-    artemis:      'nvidia-kimi/moonshotai/kimi-k3',
-    athena:       'nvidia-glm/z-ai/glm-5.3-flash',
+    atlas:        'nvidia-google/google/gemma-4-31b-it',
+    artemis:      'nvidia-meta/meta/muse-glimmer-30b',
+    athena:       'nvidia-step/stepfun-ai/step-5-preview',
     dionysus:     'nvidia-glm/z-ai/glm-5.3',
-    hephaestus:   'nvidia-kimi/moonshotai/kimi-k3',
+    hephaestus:   'nvidia-step/stepfun-ai/step-5-preview',
     hermes:       'nvidia-meta/meta/muse-glimmer-30b',
     persephone:   'nvidia-glm/z-ai/glm-5.3',
-    prometheus:   'nvidia-kimi/moonshotai/kimi-k3',
-    callimachus:  'nvidia-glm/z-ai/glm-5.3-flash',
+    prometheus:   'nvidia-openai/openai/gpt-oss-20b',
+    callimachus:  'nvidia-google/google/gemma-4-31b-it',
   },
 };
 
@@ -338,14 +346,16 @@ const SMALL_MODEL_GO = 'opencode-go/glm-5.3-flash';
 // Zen (pay-as-you-go) uses the same Flash class for background tasks —
 // opencode/deepseek-v4-flash costs $0.14/$0.28 per 1M tokens on Zen.
 const SMALL_MODEL_ZEN = 'opencode/deepseek-v4-flash';
-// small_model runs title generation + compaction. A cheap OpenRouter free
-// model keeps those background calls off the flagship's shared pool.
-const SMALL_MODEL_FREE = 'openrouter/nvidia/nemotron-3-nano-30b-a3b:free';
-// #106: free-nvidia-build's small_model rides the strategy's own FAST lane
-// (GLM 5.3 Flash via the nvidia-glm family entry) — volume work (titles,
+// small_model runs title generation + compaction. The OpenRouter free
+// strategies ride the OpenRouter volume lane (cohere/north-mini-code:free —
+// probe-verified 2026-10-16, 256K ctx); zero cross-provider key needs.
+const SMALL_MODEL_FREE = 'openrouter/cohere/north-mini-code:free';
+// #106: the NVIDIA free strategies' small_model rides their own FAST lane
+// (Gemma 4 31B via the nvidia-google family entry — the 2026-10-16 volume
+// lane; glm-5.3-flash is DEAD at the pool) — volume work (titles,
 // compaction) on the volume lane, zero Nemotron (the user's ban covers the
 // whole family), zero cross-provider key requirements.
-export const SMALL_MODEL_FREE_NVIDIA = 'nvidia-glm/z-ai/glm-5.3-flash';
+export const SMALL_MODEL_FREE_NVIDIA = 'nvidia-google/google/gemma-4-31b-it';
 
 // Verified live free models with per-model output budgets. DOCTRINE
 // (MADRUGA-FIX-3, superseding the old 2048 rate-window caps): the 2048
@@ -358,31 +368,32 @@ export const SMALL_MODEL_FREE_NVIDIA = 'nvidia-glm/z-ai/glm-5.3-flash';
 // single-turn contract + the exit gate) — NOT the output mouth.
 // Models discovered by the live refresh are merged in at runtime by
 // getFreeModelLimits(); curated entries win when both exist.
+//
+// PROBE-VERIFIED 2026-10-16 (context windows from the live model cards —
+// honest, never inflated): the OpenRouter :free ids were re-probed against
+// /api/v1/models (ling-3.0-flash:free and gpt-oss-20b:free are GONE from
+// the free list; the 5 live nemotron:free variants stay excluded forever —
+// the user's ban); the NVIDIA family lanes were chat-probed one by one
+// (glm-5.3, gemma-4-31b-it, step-5-preview, muse-glimmer-30b, gpt-oss-20b
+// all 200; glm-5.3-flash timed out 30s, kimi-k3 410 end-of-life,
+// deepseek-v4.1-flash dead — all REMOVED).
 const FREE_MODEL_LIMITS = {
-  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free': { context: 1000000, output: 16384 },
-  'openrouter/nvidia/nemotron-3-super-120b-a12b:free': { context: 262144, output: 16384 },
-  'openrouter/inclusionai/ling-3.0-flash:free': { context: 262144, output: 16384 },
+  // OpenRouter free catalog (every id re-verified live 2026-10-16).
+  'openrouter/cohere/north-mini-code:free': { context: 256000, output: 16384 },
+  'openrouter/thinkingmachines/inkling:free': { context: 1048576, output: 16384 },
+  'openrouter/thinkingmachines/inkling-small:free': { context: 1048576, output: 16384 },
   'openrouter/google/gemma-4-31b-it:free': { context: 262144, output: 16384 },
   'openrouter/google/gemma-4-26b-a4b-it:free': { context: 262144, output: 16384 },
   'openrouter/poolside/laguna-s-2.1:free': { context: 262144, output: 16384 },
-  'openrouter/openai/gpt-oss-20b:free': { context: 131072, output: 16384 },
-  'openrouter/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free': { context: 256000, output: 16384 },
   'openrouter/poolside/laguna-xs-2.1:free': { context: 262144, output: 16384 },
-  'openrouter/cohere/north-mini-code:free': { context: 256000, output: 16384 },
-  'openrouter/nvidia/nemotron-3-nano-30b-a3b:free': { context: 256000, output: 16384 },
-  // NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON's anchor lanes
-  // (#106): family-prefixed ids (one client pool per family). The
-  // /models API does not report context_length — these are the LIVE MODEL
-  // CARD windows, verified 2026-10-08 (E8 record:
-  // reports/free-1/s0/E8-LIVE-MODEL-VERIFICATION.md): kimi-k3 1,048,576
-  // (build.nvidia.com/moonshotai/kimi-k3), muse-glimmer-30b 131,072
-  // (build.nvidia.com/meta/muse-glimmer-30b) — never inflated. The old
-  // single-provider nvidia/* lanes (the nemotron pool era) are GONE.
+  // NVIDIA Build free endpoints — THE DISTRIBUTED PANTHEON's anchor lanes
+  // (#106, the 2026-10-16 rotation): family-prefixed ids (one client pool
+  // per family), each lane chat-probed live the same night.
   'nvidia-glm/z-ai/glm-5.3': { context: 1000000, output: 16384 },
-  'nvidia-glm/z-ai/glm-5.3-flash': { context: 1000000, output: 16384 },
-  'nvidia-kimi/moonshotai/kimi-k3': { context: 1048576, output: 16384 },
+  'nvidia-google/google/gemma-4-31b-it': { context: 262144, output: 16384 },
+  'nvidia-step/stepfun-ai/step-5-preview': { context: 1000000, output: 16384 },
   'nvidia-meta/meta/muse-glimmer-30b': { context: 131072, output: 16384 },
-  'nvidia-deepseek/deepseek-ai/deepseek-v4.1-flash': { context: 1000000, output: 16384 },
+  'nvidia-openai/openai/gpt-oss-20b': { context: 131072, output: 16384 },
 };
 
 /**
@@ -395,8 +406,11 @@ const FREE_MODEL_LIMITS = {
  * config dispatched nvidia-glm/z-ai/glm-5.3 "OK" through exactly this
  * shape — npm @ai-sdk/openai-compatible + options.baseURL + auth.json key).
  *
- * The deepseek family entry stays in the pinned anchor set but carries ZERO
- * gods tonight — the pool was dead at the E8 probe (3× timeouts, disclosed).
+ * The 2026-10-16 rotation: the dead families (nvidia-kimi — the kimi-k3
+ * anchor 410'd end-of-life; nvidia-deepseek — the v4.1-flash pool dead at
+ * three consecutive probes) are REMOVED. Five families remain, every one
+ * chat-probed live the same night: glm-5.3, gemma-4-31b-it, step-5-preview,
+ * muse-glimmer-30b, gpt-oss-20b.
  */
 export const NVIDIA_FAMILY_PROVIDERS = {
   'nvidia-glm': {
@@ -410,35 +424,29 @@ export const NVIDIA_FAMILY_PROVIDERS = {
         reasoning: true,
         tool_call: true,
       },
-      'z-ai/glm-5.3-flash': {
-        name: 'GLM 5.3 Flash (fast multimodal — the volume lane)',
-        limit: { context: 1000000, output: 16384 },
+    },
+  },
+  'nvidia-google': {
+    name: 'NVIDIA Build — Gemma family lane (the volume lane)',
+    npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: 'https://integrate.api.nvidia.com/v1' },
+    models: {
+      'google/gemma-4-31b-it': {
+        name: 'Gemma 4 31B IT (multimodal instruct — the fast lane)',
+        limit: { context: 262144, output: 16384 },
         reasoning: true,
         tool_call: true,
       },
     },
   },
-  'nvidia-deepseek': {
-    name: 'NVIDIA Build — DeepSeek family lane (pinned anchor; pool dead at the 2026-10-08 probe — zero gods until it recovers)',
+  'nvidia-step': {
+    name: 'NVIDIA Build — Step family lane (long-context code)',
     npm: '@ai-sdk/openai-compatible',
     options: { baseURL: 'https://integrate.api.nvidia.com/v1' },
     models: {
-      'deepseek-ai/deepseek-v4.1-flash': {
-        name: 'DeepSeek V4.1 Flash (552B MoE, 8B active)',
+      'stepfun-ai/step-5-preview': {
+        name: 'Step 5 Preview (1M-context coder — the frontend+build lane)',
         limit: { context: 1000000, output: 16384 },
-        reasoning: true,
-        tool_call: true,
-      },
-    },
-  },
-  'nvidia-kimi': {
-    name: 'NVIDIA Build — Kimi family lane (long-horizon coding)',
-    npm: '@ai-sdk/openai-compatible',
-    options: { baseURL: 'https://integrate.api.nvidia.com/v1' },
-    models: {
-      'moonshotai/kimi-k3': {
-        name: 'Kimi K3 (2.8T MoE, 104B active, agentic)',
-        limit: { context: 1048576, output: 16384 },
         reasoning: true,
         tool_call: true,
       },
@@ -451,6 +459,19 @@ export const NVIDIA_FAMILY_PROVIDERS = {
     models: {
       'meta/muse-glimmer-30b': {
         name: 'Muse Glimmer 30B (multimodal reasoning, tool-calling)',
+        limit: { context: 131072, output: 16384 },
+        reasoning: true,
+        tool_call: true,
+      },
+    },
+  },
+  'nvidia-openai': {
+    name: 'NVIDIA Build — OpenAI family lane',
+    npm: '@ai-sdk/openai-compatible',
+    options: { baseURL: 'https://integrate.api.nvidia.com/v1' },
+    models: {
+      'openai/gpt-oss-20b': {
+        name: 'GPT-OSS 20B (open-weights MoE, 3.6B active)',
         limit: { context: 131072, output: 16384 },
         reasoning: true,
         tool_call: true,
@@ -768,7 +789,7 @@ function buildOpenRouterMixed() {
       log(`  Free OpenRouter: primary roles -> ${live} (live #1 from refresh)`);
       return live;
     }
-    return 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free';
+    return 'openrouter/cohere/north-mini-code:free';
   };
 
   // Specialist gods → the second-strongest free model, but only if it can
@@ -1261,8 +1282,9 @@ function applyNvidiaFamilyProviders(config) {
 }
 
 /**
- * Mirror the user's `nvidia` auth.json key to the four family provider ids
- * (nvidia-glm / nvidia-deepseek / nvidia-kimi / nvidia-meta) — the standard
+ * Mirror the user's `nvidia` auth.json key to the five family provider ids
+ * (nvidia-glm / nvidia-google / nvidia-step / nvidia-meta / nvidia-openai —
+ * the 2026-10-16 lane set; the dead families are removed) — the standard
  * /connect flow's storage, keyed by provider id. NO new secrets are
  * introduced (the same nvapi-... key, under aliases); auth.json is never
  * tracked by git. Absent family entries are written; existing ones are
@@ -1708,10 +1730,11 @@ function applyFreeConfigShape(config, modelMap, strategy) {
   }
 
   // --- 5. small_model ---
-  // #106: free-nvidia-build's small_model rides the strategy's own flash
-  // lane (volume work on the volume lane, zero Nemotron, zero cross-provider
-  // key needs). The other free strategies keep the OpenRouter nano default.
-  const expectedSmallModel = strategy === 'free-nvidia-build'
+  // #106: the NVIDIA free strategies (free-nvidia-build + free-big-pickle)
+  // ride their own volume lane (gemma-4-31b-it — volume work on the volume
+  // lane, zero Nemotron, zero cross-provider key needs). The OpenRouter
+  // free strategies keep the OpenRouter cohere:free default.
+  const expectedSmallModel = (strategy === 'free-nvidia-build' || strategy === 'free-big-pickle')
     ? SMALL_MODEL_FREE_NVIDIA
     : FREE_CONFIG_SHAPE.small_model;
   if (config.small_model !== expectedSmallModel) {
@@ -1809,7 +1832,9 @@ function preflightModelCatalogue(config, opts = {}) {
   // Build endpoint, routed through a per-family client pool; before the
   // first apply writes the family providers, `opencode models nvidia-glm`
   // would report "Provider not found" (the probe reads the on-disk config).
-  const FAMILY_PROVIDER_RE = /^(nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta)$/;
+  // The 2026-10-16 lane set: glm / google / step / meta / openai (the dead
+  // families deepseek/kimi stay matched for legacy configs).
+  const FAMILY_PROVIDER_RE = /^(nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia-google|nvidia-step|nvidia-openai)$/;
   const byProvider = new Map();
   for (const id of ids) {
     const family = id.split('/')[0];
@@ -2092,7 +2117,7 @@ Strategy shapes:
     - God prompts inlined + truncated (OpenRouter/NVIDIA: 1000 chars)
     - Plugin array trimmed to 4 (overlay + router + cache + context-cache)
     - Single short instruction string
-    - small_model = openrouter/nvidia/nemotron-3-nano-30b-a3b:free
+    - small_model = openrouter/cohere/north-mini-code:free
     - Provider output caps applied (free models can't take 32K max_tokens)
     - When ~/.olympus/free-models.json is fresh (≤ 7 days), gods route to
       the CURRENT top free models from the live provider lists

@@ -3,22 +3,34 @@
  * free-pantheon.test.mjs — #106 (MADRUGA-FREE-1): the distributed pantheon
  * doctrine, asserted as code. Run: npx tsx scripts/free-pantheon.test.mjs
  *
- * THE DOCTRINE (the user's directive, 2026-10-08):
+ * THE DOCTRINE (the user's directive, 2026-10-08; revised 2026-10-16 after
+ * the kimi-k3 410 and the glm-5.3-flash pool death):
  *   1. THE BAN — zero gods (and zero vault/small lanes) on any `nemotron-*`
  *      id, forever. The user's ban: low effective context + the observed
  *      contention pool ("Service temporarily overloaded" — 503-class
  *      per-model serving-pool contention, NOT the 40-RPM key limit).
  *   2. THE LANES — every god on exactly ONE anchor model, routed through its
- *      per-family provider entry (nvidia-glm / nvidia-deepseek / nvidia-kimi
- *      / nvidia-meta — "different endpoints per god", client-pool
- *      isolation on top of the serving-pool diversity).
- *   3. THE HEAVY THREE — apollo's entry lane, athena's frontend-kit lane,
- *      hephaestus's build lane NEVER share a pool (three distinct anchors).
- *   4. THE VOLUME LANE — callimachus + vaultLlm on the FAST lane
- *      (z-ai/glm-5.3-flash — heartbeat/summarizer work is volume, not depth).
+ *      per-family provider entry (nvidia-glm / nvidia-google / nvidia-step
+ *      / nvidia-meta / nvidia-openai — "different endpoints per god",
+ *      client-pool isolation on top of the serving-pool diversity. The
+ *      dead families nvidia-kimi/nvidia-deepseek are REMOVED, not parked).
+ *   3. THE HEAVY THREE — REVISED 2026-10-16: the catalog now holds exactly
+ *      TWO strong anchors (glm-5.3 + step-5-preview, both probe-verified).
+ *      The old three-distinct-pools law assumed three strong anchors and
+ *      died with kimi-k3. The revised law keeps its spirit: apollo's entry
+ *      lane is NEVER shared with athena or hephaestus (a dead pool can
+ *      never take the entry god down together with a heavy code lane),
+ *      and the heavy three span >= 2 distinct pools. athena + hephaestus
+ *      deliberately share step-5-preview — the strongest code anchor —
+ *      because demoting either to a <=31B small would trade the
+ *      build/frontend quality bar for a reliability nicety.
+ *   4. THE VOLUME LANE — callimachus + vaultLlm + small_model on the FAST
+ *      lane (google/gemma-4-31b-it — the 2026-10-16 volume lane;
+ *      glm-5.3-flash is DEAD. Heartbeat/summarizer work is volume, not
+ *      depth).
  *   5. THE CAP — no more than 3 gods on any single anchor model.
  *   6. THE LIVE SET — every assigned model id exists in the live-ids
- *      snapshot (probe-verified 2026-10-07/08 — a claim about model
+ *      snapshot (chat-probe-verified 2026-10-16 — a claim about model
  *      availability carries probe evidence or it is not made, #105).
  *   7. THE MIRRORS — all four strategy-map surfaces agree (canonical
  *      model-strategies.ts + apply-strategy.js BUILTIN_STRATEGIES +
@@ -32,12 +44,14 @@
  *      generator (npm @ai-sdk/openai-compatible + the NVIDIA base URL),
  *      each carrying ONLY its family's models.
  *  10. THE SMALL MODEL — the strategy's small_model (title/compaction
- *      volume work) rides the flash lane too. Zero nemotron anywhere.
+ *      volume work) rides the volume lane too. Zero nemotron anywhere.
  *  11. THE TERMINAL — the top-level model == apollo's lane (the entry god).
  *
  * RED proven against the pre-cure code (2026-10-08): the suite named
  * nemotron-3-ultra-550b on apollo/atlas + nano-omni on callimachus/vaultLlm —
- * the #106 defect, proven. GREEN after the cure.
+ * the #106 defect, proven. GREEN after the cure. Re-baselined 2026-10-16
+ * against the post-rotation distribution (the five-family lane set, the
+ * gemma volume lane, the revised heavy-three law).
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -50,16 +64,17 @@ const ROOT = path.resolve(__dirname, '..');
 
 const GODS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus',
   'hermes', 'persephone', 'prometheus', 'callimachus'];
-const FAMILIES = ['nvidia-glm', 'nvidia-deepseek', 'nvidia-kimi', 'nvidia-meta'];
-// The honest windows (live model cards, verified 2026-10-08 — E8 record:
-// reports/free-1/s0/E8-LIVE-MODEL-VERIFICATION.md; kimi-k3 1,048,576;
-// muse-glimmer-30b 131,072 — NOT inflated).
+const FAMILIES = ['nvidia-glm', 'nvidia-google', 'nvidia-step', 'nvidia-meta', 'nvidia-openai'];
+// The honest windows (live model cards + the 2026-10-16 chat probes:
+// glm-5.3 200, gemma-4-31b-it 200, step-5-preview 200, muse-glimmer-30b
+// 200, gpt-oss-20b 200; kimi-k3 410 end-of-life, glm-5.3-flash 30s
+// timeout, deepseek-v4.1-flash dead — none inflated, none assumed).
 const HONEST_CONTEXT = {
   'z-ai/glm-5.3': 1000000,
-  'z-ai/glm-5.3-flash': 1000000,
-  'moonshotai/kimi-k3': 1048576,
+  'google/gemma-4-31b-it': 262144,
+  'stepfun-ai/step-5-preview': 1000000,
   'meta/muse-glimmer-30b': 131072,
-  'deepseek-ai/deepseek-v4.1-flash': 1000000,
+  'openai/gpt-oss-20b': 131072,
 };
 const FLOOR_OUTPUT = 8192;
 const TARGET_OUTPUT = 16384;
@@ -79,7 +94,7 @@ function read(p) {
 // Values are 'provider/model' ids — the character class covers letters,
 // digits, '.', ':', '/', '-', '_'. Family prefixes (nvidia-glm etc.) are
 // matched BEFORE the plain `nvidia` (ordered alternation).
-const PROVIDER_ALT = 'opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia';
+const PROVIDER_ALT = 'opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia-google|nvidia-step|nvidia-openai|nvidia';
 function extractGods(block) {
   const gods = {};
   const re = new RegExp(`([a-z]+):\\s*['"]((${PROVIDER_ALT})\\/[a-z0-9._:/-]+)['"]`, 'g');
@@ -88,7 +103,7 @@ function extractGods(block) {
   return gods;
 }
 
-// model-strategies.ts: the 'free-nvidia-build' strategy block (nested `gods:`).
+// model-strategies.ts: the 'free-nvidia-build' strategy block (nested `gods`).
 const msSrc = read(path.join(ROOT, 'src/lib/model-strategies.ts'));
 const msBlockMatch = msSrc.match(/'free-nvidia-build':\s*\{[\s\S]*?\n  \},\n\};/);
 if (!msBlockMatch) throw new Error('free-nvidia-build block not found in model-strategies.ts');
@@ -115,10 +130,10 @@ const dlgBlockMatch = dlgSrc.match(/'free-nvidia-build':\s*\{([\s\S]*?)\n  \},/)
 if (!dlgBlockMatch) throw new Error('free-nvidia-build mirror not found in settings-dialog.tsx');
 const dlgGods = extractGods(dlgBlockMatch[1]);
 
-// The live-ids snapshot (probe-verified 2026-10-07, committed at
-// reports/gap-1/s3/ — the E8 re-verification of the same list lives in
-// reports/free-1/s0/E8-LIVE-MODEL-VERIFICATION.md).
-const liveIds = JSON.parse(read(path.join(ROOT, 'reports/gap-1/s3/nvidia-live-ids-2026-10-07.json')));
+// The live-ids snapshot (chat-probe-verified 2026-10-16 — every id was sent
+// a real completion, not merely catalog-listed; the /models catalog carries
+// 404-dead entries, only the probe tells the truth).
+const liveIds = JSON.parse(read(path.join(ROOT, 'reports/gap-1/s3/nvidia-live-ids-2026-10-16.json')));
 
 // The generator tables (import the apply module — same pattern as
 // budget-guard.test.mjs).
@@ -143,24 +158,29 @@ check('THE BAN: zero nemotron-* ids in the free-nvidia-build assignment (gods + 
 const laneOffenders = GODS
   .filter(g => !canonicalGods[g] || !FAMILIES.some(f => canonicalGods[g].startsWith(f + '/')))
   .map(g => `${g}=${canonicalGods[g] || '(missing)'}`);
-check('THE LANES: all 10 gods on per-family provider lanes (nvidia-glm/-deepseek/-kimi/-meta)',
+check('THE LANES: all 10 gods on per-family provider lanes (nvidia-glm/-google/-step/-meta/-openai)',
   laneOffenders.length === 0,
   `gods not on a family lane: ${laneOffenders.join(', ')}`);
 
-// --- 3. THE HEAVY THREE: three distinct pools --------------------------------
-const heavyThree = ['apollo', 'athena', 'hephaestus'].map(g => canonicalGods[g]);
-const heavyDistinct = new Set(heavyThree).size === 3;
-check('THE HEAVY THREE: apollo / athena / hephaestus on three DIFFERENT anchors',
-  heavyDistinct,
-  `the three heaviest paths share a pool: apollo=${heavyThree[0]}, athena=${heavyThree[1]}, hephaestus=${heavyThree[2]}`);
+// --- 3. THE HEAVY THREE: apollo's lane exclusive; >=2 pools (2026-10-16) ----
+// The catalog holds exactly two strong anchors post-kimi-k3-death; the law's
+// spirit (a dead pool never kills the entry god together with a heavy code
+// lane) is preserved: athena/hephaestus NEVER ride apollo's anchor.
+const heavyOffenders = ['athena', 'hephaestus']
+  .filter(g => canonicalGods[g] === canonicalGods.apollo)
+  .map(g => `${g} shares apollo's pool: ${canonicalGods[g]}`);
+const heavyPools = new Set(['apollo', 'athena', 'hephaestus'].map(g => canonicalGods[g]));
+check('THE HEAVY THREE: athena/hephaestus NEVER on apollo\'s anchor + the heavy three span >=2 pools',
+  heavyOffenders.length === 0 && heavyPools.size >= 2,
+  `entry-lane sharing: ${heavyOffenders.join(', ') || 'none'}; pools=${[...heavyPools].join(', ')}`);
 
-// --- 4. THE VOLUME LANE: callimachus + vault on the flash lane --------------
-const flash = 'nvidia-glm/z-ai/glm-5.3-flash';
-check('THE VOLUME LANE: callimachus on the flash lane (z-ai/glm-5.3-flash)',
+// --- 4. THE VOLUME LANE: callimachus + vault + small on the fast lane --------
+const flash = 'nvidia-google/google/gemma-4-31b-it';
+check('THE VOLUME LANE: callimachus on the fast lane (google/gemma-4-31b-it)',
   canonicalGods.callimachus === flash, `callimachus=${canonicalGods.callimachus}`);
-check('THE VOLUME LANE: vaultLlm on the flash lane',
+check('THE VOLUME LANE: vaultLlm on the fast lane',
   vaultLlm === flash, `vaultLlm=${vaultLlm}`);
-check('THE VOLUME LANE: the strategy small_model on the flash lane (volume, not depth)',
+check('THE VOLUME LANE: the strategy small_model on the fast lane (volume, not depth)',
   smallModelNvidia === flash, `small_model(free-nvidia-build)=${smallModelNvidia}`);
 
 // --- 5. THE CAP: <=3 gods per anchor -----------------------------------------
@@ -262,11 +282,18 @@ check('#93: the prose class is LINTED (check-strategy-sync carries the GO-CARD-P
 }
 
 // --- 8. THE GENERATOR: family lanes only, honest limits ---------------------
+// The family -> vendor-prefix map for the 2026-10-16 five-family lane set.
+const FAMILY_VENDOR_PREFIX = {
+  'nvidia-glm': 'z-ai/',
+  'nvidia-google': 'google/',
+  'nvidia-step': 'stepfun-ai/',
+  'nvidia-meta': 'meta/',
+  'nvidia-openai': 'openai/',
+};
 const familyLaneIds = FAMILIES.flatMap(f =>
-  Object.keys(HONEST_CONTEXT).filter(m => {
-    const fam = f.replace('nvidia-', '');
-    return m.startsWith(fam === 'glm' ? 'z-ai/' : fam === 'kimi' ? 'moonshotai/' : fam === 'meta' ? 'meta/' : 'deepseek-ai/');
-  }).map(m => `${f}/${m}`));
+  Object.keys(HONEST_CONTEXT)
+    .filter(m => m.startsWith(FAMILY_VENDOR_PREFIX[f]))
+    .map(m => `${f}/${m}`));
 for (const id of familyLaneIds) {
   const lim = limits[id];
   check(`THE GENERATOR: ${id} present with output ${TARGET_OUTPUT}`,
@@ -282,15 +309,16 @@ check('THE GENERATOR: every table lane sized >= the #76 floor (8192)',
   underFloor.length === 0, `under-floor: ${underFloor.map(([id, l]) => `${id}=${l.output}`).join(', ')}`);
 
 // --- 9. THE PROVIDER SPLIT: per-family entries, per-family subsets ----------
-check('THE PROVIDER SPLIT: all four family entries defined in the generator',
+check('THE PROVIDER SPLIT: all five family entries defined in the generator',
   !!familyProviders && FAMILIES.every(f => familyProviders[f]),
   `NVIDIA_FAMILY_PROVIDERS keys: ${familyProviders ? Object.keys(familyProviders).join(', ') : '(absent)'}`);
 if (familyProviders) {
   const EXPECTED_MODELS = {
-    'nvidia-glm': ['z-ai/glm-5.3', 'z-ai/glm-5.3-flash'],
-    'nvidia-deepseek': ['deepseek-ai/deepseek-v4.1-flash'],
-    'nvidia-kimi': ['moonshotai/kimi-k3'],
+    'nvidia-glm': ['z-ai/glm-5.3'],
+    'nvidia-google': ['google/gemma-4-31b-it'],
+    'nvidia-step': ['stepfun-ai/step-5-preview'],
     'nvidia-meta': ['meta/muse-glimmer-30b'],
+    'nvidia-openai': ['openai/gpt-oss-20b'],
   };
   for (const f of FAMILIES) {
     const fp = familyProviders[f] || {};

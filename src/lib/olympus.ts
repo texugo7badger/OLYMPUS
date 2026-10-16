@@ -136,7 +136,7 @@ function parseFrontmatter(file: string): Record<string, any> {
 // Do NOT edit by hand — update the canonical file and run `npm run check-strategy-sync`.
 // Enforced by scripts/check-strategy-sync.js in CI.
 const GOD_META: Record<string, { icon: string; domain: string; model: string; caveman: string; army: number }> = {
-  apollo:      { icon: 'apollo',     domain: 'Planner — Architecture, Spec',       model: 'opencode-go/glm-5.3-flash',   caveman: 'never', army: 8 },
+  apollo:      { icon: 'apollo',     domain: 'Planner — Architecture, Spec',       model: 'opencode-go/glm-5.3',   caveman: 'never', army: 8 },
   atlas:       { icon: 'git-fork',   domain: 'Orchestrator — Dispatch, Execution', model: 'opencode-go/hy3',             caveman: 'never', army: 6 },
   hephaestus:  { icon: 'hephaestus', domain: 'Backend / Infrastructure',           model: 'opencode-go/kimi-k2.7-code',  caveman: 'full',  army: 30 },
   athena:      { icon: 'athena',     domain: 'Frontend / UX-UI / Design',          model: 'opencode-go/qwen3.7-plus',    caveman: 'never', army: 7 },

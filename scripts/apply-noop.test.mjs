@@ -130,7 +130,7 @@ try {
   // --- The temp config really was mutated by apply-1 only ------------------
   const cfgAfter = JSON.parse(fs.readFileSync(path.join(TMP_ROOT, 'opencode.json'), 'utf-8'));
   expect('apply-1 granted the free-tier toolset (L1)', cfgAfter.agent?.apollo?.tools?.['olympus-dispatch'], true);
-  expect('apply-1 set the free small_model', cfgAfter.small_model, 'openrouter/nvidia/nemotron-3-nano-30b-a3b:free');
+  expect('apply-1 set the free small_model', cfgAfter.small_model, 'openrouter/cohere/north-mini-code:free');
 } finally {
   fs.rmSync(TMP_BASE, { recursive: true, force: true });
 }
