@@ -636,6 +636,9 @@ async function main() {
   expect('D2: the design-score check exists in the verify (the review gate)',
     /design-score:/.test(fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/verify.ts', 'utf-8')),
     'the verify only checks file-exists + build — nothing gates the visual quality');
+  expect('D2+: the page-styles extractor exists (the CDP-adjacent visual data for text-only models)',
+    fs.existsSync(OLYMPUS + '/scripts/extract-page-styles.mjs') && /slopSignals/.test(fs.readFileSync(OLYMPUS + '/scripts/extract-page-styles.mjs', 'utf-8')),
+    'the design-review god critiques source code without seeing the real page — no slop detection');
   expect('D3: the self-correction loop (the fix hops from the review)',
     /fixInstructions/.test(postRunSrc) && /design-fix-/.test(postRunSrc) && /_designIterations/.test(postRunSrc),
     'the design review parks but nobody repairs — the anti-slop gate has no teeth');

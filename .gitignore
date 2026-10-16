@@ -111,3 +111,5 @@ vault-test-*/
 vault-sim/
 vault-sim*/
 .tmp-*.mts
+.superpowers
+reports/

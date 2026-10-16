@@ -2,10 +2,25 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
-The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [v0.0.3] — 2026-10-13
 
-Categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
+The fix-OLYMPUS-itself release. Two campaigns + five UAT rounds + the Design Intelligence evolution — the machine that couldn't deliver a project now delivers one, critiques it, and self-corrects.
+
+### The Campaign Arcs
+
+**PLANO-MASTER-1** (12 merges): the four UAT symptoms — OPACITY, CONTEXT, LOCAL, INTERACTIVITY — all dead with evidence. The plan is WALKED by the product flow (wire-the-walk), the orphan lane loses to the intake home (note-home), the dev-server has dignity (deps before spawn + staged patience), the planner contract rides inline, the HITL gates are wired (Pantheon + terminal), the build banner names both halves, the Lumina CRM acceptance test PASSED (14/14 hops walked, the house gate 7/7, HTTP 200, the URL live).
+
+**HIGIENIA-1+2** (9 merges): 18 of 23 open issues closed — the guard's surface declaration, the GO-prose reconciliation (11 surfaces + the GO-CARD-PROSE lint), the battery contract (npm run battery), the root-lane kill-switch, the one-shot retry+watchdog, the crash-recovery reader, the instinct RAG wired into BOTH dispatch paths, the RLM learning loop run LIVE (the first empirical instinct promoted from real outcomes), the drift detector, the Callimachus certification mark EARNED, the CDP-vs-Playwright decision, the sizing matrix with live evidence.
+
+**UAT-2 through UAT-5** (5 merges): the lane-root pin (the planner marker carries the ABSOLUTE home path), the gate short-circuit (regex matching for choice labels + the already-resolved path + the Pantheon walk trigger), the execution law (NEVER hand-build what the walker should walk), the .opencode symlink, the peak-hour evolution (OLYMPUS_HOP_VARIANT=low cuts thinking tokens ~83%), the conversation continuity, the continuation guard, the env-tunable max-runtime.
+
+**DESIGN-INTELLIGENCE** (this merge): the anti-AI-slop evolution. The [OLYMPUS-DESIGN] marker (distinctive typography, bold accent, 3+ elevation layers, personality-required components, generic shadcn clones FORBIDDEN), the cultural context detection (PT-BR → Brazilian fixtures), the design-review gate (design-score:7 — the Athena critiques the output 0-10), the SELF-CORRECTION LOOP (the walker reads the review's fixInstructions, generates fix hops, walks them, re-reviews — max 2 iterations), the RESIDUE CLEANUP (the deliverable contains ONLY deliverable files), the page-styles extractor (CDP-adjacent visual data for text-only models — slop signals, font checks, spacing generosity, component quality signals from the served page).
+
+### The Standing Rules Born
+- #101: the close-out is a FILE on disk before any chat summary.
+- #105: verified ≠ claimed — every green cites a probe.
+- The execution law: when a plan exists, the HOP RUNTIME is the ONLY engine — the god plans, the machine walks.
+- The design law: every component must have ONE distinctive detail. Generic shadcn clones are FORBIDDEN.
 
 ## [v0.0.2] — 2026-10-05
 
