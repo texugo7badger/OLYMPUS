@@ -22,9 +22,10 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { appendFileSync, copyFileSync, existsSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
+import { syncLaneFile } from '@/lib/lane-config';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
 import { loadHopState, saveHopState, hopStatePath, type HopPark } from './hop-state';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
@@ -316,15 +317,16 @@ export function ensureLaneConfig(laneRoot: string): void {
   const dstDotOpenCode = join(laneRoot, '.opencode');
   try {
     const root = findOlympusRoot();
-    // (a) the config copy — the model lanes + the strategy context
-    if (!existsSync(dst)) {
-      const src = join(root, 'opencode.json');
-      if (existsSync(src)) copyFileSync(src, dst);
-    }
-    // (b) the demigods copy — the dispatch registry
-    if (!existsSync(dstDemigods)) {
-      const srcDemigods = join(root, 'opencode.demigods.json');
-      if (existsSync(srcDemigods)) copyFileSync(srcDemigods, dstDemigods);
+    // (a)+(b) the config + demigods copies — #LANE-DRIFT: REFRESH-ON-DRIFT,
+    // never created-if-missing. A lane created in an earlier era would
+    // otherwise ride its fossil model map forever (the 2026-10-16
+    // specimen: the workspace lane survived two rotations on the banned
+    // nemotron pool). The lane mirrors the root — operator edits belong
+    // in the root config.
+    const verdictCfg = syncLaneFile(join(root, 'opencode.json'), dst);
+    const verdictDemigods = syncLaneFile(join(root, 'opencode.demigods.json'), dstDemigods);
+    if (verdictCfg === 'refreshed' || verdictDemigods === 'refreshed') {
+      console.log(`[lane-config] lane ${laneRoot} drifted from the root config — REFRESHED (cfg=${verdictCfg}, demigods=${verdictDemigods})`);
     }
     // (c) THE .opencode SYMLINK — the piece the #99 lanes always had and
     // the UAT-4 specimen proved is load-bearing: the config's `{file:...}`

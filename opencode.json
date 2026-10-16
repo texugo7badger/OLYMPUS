@@ -436,31 +436,28 @@
   "provider": {
     "openrouter": {
       "models": {
-        "openai/gpt-oss-20b:free": {
-          "limit": {
-            "context": 131072,
-            "output": 16384
-          }
-        },
-        "inclusionai/ling-3.0-flash:free": {
-          "limit": {
-            "context": 262144,
-            "output": 16384
-          }
-        },
-        "nvidia/nemotron-3-nano-30b-a3b:free": {
+        "cohere/north-mini-code:free": {
+          "name": "Cohere North Mini Code (free — the free-openrouter anchor, 256K ctx)",
+          "reasoning": true,
+          "tool_call": true,
           "limit": {
             "context": 256000,
             "output": 16384
           }
         },
-        "nvidia/nemotron-3-ultra-550b-a55b:free": {
+        "thinkingmachines/inkling:free": {
+          "name": "Thinking Machines Inkling (free — 1M ctx)",
+          "reasoning": true,
+          "tool_call": true,
           "limit": {
-            "context": 1000000,
+            "context": 1048576,
             "output": 16384
           }
         },
-        "nvidia/nemotron-3-super-120b-a12b:free": {
+        "google/gemma-4-31b-it:free": {
+          "name": "Gemma 4 31B IT (free)",
+          "reasoning": true,
+          "tool_call": true,
           "limit": {
             "context": 262144,
             "output": 16384

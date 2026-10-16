@@ -26,8 +26,9 @@
  */
 
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync, copyFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { syncLaneFile } from './lane-config';
 import { platform, homedir } from 'node:os';
 import { decryptValue } from './env-crypto';
 import { getVaultRoot } from './vault-root';
@@ -468,11 +469,15 @@ export function resolveWorkspaceLane(): WorkspaceLane {
     const dotOpencode = join(dir, '.opencode');
     if (!existsSync(dotOpencode)) symlinkSync(join(root, '.opencode'), dotOpencode);
   } catch {}
+  // #LANE-DRIFT: the copies are REFRESH-ON-DRIFT, never created-if-missing.
+  // The 2026-10-16 specimen: the fossil pinning Apollo to the banned
+  // nemotron pool survived two rotations because nothing ever refreshed it.
   for (const f of ['opencode.json', 'opencode.demigods.json']) {
     try {
-      const src = join(root, f);
-      const dst = join(dir, f);
-      if (existsSync(src) && !existsSync(dst)) copyFileSync(src, dst);
+      const verdict = syncLaneFile(join(root, f), join(dir, f));
+      if (verdict === 'refreshed') {
+        console.warn(`[lane-config] workspace ${f} drifted from the root — REFRESHED (lane mirrors the root; operator edits belong in the root)`);
+      }
     } catch {}
   }
   return { dir, fresh };
