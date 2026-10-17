@@ -19,6 +19,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as devServerManager from './dev-server-manager';
+import { probeDevServer } from './dev-server-probe';
 
 /** The frontend marker set — a dev script alone is not enough (a plain
  *  node server is not the preview the user asked to see). */
@@ -112,7 +113,25 @@ export async function maybeStartDevServer(projectSlug: string, laneRoot: string)
 
     const started = await devServerManager.start(projectSlug);
     if (!started.ok) {
-      return { triggered: false, reason: `start refused — ${started.error ?? 'unknown error'} (pid ${started.pid ?? '?'})` };
+      // #ADOPT-ON-PROBE (the 23:53:31 specimen): the turn had already raised
+      // the dev server via bash; the manager — rightly — refused to
+      // double-spawn, but the refusal read as a FAILURE while :3011 was
+      // serving 200. When the refusal is the port-busy class, PROBE the
+      // port: a live server IS the preview. Adopted, honestly named (the
+      // manager does not own it — it won't be stopped by the manager).
+      const portMatch = String(started.error || '').match(/port (\d+) is busy/);
+      if (portMatch) {
+        const port = Number(portMatch[1]);
+        const probe = await probeDevServer(port, 2500);
+        if (probe.running) {
+          return {
+            triggered: true,
+            reason: `already serving on :${port} (probe: ${probe.host}, ${probe.responseTimeMs}ms) — ADOPTED: a dev server this manager did not spawn (likely raised during the turn); it will NOT be auto-stopped`,
+            status: { running: true, host: probe.host, port, url: probe.url, responseTimeMs: probe.responseTimeMs, note: 'adopted: not spawned by the manager' },
+          };
+        }
+      }
+      return { triggered: false, reason: `start refused — ${started.error ?? 'unknown error'}` };
     }
 
     // #118 (PLANO-MASTER-1 B4): the GROWING patience, staged:

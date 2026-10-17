@@ -176,6 +176,20 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
     /extractProjectPathCandidate/.test(intentSrc)
       && /the prompt names the project's path/.test(intentSrc),
     'paths still become garbage project names');
+  // (f) THE WALK BUDGET (the 00:00:48 specimen): the route-level turn timer
+  // stayed armed through the walk phase and killed hops fixtures/ui-kit
+  // mid-flight at exactly request-start + 15 min. The turn's timer must
+  // retire when the walk begins — the walk bounds itself per-hop.
+  const routeSrc = read('src/app/api/olympus/action/route.ts');
+  const walkBudgetIdx = routeSrc.indexOf('#WALK-BUDGET');
+  const walkCallIdx = routeSrc.indexOf('await maybeWalkThePlan', walkBudgetIdx);
+  check('law: the route retires the TURN timers before the walk phase (the walk bounds itself per-hop)',
+    walkBudgetIdx >= 0
+      && walkCallIdx > walkBudgetIdx
+      && walkCallIdx - walkBudgetIdx < 1000
+      && routeSrc.slice(walkBudgetIdx, walkCallIdx).includes('clearTimeout(maxRuntimeTimer)')
+      && routeSrc.slice(walkBudgetIdx, walkCallIdx).includes('clearTimeout(startupTimer)'),
+    'the turn budget still bounds the walk — long campaigns die at 15 min mid-hop');
 }
 
 console.log('');

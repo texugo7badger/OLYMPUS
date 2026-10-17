@@ -23,7 +23,7 @@ import ContextIndicator from './context-indicator';
 import DesignReviewCard from './design-review-card';
 // Issue #42: the Parthenon panel. One card per god — status, current tool,
 // step count — and a click focuses the message stream on that god.
-import GodPanel, { type GodState } from './god-panel';
+import GodPanel, { ParthenonRailCollapsed, type GodState } from './god-panel';
 // Issue #43: the Plan panel. A todo list is a plan; this one stays pinned to
 // the bottom of the Parthenon column instead of scrolling away with the log.
 import PlanPanel, { normalizeTodoEvent, type PlanItem } from './plan-panel';
@@ -270,6 +270,14 @@ export default function InteractiveTerminal() {
   // reads this, it never re-derives god state from the message log.
   const [godStates, setGodStates] = useState<Map<string, GodState>>(() => new Map());
   const [focusedGod, setFocusedGod] = useState<string | null>(null);
+  // #PANTHEON-RAIL: the minimize toggle — icons only when collapsed (more
+  // room for the chat). Persisted: the user's preference survives reloads.
+  const [parthenonCollapsed, setParthenonCollapsed] = useState<boolean>(() => {
+    try { return window.localStorage.getItem('olympus:parthenon-collapsed') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem('olympus:parthenon-collapsed', parthenonCollapsed ? '1' : '0'); } catch { /* private mode etc. */ }
+  }, [parthenonCollapsed]);
   const [todos, setTodos] = useState<PlanItem[]>([]);
   const [sseConnected, setSseConnected] = useState(false);
   // Issue #47: the /permissions panel. Declared here (with the other
@@ -380,7 +388,7 @@ export default function InteractiveTerminal() {
     god: string,
     phase: GodPhase,
     task?: string,
-    opts?: { currentTool?: string; steps?: number },
+    opts?: { currentTool?: string; steps?: number; artifacts?: string[] },
   ) => {
     setGodStates(prev => {
       const next = new Map(prev);
@@ -395,6 +403,9 @@ export default function InteractiveTerminal() {
         currentTool: phase === 'idle' ? undefined : (opts?.currentTool ?? existing?.currentTool),
         lastEvent: task ?? existing?.lastEvent,
         lastTs: Date.now(),
+        // #PANTHEON-RAIL: the hop's deliverable files — an ARRAY (even
+        // empty) SETS/CLEARS; undefined keeps whatever the god carried.
+        artifacts: opts?.artifacts !== undefined ? opts.artifacts : existing?.artifacts,
       });
       return next;
     });
@@ -671,7 +682,13 @@ export default function InteractiveTerminal() {
       // #DESIGN-INTELLIGENCE D4: the PROGRESS CARD — a structured walk
       // summary line (the user sees a dashboard, not a linear log).
       if (ev.msg) { removeThinking(); addMessage({ type: 'system', text: ev.msg }); }
-      updateGodActivity(ev.god || 'hephaestus', ev.type === 'hop_done' ? 'done' : ev.type === 'hop_parked' ? 'idle' : 'working', ev.msg || '');
+      updateGodActivity(ev.god || 'hephaestus', ev.type === 'hop_done' ? 'done' : ev.type === 'hop_parked' ? 'idle' : 'working', ev.msg || '', {
+        // #PANTHEON-RAIL: the hop's deliverable files ride the start event —
+        // the god card (and the collapsed rail's tooltip) shows WHAT is
+        // being created, cleared when the hop lands. An EMPTY array clears
+        // (a hop without artifacts); undefined keeps the prior state.
+        artifacts: ev.type === 'hop_start' ? (ev.artifacts as string[] | undefined) || [] : [],
+      });
       // D4: the hop counter line (compact, non-intrusive)
       if (ev.type === 'hop_done' && ev.msg) {
         const m = ev.msg.match(/Hop '([^']+)'/);
@@ -1770,14 +1787,18 @@ export default function InteractiveTerminal() {
         </div>
 
         {(godStateList.length > 0 || todos.length > 0) && (
-          <div className="w-60 shrink-0 border-l border-olympus-gold/10 bg-olympus-panel flex flex-col min-h-0">
-            {/* The cards scroll; the plan does not. A checklist you have to
-                scroll to find is not telling you what is happening now. */}
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scroll">
-              <GodPanel states={godStateList} focusedGod={focusedGod} onFocus={setFocusedGod} />
+          parthenonCollapsed ? (
+            <ParthenonRailCollapsed states={godStateList} focusedGod={focusedGod} onFocus={setFocusedGod} onExpand={() => setParthenonCollapsed(false)} />
+          ) : (
+            <div className="w-60 shrink-0 border-l border-olympus-gold/10 bg-olympus-panel flex flex-col min-h-0">
+              {/* The cards scroll; the plan does not. A checklist you have to
+                  scroll to find is not telling you what is happening now. */}
+              <div className="flex-1 min-h-0 overflow-y-auto custom-scroll">
+                <GodPanel states={godStateList} focusedGod={focusedGod} onFocus={setFocusedGod} onCollapse={() => setParthenonCollapsed(true)} />
+              </div>
+              <PlanPanel items={todos} onToggle={toggleTodo} />
             </div>
-            <PlanPanel items={todos} onToggle={toggleTodo} />
-          </div>
+          )
         )}
       </div>
     </div>

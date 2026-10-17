@@ -388,7 +388,7 @@ export interface WalkResult {
  * bridges these to the terminal stream (WHO the god is, WHERE the lane is,
  * what happened) so the walk is visible while it runs. */
 export type HopWalkEvent =
-  | { type: 'hop_start'; hop: string; god: string }
+  | { type: 'hop_start'; hop: string; god: string; artifacts?: string[] }
   | { type: 'hop_done'; hop: string; god: string; durationMs: number; tokensIn: number | null; tokensOut: number | null; retriesAbsorbed: number }
   | { type: 'hop_parked'; hop: string; god: string; reason: string; error?: string };
 
@@ -485,7 +485,10 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         const startedAt = Date.now();
         const task: WalkTask = { hop: next, startedAt, done: false, promise: Promise.resolve() };
         inFlight.set(next.id, task);
-        opts.onEvent?.({ type: 'hop_start', hop: next.id, god: next.god });
+        // #PANTHEON-RAIL: the hop's ARTIFACTS ride the start event — the
+        // rail shows WHAT each god is creating (the file list from the
+        // plan), not just that it started.
+        opts.onEvent?.({ type: 'hop_start', hop: next.id, god: next.god, artifacts: next.artifacts });
         task.promise = (async () => {
           let result: HopDispatchResult;
           try {

@@ -15,7 +15,7 @@
 
 'use client';
 
-import { Sparkles, type LucideIcon } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Sparkles, type LucideIcon } from 'lucide-react';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +39,9 @@ export interface GodState {
   steps: number;
   /** Epoch ms of the last event — drives recency ordering. */
   lastTs: number;
+  /** #PANTHEON-RAIL: the files this god's hop is creating (from the
+   *  dispatch plan's artifacts — "what each god is coding", at a glance). */
+  artifacts?: string[];
 }
 
 const DISPLAY_NAMES: Record<string, string> = {
@@ -76,13 +79,17 @@ interface GodPanelProps {
   onFocus: (god: string | null) => void;
   /** Rendered under the cards — the TODO block today, the plan panel next. */
   children?: React.ReactNode;
+  /** #PANTHEON-RAIL: the collapse control — when set, the header carries a
+   *  minimize button (the rail collapses to god icons only, freeing the
+   *  chat surface). */
+  onCollapse?: () => void;
 }
 
 /**
  * Renders the Parthenon header and cards only. The surrounding rail (border,
  * scroll) belongs to the terminal so sibling panels can share one column.
  */
-export default function GodPanel({ states, focusedGod, onFocus, children }: GodPanelProps) {
+export default function GodPanel({ states, focusedGod, onFocus, children, onCollapse }: GodPanelProps) {
   const ordered = orderGodStates(states);
   const active = ordered.filter(s => s.status === 'working').length;
 
@@ -94,6 +101,17 @@ export default function GodPanel({ states, focusedGod, onFocus, children }: GodP
         <span className="ml-auto normal-case tracking-normal">
           {active} active / {ordered.length}
         </span>
+        {onCollapse && (
+          <button
+            type="button"
+            onClick={onCollapse}
+            title="Minimize the Parthenon to god icons (more room for the chat)"
+            aria-label="Minimize the Parthenon"
+            className="ml-1 text-olympus-text-dim hover:text-olympus-gold transition-colors"
+          >
+            <ChevronsRight size={10} />
+          </button>
+        )}
       </div>
 
       <div className="py-1">
@@ -140,6 +158,19 @@ export default function GodPanel({ states, focusedGod, onFocus, children }: GodP
                   {s.task}
                 </div>
               )}
+              {/* #PANTHEON-RAIL: WHAT the god is creating — the hop's
+                  deliverable files (from the dispatch plan), the first three
+                  + a count. The "each file created" ask, at a glance. */}
+              {s.artifacts && s.artifacts.length > 0 && s.status === 'working' && (
+                <div className="text-[8px] font-mono text-[#6B8F71] ml-4 space-y-0.5">
+                  {s.artifacts.slice(0, 3).map(f => (
+                    <div key={f} className="truncate">↳ {f}</div>
+                  ))}
+                  {s.artifacts.length > 3 && (
+                    <div className="text-[#5A5A5A]">↳ +{s.artifacts.length - 3} more</div>
+                  )}
+                </div>
+              )}
               {s.lastEvent && s.lastEvent !== s.task && (
                 <div className="text-[8px] font-mono text-[#4A4A4A] ml-4 truncate">
                   {s.lastEvent}
@@ -151,5 +182,70 @@ export default function GodPanel({ states, focusedGod, onFocus, children }: GodP
       </div>
       {children}
     </>
+  );
+}
+
+/**
+ * #PANTHEON-RAIL (the 2026-10-17 UX ask): the COLLAPSED rail — god icons
+ * only, a slim column beside the chat. Working gods pulse in their status
+ * color; the icon tooltip carries name + the last line (the "what is he
+ * coding" answer without paying screen space); a click focuses; the expand
+ * button restores the full cards.
+ */
+export function ParthenonRailCollapsed({ states, focusedGod, onFocus, onExpand }: {
+  states: GodState[];
+  focusedGod: string | null;
+  onFocus: (god: string | null) => void;
+  onExpand: () => void;
+}) {
+  const ordered = orderGodStates(states);
+  const active = ordered.filter(s => s.status === 'working').length;
+  return (
+    <div className="w-9 shrink-0 border-l border-olympus-gold/10 bg-olympus-panel flex flex-col min-h-0">
+      <button
+        type="button"
+        onClick={onExpand}
+        title="Expand the Parthenon (god cards + the plan)"
+        aria-label="Expand the Parthenon"
+        className="shrink-0 px-2 py-1.5 border-b border-olympus-gold/10 flex items-center justify-center text-olympus-text-dim hover:text-olympus-gold transition-colors"
+      >
+        <ChevronsLeft size={10} />
+      </button>
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scroll py-1 flex flex-col items-center gap-1">
+        {ordered.map(s => {
+          const Icon: LucideIcon = GOD_ICONS[s.god] || Sparkles;
+          const color = STATUS_COLOR[s.status];
+          const selected = focusedGod === s.god;
+          const spinning = s.status === 'working';
+          const title = `${DISPLAY_NAMES[s.god] || s.god} — ${s.task || s.lastEvent || STATUS_LABEL[s.status]}${s.artifacts && s.artifacts.length ? `\n${s.artifacts.slice(0, 4).join('\n')}` : ''}`;
+          return (
+            <button
+              key={s.god}
+              type="button"
+              onClick={() => onFocus(selected ? null : s.god)}
+              aria-pressed={selected}
+              title={title}
+              className={cn(
+                'relative w-7 h-7 rounded flex items-center justify-center transition-colors',
+                selected ? 'bg-olympus-gold/15 ring-1 ring-olympus-gold/40' : 'hover:bg-olympus-gold/10',
+              )}
+            >
+              <Icon size={13} style={{ color }} className={cn(spinning && 'animate-pulse')} />
+              {s.status === 'working' && (
+                <span className="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-olympus-green animate-pulse" />
+              )}
+              {s.steps > 0 && (
+                <span className="absolute bottom-0 right-0.5 text-[7px] font-mono" style={{ color }}>
+                  {s.steps}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <div className="shrink-0 py-1 text-center text-[8px] font-mono text-[#5A5A5A] border-t border-olympus-gold/10">
+        {active}
+      </div>
+    </div>
   );
 }

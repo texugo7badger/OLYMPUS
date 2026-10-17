@@ -1088,6 +1088,17 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
                 ts: new Date().toISOString(),
               });
             }
+            // #WALK-BUDGET (the 00:00:48 specimen): the route-level
+            // max-runtime timer is the TURN's budget — it exists to catch a
+            // hung turn. The walk phase is NOT a turn: it has its own bounds
+            // (the per-hop ceiling OLYMPUS_HOP_TIMEOUT_MS + the first-byte
+            // deadline + park-on-exhaustion with hop-state persistence from
+            // second zero). Leaving the turn's timer armed through the walk
+            // killed hops fixtures/ui-kit mid-flight at exactly
+            // request-start + 15 min while they were GREEN-ward bound. The
+            // turn is over — its timer retires; the walk bounds itself.
+            clearTimeout(maxRuntimeTimer);
+            clearTimeout(startupTimer);
             try {
               const walk = await maybeWalkThePlan({ slug: opts.intent.slug, laneRoot, send, sessionId: opts.conversationId, publishActivity: true, expectPlan: opts.classification?.needsPlanning === true });
               if (walk.awaitingApproval?.gate) {
