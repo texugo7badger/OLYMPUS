@@ -205,3 +205,37 @@
 - **Release:** the v0.0.3 tag MOVED to this commit (originally cut at the DESIGN-INTELLIGENCE
   merge; the GitHub release never published, so the move loses no consumer) — the release
   carries every improvement through the hygiene pass.
+
+## The V003-CI reconciliation (2026-10-17 the release-day CI cure)
+
+- **The disclosure:** the Eval Harness had been RED since PLANNER-1 (2026-10-17 00:17) — five
+  consecutive failures, invisible because the workflow only fires on `.opencode/**` + `src/**`
+  pushes and the dependabot merge train touched neither. The Release workflow's first failure
+  (the tag push) surfaced the VERSION straggler; the log dive then surfaced the whole chain.
+- **The four fixes, in causal order:** (1) `VERSION` 0.0.2 → 0.0.3 (the Release gate's
+  tag-match); (2) the overlay compile — `olympus-dispatch`'s #84 instinct-RAG dynamic import
+  had 2 directory levels where the file's own :80-87 doctrine demands 3 (TS2307; and at runtime
+  the RAG silently degraded into its own try/catch — the fix makes it resolve for real) +
+  `instinct-rag.ts`'s extensionless `./vault-root` import (TS2835 under NodeNext); (3) the dead
+  `ling-3.0-flash:free` specialist fallback in `apply-strategy.js` (retired from the
+  OpenRouter free list; the L4 catalogue preflight caught it red with live suggestions — the
+  D19 net working) → `inkling-small:free` (live-verified against /api/v1/models); (4) the L4
+  skip knob `OLYMPUS_PREFLIGHT_SKIP_PROVIDERS` — a provider a runner cannot QUERY (no NVIDIA
+  key) leaves the probe set LOUDLY, logged, never silently trusted; queryable providers keep
+  full dead-id strictness (eval.yml sets it to nvidia for the free-openrouter smoke).
+- **Found on the path → FILED #129:** the 2026-10-17 chat-probe (real completions, the user's
+  key): `step-5-preview` ABSENT from the NVIDIA catalogue (an active athena/hephaestus
+  anchor), `kimi-k3` HTTP 410, `glm-5.3-flash` + `deepseek-v4.1-flash` listed but dead in
+  practice (45-60s timeouts ×2), `gemma-4-31b-it` stalled in the window (re-probe owed);
+  survivors `gpt-oss-20b` (200 @ 328ms), `muse-glimmer-30b` (200 @ 14.9s), `glm-5.3` (alive
+  under 429 cap pressure). The anchor set is USER-PINNED — the rotation is the user's call.
+- **Machine at the close:** Release workflow SUCCESS (8m2s at the final tag, Linux artifacts
+  published) + Eval Harness SUCCESS (8m8s at HEAD) + sync 9/9 + lane-config-sync 15/15 +
+  free-pantheon + free-lane-generator 27/27; the release retitled `OLYMPUS v0.0.3` (clean
+  name, Latest).
+- **Doc alignment ride:** MODEL-STRATEGIES.md (v0.0.3, the 2026-10-17 GO tables — per-model
+  caps, DeepSeek V4.1 173K req/mo, the three free promos, the privacy matrix, the #129
+  addendum, the TL;DR rows reconciled with the canonical code map), ROADMAP (v0.0.3 shipped +
+  the v0.0.4 arc), ARCHITECTURE/WORKFLOW/CREDITS/BENCHMARKS/BUILD-AND-PUBLISH version stamps,
+  the badge SVGs, the README's free-tier paragraph (the Nemotron claim was WRONG — the ban
+  doctrine now stated), CHANGELOG's CI-cure arc.

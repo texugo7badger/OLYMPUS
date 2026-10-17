@@ -8,22 +8,22 @@
 > enforces parity and runs in CI. Docs below are updated manually when the
 > canonical file changes.
 
-**Version:** v0.0.2
+**Version:** v0.0.3
 **License:** AGPL-3.0-or-later
 
 ## TL;DR
 
 | Strategy | Plan required | Cost | Quality | Daily req budget | When to use |
 |---|---|---|---|---|---|
-| `go-max-quality` | GO plan | $ | Best | ~20-30 (GLM-5.3 tight) | Production — Apollo on GLM-5.3, Atlas on Hy3, Hephaestus/Hermes on Kimi K2.7 Code, Athena/Dionysus/Persephone/Callimachus on GLM-5.3-Flash, Artemis on GLM-5.3, Prometheus on MiniMax M3 |
-| `go-balanced` (default) | GO plan | $ | Great | ~500-1,000 | **Day-to-day 5h/day (cap-aware)** — Apollo on GLM-5.3-Flash, Atlas on Hy3, Hephaestus/Hermes on Kimi K2.7 Code, Athena/Persephone on Qwen3.7 Plus, Prometheus on MiniMax M3, Dionysus/Artemis/Callimachus on GLM-5.3-Flash |
+| `go-max-quality` | GO plan | $ | Best | ~20-30 (GLM-5.3 tight) | Production — Apollo on GLM-5.3, Atlas on Hy3, Hephaestus/Hermes on Kimi K2.7 Code, Athena/Dionysus/Persephone on GLM-5.3, Artemis on Kimi K3, Prometheus on MiniMax M3, Callimachus on GLM-5.3-Flash |
+| `go-balanced` (default) | GO plan | $ | Great | ~500-1,000 | **Day-to-day 5h/day (cap-aware)** — Apollo on FULL GLM-5.3 (the 2026-10-16 upgrade — the planner is the quality bottleneck; when the rolling cap blows, go-budget keeps Apollo on Flash), Atlas on Hy3, Hephaestus/Hermes on Kimi K2.7 Code, Athena/Persephone on Qwen3.7 Plus, Prometheus on MiniMax M3, Dionysus/Artemis/Callimachus on GLM-5.3-Flash |
 | `go-budget` | GO plan | ¢ | Good | ~1,000+ | Maximum savings (cap-aware 8h/day) — Apollo on GLM-5.3-Flash, Atlas on Hy3 (orchestration), all others on GLM-5.3-Flash |
 | `zen-max-quality` (**Zen**) | **Zen plan** | $$ | Best | **No caps** (pay-as-you-go) | Best quality on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Sol, Hephaestus/Artemis/Hermes on Claude Sonnet 5, Athena on GPT 5.6 Terra, Dionysus on GPT 5.6 Luna, Persephone on Gemini 3.1 Pro, Prometheus on Grok Build 0.1, Callimachus on Claude Haiku 4.5, vault on GLM-5.3 |
 | `zen-balanced` (**Zen**) | **Zen plan** | $ | Great | **No caps** (pay-as-you-go) | Full 128-agent OLYMPUS without a GO plan — Apollo on GLM-5.3, Atlas on GPT 6 Sol, Hephaestus/Artemis on Claude Sonnet 5, Athena on GPT 5.6 Terra, Dionysus on GPT 5.6 Luna, Hermes on GPT 5.4 Mini, Persephone on Gemini 3.1 Pro, Prometheus on Grok Build 0.1, Callimachus on Claude Haiku 4.5, vault on GLM-5.3-Flash. Proprietary APIs, charged per request |
 | `zen-budget` (**Zen**) | **Zen plan** | ¢ | Good | **No caps** (pay-as-you-go) | Lowest cost on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Luna, all others on GLM-5.3-Flash, Callimachus on Claude Haiku 4.5 |
 | `free-openrouter` (**Free OpenRouter**) | **None** | **Free** | Lower | Unlimited (rate-limited) | The OpenRouter-only split — primary trio on #1, specialists on #2, Callimachus on a fast background model. Refreshes automatically |
 | `free-big-pickle` (**Free Big Pickle**) | **None** | **Free** | Lower | Unlimited (rate-limited) | All 10 gods (Callimachus included) on one free model — the strongest currently live, refreshed automatically |
-| `free-nvidia-build` (**Free Nvidia Build**) | **None** | **Free** | Lower | Unlimited (rate-limited) | **The distributed pantheon (#106)** — NVIDIA Build free endpoints: per-god model lanes on the user-pinned anchors (GLM-5.3 / Step 5 Preview / Gemma 4 31B / Muse Glimmer / GPT-OSS-20B — the 2026-10-16 rotation), per-family client pools, no single pool, NO Nemotron (the user's ban). The anchor set is pinned — the refresh verifies, never overrides |
+| `free-nvidia-build` (**Free Nvidia Build**) | **None** | **Free** | Lower | Unlimited (rate-limited) | **The distributed pantheon (#106)** — NVIDIA Build free endpoints: per-god model lanes on the user-pinned anchors (GLM-5.3 / Step 5 Preview / Gemma 4 31B / Muse Glimmer / GPT-OSS-20B — the 2026-10-16 rotation), per-family client pools, no single pool, NO Nemotron (the user's ban). The anchor set is pinned — the refresh verifies, never overrides. **2026-10-17 health: step-5-preview is dead from the NVIDIA catalogue and gemma-4-31b stalled in the probe window — the rotation owes (see [#129](https://github.com/texugo7badger/OLYMPUS/issues/129))** |
 | `custom-*` | User-defined | User-defined | User-defined | Custom | Advanced — define your own per-god model map |
 
 Switch strategies at any time:
@@ -40,37 +40,43 @@ When a free provider's rate limit runs out, pick another free strategy (`free-op
 
 ## GO Plan Limits & Sustainable Usage
 
-The OpenCode GO plan costs **$10/month** and includes:
-- **5-hour limit:** $12 of usage
-- **Weekly limit:** $30 of usage  
-- **Monthly limit:** $60 of usage
+The OpenCode Go plan costs **$10/month** (Go) or **$40/month** (Go Plus — every per-model limit below roughly 3-4x higher). There is no single global cap: **usage limits are monthly DOLLAR amounts PER MODEL**, and each model's own limit rolls as **5-hour = 20%, weekly = 50%, monthly = 100%** of that model's monthly cap. A cheap model's cap goes a very long way; a premium model's cap is precious (cross-checked against https://opencode.ai/v2/docs/console/go/, page current 2026-10-17).
 
-These are dollar-value caps, not request counts. Different models consume the budget at different rates. **Per-model dollar limits: 5h = 20%, weekly = 50%, monthly = 100% of each model's own cap** — a model's 5h budget is one fifth of its monthly dollar cap, NOT of the global $12 (cross-checked against https://opencode.ai/docs/go/, page updated 2026-10-03; refreshed in BATCH 13 per #66).
-
-The table below shows estimated monthly request counts per model within the $60 plan:
+The table below shows estimated monthly request counts per model on the **Go plan ($10/mo)** (the provider's own estimates — typical coding-agent request shapes, cache-heavy):
 
 | Model | Requests/month | Best for | Cost per request |
 |---|---|---|---|
-| MiMo V2.5 | **150,400** | Ultra-cheap bulk tasks | Lowest |
-| DeepSeek V4 Flash | **65,000** (was 158,150 — limit now $30) | Mechanical tasks (testing, DB migrations, vault) | Very low |
-| GLM-5.3-Flash | **31,580** | Workhorse — specialists, vault, background | Very low |
-| Qwen3.7 Plus | **21,600** | Reasoning, security, frontend, integration | Low-Medium |
-| DeepSeek V4 Pro | **5,200** (was 17,150 — limit now $15) | Code generation, backend logic | Low |
-| Kimi K2.7 Code | **6,750** | Specialist coding tasks | Medium |
-| GLM-5.3 | **1,080** | Apollo (sacred) + Athena/Dionysus/Persephone in go-max-quality + go-balanced's planner lane | Medium |
-| Kimi K3 | **490** | Artemis in go-max-quality (security reasoning) | High |
-| Grok 4.7 / 4.6 | **845** each (replaces defunct Grok 4.5) | Specialized reasoning | High |
-| LongCat-2.0 | **57,200** ($60 tier) | Bulk long-context | Very low |
-| Space Bunny Free | **Unlimited** (limited-time, zero limit consumption) | Bulk work while offered | Free |
-| LongCat 2.5 Preview Free | **Unlimited** (limited-time, zero limit consumption) | Bulk work while offered | Free |
+| DeepSeek V4.1 Flash | **173,330** ($80 cap) | Mechanical bulk — testing, DB migrations, vault | Lowest (off-peak) |
+| MiMo V2.5 / V2.6-Flash | **150,400** ($60 cap) | Ultra-cheap bulk tasks | Lowest |
+| LongCat-2.0 | **57,200** ($60 cap) | Bulk long-context | Very low |
+| GLM-5.3-Flash | **31,580** ($60 cap) | Workhorse — specialists, vault, background | Very low |
+| Qwen3.8 Flash | **27,000** ($30 cap) | Fast reasoning lanes | Very low |
+| Hy3 | **21,500** ($60 cap) | Atlas (sacred — orchestration) | Very low |
+| Qwen3.7 Plus | **21,600** ($60 cap) | Reasoning, security, frontend, integration | Low-Medium |
+| GPT 6 Luna | **21,130** ($15 cap) | Cheap near-frontier reasoning | Very low |
+| Claude Haiku 5.5 | **19,230** ($15 cap) | Sharp lightweight reasoning | Very low |
+| MiniMax M3 | **16,000** ($60 cap) | DevOps + search-heavy roles | Very low |
+| Kimi K2.7 Code | **6,750** ($60 cap) | Specialist coding tasks | Medium |
+| DeepSeek V4 Pro | **5,200** ($15 cap) | Code generation, backend logic | Low |
+| Step 5 Preview | **8,520** ($60 cap, 4x promo) | Code + reasoning while the boost lasts | Low |
+| GLM-5.3 | **1,080** ($15 cap) | Apollo (sacred) + Athena/Dionysus/Persephone in go-max-quality | Medium |
+| Kimi K3 | **490** ($15 cap) | Artemis in go-max-quality (security reasoning) | High |
+| Grok 4.7 | **845** ($15 cap) | Specialized reasoning | High |
+| Space Bunny | **Unlimited** (limited-time, zero cap consumption) | Bulk work while offered | Free |
+| LongCat 2.5 Preview Free | **Unlimited** (limited-time, zero cap consumption) | Bulk work while offered | Free |
+| Beam Free | **Unlimited** (limited-time, zero cap consumption; region-limited) | Bulk work while offered | Free |
 
-> **Expiry caveat:** the two Free rows are promotional, limited-time
+> **Expiry caveat:** the three Free rows are promotional, limited-time
 > offerings — they consume none of the plan's per-model dollar caps while
 > active but may disappear without notice; do not build a sustainable-load
-> plan on them. Also available per the 2026-10-03 docs: Qwen3.8 generation,
-> DeepSeek V4.1 Flash, MiMo V2.6 generation, GPT 6 Luna / GPT 5.6 Luna,
-> Hy4 preview, Kimi K2.6, MiniMax M2.7, and GLM-5.3 at the $60 tier
-> (4,300 req/mo; GLM-5.3 request counts confirmed still correct).
+> plan on them. Step 5 Preview's 4x cap is also a limited-time boost.
+
+> **Privacy matrix (2026-10-17 docs — your code rides these prompts):**
+> zero-day retention (nothing stored) — GLM, Kimi, DeepSeek, Qwen, MiMo,
+> Hy3/Hy4, MiniMax M3, Space Bunny, Step 5, LongCat; 30-day retention —
+> Grok 4.7, GPT 6/5.6 Luna, Claude Haiku 5.5, Beam Free; **trains on your
+> prompts** — Gemini 4 Argon Contributor + the Muse Spark Contributor tiers
+> (heavily discounted in exchange; avoid for private code).
 
 > **DeepSeek peak windows:** DeepSeek models bill their caps against
 > peak/off-peak pricing — peak is Mon–Fri 01:00–04:00 and 06:00–10:00 UTC.
@@ -84,21 +90,28 @@ The table below shows estimated monthly request counts per model within the $60 
 
 | God | Model | Requests/day | Monthly | % of cap |
 |---|---|---|---|---|
-| Apollo (balanced) | GLM-5.3-Flash | ~20 (planning) | 400 | 1% |
-| Atlas | Hy3 | ~20 (orchestration) | ~400 | Very low |
+| Apollo (balanced) | GLM-5.3 (FULL — the 2026-10-16 upgrade) | ~20 (planning, small bursts) | 400-600 | 40-55% of 1,080 (cap-aware) |
+| Atlas | Hy3 | ~20 (orchestration) | ~400 | ~2% of 21,500 |
 | 2 reasoning gods | Qwen3.7 Plus | ~40 each | 800 each | 4% |
 | 2 code gods | Kimi K2.7 Code | ~40 each | 800 each | 12% |
 | 1 orchestration god | MiniMax M3 | ~40 | 800 | 5% |
 | 1 security god | GLM-5.3-Flash | ~30 | 600 | <2% |
 | 3 mechanical gods | GLM-5.3-Flash | ~30 each | 600 each | <2% |
 
-> Note: cap-aware mapping. The daily strategies keep Apollo + Artemis on
-> GLM-5.3-Flash ($60/mo → $12/5h rolling, 31,580 req/mo). GLM-5.3
-> ($15/mo → $3/5h rolling, 1,080 req/mo) is reserved for go-max-quality
-> (occasional premium use). At 5h/day Apollo alone would burn ~$46.86/mo
-> on GLM-5.3 vs ~$5.28/mo on Flash — Flash survives the month comfortably.
+> Note: cap-aware mapping (the 2026-10-16 doctrine). Apollo rides FULL
+> GLM-5.3 even in go-balanced — the planner is the quality bottleneck, and
+> the hop runtime's small-burst request shape (~20 planning calls/day,
+> reasoning_effort=low on the wire) keeps the burn far under the 1,080
+> req/mo cap that killed the old interactive-turn economics (the 20.6-min
+> at-cap specimen went 20.6min/output=0 → 2min33s with the full 9-hop plan
+> after PLANNER-1). The old math — "at 5h/day Apollo would burn ~$46.86/mo
+> on full GLM-5.3" — assumed giant interactive turns; small hops + prompt
+> caching (cached reads at $0.26/M vs $1.40/M fresh input) changed the
+> shape. When the rolling cap still blows, go-budget keeps Apollo on
+> GLM-5.3-Flash ($60/mo cap, 31,580 req/mo) — the fallback is a strategy
+> switch, never a silent downgrade.
 
-**Total monthly spend:** ~$15-20 (well within the $60 plan). Headroom for spikes.
+**Total monthly spend:** ~$15-20 of metered usage inside the per-model caps. Headroom for spikes.
 
 ### Dispatch Optimization
 
@@ -212,7 +225,7 @@ Groq's free tier was removed from OLYMPUS. Its **12K TPM window** (prompt + max_
 
 ### `free-openrouter` — the OpenRouter-only split
 
-All 10 gods on the strongest OpenRouter free model currently live (probe-verified 2026-10-16: `openrouter/cohere/north-mini-code:free` — 256K context, 64K output). One pool, zero cost, one key. Live-refreshed from the OpenRouter provider list; `small_model` rides the same cohere:free lane.
+All 10 gods on the strongest OpenRouter free model currently live (probe-verified 2026-10-16: `openrouter/cohere/north-mini-code:free` — 256K context, 64K output). One pool, zero cost, one key. Live-refreshed from the OpenRouter provider list; `small_model` rides the same cohere:free lane. The no-refresh fallback pair is curated live too: primary roles fall back to `north-mini-code:free`, specialist roles to `thinkingmachines/inkling-small:free` (1M ctx) — the old `ling-3.0-flash:free` fallback died in the free list on 2026-10-17 and was retired (the L4 catalogue preflight caught it red).
 
 **Requirements:** an OpenRouter API key configured inside OpenCode (Settings → add OpenRouter). Get one free at https://openrouter.ai/keys.
 
@@ -256,6 +269,16 @@ REMOVED, family entries and all):
 | `nvidia-google/google/gemma-4-31b-it` | Atlas, Callimachus + vaultLlm + small_model | 31B multimodal instruct — the volume lane, 262K ctx |
 | `nvidia-meta/meta/muse-glimmer-30b` | Artemis, Hermes | 29.6B dense + ViT-G/14, multimodal reasoning + tool-calling, 131,072 ctx |
 | `nvidia-openai/openai/gpt-oss-20b` | Prometheus | 20B MoE (3.6B active), open-weights, 131,072 ctx |
+
+**The 2026-10-17 probe addendum (issue [#129](https://github.com/texugo7badger/OLYMPUS/issues/129)):** the catalogue rotated again
+the night after the rotation — `step-5-preview` is now ABSENT from the NVIDIA listing (the L4
+preflight hard-fails on it), `kimi-k3` returns HTTP 410 end-of-life, and `glm-5.3-flash` +
+`deepseek-v4.1-flash` (both listed) timed out 45-60s on real completions ×2. `gemma-4-31b-it`
+stalled in the same probe window — possibly peak transience, re-probe owed at an off-peak hour.
+Chat-probe survivors: `gpt-oss-20b` (200 in 328ms — the strongest), `muse-glimmer-30b`
+(200 in 14.9s), `glm-5.3` (alive under 429 cap pressure). The rotation is USER-PINNED — this
+table records the pinned set as shipped in v0.0.3; the next rotation is the user's call with
+#129's evidence in hand.
 
 **The provider split** ("different endpoints per god"): the single `nvidia` provider became
 per-family entries — `nvidia-glm` / `nvidia-google` / `nvidia-step` / `nvidia-meta` /

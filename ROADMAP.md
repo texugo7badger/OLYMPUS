@@ -1,23 +1,30 @@
 # OLYMPUS Roadmap
 
-**v0.0.1 is the base release.** 10 gods, 118 demigods, Symphony dispatch, VaultBrain, Electron desktop app, Editor Bridge + Terminal Bridge, and 9 built-in LLM strategies (3 GO, 3 Zen, 3 free: OpenRouter / Big Pickle / Nvidia Build, plus custom).
-
-Everything OLYMPUS is today ships in v0.0.1. See [CHANGELOG.md](CHANGELOG.md) for what's in the release.
+**v0.0.3 is the current release** (shipped 2026-10-17 — "the fix-OLYMPUS-itself release"). 10 gods, 118 demigods, Symphony dispatch, the hop runtime, VaultBrain, the 8-check exit gate, DESIGN-INTELLIGENCE self-correction, and 9 built-in LLM strategies (3 GO, 3 Zen, 3 free: OpenRouter / Big Pickle / Nvidia Build, plus custom). See [CHANGELOG.md](CHANGELOG.md) for the full arc — two campaigns + five UAT rounds + the Design Intelligence evolution + the late arc (anchor rotation, strategy redesign, PLANNER-1/WALK-1/PANTHEON-RAIL/SELFTEST-1, the #81 cost stamp, the #96 gate check-8) + the CI cure.
 
 ---
 
-## The near arc (v0.0.3)
+## SHIPPED — v0.0.3 (2026-10-17)
 
-1. **The v0.0.3 gate = the USER's manual UAT** (UAT-KIT §0–§4, `reports/uat-r1/`): from zero, "exemplo landingpage", every god and demigod in parallel, the project runs first-try and is well-built. If an unknown death appears: re-run with skills trimmed (KIT §3). If token cuts: STOP and report (the #76 bar).
-2. **Tag v0.0.3 — Monday 2026-10-12** (after the UAT passes; the user's hands).
-3. **Cert night (N10)** — the planted-defect certification (needs the user's quota top-up decision).
-4. **MADRUGA-4** — the next campaign, fed by the GAP-1 future ledger below.
+- The UAT gate passed (the Lumina CRM acceptance: 14/14 hops, gate 7/7 + check 8, HTTP 200).
+- **#81 closed** — the deterministic-spawn cost stamp (`OLYMPUS_LANE_GOD`): agent-less one-shot cost rows resolve the real god, never 'global'.
+- **#96 closed** — the exit gate's check 8: duplicated JSX props (the silent-override class) fail the gate with element + props named; the bench corpus is optional.
+- The CI chain cured (V003-CI): overlay compile, the VERSION straggler, the dead free-list fallback, the L4 skip knob. Release + Eval Harness green at the tag.
+- 20 of 23 filed issues closed with evidence; the machine aligned (battery 31 suites green, sync 9/9).
 
-State at the GAP-1 close: #70/#69/#77/#67 all closed with post-merge evidence; the machine aligned (battery-22, guard both surfaces, sync 9/9); the catalogue current (glm-5.3 family, live-verified 2026-10-07); only #76 (the user's UAT bar) predates the future ledger.
+## The near arc (v0.0.4)
 
-## The future arc (v0.0.3 → v0.1, the P2/P3 ladder)
+1. **STRATEGY-REFRESH-2026-10-17** — sync `MODEL-STRATEGIES.md` + the canonical maps with the 2026-10-17 GO catalog (done for the docs in v0.0.3; the lane economics re-check owed) + a BenchLM-anchored quality-per-dollar table; validate candidate lane swaps (Claude Haiku 5.5 / GPT 6 Luna / MiMo-V2.6-Flash class) with live probes before they become defaults.
+2. **#129 — the NVIDIA anchor rotation** (the user's call, user-pinned): step-5-preview is dead from the catalogue; gemma stalled in the probe window; survivors gpt-oss-20b / muse-glimmer / glm-5.3. Re-probe off-peak, then rotate the pin.
+3. **BENCH-2 — the ambitious benchmark** (the ORBITAL concept: a real-time satellite ground-station mission-control — SQLite via Prisma, SSE live telemetry, ≥8 tables, role-gated auth, award-tier dark UI) + the variation matrix: free-nvidia-build / go-balanced / free-big-pickle / go-max-quality / go-balanced+low — same prompt, per-strategy reports under `reports/bench-2/` (hops, gate, design-score, wall-time, tokens, $, UAT).
+4. **PANELS-TRIO** — the live-UX arc: #85 (the who-is-doing-what panel on the sync-map), #90 (sync-map retention/compaction), #100 (the in-app dev-server preview pane).
+5. **VAULT-RAG-2** — semantic RAG over the vault (embeddings, local/free) upgrading the TF-IDF skill-vec index + the #84 instinct RAG.
+6. **REA-MCP (optional, low)** — wire [morluto/rea](https://github.com/morluto/rea) as an optional Artemis MCP (binary/Electron/APK reverse-engineering) + a reference-analyzer lane for benchmarks.
+7. **N10 cert night** — the planted-defect certification (needs the user's quota top-up decision).
 
-The filed issues are the ladder — ordered by what unblocks what:
+## The future arc (v0.0.4 → v0.1, the P2/P3 ladder)
+
+The still-open issues are the ladder (the v0.0.3 close retired most of the original 23 — #81 and #96 among them):
 
 1. **Telemetry truth** — [#81](https://github.com/texugo7badger/OLYMPUS/issues/81) (session→god cost linkage) + [#82](https://github.com/texugo7badger/OLYMPUS/issues/82) (whitespace-only text channel): the observability layer tells the whole truth before anything builds on it.
 2. **The drift detector + guard surface** — [#78](https://github.com/texugo7badger/OLYMPUS/issues/78) (the case-INSENSITIVE catalogue detector: the D19/AN10-AN12 class dies structurally) + [#80](https://github.com/texugo7badger/OLYMPUS/issues/80) (the guard declares live-vs-tracked): the config can no longer lie silently.

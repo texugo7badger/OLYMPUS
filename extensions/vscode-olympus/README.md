@@ -2,7 +2,7 @@
 
 > Embed the live OLYMPUS interactive terminal inside your editor. The terminal is shared with the one running in the OLYMPUS Electron app — type in either, see it in both.
 
-**Version:** 0.0.2
+**Version:** 0.0.3
 **License:** AGPL-3.0-or-later
 
 ## What it does
@@ -29,7 +29,7 @@ node extensions/vscode-olympus/scripts/vendor-xterm.js   # one-time: copy xterm.
 cd extensions/vscode-olympus
 npm install
 npm run compile
-npm run package    # produces olympus-bridge-0.0.2.vsix
+npm run package    # produces olympus-bridge-0.0.3.vsix
 ```
 
 Then in VSCode/VSCodium/Cursor:
@@ -100,7 +100,7 @@ The extension is **read-only with respect to PTY lifecycle** — it never kills 
 - Make sure OLYMPUS is running: `olympus dev`
 - Check that `~/.olympus/terminal-bridge-token` exists and is readable.
 - Run `olympus terminal --status` — if it can connect, the bridge is up and the issue is with the extension's token file path (check the `olympus.bridge.tokenFile` setting).
-- View → Output → "OLYMPUS Bridge" channel for logs (coming in v0.0.2).
+- The extension surfaces connection state in the status bar; the OLYMPUS in-app terminal shows the bridge-side logs.
 
 ### Terminal panel opens but shows no output
 - The PTY may have been spawned before the panel attached. Click "Refresh Terminal List" and pick a different PTY, or spawn a new one.

@@ -36,7 +36,7 @@ OLYMPUS runs as a **standalone desktop application** — it opens its own window
 ```bash
 # 1. Download the latest AppImage from GitHub Releases:
 #    https://github.com/texugo7badger/olympus/releases
-#    OLYMPUS-0.0.2-linux-x64.AppImage (~180 MB)
+#    OLYMPUS-0.0.3-linux-x64.AppImage (~180 MB)
 
 # 2. Make it executable and run:
 chmod +x OLYMPUS-*.AppImage
@@ -151,7 +151,7 @@ GLM-5.3 is reserved for go-max-quality (Apollo + Artemis). The daily strategies 
 
 The **Zen** strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) run the full 128-agent OLYMPUS on OpenCode Zen — pay-as-you-go, **no request caps**, built around **proprietary APIs** (Claude Sonnet 5, GPT-5.4, Gemini 3.5 Flash, Kimi K2.7 Code, MiniMax) while the GO plan runs the open-weight line (GLM, DeepSeek, Qwen, Hy3). Model ids use `opencode/<id>`. Authorize via `olympus opencode` → `/connect` → OpenCode Zen (key stored in OpenCode's own auth.json under the `opencode` provider; env override `OPENCODE_API_KEY`). NOTE: OpenAI/Anthropic requests are retained 30 days per their data policies — the open-weight and free-on-Zen models are zero-retention.
 
-The **free** strategies require no plan — each one is provider-specific and routes gods to that provider's strongest free models currently live (a 550B / 1M-context flagship as of 2026-07-31). Models **refresh automatically** from the live provider lists (`scripts/refresh-free-models.js`, or `olympus apply-strategy <id> --refresh-models`). `free-openrouter` runs the primary trio on OpenRouter's #1 free model, specialists on #2, Callimachus on a fast background model (one OpenRouter key is enough); `free-big-pickle` runs every god — Callimachus included — on one free flagship model; `free-nvidia-build` uses NVIDIA Build's free endpoints (build.nvidia.com — GLM-5.3 + the Nemotron family), live-refreshed the same way. Configure keys inside OpenCode (`olympus opencode` → Settings → add OpenRouter and/or NVIDIA as providers). When one free provider's rate limit runs out, switch to another free strategy and continue. See [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) for the full strategy reference.
+The **free** strategies require no plan — each one is provider-specific and routes gods to that provider's strongest free models currently live. Models **refresh automatically** from the live provider lists (`scripts/refresh-free-models.js`, or `olympus apply-strategy <id> --refresh-models`). `free-openrouter` runs the primary trio on OpenRouter's #1 free model, specialists on #2, Callimachus on a fast background model (one OpenRouter key is enough); `free-big-pickle` runs every god — Callimachus included — on one free flagship model; `free-nvidia-build` is **the distributed pantheon** — per-god model lanes on user-pinned NVIDIA Build anchors (GLM-5.3 / GPT-OSS-20B / Gemma 4 31B / Muse Glimmer — **NO Nemotron, the user's ban, forever**), one client pool per family, live-verified by the refresh (the anchor set is pinned: verified + renamed, never silently swapped). Configure keys inside OpenCode (`olympus opencode` → Settings → add OpenRouter and/or NVIDIA as providers). When one free provider's rate limit runs out, switch to another free strategy and continue. See [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) for the full strategy reference.
 
 ## Uninstall
 
