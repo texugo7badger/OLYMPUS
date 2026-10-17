@@ -230,6 +230,25 @@ async function main() {
   expect('U: complexityScale: architectural → 3', complexityScale('architectural') === 3, 'want 3');
   expect('U: complexityScale: complex → 3', complexityScale('complex') === 3, 'want 3');
   expect('U: complexityScale: simple → 1', complexityScale('simple') === 1, 'want 1');
+
+  // ── Unit layer (STALL-KILL, the 17:44 ORBITAL specimen): the bounded
+  // alive-stall decision table — the 10-minute hostage hold with no
+  // narration and a NO-RETRY max-runtime death is dead; every stall now
+  // ends in a pileup-safe server-side kill + an automatic re-post. ──
+  const { stallKillDecision } = await import(OLYMPUS + '/src/lib/opencode-session.ts');
+  const K = { firstByteStallMs: 180_000, aliveStallKillMs: 120_000, stallMs: 150_000 };
+  expect('K: wait while frames flow and patience holds',
+    stallKillDecision({ ...K, firstFrameSeen: true, msSincePost: 500_000, silentForMs: 100_000 }) === 'wait', 'want wait');
+  expect('K: FIRST-BYTE kill at 180s un-scaled — a hung request is a hung request at any task size (the 17:44 class would have waited 450s scaled)',
+    stallKillDecision({ ...K, firstFrameSeen: false, msSincePost: 180_000, silentForMs: 180_000 }) === 'first-byte-kill', 'want first-byte-kill');
+  expect('K: first-byte patience still waits below the bound (cold pools can take a minute)',
+    stallKillDecision({ ...K, firstFrameSeen: false, msSincePost: 120_000, silentForMs: 120_000 }) === 'wait', 'want wait');
+  expect('K: MID-STREAM kill at stall+kill-bound (150s+120s) — the alive-but-silent wait is bounded',
+    stallKillDecision({ ...K, firstFrameSeen: true, msSincePost: 600_000, silentForMs: 270_000 }) === 'mid-stream-kill', 'want mid-stream-kill');
+  expect('K: mid-stream still waits between stallMs and the kill-bound (the thinking-model patience window)',
+    stallKillDecision({ ...K, firstFrameSeen: true, msSincePost: 600_000, silentForMs: 200_000 }) === 'wait', 'want wait');
+  expect('K: firstFrameSeen guards the first-byte lane — a flowed turn never takes it',
+    stallKillDecision({ ...K, firstFrameSeen: true, msSincePost: 999_000, silentForMs: 100_000 }) === 'wait', 'want wait');
   expect('U: complexityScale: absent → 1', complexityScale(null) === 1, 'want 1');
 
   // ── Scenario 4 (#60): client gone mid-run (attended, short grace) ──

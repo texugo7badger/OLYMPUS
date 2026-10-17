@@ -1750,6 +1750,34 @@ export function complexityScale(complexity?: string | null): number {
 }
 
 /**
+ * STALL-KILL (the 17:44 ORBITAL specimen): the pure bounded-stall
+ * decision, exported for the deterministic fixture (never wall-clock).
+ * Decision table:
+ *   - !firstFrameSeen && msSincePost >= firstByteStallMs  → 'first-byte-kill'
+ *     (the provider request hung BEFORE producing anything — un-scaled;
+ *      a hung request is a hung request at any task size)
+ *   - silentForMs >= stallMs + aliveStallKillMs           → 'mid-stream-kill'
+ *     (frames flowed, then a step's request hung; the class-scaled stall
+ *      patience + a fixed kill-bound, narrated every heartbeat)
+ *   - otherwise                                            → 'wait'
+ * Both kill kinds are pileup-safe in the caller: the server-side abort
+ * lands BEFORE the local abort, and the attempt returns as
+ * stream_idle_timeout so the #61 retry layer re-posts automatically.
+ */
+export function stallKillDecision(args: {
+  firstFrameSeen: boolean;
+  msSincePost: number;
+  silentForMs: number;
+  firstByteStallMs: number;
+  aliveStallKillMs: number;
+  stallMs: number;
+}): 'wait' | 'first-byte-kill' | 'mid-stream-kill' {
+  if (!args.firstFrameSeen && args.msSincePost >= args.firstByteStallMs) return 'first-byte-kill';
+  if (args.silentForMs >= args.stallMs + args.aliveStallKillMs) return 'mid-stream-kill';
+  return 'wait';
+}
+
+/**
  * #62 (BATCH 13): the pure watchdog decision, exported for the
  * injected-timestamp fixture (never wall-clock). Decision table:
  *   - silent < warnMs                        → 'quiet'
@@ -1846,6 +1874,12 @@ async function runWarmMessageAttempt(
     // session filtering — any frame proves the feed is alive). Drives the
     // silence watchdog.
     lastFrameAt: Date.now(),
+    // STALL-KILL (the 17:44 ORBITAL specimen): set on the FIRST mapped
+    // event — distinguishes a FIRST-BYTE hang (the provider request never
+    // produced anything; kill fast, un-scaled) from a MID-STREAM stall
+    // (frames flowed, then a step's request hung; the class-scaled stall
+    // patience + a bounded kill applies).
+    firstFrameSeen: false,
     // #62: starts false; the pump sets it when the latest visible part is a
     // tool awaiting permission approval, clears it on any other event.
     permissionPending: false,
@@ -1861,6 +1895,8 @@ async function runWarmMessageAttempt(
   };
     let receivedEvents = false;
     let postStarted = false;
+    // STALL-KILL: when the POST actually went out (the first-byte clock).
+    let postStartedAt = 0;
     let maxTimedOut = false;
     // Issue #39: the provider HTTP status behind this attempt's failure, so
     // classifyRetry can prefer a structured code over display-string parsing.
@@ -1952,12 +1988,35 @@ async function runWarmMessageAttempt(
     const SILENCE_SCALE = complexityScale(opts.complexity);
     const SILENCE_WARN_MS = Number(process.env.OLYMPUS_SILENCE_WARN_MS || 60_000) * SILENCE_SCALE;
     const SILENCE_STALL_MS = Number(process.env.OLYMPUS_SILENCE_STALL_MS || 150_000) * SILENCE_SCALE;
+    // STALL-KILL (the 17:44 ORBITAL specimen, the v0.0.3 first-prompt bar):
+    // the alive-but-silent wait is BOUNDED and DECISIVE now. The 17:44
+    // shape — a step's provider request hung mid-stream (the free glm-5.3
+    // pool at cap pressure), the turn ALIVE server-side, the old doctrine
+    // "extend the wait, the max runtime bounds it" — meant a 10-minute
+    // hostage hold ending in a max-runtime death the retry layer
+    // classifies as NO-RETRY. The user could not tell frozen from building
+    // and had to STOP by hand. Both halves cured:
+    //   - FIRST-BYTE hang: ZERO mapped frames since the POST for
+    //     FIRST_BYTE_STALL_MS (UN-scaled — a hung request is a hung request
+    //     at any task size; the class scale exists for thinking gaps, not
+    //     never-started requests) → kill server-side (pileup-safe: the #60
+    //     abort lands BEFORE the local abort) → stream_idle_timeout → the
+    //     #61 layer re-posts automatically.
+    //   - MID-STREAM stall: the class-scaled stallMs patience (thinking
+    //     models legitimately go frame-silent mid-essay) + ALIVE_STALL_KILL_MS
+    //     of further patience, narrated every STALL_HEARTBEAT_MS with the
+    //     live countdown and the kill bound — then the same decisive
+    //     server-side kill + auto-retry. The max-runtime no-retry death
+    //     becomes unreachable for stalls: every stall ends in a RETRY.
+    const FIRST_BYTE_STALL_MS = Number(process.env.OLYMPUS_FIRST_BYTE_STALL_MS || 180_000);
+    const ALIVE_STALL_KILL_MS = Number(process.env.OLYMPUS_ALIVE_STALL_KILL_MS || 120_000);
+    const STALL_HEARTBEAT_MS = Number(process.env.OLYMPUS_STALL_HEARTBEAT_MS || 30_000);
     let warnedSilence = false;
     let stalledNotified = false;
     let idleNudged = false;
     let idleTimedOut = false;
-    // #NUDGE-ALIVE-CHECK: the alive-wait log fires once, never per poll.
-    let nudgeAliveWaitLogged = false;
+    let stallKillKind: 'first-byte' | 'mid-stream' | null = null;
+    let aliveNarrationAt = 0;
     const silenceTimer = setInterval(() => {
       if (postStarted === false || eventCtrl.signal.aborted) return;
       const decision = watchdogDecision({
@@ -1993,6 +2052,35 @@ async function runWarmMessageAttempt(
         }
         return;
       }
+      // STALL-KILL / FIRST-BYTE (the never-started request): zero mapped
+      // frames since the POST for FIRST_BYTE_STALL_MS — the provider
+      // request hung before producing ANYTHING. This is not thinking, not
+      // a child, not a permission: it is dead weight, and waiting longer
+      // (the old doctrine held it to the 10-min max-runtime, a NO-RETRY
+      // death) only hostage-holds the session. Kill server-side FIRST
+      // (pileup-safe — the #60 abort lands before the local abort, so the
+      // re-post can never stack behind a zombie) and hand the attempt to
+      // the #61 retry layer as stream_idle_timeout.
+      const stallKill = stallKillDecision({
+        firstFrameSeen: state.firstFrameSeen,
+        msSincePost: postStartedAt > 0 ? Date.now() - postStartedAt : 0,
+        silentForMs: Date.now() - state.lastFrameAt,
+        firstByteStallMs: FIRST_BYTE_STALL_MS,
+        aliveStallKillMs: ALIVE_STALL_KILL_MS,
+        stallMs: SILENCE_STALL_MS,
+      });
+      if (!idleNudged && stallKill === 'first-byte-kill') {
+        idleNudged = true;
+        idleTimedOut = true;
+        stallKillKind = 'first-byte';
+        deliver({
+          type: 'log',
+          msg: `⚠ FIRST-BYTE STALL — ${Math.round((Date.now() - postStartedAt) / 1000)}s with ZERO stream bytes since the post (the provider request hung; this is not thinking, not a child, not a permission) — killing the stalled attempt server-side (pileup-safe) and re-posting automatically (the retry layer carries it).`,
+          ts: new Date().toISOString(),
+        });
+        void sendServerAbort().then(() => onAbort());
+        return;
+      }
       if (decision === 'nudge-abort' && !idleNudged) {
         // #NUDGE-ALIVE-CHECK (the 04:31 specimen): the silence is REAL, but
         // WHY matters. A turn that FINISHED silently (the F5/F6 shape the
@@ -2000,15 +2088,45 @@ async function runWarmMessageAttempt(
         // that is ALIVE server-side (a provider request stalled mid-step,
         // the step-2 hang of attempt 2) must NOT be re-posted: that stacks a
         // second prompt on a running turn — the pileup class. Ask the
-        // server; alive means wait (the max-runtime timer stays the bound).
+        // server; alive means wait — but BOUNDED now (the 17:44 ORBITAL
+        // specimen: the old unbounded alive-wait held the user hostage for
+        // 453s+ with no narration and ended in a no-retry max-runtime death).
+        // The wait narrates every STALL_HEARTBEAT_MS with the countdown and
+        // the kill bound; past SILENCE_STALL_MS + ALIVE_STALL_KILL_MS it
+        // kills server-side (pileup-safe) and retries — a stall can never
+        // end in the no-retry death anymore.
         void (async () => {
           const alive = await isTurnAliveServerSide(server, opts.sessionId);
           if (alive.alive && !eventCtrl.signal.aborted && !maxTimedOut) {
-            if (!nudgeAliveWaitLogged) {
-              nudgeAliveWaitLogged = true;
+            const silentMs = Date.now() - state.lastFrameAt;
+            const killInMs = SILENCE_STALL_MS + ALIVE_STALL_KILL_MS - silentMs;
+            // The bounded decision: patience exhausted → the decisive kill.
+            if (stallKillDecision({
+              firstFrameSeen: state.firstFrameSeen,
+              msSincePost: postStartedAt > 0 ? Date.now() - postStartedAt : 0,
+              silentForMs: silentMs,
+              firstByteStallMs: FIRST_BYTE_STALL_MS,
+              aliveStallKillMs: ALIVE_STALL_KILL_MS,
+              stallMs: SILENCE_STALL_MS,
+            }) === 'mid-stream-kill') {
+              idleNudged = true;
+              idleTimedOut = true;
+              stallKillKind = 'mid-stream';
               deliver({
                 type: 'log',
-                msg: `No stream activity for ${Math.round((Date.now() - state.lastFrameAt) / 1000)}s, but the turn is ALIVE server-side (a step's provider request is stalled, not the session) — extending the wait, NO re-post (no prompt pileup); the max runtime bounds it.`,
+                msg: `⚠ MID-STREAM STALL-KILL — ${Math.round(silentMs / 1000)}s silent while ALIVE server-side (a step's provider request hung mid-generation) — patience exhausted (stall ${Math.round(SILENCE_STALL_MS / 1000)}s + kill-bound ${Math.round(ALIVE_STALL_KILL_MS / 1000)}s): killing the stalled attempt server-side (pileup-safe) and re-posting automatically (the retry layer carries it).`,
+                ts: new Date().toISOString(),
+              });
+              void sendServerAbort().then(() => onAbort());
+              return;
+            }
+            // The visible wait: narrate EVERY heartbeat — the user always
+            // knows frozen-vs-building AND what happens next, when.
+            if (Date.now() - aliveNarrationAt >= STALL_HEARTBEAT_MS) {
+              aliveNarrationAt = Date.now();
+              deliver({
+                type: 'log',
+                msg: `No stream activity for ${Math.round(silentMs / 1000)}s, but the turn is ALIVE server-side (a step's provider request is stalled, not the session) — waiting, NO re-post (no prompt pileup); kill + auto-retry in ${Math.round(killInMs / 1000)}s, max runtime in ${Math.round((((opts.maxRuntimeMs ?? 10 * 60_000) - (Date.now() - (postStartedAt || state.lastFrameAt))) / 1000))}s.`,
                 ts: new Date().toISOString(),
               });
             }
@@ -2131,6 +2249,7 @@ async function runWarmMessageAttempt(
       // 2. Post the message (waits for the full turn).
       const auth = server.authed ? server.password : null;
       postStarted = true;
+      postStartedAt = Date.now();
       // Issue #32 (complaint 1: 66s of silence between "Routing to Apollo..."
       // and opencode actually starting). Emitted at the moment the POST goes
       // out, so the gap is explained rather than blank. Agent stands in for
@@ -2316,7 +2435,7 @@ async function runWarmMessageAttempt(
           sessionId: opts.sessionId,
           receivedEvents,
           postStarted,
-          error: `stream_idle_timeout: no visible stream activity for ${Math.round(SILENCE_STALL_MS / 1000)}s${opts.complexity ? ` (class '${opts.complexity}', budget scaled ${SILENCE_SCALE}x)` : ''} — auto-continue nudge fired; the retry layer re-posts this run`,
+          error: `stream_idle_timeout${stallKillKind ? ` (${stallKillKind} stall-kill)` : ''}: no visible stream activity for ${stallKillKind === 'first-byte' ? Math.round((Date.now() - postStartedAt) / 1000) : Math.round(SILENCE_STALL_MS / 1000)}s${opts.complexity ? ` (class '${opts.complexity}', budget scaled ${SILENCE_SCALE}x)` : ''} — auto-continue nudge fired; the retry layer re-posts this run`,
         };
       }
       if (maxTimedOut) {
@@ -2362,6 +2481,9 @@ async function openEventFeed(
     gotError: boolean;
     userMessageIds: Set<string>;
     lastFrameAt: number;
+    /** STALL-KILL: set on the first MAPPED event — distinguishes the
+     *  first-byte hang (kill un-scaled) from the mid-stream stall. */
+    firstFrameSeen?: boolean;
     /** #62: the latest visible part is a tool awaiting permission approval. */
     permissionPending: boolean;
     /** #CHILD-LIVENESS: the latest visible part is a tool in 'running'
@@ -2464,6 +2586,7 @@ async function openEventFeed(
               // after the WARN fired.
               mapEvent(ev, sessionId, state, (mapped) => {
                 state.lastFrameAt = Date.now();
+                state.firstFrameSeen = true;
                 // #62 (BATCH 13): permission-pending detection — the LATEST
                 // visible part being a tool in 'pending' state means the run
                 // is waiting for the HUMAN's permission approval: a legitimate

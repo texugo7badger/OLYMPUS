@@ -239,3 +239,32 @@
   the v0.0.4 arc), ARCHITECTURE/WORKFLOW/CREDITS/BENCHMARKS/BUILD-AND-PUBLISH version stamps,
   the badge SVGs, the README's free-tier paragraph (the Nemotron claim was WRONG — the ban
   doctrine now stated), CHANGELOG's CI-cure arc.
+
+## The STALL-KILL reconciliation (2026-10-17 the 17:44 ORBITAL specimen)
+
+- **The specimen (the user's own first-prompt run of the ORBITAL bench):** the planning turn
+  emitted its opener at 17:44:48, then ZERO stream bytes; the warn fired at 183s, the
+  alive-extension at 453s ("extending the wait, the max runtime bounds it"), no further
+  narration — the user could not tell frozen from building and STOPped it by hand at ~8min.
+  The old doctrine's terminal state was a 10-minute max-runtime death that classifyRetry
+  reads as NO-RETRY — a hostage hold ending in a dead turn. Root context: the free glm-5.3
+  pool at cap pressure (the same night's probes: 429 + multi-second stalls on the planner
+  lane).
+- **The user's question — does the ~150k token estimate hurt?** No: the estimate only
+  scales the silence patience 3x (architectural class — warn 180s/stall 450s). The disease
+  was the UNBOUNDED alive-wait + the no-retry terminal + zero narration, not the estimate.
+  Post-cure the scale only widens the patience WINDOW; it can never hold a stall past the
+  kill-bound.
+- **The cure (both halves, pileup-safe):** FIRST-BYTE hang — zero MAPPED frames since the
+  POST for `OLYMPUS_FIRST_BYTE_STALL_MS` (default 180s, UN-scaled) → server-side kill (the
+  #60 abort lands BEFORE the local abort) → `stream_idle_timeout` → the #61 layer re-posts
+  automatically. MID-STREAM stall — the class-scaled `SILENCE_STALL_MS` + a 120s kill-bound
+  (`OLYMPUS_ALIVE_STALL_KILL_MS`), narrated every 30s (`OLYMPUS_STALL_HEARTBEAT_MS`) with the
+  countdown and BOTH bounds (kill+retry / max runtime) → the same decisive kill + retry. The
+  no-retry death is unreachable for stalls now. The renderer lanes honored: kills carry ⚠
+  (red escalate), the heartbeat keeps the calm 'No stream activity' phrasing (system tone +
+  the god-activity card).
+- **Evidence:** the pure `stallKillDecision` fixture 6/6 (first-byte un-scaled fires where
+  the scaled ladder would have waited 450s; the mid-stream bound; the patience window; the
+  firstFrameSeen guard) in `scripts/opencode-session.test.mjs`; battery 31/0/1 at the close;
+  tsc 0 + eslint 0.
