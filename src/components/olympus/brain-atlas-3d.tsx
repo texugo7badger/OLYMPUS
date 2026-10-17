@@ -611,6 +611,51 @@ export default function BrainAtlas3D() {
   }, [highlightLobe]);
 
   /* ---------------------------------------------------------------- */
+  /* WORKING-GODS GLOW — the neuron pulse tracks real activity.       */
+  /* Polls the live episodes API (the same feed Recent Activity reads) */
+  /* and derives the set of gods with events in the last 3 minutes —   */
+  /* the renderer biases its inter-neuron signals to those neurons,   */
+  /* faster + longer while work flows. Apollo planning → signals      */
+  /* streaming from the frontal lobe; a demigod delegation → pulses   */
+  /* on the dispatching god. Idle (no recent events) = the calm       */
+  /* random spawn, untouched.                                         */
+  /* ---------------------------------------------------------------- */
+  const workingGodsRef = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const derive = async () => {
+      try {
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), 5000);
+        const r = await fetch('/api/olympus/episodes', { signal: ctrl.signal, cache: 'no-store' });
+        clearTimeout(to);
+        if (!r.ok) return;
+        const d = await r.json();
+        if (cancelled) return;
+        const cutoff = Date.now() - 3 * 60 * 1000;
+        const next = new Set<string>();
+        for (const ep of (d?.episodes || []) as Array<{ source?: string; god?: string; ts?: string }>) {
+          if (ep?.source !== 'live' || !ep.god || !ep.ts) continue;
+          let t = 0;
+          try { t = new Date(ep.ts).getTime(); } catch { continue; }
+          if (Number.isFinite(t) && t >= cutoff) next.add(`god:${ep.god}`);
+        }
+        // Push only on CHANGE — a no-op poll must not force frames.
+        const prev = workingGodsRef.current;
+        const same = prev === null && next.size === 0
+          || (prev !== null && next.size === prev.size && [...next].every(g => prev.has(g)));
+        if (same) return;
+        workingGodsRef.current = next.size ? next : null;
+        const rr = rendererRef.current;
+        if (rr && startedRef.current) rr.setWorkingGods(next.size ? [...next] : null);
+      } catch { /* the glow is decorative — a dead API never breaks the brain */ }
+    };
+    derive();
+    const iv = setInterval(derive, 15_000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []);
+
+  /* ---------------------------------------------------------------- */
   /* Toggle handlers.                                                  */
   /* ---------------------------------------------------------------- */
   const toggleLobe = useCallback((lobe: LobeName) => {

@@ -268,3 +268,37 @@
   the scaled ladder would have waited 450s; the mid-stream bound; the patience window; the
   firstFrameSeen guard) in `scripts/opencode-session.test.mjs`; battery 31/0/1 at the close;
   tsc 0 + eslint 0.
+
+## The LIVE-ACTIVITY reconciliation (2026-10-17 the dead-panel specimen)
+
+- **The specimen (the user's report):** "Recent Activity — episodes 0 · high impact 0 ·
+  delegations 0 · No activity yet" while his own ORBITAL run had just produced a rich session.
+  The live feed at `06_Activity_Feed/live.jsonl` carried **2,026 real events** (1,501
+  tool_call, 210 hop, 176 classification, 63 dispatch-class, 34 milestone, 3 error) — the
+  panel's API read NONE of them.
+- **Root cause ×2:** (1) the episodes route read only
+  `05_Auto_Learning/episodes/*.md` — a FLAT read, while the vault nests episodes under
+  `<god>/` subdirectories (also: the learning loop rarely writes episode files, so even a
+  fixed read would stay near-empty); (2) the LIVE feed — the actual record of what every god
+  and demigod does — was never surfaced to any panel.
+- **The cure:** the route's PRIMARY source is now `live.jsonl` (last 24h window, newest 400,
+  tail-capped at 25k lines with a 4MB tail read for path-size safety): each event maps to a
+  panel episode with god, ACTION badge, the DEMIGOD NAMED on dispatches (`apollo →
+  researcher`), impact classes (dispatch/dispatch_outcome/error/milestone/unattended/
+  shortcircuit = high; hop/classification = medium; tool_call = low), and delegation counting
+  from real dispatch actions. Vault episodes stay secondary, read RECURSIVELY (the flat-read
+  bug dies too). The timeline UI renders the action chip + demigod arrow; the empty-state
+  footer stays honest.
+- **The neuron glow (the user's ask):** the brain atlas polls the same endpoint every 15s
+  and derives the WORKING set (gods with live events in the last 3 minutes → node ids
+  `god:<name>`); `RenderCore.setWorkingGods()` biases the inter-neuron signal particles —
+  previously RANDOM spawns every 900ms — to edges touching the working gods' neurons,
+  firing every 450ms with longer trails. Idle = the calm random spawn, untouched. The glow
+  between neurons is now the live pulse of the session, not decoration.
+- **Side-kill found on the path:** the local production build died in Turbopack's tracing on
+  `tmp/ffprof-d/lock` — Firefox-profile RESIDUE (from an earlier browser probe) sitting in
+  the repo root, its `lock` symlink breaking module-graph resolution. Disposed per the
+  zero-residue doctrine (`tmp/` is gitignored; the profiles are runtime junk, moved out).
+- **Probe evidence:** `GET /api/olympus/episodes` on the production build →
+  `total: 400, liveCount: 400, vaultCount: 0`, the ORBITAL session's milestones and tool
+  calls verbatim, high impact 9, delegations 2; `✓ Compiled successfully`; tsc 0 + eslint 0.

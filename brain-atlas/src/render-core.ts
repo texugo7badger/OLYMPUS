@@ -108,6 +108,15 @@ export abstract class RenderCore {
   protected hoverId: string | null = null;
   protected focusId: string | null = null;
   protected highlightLobe: LobeName | null = null;
+  /**
+   * WORKING-GODS GLOW (the v0.0.3 neuron-glow feature): the set of node
+   * ids whose god is WORKING right now (live feed events in the last
+   * minutes, e.g. "god:apollo"). While non-empty, signal spawns bias to
+   * edges touching those neurons and fire faster — the glow between
+   * neurons tracks real god activity instead of randomness. Null/empty =
+   * the idle random behavior, untouched.
+   */
+  protected workingGods: Set<string> | null = null;
   protected width = 1;
   protected height = 1;
   protected dpr = 1;
@@ -261,6 +270,11 @@ export abstract class RenderCore {
 
   setHighlightLobe(lobe: LobeName | null): void {
     this.highlightLobe = lobe;
+    this.requestImmediateFrame();
+  }
+
+  setWorkingGods(ids: string[] | null): void {
+    this.workingGods = ids && ids.length ? new Set(ids) : null;
     this.requestImmediateFrame();
   }
 
@@ -591,22 +605,34 @@ export abstract class RenderCore {
       }
       return;
     }
-    if (interLobeEdges.length && now - this.lastSpawn > 900) {
-      this.lastSpawn = now;
-      const edge = interLobeEdges[Math.floor(Math.random() * interLobeEdges.length)];
-      const forward = Math.random() < 0.5;
-      const A = graph.idx[forward ? edge.a : edge.b];
-      const B = graph.idx[forward ? edge.b : edge.a];
-      if (A && B) {
-        this.signals.push({
-          id: Math.random(),
-          a: A,
-          b: B,
-          born: now,
-          dur: 2400 + Math.random() * 1100,
-          colA: A.color,
-          colB: B.color
-        });
+    // WORKING-GODS GLOW: while gods work, bias every spawn to their
+    // neurons and fire ~2x faster — the inter-neuron glow becomes the
+    // live pulse of the session (Apollo thinking → signals streaming
+    // from the frontal lobe to its instinct cloud). When the set is
+    // empty (idle) the behavior is exactly the old random spawn.
+    const working = this.workingGods;
+    const spawnEvery = working ? 450 : 900;
+    if (interLobeEdges.length && now - this.lastSpawn > spawnEvery) {
+      const pool = working
+        ? interLobeEdges.filter(e => working.has(e.a) || working.has(e.b))
+        : interLobeEdges;
+      if (pool.length) {
+        this.lastSpawn = now;
+        const edge = pool[Math.floor(Math.random() * pool.length)];
+        const forward = Math.random() < 0.5;
+        const A = graph.idx[forward ? edge.a : edge.b];
+        const B = graph.idx[forward ? edge.b : edge.a];
+        if (A && B) {
+          this.signals.push({
+            id: Math.random(),
+            a: A,
+            b: B,
+            born: now,
+            dur: (working ? 2900 : 2400) + Math.random() * 1100,
+            colA: A.color,
+            colB: B.color
+          });
+        }
       }
     }
     for (let index = this.signals.length - 1; index >= 0; index -= 1) {

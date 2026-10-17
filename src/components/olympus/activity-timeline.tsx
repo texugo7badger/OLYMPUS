@@ -23,7 +23,13 @@ interface Episode {
   summary: string;
   outcome: string;
   tools: string[];
-  source: 'vault' | 'simulated';
+  source: 'vault' | 'simulated' | 'live';
+  /** LIVE events: the feed action (tool_call / dispatch / hop / …). */
+  action?: string;
+  /** LIVE dispatch events: the demigod that received the delegation. */
+  demigod?: string | null;
+  /** 'delegation' on dispatch-shaped events. */
+  type?: string;
 }
 
 const IMPACT_COLORS: Record<string, string> = {
@@ -91,8 +97,9 @@ export default function ActivityTimeline() {
   // Count delegations — episodes where the outcome mentions "delegated" or the type field is delegation.
   // (The Activity Timeline now absorbs the Delegation History view — user request.)
   const delegations = filtered.filter(e =>
-    e.outcome?.toLowerCase().includes('delegat') ||
-    (e as any).type === 'delegation'
+    e.action === 'dispatch' || e.action === 'symphony-dispatch' ||
+    (e as any).type === 'delegation' ||
+    e.outcome?.toLowerCase().includes('delegat')
   ).length;
 
   return (
@@ -204,6 +211,14 @@ function TimelineItem({ ep, isLast, onClick }: { ep: Episode; isLast: boolean; o
           <div className="flex items-center gap-1.5 mb-0.5">
             {Icon ? <Icon size={13} className="text-olympus-gold" /> : null}
             <span className="text-[11px] font-mono text-olympus-gold capitalize">{ep.god}</span>
+            {ep.demigod ? (
+              <span className="text-[10px] font-mono text-olympus-cyan">→ {ep.demigod}</span>
+            ) : null}
+            {ep.action ? (
+              <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/20">
+                {ep.action}
+              </span>
+            ) : null}
             <span className={cn('text-[8px] font-mono px-1 py-0.5 rounded ring-1', IMPACT_COLORS[ep.impact])}>
               {ep.impact}
             </span>
@@ -215,8 +230,14 @@ function TimelineItem({ ep, isLast, onClick }: { ep: Episode; isLast: boolean; o
           </div>
           <div className="text-[11px] text-olympus-text leading-snug mb-1">{ep.summary}</div>
           <div className="text-[10px] text-olympus-text-dim leading-snug flex items-start gap-1">
-            <GitBranch size={9} className="text-olympus-text-dim mt-0.5 shrink-0" />
-            <span>{ep.outcome}</span>
+            {ep.outcome ? (
+              <>
+                <GitBranch size={9} className="text-olympus-text-dim mt-0.5 shrink-0" />
+                <span>{ep.outcome}</span>
+              </>
+            ) : (
+              <span className="font-mono">{formatTime(ep.ts)}</span>
+            )}
           </div>
           {ep.tools.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
