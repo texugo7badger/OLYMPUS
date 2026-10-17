@@ -77,7 +77,23 @@ const HONEST_CONTEXT = {
   'openai/gpt-oss-20b': 131072,
 };
 const FLOOR_OUTPUT = 8192;
-const TARGET_OUTPUT = 16384;
+// #MOUTH-REVISION (the 06:15/06:26 specimens): the 16384 mouth starved BOTH
+// classes on the REASONING lanes — the planner thought itself to death
+// (reasoning eats the budget) AND the fixtures hop's single ~16K-token file
+// died mid-write (finish=length, tools=0, zero artifacts). The reasoning
+// lanes (glm-5.3, step-5) now carry 32768 — probe-accepted by both models —
+// covering reasoning + a big single-file write. The volume lanes keep the
+// #76 bar: their work is small + mechanical.
+const REASONING_OUTPUT = 32768;
+const VOLUME_OUTPUT = 16384;
+const OUTPUT_BY_LANE = {
+  'z-ai/glm-5.3': REASONING_OUTPUT,
+  'stepfun-ai/step-5-preview': REASONING_OUTPUT,
+  'google/gemma-4-31b-it': VOLUME_OUTPUT,
+  'meta/muse-glimmer-30b': VOLUME_OUTPUT,
+  'openai/gpt-oss-20b': VOLUME_OUTPUT,
+};
+const TARGET_OUTPUT = REASONING_OUTPUT;
 
 let failures = 0;
 function check(name, ok, detail = '') {
@@ -296,8 +312,9 @@ const familyLaneIds = FAMILIES.flatMap(f =>
     .map(m => `${f}/${m}`));
 for (const id of familyLaneIds) {
   const lim = limits[id];
-  check(`THE GENERATOR: ${id} present with output ${TARGET_OUTPUT}`,
-    !!lim && lim.output === TARGET_OUTPUT, `limits[${id}]=${JSON.stringify(lim)}`);
+  const wantOut = OUTPUT_BY_LANE[bare(id)] ?? VOLUME_OUTPUT;
+  check(`THE GENERATOR: ${id} present with output ${wantOut}`,
+    !!lim && lim.output === wantOut, `limits[${id}]=${JSON.stringify(lim)}`);
   check(`THE GENERATOR: ${id} honest context (${HONEST_CONTEXT[bare(id)]})`,
     !!lim && lim.context === HONEST_CONTEXT[bare(id)], `context=${lim ? lim.context : '(absent)'}`);
 }
@@ -331,8 +348,8 @@ if (familyProviders) {
       JSON.stringify(models) === JSON.stringify(expected),
       `models=${models.join(', ')}`);
     for (const [mid, mc] of Object.entries(fp.models || {})) {
-      check(`THE PROVIDER SPLIT: ${f}/${mid} honest limits (ctx ${HONEST_CONTEXT[mid]}, out ${TARGET_OUTPUT})`,
-        mc?.limit?.context === HONEST_CONTEXT[mid] && mc?.limit?.output === TARGET_OUTPUT,
+      check(`THE PROVIDER SPLIT: ${f}/${mid} honest limits (ctx ${HONEST_CONTEXT[mid]}, out ${OUTPUT_BY_LANE[mid] ?? VOLUME_OUTPUT})`,
+        mc?.limit?.context === HONEST_CONTEXT[mid] && mc?.limit?.output === (OUTPUT_BY_LANE[mid] ?? VOLUME_OUTPUT),
         `limit=${JSON.stringify(mc?.limit)}`);
     }
   }

@@ -209,7 +209,7 @@ async function main() {
     return;
   }
 
-  const { walkPlan, MAX_HOP_CONCURRENCY } = mod;
+  const { walkPlan, MAX_HOP_CONCURRENCY, MAX_HOP_PER_POOL } = mod;
   const schema = await import(OLYMPUS + '/src/lib/hop-runtime/plan-schema.ts');
   const { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS } = schema;
 
@@ -253,13 +253,16 @@ async function main() {
 
   // ── 2. The walker: topological order + the concurrency cap ─────────────
   const capLane = tempLane();
+  // #POOL-CONTENTION: the roots ride THREE distinct pools (apollo → glm,
+  // athena/hephaestus → step) so the global cap of 3 is reachable; the
+  // same-lane saturation is asserted by its own fixture below.
   const capPlan = {
     version: 1,
     laneRoot: capLane,
     hops: [
       { id: 'r1', god: 'apollo', prompt: 'root 1', artifacts: ['a1.txt'] },
-      { id: 'r2', god: 'apollo', prompt: 'root 2', artifacts: ['a2.txt'] },
-      { id: 'r3', god: 'apollo', prompt: 'root 3', artifacts: ['a3.txt'] },
+      { id: 'r2', god: 'athena', prompt: 'root 2', artifacts: ['a2.txt'] },
+      { id: 'r3', god: 'hephaestus', prompt: 'root 3', artifacts: ['a3.txt'] },
       { id: 'r4', god: 'apollo', prompt: 'root 4', artifacts: ['a4.txt'] },
       { id: 'sink', god: 'apollo', prompt: 'after all roots', artifacts: ['sink.txt'], after: ['r1', 'r2', 'r3', 'r4'] },
     ],
@@ -277,7 +280,32 @@ async function main() {
   const walk1 = await walkPlan({ plan: capPlan, dispatcher: capDisp, stateDir: capState });
   expect('W: MAX_HOP_CONCURRENCY = 3 (the #106 law)', MAX_HOP_CONCURRENCY === 3, String(MAX_HOP_CONCURRENCY));
   expect('W: the cap held (4 roots runnable, never 4 in flight)', maxInFlight <= 3, 'max=' + maxInFlight);
-  expect('W: the cap USED (the roots actually ran concurrently)', maxInFlight === 3, 'max=' + maxInFlight + ' (want 3 — parallelism dead?)');
+  expect('W: the cap USED across DISTINCT pools (the roots actually ran concurrently)', maxInFlight === 3, 'max=' + maxInFlight + ' (want 3 — parallelism dead?)');
+  // #POOL-CONTENTION (the 06:15-06:40 specimens): three same-lane hops
+  // crawled a single free pool to a 25-minute ceiling-kill. The per-pool
+  // cap: same-lane roots saturate at MAX_HOP_PER_POOL, never the global 3.
+  const poolLane = tempLane();
+  const poolPlan = {
+    version: 1,
+    laneRoot: poolLane,
+    hops: [
+      { id: 'p1', god: 'apollo', prompt: 'root', artifacts: ['p1.txt'] },
+      { id: 'p2', god: 'apollo', prompt: 'root', artifacts: ['p2.txt'] },
+      { id: 'p3', god: 'apollo', prompt: 'root', artifacts: ['p3.txt'] },
+      { id: 'p4', god: 'apollo', prompt: 'root', artifacts: ['p4.txt'] },
+    ],
+  };
+  let poolInFlight = 0, poolMax = 0;
+  const poolDisp = async (hop) => {
+    poolInFlight++; poolMax = Math.max(poolMax, poolInFlight);
+    await new Promise(r => setTimeout(r, 30));
+    fs.writeFileSync(path.join(poolLane, hop.artifacts[0]), 'done');
+    poolInFlight--;
+    return { ok: true, exitCode: 0, output: 'ok', tokensIn: 100, tokensOut: 500, retriesAbsorbed: 0, exhausted: false };
+  };
+  await walkPlan({ plan: poolPlan, dispatcher: poolDisp, stateDir: tempLane() });
+  expect('W: the POOL cap — same-lane roots saturate at MAX_HOP_PER_POOL (the contention cure)',
+    poolMax === MAX_HOP_PER_POOL && MAX_HOP_PER_POOL === 2, 'poolMax=' + poolMax + ' MAX_HOP_PER_POOL=' + MAX_HOP_PER_POOL);
   expect('W: topological order — the sink last, after every root',
     order.indexOf('sink') === 4 && ['r1','r2','r3','r4'].every(id => order.indexOf(id) < order.indexOf('sink')),
     JSON.stringify(order));

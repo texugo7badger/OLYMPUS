@@ -34,6 +34,14 @@ import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencod
 
 /** The #106 law: never more than 3 gods riding pools at once. */
 export const MAX_HOP_CONCURRENCY = 3;
+/**
+ * #POOL-CONTENTION (the 06:15-06:40 specimens): three athena/hephaestus
+ * hops launched CONCURRENTLY on the SAME nvidia-step pool — each crawled at
+ * a third of the throughput (shell 801s, logo 677s, ui-primitives 25 min to
+ * a ceiling-kill). The free pools are per-key rate-limited and per-pool
+ * contention-bound: at most MAX_PER_POOL hops share one provider lane.
+ */
+export const MAX_HOP_PER_POOL = 2;
 
 export const HOP_TELEMETRY_FILENAME = '.olympus-hop-telemetry.jsonl';
 
@@ -105,6 +113,13 @@ export function composeHopPrompt(hop: PlanHop, laneRoot: string): string {
   }
   lines.push(`Budget: at most ${hop.budgetTokens ?? MAX_HOP_BUDGET_TOKENS} output tokens — a small hop, one god, artifacts on disk.`);
   lines.push('The spine verifies the artifacts deterministically (file-exists / build / lint). Sessions are lanes; the disk carries the campaign.');
+  // #SACRED-RUNTIME (the 10:16 specimen): the build-green god read the
+  // residue-cleanup doctrine and DELETED the walk's own machinery mid-hop
+  // (rm opencode.json dispatch-plan.json .olympus-* .opencode…) — the next
+  // hop died with "Model not found" and the campaign parked. The cleanup is
+  // the RUNTIME's post-campaign job (post-run.ts), NEVER a god's. Every hop
+  // prompt carries the guard; the planner template forbids it too.
+  lines.push('RUNTIME FILES ARE SACRED: NEVER delete, move, or rewrite .opencode, opencode.json, opencode.demigods.json, dispatch-plan.json, .olympus-context.json, .olympus-hop-state.json, .olympus-hop-telemetry.jsonl, project.md, _handoff.md, or _delegations — they are the walk\'s own machinery. Cleaning the deliverable is the RUNTIME\'s job after the campaign completes, never a god\'s mid-hop.');
   return lines.join('\n');
 }
 
@@ -164,6 +179,11 @@ function parseJsonEvents(raw: string): JsonEventParse {
  * above the slowest measured legitimate TTFT: gemma-4-31b at 111s).
  */
 export const DEFAULT_HOP_FIRST_BYTE_MS = 240_000;
+export const DEFAULT_HOP_SILENCE_MS = 600_000;
+export function resolveHopSilenceMs(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number.parseInt(env.OLYMPUS_HOP_SILENCE_MS ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_HOP_SILENCE_MS;
+}
 export const HOP_FIRST_BYTE_MARKER = 'hop-first-byte-timeout';
 export function resolveHopFirstByteMs(env: NodeJS.ProcessEnv = process.env): number {
   const n = Number.parseInt(env.OLYMPUS_HOP_FIRST_BYTE_MS ?? '', 10);
@@ -186,13 +206,32 @@ function runSpawn(args: string[], hopCwd: string, timeoutMs: number): Promise<{ 
       try { child.kill('SIGKILL'); } catch { /* already gone */ }
       stderr += `\n${HOP_FIRST_BYTE_MARKER} (OLYMPUS_HOP_FIRST_BYTE_MS ${resolveHopFirstByteMs()}ms): the turn produced ZERO output — the provider pool stalled before the first token (the empty-reasoning stall class; transient pool contention — retries absorb it)`;
     }, resolveHopFirstByteMs());
+    // #ROLLING-SILENCE (the fixtures specimen, 05:28→05:42): the MID-RUN
+    // stall class — the child EMITTED its first bytes (first-byte is happy)
+    // then froze on a step-2 provider request for the rest of the ceiling.
+    // The rolling deadline resets on every stdout chunk: a live hop is
+    // never silent for long (its json events stream per turn); a stalled
+    // one dies at the deadline, NAMED, retried. 600s default — above the
+    // longest legitimate silent window (a cold `npm install` can take 2-4
+    // quiet minutes; the deadline must never kill live work).
+    const silenceMs = resolveHopSilenceMs();
+    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+    const armSilence = () => {
+      if (silenceTimer) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        try { child.kill('SIGKILL'); } catch { /* already gone */ }
+        stderr += `\n${HOP_FIRST_BYTE_MARKER} (OLYMPUS_HOP_SILENCE_MS ${silenceMs}ms rolling): the turn went SILENT mid-run after producing output — a step's provider request stalled (the fixtures step-2 class; transient pool contention — retries absorb it)`;
+      }, silenceMs);
+    };
     child.stdout?.on('data', (d) => {
       if (firstByteAt === null && String(d).trim()) firstByteAt = Date.now();
       stdout += String(d);
+      if (String(d).trim()) armSilence();
     });
     child.stderr?.on('data', (d) => { stderr += String(d); });
-    child.on('error', (e) => { clearTimeout(timer); clearTimeout(firstByteTimer); resolveP({ code: -1, stdout, stderr: stderr + String(e) }); });
-    child.on('close', (code) => { clearTimeout(timer); clearTimeout(firstByteTimer); resolveP({ code, stdout, stderr }); });
+    child.on('error', (e) => { clearTimeout(timer); clearTimeout(firstByteTimer); if (silenceTimer) clearTimeout(silenceTimer); resolveP({ code: -1, stdout, stderr: stderr + String(e) }); });
+    child.on('close', (code) => { clearTimeout(timer); clearTimeout(firstByteTimer); if (silenceTimer) clearTimeout(silenceTimer); resolveP({ code, stdout, stderr }); });
+    armSilence();
   });
 }
 
@@ -480,8 +519,24 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     const launch = () => {
       if (stopped) return;
       while (inFlight.size < MAX_HOP_CONCURRENCY) {
-        const next = pending.find((h) => ready(h) && !inFlight.has(h.id) && !completed.has(h.id));
+        // #POOL-CONTENTION: count the in-flight hops per provider lane; a
+        // saturated lane's hops wait (other-pool hops can still launch).
+        const perPool = new Map<string, number>();
+        for (const t of inFlight.values()) {
+          const lane = resolveGodModelLane(t.hop.god) ?? 'unknown';
+          perPool.set(lane, (perPool.get(lane) ?? 0) + 1);
+        }
+        const next = pending.find((h) => {
+          if (!ready(h) || inFlight.has(h.id) || completed.has(h.id)) return false;
+          const lane = resolveGodModelLane(h.god) ?? 'unknown';
+          return (perPool.get(lane) ?? 0) < MAX_HOP_PER_POOL;
+        });
         if (!next) return;
+        // #SACRED-RUNTIME: self-healing lane — a god (or anything) may have
+        // deleted the runtime config mid-walk (the 10:16 specimen killed the
+        // NEXT hop with "Model not found"). Re-assert the lane config before
+        // every dispatch: config, demigods, symlink — idempotent, cheap.
+        try { ensureLaneConfig(laneRoot); } catch { /* the dispatch names the failure */ }
         const startedAt = Date.now();
         const task: WalkTask = { hop: next, startedAt, done: false, promise: Promise.resolve() };
         inFlight.set(next.id, task);
@@ -490,6 +545,13 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         // plan), not just that it started.
         opts.onEvent?.({ type: 'hop_start', hop: next.id, god: next.god, artifacts: next.artifacts });
         task.promise = (async () => {
+          // #CRASH-ARMOR (the 05:42 specimen): the DEV SERVER DIED on an
+          // unhandled rejection — a task-promise rejection propagates
+          // through settle's Promise.race, settle is void'd, and Node kills
+          // the process: the whole campaign dies mid-walk with zero
+          // narration. The armor: the task body can NEVER throw — every
+          // failure becomes a parked result.
+          try {
           let result: HopDispatchResult;
           try {
             result = await dispatch(next, { laneRoot, prompt: composeHopPrompt(next, laneRoot) });
@@ -544,24 +606,48 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
             opts.onEvent?.({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'dispatch-failed', error: result.error });
           }
           task.done = true;
+          } catch (e) {
+            // The armor: post-dispatch failures (verify, telemetry, the
+            // event bridge) park NAMED instead of rejecting the promise.
+            if (!stopped) {
+              stopped = true;
+              parkedHop = {
+                hopId: next.id, reason: 'walker-internal-error',
+                ts: new Date().toISOString(),
+                error: e instanceof Error ? e.message : String(e),
+              };
+            }
+            try {
+              telemetryRow(next, null, 'parked-walker-internal-error', startedAt);
+              opts.onEvent?.({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'walker-internal-error', error: e instanceof Error ? e.message : String(e) });
+            } catch { /* never again */ }
+            task.done = true;
+          }
         })();
       }
     };
     const settle = async () => {
+      // #CRASH-ARMOR: settle is void'd — a rejection here is UNHANDLED and
+      // kills the server process (the 05:42 death). The loop body never
+      // throws; the walk always resolves with the truth on disk.
+      try {
       while (inFlight.size > 0) {
         await Promise.race([...inFlight.values()].map((t) => t.promise));
         for (const [id, t] of [...inFlight.entries()]) {
           if (t.done) inFlight.delete(id);
         }
         // Persist durable progress after each settle — the disk carries the campaign.
-        saveHopState(stateDir, {
-          version: 1,
-          completed: [...completed],
-          parked: parkedHop,
-          updatedAt: new Date().toISOString(),
-        });
+        try {
+          saveHopState(stateDir, {
+            version: 1,
+            completed: [...completed],
+            parked: parkedHop,
+            updatedAt: new Date().toISOString(),
+          });
+        } catch { /* a state-write failure must never kill the walk */ }
         launch();
       }
+      } catch { /* the armor: settle NEVER rejects */ }
       // In-flight drained: either every hop completed, or a park stopped
       // the campaign. The result tells the truth.
       resolveWalk();

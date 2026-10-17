@@ -389,9 +389,9 @@ const FREE_MODEL_LIMITS = {
   // NVIDIA Build free endpoints — THE DISTRIBUTED PANTHEON's anchor lanes
   // (#106, the 2026-10-16 rotation): family-prefixed ids (one client pool
   // per family), each lane chat-probed live the same night.
-  'nvidia-glm/z-ai/glm-5.3': { context: 1000000, output: 16384 },
+  'nvidia-glm/z-ai/glm-5.3': { context: 1000000, output: 32768 },
   'nvidia-google/google/gemma-4-31b-it': { context: 262144, output: 16384 },
-  'nvidia-step/stepfun-ai/step-5-preview': { context: 1000000, output: 16384 },
+  'nvidia-step/stepfun-ai/step-5-preview': { context: 1000000, output: 32768 },
   'nvidia-meta/meta/muse-glimmer-30b': { context: 131072, output: 16384 },
   'nvidia-openai/openai/gpt-oss-20b': { context: 131072, output: 16384 },
 };
@@ -420,7 +420,7 @@ export const NVIDIA_FAMILY_PROVIDERS = {
     models: {
       'z-ai/glm-5.3': {
         name: 'GLM 5.3 (753B reasoner — the entry lane)',
-        limit: { context: 1000000, output: 16384 },
+        limit: { context: 1000000, output: 32768 },
         reasoning: true,
         tool_call: true,
       },
@@ -446,7 +446,7 @@ export const NVIDIA_FAMILY_PROVIDERS = {
     models: {
       'stepfun-ai/step-5-preview': {
         name: 'Step 5 Preview (1M-context coder — the frontend+build lane)',
-        limit: { context: 1000000, output: 16384 },
+        limit: { context: 1000000, output: 32768 },
         reasoning: true,
         tool_call: true,
       },

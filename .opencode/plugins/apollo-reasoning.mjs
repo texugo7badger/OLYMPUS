@@ -27,12 +27,22 @@ function plugin(_input, _options) {
       try {
         const providerID = String(hookInput?.model?.providerID ?? hookInput?.provider ?? "");
         const agent = String(hookInput?.agent ?? "");
-        if (providerID !== "nvidia-glm" || agent !== "apollo") return;
-        // The measured fix: LOW reasoning for the planning turn.
+        // #HOP-STARVATION (the 05:08 specimen): step-5-preview — the
+        // athena/hephaestus HOP lane — is a REASONER whose reasoning tokens
+        // count against the 16384 output mouth. The shell hop burned ALL
+        // 16,384 tokens THINKING (8.6 min, zero tool calls, zero files,
+        // finish=length) — the exact starvation that killed the planner on
+        // glm. THE DOCTRINE (the user's own words): pre-planned execution
+        // turns ride LOW thinking — the plan already did the thinking.
+        // Scope: EVERY god on EVERY free NVIDIA lane (the free plan is
+        // pre-planned hops by construction). GO/Zen lanes are untouched —
+        // paid pools afford full-depth reasoning.
+        if (!providerID.startsWith("nvidia-")) return;
+        // The wire shape (intercept-proven): opencode forwards
+        // options.* (the providerOptions namespace) into the request body —
+        // the top-level output.reasoning_effort alone is dropped. Belt and
+        // braces: both spellings ride; the builder keeps the honored one.
         output.reasoning_effort = "low";
-        // Belt-and-braces shapes for provider-options passthrough — the
-        // one the runtime honors rides; the extras are ignored by the
-        // OpenAI-compatible body builder (unknown fields are dropped).
         output.options = output.options ?? {};
         output.options.reasoning_effort = "low";
         output.options.reasoningEffort = "low";

@@ -34,6 +34,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { execSync, spawn, type ChildProcess } from 'node:child_process';
+import * as http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -164,7 +165,7 @@ export function buildStrategyContextBlock(): string {
   // strategy block, so the law rides here: the hop runtime executes plans,
   // hand-dispatching the DAG is forbidden, and a parked walk resumes in the
   // post-run by itself.
-  lines.push('EXECUTION LAW: if the active project lane carries a dispatch-plan.json, the HOP RUNTIME is the ONLY execution engine — NEVER execute hops yourself, NEVER write component code, NEVER hand-dispatch the plan to Atlas (no task-tool DAG execution). If the walk is parked, the user\'s next prompt resumes it automatically in the post-run; you only answer, plan, or interview.');
+  lines.push('EXECUTION LAW: if the active project lane carries a dispatch-plan.json, the HOP RUNTIME is the ONLY execution engine — NEVER execute hops yourself, NEVER write component code, NEVER dispatch ANY hop of the plan to ANY god via the task tool (not Atlas, not Athena, not Hephaestus — NOBODY; the 00:49 specimen dispatched hop 3 to Athena by hand and the watchdog fought the child for nine minutes). The post-run walks the plan by itself after your turn ends — you only answer, plan, or interview. If the walk is parked, the user\'s next prompt resumes it automatically.');
   return lines.join('\n');
 }
 
@@ -194,8 +195,13 @@ async function apiFetch(
   timeoutMs: number = REQUEST_TIMEOUT_MS,
   externalSignal?: AbortSignal,
 ): Promise<Response> {
-  const headers = new Headers(init.headers);
-  if (password) headers.set('Authorization', basicAuth(password));
+  // #BODY-TIMEOUT (2026-10-17, attempt-2 forensics): Node's global fetch is
+  // undici, whose DEFAULT bodyTimeout is 300s BETWEEN BODY CHUNKS. The
+  // message POST — whose response body only arrives when the turn COMPLETES
+  // — was TERMINATED at exactly +300s on every long planning turn: the
+  // "fetch failed" transport class, the misclassified retry, the re-post
+  // pileup. Raw node:http has no inter-chunk timeout; the AbortController
+  // below stays the ONLY kill switch (the max-runtime owns the bound).
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const onExternalAbort = () => controller.abort();
@@ -204,11 +210,50 @@ async function apiFetch(
     else externalSignal.addEventListener('abort', onExternalAbort, { once: true });
   }
   try {
-    return await fetch(`http://127.0.0.1:${port}${pathname}`, {
-      ...init,
-      headers,
-      signal: controller.signal,
+    if (controller.signal.aborted) throw new DOMException('This operation was aborted', 'AbortError');
+    const initBody = init.body == null ? undefined : String(init.body as any);
+    const initHeaders: Record<string, string> = {};
+    new Headers(init.headers).forEach((v, k) => { initHeaders[k] = v; });
+    if (password) initHeaders['Authorization'] = basicAuth(password);
+    if (initBody != null && initHeaders['Content-Type'] == null) initHeaders['Content-Type'] = 'application/json';
+    const req = http.request({
+      host: '127.0.0.1',
+      port,
+      path: pathname,
+      method: (init.method as any) || 'GET',
+      headers: initBody != null
+        ? { ...initHeaders, 'Content-Length': String(Buffer.byteLength(initBody)) }
+        : initHeaders,
     });
+    const onAbort = () => { try { req.destroy(new DOMException('This operation was aborted', 'AbortError')); } catch {} };
+    if (controller.signal.aborted) onAbort();
+    else controller.signal.addEventListener('abort', onAbort, { once: true });
+    // The body goes out BEFORE awaiting the response — a POST's headers
+    // only arrive after the server reads the full request.
+    if (controller.signal.aborted) {
+      if (initBody != null) req.write(initBody);
+      req.end();
+      throw new DOMException('This operation was aborted', 'AbortError');
+    }
+    if (initBody != null) req.write(initBody);
+    req.end();
+    const res = await new Promise<http.IncomingMessage>((resolveP, rejectP) => {
+      req.on('response', (r) => resolveP(r));
+      req.on('error', rejectP);
+    });
+    // A Response-shaped shim: ok/status/json() — everything the callers use.
+    const status = res.statusCode ?? 0;
+    const bodyPromise = new Promise<string>((resolveP) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => resolveP(data));
+      res.on('error', () => resolveP(data));
+    });
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => { const raw = await bodyPromise; return JSON.parse(raw); },
+    } as unknown as Response;
   } finally {
     clearTimeout(timer);
     if (externalSignal) externalSignal.removeEventListener('abort', onExternalAbort);
@@ -1431,7 +1476,10 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
     // RESUME THE WATCH on an in-flight server-side turn instead of
     // re-posting (the 2026-10-16 specimen: retries stacked FOUR planning
     // prompts on one session while the first turn reasoned for 20 minutes).
-    let watchResume = false;
+    // #RESUME-SEED: carries the server-side liveness truth (a running child
+    // tool / a pending permission) so the resumed watch never misreads a
+    // silently-working child as a stall (the 00:55 nudge specimen).
+    let watchResume: { childRunning: boolean; permissionPending: boolean } | false = false;
     for (let attempt = 0; ; attempt++) {
       const result = await runWarmMessageAttempt(srv, opts, attempt === 0, watchResume);
       watchResume = false;
@@ -1518,11 +1566,16 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
         // instead — only re-post when the session is truly idle server-side,
         // or the serve respawned COLD (the in-flight turn died with the old
         // process — re-posting is the only recovery there).
-        watchResume = srv.warm === true && await isTurnAliveServerSide(srv, opts.sessionId);
+        const turnAlive = srv.warm === true
+          ? await isTurnAliveServerSide(srv, opts.sessionId)
+          : { alive: false as const };
+        watchResume = turnAlive.alive
+          ? { childRunning: turnAlive.childRunning, permissionPending: turnAlive.permissionPending }
+          : false;
         if (watchResume) {
           opts.onEvent({
             type: 'log',
-            msg: `The turn is still running server-side — resuming the watch, no re-post (no prompt pileup)`,
+            msg: `The turn is still running server-side — resuming the watch, no re-post (no prompt pileup)${watchResume.childRunning ? '; a child tool is executing — the watch is seeded live, the nudge stays off' : ''}`,
             ts: new Date().toISOString(),
           });
         }
@@ -1758,7 +1811,7 @@ async function runWarmMessageAttempt(
   server: ServerInfo,
   opts: WarmRunOptions,
   _allowRetry: boolean,
-  watchResume = false,
+  watchResume: { childRunning: boolean; permissionPending: boolean } | false = false,
 ): Promise<WarmRunResult> {
   // NOTE (fix d revision, 2026-09-29): the original pre-send health check
   // (2.5s probe → invalidateServer → ensureServer) was REMOVED after live
@@ -1797,6 +1850,14 @@ async function runWarmMessageAttempt(
     // tool awaiting permission approval, clears it on any other event.
     permissionPending: false,
     childPending: false,
+    // #RESUME-SEED (the 00:55 specimen): a resumed watch inherits the
+    // server-side liveness truth — a child tool running silently (no
+    // frames while it works) is LIVE work, and without the seed the
+    // watchdog saw 150s of silence over a working child and nudged.
+    ...(watchResume ? {
+      childPending: watchResume.childRunning,
+      permissionPending: watchResume.permissionPending,
+    } : {}),
   };
     let receivedEvents = false;
     let postStarted = false;
@@ -1868,6 +1929,12 @@ async function runWarmMessageAttempt(
 
     const maxTimer = setTimeout(() => {
       maxTimedOut = true;
+      // #MAX-RUNTIME-SERVER-ABORT (the 04:31 specimen): the watch dies at
+      // the bound, but the SERVER-SIDE turn may be hung on a stalled
+      // provider request (the step-2 hang). Leaving it alive means the next
+      // prompt on this session queues behind a zombie. Kill it server-side
+      // too (best-effort — the same #60 kill the client-gone path uses).
+      void sendServerAbort();
       onAbort();
     }, opts.maxRuntimeMs ?? 10 * 60_000);
 
@@ -1889,6 +1956,8 @@ async function runWarmMessageAttempt(
     let stalledNotified = false;
     let idleNudged = false;
     let idleTimedOut = false;
+    // #NUDGE-ALIVE-CHECK: the alive-wait log fires once, never per poll.
+    let nudgeAliveWaitLogged = false;
     const silenceTimer = setInterval(() => {
       if (postStarted === false || eventCtrl.signal.aborted) return;
       const decision = watchdogDecision({
@@ -1925,14 +1994,36 @@ async function runWarmMessageAttempt(
         return;
       }
       if (decision === 'nudge-abort' && !idleNudged) {
-        idleNudged = true;
-        idleTimedOut = true;
-        deliver({
-          type: 'log',
-          msg: `⚠ No stream activity for ${Math.round((Date.now() - state.lastFrameAt) / 1000)}s — sending the auto-continue nudge (#62): aborting this attempt with stream_idle_timeout; the retry layer re-posts against the same warm session automatically.`,
-          ts: new Date().toISOString(),
-        });
-        onAbort();
+        // #NUDGE-ALIVE-CHECK (the 04:31 specimen): the silence is REAL, but
+        // WHY matters. A turn that FINISHED silently (the F5/F6 shape the
+        // nudge was built for) must be re-posted — that recovers it. A turn
+        // that is ALIVE server-side (a provider request stalled mid-step,
+        // the step-2 hang of attempt 2) must NOT be re-posted: that stacks a
+        // second prompt on a running turn — the pileup class. Ask the
+        // server; alive means wait (the max-runtime timer stays the bound).
+        void (async () => {
+          const alive = await isTurnAliveServerSide(server, opts.sessionId);
+          if (alive.alive && !eventCtrl.signal.aborted && !maxTimedOut) {
+            if (!nudgeAliveWaitLogged) {
+              nudgeAliveWaitLogged = true;
+              deliver({
+                type: 'log',
+                msg: `No stream activity for ${Math.round((Date.now() - state.lastFrameAt) / 1000)}s, but the turn is ALIVE server-side (a step's provider request is stalled, not the session) — extending the wait, NO re-post (no prompt pileup); the max runtime bounds it.`,
+                ts: new Date().toISOString(),
+              });
+            }
+            return;
+          }
+          if (eventCtrl.signal.aborted || maxTimedOut || idleNudged) return;
+          idleNudged = true;
+          idleTimedOut = true;
+          deliver({
+            type: 'log',
+            msg: `⚠ No stream activity for ${Math.round((Date.now() - state.lastFrameAt) / 1000)}s and the turn is NOT running server-side — sending the auto-continue nudge (#62): aborting this attempt with stream_idle_timeout; the retry layer re-posts against the same warm session automatically.`,
+            ts: new Date().toISOString(),
+          });
+          onAbort();
+        })();
         return;
       }
       if (decision === 'warn' && !warnedSilence) {
@@ -2284,18 +2375,37 @@ async function openEventFeed(
   signal: AbortSignal,
 ): Promise<() => Promise<void>> {
   const auth = server.authed ? server.password : null;
-  const headers = new Headers();
-  if (auth) headers.set('Authorization', basicAuth(auth));
-  const res = await fetch(`http://127.0.0.1:${server.port}/event`, {
-    headers,
-    signal,
-    cache: 'no-store',
+  // #BODY-TIMEOUT (the 300s transport-break root cause, 2026-10-17): Node's
+  // global fetch is undici under the hood, and undici's DEFAULT bodyTimeout
+  // is 300s BETWEEN BODY CHUNKS. An SSE feed that goes silent while a turn
+  // thinks or a child tool runs (minutes at peak) got TERMINATED
+  // client-side — the exact "fetch failed" transport class every campaign
+  // fought (and the exact 300s my self-test driver died at). Raw node:http
+  // carries no inter-chunk timeout; the AbortSignal stays the only kill
+  // switch.
+  const req = http.get({
+    host: '127.0.0.1',
+    port: server.port,
+    path: '/event',
+    headers: auth ? { Authorization: basicAuth(auth) } : {},
   });
-  if (!res.ok || !res.body) {
-    throw new Error(`event feed failed (HTTP ${res.status})`);
+  if (signal.aborted) req.destroy();
+  else signal.addEventListener('abort', () => req.destroy(), { once: true });
+  const res = await new Promise<http.IncomingMessage>((resolveP, rejectP) => {
+    req.on('response', (r) => resolveP(r));
+    req.on('error', rejectP);
+  });
+  if (!res.statusCode || res.statusCode >= 300) {
+    req.destroy();
+    throw new Error(`event feed failed (HTTP ${res.statusCode})`);
   }
 
-  const reader = res.body.getReader();
+  // An async-iterator shim over the http chunk stream — the pump below is
+  // byte-identical to the old fetch-body reader loop.
+  async function* httpChunks(): AsyncGenerator<Buffer> {
+    for await (const c of res) yield typeof c === 'string' ? Buffer.from(c) : (c as Buffer);
+  }
+  const chunkIter = httpChunks();
   const decoder = new TextDecoder();
   let buf = '';
   let closing = false;
@@ -2305,8 +2415,10 @@ async function openEventFeed(
   const pump = (async () => {
     try {
       for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        const nxt = await chunkIter.next();
+        const done = nxt.done === true;
+        const value = done ? undefined : nxt.value;
+        if (done || !value) break;
         buf += decoder.decode(value, { stream: true });
         let idx: number;
         while ((idx = buf.indexOf('\n')) >= 0) {
@@ -2324,6 +2436,16 @@ async function openEventFeed(
               ev?.properties?.sessionID === sessionId ||
               (ev?.type === 'message.part.updated' && ev?.properties?.part?.sessionID === sessionId);
             if (belongs) {
+              // #THINKING-LIVENESS (the 04:31 specimen): a REASONING part
+              // updating is the model WORKING — the very definition of
+              // alive. The B2 visibility rule below still governs visible
+              // frames, but reasoning frames must ALSO stamp the silence
+              // clock, or a thinking turn (reasoning streaming for minutes
+              // before any visible output) reads as a stall and the nudge
+              // aborts live work.
+              if (ev?.type === 'message.part.updated' && ev?.properties?.part?.type === 'reasoning') {
+                state.lastFrameAt = Date.now();
+              }
               // B2: liveness means VISIBILITY, not frame arrival. Stamping
               // lastFrameAt here (before mapping) kept the silence clock
               // alive with frames that map to nothing the user can see:
@@ -2371,7 +2493,7 @@ async function openEventFeed(
       // Aborted or connection error — the caller is responsible for
       // deciding whether that matters.
     } finally {
-      try { reader.releaseLock(); } catch {}
+      try { req.destroy(); } catch {}
       closeResolve();
     }
   })();
@@ -2379,7 +2501,7 @@ async function openEventFeed(
   return async () => {
     if (closing) { await closedPromise; return; }
     closing = true;
-    try { await reader.cancel(); } catch {}
+    try { req.destroy(); } catch {}
     await closedPromise;
   };
 }
@@ -2396,20 +2518,43 @@ async function openEventFeed(
  * executing — the watch must resume, because a blind re-post would pile a
  * second prompt onto the session (the 2026-10-16 specimen: FOUR planning
  * prompts stacked while the first turn reasoned for 20 minutes).
+ *
+ * #RESUME-SEED (the 00:55 specimen): the resumed watch must ALSO inherit
+ * the turn's LIVENESS TRUTH — a tool part in 'running' state means the
+ * turn is executing a child (the 00:49 Athena task ran silently for nine
+ * minutes; the unseeded resumed state saw 150s of silence, decided the
+ * turn stalled, and the nudge aborted around a live child). The seed
+ * stamps childPending/permissionPending BEFORE the first frame arrives,
+ * so a silently-working child is never misread as a stall.
  */
-async function isTurnAliveServerSide(server: ServerInfo, sessionId: string): Promise<boolean> {
+async function isTurnAliveServerSide(server: ServerInfo, sessionId: string): Promise<
+  { alive: true; childRunning: boolean; permissionPending: boolean } | { alive: false }
+> {
   try {
     const auth = server.authed ? server.password : null;
     const res = await apiFetch(server.port, auth, `/session/${sessionId}/message`, {}, 10_000);
-    if (!res.ok) return false;
+    if (!res.ok) return { alive: false };
     const messages: any[] = await res.json().catch(() => []);
-    if (!Array.isArray(messages) || messages.length === 0) return false;
+    if (!Array.isArray(messages) || messages.length === 0) return { alive: false };
     const last = messages[messages.length - 1];
-    return last?.info?.role === 'assistant'
-      && !last?.info?.time?.completed
-      && !last?.info?.error;
+    const info = last?.info;
+    const alive = info?.role === 'assistant' && !info?.time?.completed && !info?.error;
+    if (!alive) return { alive: false };
+    // The seed: the newest tool part's state decides the liveness class.
+    let childRunning = false;
+    let permissionPending = false;
+    const parts = Array.isArray(last?.parts) ? last.parts : [];
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      if (p?.type !== 'tool') continue;
+      const st = p?.state?.status ?? p?.status;
+      if (st === 'running') childRunning = true;
+      if (st === 'pending') permissionPending = true;
+      break;
+    }
+    return { alive: true, childRunning, permissionPending };
   } catch {
-    return false;
+    return { alive: false };
   }
 }
 

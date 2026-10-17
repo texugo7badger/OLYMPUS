@@ -72,9 +72,10 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
   check('plugin: apollo-reasoning.mjs exists and registers the chat.params hook',
     /"chat\.params":\s*async/.test(pluginSrc),
     'the chat.params hook is gone — the wire path is dead');
-  check('plugin: the hook is SCOPED (nvidia-glm lane + apollo only — the other gods keep full reasoning)',
-    /providerID !== "nvidia-glm" \|\| agent !== "apollo"/.test(pluginSrc),
-    'the scope guard is gone — every glm turn gets silenced (out of scope)');
+  check('plugin: the hook covers EVERY free NVIDIA lane (the 05:08 specimen — step-5 hop gods starved the mouth on reasoning) and NEVER the GO/Zen lanes',
+    /if \(!providerID\.startsWith\("nvidia-"\)\) return;/.test(pluginSrc)
+      && /output\.options\.reasoning_effort = "low";/.test(pluginSrc),
+    'the scope regressed — a reasoning lane without low effort starves the 16384 mouth (zero tool calls, zero files)');
   check('plugin: the hook injects reasoning_effort "low" into the request params',
     /output\.reasoning_effort = "low";/.test(pluginSrc),
     'the injection line is gone');
@@ -110,10 +111,13 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
     /async function pollInFlightTurn/.test(src),
     'the completion poll is gone');
   check('opencode-session.ts: the transport branch gates the resume on WARM + alive (a cold respawn re-posts — the turn died with the old process)',
-    /watchResume = srv\.warm === true && await isTurnAliveServerSide\(srv, opts\.sessionId\)/.test(src),
+    /const turnAlive = srv\.warm === true\s*\? await isTurnAliveServerSide\(srv, opts\.sessionId\)\s*: \{ alive: false as const \};[\s\S]{0,300}?watchResume = turnAlive\.alive/.test(src),
     'the warm+alive gate is gone — dead-turn resumes or blind re-posts return');
-  check('opencode-session.ts: the attempt takes the watchResume flag (the no-re-post path exists)',
-    /watchResume = false,\n\): Promise<WarmRunResult>/.test(src),
+  check('opencode-session.ts: the resume SEEDS the liveness truth (a running child survives the resumed watch)',
+    /\.\.\.\(watchResume \? \{[\s\S]{0,120}?childPending: watchResume\.childRunning[\s\S]{0,80}?permissionPending: watchResume\.permissionPending/.test(src),
+    'the resume seed is gone — a silently-working child gets nudged again (the 00:55 specimen)');
+  check('opencode-session.ts: the attempt takes the watchResume seed (the no-re-post path exists)',
+    /watchResume: \{ childRunning: boolean; permissionPending: boolean \} \| false = false,\n\): Promise<WarmRunResult>/.test(src),
     'the attempt lost the watchResume parameter');
   check('opencode-session.ts: the watch path NEVER posts a message body',
     /if \(watchResume\) \{[\s\S]*?pollInFlightTurn[\s\S]*?\} else \{[\s\S]*?\/session\/\$\{opts\.sessionId\}\/message/.test(src),
@@ -123,12 +127,22 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
     'the per-attempt reset is gone — a stale resume flag leaks across classes');
 }
 
-// ── 4. THE MOUTH STAYS #76 (the doctrine is untouched by this cure) ─────────
+// ── 4. THE MOUTH — the #MOUTH-REVISION (authorized 2026-10-17, the two
+// cap-starvation specimens: the planner's 20-min reasoning death + the
+// fixtures hop's single ~16K-token file dying mid-write, finish=length,
+// zero artifacts). The reasoning lanes double (32768 — probe-accepted by
+// BOTH glm-5.3 and step-5); the volume lanes KEEP the #76 bar (16384).
 {
   const pantheonSrc = read('scripts/free-pantheon.test.mjs');
-  check('the #76 doctrine surface is untouched (TARGET_OUTPUT 16384 still the law)',
-    /const TARGET_OUTPUT = 16384;/.test(pantheonSrc),
-    'the output bar moved — this suite did not authorize that');
+  const cfg = JSON.parse(read('opencode.json'));
+  const glmOut = cfg?.provider?.['nvidia-glm']?.models?.['z-ai/glm-5.3']?.limit?.output;
+  const stepOut = cfg?.provider?.['nvidia-step']?.models?.['stepfun-ai/step-5-preview']?.limit?.output;
+  const gemmaOut = cfg?.provider?.['nvidia-google']?.models?.['google/gemma-4-31b-it']?.limit?.output;
+  check('the MOUTH revision: reasoning lanes 32768 (glm + step), volume lanes keep the #76 bar 16384',
+    /const REASONING_OUTPUT = 32768;/.test(pantheonSrc)
+      && /const VOLUME_OUTPUT = 16384;/.test(pantheonSrc)
+      && glmOut === 32768 && stepOut === 32768 && gemmaOut === 16384,
+    `glm=${glmOut} step=${stepOut} gemma=${gemmaOut} — an unauthorized bar move`);
 }
 
 // ── 5. THE 22:27-22:41 SPECIMEN CHAIN: walk durability + execution law ─────
@@ -139,10 +153,10 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
   // (a) THE EXECUTION LAW rides the strategy block — EVERY turn sees it
   // (the 22:33 specimen: a planning=NO turn never saw the [OLYMPUS-PLANNER]
   // contract and hand-dispatched Atlas via the task tool).
-  check('law: the strategy block carries the EXECUTION LAW (never hand-dispatch the DAG — every turn sees it)',
+  check('law: the strategy block carries the EXECUTION LAW with NO god named as a legal task target (the 00:49 Athena loophole)',
     /EXECUTION LAW: if the active project lane carries a dispatch-plan\.json/.test(sessionSrc)
-      && /no task-tool DAG execution/.test(sessionSrc),
-    'the execution law is missing from the every-turn contract — interview turns will freelance again');
+      && /NEVER dispatch ANY hop of the plan to ANY god via the task tool \(not Atlas, not Athena, not Hephaestus — NOBODY/.test(sessionSrc),
+    'the execution law regressed — a god named as a legal target reopens the hand-dispatch loophole');
 
   // (b) THE CHILD-LIVENESS: a RUNNING tool is live work; the nudge never
   // aborts a parent blocked on a child (the 22:34 specimen: two nudges
@@ -190,6 +204,25 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
       && routeSrc.slice(walkBudgetIdx, walkCallIdx).includes('clearTimeout(maxRuntimeTimer)')
       && routeSrc.slice(walkBudgetIdx, walkCallIdx).includes('clearTimeout(startupTimer)'),
     'the turn budget still bounds the walk — long campaigns die at 15 min mid-hop');
+}
+
+// ── 6. #SACRED-RUNTIME (the 10:16 specimen): a build-fix god deleted the
+// walk's own machinery mid-campaign (rm opencode.json dispatch-plan.json
+// .olympus-* .opencode…) — the next hop died "Model not found". The guard
+// rides every hop prompt; the lane self-heals before every dispatch; the
+// planner template forbids cleanup instructions in hop prompts.
+{
+  const walkerSrc2 = read('src/lib/hop-runtime/walker.ts');
+  check('law: every hop prompt carries the RUNTIME FILES ARE SACRED guard',
+    /RUNTIME FILES ARE SACRED: NEVER delete, move, or rewrite \.opencode/.test(walkerSrc2),
+    'a god can clean the machinery again — the 10:16 class returns');
+  check('law: the lane SELF-HEALS before every hop dispatch (ensureLaneConfig in launch)',
+    /#SACRED-RUNTIME: self-healing lane[\s\S]{0,400}?ensureLaneConfig\(laneRoot\)/.test(walkerSrc2),
+    'a deleted config still kills the next hop');
+  const routeSrc2 = read('src/app/api/olympus/action/route.ts');
+  check('law: the planner contract forbids cleanup instructions in hop prompts',
+    /hop prompts must NEVER instruct deletion or cleanup of the lane's runtime files/.test(routeSrc2),
+    'the planner can write the assassination into a hop prompt again');
 }
 
 console.log('');

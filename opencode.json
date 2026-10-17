@@ -480,7 +480,7 @@
           "tool_call": true,
           "limit": {
             "context": 1000000,
-            "output": 16384
+            "output": 32768
           }
         }
       }
@@ -512,8 +512,8 @@
         "google/gemma-4-31b-it": {
           "name": "Gemma 4 31B IT",
           "limit": {
-            "context": 128000,
-            "output": 8192
+            "context": 262144,
+            "output": 16384
           }
         }
       }
@@ -527,8 +527,8 @@
         "openai/gpt-oss-20b": {
           "name": "GPT OSS 20B",
           "limit": {
-            "context": 128000,
-            "output": 8192
+            "context": 131072,
+            "output": 16384
           }
         }
       }
@@ -543,7 +543,7 @@
           "name": "Step 5 Preview",
           "limit": {
             "context": 1000000,
-            "output": 16384
+            "output": 32768
           }
         }
       }

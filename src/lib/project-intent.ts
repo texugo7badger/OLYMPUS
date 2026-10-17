@@ -231,10 +231,30 @@ export async function resolveAndRegisterIntent(
   // honest response is ASK, never a garbage-named creation. The 09:10:09
   // specimen: "Continue o projeto Lumina seguindo todo o planejamento!"
   // became the project 'continue-projeto-lumina-seguindo'.
+  //
+  // #BARE-CONTINUATION (the 00:47 specimen): "continue!" — a bare
+  // continuation with zero identity tokens — asked WHICH project while the
+  // session's own active pointer and the most-recent project sat right
+  // there. A continuation with no name routes to the ACTIVE project; no
+  // pointer → the most recently active project; nothing known → the ask,
+  // now WITH the candidates listed.
   if (intent.kind === 'new' && isContinuationMessage(userRequest)) {
+    const projects = listProjects();
+    const active = getActiveProjectSlug();
+    if (active) {
+      setActiveProject(active);
+      return { kind: 'existing', slug: active, message: `Routed to the active project '${active}' (continuation — a bare "continue" inherits the session's active project)` };
+    }
+    const recent = [...projects]
+      .filter((p) => p.last_active)
+      .sort((a, b) => String(b.last_active).localeCompare(String(a.last_active)))[0];
+    if (recent) {
+      setActiveProject(recent.slug);
+      return { kind: 'existing', slug: recent.slug, message: `Routed to the most recent project '${recent.slug}' (continuation — no active pointer, newest project by activity)` };
+    }
     return {
       kind: 'ask',
-      candidates: [],
+      candidates: projects.slice(0, 3).map((p) => ({ slug: p.slug, score: 1 })),
       message: `This looks like a continuation of an existing project, but I can't find a match. Which project? (Or re-send the original prompt to start fresh.)`,
     };
   }
