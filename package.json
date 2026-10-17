@@ -70,7 +70,7 @@
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
-    "@radix-ui/primitive": "^1.1.7",
+    "@radix-ui/primitive": "^1.2.0",
     "better-sqlite3": "latest",
     "chokidar": "latest",
     "fflate": "latest",
@@ -91,7 +91,7 @@
     "@electron/rebuild": "latest",
     "@fission-ai/openspec": "latest",
     "@opencode-ai/plugin": "latest",
-    "@radix-ui/react-checkbox": "^1.3.11",
+    "@radix-ui/react-checkbox": "^1.4.1",
     "@radix-ui/react-dialog": "latest",
     "@radix-ui/react-label": "latest",
     "@radix-ui/react-select": "latest",
