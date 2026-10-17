@@ -17,7 +17,7 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getVaultRoot } from './vault-root';
+import { getVaultRoot } from './vault-root.js';
 
 const STOPWORDS = new Set([
   'the', 'a', 'an', 'and', 'or', 'to', 'of', 'in', 'on', 'for', 'with', 'is', 'are',

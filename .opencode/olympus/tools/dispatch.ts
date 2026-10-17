@@ -555,7 +555,7 @@ const dispatchTool: ToolDefinition = tool({
     // The block is short (D16), lean on no-match, never an essay.
     let ragPriorContext: string | null = null;
     try {
-      const { instinctPriorContext } = await import("../../src/lib/instinct-rag.js");
+      const { instinctPriorContext } = await import("../../../src/lib/instinct-rag.js");
       ragPriorContext = instinctPriorContext(String(args.godId || "apollo"), String(args.task || ""));
     } catch { /* the RAG never breaks the dispatch */ }
     const effectiveTask84 = ragPriorContext ? `${args.task}\n\n${ragPriorContext}` : args.task;
