@@ -1853,6 +1853,23 @@ function preflightModelCatalogue(config, opts = {}) {
     if (!byProvider.has(probeProvider)) byProvider.set(probeProvider, []);
     byProvider.get(probeProvider).push(probeId);
   }
+  // ENV ESCAPE (V003-CI): a provider whose catalogue cannot be QUERIED in
+  // this environment (e.g. no NVIDIA key on a CI runner) is dropped from the
+  // probe set LOUDLY via OLYMPUS_PREFLIGHT_SKIP_PROVIDERS (comma list) —
+  // its ids are out of scope for this run, logged, never silently trusted.
+  // Queryable providers keep FULL strictness: a dead id in a live catalogue
+  // still hard-fails with suggestions (the D19 net stays up for the
+  // providers this environment can actually see).
+  const skipProviders = new Set(
+    String(process.env.OLYMPUS_PREFLIGHT_SKIP_PROVIDERS || '')
+      .split(',').map((x) => x.trim()).filter(Boolean),
+  );
+  for (const sp of skipProviders) {
+    if (byProvider.has(sp)) {
+      log(`  L4: provider '${sp}' skipped by OLYMPUS_PREFLIGHT_SKIP_PROVIDERS (${byProvider.get(sp).length} id(s) out of scope this run — validated on boxes that hold the key)`);
+      byProvider.delete(sp);
+    }
+  }
   const opencodeBin = path.join(OLYMPUS_ROOT, 'node_modules', '.bin', 'opencode');
   if (!fs.existsSync(opencodeBin)) {
     const msg =

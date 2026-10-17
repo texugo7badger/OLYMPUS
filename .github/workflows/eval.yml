@@ -67,6 +67,11 @@ jobs:
         env:
           OLYMPUS_OPENROUTER_KEY: ${{ secrets.OLYMPUS_OPENROUTER_KEY }}
           OLYMPUS_GROQ_KEY: ${{ secrets.OLYMPUS_GROQ_KEY }}
+          # V003-CI: the runner holds no NVIDIA key — the nvidia family
+          # blocks stay in the config for switch-back but cannot be probed
+          # here; skip them LOUDLY. OpenRouter keeps full L4 strictness
+          # (the dead-id regression net this step exists to catch).
+          OLYMPUS_PREFLIGHT_SKIP_PROVIDERS: nvidia
 
       - name: Run eval harness
         run: npm run eval
