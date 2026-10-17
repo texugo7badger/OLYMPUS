@@ -111,7 +111,11 @@ function readLiveEpisodes(): Episode[] {
     const meta = (ev.meta && typeof ev.meta === 'object') ? ev.meta : {};
     const demigod = ev.demigod ?? meta.demigod ?? meta.agent ?? null;
     const msg = String(ev.msg || ev.task_signature || action);
-    const isDispatch = action === 'dispatch' || action === 'symphony-dispatch' || action === 'delegation';
+    // W0-D: the hop runtime replaced dispatch-as-tool — each hop IS a
+    // delegated task. The panel's TASKS counter and the drill-down agree
+    // on these semantics.
+    const isDispatch = action === 'dispatch' || action === 'symphony-dispatch' || action === 'delegation'
+      || action === 'hop';
     out.push({
       id: `live-${t}-${out.length}`,
       god,

@@ -96,8 +96,10 @@ export default function ActivityTimeline() {
   const highImpact = filtered.filter(e => e.impact === 'high').length;
   // Count delegations — episodes where the outcome mentions "delegated" or the type field is delegation.
   // (The Activity Timeline now absorbs the Delegation History view — user request.)
-  const delegations = filtered.filter(e =>
-    e.action === 'dispatch' || e.action === 'symphony-dispatch' ||
+  // W0-D: TASKS — hop starts count (the hop runtime IS the delegation
+  // path; "Delegations 0" while hops flowed was a lie).
+  const tasks = filtered.filter(e =>
+    e.action === 'hop' || e.action === 'dispatch' || e.action === 'symphony-dispatch' ||
     (e as any).type === 'delegation' ||
     e.outcome?.toLowerCase().includes('delegat')
   ).length;
@@ -134,10 +136,10 @@ export default function ActivityTimeline() {
         <div className="rounded-lg p-2.5 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-gold/15">
           <div className="flex items-center gap-1 mb-0.5">
             <ArrowRight size={10} className="text-olympus-gold" />
-            <span className="text-[8px] font-mono text-olympus-text-dim uppercase">delegations</span>
+            <span className="text-[8px] font-mono text-olympus-text-dim uppercase">tasks</span>
           </div>
           <div className="text-base font-bold font-mono text-olympus-gold">
-            <AnimatedNumber value={delegations} />
+            <AnimatedNumber value={tasks} />
           </div>
         </div>
       </div>

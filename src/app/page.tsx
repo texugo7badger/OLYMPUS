@@ -134,7 +134,7 @@ function RightPane({ rightTab, setRightTab }: { rightTab: string; setRightTab: (
         <Tab id="frames" icon={LayoutGrid} label="Frames" active={rightTab === 'frames'} onClick={() => setRightTab('frames')} />
         <div className="flex-1" />
       </div>
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0 relative overflow-hidden">
         	{/* visibility:hidden instead of display:none for inactive tabs —
 	    display:none gives the container 0 dimensions, preventing xterm.js
 	    from opening (term.open() needs non-zero container dimensions).
@@ -435,7 +435,12 @@ export default function OlympusWorkspace() {
           <RawPanel
             id="left"
             defaultSize={50}
-            minSize={20}
+            /* W0-C: focus mode sets the layout to 0/100, but minSize=20
+               CLAMPED the imperative setLayout back to 20% — the dead
+               empty strip at the left the user reported. While focus
+               mode is on the floor drops to 0 so the chat expands
+               FULL-WIDTH; back to 20 when the dashboard returns. */
+            minSize={focusMode ? 0 : 20}
             // Hide the panel content via CSS when focus mode is on (size 0).
             // The panel itself has width:0, but its content might still be
             // visible briefly during the resize animation. This wrapper ensures

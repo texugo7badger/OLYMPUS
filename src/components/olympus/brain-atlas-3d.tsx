@@ -73,6 +73,7 @@ import {
 } from '@/lib/olympus-brain-adapter';
 import { OLYMPUS_PALETTE, LOBE_TINTS, hexA } from '@/lib/brain-atlas-palette';
 import { useOlympus } from '@/lib/olympus-store';
+import { useWorkingGods } from '@/lib/use-working-gods';
 import type { GraphNode, GraphLink } from '@/lib/olympus';
 import {
   Eye, EyeOff, X, Gauge,
@@ -620,40 +621,20 @@ export default function BrainAtlas3D() {
   /* on the dispatching god. Idle (no recent events) = the calm       */
   /* random spawn, untouched.                                         */
   /* ---------------------------------------------------------------- */
-  const workingGodsRef = useRef<Set<string> | null>(null);
+  // W0-A: the SAME source of truth as the StatusBar strip — the shared
+  // hook (the live-feed poll). The brain maps god names to node ids.
+  const workingGods = useWorkingGods();
+  const workingGodsRef = useRef<string[]>([]);
   useEffect(() => {
-    let cancelled = false;
-    const derive = async () => {
-      try {
-        const ctrl = new AbortController();
-        const to = setTimeout(() => ctrl.abort(), 5000);
-        const r = await fetch('/api/olympus/episodes', { signal: ctrl.signal, cache: 'no-store' });
-        clearTimeout(to);
-        if (!r.ok) return;
-        const d = await r.json();
-        if (cancelled) return;
-        const cutoff = Date.now() - 3 * 60 * 1000;
-        const next = new Set<string>();
-        for (const ep of (d?.episodes || []) as Array<{ source?: string; god?: string; ts?: string }>) {
-          if (ep?.source !== 'live' || !ep.god || !ep.ts) continue;
-          let t = 0;
-          try { t = new Date(ep.ts).getTime(); } catch { continue; }
-          if (Number.isFinite(t) && t >= cutoff) next.add(`god:${ep.god}`);
-        }
-        // Push only on CHANGE — a no-op poll must not force frames.
-        const prev = workingGodsRef.current;
-        const same = prev === null && next.size === 0
-          || (prev !== null && next.size === prev.size && [...next].every(g => prev.has(g)));
-        if (same) return;
-        workingGodsRef.current = next.size ? next : null;
-        const rr = rendererRef.current;
-        if (rr && startedRef.current) rr.setWorkingGods(next.size ? [...next] : null);
-      } catch { /* the glow is decorative — a dead API never breaks the brain */ }
-    };
-    derive();
-    const iv = setInterval(derive, 15_000);
-    return () => { cancelled = true; clearInterval(iv); };
-  }, []);
+    const prev = workingGodsRef.current;
+    const same = prev.length === workingGods.length && prev.every((g, i) => g === workingGods[i]);
+    if (same) return;
+    workingGodsRef.current = workingGods;
+    const rr = rendererRef.current;
+    if (rr && startedRef.current) {
+      rr.setWorkingGods(workingGods.length ? workingGods.map(g => `god:${g}`) : null);
+    }
+  }, [workingGods]);
 
   /* ---------------------------------------------------------------- */
   /* Toggle handlers.                                                  */

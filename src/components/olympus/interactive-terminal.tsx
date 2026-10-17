@@ -1495,7 +1495,7 @@ export default function InteractiveTerminal() {
   }, [updateGodActivity]);
 
   return (
-    <div className="w-full h-full bg-olympus-bg flex flex-col">
+    <div className="w-full h-full bg-olympus-bg flex flex-col overflow-hidden">
       <div className="h-8 shrink-0 flex items-center justify-between px-3 border-b border-olympus-gold/10 bg-olympus-panel">
         <div className="flex items-center gap-1.5 text-[10px] font-mono">
           <Landmark size={11} style={{ color: GOD_COLOR }} />
@@ -1605,7 +1605,7 @@ export default function InteractiveTerminal() {
             The OpenCode Mode toggle and the TerminalTabs rendering are gone.
             The Apollo chat uses /api/olympus/action (god delegation, todos, etc.). */}
         <div className="flex-1 min-w-0 flex flex-col">
-          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto custom-scroll px-3 py-2 font-mono text-[11px] leading-relaxed space-y-2">
+          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scroll px-3 py-2 font-mono text-[11px] leading-relaxed space-y-2">
             {messages.map(m => (
               <VisibleMessage
                 key={m.id}
@@ -1793,7 +1793,7 @@ export default function InteractiveTerminal() {
             <div className="w-60 shrink-0 border-l border-olympus-gold/10 bg-olympus-panel flex flex-col min-h-0">
               {/* The cards scroll; the plan does not. A checklist you have to
                   scroll to find is not telling you what is happening now. */}
-              <div className="flex-1 min-h-0 overflow-y-auto custom-scroll">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scroll">
                 <GodPanel states={godStateList} focusedGod={focusedGod} onFocus={setFocusedGod} onCollapse={() => setParthenonCollapsed(true)} />
               </div>
               <PlanPanel items={todos} onToggle={toggleTodo} />

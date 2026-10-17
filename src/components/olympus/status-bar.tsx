@@ -18,6 +18,7 @@ const ProjectSwitcher = dynamic(() => import('./project-switcher'), { ssr: false
 const ApiConfigDialog = dynamic(() => import('./api-config-dialog'), { ssr: false });
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip';
+import { useWorkingGods } from '@/lib/use-working-gods';
 
 interface ProviderInfo {
  name: string; isFree: boolean; displayName: string; capsDisplay: string;
@@ -49,6 +50,10 @@ function shouldShowCustomWindowControls(): boolean {
 
 export default function StatusBar({ health }: { health: any }) {
  const activeGod = useOlympus(s => s.activeGod);
+ // W0-A: the WORKING gods strip — the live set replaces the static
+ // 'active god: Apollo' label. Icons side by side, blinking while the
+ // gods work, no names (the user's directive).
+ const workingGods = useWorkingGods();
  const sseConnected = useOlympus(s => s.sseConnected);
  const eventsCount = useOlympus(s => s.events.length);
  const setLeftPane = useOlympus(s => s.setLeftPane);
@@ -153,17 +158,24 @@ export default function StatusBar({ health }: { health: any }) {
  <CompactBrainButton />
 
  <div className="w-px h-3 bg-olympus-gold/15 shrink-0" />
- <div className="flex items-center gap-1.5 shrink-0">
- <span className="text-olympus-text-dim">active god:</span>
- <span className="text-olympus-gold min-w-22.5 flex items-center gap-1">
- {ActiveGodIcon ? (
- <>
- <ActiveGodIcon size={11} />
-	 {/* Capitalize god name (Apollo, not apollo). */}
-				 {activeGod ? activeGod.charAt(0).toUpperCase() + activeGod.slice(1) : ''}
- </>
- ) : '- idle -'}
+ {/* W0-A: the WORKING-GODS strip — every god working RIGHT NOW, icons
+     side by side, blinking (animate-pulse), NO names. Falls back to the
+     selected god (dimmed, steady) when the machine is idle. */}
+ <div className="flex items-center gap-1 shrink-0" title={workingGods.length > 0 ? workingGods.join(' · ') : (activeGod || 'idle')}>
+ {workingGods.length > 0 ? (
+ workingGods.map((g) => {
+ const Icon = GOD_ICONS[g];
+ return Icon ? (
+ <span key={g} className="flex items-center">
+ <Icon size={12} className="text-olympus-gold animate-pulse" />
  </span>
+ ) : null;
+ })
+ ) : ActiveGodIcon ? (
+ <ActiveGodIcon size={12} className="text-olympus-text-dim" />
+ ) : (
+ <span className="text-olympus-text-dim text-[10px] font-mono">idle</span>
+ )}
  </div>
  {!hideProject && (
  <>
