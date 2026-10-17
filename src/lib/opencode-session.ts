@@ -1419,8 +1419,14 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
     // re-arm a zero-activity ghost row (same rule as markSessionError).
     const preRunPoisoned = accumulators.get(opts.sessionId)?.get(MULTI_KEY)?.had_error === true;
     let srv = server;
+    // #PILEUP: set by the transport branch below when the next attempt must
+    // RESUME THE WATCH on an in-flight server-side turn instead of
+    // re-posting (the 2026-10-16 specimen: retries stacked FOUR planning
+    // prompts on one session while the first turn reasoned for 20 minutes).
+    let watchResume = false;
     for (let attempt = 0; ; attempt++) {
-      const result = await runWarmMessageAttempt(srv, opts, attempt === 0);
+      const result = await runWarmMessageAttempt(srv, opts, attempt === 0, watchResume);
+      watchResume = false;
       // Issue #35/#39: the window outcome must reflect the TURN's final result,
       // and the retries themselves are already visible in the terminal log.
       // Narrowest correct clear: only the poison WE introduced (flag clean
@@ -1497,6 +1503,21 @@ export async function runWarmMessage(opts: WarmRunOptions): Promise<WarmRunResul
       if (kind === 'transport') {
         invalidateServer();
         srv = await ensureServer();
+        // #PILEUP (the 2026-10-16 specimen): the SSE watch can idle-break
+        // (~300s without frames) while the turn KEEPS RUNNING on the warm
+        // server. A blind re-post stacked a second prompt onto the session
+        // (the DB showed four queued planning prompts). Resume the WATCH
+        // instead — only re-post when the session is truly idle server-side,
+        // or the serve respawned COLD (the in-flight turn died with the old
+        // process — re-posting is the only recovery there).
+        watchResume = srv.warm === true && await isTurnAliveServerSide(srv, opts.sessionId);
+        if (watchResume) {
+          opts.onEvent({
+            type: 'log',
+            msg: `The turn is still running server-side — resuming the watch, no re-post (no prompt pileup)`,
+            ts: new Date().toISOString(),
+          });
+        }
       }
       await sleep(delay);
     }
@@ -1722,6 +1743,7 @@ async function runWarmMessageAttempt(
   server: ServerInfo,
   opts: WarmRunOptions,
   _allowRetry: boolean,
+  watchResume = false,
 ): Promise<WarmRunResult> {
   // NOTE (fix d revision, 2026-09-29): the original pre-send health check
   // (2.5s probe → invalidateServer → ensureServer) was REMOVED after live
@@ -1993,33 +2015,52 @@ async function runWarmMessageAttempt(
       // long after this line is the only thing the user can see.
       opts.onEvent({
         type: 'log',
-        msg: `▶ dispatching to warm session ${String(opts.sessionId).slice(-8)} (${opts.agent || 'apollo'})`,
+        msg: watchResume
+          ? `▶ resuming the watch on the in-flight turn (warm session ${String(opts.sessionId).slice(-8)}) — no re-post, no prompt pileup`
+          : `▶ dispatching to warm session ${String(opts.sessionId).slice(-8)} (${opts.agent || 'apollo'})`,
         ts: new Date().toISOString(),
       });
       // Benchmark: remember this turn's task signature (raw text stays in
       // memory; only its sha256 prefix is ever written to the log). Recorded
       // before the post so an immediate crash still leaves a flushable row.
       setBenchmarkTaskSignature(opts.sessionId, opts.text);
-      const res = await apiFetch(
-        server.port,
-        auth,
-        `/session/${opts.sessionId}/message`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            // Prepend the authoritative strategy block so the model never has
-            // to infer the active strategy from model IDs (it hallucinated
-            // "free-nvidia-build" / "via OpenRouter" before this existed).
-            parts: [{ type: 'text', text: `${buildStrategyContextBlock()}\n\n${opts.text}` }],
-            ...(opts.agent ? { agent: opts.agent } : {}),
-          }),
-        },
-        // The message itself can legitimately take minutes; the maxTimer
-        // above is the real bound. Use a generous per-call timeout.
-        (opts.maxRuntimeMs ?? 10 * 60_000) + 15_000,
-        postCtrl.signal,
-      );
+      let res: any;
+      if (watchResume) {
+        // #PILEUP (the 2026-10-16 specimen): the transport broke while the
+        // turn KEEPS RUNNING on the warm server. NO re-post — a blind retry
+        // stacked a second prompt onto the session (the DB showed FOUR
+        // queued planning prompts while the first turn reasoned for 20
+        // minutes). Watch-resume: the feed above is already re-opened; poll
+        // the in-flight turn's completion server-side. The maxTimer/idle
+        // nudge aborts surface through the throw below and keep their
+        // existing catch classification.
+        const watched = await pollInFlightTurn(server, opts.sessionId, postCtrl.signal);
+        res = {
+          ok: true,
+          json: async () => ({ info: watched.info, parts: watched.parts }),
+        };
+      } else {
+        res = await apiFetch(
+          server.port,
+          auth,
+          `/session/${opts.sessionId}/message`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              // Prepend the authoritative strategy block so the model never has
+              // to infer the active strategy from model IDs (it hallucinated
+              // "free-nvidia-build" / "via OpenRouter" before this existed).
+              parts: [{ type: 'text', text: `${buildStrategyContextBlock()}\n\n${opts.text}` }],
+              ...(opts.agent ? { agent: opts.agent } : {}),
+            }),
+          },
+          // The message itself can legitimately take minutes; the maxTimer
+          // above is the real bound. Use a generous per-call timeout.
+          (opts.maxRuntimeMs ?? 10 * 60_000) + 15_000,
+          postCtrl.signal,
+        );
+      }
 
       let info: any = null;
       let parts: any[] = [];
@@ -2306,6 +2347,69 @@ async function openEventFeed(
  * newest assistant message's parts through the mapper. Covers the rare case
  * where the event feed delivered nothing for a very fast turn.
  */
+/**
+ * #PILEUP: is the session's turn still running server-side? The last
+ * message being an in-flight assistant turn (no time.completed, no error)
+ * on a WARM server means the transport broke while the turn kept
+ * executing — the watch must resume, because a blind re-post would pile a
+ * second prompt onto the session (the 2026-10-16 specimen: FOUR planning
+ * prompts stacked while the first turn reasoned for 20 minutes).
+ */
+async function isTurnAliveServerSide(server: ServerInfo, sessionId: string): Promise<boolean> {
+  try {
+    const auth = server.authed ? server.password : null;
+    const res = await apiFetch(server.port, auth, `/session/${sessionId}/message`, {}, 10_000);
+    if (!res.ok) return false;
+    const messages: any[] = await res.json().catch(() => []);
+    if (!Array.isArray(messages) || messages.length === 0) return false;
+    const last = messages[messages.length - 1];
+    return last?.info?.role === 'assistant'
+      && !last?.info?.time?.completed
+      && !last?.info?.error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * #PILEUP (watch-resume): poll the in-flight turn until it completes (or
+ * errors) server-side. Resolves with { info, parts } of the LAST message —
+ * the in-flight turn by construction. Transient fetch failures keep
+ * polling (the pool stalls mid-reasoning for minutes at peak). The ONLY
+ * exits are completion/error (resolve) and signal abort (throw — the
+ * catch keeps the maxTimedOut / idleTimedOut / aborted classification
+ * untouched). The maxTimer owns the bound; no independent deadline.
+ */
+async function pollInFlightTurn(
+  server: ServerInfo,
+  sessionId: string,
+  signal: AbortSignal,
+): Promise<{ info: any; parts: any[] }> {
+  const auth = server.authed ? server.password : null;
+  while (!signal.aborted) {
+    await sleep(5_000);
+    if (signal.aborted) break;
+    try {
+      const res = await apiFetch(server.port, auth, `/session/${sessionId}/message`, {}, 10_000);
+      if (res.ok) {
+        const messages: any[] = await res.json().catch(() => []);
+        if (Array.isArray(messages) && messages.length > 0) {
+          const last = messages[messages.length - 1];
+          const info = last?.info;
+          if (info?.role === 'assistant' && (info?.time?.completed || info?.error)) {
+            return { info, parts: Array.isArray(last?.parts) ? last.parts : [] };
+          }
+        }
+      }
+    } catch {
+      // transient — the pool stalls mid-turn for minutes at peak; keep polling
+    }
+  }
+  // Aborted (maxTimer / idle nudge / client-gone) without completion —
+  // surface through the throw so the existing catch classification applies.
+  throw new Error('stream_idle_timeout: watch-resume aborted before the in-flight turn completed');
+}
+
 async function synthesizeFromHistory(
   server: ServerInfo,
   sessionId: string,

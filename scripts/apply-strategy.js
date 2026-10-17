@@ -686,6 +686,13 @@ const FREE_CONFIG_SHAPE = {
   // (they read skill files at startup which would blow the token budget).
   plugins: [
     './.opencode/olympus',
+    // #PILEUP: the planner patience fix — apollo's planning turn on the
+    // reasoning lanes rides reasoning_effort=low (the 2026-10-16 specimen:
+    // 20.6 min at the reasoning cap with output=0; with low effort the
+    // same prompt plans in 171s). The chat.params hook is the only wire
+    // path opencode 1.18.10 offers — the agent config accepts the key but
+    // the openai-compatible runtime drops it.
+    './.opencode/plugins/apollo-reasoning.mjs',
     './.opencode/plugins/olympus-router',
     './.opencode/plugins/olympus-go-cache',
     './.opencode/plugins/opencode-context-cache.mjs',

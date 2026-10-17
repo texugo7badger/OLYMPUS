@@ -62,7 +62,8 @@
         "olympus-deploy-review": true,
         "olympus-integration-review": true
       },
-      "color": "#D4A574"
+      "color": "#D4A574",
+      "reasoning_effort": "low"
     },
     "atlas": {
       "description": "Orchestrator & Dispatch Executor — Receives execution DAG from Apollo, dispatches waves to specialist gods, tracks progress, detects failures, compiles results.",
@@ -427,6 +428,7 @@
   },
   "plugin": [
     "./.opencode/olympus",
+    "./.opencode/plugins/apollo-reasoning.mjs",
     "./.opencode/plugins/olympus-router"
   ],
   "compaction": {},

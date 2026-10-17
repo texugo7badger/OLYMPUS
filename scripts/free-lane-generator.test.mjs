@@ -236,8 +236,8 @@ mkdirSync(WORK, { recursive: true });
     // the two cache plugins — documented provider-shape behavior), single
     // instruction.
     check('G1 shape: only the 10 gods present (demigods removed)', Object.keys(cfg.agent).length === 10, `got ${Object.keys(cfg.agent).join(',')}`);
-    check('G1 shape: free plugin preset (nvidia build: cache plugins stripped)',
-      JSON.stringify(cfg.plugin) === JSON.stringify(['./.opencode/olympus', './.opencode/plugins/olympus-router']),
+    check('G1 shape: free plugin preset (nvidia build: cache plugins stripped, apollo-reasoning kept)',
+      JSON.stringify(cfg.plugin) === JSON.stringify(['./.opencode/olympus', './.opencode/plugins/apollo-reasoning.mjs', './.opencode/plugins/olympus-router']),
       JSON.stringify(cfg.plugin));
     // #106 THE ANCHOR-PIN: the pinned family-lane map lands VERBATIM — the
     // fake "stronger nemotron live #1" from the refresh appears NOWHERE
