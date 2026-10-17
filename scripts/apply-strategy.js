@@ -801,7 +801,10 @@ function buildOpenRouterMixed() {
 
   // Specialist gods → the second-strongest free model, but only if it can
   // actually hold the OLYMPUS context (≥ 131K) and cleared a sanity score.
-  // Falls back to the verified ling-3.0-flash.
+  // Falls back to the verified inkling-small:free (1M ctx, probe-verified
+  // 2026-10-16 AND re-checked against the live /api/v1/models at the
+  // V003-CI cure — the old ling-3.0-flash:free fallback died in the free
+  // list; the L4 catalogue preflight caught it red in the Eval Harness).
   const pickSpecialist = () => {
     const second = orTop[1];
     if (second && second.context >= 131072 && second.score >= 30) {
@@ -809,7 +812,7 @@ function buildOpenRouterMixed() {
       log(`  Free OpenRouter: specialist roles -> ${live} (live #2 from refresh)`);
       return live;
     }
-    return 'openrouter/inclusionai/ling-3.0-flash:free';
+    return 'openrouter/thinkingmachines/inkling-small:free';
   };
 
   const map = { ...BUILTIN_STRATEGIES['free-openrouter'] };
