@@ -219,6 +219,18 @@ async function main() {
     ['no name -> derived from significant words', 'landing page for a bakery with menu', [], (r) => r.kind === 'new' && r.projectName === 'Landing Bakery Menu'],
     ['candidate name matches an existing project -> existing', 'continue the "Lumina CRM" build', [lumina, petlove], (r) => r.kind === 'existing' && r.slug === 'lumina-crm'],
     ['candidate partial name (Lumina) -> existing via token overlap', 'update "Lumina" with a settings page', [lumina, petlove], (r) => r.kind === 'existing' && r.slug === 'lumina-crm'],
+    // #CONTINUATION-SPECIMEN (2026-10-16 22:30): "Continue o lumina Atlas
+    // para dispatch em todas as áreas!" — Jaccard 1/11 = 0.09, NO match,
+    // the honest-ask fired while lumina-crm sat right there. A distinctive
+    // slug token ("lumina") in the prompt must route.
+    ['continuation instruction naming the project -> existing (the 22:30 specimen)', 'Continue o lumina Atlas para dispatch em todas as áreas!', [lumina, petlove], (r) => r.kind === 'existing' && r.slug === 'lumina-crm'],
+    // #PATH-SPECIMEN (2026-10-16 22:32): the prompt named the project's PATH
+    // (typographic quotes from the terminal) and the intake CREATED a
+    // project named 'home-texugo-olympus-vault-02-projects-lumina-crm'.
+    // A quoted path is a LOCATION — route, never create.
+    ['quoted PROJECT PATH -> existing (the 22:32 specimen — a path is a location, never a name)', 'O objetivo é continuar o desenvolvimento e criação do Lumina “/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm”', [lumina, petlove], (r) => r.kind === 'existing' && r.slug === 'lumina-crm'],
+    ['quoted path with ASCII quotes -> existing (both quote flavors route)', "continuar o projeto em '/home/texugo/OLYMPUS-VAULT/02_Projects/lumina-crm'", [lumina, petlove], (r) => r.kind === 'existing' && r.slug === 'lumina-crm'],
+    ['quoted path of an UNKNOWN project -> new (a path alone cannot invent a match)', 'work on “/home/texugo/some/other/thing”', [lumina, petlove], (r) => r.kind !== 'existing' || r.slug === 'lumina-crm'],
     ['description overlap -> existing', 'build a CRM for solar customers', [lumina, petlove], (r) => r.kind === 'existing' && r.slug === 'lumina-crm'],
     ['weak overlap -> new (the threshold is honest)', 'build a CRM for solar customers', [petlove], (r) => r.kind === 'new'],
     ['two strong matches -> ask (never a silent guess)', 'update the "Lumina" project', [lumina, proj('lumina-two', 'Lumina Two', 'another lumina crm build')], (r) => r.kind === 'ask' && r.candidates.length >= 2],

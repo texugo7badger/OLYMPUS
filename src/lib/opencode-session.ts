@@ -157,6 +157,14 @@ export function buildStrategyContextBlock(): string {
   // guesses (observed: it tried ~/Projects/olympus/OLYMPUS-VAULT before the
   // canonical ~/OLYMPUS-VAULT) and burns probe cycles per run.
   lines.push(`Vault root: ${VAULT_ROOT} — never guess vault paths; resolve from this root.`);
+  // #EXECUTION-LAW (the 2026-10-16 22:33 specimen): a planning=NO turn
+  // improvised a hand-dispatch of Atlas via the task tool — while the HOP
+  // RUNTIME owns DAG execution. The [OLYMPUS-PLANNER] contract carries this
+  // law, but interview/continuation turns never see it. EVERY turn sees the
+  // strategy block, so the law rides here: the hop runtime executes plans,
+  // hand-dispatching the DAG is forbidden, and a parked walk resumes in the
+  // post-run by itself.
+  lines.push('EXECUTION LAW: if the active project lane carries a dispatch-plan.json, the HOP RUNTIME is the ONLY execution engine — NEVER execute hops yourself, NEVER write component code, NEVER hand-dispatch the plan to Atlas (no task-tool DAG execution). If the walk is parked, the user\'s next prompt resumes it automatically in the post-run; you only answer, plan, or interview.');
   return lines.join('\n');
 }
 
@@ -1705,9 +1713,16 @@ export function watchdogDecision(args: {
   warnMs: number;
   stallMs: number;
   permissionPending: boolean;
-}): 'quiet' | 'warn' | 'permission-pending' | 'nudge-abort' {
+  /** #CHILD-LIVENESS (the 2026-10-16 22:34 specimen): the latest visible
+   * part is a tool in 'running' state — the turn is legitimately executing
+   * (a subagent task, a long build), NOT stalled. A running child tool is
+   * live work; the nudge must never abort it. */
+  childPending?: boolean;
+}): 'quiet' | 'warn' | 'permission-pending' | 'child-running' | 'nudge-abort' {
   if (args.silentForMs >= args.stallMs) {
-    return args.permissionPending ? 'permission-pending' : 'nudge-abort';
+    if (args.permissionPending) return 'permission-pending';
+    if (args.childPending) return 'child-running';
+    return 'nudge-abort';
   }
   if (args.silentForMs >= args.warnMs) return 'warn';
   return 'quiet';
@@ -1781,6 +1796,7 @@ async function runWarmMessageAttempt(
     // #62: starts false; the pump sets it when the latest visible part is a
     // tool awaiting permission approval, clears it on any other event.
     permissionPending: false,
+    childPending: false,
   };
     let receivedEvents = false;
     let postStarted = false;
@@ -1880,6 +1896,7 @@ async function runWarmMessageAttempt(
         warnMs: SILENCE_WARN_MS,
         stallMs: SILENCE_STALL_MS,
         permissionPending: state.permissionPending,
+        childPending: state.childPending,
       });
       if (decision === 'permission-pending') {
         if (!stalledNotified) {
@@ -1887,6 +1904,21 @@ async function runWarmMessageAttempt(
           deliver({
             type: 'permission_pending',
             msg: `⏸ Awaiting your permission approval (${Math.round((Date.now() - state.lastFrameAt) / 1000)}s) — the run is paused on a permission ask, not stalled. Approve or reject in the terminal; this wait is never auto-killed.`,
+            ts: new Date().toISOString(),
+          });
+        }
+        return;
+      }
+      if (decision === 'child-running') {
+        // #CHILD-LIVENESS (the 22:34 specimen): a RUNNING tool is live work —
+        // the parent is blocked on a child (a subagent task, a long build),
+        // not stalled. Never nudge; the max-runtime timer stays the only
+        // bound. The card says WHY it is quiet, once.
+        if (!stalledNotified) {
+          stalledNotified = true;
+          deliver({
+            type: 'log',
+            msg: `⚙ A tool is running (${Math.round((Date.now() - state.lastFrameAt) / 1000)}s quiet — a subagent or a long command executing, not a stall). Watching; never auto-nudged while the child works.`,
             ts: new Date().toISOString(),
           });
         }
@@ -2241,6 +2273,9 @@ async function openEventFeed(
     lastFrameAt: number;
     /** #62: the latest visible part is a tool awaiting permission approval. */
     permissionPending: boolean;
+    /** #CHILD-LIVENESS: the latest visible part is a tool in 'running'
+     * state — a live child (subagent task, long build), never a stall. */
+    childPending?: boolean;
     /** Issue #40: reasoning that arrived BEFORE the first step-start is held
      *  here instead of being dropped, then flushed with a prelude marker. */
     reasoningPre?: string;
@@ -2314,8 +2349,15 @@ async function openEventFeed(
                 if (mapped?.type === 'tool_use' || mapped?.type === 'tool_call' || mapped?.part?.type === 'tool') {
                   const st = mapped.part?.state?.status ?? mapped.part?.status;
                   state.permissionPending = st === 'pending';
+                  // #CHILD-LIVENESS: a RUNNING tool is live work — the turn
+                  // is executing a child (the 22:34 specimen: Apollo blocked
+                  // on an Atlas subagent task while the nudge aborted and
+                  // re-posted around it — the child kept working through two
+                  // parent nudges). Running = live; completed/error = done.
+                  state.childPending = st === 'running';
                 } else {
                   state.permissionPending = false;
+                  state.childPending = false;
                 }
                 onEvent(mapped);
               });

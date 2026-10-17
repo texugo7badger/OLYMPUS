@@ -131,6 +131,53 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
     'the output bar moved — this suite did not authorize that');
 }
 
+// ── 5. THE 22:27-22:41 SPECIMEN CHAIN: walk durability + execution law ─────
+{
+  const sessionSrc = read('src/lib/opencode-session.ts');
+  const walkerSrc = read('src/lib/hop-runtime/walker.ts');
+
+  // (a) THE EXECUTION LAW rides the strategy block — EVERY turn sees it
+  // (the 22:33 specimen: a planning=NO turn never saw the [OLYMPUS-PLANNER]
+  // contract and hand-dispatched Atlas via the task tool).
+  check('law: the strategy block carries the EXECUTION LAW (never hand-dispatch the DAG — every turn sees it)',
+    /EXECUTION LAW: if the active project lane carries a dispatch-plan\.json/.test(sessionSrc)
+      && /no task-tool DAG execution/.test(sessionSrc),
+    'the execution law is missing from the every-turn contract — interview turns will freelance again');
+
+  // (b) THE CHILD-LIVENESS: a RUNNING tool is live work; the nudge never
+  // aborts a parent blocked on a child (the 22:34 specimen: two nudges
+  // re-posted around a working Atlas subagent).
+  check('law: the watchdog carries childPending (a running tool is live work)',
+    /childPending = st === 'running'/.test(sessionSrc)
+      && /decision === 'child-running'/.test(sessionSrc)
+      && /childPending: state\.childPending/.test(sessionSrc),
+    'the nudge still kills parents blocked on live children');
+
+  // (c) THE WALK STATE PERSISTS FROM SECOND ZERO (the 22:27 specimen: the
+  // app restart killed the walk mid-hop-1 leaving NO state — the campaign
+  // was stranded with a plan and zero resume surface).
+  check('law: the walker persists the INITIAL hop-state BEFORE the first dispatch (a restart never strands the campaign)',
+    /#RESTART-SPECIMEN[\s\S]*?saveHopState\(stateDir, \{\n    version: 1,\n    completed: \[\.\.\.completed\],\n    parked: null,/.test(walkerSrc),
+    'the initial hop-state save is gone — a killed walk leaves no resume surface');
+
+  // (d) THE FIRST-BYTE DEADLINE: a mute hop is a stalled pool, not a slow
+  // hop (the 22:27 specimen: step-5 froze at hop-1 with zero output and
+  // would have ridden the full 25-minute ceiling in silence).
+  check('law: the hop dispatcher carries the first-byte deadline (a mute hop dies fast, named, retried)',
+    /HOP_FIRST_BYTE_MARKER = 'hop-first-byte-timeout'/.test(walkerSrc)
+      && /firstByteTimer/.test(walkerSrc)
+      && /errHead\.includes\(HOP_FIRST_BYTE_MARKER\)/.test(walkerSrc)
+      && /kind: 'provider-overload', error: errHead \}/.test(walkerSrc.replace(/\s/g, '')) || /if \(errHead\.includes\(HOP_FIRST_BYTE_MARKER\)\) \{[\s\S]*?provider-overload/.test(walkerSrc),
+    'a stalled hop still waits the full ceiling in silence');
+
+  // (e) THE PATH ROUTES (the 22:32 specimen: the path became a project NAME).
+  const intentSrc = read('src/lib/project-intent.ts');
+  check('law: a quoted project path routes to the project, never creates a path-named one',
+    /extractProjectPathCandidate/.test(intentSrc)
+      && /the prompt names the project's path/.test(intentSrc),
+    'paths still become garbage project names');
+}
+
 console.log('');
 if (failures > 0) {
   console.error(`planner-patience: ${failures} violation(s) — the peak-hour planning cure is NOT in effect`);

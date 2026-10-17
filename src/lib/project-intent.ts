@@ -34,6 +34,19 @@ const STOPWORDS = new Set([
   'website', 'page', 'pages', 'new', 'some', 'like', 'about',
 ]);
 
+/**
+ * #PATH-SPECIMEN (2026-10-16, 22:32): detect a quoted PATH candidate (any
+ * quote flavor — the terminal converts ASCII quotes to typographic ones).
+ * Returns the raw path when the quoted text contains a path separator,
+ * null otherwise. Routing resolves it; it is NEVER a project name.
+ */
+export function extractProjectPathCandidate(prompt: string): string | null {
+  const quoted = prompt.match(/["'“‘]([^"'”’\n]{2,300})["'”’]/);
+  if (!quoted) return null;
+  const raw = quoted[1].trim().replace(/^["'“‘”’]+|["'“‘”’]+$/g, '');
+  return raw.includes('/') ? raw : null;
+}
+
 function words(s: string): Set<string> {
   return new Set(
     s.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/[\s-]+/).filter((w) => w.length >= 3 && !STOPWORDS.has(w)),
@@ -50,8 +63,17 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 /**
  * Extract an explicitly named project from the prompt: quoted ("Lumina
  * CRM"), or `called|named|titled X [Y]`. Null when the prompt names nothing.
+ *
+ * #PATH-SPECIMEN (2026-10-16, 22:32): the terminal's typographic quotes made
+ * a quoted PROJECT PATH ("'/home/.../02_Projects/lumina-crm'") land here as
+ * the project NAME — the intake created 'home-texugo-olympus-vault-02-
+ * projects-lumina-crm' instead of routing to the live lumina-crm at exactly
+ * that path. A quoted candidate containing a path separator is a LOCATION,
+ * never a name — classifyFirstPrompt resolves it BEFORE any naming path.
  */
 export function extractProjectName(prompt: string): string | null {
+  const pathCand = extractProjectPathCandidate(prompt);
+  if (pathCand) return null; // a path is a routing signal, not a name
   const quoted = prompt.match(/["“]([^"”\n]{2,60})["”]/);
   if (quoted) return quoted[1].trim();
   const called = prompt.match(/\b(?:called|named|titled)\s+([A-Za-z0-9&'’-]+)(?:\s+([A-Za-z0-9&'’-]+))?/i);
@@ -83,12 +105,42 @@ export function deriveProjectName(prompt: string): string {
 export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): FirstPromptIntent {
   const known = projects ?? listProjects();
   const promptWords = words(prompt);
+
+  // #PATH-SPECIMEN: a quoted path names a project LOCATION — route, never
+  // create. The slug is the basename under 02_Projects (the pinned
+  // directive: every project lives at 02_Projects/<slug>).
+  const pathCand = extractProjectPathCandidate(prompt);
+  if (pathCand) {
+    const base = pathCand.replace(/\/+$/, '').split('/').pop()?.toLowerCase() ?? '';
+    const hit = known.find((p) => p.slug.toLowerCase() === base);
+    if (hit) {
+      return {
+        kind: 'existing',
+        slug: hit.slug,
+        score: 1,
+        reason: `the prompt names the project's path '${pathCand}' — routing to '${hit.slug}'`,
+      };
+    }
+  }
+
   const candidateName = extractProjectName(prompt);
 
   const scored = known
     .map((p) => {
       const nameWords = words(p.name);
       let score = jaccard(nameWords, promptWords);
+      // #CONTINUATION-SPECIMEN (2026-10-16, 22:30): "Continue o lumina" must
+      // MATCH the project it continues — Jaccard on full prompts starves
+      // short continuation instructions (1/11 = 0.09). A distinctive prompt
+      // token equal to a slug token is a strong routing signal.
+      const slugTokens = new Set(p.slug.toLowerCase().split('-'));
+      const lowerPrompt = prompt.toLowerCase();
+      for (const t of slugTokens) {
+        if (t.length >= 4 && new RegExp(`\\b${t}\\b`).test(lowerPrompt)) {
+          score = Math.max(score, 0.55);
+          break;
+        }
+      }
       if (candidateName) {
         const candidateWords = words(candidateName);
         const candidateScore = jaccard(nameWords, candidateWords);

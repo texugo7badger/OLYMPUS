@@ -220,6 +220,13 @@ async function main() {
   expect('U: warn at warnMs', watchdogDecision({ ...W, silentForMs: 70_000 }) === 'warn', 'want warn');
   expect('U: nudge-abort at stallMs (no permission)', watchdogDecision({ ...W, silentForMs: 150_000 }) === 'nudge-abort', 'want nudge-abort');
   expect('U: permission-pending OVERRIDES the nudge at stallMs', watchdogDecision({ ...W, silentForMs: 300_000, permissionPending: true }) === 'permission-pending', 'want permission-pending');
+  // #CHILD-LIVENESS (the 2026-10-16 22:34 specimen): a parent blocked on a
+  // RUNNING child tool (the Atlas subagent task) is LIVE, never stalled —
+  // the nudge must not abort it. The decision table is the law's letter.
+  expect('U: child-running OVERRIDES the nudge at stallMs (a running tool is live work)',
+    watchdogDecision({ ...W, silentForMs: 300_000, childPending: true }) === 'child-running', 'want child-running');
+  expect('U: permission-pending still wins over child-running',
+    watchdogDecision({ ...W, silentForMs: 300_000, permissionPending: true, childPending: true }) === 'permission-pending', 'want permission-pending');
   expect('U: complexityScale: architectural → 3', complexityScale('architectural') === 3, 'want 3');
   expect('U: complexityScale: complex → 3', complexityScale('complex') === 3, 'want 3');
   expect('U: complexityScale: simple → 1', complexityScale('simple') === 1, 'want 1');

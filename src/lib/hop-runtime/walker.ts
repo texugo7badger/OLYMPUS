@@ -152,18 +152,47 @@ function parseJsonEvents(raw: string): JsonEventParse {
   return acc;
 }
 
+/**
+ * #FIRST-BYTE (the 2026-10-16 22:27 specimen): a hop whose turn hangs with
+ * ZERO output — the empty-reasoning stall class (step-5 froze at hop-1 with
+ * step-start + an empty reasoning part; the 16:31 planning turn showed the
+ * same signature on glm) — used to ride the full 25-minute ceiling in
+ * SILENCE. The first-byte deadline kills a mute hop fast and names the
+ * class so classifyCeilingKill buckets it as provider-overload (transient
+ * pool contention — the crescendo retries it; the honest park only fires
+ * on exhaustion). Env-tunable: OLYMPUS_HOP_FIRST_BYTE_MS (default 240s —
+ * above the slowest measured legitimate TTFT: gemma-4-31b at 111s).
+ */
+export const DEFAULT_HOP_FIRST_BYTE_MS = 240_000;
+export const HOP_FIRST_BYTE_MARKER = 'hop-first-byte-timeout';
+export function resolveHopFirstByteMs(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number.parseInt(env.OLYMPUS_HOP_FIRST_BYTE_MS ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_HOP_FIRST_BYTE_MS;
+}
+
 function runSpawn(args: string[], hopCwd: string, timeoutMs: number): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolveP) => {
     const child = spawnOpencode(args, { cwd: hopCwd });
     let stdout = '';
     let stderr = '';
+    let firstByteAt: number | null = null;
     const timer = setTimeout(() => {
       try { child.kill('SIGKILL'); } catch { /* already gone */ }
     }, timeoutMs);
-    child.stdout?.on('data', (d) => { stdout += String(d); });
+    // #FIRST-BYTE: a mute child is a stalled pool, not a slow hop — kill at
+    // the deadline and NAME the class on stderr (the classifier reads it).
+    const firstByteTimer = setTimeout(() => {
+      if (firstByteAt !== null) return;
+      try { child.kill('SIGKILL'); } catch { /* already gone */ }
+      stderr += `\n${HOP_FIRST_BYTE_MARKER} (OLYMPUS_HOP_FIRST_BYTE_MS ${resolveHopFirstByteMs()}ms): the turn produced ZERO output — the provider pool stalled before the first token (the empty-reasoning stall class; transient pool contention — retries absorb it)`;
+    }, resolveHopFirstByteMs());
+    child.stdout?.on('data', (d) => {
+      if (firstByteAt === null && String(d).trim()) firstByteAt = Date.now();
+      stdout += String(d);
+    });
     child.stderr?.on('data', (d) => { stderr += String(d); });
-    child.on('error', (e) => { clearTimeout(timer); resolveP({ code: -1, stdout, stderr: stderr + String(e) }); });
-    child.on('close', (code) => { clearTimeout(timer); resolveP({ code, stdout, stderr }); });
+    child.on('error', (e) => { clearTimeout(timer); clearTimeout(firstByteTimer); resolveP({ code: -1, stdout, stderr: stderr + String(e) }); });
+    child.on('close', (code) => { clearTimeout(timer); clearTimeout(firstByteTimer); resolveP({ code, stdout, stderr }); });
   });
 }
 
@@ -215,6 +244,11 @@ export interface CeilingKillClassification {
  */
 export function classifyCeilingKill(stderrText: string): CeilingKillClassification {
   const errHead = (stderrText || '').slice(-2000);
+  // #FIRST-BYTE: the zero-output stall class — provider pool contention,
+  // transient: the crescendo retries it, the park only fires on exhaustion.
+  if (errHead.includes(HOP_FIRST_BYTE_MARKER)) {
+    return { kind: 'provider-overload', error: errHead };
+  }
   const kind: CeilingKillClassification['kind'] =
     classifyRetry({ code: -1, error: errHead, statusCode: undefined } as never) === 'provider-overload'
       ? 'provider-overload'
@@ -405,6 +439,19 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   const completed = new Set<string>(state?.completed ?? []);
   let parkedHop: (HopPark & { verify?: HopVerifyResult }) | null = null;
   const rows: HopTelemetryRow[] = [];
+
+  // #RESTART-SPECIMEN (2026-10-16, 22:27): the walk died mid-hop-1 (the app
+  // restart killed the dev server) with NO state on disk — the campaign was
+  // stranded (plan present, zero hop-state, no resume surface). Persist the
+  // INITIAL state BEFORE the first dispatch: any kill — app restart, server
+  // crash, machine power — leaves a resumable campaign on disk. The disk
+  // carries the campaign, from second zero.
+  saveHopState(stateDir, {
+    version: 1,
+    completed: [...completed],
+    parked: null,
+    updatedAt: new Date().toISOString(),
+  });
 
   const pending = plan.hops.filter((h) => !completed.has(h.id));
   const byId = new Map(plan.hops.map((h) => [h.id, h]));
