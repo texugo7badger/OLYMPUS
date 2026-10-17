@@ -190,9 +190,13 @@ export function resolveHopFirstByteMs(env: NodeJS.ProcessEnv = process.env): num
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_HOP_FIRST_BYTE_MS;
 }
 
-function runSpawn(args: string[], hopCwd: string, timeoutMs: number): Promise<{ code: number | null; stdout: string; stderr: string }> {
+function runSpawn(args: string[], hopCwd: string, timeoutMs: number, laneGod?: string): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolveP) => {
-    const child = spawnOpencode(args, { cwd: hopCwd });
+    // #81 (D17/D20): the deterministic-spawn COST STAMP — the hop's god rides
+    // the child's environment, so every cost row from this session resolves
+    // its god WITHOUT the in-band agent or event ordering (the agent-less
+    // one-shot rows that fell to 'global').
+    const child = spawnOpencode(args, { cwd: hopCwd, extraEnv: laneGod ? { OLYMPUS_LANE_GOD: laneGod } : undefined });
     let stdout = '';
     let stderr = '';
     let firstByteAt: number | null = null;
@@ -324,6 +328,7 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
       ['run', '--model', lane, '--format', 'json', ...(resolveHopVariant() ? ['--variant', resolveHopVariant()!] : []), ctx.prompt],
       ctx.laneRoot,
       resolveHopTimeoutMs(),
+      hop.god,
     );
     const ok = last.code === 0;
     const errText = (last.stderr || '').slice(-2000) || (ok ? '' : `exit ${last.code}`);

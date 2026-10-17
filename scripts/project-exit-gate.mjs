@@ -32,6 +32,13 @@
  *                     false-positived a real 1780B page, the G4 specimen).
  *                     Pairs with check 4 — the page must exist, compose,
  *                     and render (P-A)
+ *   8 dup-handlers    (#96, D28's GAP-1-S1 onChange half) NO duplicated prop
+ *                     on one JSX element — the silent-override class that
+ *                     type-checks, builds, and renders 200 while the input
+ *                     misbehaves (BENCH P-F: the duplicated onChange). A
+ *                     static pass over the source .tsx/.jsx: every opening
+ *                     tag's prop names must be unique; handlers (on*) are
+ *                     the named class. Strings/braces/spreads respected.
  *
  * Exit codes: 0 all-pass; 1 any fail; 2 usage error. The structured report
  * (project-named, per-check status + detail) always prints.
@@ -211,6 +218,33 @@ if (!page) {
       : 'app/page.tsx present but does NOT compose the kit (zero local imports — a route entry must render the built sections/components; pairs with check 4)');
 }
 
+// ── (8) duplicate props on one JSX element (the D28 onChange class, #96) ────
+// The one bench failure class the gate did not catch: a duplicated prop in
+// ONE opening tag (onChange={...} onChange={...}) — JSX takes the LAST
+// silently; it type-checks, builds, renders HTTP 200, and the form
+// misbehaves. Static pass: for every JSX opening tag (strings, template
+// literals, and balanced braces skipped; spreads {...x} cannot be resolved
+// statically and are ignored — no false positives), the prop names must be
+// UNIQUE. Handler props (on[A-Z]*) are the named class; ANY duplicate is
+// flagged — className twice is the same silent-override disease.
+const dupFindings = [];
+(function scanDup(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (['node_modules', '.git', '.next', 'out', 'dist', 'build', '.turbo', '_next'].includes(entry.name)) continue;
+    const p = join(dir, entry.name);
+    const st = lstatSync(p);
+    if (st.isDirectory()) scanDup(p);
+    else if (/\.tsx$/.test(entry.name) || /\.jsx$/.test(entry.name)) {
+      const srcText = readFileSync(p, 'utf-8');
+      for (const hit of findDuplicateJsxProps(srcText)) {
+        dupFindings.push(`${relative(PROJECT, p)}:${hit.line} — <${hit.tag}> carries ${hit.duplicates.map((d) => `${d.name} x${d.count}${/^on[A-Z]/.test(d.name) ? ' (HANDLER — the D28 silent-override class)' : ''}`).join(', ')}`);
+      }
+    }
+  }
+})(PROJECT);
+add('8', 'dup-handlers', dupFindings.length === 0 ? 'pass' : 'fail',
+  dupFindings.length === 0 ? 'no duplicated props on any JSX element (D28 covered — a silent-override handler never ships)' : `DUPLICATED PROPS on one element (D28, #96: JSX keeps the LAST prop silently — the form renders 200 and misbehaves; the input element + props are NAMED below):\n  ${dupFindings.join('\n  ')}`);
+
 // ── Report ───────────────────────────────────────────────────────────────────
 const fails = results.filter(r => r.status === 'fail');
 const skippedCount = results.filter(r => r.status === 'skipped').length;
@@ -235,6 +269,80 @@ if (FLAG_JSON) {
 process.exit(fails.length === 0 ? 0 : 1);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+/**
+ * #96 (D28): scan JSX source for opening tags carrying the SAME prop name
+ * more than once. A tiny state machine: '<' + identifier starts a tag; the
+ * scan runs to the tag's '>' with strings ('...', "...", `...`) skipped and
+ * {...} blocks depth-counted (attribute expressions may nest); prop names
+ * are identifiers followed by '=' (JSX-attribute shape). Spreads ({...x})
+ * and bare shorthand ({foo}) add no prop name — ignored, never a false
+ * positive. Returns [{ tag, line, duplicates: [{name, count}] }].
+ */
+function findDuplicateJsxProps(srcText) {
+  const findings = [];
+  const isIdStart = (c) => /[A-Za-z_$]/.test(c);
+  const isIdChar = (c) => /[\w$]/.test(c);
+  let i = 0;
+  let line = 1;
+  while (i < srcText.length) {
+    const c = srcText[i];
+    if (c === '\n') line++;
+    // A JSX opening tag starts with '<' + identifier (component or intrinsic)
+    if (c === '<' && isIdStart(srcText[i + 1] || '')) {
+      let j = i + 1;
+      let tag = '';
+      while (j < srcText.length && isIdChar(srcText[j])) tag += srcText[j++];
+      if (tag.length > 0) {
+        const tagStartLine = line;
+        const names = new Map();
+        let ok = true; // stays true while the segment parses as a tag
+        let closed = false;
+        while (j < srcText.length && ok && !closed) {
+          const ch = srcText[j];
+          if (ch === '\n') line++;
+          if (ch === '>' || (ch === '/' && srcText[j + 1] === '>')) { closed = true; j += ch === '/' ? 2 : 1; break; }
+          if (ch === '"' || ch === "'" || ch === '`') { // skip the string whole
+            const quote = ch; j++;
+            while (j < srcText.length && srcText[j] !== quote) { if (srcText[j] === '\n') line++; j++; }
+            j++; continue;
+          }
+          if (ch === '{') { // skip the balanced expression (may nest + hold strings)
+            let depth = 1; j++;
+            while (j < srcText.length && depth > 0) {
+              const cj = srcText[j];
+              if (cj === '\n') line++;
+              if (cj === '"' || cj === "'" || cj === '`') { const q = cj; j++; while (j < srcText.length && srcText[j] !== q) { if (srcText[j] === '\n') line++; j++; } j++; continue; }
+              if (cj === '{') depth++;
+              if (cj === '}') depth--;
+              j++;
+            }
+            continue;
+          }
+          if (isIdStart(ch)) {
+            let name = '';
+            while (j < srcText.length && isIdChar(srcText[j])) name += srcText[j++];
+            // JSX attribute shape: identifier followed by '=' — shorthand and
+            // spreads never match (no '='), so they cannot false-positive.
+            if (srcText[j] === '=') {
+              names.set(name, (names.get(name) || 0) + 1);
+            }
+            continue;
+          }
+          j++;
+        }
+        // A segment that never closed is not a tag (a generic/regex artifact) — ignore.
+        if (closed) {
+          const duplicates = [...names.entries()].filter(([, n]) => n > 1).map(([name, count]) => ({ name, count }));
+          if (duplicates.length > 0) findings.push({ tag, line: tagStartLine, duplicates });
+          i = j; // continue after the tag
+          continue;
+        }
+      }
+    }
+    i++;
+  }
+  return findings;
+}
 async function freeEphemeralPort() {
   for (let i = 0; i < 25; i++) {
     const port = 21000 + Math.floor(Math.random() * 3000);

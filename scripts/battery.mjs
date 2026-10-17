@@ -11,8 +11,11 @@
  * THE DECLARED ENVIRONMENT (a fresh clone reads pointers, not stack
  * traces): the environment-dependent suites get a NAMED SKIP when their
  * prerequisite is absent —
- *   - project-exit-gate  needs `~/olympus-bench` (the FIXTURES corpus:
- *                         madruga-1/cafeteria + madruga-2/escola);
+ *   - project-exit-gate  is bench-OPTIONAL (#96): the corpus only unlocks
+ *                         the cafeteria/escola assertions (self-skipped
+ *                         LOUDLY when absent); the #96 check-8 fixtures are
+ *                         local and ALWAYS run — no prereq, never listed
+ *                         as env-dependent here;
  *   - generation-contract + parallel-pantheon read REAL vault state
  *                         (the LIVE-VS-VAULT surface — green on the
  *                         user's box by design, N29's declaration class);
@@ -40,7 +43,6 @@ const OPENCODE_RUN_STATE = join(ROOT, '.opencode', 'package.json');
 /** The suites that read environment state beyond the repo, with the
  *  DECLARED reason a fresh clone would see as a named skip. */
 const ENV_DEPENDENT = new Map([
-  ['project-exit-gate.test.mjs', `needs ${BENCH_DIR} (the FIXTURES corpus: madruga-1/cafeteria + madruga-2/escola)`],
   ['generation-contract.test.mjs', `needs ${BENCH_DIR} (the F2 sandbox driver: madruga-2/driver.mjs — the bench generator) + reads REAL vault state (the LIVE-VS-VAULT surface — N29 class; green on the user's box by design)`],
   ['parallel-pantheon.test.mjs', 'reads REAL vault state (the LIVE-VS-VAULT surface — N29 class; green on the user\'s box by design)'],
 ]);

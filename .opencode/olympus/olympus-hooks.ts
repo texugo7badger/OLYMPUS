@@ -198,9 +198,10 @@ function resolveGodForStepFinish(
 
 /**
  * Issue #25: pick the agent a cost line belongs to, from the event itself.
- * Ladder: this event's agent → tracker's last-seen god → "global" (no model,
- * so no priced spend). Never "ecc": that phantom god resolved a model, so
- * unattributed spend was costed as though a real god had made it.
+ * Ladder: this event's agent → tracker's last-seen god → the OLYMPUS_LANE_GOD
+ * spawn stamp (#81) → "global" (no model, so no priced spend). Never "ecc":
+ * that phantom god resolved a model, so unattributed spend was costed as
+ * though a real god had made it.
  */
 type CostAttribution = { god: string; subagent: string | null; priced: boolean };
 
@@ -220,6 +221,15 @@ function resolveCostGod(
   if (state.godId) {
     const demigod = state.agentId && state.agentId !== state.godId ? state.agentId : null;
     return { god: state.godId, subagent: demigod, priced: true };
+  }
+  // #81 (D17/D20): the DETERMINISTIC-SPAWN STAMP — the hop runtime stamps the
+  // spawning god onto the child's environment (OLYMPUS_LANE_GOD, set by the
+  // walker at spawn). The agent-less one-shot sessions resolve their god from
+  // the stamp — no in-band agent, no event-ordering dependency, never the
+  // catch-all 'global' for a session that resolved a real god's model.
+  const laneGod = process.env.OLYMPUS_LANE_GOD;
+  if (typeof laneGod === "string" && laneGod.trim() && GOD_NAMES.has(laneGod.trim())) {
+    return { god: laneGod.trim(), subagent: null, priced: true };
   }
   return { god: "global", subagent: null, priced: false };
 }

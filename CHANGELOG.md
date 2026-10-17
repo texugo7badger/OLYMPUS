@@ -2,7 +2,7 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
-## [v0.0.3] — 2026-10-13
+## [v0.0.3] — 2026-10-13 (final cut 2026-10-17: the tag rides the release-hygiene pass — every improvement below is IN the release)
 
 The fix-OLYMPUS-itself release. Two campaigns + five UAT rounds + the Design Intelligence evolution — the machine that couldn't deliver a project now delivers one, critiques it, and self-corrects.
 
@@ -15,6 +15,20 @@ The fix-OLYMPUS-itself release. Two campaigns + five UAT rounds + the Design Int
 **UAT-2 through UAT-5** (5 merges): the lane-root pin (the planner marker carries the ABSOLUTE home path), the gate short-circuit (regex matching for choice labels + the already-resolved path + the Pantheon walk trigger), the execution law (NEVER hand-build what the walker should walk), the .opencode symlink, the peak-hour evolution (OLYMPUS_HOP_VARIANT=low cuts thinking tokens ~83%), the conversation continuity, the continuation guard, the env-tunable max-runtime.
 
 **DESIGN-INTELLIGENCE** (this merge): the anti-AI-slop evolution. The [OLYMPUS-DESIGN] marker (distinctive typography, bold accent, 3+ elevation layers, personality-required components, generic shadcn clones FORBIDDEN), the cultural context detection (PT-BR → Brazilian fixtures), the design-review gate (design-score:7 — the Athena critiques the output 0-10), the SELF-CORRECTION LOOP (the walker reads the review's fixInstructions, generates fix hops, walks them, re-reviews — max 2 iterations), the RESIDUE CLEANUP (the deliverable contains ONLY deliverable files), the page-styles extractor (CDP-adjacent visual data for text-only models — slop signals, font checks, spacing generosity, component quality signals from the served page).
+
+### The Late Arc (2026-10-16 → 2026-10-17 — post-tag completion, IN this release)
+
+**THE ANCHOR ROTATION + THE STRATEGY REDESIGN** (af60609 + c52d5ca): the kimi-k3 death (410 Gone from the NVIDIA catalogue) cured — all 10 gods redistributed across 4 LIVE anchors; the dead pools (kimi-k3, glm-5.3-flash, deepseek-v4.1-flash) retired; the new anchors (gemma-4-31b-it, gpt-oss-20b) wired; every tier re-anchored on the probe-verified 2026-10-16 catalog with all four mirrors + prose surfaces honest. Battery 28/0/2 + sync 9/9 + drift clean.
+
+**#LANE-DRIFT + PLANNER-1** (fef9a0e + 40deb04): the lane copies REFRESH-ON-DRIFT, never created-if-missing; the peak-hour planning turn cured end-to-end — reasoning_effort=low ON THE WIRE (the chat.params plugin) + the watch-resume (no prompt pileup); the exact killer prompt went 20.6min/at-cap/output=0 → 2min33s with the full 9-hop plan written and verified.
+
+**WALK-1 + PANTHEON-RAIL + SELFTEST-1** (6f20405 + a959405 + 41789a5): the overnight campaign chain cured end-to-end — the walk survives (hop-state from second zero + first-byte fast-fail), the continuation routes, and the execution law reaches EVERY turn; the 00:00:48 walk-budget kill cured + the Parthenon minimizes (icons only) with per-god FILES + the dev server adopts a live port; the full-campaign self-test probe-verified (8/10 hops delivered, build green in the lane).
+
+**The #81 cost stamp** (this hygiene pass): the deterministic-spawn COST STAMP — the hop runtime stamps the spawning god onto the child's environment (`OLYMPUS_LANE_GOD`), so agent-less one-shot cost rows resolve the real god — never the catch-all 'global' — with zero event-ordering dependency; the ladder stays intact, the stamp is additive (telemetry-pulse 24/24, the unstamped control falls to 'global' by construction). Closes the D17/D20 class.
+
+**The #96 form check** (this hygiene pass): the exit gate grows check 8 (dup-handlers) — a static pass over every JSX opening tag: duplicated props on ONE element (the silent-override class: `onChange` twice, JSX keeps the LAST silently, builds + renders 200 and the form misbehaves) fail the gate with the element + props named; zero false positives on the ordinary shapes; the bench corpus is now OPTIONAL (the cafeteria/escola assertions self-skip loudly; the #96 fixtures are local and always run).
+
+**The hygiene pass** (this hygiene pass): the `ss` vacuous-green killed (the gate test's lingering-listener probe now DECLARED-skips when `ss` is absent, never fakes green); the battery header's stale project-exit-gate prereq corrected; 10 dependabot merges (typescript 7.0.2, opencode plugin 1.18.34, next 16.4.2, codemirror, tsx, react, @electron/rebuild, handlebars, the multi group, the radix group); battery 31/0/1 + tsc 0 + lint 0 + sync 9/9 at the close.
 
 ### The Standing Rules Born
 - #101: the close-out is a FILE on disk before any chat summary.

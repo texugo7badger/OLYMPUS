@@ -185,8 +185,8 @@ if (process.argv[2] === 'child') {
 // ─── Parent: drive the shapes, assert the 12 ────────────────────────────────
 const BASE = join(tmpdir(), 'olympus-pulse-' + Math.random().toString(36).slice(2, 9));
 
-function runShape(shape, env = {}) {
-  const dir = join(BASE, shape);
+function runShape(shape, env = {}, dirName = shape) {
+  const dir = join(BASE, dirName);
   const lane = join(dir, 'lane'), vault = join(dir, 'vault'), home = join(dir, 'home');
   mkdirSync(lane, { recursive: true }); mkdirSync(vault, { recursive: true }); mkdirSync(home, { recursive: true });
   const r = spawnSync('npx', ['tsx', SELF, 'child'], {
@@ -273,6 +273,45 @@ try {
   check('root: the #25 contract preserved — zero cost rows, active-agent.json ABSENT',
     root.costRows === 0 && root.activeAgentFile === false,
     `costRows: ${root.costRows}, activeAgentFile: ${root.activeAgentFile}`);
+
+  // ── #81: the DETERMINISTIC-SPAWN STAMP ──────────────────────────────
+  // The hop runtime stamps the spawning god onto the child's environment
+  // (OLYMPUS_LANE_GOD). An agent-less one-shot session resolves its god
+  // from the stamp — never the catch-all 'global' for a session that
+  // resolved a real god's model. The cost row + activity row both carry
+  // the stamped god; without the stamp the same shape falls to 'global'.
+  const stamped = runShape('oneshot', { OLYMPUS_MANAGED: '1', OLYMPUS_LANE_GOD: 'hermes' }, 'stamped');
+  check('stamped: the crash-free child ran', !stamped.__crash, JSON.stringify(stamped));
+  if (!stamped.__crash) {
+    check('stamped: activity rows reach live.jsonl', stamped.rowsTotal > 0,
+      `rowsTotal: ${stamped.rowsTotal}`);
+    const stampedAgentLess = (stamped.rows || []).find((r) => r.action === 'tool_call' && r.agent === null);
+    check('stamped: the agent-less row attributed the LANE god (hermes), not global',
+      !!stampedAgentLess && stampedAgentLess.god === 'hermes',
+      JSON.stringify(stamped.rows));
+    check('stamped: cost rows kept flowing', stamped.costRows >= 2,
+      `costRows: ${stamped.costRows}`);
+    // Cost file carries the stamped god on every row.
+    const stampedCostPath = join(BASE, 'stamped', 'home', '.olympus', 'metrics', 'cost.jsonl');
+    let stampedCostGods = [];
+    try {
+      stampedCostGods = readFileSync(stampedCostPath, 'utf-8').trim().split('\n').filter(Boolean)
+        .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean).map((r) => r.god);
+    } catch { /* kept empty */ }
+    check('stamped: every cost row carries the lane god (hermes) — no global, no invent',
+      stampedCostGods.length >= 2 && stampedCostGods.every((g) => g === 'hermes'),
+      JSON.stringify(stampedCostGods));
+    // Control: the SAME shape WITHOUT the stamp still falls to 'global' (the
+    // #69 invariant, preserved — the stamp is additive, never a replacement).
+    const unStamped = runShape('oneshot', { OLYMPUS_MANAGED: '1' }, 'unstamped');
+    check('unstamped: the crash-free child ran', !unStamped.__crash, JSON.stringify(unStamped));
+    if (!unStamped.__crash) {
+      const unStampedAgentLess = (unStamped.rows || []).find((r) => r.action === 'tool_call' && r.agent === null);
+      check('unstamped: without the stamp the agent-less row stays global (additive, not replacement)',
+        !!unStampedAgentLess && unStampedAgentLess.god === 'global',
+        JSON.stringify(unStamped.rows));
+    }
+  }
 } finally {
   rmSync(BASE, { recursive: true, force: true });
 }
@@ -281,4 +320,4 @@ if (fails > 0) {
   console.error(`\ntelemetry-pulse: ${fails} FAILURE(S), ${checked} checked`);
   process.exit(1);
 }
-console.log(`\nAll ${checked} telemetry-pulse (#69 one-shot feed + #77 root heartbeat lane) assertions passed`);
+console.log(`\nAll ${checked} telemetry-pulse (#69 one-shot feed + #77 root heartbeat lane + #81 env-stamp) assertions passed`);

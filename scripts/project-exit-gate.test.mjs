@@ -81,13 +81,14 @@ const FIXTURES = [
   { src: join(BENCH, 'madruga-1', 'projects', 'cafeteria-grao-fino'), name: 'cafeteria' },
   { src: join(BENCH, 'madruga-2', 'projects', 'escola-de-musica-compasso'), name: 'escola' },
 ];
-for (const f of FIXTURES) {
-  if (!existsSync(f.src)) {
-    check(`fixture source present: ${f.name}`, false, `missing ${f.src}`);
-  }
+const BENCH_PRESENT = FIXTURES.every(f => existsSync(f.src));
+if (!BENCH_PRESENT) {
+  // #96: the BENCH corpus is optional now — its assertions self-skip loudly
+  // (declared, never silent), and the #96 check-8 block below ALWAYS runs.
+  console.log('SKIP  the bench corpus is absent — the cafeteria/escola assertions self-skip (declared, never silent); the #96 check-8 fixtures run regardless.');
 }
 
-if (existsSync(FIXTURES[0].src) && existsSync(FIXTURES[1].src)) {
+if (BENCH_PRESENT) {
   // ─── RED 1: the no-route original shape (P-A) ────────────────────────────
   {
     const dir = copyProject(FIXTURES[0].src, 'red-no-route');
@@ -200,11 +201,45 @@ if (existsSync(FIXTURES[0].src) && existsSync(FIXTURES[1].src)) {
       c6?.status === 'fail' && /clsx/.test(c6?.detail || ''), JSON.stringify(c6).slice(0, 200));
   }
 
-  // ─── Gate hygiene: no lingering listeners after the runs ──────────────────
-  const r = spawnSync('ss', ['-tlnp'], { encoding: 'utf-8' });
-  const lingering = (r.stdout || '').split('\n').filter(l => /:21\d{3}\s|:24\d{3}\s/.test(l));
-  check('gate hygiene: zero lingering dev listeners in the ephemeral range', lingering.length === 0, lingering.join(' | '));
 }
+
+  // ─── #96 (D28, GAP-1-S1): the duplicated-onChange class — check 8 ────────
+  // The one bench failure class the gate never caught: a duplicated prop in
+  // ONE opening tag (JSX keeps the LAST silently; it builds + renders 200
+  // and the form misbehaves). Fixtures are LOCAL (bench-independent) so the
+  // check 8 assertions run even when the corpus is absent.
+  {
+    const dupDir = join(WORK, 'dup-handler-fx');
+    mkdirSync(join(dupDir, 'app'), { recursive: true });
+    writeFileSync(join(dupDir, 'app', 'page.tsx'),
+      `export default function Page() {\n  return (\n    <div>\n      <input onChange={() => 1} onChange={() => 2} placeholder="a" className="x" className="y" />\n      <select onChange={() => 1} onFocus={() => 2} />\n    </div>\n  );\n}\n`);
+    const g = runGate(dupDir, 'dup-handler-fx', ['--skip-build']);
+    const c8 = (g.report?.checks || []).find(c => c.id === '8');
+    check('#96: a duplicated onChange FAILS check 8 with the element + props NAMED',
+      c8?.status === 'fail' && /<input> carries onChange x2/.test(c8?.detail || '') && /app\/page\.tsx:4/.test(c8?.detail || ''),
+      JSON.stringify(c8).slice(0, 240));
+    const cleanDir = join(WORK, 'clean-form-fx');
+    mkdirSync(join(cleanDir, 'app'), { recursive: true });
+    writeFileSync(join(cleanDir, 'app', 'page.tsx'),
+      `export default function Page() {\n  return (\n    <form onSubmit={(e) => e.preventDefault()}>\n      <input onChange={(e) => console.log(e.target.value)} placeholder="clean" />\n      <button onClick={() => 1} type="submit">ok</button>\n    </form>\n  );\n}\n`);
+    const gc = runGate(cleanDir, 'clean-form-fx', ['--skip-build']);
+    const c8c = (gc.report?.checks || []).find(c => c.id === '8');
+    check('#96: a clean form passes check 8 (zero false positives on the ordinary shapes)',
+      c8c?.status === 'pass', JSON.stringify(c8c).slice(0, 200));
+  }
+
+  // ─── Gate hygiene: no lingering listeners after the runs ──────────────────
+  // HYG-S1 (found at the v0.0.3 hygiene pass): when `ss` is absent the old
+  // line passed VACUOUSLY (stdout null → zero matches → green) — a silent
+  // pass the register forbids. The tool's absence is now DECLARED (loud
+  // skip), never faked green.
+  const r = spawnSync('ss', ['-tlnp'], { encoding: 'utf-8' });
+  if (r.error || r.status !== 0) {
+    console.log('SKIP  gate hygiene: `ss` is unavailable on this box — the lingering-listener probe is DECLARED skipped (never a vacuous green)');
+  } else {
+    const lingering = (r.stdout || '').split('\n').filter(l => /:21\d{3}\s|:24\d{3}\s/.test(l));
+    check('gate hygiene: zero lingering dev listeners in the ephemeral range', lingering.length === 0, lingering.join(' | '));
+  }
 
 if (fails > 0) { console.error(`\n${fails}/${checked} gate fixture assertion(s) FAILED`); process.exit(1); }
 console.log(`\nAll ${checked} project-exit-gate assertions passed`);

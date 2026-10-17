@@ -180,3 +180,28 @@
   `.opencode/package.json` keeps overlay .ts in tsx's CJS mode; a fresh worktree without the
   gitignored runtime artifacts fails 6 suites on `__filename` — healed by copying them,
   gitignored, never committed).
+
+## The V003-HYG reconciliation (2026-10-17 the release-hygiene pass)
+
+- **Tracker:** **#96 FIXED + closed** (the exit gate's check 8 — the duplicate-props class:
+  a static pass over every JSX opening tag; the duplicated `onChange` fixture FAILS with the
+  element + props named (`<input> carries onChange x2` @ app/page.tsx:4), the clean form
+  passes, zero false positives; the bench corpus is now OPTIONAL — cafeteria/escola
+  self-skip LOUDLY, the #96 fixtures are local and always run). **#81 FIXED + closed** (the
+  deterministic-spawn COST STAMP: the walker stamps `OLYMPUS_LANE_GOD` onto the child env at
+  spawn; resolveCostGod's ladder gains the stamp step — agent-less one-shot cost rows resolve
+  the real god, never 'global', zero event-ordering dependency; the ladder's earlier steps
+  intact; the unstamped control falls to 'global' — additive, never a replacement;
+  telemetry-pulse 24/24).
+- **Found on the path, fixed in-pass:** HYG-S1 — the gate test's `ss` lingering-listener
+  probe passed VACUOUSLY when `ss` was absent (stdout null → zero matches → green); now a
+  DECLARED loud skip, never a faked green. Plus the battery header's stale project-exit-gate
+  prereq line corrected (the suite is bench-OPTIONAL, never env-dependent).
+- **Merges:** 5 dependabot PRs (#122 handlebars, #125 @electron/rebuild, #126 next 16.4.2,
+  #127 codemirror, #128 radix group) — all MERGEABLE-CLEAN, merged, lockfile synced
+  (npm install clean).
+- **Machine at close:** battery **31/0/1** (the 1 declared skip: generation-contract needs
+  the bench corpus) + tsc 0 + eslint 0 on every touched file + strategy-sync 9/9.
+- **Release:** the v0.0.3 tag MOVED to this commit (originally cut at the DESIGN-INTELLIGENCE
+  merge; the GitHub release never published, so the move loses no consumer) — the release
+  carries every improvement through the hygiene pass.
