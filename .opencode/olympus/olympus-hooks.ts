@@ -784,7 +784,18 @@ const OLYMPUS_TOOLS = {
 // flag unset) keep the bare tools-only return.
 function buildRootSessionHooks(): Record<string, unknown> {
   // In-memory and session-local: nothing persisted, nothing read from disk.
-  let rootAgent: string | null = null;
+  // #142 (v0.0.4 W2-B): rootAgent used to start NULL and only resolved from
+  // wire-agent fields that opencode 1.18 often omits (the one-shot class) —
+  // the heartbeat lane then died in silence (the specimen: ZERO heartbeats
+  // in the bus despite ROOT_SESSION=1, Callimachus "dead"). The ROOT
+  // session IS the user's interactive chat — APOLLO's by doctrine ("speak
+  // directly to Apollo"); default to him, honor the wire when it speaks,
+  // OLYMPUS_ROOT_AGENT overrides for exotic setups.
+  const ROOT_AGENT_DEFAULT = (() => {
+    const env = (process.env.OLYMPUS_ROOT_AGENT || "").trim();
+    return env && GOD_NAMES.has(env) ? env : "apollo";
+  })();
+  let rootAgent: string | null = ROOT_AGENT_DEFAULT;
   return {
     "event": async (input: { event: any }) => {
       try {

@@ -117,6 +117,9 @@ export abstract class RenderCore {
    * the idle random behavior, untouched.
    */
   protected workingGods: Set<string> | null = null;
+  /** W3-A: per-god signal colors — the working-god trails carry EACH god's
+   *  own hue (passed by the Olympus layer with the working set). */
+  protected workingGodColors: Record<string, string> | null = null;
   protected width = 1;
   protected height = 1;
   protected dpr = 1;
@@ -273,8 +276,9 @@ export abstract class RenderCore {
     this.requestImmediateFrame();
   }
 
-  setWorkingGods(ids: string[] | null): void {
+  setWorkingGods(ids: string[] | null, colors?: Record<string, string> | null): void {
     this.workingGods = ids && ids.length ? new Set(ids) : null;
+    this.workingGodColors = colors && Object.keys(colors).length ? colors : null;
     this.requestImmediateFrame();
   }
 
@@ -623,14 +627,22 @@ export abstract class RenderCore {
         const A = graph.idx[forward ? edge.a : edge.b];
         const B = graph.idx[forward ? edge.b : edge.a];
         if (A && B) {
+          // W3-A: per-god colored trails — a working god's signals carry ITS
+          // hue (the Olympus layer's palette), so two gods working side by
+          // side read as two distinct light streams across the brain.
+          const godColor = (n: BrainNode): string | null => {
+            if (!this.workingGods || !this.workingGodColors) return null;
+            const m = /^god:([a-z]+)/.exec(n.id || '');
+            return m && this.workingGods.has(n.id) ? (this.workingGodColors[m[1]] ?? null) : null;
+          };
           this.signals.push({
             id: Math.random(),
             a: A,
             b: B,
             born: now,
             dur: (working ? 2900 : 2400) + Math.random() * 1100,
-            colA: A.color,
-            colB: B.color
+            colA: godColor(A) ?? A.color,
+            colB: godColor(B) ?? B.color
           });
         }
       }

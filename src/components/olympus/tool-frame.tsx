@@ -103,6 +103,16 @@ export function DiffPreview({ path, input, kind }: DiffPreviewProps) {
   );
 }
 
+/** W1-1 (v0.0.4): open the file in the user's external editor - the
+ *  Editor Bridge lane. Best-effort; a failure never breaks the chat. */
+function openInEditor(file: string) {
+  void fetch('/api/olympus/editor/launch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectPath: file }),
+  }).catch(() => {});
+}
+
 interface ToolFrameProps {
   toolName: string;
   input: any;
@@ -119,6 +129,22 @@ export function ToolFrame({ toolName, input, text }: ToolFrameProps) {
   const kind: FileChangeKind | null = name === 'write' ? 'added' : name === 'edit' ? 'modified' : null;
 
   if (!kind || !path) {
+    // W1-1: a READ with a path renders the compact line WITH a clickable
+    // file chip - the file being read, ready to open.
+    if (name === 'read' && path) {
+      return (
+        <span className="text-[11px] text-[#8A8A8A] wrap-break-word font-mono leading-snug">
+          {text}{' '}
+          <button
+            onClick={() => openInEditor(path)}
+            title={`Open ${path} in your editor`}
+            className="text-[10px] font-mono px-1 py-0.5 rounded bg-olympus-card text-olympus-cyan ring-1 ring-olympus-cyan/20 hover:bg-olympus-gold/10 hover:text-olympus-gold transition-colors"
+          >
+            {path.split('/').pop()}
+          </button>
+        </span>
+      );
+    }
     return <span className="text-[11px] text-[#8A8A8A] wrap-break-word font-mono leading-snug">{text}</span>;
   }
 
@@ -131,7 +157,15 @@ export function ToolFrame({ toolName, input, text }: ToolFrameProps) {
         <span className={cn('text-[9px] font-mono font-semibold shrink-0', kind === 'added' ? 'text-olympus-green' : 'text-olympus-gold')}>
           {kind === 'added' ? 'A' : 'M'}
         </span>
-        <span className="text-[11px] text-[#8A8A8A] font-mono truncate">{path}</span>
+        {/* W1-1: the file being WRITTEN/EDITED - clickable, opens in the
+            user's editor via the Editor Bridge. */}
+        <button
+          onClick={() => openInEditor(path)}
+          title={`Open ${path} in your editor`}
+          className="text-[11px] text-[#8A8A8A] hover:text-olympus-gold font-mono truncate transition-colors"
+        >
+          {path}
+        </button>
       </div>
       <DiffPreview path={path} input={input} kind={kind} />
     </div>

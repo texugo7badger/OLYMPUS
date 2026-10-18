@@ -58,6 +58,12 @@ export interface HopTelemetryRow {
   retriesAbsorbed: number;
   /** 'completed' | 'parked-retry-exhausted' | 'parked-verify-failed' | 'parked-dispatch-failed' */
   status: string;
+  /** W1-4 (v0.0.4): the child session's OWN reasoning (captured from the
+   *  --format json stream, capped) — the task sheet shows what THIS agent
+   *  was thinking above its writes. Absent on rows written pre-v0.0.4. */
+  reasoning?: string;
+  /** The child's opencode session id — the drill-down join key. */
+  sessionId?: string | null;
 }
 
 export function hopTelemetryPath(stateDir: string): string {
@@ -88,6 +94,9 @@ export interface HopDispatchResult {
   retriesAbsorbed: number;
   /** True when the dispatcher's own retry layer exhausted (the #107 card fired). */
   exhausted: boolean;
+  /** W1-4: the child's reasoning parts (capped) + session id. */
+  reasoning?: string | null;
+  sessionId?: string | null;
   error?: string;
 }
 
@@ -139,6 +148,11 @@ interface JsonEventParse {
   textOut: string;
   tokensIn: number;
   tokensOut: number;
+  /** W1-4 (v0.0.4): the child's reasoning parts — captured from the same
+   *  --format json stream, capped, stored in the hop telemetry. */
+  reasoningOut: string;
+  /** The child's opencode session id — the drill-down's join key. */
+  sessionId: string | null;
 }
 
 /** Parse `opencode run --format json` events: text parts + step-finish tokens.
@@ -146,7 +160,7 @@ interface JsonEventParse {
  *  `{type, part}` events and bare `{type:'step-finish', tokens}` lines —
  *  both are honored. */
 function parseJsonEvents(raw: string): JsonEventParse {
-  const acc: JsonEventParse = { textOut: '', tokensIn: 0, tokensOut: 0 };
+  const acc: JsonEventParse = { textOut: '', tokensIn: 0, tokensOut: 0, reasoningOut: '', sessionId: null };
   const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
   for (const line of raw.split('\n')) {
     const t = line.trim();
@@ -155,6 +169,14 @@ function parseJsonEvents(raw: string): JsonEventParse {
       const ev = JSON.parse(t);
       const part = ev?.data?.part ?? ev?.part ?? ev;
       if (part?.type === 'text' && typeof part.text === 'string') acc.textOut += part.text;
+      // W1-4 (v0.0.4): the child's OWN thinking — the reasoning parts ride
+      // the same --format json stream we already hold; capture them so the
+      // task sheet can show WHAT THIS AGENT WAS THINKING above its writes.
+      if (part?.type === 'reasoning' && typeof part.text === 'string') {
+        acc.reasoningOut += (acc.reasoningOut ? '\n' : '') + part.text;
+      }
+      const sid = ev?.info?.sessionID ?? ev?.sessionID ?? ev?.data?.info?.sessionID;
+      if (typeof sid === 'string' && sid && !acc.sessionId) acc.sessionId = sid;
       if (part?.type === 'step-finish' || ev?.type === 'step-finish' || ev?.type === 'step_finish') {
         const tokens = part?.tokens ?? ev?.tokens;
         if (tokens) {
@@ -164,6 +186,8 @@ function parseJsonEvents(raw: string): JsonEventParse {
       }
     } catch { /* not a JSON line — ignore */ }
   }
+  // Cap the stored thinking: the task sheet needs the gist, not the novel.
+  if (acc.reasoningOut.length > 16_000) acc.reasoningOut = acc.reasoningOut.slice(0, 16_000) + '\n… (truncated)';
   return acc;
 }
 
@@ -337,6 +361,8 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
       return {
         ok: true, exitCode: last.code, output: parsed.textOut || last.stdout.slice(0, 4000),
         tokensIn: parsed.tokensIn || null, tokensOut: parsed.tokensOut || null,
+        reasoning: parsed.reasoningOut || null,
+        sessionId: parsed.sessionId,
         retriesAbsorbed, exhausted: false,
       };
     }
@@ -513,6 +539,8 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       durationMs: Date.now() - startedAt,
       retriesAbsorbed: r?.retriesAbsorbed ?? 0,
       status,
+      reasoning: r?.reasoning ?? undefined,
+      sessionId: r?.sessionId ?? undefined,
     };
     appendHopTelemetry(stateDir, row);
     rows.push(row);

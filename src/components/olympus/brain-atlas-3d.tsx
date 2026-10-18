@@ -101,6 +101,22 @@ const GOD_NAMES: Record<string, string> = {
   callimachus: 'Callimachus',
 };
 
+/** W3-A: the per-god signal palette — distinct hues so the working gods'
+ *  brain trails read as distinct light streams (the user's directive:
+ *  "luzes correndo pelos neuronios para cada deus"). */
+const GOD_SIGNAL_COLORS: Record<string, string> = {
+  apollo: '#D4A574',      // signal gold
+  atlas: '#7FB3C8',       // orbit blue
+  hephaestus: '#C4756A',  // forge red
+  athena: '#7BAE8E',     // olive green
+  hermes: '#8FA8C8',     // messenger blue
+  artemis: '#9EC4A0',    // hunt green
+  dionysus: '#A88BC8',   // wine purple
+  persephone: '#C89FB8', // blossom pink
+  prometheus: '#D8946A', // flame orange
+  callimachus: '#9AA8B8', // parchment slate
+};
+
 const LOBE_SHORT: Record<LobeName, string> = {
   frontal: 'FRO', parietal: 'PAR', temporal: 'TEM',
   occipital: 'OCC', cerebellum: 'CER', stem: 'STM',
@@ -623,6 +639,8 @@ export default function BrainAtlas3D() {
   /* ---------------------------------------------------------------- */
   // W0-A: the SAME source of truth as the StatusBar strip — the shared
   // hook (the live-feed poll). The brain maps god names to node ids.
+  // W3-A: each working god's signals carry ITS OWN HUE — two gods working
+  // side by side read as two distinct light streams across the brain.
   const workingGods = useWorkingGods();
   const workingGodsRef = useRef<string[]>([]);
   useEffect(() => {
@@ -632,7 +650,9 @@ export default function BrainAtlas3D() {
     workingGodsRef.current = workingGods;
     const rr = rendererRef.current;
     if (rr && startedRef.current) {
-      rr.setWorkingGods(workingGods.length ? workingGods.map(g => `god:${g}`) : null);
+      const colors: Record<string, string> = {};
+      for (const g of workingGods) colors[g] = GOD_SIGNAL_COLORS[g] ?? '#D4A574';
+      rr.setWorkingGods(workingGods.length ? workingGods.map(g => `god:${g}`) : null, colors);
     }
   }, [workingGods]);
 

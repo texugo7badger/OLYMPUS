@@ -152,6 +152,9 @@ async function fetchAllDispatchCatalogs(): Promise<Record<string, GodDispatchInf
 export default function CostDashboard() {
  const [data, setData] = useState<CostSummary | null>(null);
  const [dispatch, setDispatch] = useState<Record<string, GodDispatchInfo>>({});
+ // W2-C (v0.0.4): live hop counts per god — component-scope state (the
+ // loader + interval live in the mount effect below).
+ const [hopCounts, setHopCounts] = useState<Record<string, number>>({});
  // Active strategy (fetched from /api/olympus/strategy) and
  // a per-god dispatch pulse tracker. When a god's request count increments
  // between polls, we flash its row gold for 500ms.
@@ -218,6 +221,25 @@ export default function CostDashboard() {
  const loadDispatch = () => fetchAllDispatchCatalogs().then(d => { if (!cancelled) setDispatch(d); });
  loadDispatch();
  const ivDispatch = setInterval(loadDispatch, 10000);
+ // W2-C (v0.0.4): the live hop count per god — the hop runtime's
+ // children ARE sub-agent work; counting only tool-dispatched demigods
+ // showed "0/N" while entire campaigns ran on god lanes.
+ const loadHops = () => fetch('/api/olympus/tasks', { cache: 'no-store' })
+   .then(r => r.ok ? r.json() : null)
+   .then(d => {
+     if (cancelled || !d?.gods || !d?.tasks) return;
+     const next: Record<string, number> = {};
+     for (const [g, v] of Object.entries(d.gods as Record<string, { running?: number }>)) {
+       const running = Number(v?.running) || 0;
+       const recent = (d.tasks as Array<{ god: string; status: string; ts?: string }>)
+         .filter(t => t.god === g && t.status === 'completed' && t.ts && Date.now() - new Date(t.ts).getTime() < 5 * 60_000).length;
+       next[g] = running + recent;
+     }
+     setHopCounts(prev => JSON.stringify(prev) === JSON.stringify(next) ? prev : next);
+   })
+   .catch(() => {});
+ loadHops();
+ const ivHops = setInterval(loadHops, 15_000);
  // Listen for demigod creation events so new demigods appear
  // immediately (not waiting up to 10s for the next poll).
  const onDemigodsChanged = () => loadDispatch();
@@ -227,6 +249,7 @@ export default function CostDashboard() {
  cancelled = true;
  clearInterval(iv);
  clearInterval(ivDispatch);
+ clearInterval(ivHops);
  window.removeEventListener('olympus:strategy-changed', onStrategyChange);
  window.removeEventListener('olympus:demigods-changed', onDemigodsChanged);
  };
@@ -390,6 +413,7 @@ export default function CostDashboard() {
 	 isFree={prov.isFree}
 	 dispatchInfo={dispatch[c.god]}
 	 pulsing={pulseGods.has(c.god)}
+	 hopCount={hopCounts[c.god]}
 	 />
 	 ))}
  </div>
@@ -408,13 +432,14 @@ export default function CostDashboard() {
 }
 
 function GodRow({
- c, cap, isFree, dispatchInfo, pulsing,
+ c, cap, isFree, dispatchInfo, pulsing, hopCount,
 }: {
  c: GodCost;
  cap: number | null;
  isFree: boolean;
  dispatchInfo?: GodDispatchInfo;
  pulsing?: boolean;
+ hopCount?: number;
 }) {
  const [expanded, setExpanded] = useState(false);
  // When set, opens the DemigodPromptModal showing the
@@ -426,6 +451,12 @@ function GodRow({
  const hasSubAgents = subAgentCount > 0;
  // LIVE active ECC count (from live.jsonl dispatch events).
  const activeDemigodCount = dispatchInfo?.activeDemigodCount ?? 0;
+ // W2-C (v0.0.4): HONEST sub-agents — the hop runtime's children ARE
+ // sub-agent work; counting only tool-dispatched demigods showed "0/N"
+ // while entire campaigns ran on god lanes. The live hop count rides the
+ // tasks API (the same source the Parthenon task sheets read).
+ const activeHopCount = hopCount ?? 0;
+ const activeSubagents = activeDemigodCount + activeHopCount;
 
  return (
  <div className={cn(
@@ -491,7 +522,7 @@ function GodRow({
  <span className={hasSubAgents ? 'text-olympus-cyan' : 'text-[#5A5A5A]'}>
  {hasSubAgents ? (
  <>
- <span className={activeDemigodCount > 0 ? 'text-olympus-green' : ''}>{activeDemigodCount}</span>
+ <span className={activeSubagents > 0 ? 'text-olympus-green' : ''}>{activeSubagents}</span>
  <span className="text-[#5A5A5A]"> / </span>
  <span>{subAgentCount}</span>
  </>

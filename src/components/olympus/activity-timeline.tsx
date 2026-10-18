@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AnimatedNumber from './animated-number';
+import TaskSheetModal from './task-sheet-modal';
 
 interface Episode {
   id: string;
@@ -64,6 +65,8 @@ export default function ActivityTimeline() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterGod, setFilterGod] = useState<string | null>(null);
+  // W1-5: the drill-down — click a hop/task row for the full sheet.
+  const [sheetHop, setSheetHop] = useState<string | null>(null);
   const setActiveGod = useOlympus(s => s.setActiveGod);
   const pushEvent = useOlympus(s => s.pushEvent);
 
@@ -179,7 +182,12 @@ export default function ActivityTimeline() {
             </p>
           </div>
         )}
-        {filtered.map((ep, i) => (
+        {filtered.map((ep, i) => {
+          // W1-5: hop rows are the campaign's tasks — the msg carries the
+          // hop id verbatim (Hop '<id>' started/GREEN/…). Click = sheet.
+          const hopMatch = ep.action === 'hop' ? ep.summary.match(/Hop '([^']+)'/) : null;
+          const hopId = hopMatch ? hopMatch[1] : null;
+          return (
           <TimelineItem
             key={ep.id}
             ep={ep}
@@ -187,20 +195,28 @@ export default function ActivityTimeline() {
             onClick={() => {
               setActiveGod(ep.god);
               pushEvent({ type: 'timeline_select', god: ep.god, msg: `Focused ${ep.god} from timeline`, ts: new Date().toISOString() });
+              if (hopId) setSheetHop(hopId);
             }}
+            hopId={hopId}
           />
-        ))}
+          );
+        })}
       </div>
+      {sheetHop && <TaskSheetModal hopId={sheetHop} onClose={() => setSheetHop(null)} />}
     </div>
   );
 }
 
-function TimelineItem({ ep, isLast, onClick }: { ep: Episode; isLast: boolean; onClick: () => void }) {
+function TimelineItem({ ep, isLast, onClick, hopId }: { ep: Episode; isLast: boolean; onClick: () => void; hopId?: string | null }) {
   const Icon = GOD_ICONS[ep.god] || GOD_ICONS[ep.icon || ''];
   return (
     <button
       onClick={onClick}
-      className="relative w-full text-left pl-8 pr-2 py-2.5 hover:bg-olympus-gold/5 rounded-lg transition-colors group"
+      title={hopId ? `Open the ${hopId} task sheet — thinking, files, tokens` : undefined}
+      className={cn(
+        'relative w-full text-left pl-8 pr-2 py-2.5 hover:bg-olympus-gold/5 rounded-lg transition-colors group',
+        hopId && 'cursor-pointer',
+      )}
     >
       <div className={cn(
         'absolute left-2 top-3.5 w-3 h-3 rounded-full border-2 border-olympus-bg z-10',

@@ -689,6 +689,14 @@ export default function InteractiveTerminal() {
         // (a hop without artifacts); undefined keeps the prior state.
         artifacts: ev.type === 'hop_start' ? (ev.artifacts as string[] | undefined) || [] : [],
       });
+      // W2-A (v0.0.4): ATLAS THE VISIBLE ORCHESTRATOR — the walker IS his
+      // domain; every hop transition lights his card with the pipeline
+      // ("walking: <hop> → <god>"). Apollo plans; Atlas walks; the Parthenon
+      // shows the division of labor the doctrine always claimed.
+      updateGodActivity('atlas', ev.type === 'hop_parked' ? 'error' : 'working',
+        ev.type === 'hop_parked'
+          ? `PARKED — ${ev.msg || 'the walk needs judgment'}`
+          : `walking: ${ev.god || '…'}${ev.msg?.match(/Hop '([^']+)'/)?.[1] ? ` · ${ev.msg.match(/Hop '([^']+)'/)[1]}` : ''}`);
       // D4: the hop counter line (compact, non-intrusive)
       if (ev.type === 'hop_done' && ev.msg) {
         const m = ev.msg.match(/Hop '([^']+)'/);

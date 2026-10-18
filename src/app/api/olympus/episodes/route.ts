@@ -137,6 +137,59 @@ function readLiveEpisodes(): Episode[] {
   return out.slice(0, LIVE_MAX_EVENTS);
 }
 
+/** The Symphony BUS tail (W2, v0.0.4): dispatch outcomes + god heartbeat
+ *  transitions ride ~/.olympus/symphony-bus.jsonl — invisible to the
+ *  panels until now (the "Atlas/Callimachus look dead" half: their work
+ *  rides the bus, the feed only carried tool/dispatch/hop rows). */
+function readBusEpisodes(): Episode[] {
+  const os = require('node:os') as typeof import('node:os');
+  const busPath = path.join(os.homedir(), '.olympus', 'symphony-bus.jsonl');
+  let raw = '';
+  try { raw = fs.readFileSync(busPath, 'utf-8'); } catch { return []; }
+  const cutoff = Date.now() - LIVE_WINDOW_MS;
+  const out: Episode[] = [];
+  for (const line of raw.trim().split('\n').filter(Boolean).slice(-4000)) {
+    let ev: any;
+    try { ev = JSON.parse(line); } catch { continue; }
+    const ts = typeof ev?.ts === 'string' ? ev.ts : '';
+    if (!ts) continue;
+    let t = 0;
+    try { t = new Date(ts).getTime(); } catch { continue; }
+    if (!Number.isFinite(t) || t < cutoff) continue;
+    const type = String(ev.type || '');
+    if (type === 'dispatch-outcome') {
+      const god = String(ev.god || 'global').toLowerCase();
+      out.push({
+        id: `bus-${t}-${out.length}`,
+        god, ts,
+        impact: 'medium',
+        confidence: 1,
+        summary: `Dispatch outcome — ${ev.evidence?.dispatchId || ev.dispatchId || 'dispatch'}${ev.outcome ? ` (${ev.outcome})` : ''}`,
+        outcome: String(ev.outcome || ''),
+        tools: ['dispatch_outcome'],
+        source: 'live',
+        action: 'dispatch_outcome',
+        demigod: ev.demigod ? String(ev.demigod) : null,
+      });
+    } else if (type === 'heartbeat') {
+      const god = String(ev.god || 'global').toLowerCase();
+      out.push({
+        id: `hb-${t}-${out.length}`,
+        god, ts,
+        impact: 'low',
+        confidence: 1,
+        summary: `${god} ${ev.state || 'alive'} — heartbeat transition`,
+        outcome: '',
+        tools: ['heartbeat'],
+        source: 'live',
+        action: 'heartbeat',
+        demigod: null,
+      });
+    }
+  }
+  return out;
+}
+
 /** Vault episodes — RECURSIVE (the 17:44 bug: the route read only the
  *  flat dir while the vault nests episodes under <god>/ subdirs). */
 function readVaultEpisodes(): { eps: Episode[]; count: number } {
@@ -177,9 +230,11 @@ function readVaultEpisodes(): { eps: Episode[]; count: number } {
 export async function GET() {
   // The LIVE feed first — Recent Activity is what the gods are doing NOW.
   const live = readLiveEpisodes();
+  // The Symphony BUS (W2): outcomes + heartbeat transitions.
+  const bus = readBusEpisodes();
   // Then the vault's curated episodes (the learning loop's digests).
   const vault = readVaultEpisodes();
-  const out = [...live, ...vault.eps].sort(
+  const out = [...live, ...bus, ...vault.eps].sort(
     (a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime(),
   );
   return NextResponse.json({

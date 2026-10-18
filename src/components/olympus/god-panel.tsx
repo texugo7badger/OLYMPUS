@@ -18,6 +18,8 @@
 import { ChevronsLeft, ChevronsRight, Sparkles, type LucideIcon } from 'lucide-react';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
 
 /** Coarse status bucket. Finer wire phases collapse into these. */
 export type ParthenonStatus = 'idle' | 'working' | 'blocked' | 'done';
@@ -92,6 +94,35 @@ interface GodPanelProps {
 export default function GodPanel({ states, focusedGod, onFocus, children, onCollapse }: GodPanelProps) {
   const ordered = orderGodStates(states);
   const active = ordered.filter(s => s.status === 'working').length;
+
+  // W1-3 (v0.0.4): the god's OWN task list from the hop runtime's
+  // artifacts — every task this god owns in the active campaign, with
+  // state, timer, and tokens. Clicking a task opens the TASK SHEET (the
+  // drill-down: thinking, files, tokens — the "what did he do" answer).
+  const [tasks, setTasks] = useState<Record<string, TaskRecord[]>>({});
+  const [sheetHop, setSheetHop] = useState<string | null>(null);
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const r = await fetch('/api/olympus/tasks', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (cancelled) return;
+        const byGod: Record<string, TaskRecord[]> = {};
+        for (const t of (d?.tasks || []) as TaskRecord[]) {
+          (byGod[t.god] ||= []).push(t);
+        }
+        setTasks(byGod);
+      } catch { /* decorative — the panel works without tasks */ }
+    };
+    load();
+    const iv = setInterval(load, 15_000);
+    // W1-1: the live second tick — running durations count up in real time.
+    const tk = setInterval(() => setTick(n => n + 1), 1_000);
+    return () => { cancelled = true; clearInterval(iv); clearInterval(tk); };
+  }, []);
 
   return (
     <>
@@ -176,11 +207,43 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                   {s.lastEvent}
                 </div>
               )}
+              {/* W1-3: the god's task list — click any task for the full sheet. */}
+              {(tasks[s.god] || []).length > 0 && (
+                <div className="ml-4 mt-1 space-y-0.5" onClick={(e) => e.stopPropagation()}>
+                  {tasks[s.god].slice(0, 5).map(t => {
+                    const dot = t.status === 'completed' ? '#7BAE8E'
+                      : t.status === 'running' ? '#D4A574'
+                      : t.status === 'parked' ? '#C4756A' : '#5A5A5A';
+                    const dur = t.status === 'running' && t.ts
+                      ? `${Math.max(0, Math.round((Date.now() - new Date(t.ts).getTime()) / 1000))}s…`
+                      : t.durationMs ? `${Math.round(t.durationMs / 1000)}s` : '';
+                    const tok = t.tokensOut ? `${(t.tokensOut / 1000).toFixed(1)}k out` : '';
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={(e2) => { e2.stopPropagation(); setSheetHop(t.id); }}
+                        title={`${t.id} — ${t.status}${t.files.length ? ` · ${t.files.length} file(s)` : ''} — click for the task sheet`}
+                        className="flex items-center gap-1.5 w-full text-left hover:bg-olympus-gold/10 rounded px-1"
+                      >
+                        <span className="w-1 h-1 rounded-full shrink-0" style={{ background: dot }} />
+                        <span className="text-[9px] font-mono truncate flex-1" style={{ color: dot }}>{t.id}</span>
+                        {dur && <span className="text-[8px] font-mono text-[#6B8F71] shrink-0">{dur}</span>}
+                        {tok && <span className="text-[8px] font-mono text-[#5A5A5A] shrink-0">{tok}</span>}
+                      </button>
+                    );
+                  })}
+                  {tasks[s.god].length > 5 && (
+                    <div className="text-[8px] font-mono text-[#5A5A5A] px-1">+{tasks[s.god].length - 5} more</div>
+                  )}
+                </div>
+              )}
             </button>
           );
         })}
       </div>
       {children}
+      {sheetHop && <TaskSheetModal hopId={sheetHop} onClose={() => setSheetHop(null)} />}
     </>
   );
 }
