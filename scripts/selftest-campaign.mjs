@@ -30,7 +30,18 @@ const arg = (name, def) => {
   return i >= 0 ? args[i + 1] : def;
 };
 const SLUG = arg('slug', 'lumina-crm');
-const PORT = Number(arg('port', '3737'));
+// #146 THE PORT ISOLATION (the ERR_CONNECTION_REFUSED specimen, 2026-10-18
+// 14:30): the bench's default port was 3737 — THE APP'S OWN PORT. The app
+// attaches to any Next server it finds there (electron/main.ts), so the
+// user's app window rode the BENCH's server; when the bench server died
+// the app died with it (and the #145 fuser-kill could MURDER the app's
+// own server). The bench's default is now the dedicated 3741, and 3737 is
+// a HARD REFUSAL — the bench may never share the app's lane.
+const PORT = Number(arg('port', '3741'));
+if (PORT === 3737) {
+  console.error('REFUSED: port 3737 is the OLYMPUS app\'s own port — the bench never shares it (the app would attach to the bench server and die with it). Use the default 3741 or any other port.');
+  process.exit(2);
+}
 // --resume: continue an existing campaign (skip the clean; the hop-state
 // carries the progress). Without it: the directive — delete + from zero.
 // --no-clean (v0.0.4 #144 containment): the RUNNER pre-creates + pins the

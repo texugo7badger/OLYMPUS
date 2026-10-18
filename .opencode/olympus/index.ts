@@ -19,7 +19,16 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-export { OlympusHooksPlugin, default } from "./olympus-hooks.js";
+export { OlympusHooksPlugin } from "./olympus-hooks.js";
+
+/* ── THE OPENCODE V2 LANE (the activation, 2026-10-18) ──────────────────
+ * v2 loads the DEFAULT export as a Plugin.define; v1 (and the battery's
+ * v1 shims) keep the named OlympusHooksPlugin export. One source of
+ * truth, two protocols: the v2-bridge builds the v1 machinery and wires
+ * it to the v2 domains (see v2-bridge.ts). */
+export { OlympusV2Plugin, default as defaultV2 } from "./v2-bridge.js";
+export { default } from "./v2-bridge.js";
+
 
 // Re-export for named imports
 export * from "./olympus-hooks.js";

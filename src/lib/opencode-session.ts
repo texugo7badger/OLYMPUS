@@ -86,6 +86,12 @@ interface ServerInfo {
   password: string | null;
   /** true when the server requires basic auth (we spawned it with a password). */
   authed: boolean;
+  /** #147 (THE V2 ACTIVATION): the serve's protocol generation — 'v2'
+   *  (OpenCode 2.x: the /api/* paths) or 'v1' (1.18.x: the legacy paths).
+   *  Resolved ONCE at discovery via GET /api/info (the v2-only endpoint);
+   *  the path mapper below speaks both so the warm-session layer survives
+   *  the CLI generation change without a fork. */
+  protocol: 'v1' | 'v2';
   /** #99: the workspace lane the serve was spawned with (cold start only). */
   workspaceDir?: string;
   /** #99: true only on the cold start that CREATED the lane — the
@@ -279,6 +285,19 @@ async function probeServer(
     return m.includes('aborted') || m.includes('TimeoutError') || m.includes('timeout');
   };
   let saw401 = false;
+  // #147: v2's serve answers 401 WITHOUT auth even on the right path —
+  // and its config moved to /api/config. The probe tries BOTH generations:
+  // v1 first (the unauthenticated /config), then the v2 pair (/api/info
+  // without auth = 401 with the UnauthorizedError _tag fingerprint, then
+  // /api/config WITH the password). A v2 serve discovered on any branch
+  // returns ok:true so the lifecycle treats it as healthy.
+  const probeOne = async (path: string, pass: string | null): Promise<Response | null> => {
+    try {
+      return await apiFetch(port, pass, path, {}, SERVER_PROBE_TIMEOUT_MS);
+    } catch {
+      return null;
+    }
+  };
   try {
     const r = await apiFetch(port, null, '/config', {}, SERVER_PROBE_TIMEOUT_MS);
     if (r.ok) return { ok: true, authed: false };
@@ -297,16 +316,61 @@ async function probeServer(
     // as hung — conservative, and correct for the boot-hang signature.
     timedOut = !isRefused(e);
   }
+  // The v2 pair: /api/info with the password (v2-only endpoint — the
+  // version fingerprint); fall back to /api/config with the password.
   if (password) {
+    const info = await probeOne('/api/info', password);
+    if (info && info.ok) return { ok: true, authed: true };
+    const cfg2 = await probeOne('/api/config', password);
+    if (cfg2 && cfg2.ok) return { ok: true, authed: true };
     try {
       const r = await apiFetch(port, password, '/config', {}, SERVER_PROBE_TIMEOUT_MS);
       if (r.ok) return { ok: true, authed: true };
     } catch (e: any) {
       timedOut = !isRefused(e);
     }
+  } else {
+    // No password yet (port-scan adoption): a v2 serve answering 401 on
+    // /api/info IS an opencode serve (the UnauthorizedError fingerprint).
+    const info = await probeOne('/api/info', null);
+    if (info && (info as any).status === 401) return { ok: false, authed: false, status: 401 };
   }
   if (saw401) return { ok: false, authed: false, status: 401 };
   return { ok: false, authed: false, timedOut };
+}
+
+/**
+ * #147: THE DUAL-PROTOCOL PATH MAPPER — one call site, both generations.
+ *   v1                          v2 (the audit's kept endpoints)
+ *   /config                  -> /api/config
+ *   POST /session            -> POST /api/session
+ *   POST /session/{id}/message -> POST /api/session/{id}/prompt
+ *   GET  /session/{id}/message -> GET  /api/session/{id}/message (KEPT)
+ *   POST /session/{id}/abort  -> POST /api/session/{id}/interrupt
+ *   /event                   -> /api/event
+ */
+/** Resolve the serve's protocol generation: /api/info is the v2-only
+ *  endpoint (the audit: it REPLACED health/server on v2). One probe at
+ *  discovery; v1 answers 404/refused -> 'v1'. */
+async function resolveProtocol(port: number, password: string | null): Promise<'v1' | 'v2'> {
+  try {
+    const r = await apiFetch(port, password, '/api/info', {}, 3_000);
+    return r.ok ? 'v2' : 'v1';
+  } catch {
+    return 'v1';
+  }
+}
+
+function v2Path(server: { protocol?: 'v1' | 'v2' }, v1: string): string {
+  if (server.protocol !== 'v2') return v1;
+  if (v1 === '/config') return '/api/config';
+  if (v1 === '/event') return '/api/event';
+  if (v1 === '/session') return '/api/session';
+  if (/\/session\/[^/]+\/message$/.test(v1)) return v1; // GET kept verbatim
+  return v1
+    .replace(/^\/session\/([^/]+)\/message$/, '/api/session/$1/message')
+    .replace(/^\/session\/([^/]+)\/abort$/, '/api/session/$1/interrupt')
+    .replace(/^\/session\//, '/api/session/');
 }
 
 // ---------------------------------------------------------------------------
@@ -457,7 +521,7 @@ export async function ensureServer(): Promise<ServerInfo> {
       const probe = await probeServer(pidFile.port, pidFile.password);
       if (probe.ok) {
         console.log(`[opencode-session] Reusing warm OpenCode server on port ${pidFile.port} (pid ${pidFile.pid})`);
-        return { port: pidFile.port, warm: true, password: pidFile.password, authed: probe.authed };
+        return { port: pidFile.port, warm: true, password: pidFile.password, authed: probe.authed, protocol: await resolveProtocol(pidFile.port, pidFile.password) };
       }
       await killStaleServe(pidFile.pid, `pid file stale (API unreachable on port ${pidFile.port})`);
       removePidFile();
@@ -477,7 +541,7 @@ export async function ensureServer(): Promise<ServerInfo> {
       const probe = await probeServer(port, null);
       if (probe.ok) {
         console.log(`[opencode-session] Found running OpenCode server on port ${port} — reusing (no cold start)`);
-        return { port, warm: true, password: null, authed: false };
+        return { port, warm: true, password: null, authed: false, protocol: await resolveProtocol(port, null) };
       }
       if (probe.status === 401) {
         const ownerPid = findPortOwnerPid(port);
@@ -530,6 +594,11 @@ async function spawnServer(port: number): Promise<ServerInfo> {
       cwd: lane.dir,
       extraEnv: {
         OPENCODE_SERVER_PASSWORD: password,
+        // #147: the v2 serve AUTO-UPDATES by default — it silently restarts
+        // the binary mid-flight (the tap3 specimen: the readback 401'd after
+        // a 100s wait because the serve had replaced itself). The warm lane
+        // pins its own binary; updates happen when OLYMPUS chooses.
+        OPENCODE_DISABLE_AUTOUPDATE: '1',
         // Tell the OLYMPUS overlay where the OLYMPUS API lives (heartbeat,
         // live.jsonl capture, etc.). Electron runs Next on PORT (3737); the
         // overlay's own default (http://127.0.0.1:3000) points nowhere.
@@ -571,7 +640,7 @@ async function spawnServer(port: number): Promise<ServerInfo> {
     if (probe.ok) {
       writePidFile(port, password, child.pid ?? process.pid);
       console.log(`[opencode-session] OpenCode server ready on port ${port} (pid ${child.pid})`);
-      return { port, warm: false, password, authed: probe.authed, workspaceDir: lane.dir, workspaceFresh: lane.fresh };
+      return { port, warm: false, password, authed: probe.authed, workspaceDir: lane.dir, workspaceFresh: lane.fresh, protocol: await resolveProtocol(port, password) };
     }
     consecutiveTimeouts = probe.timedOut ? consecutiveTimeouts + 1 : 0;
     // (Phase B) fast-fails for dead ports — each dead port previously
@@ -728,7 +797,7 @@ export async function getOrCreateSession(conversationId: string): Promise<string
   const res = await apiFetch(
     server.port,
     server.authed ? server.password : null,
-    '/session',
+    v2Path(server, '/session'),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1926,7 +1995,7 @@ async function runWarmMessageAttempt(
       serverAbortSent = true;
       try {
         const auth = server.authed ? server.password : null;
-        await apiFetch(server.port, auth, `/session/${opts.sessionId}/abort`, { method: 'POST' }, 5_000);
+        await apiFetch(server.port, auth, v2Path(server, `/session/${opts.sessionId}/abort`), { method: 'POST' }, 5_000);
       } catch {
         // Best-effort: if the serve is already gone, there is nothing to kill.
       }
@@ -2285,11 +2354,17 @@ async function runWarmMessageAttempt(
         res = await apiFetch(
           server.port,
           auth,
-          `/session/${opts.sessionId}/message`,
+          server.protocol === 'v2'
+            ? `/api/session/${opts.sessionId}/prompt`
+            : `/session/${opts.sessionId}/message`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+            body: JSON.stringify(server.protocol === 'v2' ? {
+              // v2 prompt body: {text} (the strategy block rides inline).
+              text: `${buildStrategyContextBlock()}\n\n${opts.text}`,
+              ...(opts.agent ? { agent: opts.agent } : {}),
+            } : {
               // Prepend the authoritative strategy block so the model never has
               // to infer the active strategy from model IDs (it hallucinated
               // "free-nvidia-build" / "via OpenRouter" before this existed).
@@ -2508,7 +2583,7 @@ async function openEventFeed(
   const req = http.get({
     host: '127.0.0.1',
     port: server.port,
-    path: '/event',
+    path: v2Path(server, '/event'),
     headers: auth ? { Authorization: basicAuth(auth) } : {},
   });
   if (signal.aborted) req.destroy();
@@ -2655,7 +2730,7 @@ async function isTurnAliveServerSide(server: ServerInfo, sessionId: string): Pro
 > {
   try {
     const auth = server.authed ? server.password : null;
-    const res = await apiFetch(server.port, auth, `/session/${sessionId}/message`, {}, 10_000);
+    const res = await apiFetch(server.port, auth, v2Path(server, `/session/${sessionId}/message`), {}, 10_000);
     if (!res.ok) return { alive: false };
     const messages: any[] = await res.json().catch(() => []);
     if (!Array.isArray(messages) || messages.length === 0) return { alive: false };
@@ -2700,7 +2775,7 @@ async function pollInFlightTurn(
     await sleep(5_000);
     if (signal.aborted) break;
     try {
-      const res = await apiFetch(server.port, auth, `/session/${sessionId}/message`, {}, 10_000);
+      const res = await apiFetch(server.port, auth, v2Path(server, `/session/${sessionId}/message`), {}, 10_000);
       if (res.ok) {
         const messages: any[] = await res.json().catch(() => []);
         if (Array.isArray(messages) && messages.length > 0) {
@@ -2740,7 +2815,7 @@ async function synthesizeFromHistory(
 ) {
   try {
     const auth = server.authed ? server.password : null;
-    const res = await apiFetch(server.port, auth, `/session/${sessionId}/message`, {}, 10_000);
+    const res = await apiFetch(server.port, auth, v2Path(server, `/session/${sessionId}/message`), {}, 10_000);
     if (!res.ok) return;
     const messages: any[] = await res.json().catch(() => []);
     if (!Array.isArray(messages)) return;

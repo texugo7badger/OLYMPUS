@@ -1,7 +1,7 @@
 {
   "name": "olympus",
   "version": "0.0.4",
-  "description": "Olympus \u2014 automated multi-agent operating system built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
+  "description": "Olympus — automated multi-agent operating system built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
   "author": "OLYMPUS Contributors",
   "license": "AGPL-3.0-or-later",
   "type": "module",
@@ -70,6 +70,8 @@
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
+    "@opencode/cli": "^2.0.32",
+    "@opencode/plugin": "^2.0.32",
     "@radix-ui/primitive": "^1.2.0",
     "better-sqlite3": "latest",
     "chokidar": "latest",
@@ -81,7 +83,8 @@
     "sqlite-vec": "latest",
     "ws": "latest",
     "yaml": "latest",
-    "zod": "latest"
+    "zod": "latest",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@codemirror/lang-markdown": "latest",
@@ -154,7 +157,8 @@
     "node-pty": true,
     "opencode-ai": true,
     "sharp": true,
-    "unrs-resolver": true
+    "unrs-resolver": true,
+    "@opencode/cli@2.0.32": true
   },
   "optionalDependencies": {
     "@tarquinen/opencode-dcp": "latest",

@@ -391,11 +391,60 @@ function createWindow() {
   });
 
   // Handle load failures explicitly — force window visible + show error page.
+  // #146 AUTO-RECOVERY (the ERR_CONNECTION_REFUSED specimen, 2026-10-18):
+  // a -102 at load time means the Next server is down (a cold start still
+  // compiling, or the server died). The user manually closing/reopening
+  // the app to babysit a cold start is a dead UX — the app now recovers
+  // ITSELF: it respawns its own server when it owns it (the external-
+  // server lane is now isolated from benches by the #146 port guard), then
+  // probes + reloads automatically, up to 8 rounds (~2.5min) before the
+  // honest error screen. The counter resets on a successful load.
+  let loadFailCount = 0;
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMain) => {
     console.error(`[olympus:electron] did-fail-load: code=${errorCode} desc="${errorDescription}" url=${validatedURL} isMain=${isMain}`);
     if (!isMain) return; // Only handle main-frame failures.
-    // Force-show the window so the user sees the error page.
+    // Force-show the window so the user sees the recovery/error page.
     mainWindow?.show();
+
+    if (errorCode === -102 && loadFailCount < 8) {
+      loadFailCount++;
+      const attempt = loadFailCount;
+      const reconnectHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reconnecting</title>
+<style>
+body{margin:0;padding:40px;background:#0A0E16;color:#B8B8B8;font-family:ui-monospace,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6;display:flex;align-items:center;justify-content:center;height:100vh}
+.box{text-align:center}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#D4A574;margin:0 3px;animation:p 1.2s infinite ease-in-out}
+.dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}
+@keyframes p{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+h1{color:#D4A574;font-size:14px;margin:14px 0 6px;font-weight:600;letter-spacing:.05em}
+p{color:#8B8B8B;font-size:11px;margin:0}
+</style></head><body><div class="box">
+<div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+<h1>RECONNECTING THE WORKSPACE</h1>
+<p>attempt ${attempt} of 8 — probing the server, respawning if needed, reloading on green…</p>
+</div></body></html>`;
+      mainWindow?.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(reconnectHtml));
+      void (async () => {
+        // Respawn when we own the server and it died.
+        if (nextProcess && (nextProcess.exitCode !== null || nextProcess.signalCode !== null)) {
+          console.log('[olympus:electron] our Next server died — respawning…');
+          try { nextProcess = spawnNext(); } catch (e) { console.error('[olympus:electron] respawn failed', e); }
+        }
+        // Probe with bounded patience; reload on green (a failed reload
+        // re-enters this handler → the next round, until 8).
+        const start = Date.now();
+        while (Date.now() - start < 20_000) {
+          const ok = await isNextAlreadyRunning();
+          if (ok) { loadFailCount = 0; console.log('[olympus:electron] server back — reloading.'); mainWindow?.loadURL(BASE_URL); return; }
+          await new Promise((r) => setTimeout(r, 2_000));
+        }
+        mainWindow?.loadURL(BASE_URL);
+      })();
+      return;
+    }
+    if (errorCode === -102) {
+      loadFailCount = 0; // exhausted — reset for the manual Reload click.
+    }
     // Build an inline error page (data: URL) so we don't depend on Next.js.
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Olympus failed to load</title>
 <style>

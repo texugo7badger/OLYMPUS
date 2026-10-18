@@ -1885,15 +1885,38 @@ function preflightModelCatalogue(config, opts = {}) {
   }
   const failures = [];
   const unvalidated = [];
+  // #147 (THE V2 ACTIVATION): v2's `models` CLI takes NO provider arg — it
+  // lists ALL models once. Probe the CLI generation up front and cache the
+  // full catalogue for v2; v1 keeps the per-provider form (unchanged).
+  let v2Catalogue = null;
+  try {
+    const v = execSync(`"${opencodeBin}" --version`, { encoding: 'utf-8', timeout: 15_000 }).trim();
+    if (/^opencode v?2\./.test(v)) {
+      v2Catalogue = execSync(
+        `"${opencodeBin}" models`,
+        { encoding: 'utf-8', timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'] },
+      );
+      log(`L4: opencode v2 detected — the full catalogue cached once (${(v2Catalogue || '').split('\n').filter(Boolean).length} ids)`);
+    }
+  } catch { /* falls back to the v1 per-provider form */ }
   for (const [provider, providerIds] of byProvider) {
     let catalogue = '';
     try {
-      // The probe is the opencode binary itself (a native executable) —
-      // invoke it directly via the shell, never through process.execPath.
-      catalogue = execSync(
-        `"${opencodeBin}" models ${provider}`,
-        { encoding: 'utf-8', timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'] },
-      );
+      if (v2Catalogue !== null) {
+        // v2: filter the cached full list by the provider prefix.
+        catalogue = (v2Catalogue || '')
+          .split('\n')
+          .map((l) => l.trim())
+          .filter((l) => l.startsWith(`${provider}/`) || l.startsWith(`${provider}:`))
+          .join('\n');
+      } else {
+        // The probe is the opencode binary itself (a native executable) —
+        // invoke it directly via the shell, never through process.execPath.
+        catalogue = execSync(
+          `"${opencodeBin}" models ${provider}`,
+          { encoding: 'utf-8', timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'] },
+        );
+      }
     } catch (e) {
       unvalidated.push({ provider, ids: providerIds, err: String(e.message || e).slice(0, 120) });
       continue;

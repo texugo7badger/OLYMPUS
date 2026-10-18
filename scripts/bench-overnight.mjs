@@ -31,7 +31,8 @@ import { homedir } from 'node:os';
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
 const BUDGET_MIN = Number(arg('budget-min', '90'));
-const PORT = Number(arg('port', '3737'));
+// #146: the bench's dedicated port — NEVER 3737 (the app's own).
+const PORT = Number(arg('port', '3741'));
 // --start-at N: skip the first N campaigns (a restart after a runner patch —
 // the in-flight campaign's driver survives as an orphan + finishes solo).
 const START_AT = Number(arg('start-at', '0'));
