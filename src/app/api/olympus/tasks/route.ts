@@ -58,6 +58,9 @@ export interface TaskRecord {
   sessionId?: string | null;
   /** Files this god touched inside the hop window (from the live feed). */
   files: TaskFile[];
+  /** The honest progress pct: completed = 100; running = elapsed vs the
+   *  god's median completed-hop duration (the lane's own ETA). */
+  progress?: number;
 }
 
 function safeJson<T>(p: string, fallback: T): T {
@@ -150,6 +153,21 @@ export async function GET(req: NextRequest) {
   } catch { /* no telemetry yet */ }
 
   const now = Date.now();
+  // The per-god median hop duration (the honest ETA source: the lane's own
+  // completed hops) + the global fallback.
+  const durationsByGod = new Map<string, number[]>();
+  for (const r of telemetry.values()) {
+    if (r?.status !== 'completed' || !r?.god || typeof r.durationMs !== 'number') continue;
+    const list = durationsByGod.get(String(r.god).toLowerCase()) || [];
+    list.push(r.durationMs);
+    durationsByGod.set(String(r.god).toLowerCase(), list);
+  }
+  const median = (arr: number[]): number => {
+    if (!arr.length) return 0;
+    const s = [...arr].sort((a, b) => a - b);
+    return s[Math.floor(s.length / 2)];
+  };
+  const globalMedian = median([...durationsByGod.values()].flat());
   const tasks: TaskRecord[] = (Array.isArray(plan.hops) ? plan.hops : []).map((h: any) => {
     const tel = telemetry.get(String(h?.id)) || null;
     const isCompleted = completed.includes(String(h?.id));
@@ -169,7 +187,7 @@ export async function GET(req: NextRequest) {
           new Date(tel.ts).getTime() + 60_000,
         )
       : [];
-    return {
+    const rec: TaskRecord = {
       id: String(h?.id ?? ''),
       god: String(h?.god ?? 'apollo').toLowerCase(),
       promptExcerpt: prompt.slice(0, 240),
@@ -187,6 +205,17 @@ export async function GET(req: NextRequest) {
       sessionId: tel?.sessionId ?? null,
       files,
     };
+    const t: TaskRecord = rec;
+    if (isCompleted) t.progress = 100;
+    else if (status === 'running') {
+      // Running: elapsed since the hop's window start vs the god's median —
+      // honest, telemetry-derived, capped (a slow hop never fakes 100%).
+      const startMs = tel?.ts ? new Date(tel.ts).getTime() - (tel.durationMs || 0) : now;
+      const expected = median(durationsByGod.get(t.god) || []) || globalMedian || 300_000;
+      const elapsed = Math.max(0, now - Math.max(startMs, now - 30 * 60_000));
+      t.progress = Math.min(95, Math.max(3, Math.round((elapsed / Math.max(expected, 60_000)) * 100)));
+    }
+    return t;
   });
 
   // The RUNNING hop: the most recent telemetry row whose hop is neither

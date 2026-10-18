@@ -137,7 +137,11 @@ export default function StatusBar({ health }: { health: any }) {
  <div className="flex items-center gap-1.5 text-olympus-gold font-semibold shrink-0">
  <img src="/logo.svg" alt="OLYMPUS" className="size-5" />
  <span>OLYMPUS</span>
- {!hideVersion && <span className="text-olympus-text-dim font-normal">v0.0.1</span>}
+ {!hideVersion && (
+  <span className="text-olympus-text-dim font-normal" title="OLYMPUS version">
+    v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.4'}
+  </span>
+)}
  </div>
 
 	 {/* Focus Mode toggle. */}

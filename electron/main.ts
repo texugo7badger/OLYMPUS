@@ -433,8 +433,16 @@ button:hover{background:#D4A57433}
   });
 
   // Open external links (target=_blank, window.open) in the system browser.
+  // v0.0.4 (the user's directive): ONLY the app's own origin stays in-app —
+  // every OTHER localhost port (the live preview's dev-server URL, the
+  // ephemeral gates, anything on 127.0.0.1:<other-port>) opens in the
+  // user's DEFAULT browser when clicked. The old rule lumped all 127.0.0.1
+  // into in-app windows, so the live preview's "open ↗" opened an Electron
+  // window instead of the browser.
+  const isAppOrigin = (url: string): boolean =>
+    url === BASE_URL || url.startsWith(BASE_URL + '/');
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith(BASE_URL) || url.startsWith('http://127.0.0.1:')) {
+    if (isAppOrigin(url)) {
       return { action: 'allow' };
     }
     shell.openExternal(url);
@@ -442,7 +450,7 @@ button:hover{background:#D4A57433}
   });
 
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(BASE_URL) && !url.startsWith('http://127.0.0.1:')) {
+    if (!isAppOrigin(url)) {
       event.preventDefault();
       shell.openExternal(url);
     }

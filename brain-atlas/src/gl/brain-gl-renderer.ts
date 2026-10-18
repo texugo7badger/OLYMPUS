@@ -240,6 +240,9 @@ export class BrainGLRenderer extends RenderCore {
   private nodeProgram: NodeProgram | null = null;
   /** Identity of the graph the node buffers were built from (rebuild on change). */
   private nodeGraph: BrainGraph | null = null;
+  /** The working-gods signature the node buffer was built with — a change
+   *  forces the rebuild (the working-god node glow: radius ×1.6 + hue). */
+  private nodeWorkingSig = '';
   private signalProgram: SignalProgram | null = null;
   /** Reusable scratch for uploading one node's 6-vertex interleaved block (drag update). */
   private nodeUploadScratch = new Float32Array(NODE_VERTS_PER_NODE * NODE_FLOATS_PER_VERT);
@@ -1383,7 +1386,8 @@ export class BrainGLRenderer extends RenderCore {
    * indices each frame so one indexed draw renders a whole hemisphere back-to-front.
    */
   private ensureNodeProgram(gl: WebGL2RenderingContext, graph: BrainGraph): NodeProgram {
-    if (this.nodeProgram && this.nodeGraph === graph) return this.nodeProgram;
+    const workingSig = this.workingGods ? [...this.workingGods].sort().join(',') : '';
+    if (this.nodeProgram && this.nodeGraph === graph && this.nodeWorkingSig === workingSig) return this.nodeProgram;
 
     if (this.nodeProgram) {
       gl.deleteVertexArray(this.nodeProgram.vao);
@@ -1394,7 +1398,7 @@ export class BrainGLRenderer extends RenderCore {
     }
 
     const program = createProgram(gl, NODE_VS, NODE_FS);
-    const buf = buildNodeBuffer(graph.nodes);
+    const buf = buildNodeBuffer(graph.nodes, this.workingGods, this.workingGodColors);
     const nodeCount = buf.count;
 
     // Interleaved layout (floats per vertex):
@@ -1519,6 +1523,7 @@ export class BrainGLRenderer extends RenderCore {
       indexScratch: new Uint32Array(nodeCount * 6)
     };
     this.nodeGraph = graph;
+    this.nodeWorkingSig = workingSig;
     return this.nodeProgram;
   }
 

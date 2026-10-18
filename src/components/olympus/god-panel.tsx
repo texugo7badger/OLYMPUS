@@ -225,19 +225,37 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                       ? `${Math.max(0, Math.round((Date.now() - new Date(t.ts).getTime()) / 1000))}s…`
                       : t.durationMs ? `${Math.round(t.durationMs / 1000)}s` : '';
                     const tok = t.tokensOut ? `${(t.tokensOut / 1000).toFixed(1)}k out` : '';
+                    // The task's honest progress: completed = full; running =
+                    // elapsed vs the god's own median hop duration (the lane's
+                    // telemetry-derived ETA); pending/parked = no bar.
+                    const pct = t.status === 'completed' ? 100
+                      : t.status === 'running' && typeof t.progress === 'number' ? Math.min(95, Math.max(3, t.progress)) : 0;
                     return (
-                      <button
+                      // NOT a <button>: the god card is already one — nested
+                      // interactive content is invalid HTML (the hydration
+                      // error class). role+tabIndex keep it accessible.
+                      <div
                         key={t.id}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         onClick={(e2) => { e2.stopPropagation(); setSheetHop(t.id); }}
+                        onKeyDown={(e2) => { if (e2.key === 'Enter' || e2.key === ' ') { e2.stopPropagation(); e2.preventDefault(); setSheetHop(t.id); } }}
                         title={`${t.id} — ${t.status}${t.files.length ? ` · ${t.files.length} file(s)` : ''} — click for the task sheet`}
-                        className="flex items-center gap-1.5 w-full text-left hover:bg-olympus-gold/10 rounded px-1"
+                        className="flex flex-wrap items-center gap-1.5 w-full text-left hover:bg-olympus-gold/10 rounded px-1 cursor-pointer"
                       >
                         <span className="w-1 h-1 rounded-full shrink-0" style={{ background: dot }} />
                         <span className="text-[9px] font-mono truncate flex-1" style={{ color: dot }}>{t.id}</span>
                         {dur && <span className="text-[8px] font-mono text-[#6B8F71] shrink-0">{dur}</span>}
                         {tok && <span className="text-[8px] font-mono text-[#5A5A5A] shrink-0">{tok}</span>}
-                      </button>
+                        {(t.status === 'running' || t.status === 'completed') && (
+                          <span className="block w-full h-0.5 rounded-full bg-olympus-text-dim/20 overflow-hidden">
+                            <span
+                              className="block h-full rounded-full transition-all duration-1000"
+                              style={{ width: `${pct}%`, background: t.status === 'completed' ? '#7BAE8E' : '#D4A574', opacity: t.status === 'running' ? 0.9 : 0.55 }}
+                            />
+                          </span>
+                        )}
+                      </div>
                     );
                   })}
                   {tasks[s.god].length > 5 && (

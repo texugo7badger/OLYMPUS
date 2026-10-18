@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AnimatedNumber from './animated-number';
-import TaskSheetModal from './task-sheet-modal';
+import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
 
 interface Episode {
   id: string;
@@ -67,6 +67,26 @@ export default function ActivityTimeline() {
   const [filterGod, setFilterGod] = useState<string | null>(null);
   // W1-5: the drill-down — click a hop/task row for the full sheet.
   const [sheetHop, setSheetHop] = useState<string | null>(null);
+  // The PARITY poll (v0.0.4): the same /api/olympus/tasks the Parthenon
+  // reads — the running hop rows get their live progress bar here too.
+  const [taskById, setTaskById] = useState<Record<string, TaskRecord>>({});
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const r = await fetch('/api/olympus/tasks', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (cancelled) return;
+        const next: Record<string, TaskRecord> = {};
+        for (const t of (d?.tasks || []) as TaskRecord[]) next[t.id] = t;
+        setTaskById(next);
+      } catch { /* decorative */ }
+    };
+    load();
+    const iv = setInterval(load, 15_000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []);
   const setActiveGod = useOlympus(s => s.setActiveGod);
   const pushEvent = useOlympus(s => s.pushEvent);
 
@@ -187,6 +207,7 @@ export default function ActivityTimeline() {
           // hop id verbatim (Hop '<id>' started/GREEN/…). Click = sheet.
           const hopMatch = ep.action === 'hop' ? ep.summary.match(/Hop '([^']+)'/) : null;
           const hopId = hopMatch ? hopMatch[1] : null;
+          const hopTask = hopId ? taskById[hopId] : undefined;
           return (
           <TimelineItem
             key={ep.id}
@@ -198,6 +219,7 @@ export default function ActivityTimeline() {
               if (hopId) setSheetHop(hopId);
             }}
             hopId={hopId}
+            hopTask={hopTask}
           />
           );
         })}
@@ -207,8 +229,12 @@ export default function ActivityTimeline() {
   );
 }
 
-function TimelineItem({ ep, isLast, onClick, hopId }: { ep: Episode; isLast: boolean; onClick: () => void; hopId?: string | null }) {
+function TimelineItem({ ep, isLast, onClick, hopId, hopTask }: { ep: Episode; isLast: boolean; onClick: () => void; hopId?: string | null; hopTask?: TaskRecord }) {
   const Icon = GOD_ICONS[ep.god] || GOD_ICONS[ep.icon || ''];
+  // The running-hop progress (the same telemetry-derived pct the Parthenon
+  // shows — the panels tell ONE story).
+  const runningPct = hopTask?.status === 'running' && typeof hopTask.progress === 'number'
+    ? Math.min(95, Math.max(3, hopTask.progress)) : null;
   return (
     <button
       onClick={onClick}
@@ -247,6 +273,17 @@ function TimelineItem({ ep, isLast, onClick, hopId }: { ep: Episode; isLast: boo
             )}
           </div>
           <div className="text-[11px] text-olympus-text leading-snug mb-1">{ep.summary}</div>
+          {runningPct !== null && (
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="block flex-1 h-1 rounded-full bg-olympus-text-dim/20 overflow-hidden">
+                <span
+                  className="block h-full rounded-full transition-all duration-1000 animate-pulse"
+                  style={{ width: `${runningPct}%`, background: '#D4A574' }}
+                />
+              </span>
+              <span className="text-[8px] font-mono text-olympus-gold shrink-0">{runningPct}%</span>
+            </div>
+          )}
           <div className="text-[10px] text-olympus-text-dim leading-snug flex items-start gap-1">
             {ep.outcome ? (
               <>

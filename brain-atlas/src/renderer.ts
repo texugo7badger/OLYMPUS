@@ -106,7 +106,7 @@ export class BrainRenderer extends RenderCore {
     // Pass: nodes (far half, z > 0).
     if (this.passEnabled("nodes")) {
       for (const node of nodeProjs.filter((n) => n.z > 0).sort((a, b) => b.z - a.z)) {
-        this.drawNode(ctx, node, graph, lobeMul);
+        this.drawNode(ctx, node, graph, lobeMul, now);
       }
     }
 
@@ -129,7 +129,7 @@ export class BrainRenderer extends RenderCore {
     // Pass: nodes (near half, z <= 0).
     if (this.passEnabled("nodes")) {
       for (const node of nodeProjs.filter((n) => n.z <= 0).sort((a, b) => b.z - a.z)) {
-        this.drawNode(ctx, node, graph, lobeMul);
+        this.drawNode(ctx, node, graph, lobeMul, now);
       }
     }
 
@@ -266,21 +266,32 @@ export class BrainRenderer extends RenderCore {
     ctx: CanvasRenderingContext2D,
     projected: ProjectedNode,
     graph: BrainGraph,
-    lobeMul: (lobe?: LobeName) => number
+    lobeMul: (lobe?: LobeName) => number,
+    now: number = 0
   ): void {
     const node = projected.node;
     const isHover = node.id === this.hoverId;
     const isFocus = node.id === this.focusId;
-    const radius = nodeRadius(node) * Math.max(0.55, projected.scale) * (isHover ? 1.18 : isFocus ? 1.25 : 1);
+    // WORKING-GOD NODE GLOW (v0.0.4): a working god's neuron grows,
+    // breathes (a live pulse), brightens, and carries ITS OWN hue — the
+    // node matches the per-god signal trails while the god works.
+    const working = this.workingGods?.has(node.id) ?? false;
+    const workingPulse = working ? 1 + 0.14 * Math.sin(now * 0.005) : 1;
+    const workingColor = working && this.workingGodColors
+      ? (this.workingGodColors[/^god:([a-z]+)/.exec(node.id || '')?.[1] ?? ''] ?? node.color)
+      : node.color;
+    const radius = nodeRadius(node) * Math.max(0.55, projected.scale)
+      * (working ? 1.5 * workingPulse : 1)
+      * (isHover ? 1.18 : isFocus ? 1.25 : 1);
     const fade = Math.max(0.32, 1 - projected.depth * 0.75);
     const dim = node.status === "archived" ? 0.30 : node.status === "dormantRelevant" ? 0.55 : 1;
     const alpha = fade * dim * lobeMul(node._lobeName);
     if (alpha < 0.05) return;
 
-    const haloRadius = radius * 3.6 * graph.CHAOS.halo;
+    const haloRadius = radius * (working ? 5.4 : 3.6) * graph.CHAOS.halo;
     const halo = ctx.createRadialGradient(projected.sx, projected.sy, 0, projected.sx, projected.sy, haloRadius);
-    halo.addColorStop(0, hexA(node.color, 0.32 * alpha * graph.CHAOS.bloom));
-    halo.addColorStop(1, hexA(node.color, 0));
+    halo.addColorStop(0, hexA(workingColor, (working ? 0.6 : 0.32) * alpha * graph.CHAOS.bloom));
+    halo.addColorStop(1, hexA(workingColor, 0));
     ctx.fillStyle = halo;
     ctx.beginPath();
     ctx.arc(projected.sx, projected.sy, haloRadius, 0, Math.PI * 2);

@@ -88,7 +88,16 @@ async function waitForOrbital() {
       return;
     }
     if (done >= total && total > 0) {
-      // The full walk — verify the build too.
+      // The walk is done — the misrouted AURORA driver may still be running
+      // ITS verify (two npm builds on one lane collide). Wait for any live
+      // selftest driver to exit first (10min patience), then verify.
+      const drvStart = Date.now();
+      while (Date.now() - drvStart < 10 * 60_000) {
+        const pg = spawnSync('pgrep', ['-f', 'selftest-campaign'], { encoding: 'utf-8' });
+        if ((pg.stdout || '').trim() === '') break;
+        log('Q0: the in-flight driver is verifying — waiting it out…');
+        await new Promise(r => setTimeout(r, 30_000));
+      }
       const build = spawnSync('npm', ['run', 'build'], { cwd: ORBITAL_LANE, encoding: 'utf-8', timeout: 15 * 60_000 });
       rows.push({ name: 'ORBITAL (resume)', verdict: `COMPLETED ${done}/${total} · build ${build.status === 0 ? 'GREEN' : 'RED'}`, tel: readTelemetry(ORBITAL_LANE) });
       return;

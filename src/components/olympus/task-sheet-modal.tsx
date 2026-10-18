@@ -34,6 +34,9 @@ export interface TaskRecord {
   reasoning?: string | null;
   sessionId?: string | null;
   files: { file: string; tool: string; ts: string }[];
+  /** The honest progress pct (0-100): completed = 100; running = elapsed vs
+   *  the god's own median hop duration (the lane's telemetry-derived ETA). */
+  progress?: number;
 }
 
 const STATUS_CHIP: Record<string, string> = {
