@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import { listAssets, searchAssets, MEDIA_VAULT_DIR } from '@/lib/media-vault';
+import { searchSemantic } from '@/lib/media-vault-vec';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 
 export const runtime = 'nodejs';
@@ -33,6 +34,19 @@ export async function GET(req: NextRequest) {
   }
   const q = sp.get('q');
   const limit = Number(sp.get('limit') ?? 200);
-  const assets = q ? searchAssets(q, limit) : listAssets(limit);
+  if (q) {
+    // #150: the semantic lane first (a Pollinations key indexes the vault);
+    // without one — or on any miss — the honest keyword pass answers.
+    const ids = await searchSemantic(q, limit).catch(() => null);
+    if (ids) {
+      const all = listAssets(1000);
+      const byId = new Map(all.map((a) => [a.id, a]));
+      const hits = ids.map((id) => byId.get(id)).filter(Boolean);
+      return NextResponse.json({ ok: true, assets: hits, total: hits.length, mode: 'semantic' }, { headers: NO_CACHE_HEADERS });
+    }
+    const assets = searchAssets(q, limit);
+    return NextResponse.json({ ok: true, assets, total: assets.length, mode: 'keyword' }, { headers: NO_CACHE_HEADERS });
+  }
+  const assets = listAssets(limit);
   return NextResponse.json({ ok: true, assets, total: assets.length }, { headers: NO_CACHE_HEADERS });
 }

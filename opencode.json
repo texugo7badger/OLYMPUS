@@ -1150,5 +1150,16 @@
         }
       }
     }
+  },
+  "mcp": {
+    "godot": {
+      "type": "local",
+      "command": [
+        "npx",
+        "@coding-solo/godot-mcp"
+      ],
+      "enabled": false,
+      "_olympus_note": "#155 GODOT-MCP-1 (Coding-Solo, MIT verified): the pipeline MCP \u2014 launch/run/debug/scenes/sprites. DISABLED by default (honest: the tools probe at spawn; enable when Godot is installed \u2014 Settings or flip this flag)."
+    }
   }
 }

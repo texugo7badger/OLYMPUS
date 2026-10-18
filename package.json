@@ -70,6 +70,7 @@
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
+    "@excalidraw/excalidraw": "^0.18.1",
     "@opencode/cli": "^2.0.32",
     "@opencode/plugin": "^2.0.32",
     "@radix-ui/primitive": "^1.2.0",
@@ -80,7 +81,7 @@
     "handlebars": "latest",
     "isomorphic-git": "latest",
     "node-pty": "latest",
-    "sqlite-vec": "latest",
+    "sqlite-vec": "^0.1.9",
     "ws": "latest",
     "yaml": "latest",
     "zod": "latest",

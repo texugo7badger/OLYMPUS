@@ -137,6 +137,9 @@ export async function describeAsset(asset: MediaAsset): Promise<MediaAsset> {
       asset.dominantColors = Array.isArray(parsed.dominant_colors) ? parsed.dominant_colors.map(String).slice(0, 4) : [];
       asset.suggestedUse = String(parsed.suggested_use ?? '').slice(0, 200);
       writeEntry(asset, 'described');
+      // #150: the vector index (a no-op without the BYOK key — the keyword
+      // fallback keeps the search honest).
+      try { const vec = await import('./media-vault-vec'); await vec.indexAsset(asset); } catch {}
       return asset;
     } catch (e: any) {
       lastErr = `${model.id}: ${e?.message || e}`;
@@ -194,6 +197,11 @@ function parseEntry(raw: string, id: string): MediaAsset | null {
  * fallback never pretends to be semantic).
  */
 export function searchAssets(query: string, limit = 24): MediaAsset[] {
+  return searchKeyword(query, limit);
+}
+
+/** #150's honest keyword pass — the fallback when no embedding key exists. */
+export function searchKeyword(query: string, limit = 24): MediaAsset[] {
   const terms = query.toLowerCase().split(/\s+/).filter((t) => t.length >= 3);
   if (!terms.length) return [];
   const all = listAssets(1000);
