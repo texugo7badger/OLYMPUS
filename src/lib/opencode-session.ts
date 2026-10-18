@@ -2540,6 +2540,117 @@ async function runWarmMessageAttempt(
 }
 
 /**
+ * #146 — MAP-EVENT-V2: THE V2 EVENT TRANSLATOR (the v1 replacement's last
+ * mile). OpenCode 2.x serves a NEW event vocabulary on /api/event —
+ *   session.step.started   {agent, model, assistantMessageID}
+ *   session.reasoning.delta {delta} / session.reasoning.ended {text}
+ *   session.text.delta     {delta} / session.text.ended {text}
+ *   session.tool.input.started {id, name} / session.tool.called {id, input}
+ *   session.tool.success    {id, content[{text}], metadata} / session.tool.error
+ *   session.step.ended     {finish, cost, tokens{input,output,reasoning,cache{read,write}}}
+ *   session.usage.updated  {cost, tokens} (cumulative — skipped; step.ended is per-step)
+ * — while the app's pump + mapEvent speak the v1 shapes (message.part.updated
+ * with text/reasoning/tool/step-start/step-finish parts). This translator
+ * synthesizes the v1 wire shapes from the v2 events so EVERYTHING downstream
+ * (the liveness stamping, mapPart, the terminal feed, the god cards, the
+ * step-finish cost capture) works on the v2 runtime VERBATIM — zero changes
+ * below the pump. The step context (agent/model/assistantMessageID) rides
+ * v2ctx; the tool names ride the callID map.
+ */
+interface V2StepCtx {
+  agent: string;
+  model?: any;
+  assistantMessageID?: string;
+  toolNames: Map<string, string>;
+}
+function newV2StepCtx(): V2StepCtx {
+  return { agent: 'apollo', toolNames: new Map() };
+}
+function translateV2Event(
+  ev: any,
+  sessionId: string,
+  ctx: V2StepCtx,
+  emitV1: (v1ev: any) => void,
+): void {
+  const d = ev?.data ?? {};
+  const sid = typeof d.sessionID === 'string' ? d.sessionID : sessionId;
+  const amid = typeof d.assistantMessageID === 'string' ? d.assistantMessageID : ctx.assistantMessageID;
+  const wrap = (part: any) => emitV1({
+    type: 'message.part.updated',
+    properties: {
+      sessionID: sessionId,
+      info: { agent: ctx.agent, sessionID: sid, messageID: amid },
+      part: { sessionID: sessionId, messageID: amid, ...part },
+    },
+  });
+  switch (ev?.type) {
+    case 'session.step.started': {
+      if (typeof d.agent === 'string' && d.agent) ctx.agent = d.agent;
+      if (d.model) ctx.model = d.model;
+      ctx.assistantMessageID = amid;
+      wrap({ type: 'step-start', id: amid ?? 'step' });
+      return;
+    }
+    case 'session.reasoning.delta': {
+      // Each delta is a reasoning frame — the #THINKING-LIVENESS stamping
+      // (the pump reads part.type === 'reasoning') feeds on these.
+      wrap({ type: 'reasoning', id: `r-${amid ?? 'x'}-${d.ordinal ?? 0}`, text: d.delta ?? '' });
+      return;
+    }
+    case 'session.text.delta': {
+      // The v1 two-phase text flow: deltas buffer via message.part.delta.
+      emitV1({
+        type: 'message.part.delta',
+        properties: { sessionID: sessionId, field: 'text', partID: `t-${amid ?? 'x'}`, delta: d.delta ?? '' },
+      });
+      return;
+    }
+    case 'session.text.ended': {
+      wrap({ type: 'text', id: `t-${amid ?? 'x'}`, messageID: amid, text: d.text ?? '' });
+      return;
+    }
+    case 'session.tool.input.started': {
+      if (typeof d.id === 'string' && typeof d.name === 'string') ctx.toolNames.set(d.id, d.name);
+      return;
+    }
+    case 'session.tool.called': {
+      const name = ctx.toolNames.get(d.id) ?? 'tool';
+      wrap({ type: 'tool', id: d.id, callID: d.id, tool: name, state: { status: 'running', input: d.input } });
+      return;
+    }
+    case 'session.tool.success': {
+      const name = ctx.toolNames.get(d.id) ?? 'tool';
+      const out = Array.isArray(d.content)
+        ? d.content.map((c: any) => (typeof c?.text === 'string' ? c.text : '')).join('')
+        : '';
+      wrap({ type: 'tool', id: d.id, callID: d.id, tool: name, state: { status: 'completed', output: out, metadata: d.metadata } });
+      return;
+    }
+    case 'session.tool.error': {
+      const name = ctx.toolNames.get(d.id) ?? 'tool';
+      wrap({ type: 'tool', id: d.id, callID: d.id, tool: name, state: { status: 'error', error: d.error } });
+      return;
+    }
+    case 'session.step.ended': {
+      // THE CRITICAL ONE: the v1 step-finish part — the overlay's cost
+      // capture + the benchmark window + the stepFinished gate all key on
+      // it. v2 carries REAL cost + the full token breakdown (incl. cache).
+      wrap({ type: 'step-finish', id: amid ?? 'step', tokens: d.tokens, cost: d.cost });
+      return;
+    }
+    case 'session.idle': {
+      emitV1({ type: 'session.idle', properties: { sessionID: sessionId } });
+      return;
+    }
+    default:
+      // The rest of the v2 vocabulary (session.usage.updated, inbox,
+      // execution lifecycle, catalog churn) maps to nothing the v1 pump
+      // consumed — intentionally skipped.
+      return;
+  }
+}
+
+/**
  * Open GET /event and pump mapped events for `sessionId` into `onEvent`.
  * Resolves once the SSE connection is ESTABLISHED (fetch resolved) with a
  * close() function that stops the pump and waits for it to wind down.
@@ -2609,6 +2720,45 @@ async function openEventFeed(
   let closeResolve!: () => void;
   const closedPromise = new Promise<void>((r) => { closeResolve = r; });
 
+  // #146 MAP-EVENT-V2: the v2 step context + the ONE downstream path. Every
+  // event — v1 native OR v2-translated — flows processSynthetic: the
+  // reasoning liveness stamping, mapEvent, the permission/child state, and
+  // onEvent. Zero behavioral drift between the protocols below this line.
+  const v2ctx = newV2StepCtx();
+  const processSynthetic = (ev: any) => {
+    // #THINKING-LIVENESS (the 04:31 specimen): a REASONING part
+    // updating is the model WORKING — the very definition of
+    // alive. The B2 visibility rule below still governs visible
+    // frames, but reasoning frames must ALSO stamp the silence
+    // clock, or a thinking turn (reasoning streaming for minutes
+    // before any visible output) reads as a stall and the nudge
+    // aborts live work.
+    if (ev?.type === 'message.part.updated' && ev?.properties?.part?.type === 'reasoning') {
+      state.lastFrameAt = Date.now();
+    }
+    // B2: liveness means VISIBILITY, not frame arrival — stamp only when a
+    // mapped event actually reaches the client (see the original note).
+    mapEvent(ev, sessionId, state, (mapped) => {
+      state.lastFrameAt = Date.now();
+      state.firstFrameSeen = true;
+      // #62 (BATCH 13): permission-pending detection — the LATEST
+      // visible part being a tool in 'pending' state means the run
+      // is waiting for the HUMAN's permission approval: a legitimate
+      // wait, not a stall. Any other event clears the flag.
+      if (mapped?.type === 'tool_use' || mapped?.type === 'tool_call' || mapped?.part?.type === 'tool') {
+        const st = mapped.part?.state?.status ?? mapped.part?.status;
+        state.permissionPending = st === 'pending';
+        // #CHILD-LIVENESS: a RUNNING tool is live work — the turn
+        // is executing a child. Running = live; completed/error = done.
+        state.childPending = st === 'running';
+      } else {
+        state.permissionPending = false;
+        state.childPending = false;
+      }
+      onEvent(mapped);
+    });
+  };
+
   const pump = (async () => {
     try {
       for (;;) {
@@ -2626,61 +2776,23 @@ async function openEventFeed(
           if (!payload) continue;
           try {
             const ev = JSON.parse(payload);
-            // Liveness: only SESSION-OWNED frames count. The feed is
-            // process-global — heartbeats (~20s), plugin bursts, and other
-            // sessions' traffic would otherwise mask a dead run.
-            const belongs =
-              ev?.properties?.sessionID === sessionId ||
-              (ev?.type === 'message.part.updated' && ev?.properties?.part?.sessionID === sessionId);
-            if (belongs) {
-              // #THINKING-LIVENESS (the 04:31 specimen): a REASONING part
-              // updating is the model WORKING — the very definition of
-              // alive. The B2 visibility rule below still governs visible
-              // frames, but reasoning frames must ALSO stamp the silence
-              // clock, or a thinking turn (reasoning streaming for minutes
-              // before any visible output) reads as a stall and the nudge
-              // aborts live work.
-              if (ev?.type === 'message.part.updated' && ev?.properties?.part?.type === 'reasoning') {
-                state.lastFrameAt = Date.now();
+            // #146 MAP-EVENT-V2: the dual-protocol dispatch. On a v2 serve
+            // the event goes through the TRANSLATOR (synthesizing the v1
+            // wire shapes); on v1 the belongs filter runs as it always did.
+            // Both paths converge on processSynthetic — the ONE downstream
+            // lane (the liveness stamping + mapEvent + the state machinery).
+            // Liveness note: only SESSION-OWNED frames count — the feed is
+            // process-global; other sessions' traffic must never mask a dead
+            // run. The v2 translator only emits events for THIS session.
+            if (server.protocol === 'v2') {
+              if (ev?.data?.sessionID === sessionId || ev?.data?.sessionID === undefined) {
+                translateV2Event(ev, sessionId, v2ctx, processSynthetic);
               }
-              // B2: liveness means VISIBILITY, not frame arrival. Stamping
-              // lastFrameAt here (before mapping) kept the silence clock
-              // alive with frames that map to nothing the user can see:
-              // message.part.delta buffers and returns (:720), re-emitted
-              // text/reasoning parts are dropped by the textEmitted gate
-              // (:809, :883), tool + step churn is deduped (:828, :853, :802)
-              // and non-error session.status frames return silently (:733).
-              // During a real stall opencode keeps streaming exactly those
-              // invisible frames, so the watchdog could never reach its own
-              // threshold. Stamp only when a mapped event actually reaches the
-              // client.
-              //
-              // Deliberately NOT done inside deliver(): synthetic events (this
-              // watchdog's own WARN/STALL lines, the auto-approve notice) flow
-              // through deliver and would postpone the STALL countdown right
-              // after the WARN fired.
-              mapEvent(ev, sessionId, state, (mapped) => {
-                state.lastFrameAt = Date.now();
-                state.firstFrameSeen = true;
-                // #62 (BATCH 13): permission-pending detection — the LATEST
-                // visible part being a tool in 'pending' state means the run
-                // is waiting for the HUMAN's permission approval: a legitimate
-                // wait, not a stall. Any other event clears the flag.
-                if (mapped?.type === 'tool_use' || mapped?.type === 'tool_call' || mapped?.part?.type === 'tool') {
-                  const st = mapped.part?.state?.status ?? mapped.part?.status;
-                  state.permissionPending = st === 'pending';
-                  // #CHILD-LIVENESS: a RUNNING tool is live work — the turn
-                  // is executing a child (the 22:34 specimen: Apollo blocked
-                  // on an Atlas subagent task while the nudge aborted and
-                  // re-posted around it — the child kept working through two
-                  // parent nudges). Running = live; completed/error = done.
-                  state.childPending = st === 'running';
-                } else {
-                  state.permissionPending = false;
-                  state.childPending = false;
-                }
-                onEvent(mapped);
-              });
+            } else if (
+              ev?.properties?.sessionID === sessionId ||
+              (ev?.type === 'message.part.updated' && ev?.properties?.part?.sessionID === sessionId)
+            ) {
+              processSynthetic(ev);
             }
           } catch {
             // Non-JSON data line — ignore.
