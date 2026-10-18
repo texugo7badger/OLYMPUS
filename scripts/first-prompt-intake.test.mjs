@@ -235,6 +235,26 @@ async function main() {
     ['weak overlap -> new (the threshold is honest)', 'build a CRM for solar customers', [petlove], (r) => r.kind === 'new'],
     ['two strong matches -> ask (never a silent guess)', 'update the "Lumina" project', [lumina, proj('lumina-two', 'Lumina Two', 'another lumina crm build')], (r) => r.kind === 'ask' && r.candidates.length >= 2],
     ['trivial prompt -> still non-empty new (the route gates trivial separately)', 'hi', [], (r) => r.kind === 'new' && !!r.projectName],
+    // #144 (2026-10-18, the AURORA specimen): every spec-shaped prompt
+    // shares the stack + design-bar vocabulary, and the project notes
+    // store the FULL original prompt as their description — so Jaccard
+    // scored 0.55 against an UNRELATED project and every new campaign
+    // routed into the old one (contaminating its lane). THE DISTINCT-NAME
+    // LAW: a prompt that names its project and no known project carries
+    // that name is NEW — the similarity heuristics never override the
+    // user's own words.
+    ['#144: a DISTINCT quoted name beats the description Jaccard (the AURORA specimen)',
+      'Build "AURORA FOCUS" — a focus-session tracker web app. Next.js App Router, TypeScript, Prisma, the award-tier design bar.',
+      [proj('orbital', 'ORBITAL Real-time Mission-control Web', 'Build ORBITAL — a real-time mission-control web app. Next.js App Router, TypeScript, Prisma, the award-tier design bar.'), lumina],
+      (r) => r.kind === 'new' && r.projectName === 'AURORA FOCUS'],
+    ['#144: the UNQUOTED headline names the project (Build X — ...)',
+      'Build Aurum Coffee — a cozy cafe ordering app',
+      [lumina, petlove],
+      (r) => r.kind === 'new' && r.projectName === 'Aurum Coffee'],
+    ['#144: a single capitalized word headline is too weak — the NAME law never fires, the flow falls through to the derive path',
+      'Build Something for me please',
+      [lumina, petlove],
+      (r) => (r.reason || '').includes('deriving')],
   ];
   for (const [name, prompt, table, ok] of cases) {
     const r = classifyFirstPrompt(prompt, table);

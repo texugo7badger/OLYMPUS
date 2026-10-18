@@ -76,6 +76,16 @@ export function extractProjectName(prompt: string): string | null {
   if (pathCand) return null; // a path is a routing signal, not a name
   const quoted = prompt.match(/["“]([^"”\n]{2,60})["”]/);
   if (quoted) return quoted[1].trim();
+  // #144 (the unquoted-headline class): prompts open with "Build AURORA
+  // FOCUS — a focus-session tracker" — the project name as a TITLE-CASED
+  // headline before the em-dash, no quotes. Catch it or the distinct-name
+  // law never fires for real-world naming styles.
+  const headline = prompt.match(/^[^\n]{0,8}?(?:Build|Create|Make|Construa|Crie)\s+([A-Z][A-Za-z0-9&'\u2019-]*(?:\s+[A-Z][A-Za-z0-9&'\u2019-]*){0,3})\s*(?:\u2014|:|\u2013|-|$)/m);
+  if (headline) {
+    const name = headline[1].trim();
+    // Two+ capitalized words — a single word is too weak a signal.
+    if (name.split(/\s+/).length >= 2) return name;
+  }
   const called = prompt.match(/\b(?:called|named|titled)\s+([A-Za-z0-9&'’-]+)(?:\s+([A-Za-z0-9&'’-]+))?/i);
   if (called) {
     const second = called[2];
@@ -124,6 +134,58 @@ export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): F
   }
 
   const candidateName = extractProjectName(prompt);
+
+  // #144 THE DISTINCT-NAME LAW (the AURORA specimen, 2026-10-18): a prompt
+  // that NAMES its project (quoted — "AURORA FOCUS" — or called/named X)
+  // where NO known project carries that name is a NEW project — PERIOD.
+  // The similarity heuristics below can never override the user's own
+  // words: every spec-shaped prompt shares the stack + design-bar
+  // vocabulary, and the project notes store the FULL original prompt as
+  // their description — so Jaccard scored 0.55 against an unrelated
+  // project and EVERY new campaign routed into the old one (the misroute
+  // that contaminated the orbital lane). The name is the strongest signal
+  // there is; the exact-name match stays existing (verbatim), the
+  // distinct name is new.
+  if (candidateName) {
+    const lower = candidateName.trim().toLowerCase();
+    const named = known.find((p) => p.name.trim().toLowerCase() === lower);
+    if (named) {
+      return {
+        kind: 'existing',
+        slug: named.slug,
+        score: 1,
+        reason: `the prompt names the project '${named.name}' verbatim — routing to '${named.slug}'`,
+      };
+    }
+    // The partial-name case ("update 'Lumina'" -> 'Lumina CRM'): the
+    // candidate's words are a SUBSET of known names — route there. One
+    // subset = existing; two or more = ask (never a silent guess).
+    const candidateWords = words(candidateName);
+    const subsets = known.filter((p) => {
+      const nameWords = words(p.name);
+      return candidateWords.size > 0 && [...candidateWords].every((w) => nameWords.has(w));
+    });
+    if (subsets.length === 1) {
+      return {
+        kind: 'existing',
+        slug: subsets[0].slug,
+        score: 1,
+        reason: `the prompt names '${candidateName}' — a partial name of '${subsets[0].name}' — routing to '${subsets[0].slug}'`,
+      };
+    }
+    if (subsets.length >= 2) {
+      return {
+        kind: 'ask',
+        candidates: subsets.map((p) => ({ slug: p.slug, name: p.name, score: 1 })),
+        reason: `the prompt names '${candidateName}' which matches ${subsets.length} projects — asking instead of guessing`,
+      };
+    }
+    return {
+      kind: 'new',
+      projectName: candidateName,
+      reason: `the prompt names the project '${candidateName}' and no known project carries that name — a distinct NAME beats every similarity heuristic (the #144 misroute class)`,
+    };
+  }
 
   const scored = known
     .map((p) => {

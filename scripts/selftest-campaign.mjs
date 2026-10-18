@@ -61,9 +61,20 @@ const log = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`,
 // ── The dev-server lifecycle (survive its death) ────────────────────────────
 let devChild = null;
 async function ensureDevServer() {
-  const probe = await fetch(`${BASE}/api/olympus/health`, { headers: { Origin: ORIGIN } }).catch(() => null);
-  if (probe && probe.ok) { log('dev server already healthy'); return; }
-  log('dev server DOWN — (re)starting next dev…');
+  // #DEV-HANG (the 06:12 specimen): the health probes had NO timeout — a
+  // zombie holding the port (accepts the connection, never answers) hung
+  // every fetch for undici's 300s header timeout; 90 rounds of that = the
+  // 90-minute dead budget the night burned four times. Every probe now
+  // carries a 5s abort, and the port gets FREED before the spawn (the
+  // zombie class dies at the root).
+  const probe = () => fetch(`${BASE}/api/olympus/health`, {
+    headers: { Origin: ORIGIN },
+    signal: AbortSignal.timeout(5_000),
+  }).catch(() => null);
+  const healthy = await probe();
+  if (healthy && healthy.ok) { log('dev server already healthy'); return; }
+  log('dev server DOWN — freeing the port + (re)starting next dev…');
+  try { spawnSync('fuser', ['-k', `${PORT}/tcp`], { stdio: 'ignore' }); } catch {}
   appendFileSync(DEV_LOG, `\n=== selftest restart @ ${new Date().toISOString()} ===\n`);
   devChild = spawn('npx', ['next', 'dev', '-p', String(PORT), '-H', '127.0.0.1'], {
     cwd: ROOT,
@@ -74,11 +85,12 @@ async function ensureDevServer() {
   devChild.stderr.on('data', (d) => appendFileSync(DEV_LOG, String(d)));
   devChild.on('exit', (code, signal) => appendFileSync(DEV_LOG, `\n!!! DEV SERVER EXITED code=${code} signal=${signal} @ ${new Date().toISOString()}\n`));
   for (let i = 0; i < 90; i++) {
-    const p = await fetch(`${BASE}/api/olympus/health`, { headers: { Origin: ORIGIN } }).catch(() => null);
+    const p = await probe();
     if (p && p.ok) { log(`dev server UP after ${(i + 1) * 2}s`); return; }
+    if (i > 0 && i % 15 === 0) log(`dev server still down after ${i * 2}s (see ${DEV_LOG})…`);
     await new Promise(r => setTimeout(r, 2000));
   }
-  throw new Error('dev server would not come up');
+  throw new Error('dev server would not come up (180s) — port freed, probes time-bounded; see the dev log');
 }
 
 // ── The SSE driver (node:http — NO undici bodyTimeout) ─────────────────────
