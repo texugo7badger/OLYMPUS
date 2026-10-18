@@ -32,6 +32,9 @@ const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(`--${n}`); return i >= 0 ? args[i + 1] : d; };
 const BUDGET_MIN = Number(arg('budget-min', '90'));
 const PORT = Number(arg('port', '3737'));
+// --start-at N: skip the first N campaigns (a restart after a runner patch —
+// the in-flight campaign's driver survives as an orphan + finishes solo).
+const START_AT = Number(arg('start-at', '0'));
 
 const ROOT = process.cwd();
 const VAULT = join(homedir(), 'OLYMPUS-VAULT');
@@ -91,11 +94,15 @@ async function waitForOrbital() {
       // The walk is done — the misrouted AURORA driver may still be running
       // ITS verify (two npm builds on one lane collide). Wait for any live
       // selftest driver to exit first (10min patience), then verify.
+      // A RESTARTED runner (--start-at) must wait for the ORPHAN campaign's
+      // driver to finish before starting the next — two concurrent walks
+      // on one app server is exactly the pileup the queue exists to avoid.
+      const drvPatienceMs = (START_AT > 0 ? BUDGET_MIN : 10) * 60_000;
       const drvStart = Date.now();
-      while (Date.now() - drvStart < 10 * 60_000) {
+      while (Date.now() - drvStart < drvPatienceMs) {
         const pg = spawnSync('pgrep', ['-f', 'selftest-campaign'], { encoding: 'utf-8' });
         if ((pg.stdout || '').trim() === '') break;
-        log('Q0: the in-flight driver is verifying — waiting it out…');
+        log('Q0: an in-flight driver is still walking — waiting it out…');
         await new Promise(r => setTimeout(r, 30_000));
       }
       const build = spawnSync('npm', ['run', 'build'], { cwd: ORBITAL_LANE, encoding: 'utf-8', timeout: 15 * 60_000 });
@@ -108,11 +115,49 @@ async function waitForOrbital() {
   rows.push({ name: 'ORBITAL (resume)', verdict: `BUDGET-OUT @ ${st.completed.length}/13 — resumable`, tel: readTelemetry(ORBITAL_LANE) });
 }
 
+/**
+ * #144 CONTAINMENT (the misroute cure, runner-side): the intent matcher's
+ * PATH branch wins over every naming/matching heuristic — a QUOTED lane
+ * path routes there, never creates elsewhere. The runner pre-creates the
+ * campaign's lane + the project note, then appends the quoted path to the
+ * prompt: every campaign lands in ITS OWN lane, zero contamination of the
+ * previous ones.
+ */
+function pinCampaignLane(c) {
+  const lane = join(VAULT, '02_Projects', c.slug);
+  const note = join(lane, 'project.md');
+  if (!existsSync(note)) {
+    mkdirSync(lane, { recursive: true });
+    const iso = new Date().toISOString();
+    writeFileSync(note, [
+      '---',
+      `slug: ${c.slug}`,
+      `name: ${c.slug}`,
+      `path: ${lane}`,
+      `created: ${iso}`,
+      `last_active: ${iso}`,
+      `description: ${c.label}`,
+      '---',
+      '',
+      `# ${c.label}`,
+      '',
+      'The overnight bench lane (pre-created by the runner so the intent '
+      + 'matcher routes THIS campaign here — the quoted-path branch).',
+      '',
+    ].join('\n'));
+  }
+  const pinned = join(OUT, `prompt-${c.slug}-pinned.txt`);
+  const base = readFileSync(c.prompt, 'utf-8');
+  writeFileSync(pinned, base + `\n\nProject lane: "${lane}"\n(The quoted path above is THIS project's lane — route here.)\n`);
+  return pinned;
+}
+
 async function runCampaign(c) {
   const logFile = join(OUT, `log-${c.slug}.txt`);
-  log(`campaign ${c.label}: START (budget ${BUDGET_MIN}min)`);
+  const promptFile = pinCampaignLane(c);
+  log(`campaign ${c.label}: START (budget ${BUDGET_MIN}min · lane pinned)`);
   const started = Date.now();
-  const child = spawn('node', [DRIVER, '--slug', c.slug, '--port', String(PORT), '--prompt-file', c.prompt], {
+  const child = spawn('node', [DRIVER, '--slug', c.slug, '--port', String(PORT), '--prompt-file', promptFile], {
     cwd: ROOT,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -164,7 +209,19 @@ function writeReport() {
   mkdirSync(OUT, { recursive: true });
   log(`the overnight queue: ${CAMPAIGNS.length} campaigns after the ORBITAL wait`);
   await waitForOrbital();
-  for (const c of CAMPAIGNS) {
+  // A restarted runner (--start-at) folds the orphan campaign's row from
+  // its driver log + the lane's own telemetry before continuing.
+  if (START_AT > 0) {
+    const orphan = CAMPAIGNS[START_AT - 1];
+    if (orphan) {
+      const logFile = join(OUT, `log-${orphan.slug}.txt`);
+      if (existsSync(logFile)) {
+        const last = readFileSync(logFile, 'utf-8').trim().split('\n').pop() || '';
+        rows.push({ name: `${orphan.label} (orphan driver — pre-patch run)`, verdict: last.slice(0, 120) || 'see log', hops: '—', tokens: '—', duration: '—' });
+      }
+    }
+  }
+  for (const c of CAMPAIGNS.slice(START_AT)) {
     await runCampaign(c);
     writeReport();
   }
