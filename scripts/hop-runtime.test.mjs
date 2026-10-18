@@ -678,6 +678,27 @@ async function main() {
     'no design review fires — the machine never critiques its own work');
 }
 
+
+  // ── THE ARSENAL DIRECTIVE (the parallelism-of-parallelism night) ────────
+  // The god KNOWS its demigod roster + the dispatch doctrine rides every
+  // hop prompt — the nested command structure (Apollo plans, the walker
+  // walks, GODS ORCHESTRATE their demigods).
+  {
+    const { composeHopPrompt } = await import(OLYMPUS + '/src/lib/hop-runtime/walker.ts');
+    const prompt = composeHopPrompt({ id: 'probe', god: 'hephaestus', prompt: 'Build the API layer.', artifacts: [], after: [] }, '/tmp/fake-lane');
+    expect('ARSENAL: the hop prompt carries the directive header',
+      prompt.includes('[YOUR ARSENAL — DEMIGOD ORCHESTRATION]'), 'missing the header');
+    expect('ARSENAL: the doctrine names olympus-dispatch + verification',
+      /olympus-dispatch/.test(prompt) && /verify their artifacts/.test(prompt), 'the doctrine must ride the prompt');
+    expect('ARSENAL: the roster carries a REAL hephaestus demigod (build-resolver)',
+      prompt.includes('- build_resolver'), 'the roster loader must read .opencode/prompts/agents/demigods/hephaestus/');
+    expect('ARSENAL: the roster is a menu, not a biography (>= 5 one-liners)',
+      (prompt.match(/^- [a-z_0-9-]+ — /gm) || []).length >= 5, 'expected >= 5 roster lines');
+    const apolloPrompt = composeHopPrompt({ id: 'p', god: 'apollo', prompt: 'Plan.', artifacts: [], after: [] }, '/tmp/fake-lane');
+    expect('ARSENAL: apollo carries its own roster (planner et al)',
+      apolloPrompt.includes('[YOUR ARSENAL — DEMIGOD ORCHESTRATION]') && apolloPrompt.includes('- planner'), 'apollo has demigods');
+  }
+
 main().then(() => {
   if (failures > 0) { console.error(`\n${failures} assertion(s) failed`); process.exit(1); }
   console.log('\nAll #109 hop-runtime assertions passed');

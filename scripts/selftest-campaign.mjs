@@ -192,7 +192,7 @@ try {
   let text = ORIGINAL_PROMPT;
   while (cycle < MAX_CYCLES) {
     cycle++;
-    log(cycle === 1 ? 'posting the ORIGINAL Lumina prompt…' : `RESUME cycle ${cycle}: posting 'continue' (the walk resumes from hop-state)…`);
+    log(cycle === 1 ? `posting the campaign prompt${PROMPT_FILE ? ` (${PROMPT_FILE})` : ' (the original Lumina handoff)'}…` : `RESUME cycle ${cycle}: posting 'continue' (the walk resumes from hop-state)…`);
     let res;
     try {
       res = await postAction(text, convo);

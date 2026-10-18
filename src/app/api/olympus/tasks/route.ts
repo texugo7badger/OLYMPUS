@@ -198,14 +198,39 @@ export async function GET(req: NextRequest) {
     if (!telemetry.has(t.id) && Date.now() - lastTelTs < 30 * 60_000) { t.status = 'running'; break; }
   }
 
-  const gods: Record<string, { total: number; completed: number; running: number; tokensIn: number; tokensOut: number }> = {};
+  // Live demigod dispatches per god — the PARALLELISM-OF-PARALLELISM
+  // surface: the god's own delegations riding the feed (action 'dispatch'
+  // carries god + demigod). Rendered as demigod chips in the Parthenon.
+  const demigods: Record<string, { id: string; ts: string }[]> = {};
+  try {
+    const raw = fs.readFileSync(FEED_PATH, 'utf-8');
+    const cutoff = Date.now() - 30 * 60 * 1000;
+    for (const line of raw.trim().split('\n').filter(Boolean).slice(-4000)) {
+      let ev: any;
+      try { ev = JSON.parse(line); } catch { continue; }
+      const act = String(ev?.action || '');
+      if (act !== 'dispatch' && act !== 'symphony-dispatch') continue;
+      const god = String(ev?.god || '').toLowerCase();
+      const dg = ev?.demigod ?? ev?.meta?.demigod;
+      if (!dg || typeof dg !== 'string') continue;
+      let t = 0;
+      try { t = new Date(ev.ts).getTime(); } catch { continue; }
+      if (!Number.isFinite(t) || t < cutoff) continue;
+      const list = (demigods[god] ||= []);
+      if (!list.some(d => d.id === dg)) list.push({ id: dg, ts: String(ev.ts) });
+    }
+    for (const list of Object.values(demigods)) list.sort((a, b) => a.ts < b.ts ? 1 : -1);
+  } catch { /* decorative */ }
+
+  const gods: Record<string, { total: number; completed: number; running: number; tokensIn: number; tokensOut: number; demigods: { id: string; ts: string }[] }> = {};
   for (const t of tasks) {
-    const g = (gods[t.god] ||= { total: 0, completed: 0, running: 0, tokensIn: 0, tokensOut: 0 });
+    const g = (gods[t.god] ||= { total: 0, completed: 0, running: 0, tokensIn: 0, tokensOut: 0, demigods: [] });
     g.total++;
     if (t.status === 'completed') g.completed++;
     if (t.status === 'running') g.running++;
     g.tokensIn += t.tokensIn ?? 0;
     g.tokensOut += t.tokensOut ?? 0;
+    g.demigods = demigods[t.god] || [];
   }
 
   const stats = {

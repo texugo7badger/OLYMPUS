@@ -28,6 +28,9 @@ import { spawn } from 'node:child_process';
 import { syncLaneFile } from '@/lib/lane-config';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
 import { loadHopState, saveHopState, hopStatePath, type HopPark } from './hop-state';
+import { composeArsenalDirective } from './arsenal';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
 import { spawnOpencode, findOlympusRoot } from '@/lib/opencode-spawn';
 import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencode-session';
@@ -106,6 +109,16 @@ export type HopDispatcher = (hop: PlanHop, ctx: {
   prompt: string;
 }) => Promise<HopDispatchResult>;
 
+/** The repo root for the arsenal loader — the hop-runtime module's own
+ *  tree (.opencode/prompts/agents/demigods lives there), NOT the lane. */
+function resolveHopRepoRoot(): string {
+  try {
+    return join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+  } catch {
+    return process.cwd();
+  }
+}
+
 /**
  * Compose the hop prompt: the spec SLICE + FILE POINTERS. The hop never
  * receives the campaign's full context — the artifacts on disk carry it.
@@ -129,6 +142,17 @@ export function composeHopPrompt(hop: PlanHop, laneRoot: string): string {
   // the RUNTIME's post-campaign job (post-run.ts), NEVER a god's. Every hop
   // prompt carries the guard; the planner template forbids it too.
   lines.push('RUNTIME FILES ARE SACRED: NEVER delete, move, or rewrite .opencode, opencode.json, opencode.demigods.json, dispatch-plan.json, .olympus-context.json, .olympus-hop-state.json, .olympus-hop-telemetry.jsonl, project.md, _handoff.md, or _delegations — they are the walk\'s own machinery. Cleaning the deliverable is the RUNTIME\'s job after the campaign completes, never a god\'s mid-hop.');
+  // THE ARSENAL DIRECTIVE (the parallelism-of-parallelism night): the god
+  // KNOWS its demigod roster and dispatches sub-tasks BY FIT via
+  // olympus-dispatch — the native task system spawns each demigod as the
+  // god's in-process subagent. The god verifies their artifacts; the hop
+  // owns the outcome. Apollo plans; the walker walks; GODS ORCHESTRATE
+  // their demigods — the nested command structure the doctrine claimed,
+  // now in the hop contract itself.
+  const arsenal = composeArsenalDirective(hop.god, resolveHopRepoRoot());
+  if (arsenal) {
+    lines.push('', arsenal);
+  }
   return lines.join('\n');
 }
 

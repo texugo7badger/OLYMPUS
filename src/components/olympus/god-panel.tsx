@@ -100,6 +100,9 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   // state, timer, and tokens. Clicking a task opens the TASK SHEET (the
   // drill-down: thinking, files, tokens — the "what did he do" answer).
   const [tasks, setTasks] = useState<Record<string, TaskRecord[]>>({});
+  // The god's LIVE demigod dispatches (the arsenal in action — the
+  // parallelism-of-parallelism surface: god → demigod chips).
+  const [demigods, setDemigods] = useState<Record<string, { id: string; ts: string }[]>>({});
   const [sheetHop, setSheetHop] = useState<string | null>(null);
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -115,6 +118,10 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           (byGod[t.god] ||= []).push(t);
         }
         setTasks(byGod);
+        setDemigods(d?.gods
+          ? Object.fromEntries(Object.entries(d.gods as Record<string, { demigods?: { id: string; ts: string }[] }>)
+              .map(([g, v]) => [g, v.demigods || []]))
+          : {});
       } catch { /* decorative — the panel works without tasks */ }
     };
     load();
@@ -235,6 +242,22 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                   })}
                   {tasks[s.god].length > 5 && (
                     <div className="text-[8px] font-mono text-[#5A5A5A] px-1">+{tasks[s.god].length - 5} more</div>
+                  )}
+                  {(demigods[s.god] || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(demigods[s.god] || []).slice(0, 4).map(d => (
+                        <span
+                          key={d.id}
+                          title={`${d.id} — dispatched by ${s.god} (${new Date(d.ts).toLocaleTimeString('en-US', { hour12: false })})`}
+                          className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 animate-pulse truncate max-w-28"
+                        >
+                          ↳ {d.id}
+                        </span>
+                      ))}
+                      {(demigods[s.god] || []).length > 4 && (
+                        <span className="text-[8px] font-mono text-olympus-purple/60">+{(demigods[s.god] || []).length - 4}</span>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
