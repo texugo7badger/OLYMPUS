@@ -1000,14 +1000,8 @@
     }
   },
   "plugin": [
-    "./.opencode/plugins",
-    "./.opencode/plugins/superpowers.js",
     "./.opencode/olympus",
-    "./.opencode/plugins/olympus-router",
-    "./.opencode/plugins/olympus-go-cache",
-    "./.opencode/plugins/olympus-skill-registry",
-    "./.opencode/plugins/opencode-context-cache.mjs",
-    "./.opencode/plugins/olympus-dynamic-context"
+    "./.opencode/plugins/apollo-reasoning.mjs"
   ],
   "compaction": {},
   "experimental": {
@@ -1156,8 +1150,5 @@
         }
       }
     }
-  },
-  "plugin": [
-    "./.opencode/olympus"
-  ]
+  }
 }

@@ -39,6 +39,16 @@
  *                     static pass over the source .tsx/.jsx: every opening
  *                     tag's prop names must be unique; handlers (on*) are
  *                     the named class. Strings/braces/spreads respected.
+ *   9 visual-assets   (v0.0.5 UAT-ATELIER) every image under public/ or
+ *                     assets/ that the route imports actually EXISTS and
+ *                     renders — the visual ask: a generated project carries
+ *                     its visual assets, referenced and rendering.
+ *                     on one JSX element — the silent-override class that
+ *                     type-checks, builds, and renders 200 while the input
+ *                     misbehaves (BENCH P-F: the duplicated onChange). A
+ *                     static pass over the source .tsx/.jsx: every opening
+ *                     tag's prop names must be unique; handlers (on*) are
+ *                     the named class. Strings/braces/spreads respected.
  *
  * Exit codes: 0 all-pass; 1 any fail; 2 usage error. The structured report
  * (project-named, per-check status + detail) always prints.
@@ -244,6 +254,38 @@ const dupFindings = [];
 })(PROJECT);
 add('8', 'dup-handlers', dupFindings.length === 0 ? 'pass' : 'fail',
   dupFindings.length === 0 ? 'no duplicated props on any JSX element (D28 covered — a silent-override handler never ships)' : `DUPLICATED PROPS on one element (D28, #96: JSX keeps the LAST prop silently — the form renders 200 and misbehaves; the input element + props are NAMED below):\n  ${dupFindings.join('\n  ')}`);
+
+// ── (9) visual assets — referenced images exist and render (#157 UAT-ATELIER) ─
+// The v0.0.5 visual ask: a generated project CARRIES its visual assets. A
+// static pass over the source: every src="/..." or src='/...' image ref
+// under app/ components/ must resolve to a real file (public/, assets/, or
+// a route). A missing hero image is a broken visual ship the old 8 checks
+// could not see.
+const missingAssets = [];
+(function scanVisual(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (['node_modules', '.git', '.next', 'out', 'dist', 'build', '.turbo', '_next'].includes(entry.name)) continue;
+    const p = join(dir, entry.name);
+    const st = lstatSync(p);
+    if (st.isDirectory()) scanVisual(p);
+    else if (/\.tsx?$/.test(entry.name)) {
+      const src = readFileSync(p, 'utf-8');
+      for (const m of src.matchAll(/src=[\"']([^\\"']+)[\"']/g)) {
+        const ref = m[1];
+        if (!ref.startsWith('/')) continue;            // only root-relative refs
+        if (ref.startsWith('/api/') || ref.startsWith('/_')) continue; // routes, not files
+        const rel = ref.split('?')[0].split('#')[0];
+        const asFile = join(PROJECT, 'public', rel);
+        const asAsset = join(PROJECT, rel.slice(1));
+        if (!existsSync(asFile) && !existsSync(asAsset)) {
+          missingAssets.push(`${relative(PROJECT, p)} references ${rel} — NO such file (public/ or root)`);
+        }
+      }
+    }
+  }
+})(PROJECT);
+add('9', 'visual-assets', missingAssets.length === 0 ? 'pass' : 'fail',
+  missingAssets.length === 0 ? 'every referenced visual asset exists (the project ships its visuals)' : `MISSING VISUAL ASSETS (the visual ship is broken — referenced images that do not exist):\n  ${missingAssets.slice(0, 12).join('\n  ')}`);
 
 // ── Report ───────────────────────────────────────────────────────────────────
 const fails = results.filter(r => r.status === 'fail');

@@ -200,7 +200,7 @@ interface OlympusStore {
   clearCompact: () => void;
   leftPane:
     | 'brain' | 'god-intelligence' | 'cost' | 'timeline' | 'provider-settings'
-    | 'god-detail' | 'live-preview' | 'mcp-config' | 'benchmarks';
+    | 'god-detail' | 'live-preview' | 'mcp-config' | 'benchmarks' | 'atelier';
   setLeftPane: (p: OlympusStore['leftPane']) => void;
   /**
    * rightTab now includes 'ide' (Monaco editor + file explorer + terminal)

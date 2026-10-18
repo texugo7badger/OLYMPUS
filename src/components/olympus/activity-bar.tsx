@@ -5,11 +5,7 @@
 'use client';
 
 import { useOlympus, GOD_ICONS, GOD_IDS } from '@/lib/olympus-store';
-import {
-  Brain, Settings, BrainCog,
-  DollarSign, History, SlidersHorizontal,
-  Eye, Plug, BarChart3,
-} from 'lucide-react';
+import { BarChart3, Brain, BrainCog, DollarSign, Eye, History, Palette, Plug, Settings, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
@@ -53,6 +49,7 @@ export default function ActivityBar() {
       <ActBtn icon={History} label="Recent activity" active={leftPane === 'timeline'} onClick={() => setLeftPane('timeline')} />
       <ActBtn icon={DollarSign} label="Cost" active={leftPane === 'cost'} onClick={() => setLeftPane('cost')} />
       <ActBtn icon={BarChart3} label="Benchmarks" active={leftPane === 'benchmarks'} onClick={() => setLeftPane('benchmarks')} />
+      <ActBtn icon={Palette} label="Atelier" active={leftPane === 'atelier'} onClick={() => setLeftPane('atelier')} accent />
       <ActBtn icon={SlidersHorizontal} label="LLM strategy" active={leftPane === 'provider-settings'} onClick={() => setLeftPane('provider-settings')} />
 
       <div className="my-1 w-6 h-px bg-linear-to-r from-transparent via-olympus-gold/25 to-transparent" />

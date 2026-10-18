@@ -2,6 +2,22 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.5] — 2026-10-18
+
+**"ATELIER OF HEPHAESTUS"** — the art module is born. OLYMPUS understands images, generates them for free, and keeps every asset as searchable vault memory. Plus: THE OPENCODE V1→V2 REPLACEMENT IS COMPLETE.
+
+### The v1→v2 replacement COMPLETE (the user's directive)
+- **MAP-EVENT-V2** (#146): the live terminal feed translates the v2 event vocabulary (`session.step.started/reasoning.delta/text.delta/tool.called/step.ended`) into the v1 wire shapes — ONE downstream path for both protocols, so the liveness stamping, the god cards, the terminal feed, and THE STEP-FINISH COST CAPTURE all work on the v2 runtime. E2E proof through the full app stack: `step_start → tool_use → text → step_finish → action_done`.
+- The stale v0.0.4 wave issues closed with commit evidence (12 issues); #141/#143 closed by the activation.
+
+### The Atelier (the v0.0.5 core)
+- **The Media Vault** (#149): drop ANY image from ANY AI — it lands in `10_Media_Vault/` with a frontmatter entry; **Argos** (the VLM cascade: Gemma 4 31B → 26B → dots-3-note, all `:free` on the OpenRouter key, NO Nemotron) describes + tags + names the dominant colors + suggests the use — probe-verified end-to-end ("vibrant, solid red… minimalist" + 8 tags).
+- **Pygmalion** (#151, the free lane): text-to-image via Pollinations — probe-verified (24KB image in 7.3s, $0). The BYOK price ladder (SDXL-turbo drafts → FLUX → Nano Banana finals) is the strategy layer; the free lane carries today.
+- **The Atelier tab** (#152): the gallery grid, drag-and-drop from anywhere, the forge box, the vault search, and the asset sheet (description, tags, color swatches, suggested use) — Olympus-styled.
+- **Hephaestus** (#147): the forge god — an 11th agent + the Argos/Pygmalion demigod prompts under `demigods/hephaestus/`.
+- **VISUAL-STRATEGY** (#148): the vision cascade + the generation price ladder as canonical strategy data.
+- **The exit gate grows check 9** (#157): every referenced visual asset in a generated project must EXIST and render — the visual ship is structural now.
+
 ## [v0.0.4] — 2026-10-18
 
 **"Mission Control"** — the total-visibility release. The v0.0.3 bar was "it runs from the first prompt"; the v0.0.4 bar is **you SEE everything, live**: every task timed, every file clickable, every agent's own thinking, Atlas orchestrating on screen, Callimachus's lane unblocked, honest sub-agent counts, per-god light streams in the brain.

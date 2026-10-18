@@ -636,6 +636,12 @@ const GO_CONFIG_SHAPE = {
     './.opencode/plugins',
     './.opencode/plugins/superpowers.js',
     './.opencode/olympus',
+    // #PLANNER-1-GO (the battery catch, 2026-10-18): the reasoning_effort
+    // fix must survive a GO apply — the chat.params plugin is the ONLY wire
+    // path on every openai-compatible lane, GO included. The GO preset
+    // stripped it, so the planner's 20.6-min at-cap specimen could return
+    // on the paid lanes. NEVER strip the planner fix on any preset.
+    './.opencode/plugins/apollo-reasoning.mjs',
     './.opencode/plugins/olympus-router',
     './.opencode/plugins/olympus-go-cache',
     './.opencode/plugins/olympus-skill-registry',

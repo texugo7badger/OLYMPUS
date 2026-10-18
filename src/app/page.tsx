@@ -454,6 +454,7 @@ export default function OlympusWorkspace() {
                 {leftPane === 'live-preview' && <ChunkErrorBoundary><LivePreview /></ChunkErrorBoundary>}
                 {leftPane === 'god-intelligence' && <ChunkErrorBoundary><GodIntelligenceDashboard health={health} /></ChunkErrorBoundary>}
                 {leftPane === 'cost' && <ChunkErrorBoundary><CostDashboard /></ChunkErrorBoundary>}
+                {leftPane === 'atelier' && <ChunkErrorBoundary><AtelierPanel /></ChunkErrorBoundary>}
                 {leftPane === 'benchmarks' && <ChunkErrorBoundary><BenchmarksPanel /></ChunkErrorBoundary>}
                 {leftPane === 'timeline' && <ChunkErrorBoundary><ActivityTimeline /></ChunkErrorBoundary>}
                 {leftPane === 'god-detail' && <ChunkErrorBoundary><GodDetail /></ChunkErrorBoundary>}
@@ -537,3 +538,4 @@ export default function OlympusWorkspace() {
     </ChunkErrorBoundary>
   );
 }
+const AtelierPanel = dynamic(() => import('@/components/olympus/atelier-panel'), { ssr: false, loading: () => null });

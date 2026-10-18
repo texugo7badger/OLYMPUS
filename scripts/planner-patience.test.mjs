@@ -53,9 +53,9 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
   check('opencode.json: agent.apollo carries reasoning_effort: "low" (belt — a future opencode that honors agent config gets it pre-wired)',
     apollo.reasoning_effort === 'low',
     `reasoning_effort=${JSON.stringify(apollo.reasoning_effort)} — a planning turn on a reasoner without it starves the 16384 mouth (the 20-min/67K-chars/output=0 specimen)`);
-  check('opencode.json: apollo still rides the rotated GLM lane (the planner stays sacred)',
-    apollo.model === 'nvidia-glm/z-ai/glm-5.3',
-    `apollo model=${apollo.model}`);
+  check('opencode.json: apollo still rides a GLM reasoner (the planner stays sacred — the lane rotates, the GLM family does not)',
+    /glm-5\.3/.test(String(apollo.model || '')),
+    `apollo model=${apollo.model} — the planner must ride the GLM family on every strategy`);
   check('opencode.json: ONLY apollo carries the low effort (the other gods keep full reasoning)',
     Object.entries(cfg.agent || {})
       .filter(([id, a]) => id !== 'apollo' && a && typeof a === 'object' && a.reasoning_effort === 'low')
