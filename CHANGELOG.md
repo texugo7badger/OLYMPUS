@@ -18,6 +18,14 @@ All notable changes to OLYMPUS are documented in this file.
 - **VISUAL-STRATEGY** (#148): the vision cascade + the generation price ladder as canonical strategy data.
 - **The exit gate grows check 9** (#157): every referenced visual asset in a generated project must EXIST and render — the visual ship is structural now.
 
+**The Atelier's tools (the second build arc, same release):**
+- **The semantic search** (#150): sqlite-vec v0.1.9 pinned + loaded into better-sqlite3 (the KNN probe: perfect neighbors), the vec0 table behind media-vault-vec — the ONLY door. The embedding source: Pollinations /v1/embeddings (text-embedding-3-small, key-gated BYOK at ~/.olympus/atelier.json — a free enter.pollinations.ai key); without the key the honest keyword pass answers (the route reports its mode).
+- **The Forge canvas** (#153): the embedded Excalidraw (0.18.1, MIT) — full-screen dark canvas from the asset sheet; save exports the scene as a PNG back into the vault. Heavy compositing deep-links out (by design).
+- **The deeplinks** (#154): PATH detection (ArtCraft/Godot/Krita/Blender/ComfyUI) + the asset-sheet artcraft button + the WEB FALLBACK for ArtCraft (the honest Linux lane — probe-verified: app.getartcraft.com until desktop binaries ship). GPL tools stay separate processes, never embedded.
+- **The pipeline MCP** (#155): the Coding-Solo godot MCP (MIT verified) registered — disabled-by-default (honest: probes Godot at spawn).
+- **The skill pack** (#156): art-vlm + art-generate + ffmpeg-asset + asset-inject — the pipeline contract (root-relative refs so check 9 passes; NO Nemotron; honest lane/cost naming).
+- **The battery catch** (a real bug): the GO plugin preset STRIPPED apollo-reasoning.mjs — the PLANNER-1 fix was gone on the paid lanes. Restored; the test now asserts the GLM family on any lane.
+
 ## [v0.0.4] — 2026-10-18
 
 **"Mission Control"** — the total-visibility release. The v0.0.3 bar was "it runs from the first prompt"; the v0.0.4 bar is **you SEE everything, live**: every task timed, every file clickable, every agent's own thinking, Atlas orchestrating on screen, Callimachus's lane unblocked, honest sub-agent counts, per-god light streams in the brain.
