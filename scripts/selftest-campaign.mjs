@@ -33,7 +33,11 @@ const SLUG = arg('slug', 'lumina-crm');
 const PORT = Number(arg('port', '3737'));
 // --resume: continue an existing campaign (skip the clean; the hop-state
 // carries the progress). Without it: the directive — delete + from zero.
+// --no-clean (v0.0.4 #144 containment): the RUNNER pre-creates + pins the
+// lane (the project note the intent matcher routes via) — the clean would
+// DELETE the pin before the post. The pointer reset still runs.
 const RESUME = args.includes('--resume');
+const NO_CLEAN = args.includes('--no-clean');
 const VAULT = join(homedir(), 'OLYMPUS-VAULT');
 const LANE = join(VAULT, '02_Projects', SLUG);
 const ACTIVE = join(homedir(), '.olympus', 'active-project.json');
@@ -173,6 +177,9 @@ function verify() {
 try {
   if (RESUME) {
     log(`resume: keeping ${LANE} (the hop-state carries the campaign)`);
+  } else if (NO_CLEAN) {
+    writeFileSync(ACTIVE, '{}');
+    log(`clean skipped (--no-clean — the runner pinned the lane; pointer reset only): ${LANE}`);
   } else {
     rmSync(LANE, { recursive: true, force: true });
     writeFileSync(ACTIVE, '{}');

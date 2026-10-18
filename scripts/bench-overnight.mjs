@@ -157,7 +157,7 @@ async function runCampaign(c) {
   const promptFile = pinCampaignLane(c);
   log(`campaign ${c.label}: START (budget ${BUDGET_MIN}min · lane pinned)`);
   const started = Date.now();
-  const child = spawn('node', [DRIVER, '--slug', c.slug, '--port', String(PORT), '--prompt-file', promptFile], {
+  const child = spawn('node', [DRIVER, '--slug', c.slug, '--port', String(PORT), '--prompt-file', promptFile, '--no-clean'], {
     cwd: ROOT,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
