@@ -2,6 +2,28 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.4] — 2026-10-18
+
+**"Mission Control"** — the total-visibility release. The v0.0.3 bar was "it runs from the first prompt"; the v0.0.4 bar is **you SEE everything, live**: every task timed, every file clickable, every agent's own thinking, Atlas orchestrating on screen, Callimachus's lane unblocked, honest sub-agent counts, per-god light streams in the brain.
+
+### The task sheet (W1)
+- **The walker captures the child's OWN thinking** — the reasoning parts ride the `--format json` stream the walker already holds; every hop's telemetry row grows `reasoning` + `sessionId` (16KB cap; pre-0.0.4 rows degrade honestly).
+- **`/api/olympus/tasks`** — the join layer: the dispatch-plan DAG × hop-state × hop-telemetry × the live feed's per-hop FILES. Per-god rollups, the active-lane resolver.
+- **The TaskSheetModal** — click any task (a Parthenon row or a Recent Activity hop row): the agent's thinking above its writes, the files it touched (each chip OPENS in the user's editor via the Editor Bridge), tokens in/out, duration, retries, the directive, the artifacts, the verify contract, the parked reason.
+- **The Parthenon god cards carry the god's task list** — status dot, the live second-ticking timer on running hops, tokens out. The chat's write/edit paths are clickable; read calls render a file chip.
+
+### The visible orchestra (W2)
+- **#142 — Callimachus's lane unblocked (the "Callimachus is dead" root cause):** `rootAgent` started NULL and only resolved from wire-agent fields opencode 1.18 often omits — the heartbeat lane died in silence (ZERO heartbeats in the bus despite ROOT_SESSION=1). The ROOT session now defaults to APOLLO by doctrine (`OLYMPUS_ROOT_AGENT` overrides) — the idle heartbeat fires, the 7-stage curation entry lives.
+- **The Symphony bus joins Recent Activity** — dispatch outcomes + heartbeat transitions were invisible to every panel (their work rides the bus; the feed never carried it).
+- **Atlas THE VISIBLE ORCHESTRATOR** — every hop transition lights his card ("walking: athena · worldmap"; PARKED = red). Apollo plans; Atlas walks; the Parthenon shows the division of labor.
+- **Honest sub-agents on Cost** — hop children ARE sub-agent work; the column counts them live (the "0/N while campaigns ran" lie dies).
+
+### The polish (W0+W3)
+- The **working-gods strip**: the static "active god: Apollo" dies; the StatusBar shows every working god's ICON, side by side, blinking, no names — one shared `useWorkingGods` hook feeds the strip, the Parthenon, and the brain.
+- **Per-god brain lights** — each working god's inter-neuron signals carry ITS OWN HUE (the signal palette): two gods working read as two distinct light streams.
+- The **chat scroll hole** cured (overscroll-contain + the overflow chain); the **screen-collapse gap** cured (minSize 0 in focus mode — the chat expands FULL-WIDTH); the **TASKS counter** replaces the dead "Delegations 0" (hops ARE the delegations).
+- **The opencode v2 assessment** (#141): the V2 HTTP API audit maps OLYMPUS-first surfaces — `session.diff` (per-task files as server truth), `session.message.list` (first-class thinking), `/api/info` (the dual-protocol probe). The adapter lane is filed; v2 is dev-branch (not on npm) — v0.0.4 ships on 1.18.10 with the join layers already shaped for the upgrade.
+
 ## [v0.0.3] — 2026-10-13 (final cut 2026-10-17: the tag rides the release-hygiene pass — every improvement below is IN the release)
 
 The fix-OLYMPUS-itself release. Two campaigns + five UAT rounds + the Design Intelligence evolution — the machine that couldn't deliver a project now delivers one, critiques it, and self-corrects.

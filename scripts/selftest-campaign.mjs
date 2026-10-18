@@ -42,9 +42,15 @@ const ORIGIN = `http://localhost:${PORT}`;
 const ROOT = process.cwd();
 const DEV_LOG = join('/tmp', 'opencode', 'selftest-next-dev.log');
 
-const ORIGINAL_PROMPT = readFileSync(join(ROOT, 'reports', 'plano-master-1', 's0', 'vault-lumina', '_handoff.md'), 'utf-8')
-  .match(/## 👤 User's Request\s*\n\s*\n> ([^\n]+)/)?.[1]
-  ?? 'Construa o "Lumina CRM" — um mock premium de SaaS com identidade dark.';
+// v0.0.4 BENCH: --prompt-file drives a NEW project campaign (the user's
+// "make OLYMPUS build some other project" directive) — without it the
+// original Lumina prompt stays the default.
+const PROMPT_FILE = arg('prompt-file', null);
+const ORIGINAL_PROMPT = PROMPT_FILE
+  ? readFileSync(PROMPT_FILE, 'utf-8').trim()
+  : (readFileSync(join(ROOT, 'reports', 'plano-master-1', 's0', 'vault-lumina', '_handoff.md'), 'utf-8')
+      .match(/## 👤 User's Request\s*\n\s*\n> ([^\n]+)/)?.[1]
+      ?? 'Construa o "Lumina CRM" — um mock premium de SaaS com identidade dark.');
 
 const log = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`, ...a);
 
@@ -129,8 +135,17 @@ async function consumeStream(res, conversationId, opts = {}) {
 
 // ── VERIFICATION ────────────────────────────────────────────────────────────
 function verify() {
-  const statePath = join(LANE, '.olympus-hop-state.json');
-  const planPath = join(LANE, 'dispatch-plan.json');
+  // v0.0.4 BENCH: the intake may have derived its OWN project name from
+  // the prompt — the active pointer carries the REAL lane; fall back to
+  // the --slug hint.
+  let lane = LANE;
+  try {
+    const active = JSON.parse(readFileSync(ACTIVE, 'utf-8'));
+    if (active?.lane && existsSync(join(active.lane, 'dispatch-plan.json'))) lane = active.lane;
+  } catch { /* keep the hint */ }
+  log(`verify lane: ${lane}`);
+  const statePath = join(lane, '.olympus-hop-state.json');
+  const planPath = join(lane, 'dispatch-plan.json');
   const problems = [];
   if (!existsSync(planPath)) problems.push('dispatch-plan.json missing — the planner never delivered');
   if (!existsSync(statePath)) {
@@ -143,9 +158,9 @@ function verify() {
     if (state.parked) problems.push(`walk parked at '${state.parked.hopId}' (${state.parked.reason}) — campaign incomplete`);
     if (state.completed.length < total) problems.push(`walk incomplete: ${state.completed.length}/${total}`);
   }
-  if (existsSync(join(LANE, 'package.json'))) {
+  if (existsSync(join(lane, 'package.json'))) {
     log('running npm run build in the lane…');
-    const build = spawnSync('npm', ['run', 'build'], { cwd: LANE, encoding: 'utf-8', timeout: 15 * 60_000 });
+    const build = spawnSync('npm', ['run', 'build'], { cwd: lane, encoding: 'utf-8', timeout: 15 * 60_000 });
     log(`build exit=${build.status}`);
     if (build.status !== 0) problems.push(`npm run build FAILED (exit ${build.status}): ${String(build.stderr || build.stdout || '').slice(-400)}`);
   } else {

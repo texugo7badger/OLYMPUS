@@ -302,3 +302,30 @@
 - **Probe evidence:** `GET /api/olympus/episodes` on the production build →
   `total: 400, liveCount: 400, vaultCount: 0`, the ORBITAL session's milestones and tool
   calls verbatim, high impact 9, delegations 2; `✓ Compiled successfully`; tsc 0 + eslint 0.
+
+## The V0.0.4 reconciliation (2026-10-18 the Mission Control night)
+
+- **The waves, per the approved plan (`planejamento-v0.0.4.md`):** W0 (the quick wins — version
+  stamp, the working-gods strip, the chat scroll cure, the collapse-gap cure, the TASKS counter),
+  W1 (the task sheet: thinking capture in the walker, /api/olympus/tasks, the TaskSheetModal,
+  the Parthenon task lists with live timers, the timeline click-through, the clickable file chips
+  in the chat), W2 (#142 the Callimachus lane cure + the bus joining the panels + Atlas the
+  visible orchestrator + honest sub-agents on Cost), W3-A (per-god colored brain signals).
+  Issues #131-#137 + #139 registered at wave start; #142 filed + CURED the same night.
+- **#142 (the root cause behind "Callimachus seems dead"):** the root lane's rootAgent started
+  NULL and resolved only from wire-agent fields opencode 1.18 often omits — ZERO heartbeats ever
+  reached the bus despite ROOT_SESSION=1 being wired since HIGIENIA. The ROOT session now
+  defaults to APOLLO by doctrine (OLYMPUS_ROOT_AGENT overrides); telemetry-pulse 24/24.
+- **The build-environment finding (honest disclosure):** the local `next build` dies
+  deterministically at the internal /_global-error prerender (TypeError: useContext of null) —
+  on the EXACT tree CI builds green (6902534: CI green at 22:13, local red; npm ci + .next nuke
+  + Node 22.23.1 identical + load-independent). The failure is tree-INDEPENDENT locally and
+  CI-PASSING on 6978507 — a local-environment quirk to isolate another night; CI (the release's
+  own gate) is the build arbiter. Register: the local box differs from the runner in home-dir
+  state the prerender may touch (.opencode/package.json etc.) — candidate probes noted.
+- **Machine at the waves' close:** battery 31/0/1 + tsc 0 + eslint 0 on every touched file +
+  telemetry-pulse 24/24 + CI Eval Harness GREEN on 6978507 (the build + the typecheck + the
+  packaging gate on the runner).
+- **BENCH-2 opens:** the selftest driver grows --prompt-file (new-project campaigns; the
+  verify step resolves the REAL lane from the active pointer) — the AURORA FOCUS prompt
+  (reports/bench-2/) is the first new-project campaign.
