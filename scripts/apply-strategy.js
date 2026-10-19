@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// v0.0.6 CI-proof: the three.js peer pin (0.183.0 — model-viewer's
+// contract) landed at d6064ce; this touch rides the eval's path filter
+// so the pinned tree gets its full harness run.
 /**
  * Olympus Strategy Applier v2 — Config-Aware Edition
  *
