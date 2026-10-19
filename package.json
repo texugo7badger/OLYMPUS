@@ -83,7 +83,7 @@
     "isomorphic-git": "latest",
     "node-pty": "latest",
     "sqlite-vec": "^0.1.9",
-    "three": "^0.186.1",
+    "three": "^0.183.0",
     "ws": "latest",
     "yaml": "latest",
     "zod": "latest",
