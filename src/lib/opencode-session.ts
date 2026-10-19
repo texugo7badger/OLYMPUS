@@ -423,23 +423,36 @@ function sleep(ms: number) {
  * was posted) — the server may have crashed.
  */
 export function invalidateServer() {
-  // #STRATEGY-RESPECT (the user's specimen, 2026-10-19): the old
-  // invalidateServer only dropped the CACHED HANDLE — the actual serve
-  // PROCESS kept running with the OLD strategy's models loaded at boot,
-  // and the next ensureServer() DISCOVERED + re-attached to it, so every
-  // session kept riding the previous strategy's lanes after a switch
-  // (the "marked free but kept riding GO" class). A strategy switch now
-  // KILLS the warm serve (the config is loaded at spawn): our own child
-  // gets SIGTERM; a foreign adopted serve gets the stale-kill path. The
-  // pidfile dies with it — the next prompt cold-starts (~5s) against the
-  // fresh opencode.json. THE STRATEGY RESPECTS THE CONFIG.
+  // The ORIGINAL semantics — RESTORED (the fixture catch): drop the cached
+  // handle ONLY. This is the #61 transport-retry contract: after a
+  // pre-spawn failure the next ensureServer() re-adopts the warm serve
+  // THROUGH THE PIDFILE (password + all) — killing it here would break the
+  // re-adopt path the retry machinery depends on. The strategy-switch KILL
+  // lives in killWarmServerForStrategy() below.
+  serverPromise = null;
+  serverChild = null;
+}
+
+/**
+ * #STRATEGY-RESPECT (the user's specimen, 2026-10-19): the strategy-switch
+ * kill. invalidateServer() only dropped the cached handle — the serve
+ * PROCESS kept running with the OLD strategy's models loaded at boot, and
+ * the next ensureServer() DISCOVERED + re-attached to it, so every session
+ * kept riding the previous strategy's lanes after a switch (the "marked
+ * free but kept riding GO" class). The switch now KILLS the warm serve
+ * (the config is loaded at spawn): our own child gets SIGTERM; an adopted
+ * foreign serve gets the guarded stale-kill (alive + opencode + not us —
+ * the fixture specimen: a pidfile carrying process.pid must never die by
+ * this hand). The pidfile dies with it — the next prompt cold-starts
+ * (~5s) against the fresh opencode.json. THE STRATEGY RESPECTS THE CONFIG.
+ */
+export function killWarmServerForStrategy(): void {
   if (serverChild && serverChild.exitCode === null && serverChild.signalCode === null) {
     try { serverChild.kill('SIGTERM'); } catch { /* already dying */ }
     console.log('[opencode-session] strategy switch — warm serve SIGTERM (the next prompt cold-starts on the fresh config)');
   } else {
-    // An adopted (foreign) warm serve: the pidfile names it — reap it.
     const pidFile = readPidFile();
-    if (pidFile && isProcessAlive(pidFile.pid)) {
+    if (pidFile && pidFile.pid !== process.pid && isProcessAlive(pidFile.pid) && isOpencodeProcess(pidFile.pid)) {
       try { process.kill(pidFile.pid, 'SIGTERM'); } catch { /* already dying */ }
       console.log(`[opencode-session] strategy switch — adopted serve ${pidFile.pid} SIGTERM`);
     }

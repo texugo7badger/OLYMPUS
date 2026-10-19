@@ -17,7 +17,7 @@ import { execSync } from 'child_process';
 // kills `opencode serve` (it keeps its startup config in memory), so the
 // Next.js-side serverPromise must be dropped or the next message posts to a
 // dead server.
-import { invalidateServer } from '@/lib/opencode-session';
+import { killWarmServerForStrategy } from '@/lib/opencode-session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -114,10 +114,11 @@ export async function POST(req: NextRequest) {
         timeout: 30000,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
-      // apply-strategy.js killed the warm server (its config is loaded at
-      // startup) — drop the cached handle so the next message cold-starts
-      // against the fresh opencode.json.
-      invalidateServer();
+      // #STRATEGY-RESPECT: the warm serve KEEPS its boot config until it
+      // dies — a switch must KILL it (our child or the guarded adopted
+      // pid), or every session keeps riding the previous strategy's lanes
+      // (the 'marked free but kept riding GO' specimen).
+      killWarmServerForStrategy();
     } catch (err: any) {
       return NextResponse.json(
         {

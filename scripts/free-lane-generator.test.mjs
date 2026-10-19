@@ -61,7 +61,6 @@ const STUB_CATALOGUE = {
   nvidia: [
     'nvidia/z-ai/glm-5.3',
     'nvidia/google/gemma-4-31b-it',
-    'nvidia/stepfun-ai/step-5-preview',
     'nvidia/meta/muse-glimmer-30b',
     'nvidia/openai/gpt-oss-20b',
   ],
@@ -178,7 +177,6 @@ function makeHome() {
       all: [
         { id: 'nvidia/z-ai/glm-5.3', rawId: 'z-ai/glm-5.3', context: 1000000, score: 99 },
         { id: 'nvidia/google/gemma-4-31b-it', rawId: 'google/gemma-4-31b-it', context: 262144, score: 98 },
-        { id: 'nvidia/stepfun-ai/step-5-preview', rawId: 'stepfun-ai/step-5-preview', context: 1000000, score: 97 },
         { id: 'nvidia/meta/muse-glimmer-30b', rawId: 'meta/muse-glimmer-30b', context: 131072, score: 96 },
         { id: 'nvidia/openai/gpt-oss-20b', rawId: 'openai/gpt-oss-20b', context: 131072, score: 95 },
       ],
@@ -247,8 +245,8 @@ mkdirSync(WORK, { recursive: true });
     // lane (the doctrine revision — see scripts/free-pantheon.test.mjs).
     const PINNED = {
       apollo: 'nvidia-glm/z-ai/glm-5.3', atlas: 'nvidia-google/google/gemma-4-31b-it',
-      artemis: 'nvidia-meta/meta/muse-glimmer-30b', athena: 'nvidia-step/stepfun-ai/step-5-preview',
-      dionysus: 'nvidia-glm/z-ai/glm-5.3', hephaestus: 'nvidia-step/stepfun-ai/step-5-preview',
+      artemis: 'nvidia-meta/meta/muse-glimmer-30b', athena: 'nvidia-openai/openai/gpt-oss-20b',
+      dionysus: 'nvidia-glm/z-ai/glm-5.3', hephaestus: 'nvidia-openai/openai/gpt-oss-20b',
       hermes: 'nvidia-meta/meta/muse-glimmer-30b', persephone: 'nvidia-glm/z-ai/glm-5.3',
       prometheus: 'nvidia-openai/openai/gpt-oss-20b', callimachus: 'nvidia-google/google/gemma-4-31b-it',
     };
@@ -260,7 +258,9 @@ mkdirSync(WORK, { recursive: true });
       'the refresh overrode the pin — the concentration defect is back');
     // #106 THE PROVIDER SPLIT: the family entries exist in the generated
     // config, each carrying ONLY its family's models + the NVIDIA base URL.
-    const famOk = ['nvidia-glm', 'nvidia-google', 'nvidia-step', 'nvidia-meta', 'nvidia-openai'].every(f =>
+    // #129 (2026-10-19): FOUR live families — nvidia-step retired with its
+    // dead anchor. A stale nvidia-step block is tolerated (never required).
+    const famOk = ['nvidia-glm', 'nvidia-google', 'nvidia-meta', 'nvidia-openai'].every(f =>
       cfg.provider?.[f]?.npm === '@ai-sdk/openai-compatible' &&
       cfg.provider?.[f]?.options?.baseURL === 'https://integrate.api.nvidia.com/v1' &&
       Object.keys(cfg.provider[f].models).length > 0);

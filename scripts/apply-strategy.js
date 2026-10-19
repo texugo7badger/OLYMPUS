@@ -391,7 +391,6 @@ const FREE_MODEL_LIMITS = {
   // per family), each lane chat-probed live the same night.
   'nvidia-glm/z-ai/glm-5.3': { context: 1000000, output: 32768 },
   'nvidia-google/google/gemma-4-31b-it': { context: 262144, output: 16384 },
-  'nvidia-step/stepfun-ai/step-5-preview': { context: 1000000, output: 32768 },
   'nvidia-meta/meta/muse-glimmer-30b': { context: 131072, output: 16384 },
   'nvidia-openai/openai/gpt-oss-20b': { context: 131072, output: 16384 },
 };
@@ -439,19 +438,11 @@ export const NVIDIA_FAMILY_PROVIDERS = {
       },
     },
   },
-  'nvidia-step': {
-    name: 'NVIDIA Build — Step family lane (long-context code)',
-    npm: '@ai-sdk/openai-compatible',
-    options: { baseURL: 'https://integrate.api.nvidia.com/v1' },
-    models: {
-      'stepfun-ai/step-5-preview': {
-        name: 'Step 5 Preview (1M-context coder — the frontend+build lane)',
-        limit: { context: 1000000, output: 32768 },
-        reasoning: true,
-        tool_call: true,
-      },
-    },
-  },
+  // #129 (2026-10-19): the nvidia-step family RETIRED — its anchor
+  // (stepfun-ai/step-5-preview) died from the NVIDIA catalogue, and a dead
+  // lane in a provider block hard-fails the L4 lane-sight on EVERY apply
+  // (the G1 specimen). The gods that rode it (athena + hephaestus) rotated
+  // onto nvidia-openai/openai/gpt-oss-20b.
   'nvidia-meta': {
     name: 'NVIDIA Build — Meta family lane (the alternate fast)',
     npm: '@ai-sdk/openai-compatible',
