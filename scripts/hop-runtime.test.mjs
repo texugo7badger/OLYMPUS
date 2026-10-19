@@ -704,3 +704,15 @@ main().then(() => {
   console.log('\nAll #109 hop-runtime assertions passed');
   process.exit(0);
 }).catch((e) => { console.error('FIXTURE CRASH:', e); process.exit(1); });
+
+// ─── #164 RAG-AGENTIC (v0.0.6): the retrieval block rides the async twin ──
+{
+  const { composeHopPromptWithRag, composeHopPrompt: syncCompose } = await import(OLYMPUS + '/src/lib/hop-runtime/walker.ts');
+  const hop = { id: 'rag-probe', god: 'hephaestus', prompt: 'Build the hero section.', artifacts: [], after: [] };
+  const noRag = await composeHopPromptWithRag(hop, '/tmp/fake-lane', undefined);
+  expect('RAG: no query -> the plain hop prompt (the sync contract intact)',
+    noRag === syncCompose(hop, '/tmp/fake-lane'), 'the twin must equal the sync form without a query');
+  const withRag = await composeHopPromptWithRag(hop, '/tmp/fake-lane', 'zzz-no-match-xyz');
+  expect('RAG: no-hit query -> the plain hop prompt (never padded)',
+    withRag === noRag, 'a no-hit retrieval must not add a block');
+}

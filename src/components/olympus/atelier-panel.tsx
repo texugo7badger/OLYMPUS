@@ -9,8 +9,9 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Palette, Search, Sparkles, Upload, Image as ImageIcon, Tag, X, Loader2, PenTool, ExternalLink } from 'lucide-react';
+import { Palette, Search, Sparkles, Upload, Image as ImageIcon, Tag, X, Loader2, PenTool, ExternalLink, Box } from 'lucide-react';
 import Forge2D from './forge-2d';
+import Forge3D from './forge-3d';
 import { cn } from '@/lib/utils';
 
 interface Asset {
@@ -35,6 +36,13 @@ export default function AtelierPanel() {
   const [toast, setToast] = useState<string | null>(null);
   const [selected, setSelected] = useState<Asset | null>(null);
   const [forging, setForging] = useState<string | null>(null);
+  // #163 FORGE-3D: the GLB viewport (the t2-3D lane's output viewer).
+  const [viewing3d, setViewing3d] = useState<{ src: string; label: string } | null>(null);
+  const open3d = (a: Asset) => {
+    // GLB/GLTF assets open the viewport; images fall back to a 2D look.
+    const src = `/api/olympus/atelier/assets?id=${a.id}`;
+    setViewing3d({ src, label: a.description?.slice(0, 60) ?? a.id });
+  };
   // #154: the ArtCraft deeplink (web fallback carries Linux until desktop
   // binaries ship — the detector decides at click time).
   const openInArtcraft = async (id: string) => {
@@ -213,6 +221,7 @@ export default function AtelierPanel() {
       )}
 
       {forging && <Forge2D assetId={forging} onClose={() => setForging(null)} />}
+      {viewing3d && <Forge3D src={viewing3d.src} label={viewing3d.label} onClose={() => setViewing3d(null)} />}
 
       {/* The asset sheet */}
       {selected && (
@@ -223,6 +232,7 @@ export default function AtelierPanel() {
               <Palette size={13} className="text-olympus-gold" />
               <span className="text-[12px] font-mono text-olympus-gold">{selected.id.slice(0, 24)}</span>
               <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/20 uppercase">{selected.source ?? 'vault'}</span>
+              <button onClick={() => open3d(selected)} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-1 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30 hover:bg-olympus-purple/25"><Box size={10} /> 3d</button>
               <button onClick={() => setForging(selected.id)} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-1 rounded bg-olympus-cyan/15 text-olympus-cyan ring-1 ring-olympus-cyan/30 hover:bg-olympus-cyan/25"><PenTool size={10} /> forge</button>
               <button onClick={() => openInArtcraft(selected.id)} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25"><ExternalLink size={10} /> artcraft</button>
               <button onClick={() => setSelected(null)} className="ml-auto text-olympus-text-dim hover:text-olympus-red"><X size={14} /></button>

@@ -2,6 +2,16 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.6] — 2026-10-19
+
+**"THE FORGE COMPLETES"** — the Atelier grows its third dimension, its RAG reaches every god, and the pipeline flows both ways.
+
+- **FORGE-3D** (#163): the embedded 3D viewport — @google/model-viewer (Apache-2.0) + three.js 0.186: the GLB assets (the t2-3D generation lane's output) render with orbit/zoom/auto-rotate in the Atelier's 3d view; the honest fallback for non-GLB assets names the deep-link lane (Blender/ArtCraft for the heavy work). The `3d` button rides the asset sheet.
+- **RAG-AGENTIC** (#164): the semantic retrieval reaches EVERY god's context — `composeHopPromptWithRag` (the async twin, additive to the sync contract) fuses the #150 vec layer + the #84 instinct RAG: every hop prompt carries the vault's prior-asset art direction ("style of my previous assets" as a planning input), keyword-honest without a key, semantic with one. Live-probed: the red-minimalist + anime-portrait assets surface as prior context.
+- **PIPE-1** (#165): the asset-inject route — POST /atelier/inject copies a vault asset into `<project>/public/assets/` (kebab-case, root-relative — the check-9 contract), collision-suffixed never overwriting, and the **exit gate check 9 verifies the injected asset ships** (probe-proven: inject → check 9 PASS on the live gate run).
+- **BLENDER-MCP-1 + COMFY-LOCAL-1**: the MCP registrations (ahujasid/mcp-for-blender + comfyui-mcp) — disabled-by-default honest (probes at spawn), the GPL tools stay separate processes.
+- **REA-MCP + JET** (#166 filed): the v0.0.6 evaluation items (the Artemis reverse-engineering MCP + the structured-decision demigod) — probe-first, committed only on green.
+
 ## [v0.0.5] — 2026-10-18
 
 **"ATELIER OF HEPHAESTUS"** — the art module is born. OLYMPUS understands images, generates them for free, and keeps every asset as searchable vault memory. Plus: THE OPENCODE V1→V2 REPLACEMENT IS COMPLETE.

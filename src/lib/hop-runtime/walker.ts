@@ -29,6 +29,7 @@ import { syncLaneFile } from '@/lib/lane-config';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
 import { loadHopState, saveHopState, hopStatePath, type HopPark } from './hop-state';
 import { composeArsenalDirective } from './arsenal';
+import { composeRagContext } from '../rag-inject';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
@@ -154,6 +155,28 @@ export function composeHopPrompt(hop: PlanHop, laneRoot: string): string {
     lines.push('', arsenal);
   }
   return lines.join('\n');
+}
+
+/**
+ * #164 RAG-AGENTIC: the async hop prompt — the same contract PLUS the
+ * vault retrieval block (the semantic/keyword hits as prior-asset art
+ * direction). The dispatcher uses this; the sync composeHopPrompt stays
+ * for the fixtures (the RAG block is additive, never contract-breaking).
+ */
+export async function composeHopPromptWithRag(
+  hop: PlanHop,
+  laneRoot: string,
+  campaignQuery?: string,
+): Promise<string> {
+  const base = composeHopPrompt(hop, laneRoot);
+  if (!campaignQuery) return base;
+  try {
+    const rag = await composeRagContext(campaignQuery);
+    if (!rag) return base;
+    return `${base}\n\n${rag}`;
+  } catch {
+    return base; // the RAG never breaks the hop
+  }
 }
 
 /** Resolve a god's live model lane from the repo's opencode.json. */
@@ -547,6 +570,9 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     updatedAt: new Date().toISOString(),
   });
 
+  // #164: the RAG query signal — the plan's own directive text (its style
+  // words drive the vault retrieval once, shared by every hop).
+  const planQueryForRag = (plan.hops || []).map((h) => String(h.prompt ?? '')).join(' ').slice(0, 400);
   const pending = plan.hops.filter((h) => !completed.has(h.id));
   const byId = new Map(plan.hops.map((h) => [h.id, h]));
   const ready = (h: PlanHop) => (h.after ?? []).every((dep) => completed.has(dep));
@@ -611,7 +637,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           try {
           let result: HopDispatchResult;
           try {
-            result = await dispatch(next, { laneRoot, prompt: composeHopPrompt(next, laneRoot) });
+            result = await dispatch(next, { laneRoot, prompt: await composeHopPromptWithRag(next, laneRoot, planQueryForRag) });
           } catch (e) {
             result = {
               ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,
