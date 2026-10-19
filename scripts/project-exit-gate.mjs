@@ -128,9 +128,9 @@ if (!devRunnable) {
   try {
     devProc = spawn('npm', ['run', 'dev', '--', '--port', String(port), '--hostname', '127.0.0.1'],
       { cwd: PROJECT, env: { ...process.env, PORT: String(port), NODE_ENV: 'development' }, detached: true, stdio: ['ignore', 'ignore', 'ignore'] });
-    const code = await waitForHttp(`http://127.0.0.1:${port}/`, 90_000);
-    if (code === 200) {
-      add('4', 'dev-curl-200', 'pass', `next dev (ephemeral port ${port}) + GET / == HTTP 200`);
+    const code = await waitForHttp(`http://127.0.0.1:${port}/`, 90_000, true);
+    if (code >= 200 && code < 300) {
+      add('4', 'dev-curl-200', 'pass', `next dev (ephemeral port ${port}) + GET / == HTTP ${code} (redirects followed — an authed app's 307 to /login rendering 200 is a RUNNING app)`);
     } else {
       add('4', 'dev-curl-200', 'fail', `GET / ${code === null ? 'never answered (timeout)' : `returned HTTP ${code}`} on the ephemeral dev server (P-A/P-H: a route that does not render HTTP 200 is not done)`);
     }
@@ -160,7 +160,7 @@ if (!devRunnable) {
 const absoluteSymlinks = [];
 (function walk(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (['node_modules', '.git', '.next', 'out', 'dist', 'build', '.turbo', '_next'].includes(entry.name)) continue;
+    if (['node_modules', '.git', '.next', 'out', 'dist', 'build', '.turbo', '_next', '.opencode', '.opencode-project'].includes(entry.name)) continue;
     const p = join(dir, entry.name);
     const st = lstatSync(p);
     if (st.isSymbolicLink()) {
@@ -190,6 +190,10 @@ const importRe = /(?:from\s+|import\s*\(\s*|require\s*\(\s*)["']([^"']+)["']/g;
     const st = lstatSync(p);
     if (st.isDirectory()) scan(p);
     else if (/\.(tsx?|jsx?|mjs|cjs)$/.test(entry.name)) {
+      // P-B targets APPLICATION source. Framework toolchain configs
+      // (postcss/next/tailwind/eslint/prettier) auto-load their own
+      // transitive deps — scanning them double-counts the toolchain.
+      if (/^(postcss|next|tailwind|eslint|prettier|vite|webpack)\.config\./.test(entry.name)) continue;
       const src = readFileSync(p, 'utf-8');
       for (const m of src.matchAll(importRe)) {
         const spec = m[1];
@@ -240,7 +244,7 @@ if (!page) {
 const dupFindings = [];
 (function scanDup(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (['node_modules', '.git', '.next', 'out', 'dist', 'build', '.turbo', '_next'].includes(entry.name)) continue;
+    if (['node_modules', '.git', '.next', 'out', 'dist', 'build', '.turbo', '_next', '.opencode', '.opencode-project'].includes(entry.name)) continue;
     const p = join(dir, entry.name);
     const st = lstatSync(p);
     if (st.isDirectory()) scanDup(p);
@@ -264,7 +268,7 @@ add('8', 'dup-handlers', dupFindings.length === 0 ? 'pass' : 'fail',
 const missingAssets = [];
 (function scanVisual(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (['node_modules', '.git', '.next', 'out', 'dist', 'build', '.turbo', '_next'].includes(entry.name)) continue;
+    if (['node_modules', '.git', '.next', 'out', 'dist', 'build', '.turbo', '_next', '.opencode', '.opencode-project'].includes(entry.name)) continue;
     const p = join(dir, entry.name);
     const st = lstatSync(p);
     if (st.isDirectory()) scanVisual(p);
@@ -400,12 +404,23 @@ function portIsFree(port) {
     probe.listen(port, '127.0.0.1');
   });
 }
-async function waitForHttp(url, timeoutMs) {
+async function waitForHttp(url, timeoutMs, followRedirects = false) {
   const started = Date.now();
   let lastCode = null;
+  let current = url;
+  let hops = 0;
   while (Date.now() - started < timeoutMs) {
-    lastCode = await fetchCode(url);
-    if (lastCode === 200) return 200;
+    lastCode = await fetchCode(current);
+    if (followRedirects && lastCode && lastCode >= 300 && lastCode < 400 && hops < 5) {
+      const loc = await fetchLocation(current);
+      if (loc) {
+        current = loc.startsWith('http') ? loc : new URL(loc, current).href;
+        hops++;
+        continue;
+      }
+    }
+    if (lastCode === 200 || (followRedirects && lastCode && lastCode >= 200 && lastCode < 300)) return lastCode;
+    if (!followRedirects && lastCode === 200) return 200;
     await new Promise(r => setTimeout(r, 1500));
   }
   return lastCode;
@@ -414,6 +429,14 @@ async function fetchCode(url) {
   try {
     const resp = await fetch(url, { redirect: 'manual' });
     return resp.status;
+  } catch {
+    return null;
+  }
+}
+async function fetchLocation(url) {
+  try {
+    const resp = await fetch(url, { redirect: 'manual' });
+    return resp.headers.get('location');
   } catch {
     return null;
   }

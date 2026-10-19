@@ -298,22 +298,31 @@ async function probeServer(
       return null;
     }
   };
+  // #V2-PROBE (the authed=false bug): the v2 serve answers /config 200
+  // WITHOUT auth (a public/legacy endpoint) — the old early-return
+  // adopted the serve with password=null and every subsequent create
+  // 401'd (the 'create session failed (HTTP 401)' chain). The v2
+  // fingerprint lives on /api/info (auth REQUIRED there): probe it FIRST
+  // when a password is in hand, and only fall to the v1 /config shapes.
+  if (password) {
+    const info = await probeOne('/api/info', password);
+    if (info && info.ok) return { ok: true, authed: true };
+  }
   try {
     const r = await apiFetch(port, null, '/config', {}, SERVER_PROBE_TIMEOUT_MS);
-    if (r.ok) return { ok: true, authed: false };
-    // 401 = a password-protected opencode serve. Do NOT early-return yet:
-    // when the caller HAS a password (pidfile adoption), the authenticated
-    // probe below must get its chance — the previous early-return made
-    // adoption unreachable for every password-protected serve (the only
-    // kind spawnServer creates), so healthy serves were misclassified as
-    // orphans and killed (crash-loop cascade, see issue #57).
+    if (r.ok && !password) return { ok: true, authed: false };
+    // A v2 serve with a password: /config 200 unauthed is NOT the v1
+    // unauthed-serve signal — keep probing below for the authed truth.
+    if (r.ok && password) {
+      // The authed /config (v1 shape) or /api/config (v2 shape) confirms.
+      const authed = await probeOne('/api/config', password);
+      if (authed && authed.ok) return { ok: true, authed: true };
+      const authedV1 = await probeOne('/config', password);
+      if (authedV1 && authedV1.ok) return { ok: true, authed: true };
+    }
     if (r.status === 401) saw401 = true;
     else timedOut = false;
   } catch (e: any) {
-    // Aborted = accepted but never answered (hung serve); refused = free.
-    // Refused = port free (fails fast, ~11ms); abort/hang = accepted but
-    // never answered (costs the full 2.5s). Any non-refused failure counts
-    // as hung — conservative, and correct for the boot-hang signature.
     timedOut = !isRefused(e);
   }
   // The v2 pair: /api/info with the password (v2-only endpoint — the
@@ -554,6 +563,7 @@ export async function ensureServer(): Promise<ServerInfo> {
     const pidFile = readPidFile();
     if (pidFile && isProcessAlive(pidFile.pid)) {
       const probe = await probeServer(pidFile.port, pidFile.password);
+      console.log(`[opencode-session] pidfile probe: pid=${pidFile.pid} port=${pidFile.port} ok=${probe.ok} authed=${probe.authed} status=${probe.status ?? '-'}`);
       if (probe.ok) {
         console.log(`[opencode-session] Reusing warm OpenCode server on port ${pidFile.port} (pid ${pidFile.pid})`);
         return { port: pidFile.port, warm: true, password: pidFile.password, authed: probe.authed, protocol: await resolveProtocol(pidFile.port, pidFile.password) };
@@ -840,10 +850,10 @@ export async function getOrCreateSession(conversationId: string): Promise<string
     },
   );
   if (!res.ok) {
-    throw new Error(`create session failed (HTTP ${res.status})`);
+    throw new Error(`create session failed (HTTP ${res.status}) [debug: port=${server.port} authed=${server.authed} proto=${server.protocol} path=${v2Path(server, '/session')}]`);
   }
   const data: any = await res.json().catch(() => null);
-  const sessionId = typeof data?.id === 'string' ? data.id : null;
+  const sessionId = typeof data?.id === 'string' ? data.id : (typeof data?.data?.id === 'string' ? data.data.id : null);
   if (!sessionId) {
     throw new Error('create session returned no id');
   }

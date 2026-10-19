@@ -219,7 +219,10 @@ try {
   // delivered (a stalled planning turn gets a FRESH start — the pool that
   // ate the last turn rarely eats the next).
   const nextText = () => (existsSync(join(LANE, 'dispatch-plan.json')) ? 'continue' : ORIGINAL_PROMPT);
-  let text = ORIGINAL_PROMPT;
+  // #BENCH-RESUME: with --resume + an existing durable plan, the FIRST post
+  // is 'continue' (the walk resumes from hop-state — posting the full
+  // original prompt makes the planner re-plan over a live campaign).
+  let text = (RESUME && existsSync(join(LANE, 'dispatch-plan.json'))) ? 'continue' : ORIGINAL_PROMPT;
   while (cycle < MAX_CYCLES) {
     cycle++;
     log(cycle === 1 ? `posting the campaign prompt${PROMPT_FILE ? ` (${PROMPT_FILE})` : ' (the original Lumina handoff)'}…` : `RESUME cycle ${cycle}: posting 'continue' (the walk resumes from hop-state)…`);
