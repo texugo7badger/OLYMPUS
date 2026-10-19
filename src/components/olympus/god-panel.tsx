@@ -100,6 +100,9 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   // state, timer, and tokens. Clicking a task opens the TASK SHEET (the
   // drill-down: thinking, files, tokens — the "what did he do" answer).
   const [tasks, setTasks] = useState<Record<string, TaskRecord[]>>({});
+  // W-D3: the campaign stats — the header's N/M progress + the projected
+  // time-to-finish (the user's headline ask).
+  const [campaignStats, setCampaignStats] = useState<null | { total: number; completed: number; parked: number; projectedRemainingMs: number }>(null);
   // The god's LIVE demigod dispatches (the arsenal in action — the
   // parallelism-of-parallelism surface: god → demigod chips).
   const [demigods, setDemigods] = useState<Record<string, { id: string; ts: string }[]>>({});
@@ -118,6 +121,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           (byGod[t.god] ||= []).push(t);
         }
         setTasks(byGod);
+        if (d?.stats) setCampaignStats(d.stats);
         setDemigods(d?.gods
           ? Object.fromEntries(Object.entries(d.gods as Record<string, { demigods?: { id: string; ts: string }[] }>)
               .map(([g, v]) => [g, v.demigods || []]))
@@ -136,8 +140,28 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
       <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide sticky top-0 bg-olympus-panel border-b border-olympus-gold/10 flex items-center gap-1">
         <Sparkles size={10} style={{ color: '#D4A574' }} />
         <span>Parthenon</span>
-        <span className="ml-auto normal-case tracking-normal">
-          {active} active / {ordered.length}
+        <span className="ml-auto normal-case tracking-normal flex items-center gap-1.5">
+          <span>{active} active / {ordered.length}</span>
+          {/* W-D3: the persistent campaign header — N/M hops + the projected
+              time-to-finish (the user's headline ask) + the parked badge.
+              Nothing when no campaign is live (the honest empty). */}
+          {campaignStats && campaignStats.total > 0 && (
+            <>
+              <span className="text-olympus-cyan">
+                · {campaignStats.completed}/{campaignStats.total} hops
+              </span>
+              {campaignStats.parked > 0 && (
+                <span className="text-olympus-red">· {campaignStats.parked} parked</span>
+              )}
+              {campaignStats.completed < campaignStats.total && campaignStats.projectedRemainingMs > 0 && (
+                <span className="text-olympus-text-dim">
+                  · ~{campaignStats.projectedRemainingMs >= 60_000
+                    ? `${Math.round(campaignStats.projectedRemainingMs / 60_000)}m`
+                    : `${Math.round(campaignStats.projectedRemainingMs / 1000)}s`} left
+                </span>
+              )}
+            </>
+          )}
         </span>
         {onCollapse && (
           <button
@@ -221,8 +245,11 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                     const dot = t.status === 'completed' ? '#7BAE8E'
                       : t.status === 'running' ? '#D4A574'
                       : t.status === 'parked' ? '#C4756A' : '#5A5A5A';
-                    const dur = t.status === 'running' && t.ts
-                      ? `${Math.max(0, Math.round((Date.now() - new Date(t.ts).getTime()) / 1000))}s…`
+                    // W-D2: the running chip ticks from startedAt — the
+                    // inFlight ground truth (telemetry lands only at settle).
+                    const runStart = t.startedAt || t.ts;
+                    const dur = t.status === 'running' && runStart
+                      ? `${Math.max(0, Math.round((Date.now() - new Date(runStart).getTime()) / 1000))}s…`
                       : t.durationMs ? `${Math.round(t.durationMs / 1000)}s` : '';
                     const tok = t.tokensOut ? `${(t.tokensOut / 1000).toFixed(1)}k out` : '';
                     // The task's honest progress: completed = full; running =

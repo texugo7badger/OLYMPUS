@@ -50,6 +50,11 @@ function shouldShowCustomWindowControls(): boolean {
 
 export default function StatusBar({ health }: { health: any }) {
  const activeGod = useOlympus(s => s.activeGod);
+ // W-D1: the idle fallback reads the user's SELECTED god (its own comment
+ // always claimed it) — activeGod alone is the live session, reset to
+ // apollo on every submit.
+ const selectedGod = useOlympus(s => s.selectedGod);
+ const fallbackGod = selectedGod ?? activeGod;
  // W0-A: the WORKING gods strip — the live set replaces the static
  // 'active god: Apollo' label. Icons side by side, blinking while the
  // gods work, no names (the user's directive).
@@ -115,7 +120,7 @@ export default function StatusBar({ health }: { health: any }) {
 	 const isFree = prov?.isFree ?? false;
 	 const spend = cost?.totalSpend ?? 0;
 	 const totalTokens = cost?.totalTokens ?? 0;
- const ActiveGodIcon = activeGod ? GOD_ICONS[activeGod] : null;
+ const ActiveGodIcon = fallbackGod ? GOD_ICONS[fallbackGod] : null;
 
  const compact = winWidth < 1200;
  const hideProject = winWidth < 900;
@@ -165,7 +170,7 @@ export default function StatusBar({ health }: { health: any }) {
  {/* W0-A: the WORKING-GODS strip — every god working RIGHT NOW, icons
      side by side, blinking (animate-pulse), NO names. Falls back to the
      selected god (dimmed, steady) when the machine is idle. */}
- <div className="flex items-center gap-1 shrink-0" title={workingGods.length > 0 ? workingGods.join(' · ') : (activeGod || 'idle')}>
+ <div className="flex items-center gap-1 shrink-0" title={workingGods.length > 0 ? workingGods.join(' · ') : (fallbackGod || 'idle')}>
  {workingGods.length > 0 ? (
  workingGods.map((g) => {
  const Icon = GOD_ICONS[g];

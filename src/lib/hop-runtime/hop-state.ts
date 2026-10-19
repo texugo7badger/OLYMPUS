@@ -21,10 +21,20 @@ export interface HopPark {
   error?: string;
 }
 
+export interface HopInFlight {
+  hopId: string;
+  startedAt: string;
+}
+
 export interface HopStateFile {
   version: 1;
   completed: string[];
   parked: HopPark | null;
+  /** W-D2 (v0.0.6 MISSION-CONTROL-TRUE): the hops RUNNING right now —
+   *  written at every launch/settle so the tasks sheet has GROUND TRUTH
+   *  (telemetry rows land only at hop settle; before this, a running hop
+   *  was indistinguishable from a pending one — the first-hop lie). */
+  inFlight?: HopInFlight[];
   updatedAt: string;
 }
 
@@ -51,6 +61,10 @@ export function loadHopState(stateDir: string): HopStateFile | null {
     version: 1,
     completed: [...s.completed],
     parked: s.parked ?? null,
+    inFlight: Array.isArray(s.inFlight) ? s.inFlight.map((f) => ({
+      hopId: String(f?.hopId ?? ''),
+      startedAt: String(f?.startedAt ?? new Date().toISOString()),
+    })).filter((f) => f.hopId) : [],
     updatedAt: typeof s.updatedAt === 'string' ? s.updatedAt : new Date().toISOString(),
   };
 }

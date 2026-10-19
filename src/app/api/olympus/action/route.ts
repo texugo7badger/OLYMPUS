@@ -877,6 +877,24 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
       // routes events into the SSE stream.
       const onEvent = (ev: any) => {
         if (firstEventAt === null) firstEventAt = Date.now();
+        // W-D7 (v0.0.6 MISSION-CONTROL-TRUE): the TODO EMITTER — the god's
+        // todowrite calls feed the Plan panel (plan-panel.tsx shipped with a
+        // full normalizer and NO emitter; this is the missing half). The
+        // bulk shape fills the panel in one pass per write.
+        if (ev?.type === 'tool.call' && ev?.tool?.name === 'todowrite') {
+          try {
+            const todos = ev?.tool?.input?.todos;
+            if (Array.isArray(todos) && todos.length > 0) {
+              const rows = todos.map((t: any) => ({
+                content: String(t?.content ?? t?.activeForm ?? ''),
+                status: String(t?.status ?? 'pending'),
+              })).filter((t: { content: string }) => t.content);
+              if (rows.length > 0) {
+                send({ type: 'todo', god: opts.agent ?? 'apollo', todos: rows, ts: new Date().toISOString() });
+              }
+            }
+          } catch { /* the todo emitter never breaks the stream */ }
+        }
         send(ev);
       };
 

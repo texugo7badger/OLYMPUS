@@ -211,6 +211,40 @@ export function arsenalRecon(task: string, god: string): ArsenalReconResult {
 }
 
 /**
+ * W-D8 (v0.0.6 MISSION-CONTROL-TRUE): the per-god AGGREGATE — the resonance
+ * log's feedback loop made VISIBLE (the write side ran since v0.0.4; nothing
+ * read it). Every outcome row for this god (any task class) aggregates into
+ * the top proven arsenal: skills/mcps/demigods ranked by samples x confidence.
+ * This is the god-detail panel's "proven arsenal" section, not a
+ * quick-circuit — no coherence gate, just the honest counts.
+ */
+export function arsenalResonanceByGod(god: string) {
+  const log = readArsenalLog().filter(e => e.god === god);
+  const agg = (pick: (e: ArsenalLogEntry) => string | null) => {
+    const stats = new Map<string, { successes: number; total: number }>();
+    for (const e of log) {
+      const name = pick(e);
+      if (!name) continue;
+      const s = stats.get(name) || { successes: 0, total: 0 };
+      s.total++;
+      if (e.outcome === 'success') s.successes++;
+      stats.set(name, s);
+    }
+    return [...stats.entries()]
+      .map(([name, s]) => ({ name, confidence: s.successes / s.total, samples: s.total }))
+      .sort((a, b) => (b.samples * b.confidence) - (a.samples * a.confidence))
+      .slice(0, 5);
+  };
+  return {
+    god,
+    dispatches: log.length,
+    skills: agg(e => e.skill),
+    mcps: agg(e => e.mcp),
+    demigods: agg(e => e.demigod),
+  };
+}
+
+/**
  * Log a dispatch outcome to the arsenal resonance log.
  * Called by the dispatch-tracker when a dispatch is finalized.
  *

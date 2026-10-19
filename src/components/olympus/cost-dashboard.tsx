@@ -85,7 +85,7 @@ function fallbackCostSummary(): CostSummary {
  costs: GOD_IDS_FULL.map(god => ({
  // Callimachus uses deepseek-v4-flash (cheaper brain-curation model). Atlas uses Hy3.
  god, icon: god,
- model: god === 'atlas' ? 'opencode-go/hy3' : god === 'callimachus' ? 'opencode-go/deepseek-v4-flash' : 'opencode-go/glm-5.2',
+      model: god === 'atlas' ? 'opencode-go/hy3' : god === 'callimachus' ? 'opencode-go/deepseek-v4-flash' : 'opencode-go/glm-5.3',
  requests: 0, inputTokens: 0, outputTokens: 0, cachedTokens: 0,
  spend: 0, cap5h: null, pctOfCap: null, avgLatencyMs: 0, successRate: 0, sparkline: [],
  })),

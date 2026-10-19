@@ -92,10 +92,19 @@ export function buildWalkSummaryLine(opts: {
   parked: { hopId: string; reason: string } | null;
   laneRoot: string;
   slug: string;
+  /** W-D3: the projected remaining wall-time for the parked walk's
+   *  remaining hops (the tasks sheet's critical-path model) — the RESUME
+   *  contract carries a time expectation, honestly derived. */
+  projectedRemainingMs?: number;
 }): string {
   if (opts.parked) {
+    const eta = typeof opts.projectedRemainingMs === 'number' && opts.projectedRemainingMs > 0
+      ? ` ~${opts.projectedRemainingMs >= 60_000
+          ? `${Math.round(opts.projectedRemainingMs / 60_000)} min`
+          : `${Math.round(opts.projectedRemainingMs / 1000)}s`} of projected work left (the lane's own medians).`
+      : '';
     return [
-      `Plan parked at hop '${opts.parked.hopId}' (${opts.parked.reason}) — ${opts.completed}/${opts.total} hops done.`,
+      `Plan parked at hop '${opts.parked.hopId}' (${opts.parked.reason}) — ${opts.completed}/${opts.total} hops done.${eta}`,
       `RESUME: send any prompt in '${opts.slug}' — the walk resumes from disk (.olympus-hop-state.json); nothing is lost.`,
     ].join(' ');
   }
@@ -206,7 +215,56 @@ export async function maybeWalkThePlan(opts: {
   const totalHops = planHopCount(plan);
   const completed = result.completed.length;
   const parked = result.parked ? { hopId: result.parked.hopId, reason: result.parked.reason } : null;
-  const summaryLine = buildWalkSummaryLine({ completed, total: totalHops, parked, laneRoot: opts.laneRoot, slug: opts.slug });
+  // W-D3: the parked summary carries the projected remaining time — the
+  // tasks sheet's critical-path model over the same lane artifacts.
+  let projectedRemainingMs: number | undefined;
+  try {
+    const { buildTasksSheet } = await import('../tasks-sheet');
+    projectedRemainingMs = buildTasksSheet({ lane: opts.laneRoot }).stats.projectedRemainingMs || undefined;
+  } catch { /* the projection never breaks the summary */ }
+
+  // W-D6 (v0.0.6 MISSION-CONTROL-TRUE): ATLAS THE ORCHESTRATOR, the missing
+  // half of W2-1 — on a PARK, the orchestrator lane gets the failure context
+  // and produces a bounded verification verdict (what failed, the likely
+  // cause, the resume recommendation). Deterministic checks stay first and
+  // free; this fires ONLY on park (rare, bounded — one Atlas call, never on
+  // healthy walks). Non-fatal by contract: a verdict failure never touches
+  // the summary.
+  let atlasVerdict: string | null = null;
+  if (parked) {
+    try {
+      const { spawnHopDispatcher } = await import('./walker');
+      const atlasLane = resolveGodModelLane('atlas');
+      if (atlasLane) {
+        const verdictHop: import('./plan-schema').PlanHop = {
+          id: 'atlas-verdict',
+          god: 'atlas',
+          prompt: [
+            'PROJECT VERIFICATION VERDICT (you are Atlas, the orchestrator).',
+            `The walk parked at hop '${parked.hopId}' (reason: ${parked.reason}) with ${completed}/${totalHops} hops done.`,
+            `The lane: ${opts.laneRoot}`,
+            'Write a BOUNDED verdict (max 6 lines, plain text, no headers):',
+            '1. WHAT failed (one line, the failure class in your own words).',
+            '2. The LIKELY cause (one line — read the hop state / the lane as needed, do not re-run anything).',
+            '3. The RESUME recommendation (one line — what the user should do before resuming).',
+            'Do NOT fix anything. Do NOT write code. Verdict only.',
+          ].join('\n'),
+          artifacts: [],
+        };
+        const r = await spawnHopDispatcher(verdictHop, { laneRoot: opts.laneRoot, prompt: verdictHop.prompt });
+        if (r?.ok && r.output) {
+          atlasVerdict = String(r.output).trim().slice(0, 1200);
+          try { writeFileSync(join(opts.laneRoot, '.olympus-atlas-verdict.md'), `# Atlas verification verdict — ${new Date().toISOString()}\n\n${atlasVerdict}\n`, 'utf-8'); } catch { /* the file is best-effort */ }
+          opts.send?.({ type: 'atlas_verdict', msg: atlasVerdict, parked, ts: new Date().toISOString() });
+        }
+      }
+    } catch { /* the verdict never breaks the summary */ }
+  }
+
+  const summaryLine = [
+    buildWalkSummaryLine({ completed, total: totalHops, parked, laneRoot: opts.laneRoot, slug: opts.slug, projectedRemainingMs }),
+    atlasVerdict ? ` Atlas verdict: ${atlasVerdict.split('\n')[0].slice(0, 160)}…` : '',
+  ].join('');
   opts.send?.({ type: 'walk_summary', completed, total: totalHops, parked, msg: summaryLine, ts: new Date().toISOString() });
 
   // #DESIGN-INTELLIGENCE D3: THE SELF-CORRECTION LOOP — when the walk

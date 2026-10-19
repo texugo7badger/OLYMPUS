@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useOlympus, GOD_ICONS, GOD_DOMAINS } from '@/lib/olympus-store';
-import { Cpu, Zap, Clock, TrendingUp, Activity as ActivityIcon, BookOpenText, FileText } from 'lucide-react';
+import { Cpu, Zap, Clock, TrendingUp, Activity as ActivityIcon, BookOpenText, FileText, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { demigodShortDescription } from '@/lib/demigod-short-desc';
 import DemigodPromptModal from './demigod-prompt-modal';
@@ -70,6 +70,14 @@ export default function GodDetail() {
  	// Instincts section + state REMOVED (instincts are now
  // browsable in the Vault-Summary panel). Only references (Knowledge) remain.
  const [references, setReferences] = useState<any[] | null>(null);
+ // W-D8: the Arsenal Resonance aggregate — the feedback loop's read side
+ // (the proven arsenal for THIS god across all dispatch classes).
+ const [resonance, setResonance] = useState<null | {
+   dispatches: number;
+   skills: Array<{ name: string; confidence: number; samples: number }>;
+   mcps: Array<{ name: string; confidence: number; samples: number }>;
+   demigods: Array<{ name: string; confidence: number; samples: number }>;
+ }>(null);
  	// When set, opens KnowledgeDetailModal showing the
  // knowledge doc's full markdown (frontmatter + body) as a markdown-box
  // overlay. Replaces the old setIdeFilePath() call that opened the IDE.
@@ -131,9 +139,21 @@ export default function GodDetail() {
  } catch {}
  };
 
+ // W-D8: the resonance aggregate — the feedback loop's read side.
+ const loadResonance = async () => {
+ try {
+ const r = await fetch(`/api/olympus/arsenal-recon?god=${god}`, { cache: 'no-store' });
+ if (r.ok) {
+ const d = await r.json();
+ if (!cancelled && d?.ok) setResonance(d);
+ }
+ } catch {}
+ };
+
  loadDispatch();
  loadStats();
  loadReferences();
+ loadResonance();
 
  const iv = setInterval(() => {
  loadDispatch();
@@ -310,6 +330,35 @@ export default function GodDetail() {
 	 expand to show instinct names + confidence scores). The God-Detail
 	 panel now focuses on: live stats, demigods, skills, MCPs, and
 	 knowledge docs. */}
+
+	 {/* W-D8: PROVEN ARSENAL — the Arsenal Resonance feedback loop's read
+	 side. Every dispatch outcome since v0.0.4 logged to
+	 03_Index/arsenal-resonance.jsonl; nothing read it. Here it surfaces:
+	 the skills/MCPs/demigods that ACTUALLY worked for this god, ranked by
+	 samples x confidence. The honest empty: no dispatches, no section. */}
+ {resonance && resonance.dispatches > 0 && (
+ <div className="mb-4">
+ <div className="flex items-center gap-1.5 mb-1.5 text-[10px] font-semibold text-olympus-text-dim uppercase tracking-wide">
+ <FlaskConical size={11} className="text-olympus-cyan" />
+ Proven arsenal ({resonance.dispatches} dispatches logged)
+ </div>
+ <div className="flex flex-wrap gap-1">
+ {[
+ ...resonance.skills.map(s => ({ ...s, kind: 'skill' })),
+ ...resonance.mcps.map(m => ({ ...m, kind: 'mcp' })),
+ ...resonance.demigods.map(d => ({ ...d, kind: 'demigod' })),
+ ].map(item => (
+ <span
+ key={`${item.kind}:${item.name}`}
+ title={`${item.kind} — ${item.samples} dispatches, ${(item.confidence * 100).toFixed(0)}% success (the arsenal-resonance feedback loop)`}
+ className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-card ring-1 ring-olympus-cyan/20 text-olympus-text"
+ >
+ {item.name} <span className="text-olympus-cyan">×{item.samples}</span>
+ </span>
+ ))}
+ </div>
+ </div>
+ )}
 
 	 {/* Knowledge section (was "References"). Lists the
 	 reference docs relevant to the god's domain. Each row is clickable

@@ -80,6 +80,10 @@ interface PersistedSyncMap {
   lastUpdated: string;
   /** Phase 2 (p3): god heartbeat states, recorded by Atlas from the bus. */
   godStates?: Record<string, { state: string; ts: string }>;
+  /** #90 (v0.0.6 MISSION-CONTROL-TRUE): the compaction anchor — the chain
+   *  hash of the LAST ARCHIVED entry. The live chain recomputes FROM this
+   *  seed, so archive + live verify as ONE continuous chain across files. */
+  archiveAnchor?: string | null;
 }
 
 function withDefaults(raw: PersistedSyncMap): PersistedSyncMap {
@@ -129,12 +133,14 @@ function canonicalEntry(e: SyncMapEntry): string {
   return JSON.stringify(rest);
 }
 
-/** Recompute the full hash chain over the entries (seq order). */
-function recomputeChain(state: PersistedSyncMap): void {
+/** Recompute the full hash chain over the entries (seq order). #90: the
+ * optional prevSeed anchors the live chain to the LAST ARCHIVED entry's
+ * hash, so archive + live verify as ONE continuous chain. */
+function recomputeChain(state: PersistedSyncMap, prevSeed?: string): void {
   const entries = Object.values(state.entries)
     .filter(e => typeof e.seq === "number")
     .sort((a, b) => (a.seq as number) - (b.seq as number));
-  let prev = "genesis";
+  let prev = prevSeed ?? "genesis";
   for (const e of entries) {
     e.chainHash = crypto.createHash("sha256")
       .update(prev + "|" + e.id + "|" + canonicalEntry(e))
@@ -142,6 +148,51 @@ function recomputeChain(state: PersistedSyncMap): void {
     prev = e.chainHash;
   }
   state.chainHead = prev;
+}
+
+// ─── #90: the retention/compaction policy ───────────────────────────────────
+// The map is append-heavy (every chat turn + every dispatch); unbounded it
+// grows forever (386 entries at the v0.0.6 audit, climbing every session).
+// The policy (env-tunable, the R3 knob family): past SYNC_MAP_MAX_ENTRIES,
+// the OLDEST entries (by seq) are archived — appended to sync-map.archive.json
+// (preserving chain order) — down to the keep floor (half the cap), and the
+// live chain re-anchors to the last archived hash. Nothing is ever DELETED:
+// archive + live remain one continuous, tamper-evident chain.
+
+function resolveSyncMapCap(): number {
+  const v = Number(process.env.OLYMPUS_SYNC_MAP_MAX_ENTRIES);
+  return v > 0 ? Math.floor(v) : 2000;
+}
+
+function compactIfNeeded(state: PersistedSyncMap): boolean {
+  const cap = resolveSyncMapCap();
+  const all = Object.values(state.entries);
+  if (all.length <= cap) return false;
+  const keep = Math.floor(cap / 2);
+  const sorted = all.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+  const archived = sorted.slice(0, sorted.length - keep);
+  const kept = sorted.slice(sorted.length - keep);
+  const archiveFile = STATE_FILE.replace(/\.json$/, ".archive.json");
+  let archive: { entries: SyncMapEntry[]; archivedThroughSeq: number; lastArchivedAt: string; archiveChainHead?: string } =
+    { entries: [], archivedThroughSeq: 0, lastArchivedAt: "" };
+  try {
+    const raw = JSON.parse(fs.readFileSync(archiveFile, "utf-8"));
+    if (raw && Array.isArray(raw.entries)) archive = raw;
+  } catch { /* fresh archive */ }
+  archive.entries.push(...archived);
+  archive.archivedThroughSeq = (archived[archived.length - 1]?.seq as number) ?? archive.archivedThroughSeq;
+  archive.archiveChainHead = archived[archived.length - 1]?.chainHash ?? archive.archiveChainHead;
+  archive.lastArchivedAt = new Date().toISOString();
+  try {
+    fs.writeFileSync(archiveFile, JSON.stringify(archive), "utf-8");
+  } catch { return false; /* the archive write failed: keep the map intact */ }
+  state.entries = Object.fromEntries(kept.map(e => [e.id, e]));
+  state.archiveAnchor = archived[archived.length - 1]?.chainHash ?? null;
+  console.error(
+    `[atlas-sync] sync-map compacted (#90): ${archived.length} entries archived to ${path.basename(archiveFile)} ` +
+    `(${archive.entries.length} total archived), ${kept.length} kept live, chain re-anchored at ${state.archiveAnchor?.slice(0, 16)}…`,
+  );
+  return true;
 }
 
 function persist(state: PersistedSyncMap): void {
@@ -207,7 +258,10 @@ export function writeSyncMapEntry(
     e.seq = seqs.length ? Math.max(...seqs) + 1 : 1;
     state.entries[entry.id] = e;
   }
-  recomputeChain(state);
+  // #90: the retention pass — past the cap, the oldest entries archive and
+  // the live chain re-anchors to the archive (nothing is ever deleted).
+  compactIfNeeded(state);
+  recomputeChain(state, state.archiveAnchor ?? undefined);
   state.lastUpdated = new Date().toISOString();
   persist(state);
   return e;

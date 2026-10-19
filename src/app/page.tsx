@@ -452,9 +452,10 @@ export default function OlympusWorkspace() {
               <div className="flex-1 relative min-w-0">
                 {leftPane === 'brain' && <ChunkErrorBoundary><BrainGraph3D /></ChunkErrorBoundary>}
                 {leftPane === 'live-preview' && <ChunkErrorBoundary><LivePreview /></ChunkErrorBoundary>}
-                {leftPane === 'god-intelligence' && <ChunkErrorBoundary><GodIntelligenceDashboard health={health} /></ChunkErrorBoundary>}
+                {leftPane === 'god-intelligence' && <ChunkErrorBoundary><GodIntelligenceDashboard health={brainHealth ?? health} /></ChunkErrorBoundary>}
                 {leftPane === 'cost' && <ChunkErrorBoundary><CostDashboard /></ChunkErrorBoundary>}
                 {leftPane === 'atelier' && <ChunkErrorBoundary><AtelierPanel /></ChunkErrorBoundary>}
+                {leftPane === 'sync-map' && <ChunkErrorBoundary><SyncMapPanel /></ChunkErrorBoundary>}
                 {leftPane === 'benchmarks' && <ChunkErrorBoundary><BenchmarksPanel /></ChunkErrorBoundary>}
                 {leftPane === 'timeline' && <ChunkErrorBoundary><ActivityTimeline /></ChunkErrorBoundary>}
                 {leftPane === 'god-detail' && <ChunkErrorBoundary><GodDetail /></ChunkErrorBoundary>}
@@ -466,12 +467,12 @@ export default function OlympusWorkspace() {
                     protocol between Gods and Demigods (see src/lib/symphony/),
                     but the vibrational ring overlay is no longer rendered on
                     top of the brain atlas. */}
-                {/* NodeDetailPanel REMOVED — clicking a skill / instinct /
-                    knowledge node now opens the DocumentViewerModal (rendered
-                    inside BrainGraph3D) which shows the actual source document.
-                    God nodes switch leftPane to 'god-detail' via setSelectedNode.
-                    The node-detail-panel.tsx file is intentionally left in place
-                    for manual deletion if desired. */}
+                {/* NodeDetailPanel REMOVED (v0.0.6 premium pass — the file
+                    retired with the other dead surfaces) — clicking a skill /
+                    instinct / knowledge node now opens the DocumentViewerModal
+                    (rendered inside BrainGraph3D) which shows the actual
+                    source document. God nodes switch leftPane to 'god-detail'
+                    via setSelectedNode. */}
               </div>
             </div>
           </RawPanel>
@@ -539,3 +540,4 @@ export default function OlympusWorkspace() {
   );
 }
 const AtelierPanel = dynamic(() => import('@/components/olympus/atelier-panel'), { ssr: false, loading: () => null });
+const SyncMapPanel = dynamic(() => import('@/components/olympus/sync-map-panel'), { ssr: false, loading: () => null });

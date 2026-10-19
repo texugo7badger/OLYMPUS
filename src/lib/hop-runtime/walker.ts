@@ -585,6 +585,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     version: 1,
     completed: [...completed],
     parked: null,
+    inFlight: [],
     updatedAt: new Date().toISOString(),
   });
 
@@ -614,6 +615,21 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
 
   await new Promise<void>((resolveWalk) => {
     const inFlight = new Map<string, WalkTask>();
+    // W-D2 (v0.0.6 MISSION-CONTROL-TRUE): the persisted RUNNING set — written
+    // on every launch + settle, so the tasks sheet has GROUND TRUTH about
+    // which hops are running right now (telemetry rows land only at settle;
+    // before this, a running hop was indistinguishable from a pending one).
+    const persistState = () => {
+      try {
+        saveHopState(stateDir, {
+          version: 1,
+          completed: [...completed],
+          parked: parkedHop,
+          inFlight: [...inFlight.values()].map((t) => ({ hopId: t.hop.id, startedAt: new Date(t.startedAt).toISOString() })),
+          updatedAt: new Date().toISOString(),
+        });
+      } catch { /* a state-write failure must never kill the walk */ }
+    };
     const launch = () => {
       if (stopped) return;
       while (inFlight.size < MAX_HOP_CONCURRENCY) {
@@ -642,6 +658,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         // rail shows WHAT each god is creating (the file list from the
         // plan), not just that it started.
         opts.onEvent?.({ type: 'hop_start', hop: next.id, god: next.god, artifacts: next.artifacts });
+        persistState();
         task.promise = (async () => {
           // #CRASH-ARMOR (the 05:42 specimen): the DEV SERVER DIED on an
           // unhandled rejection — a task-promise rejection propagates
@@ -735,14 +752,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           if (t.done) inFlight.delete(id);
         }
         // Persist durable progress after each settle — the disk carries the campaign.
-        try {
-          saveHopState(stateDir, {
-            version: 1,
-            completed: [...completed],
-            parked: parkedHop,
-            updatedAt: new Date().toISOString(),
-          });
-        } catch { /* a state-write failure must never kill the walk */ }
+        persistState();
         launch();
       }
       } catch { /* the armor: settle NEVER rejects */ }
@@ -754,10 +764,13 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     void settle();
   });
 
+  // The walk is over: the final state clears the RUNNING set (nothing is
+  // in flight anymore — the file never lies about liveness).
   saveHopState(stateDir, {
     version: 1,
     completed: [...completed],
     parked: parkedHop,
+    inFlight: [],
     updatedAt: new Date().toISOString(),
   });
   return { completed: [...completed], parked: parkedHop, rows };

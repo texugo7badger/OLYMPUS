@@ -154,6 +154,11 @@ interface OlympusStore {
   setSelectedNode: (n: any | null) => void;
   activeGod: string | null;
   setActiveGod: (g: string | null) => void;
+  /** W-D1: the user's CLICKED god — the persistent selection, distinct from
+   *  activeGod (the live-session god that SSE events and every chat submit
+   *  reset). The ActivityBar ring keys on this; the pulse dot stays activeGod. */
+  selectedGod: string | null;
+  setSelectedGod: (g: string | null) => void;
   filters: {
     god: boolean; skill: boolean; instinct: boolean;
     project: boolean; knowledge: boolean; evolved: boolean;
@@ -200,7 +205,8 @@ interface OlympusStore {
   clearCompact: () => void;
   leftPane:
     | 'brain' | 'god-intelligence' | 'cost' | 'timeline' | 'provider-settings'
-    | 'god-detail' | 'live-preview' | 'mcp-config' | 'benchmarks' | 'atelier';
+    | 'god-detail' | 'live-preview' | 'mcp-config' | 'benchmarks' | 'atelier'
+    | 'sync-map';
   setLeftPane: (p: OlympusStore['leftPane']) => void;
   /**
    * rightTab now includes 'ide' (Monaco editor + file explorer + terminal)
@@ -302,6 +308,8 @@ export const useOlympus = create<OlympusStore>((set, get) => ({
   },
   activeGod: null,
   setActiveGod: (g) => set({ activeGod: g }),
+  selectedGod: null,
+  setSelectedGod: (g) => set({ selectedGod: g }),
   filters: {
     // Brain view reduced to three categories: Gods, Instincts, Knowledge.
     // The skill / evolved / project booleans remain for backward compat

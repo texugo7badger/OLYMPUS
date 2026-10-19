@@ -5,7 +5,7 @@
 'use client';
 
 import { useOlympus, GOD_ICONS, GOD_IDS } from '@/lib/olympus-store';
-import { BarChart3, Brain, BrainCog, DollarSign, Eye, History, Palette, Plug, Settings, SlidersHorizontal } from 'lucide-react';
+import { BarChart3, Brain, BrainCog, DollarSign, Eye, History, Network, Palette, Plug, Settings, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
@@ -36,6 +36,11 @@ export default function ActivityBar() {
   const setLeftPane = useOlympus(s => s.setLeftPane);
   const setSettingsOpen = useOlympus(s => s.setSettingsOpen);
   const activeGod = useOlympus(s => s.activeGod);
+  // W-D1: the user's SELECTION — persisted on click, distinct from the live
+  // activeGod (which every chat submit resets to apollo). The ring keys on
+  // the selection; the pulsing dot stays the live god.
+  const selectedGod = useOlympus(s => s.selectedGod);
+  const setSelectedGod = useOlympus(s => s.setSelectedGod);
   const graphData = useOlympus(s => s.graphData);
   const setSelectedNode = useOlympus(s => s.setSelectedNode);
 
@@ -50,6 +55,7 @@ export default function ActivityBar() {
       <ActBtn icon={DollarSign} label="Cost" active={leftPane === 'cost'} onClick={() => setLeftPane('cost')} />
       <ActBtn icon={BarChart3} label="Benchmarks" active={leftPane === 'benchmarks'} onClick={() => setLeftPane('benchmarks')} />
       <ActBtn icon={Palette} label="Atelier" active={leftPane === 'atelier'} onClick={() => setLeftPane('atelier')} accent />
+      <ActBtn icon={Network} label="Sync map" active={leftPane === 'sync-map'} onClick={() => setLeftPane('sync-map')} />
       <ActBtn icon={SlidersHorizontal} label="LLM strategy" active={leftPane === 'provider-settings'} onClick={() => setLeftPane('provider-settings')} />
 
       <div className="my-1 w-6 h-px bg-linear-to-r from-transparent via-olympus-gold/25 to-transparent" />
@@ -62,19 +68,32 @@ export default function ActivityBar() {
         <div className="text-[8px] font-mono text-olympus-text-dim uppercase tracking-wider mb-0.5">gods</div>
         {DISPATCHABLE_GOD_IDS.map(id => {
           const Icon = GOD_ICONS[id];
+          // W-D1: the highlight SPLITS — the gold ring is the user's
+          // SELECTION (persistent, survives every SSE reset); the pulsing
+          // dot is the LIVE god (unchanged telemetry).
+          const isSelected = selectedGod === id;
           const isActive = activeGod === id;
           return (
             <button
               key={id}
               aria-label={id}
+              aria-pressed={isSelected}
+              title={`${id.charAt(0).toUpperCase() + id.slice(1)} — ${isSelected ? 'selected (click to clear)' : 'select + open god detail'}`}
               onClick={() => {
-                const node = graphData?.nodes.find(n => n.id === `god:${id}`);
-                if (node) setSelectedNode(node);
+                // W-D1: the click WRITES the selection (toggle — the
+                // Parthenon's own god-panel precedent), then drills down.
+                setSelectedGod(isSelected ? null : id);
+                // The empty-pane guard: before graphData loads (or for a god
+                // missing from the graph), build the node so god-detail never
+                // opens empty.
+                const node = graphData?.nodes.find(n => n.id === `god:${id}`)
+                  ?? { id: `god:${id}`, type: 'god', god: id };
+                setSelectedNode(node);
                 setLeftPane('god-detail');
               }}
               className={cn(
                 'w-9 h-9 rounded-lg flex items-center justify-center transition-all group relative',
-                isActive
+                isSelected
                   ? 'bg-olympus-gold/15 ring-1 ring-olympus-gold/50'
                   : 'hover:bg-olympus-gold/10',
               )}
@@ -83,7 +102,7 @@ export default function ActivityBar() {
                 size={17}
                 className={cn(
                   'transition-colors',
-                  isActive ? 'text-olympus-gold' : 'text-olympus-text-dim group-hover:text-olympus-gold',
+                  isSelected ? 'text-olympus-gold' : 'text-olympus-text-dim group-hover:text-olympus-gold',
                 )}
               />
               {isActive && (

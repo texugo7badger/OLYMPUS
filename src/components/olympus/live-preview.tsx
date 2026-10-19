@@ -20,7 +20,7 @@ import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
 const DEFAULT_PORT = 3000;
 const PROBE_INTERVAL_MS = 3000;
 
-interface ProbeStatus { running: boolean; port: number; url: string; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; demoLogin?: string | null; }
+interface ProbeStatus { running: boolean; port: number; url: string; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; demoLogin?: string | null; manager?: { running: boolean; port: number | null; url: string | null; slug: string; startedAt: string | null; responseTimeMs: number | null; note: string } | null; }
 
 export default function LivePreview() {
   const activeProject = useOlympus(s => s.activeProject);
@@ -49,7 +49,7 @@ export default function LivePreview() {
       // the panel's real defect; no client-side workaround could fix it.
       const r = await fetch(`/api/olympus/live-preview${params}`);
       const d = await r.json();
-      setStatus({ running: d.running, port: d.port, url: d.url, host: d.host ?? null, responseTimeMs: d.responseTimeMs, path: d.path ?? null, pathSource: d.pathSource ?? null, demoLogin: d.demoLogin ?? null });
+      setStatus({ running: d.running, port: d.port, url: d.url, host: d.host ?? null, responseTimeMs: d.responseTimeMs, path: d.path ?? null, pathSource: d.pathSource ?? null, demoLogin: d.demoLogin ?? null, manager: d.manager ?? null });
       setProbing(false);
     } catch { setStatus({ running: false, port, url: previewUrl, host: null, responseTimeMs: 0 }); setProbing(false); }
   }, [projectSlug, port, previewUrl]);
@@ -122,6 +122,12 @@ export default function LivePreview() {
           {isRunning && !probing && <span className="text-olympus-green text-[10px] flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-olympus-green animate-pulse" /> live</span>}
         </div>
         <div className="flex items-center gap-1.5">
+          {/* #100 (v0.0.6): THE DURABLE HOST CONTROLS — the #86 manager is
+              the host (probe-verified truth, deps-first spawn, patience
+              windows). Start when nothing runs; stop when the manager owns
+              the server (an unmanaged ephemeral server stops with its
+              owner — the button honestly hides). */}
+          <DevServerControls status={status} onDone={() => { setIframeLoaded(false); probe(); }} />
           <OlympusTooltip content="Mark an element for editing" side="bottom">
             <button onClick={() => setMarkMode(!markMode)} className={cn('flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono transition-all', markMode ? 'bg-olympus-gold/20 text-olympus-gold ring-1 ring-olympus-gold/40' : 'text-olympus-text-dim hover:text-olympus-gold hover:bg-olympus-gold/10')}>
               <MousePointerClick size={11} /> {markMode ? 'click preview…' : 'Mark'}
@@ -201,9 +207,83 @@ export default function LivePreview() {
       </div>
 
       <div className="h-6 shrink-0 flex items-center justify-between px-3 border-t border-olympus-gold/10 bg-olympus-panel text-[9px] font-mono text-olympus-text-dim">
-        <span>{isRunning ? `:${port} · ${status?.responseTimeMs ?? 0}ms` : `:${port} · offline`}</span>
+        <span>
+          {isRunning ? `:${port} · ${status?.responseTimeMs ?? 0}ms` : `:${port} · offline`}
+          {status?.manager?.running ? ' · durable host' : ''}
+        </span>
         <span className="text-[#5A5A5A]">live · no auto-refresh · interactive</span>
       </div>
     </div>
   );
+}
+
+/* #100 (v0.0.6): the durable host controls — the #86 manager IS the host.
+ * START when nothing runs (the manager installs deps first, probes after,
+ * answers honest); STOP only when the manager owns the running server (an
+ * unmanaged ephemeral server stops with its owner — no fake control). */
+function DevServerControls({ status, onDone }: { status: ProbeStatus | null; onDone: () => void }) {
+  const [busy, setBusy] = useState<null | 'start' | 'stop'>(null);
+  const [error, setError] = useState<string | null>(null);
+  const managed = status?.manager?.running === true;
+  const anythingRunning = status?.running === true;
+
+  const call = async (action: 'start' | 'stop') => {
+    setBusy(action);
+    setError(null);
+    try {
+      const r = await fetch(action === 'start' ? '/api/olympus/dev-server/start' : '/api/olympus/dev-server/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port: status?.port }),
+      }).then((r) => r.json());
+      if (!r?.ok) setError(String(r?.error || r?.result?.error || `${action} failed`));
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setBusy(null);
+      // The poll picks up the new state; nudge it now for snappiness.
+      onDone();
+    }
+  };
+
+  if (busy === 'start' || busy === 'stop') {
+    return (
+      <span className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim">
+        <Loader2 size={10} className="animate-spin" />
+        {busy === 'start' ? 'starting (deps + boot + probe)…' : 'stopping…'}
+      </span>
+    );
+  }
+  if (error) {
+    return (
+      <button onClick={() => setError(null)} className="text-[9px] font-mono text-olympus-red hover:underline" title={error}>
+        {error.slice(0, 40)}… ✕
+      </button>
+    );
+  }
+  if (managed) {
+    return (
+      <button
+        onClick={() => call('stop')}
+        title={`Stop the durable dev server (${status?.manager?.note ?? 'the #86 manager'})`}
+        className="text-[10px] font-mono text-olympus-text-dim hover:text-olympus-red transition-colors px-1.5"
+      >
+        stop
+      </button>
+    );
+  }
+  if (!anythingRunning) {
+    return (
+      <button
+        onClick={() => call('start')}
+        title="Start the durable dev server via the #86 manager (deps-first, probe-verified)"
+        className="text-[10px] font-mono text-olympus-text-dim hover:text-olympus-green transition-colors px-1.5"
+      >
+        start
+      </button>
+    );
+  }
+  // Running but NOT manager-owned: an ephemeral server (a shell, a trigger
+  // lane) — no fake control over a process we don't host.
+  return null;
 }

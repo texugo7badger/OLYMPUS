@@ -13,7 +13,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { X, Brain, FilePen, Coins, Clock, ChevronDown, ChevronRight, Wrench, RotateCcw, Sparkles } from 'lucide-react';
+import { X, Brain, FilePen, Coins, Clock, ChevronDown, ChevronRight, Wrench, RotateCcw, Sparkles, ShieldCheck } from 'lucide-react';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +27,9 @@ export interface TaskRecord {
   status: string;
   parkedReason?: string | null;
   ts?: string;
+  /** W-D2: when this hop STARTED (the inFlight ground truth — the running
+   *  timer's source; telemetry rows land only at settle). */
+  startedAt?: string;
   tokensIn?: number | null;
   tokensOut?: number | null;
   durationMs?: number;
@@ -37,6 +40,8 @@ export interface TaskRecord {
   /** The honest progress pct (0-100): completed = 100; running = elapsed vs
    *  the god's own median hop duration (the lane's telemetry-derived ETA). */
   progress?: number;
+  /** W-D5: the derived $ cost (tokens x the active strategy's rates). */
+  estimatedCostUsd?: number | null;
 }
 
 const STATUS_CHIP: Record<string, string> = {
@@ -147,7 +152,9 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
                 <div className="rounded-lg p-2 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-cyan/15">
                   <div className="flex items-center gap-1 mb-0.5"><Coins size={10} className="text-olympus-cyan" /><span className="text-[8px] font-mono text-olympus-text-dim uppercase">tokens</span></div>
                   <div className="text-[12px] font-bold font-mono text-olympus-cyan">{fmtTokens(task.tokensIn)} / {fmtTokens(task.tokensOut)}</div>
-                  <div className="text-[8px] font-mono text-olympus-text-dim">in / out</div>
+                  <div className="text-[8px] font-mono text-olympus-text-dim">
+                    in / out{typeof task.estimatedCostUsd === 'number' ? ` · ~$${task.estimatedCostUsd.toFixed(4)}` : ''}
+                  </div>
                 </div>
                 <div className="rounded-lg p-2 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-gold/15">
                   <div className="flex items-center gap-1 mb-0.5"><Clock size={10} className="text-olympus-gold" /><span className="text-[8px] font-mono text-olympus-text-dim uppercase">duration</span></div>
@@ -227,6 +234,29 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
                 <div className="rounded-lg border border-olympus-text-dim/10 p-2.5">
                   <div className="text-[10px] font-mono font-semibold text-olympus-cyan uppercase mb-1">directive</div>
                   <div className="text-[10px] font-mono text-olympus-text-dim leading-relaxed max-h-28 overflow-y-auto overscroll-contain custom-scroll whitespace-pre-wrap">{task.promptExcerpt}…</div>
+                </div>
+              )}
+
+              {/* W-D5: VERIFY CONTRACT — the deterministic gate the hop must
+                  pass (the plan's own checks, rendered — nothing dead). */}
+              {task.verify && typeof task.verify === 'object' && (
+                <div className="rounded-lg border border-olympus-cyan/15 p-2.5">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <ShieldCheck size={11} className="text-olympus-cyan" />
+                    <span className="text-[10px] font-mono font-semibold text-olympus-cyan uppercase">verify contract</span>
+                    <span className="text-[8px] font-mono text-olympus-text-dim ml-auto">
+                      {String((task.verify as any).review ?? 'deterministic')}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {Array.isArray((task.verify as any).checks)
+                      ? (task.verify as any).checks.map((c: string) => (
+                          <span key={c} className="text-[9px] font-mono text-olympus-text bg-olympus-card px-1.5 py-0.5 rounded ring-1 ring-olympus-cyan/20">
+                            {c}
+                          </span>
+                        ))
+                      : <span className="text-[9px] font-mono text-olympus-text-dim">no checks declared</span>}
+                  </div>
                 </div>
               )}
 

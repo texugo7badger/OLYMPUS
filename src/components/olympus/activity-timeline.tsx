@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import { useOlympus, GOD_ICONS } from '@/lib/olympus-store';
 import {
-  History, Activity, Clock, AlertCircle, CheckCircle2, GitBranch, Wrench, ArrowRight,
+  History, Activity, Clock, AlertCircle, CheckCircle2, GitBranch, Wrench, ArrowRight, Timer,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AnimatedNumber from './animated-number';
@@ -69,7 +69,10 @@ export default function ActivityTimeline() {
   const [sheetHop, setSheetHop] = useState<string | null>(null);
   // The PARITY poll (v0.0.4): the same /api/olympus/tasks the Parthenon
   // reads — the running hop rows get their live progress bar here too.
+  // W-D3: the campaign stats ride the same poll — the ETA card (the
+  // projected time-to-finish) lives in the summary grid.
   const [taskById, setTaskById] = useState<Record<string, TaskRecord>>({});
+  const [campaignStats, setCampaignStats] = useState<null | { total: number; completed: number; parked: number; projectedRemainingMs: number }>(null);
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -81,6 +84,7 @@ export default function ActivityTimeline() {
         const next: Record<string, TaskRecord> = {};
         for (const t of (d?.tasks || []) as TaskRecord[]) next[t.id] = t;
         setTaskById(next);
+        if (d?.stats) setCampaignStats(d.stats);
       } catch { /* decorative */ }
     };
     load();
@@ -137,7 +141,7 @@ export default function ActivityTimeline() {
       </div>
 
       {/* Summary stats — replaced "avg conf" (overused everywhere) with "delegations" */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="rounded-lg p-2.5 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-cyan/15">
           <div className="flex items-center gap-1 mb-0.5">
             <Clock size={10} className="text-olympus-cyan" />
@@ -164,6 +168,27 @@ export default function ActivityTimeline() {
           <div className="text-base font-bold font-mono text-olympus-gold">
             <AnimatedNumber value={tasks} />
           </div>
+        </div>
+        {/* W-D3: the projected time-to-finish — the campaign's honest ETA
+            (the critical-path model from the tasks sheet). The honest "—"
+            when no campaign is live; "done" when nothing remains. */}
+        <div className="rounded-lg p-2.5 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-cyan/15">
+          <div className="flex items-center gap-1 mb-0.5">
+            <Timer size={10} className="text-olympus-cyan" />
+            <span className="text-[8px] font-mono text-olympus-text-dim uppercase">eta</span>
+          </div>
+          <div className="text-base font-bold font-mono text-olympus-cyan">
+            {!campaignStats || campaignStats.total === 0 ? '—'
+              : campaignStats.completed >= campaignStats.total ? 'done'
+              : `~${campaignStats.projectedRemainingMs >= 60_000
+                ? `${Math.round(campaignStats.projectedRemainingMs / 60_000)}m`
+                : `${Math.round(campaignStats.projectedRemainingMs / 1000)}s`}`}
+          </div>
+          {campaignStats && campaignStats.total > 0 && (
+            <div className="text-[8px] font-mono text-olympus-text-dim mt-0.5">
+              {campaignStats.completed}/{campaignStats.total} hops{campaignStats.parked > 0 ? ` · ${campaignStats.parked} parked` : ''}
+            </div>
+          )}
         </div>
       </div>
 
