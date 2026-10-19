@@ -4,7 +4,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { probeDevServer } from '@/lib/dev-server-probe';
-import { getProject, reconcileProjectPath } from '@/lib/project-context';
+import { getProject, parseFrontmatter, reconcileProjectPath } from '@/lib/project-context';
+import path from 'node:path';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,18 @@ export async function GET(req: NextRequest) {
   // #103: the note/lane reconciliation — the path consumers should show (the
   // lane-aware truth), with the staleness surfaced, never silently clobbered.
   const reconciled = slug ? reconcileProjectPath(slug) : null;
+  // #DEMO-LOGIN: an auth-gated preview may declare its seed credentials in
+  // the project note frontmatter (`demoLogin: email / password`). The panel
+  // surfaces the chip so the user never guesses at a login form inside the
+  // iframe. The note is the user's territory — no value, no chip.
+  let demoLogin: string | null = null;
+  try {
+    if (reconciled?.path) {
+      const fm = parseFrontmatter(path.join(reconciled.path, 'project.md'));
+      const v = fm?.demoLogin;
+      if (typeof v === 'string' && v.trim()) demoLogin = v.trim();
+    }
+  } catch {}
   return NextResponse.json({
     running: probe.running,
     port,
@@ -30,5 +43,6 @@ export async function GET(req: NextRequest) {
     slug: slug || null,
     path: reconciled?.path ?? null,
     pathSource: reconciled?.source ?? null,
+    demoLogin,
   });
 }

@@ -20,7 +20,7 @@ import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
 const DEFAULT_PORT = 3000;
 const PROBE_INTERVAL_MS = 3000;
 
-interface ProbeStatus { running: boolean; port: number; url: string; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; }
+interface ProbeStatus { running: boolean; port: number; url: string; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; demoLogin?: string | null; }
 
 export default function LivePreview() {
   const activeProject = useOlympus(s => s.activeProject);
@@ -49,7 +49,7 @@ export default function LivePreview() {
       // the panel's real defect; no client-side workaround could fix it.
       const r = await fetch(`/api/olympus/live-preview${params}`);
       const d = await r.json();
-      setStatus({ running: d.running, port: d.port, url: d.url, host: d.host ?? null, responseTimeMs: d.responseTimeMs, path: d.path ?? null, pathSource: d.pathSource ?? null });
+      setStatus({ running: d.running, port: d.port, url: d.url, host: d.host ?? null, responseTimeMs: d.responseTimeMs, path: d.path ?? null, pathSource: d.pathSource ?? null, demoLogin: d.demoLogin ?? null });
       setProbing(false);
     } catch { setStatus({ running: false, port, url: previewUrl, host: null, responseTimeMs: 0 }); setProbing(false); }
   }, [projectSlug, port, previewUrl]);
@@ -133,6 +133,13 @@ export default function LivePreview() {
           <a href={effectiveUrl} target="_blank" rel="noopener noreferrer" className="text-olympus-gold hover:text-olympus-gold/80 text-[10px] font-mono px-1.5">open ↗</a>
         </div>
       </div>
+
+      {isRunning && status?.demoLogin && (
+        <div className="shrink-0 flex items-center gap-1.5 px-3 py-1 bg-olympus-gold/5 border-b border-olympus-gold/10 text-[10px] font-mono overflow-hidden">
+          <span className="text-olympus-gold shrink-0">demo login:</span>
+          <code className="text-olympus-text/80 truncate" title={status.demoLogin}>{status.demoLogin}</code>
+        </div>
+      )}
 
       {pendingMark && (
         <div className="shrink-0 flex flex-col gap-1.5 px-3 py-2 bg-olympus-gold/10 border-b border-olympus-gold/20 text-[10px] font-mono">
