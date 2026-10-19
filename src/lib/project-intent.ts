@@ -74,6 +74,17 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 export function extractProjectName(prompt: string): string | null {
   const pathCand = extractProjectPathCandidate(prompt);
   if (pathCand) return null; // a path is a routing signal, not a name
+  // #CONTINUATION-HEADER (the next-pass specimen, 2026-10-19): when the
+  // prompt OPENS with a continuation directive (Continue/Resume/Continue o/
+  // Retomar etc.), the quoted-string extraction is SUPPRESSED — deeper
+  // quoted strings are feature descriptions ("a 'next pass' countdown
+  // card" inside a mission-passes brief), never project declarations.
+  // Returning null lets the slug-token matching in classifyFirstPrompt
+  // handle the routing (the 22:30 specimen's logic already covers
+  // "Continue o lumina Atlas para dispatch" — the word-set similarity).
+  if (/^.{0,12}?(?:[Cc]ontinue|[Rr]esume|[Cc]ontinuar|[Rr]etomar|[Cc]ontinue o)\b/m.test(prompt)) {
+    return null;
+  }
   const quoted = prompt.match(/["“]([^"”\n]{2,60})["”]/);
   if (quoted) return quoted[1].trim();
   // #144 (the unquoted-headline class): prompts open with "Build AURORA
@@ -222,6 +233,35 @@ export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): F
       score: scored[0].score,
       reason: `prompt matches project '${scored[0].name}' (score ${scored[0].score.toFixed(2)} >= ${INTENT_MATCH_THRESHOLD})`,
     };
+  }
+  // #CONTINUATION-SLUG (the next-pass followup, 2026-10-19): a continuation
+  // prompt with exactly ONE slug-token hit routes THERE — never the ask
+  // branch. A continuation is the user's explicit resume action; the
+  // feature-description vocabulary ("next pass", "telemetry") matching other
+  // projects' descriptions is noise, not intent. One slug hit = the project.
+  const isContinuation = /^.{0,12}?(?:[Cc]ontinue|[Rr]esume|[Cc]ontinuar|[Rr]etomar|[Cc]ontinue o)\b/m.test(prompt);
+  if (isContinuation && scored.length >= 2) {
+    // Only tokens in the CONTINUATION HEADER ZONE (the first ~80 chars —
+    // where "Continue ORBITAL project" lives) count. A slug token that
+    // only appears deeper in the brief ("next pass" as a feature
+    // description 300 chars in) is vocabulary noise, never the resume
+    // intent.
+    const headerZone = prompt.slice(0, 80).toLowerCase();
+    const slugHits = scored.filter((s) => {
+      const st = new Set(s.slug.toLowerCase().split('-'));
+      for (const t of st) {
+        if (t.length >= 4 && new RegExp(`\\b${t}\\b`).test(headerZone)) return true;
+      }
+      return false;
+    });
+    if (slugHits.length === 1) {
+      return {
+        kind: 'existing',
+        slug: slugHits[0].slug,
+        score: slugHits[0].score,
+        reason: `continuation + slug-token match on '${slugHits[0].slug}' — the resume action routes there (the feature vocabulary matching other descriptions is noise, not intent)`,
+      };
+    }
   }
   if (scored.length >= 2) {
     return {
