@@ -244,13 +244,36 @@ function readUsageFromDb(sessionId?: string): {
       }
       if (!row) return null;
 
-      // Deliberately excludes tokens_cache_read: opencode reports cache
-      // reads as a SUBSET of tokens_input (the cached prompt prefix), so
-      // adding it double-counts. Live proof: one session reported
-      // input=10,472,846 with cache_read=239,497,874, which inflated the
-      // "used" figure to 250M and the indicator past 125,000%.
-      const used = (row.tokens_input || 0) + (row.tokens_output || 0)
-        + (row.tokens_reasoning || 0);
+      // #CTX-CUMULATIVE (2026-10-19 specimen): the session row's tokens_*
+      // are CUMULATIVE across turns — every turn re-sends the full
+      // context, so tokens_input grows by the whole context every turn
+      // (16,121,033 on a healthy ~107k-context session → the indicator
+      // pinned at 100% from the first turns). The honest "current context"
+      // is the LAST message's tokens.total (v2 message shape: total =
+      // input + output + reasoning + cache.read for that turn = the
+      // context as it stood on the last turn; aborted turns write all
+      // zeros and carry no total — skipped by the > 0 filter). Fallback to
+      // the cumulative sum only when no message rows exist (pre-v2 DBs).
+      let used: number | null = null;
+      try {
+        const msgs = db
+          .prepare('SELECT data FROM message WHERE session_id = ? ORDER BY time_created DESC LIMIT 5')
+          .all(row.id) as Array<{ data: string }>;
+        for (const m of msgs) {
+          const d = JSON.parse(m.data);
+          const t = Number(d?.tokens?.total);
+          if (Number.isFinite(t) && t > 0) { used = t; break; }
+        }
+      } catch {}
+      if (used == null) {
+        // Deliberately excludes tokens_cache_read: opencode reports cache
+        // reads as a SUBSET of tokens_input (the cached prompt prefix), so
+        // adding it double-counts. Live proof: one session reported
+        // input=10,472,846 with cache_read=239,497,874, which inflated the
+        // "used" figure to 250M and the indicator past 125,000%.
+        used = Number(row.tokens_input || 0) + Number(row.tokens_output || 0)
+          + Number(row.tokens_reasoning || 0);
+      }
 
       // Model: the session.model column is a JSON blob like
       // {"id":"openai/gpt-oss-120b","providerID":"groq",...} — surface the id.
