@@ -11,6 +11,7 @@ All notable changes to OLYMPUS are documented in this file.
 - **PIPE-1** (#165): the asset-inject route — POST /atelier/inject copies a vault asset into `<project>/public/assets/` (kebab-case, root-relative — the check-9 contract), collision-suffixed never overwriting, and the **exit gate check 9 verifies the injected asset ships** (probe-proven: inject → check 9 PASS on the live gate run).
 - **BLENDER-MCP-1 + COMFY-LOCAL-1**: the MCP registrations (ahujasid/mcp-for-blender + comfyui-mcp) — disabled-by-default honest (probes at spawn), the GPL tools stay separate processes.
 - **REA-MCP + JET** (#166 filed): the v0.0.6 evaluation items (the Artemis reverse-engineering MCP + the structured-decision demigod) — probe-first, committed only on green.
+- **THE CONTINUATION-HEADER LAW** (the user's own specimen): 'Continue ORBITAL project ... a "next pass" countdown card' hijacked to the 'next-pass' project — the QUOTED FEATURE DESCRIPTION inside the brief won the intent over the explicit continuation naming ORBITAL. The cure (three layers): the continuation header suppresses quoted-string extraction entirely; a continuation with one slug-token hit in the HEADER ZONE (the first 80 chars) routes there directly, never the ask; feature vocabulary deeper in the brief is noise, never intent. All #110 intake fixtures green (the 22:30 specimen + the quoted continuation preserved).
 
 ## [v0.0.5] — 2026-10-18
 
