@@ -26,11 +26,25 @@ const EMBED_DIM = 1536; // openai/text-embedding-3-small
 
 /** The Atelier BYOK config (~/.olympus/atelier.json). */
 export interface AtelierKeys { pollinations_key?: string; google_key?: string; }
-export function readAtelierKeys(): AtelierKeys {
+/**
+ * W-A RAG-CERT A2: the key front door. The CANONICAL store is
+ * ~/.olympus/api-configs.json (POLLINATIONS_KEY — written by the API Keys
+ * dialog); the legacy ~/.olympus/atelier.json still satisfies, but the
+ * canonical key WINS when both exist (one truth). homeDir is the
+ * testability seam (fixture homes, the authLaneCensus precedent).
+ */
+export function readAtelierKeys(homeDir?: string): AtelierKeys {
+  const home = homeDir ?? os.homedir();
+  let keys: AtelierKeys = {};
   try {
-    const p = path.join(os.homedir(), '.olympus', 'atelier.json');
-    return JSON.parse(fs.readFileSync(p, 'utf-8')) as AtelierKeys;
-  } catch { return {}; }
+    keys = JSON.parse(fs.readFileSync(path.join(home, '.olympus', 'atelier.json'), 'utf-8')) as AtelierKeys;
+  } catch { keys = {}; }
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(home, '.olympus', 'api-configs.json'), 'utf-8'));
+    const pk = cfg?.POLLINATIONS_KEY;
+    if (typeof pk === 'string' && pk.trim()) keys.pollinations_key = pk.trim();
+  } catch { /* no canonical store — the legacy shape stands alone */ }
+  return keys;
 }
 
 let db: Database.Database | null = null;
@@ -79,14 +93,6 @@ export async function indexAsset(asset: MediaAsset): Promise<boolean> {
   d.prepare('INSERT INTO asset_vectors(rowid, embedding, asset_id, text) VALUES (?, ?, ?, ?)')
     .run(nextRowId(), vecBlob(emb), asset.id, text);
   return true;
-}
-
-/** The semantic KNN search — null when unavailable (the keyword fallback runs). */
-export function searchByVector(query: string, limit = 24): MediaAsset['id'][] | null {
-  if (!readAtelierKeys().pollinations_key) return null;
-  // The query embedding is async in embedText — for the sync interface we
-  // pre-embed in searchSemantic below; this sync path is the internal helper.
-  return null;
 }
 
 /** The full async semantic path — null = unavailable (fall back to keyword). */

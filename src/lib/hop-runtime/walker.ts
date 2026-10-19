@@ -158,10 +158,19 @@ export function composeHopPrompt(hop: PlanHop, laneRoot: string): string {
 }
 
 /**
- * #164 RAG-AGENTIC: the async hop prompt — the same contract PLUS the
- * vault retrieval block (the semantic/keyword hits as prior-asset art
- * direction). The dispatcher uses this; the sync composeHopPrompt stays
- * for the fixtures (the RAG block is additive, never contract-breaking).
+ * #164 RAG-AGENTIC + W-A RAG-CERT A4: the async hop prompt — the same
+ * contract PLUS the retrieval that actually matches THIS hop:
+ *   - the vault hits ("style of my previous assets") queried by the hop's
+ *     OWN slice (RAG-CERT A4: the old form joined every hop prompt into one
+ *     400-char campaign mush shared by all hops — noise for every hop that
+ *     wasn't the first; the campaign-level style flavor now rides the
+ *     planner marker via composePlannerRag on the action route);
+ *   - the #84 instinct fusion at HOP level (the composer god's proven
+ *     instincts matching the slice — the same block the demigod dispatches
+ *     carry, so the CHANGELOG #164 "fused" claim is true in code).
+ * The dispatcher uses this; the sync composeHopPrompt stays for the
+ * fixtures (the RAG block is additive, never contract-breaking). No hits +
+ * no instincts = the plain sync form (lean, never padded).
  */
 export async function composeHopPromptWithRag(
   hop: PlanHop,
@@ -169,11 +178,20 @@ export async function composeHopPromptWithRag(
   campaignQuery?: string,
 ): Promise<string> {
   const base = composeHopPrompt(hop, laneRoot);
-  if (!campaignQuery) return base;
+  // The hop's own slice is the query; campaignQuery is only the fallback
+  // for the degenerate empty-slice shape (never the shared-mush primary).
+  const query = String(hop.prompt ?? '').slice(0, 400) || campaignQuery || '';
+  if (!query) return base;
   try {
-    const rag = await composeRagContext(campaignQuery);
-    if (!rag) return base;
-    return `${base}\n\n${rag}`;
+    const rag = await composeRagContext(query);
+    let instinct: string | null = null;
+    try {
+      const { instinctPriorContext } = await import('../instinct-rag');
+      instinct = instinctPriorContext(hop.god, query);
+    } catch { /* the instinct lane never breaks the hop */ }
+    if (!rag && !instinct) return base;
+    const blocks = [rag, instinct].filter(Boolean).join('\n\n');
+    return `${base}\n\n${blocks}`;
   } catch {
     return base; // the RAG never breaks the hop
   }
@@ -570,9 +588,6 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     updatedAt: new Date().toISOString(),
   });
 
-  // #164: the RAG query signal — the plan's own directive text (its style
-  // words drive the vault retrieval once, shared by every hop).
-  const planQueryForRag = (plan.hops || []).map((h) => String(h.prompt ?? '')).join(' ').slice(0, 400);
   const pending = plan.hops.filter((h) => !completed.has(h.id));
   const byId = new Map(plan.hops.map((h) => [h.id, h]));
   const ready = (h: PlanHop) => (h.after ?? []).every((dep) => completed.has(dep));
@@ -637,7 +652,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           try {
           let result: HopDispatchResult;
           try {
-            result = await dispatch(next, { laneRoot, prompt: await composeHopPromptWithRag(next, laneRoot, planQueryForRag) });
+            result = await dispatch(next, { laneRoot, prompt: await composeHopPromptWithRag(next, laneRoot) });
           } catch (e) {
             result = {
               ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,

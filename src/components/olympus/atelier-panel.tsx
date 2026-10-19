@@ -174,6 +174,26 @@ export default function AtelierPanel() {
           placeholder="search the vault — style, subject, mood…"
           className="flex-1 bg-olympus-card border border-olympus-gold/15 rounded px-2 py-1 text-[11px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/40"
         />
+        {/* W-A RAG-CERT A2: the re-index action — reindexVault's front door.
+            Honest result flash: keyed lane embeds, keyless lane says so. */}
+        <button
+          onClick={async () => {
+            setBusy('reindex');
+            try {
+              const r = await fetch('/api/olympus/atelier/reindex', { method: 'POST' }).then((r) => r.json());
+              if (!r?.ok) throw new Error(r?.error || 'reindex failed');
+              flash(r.semantic
+                ? `semantic re-index: ${r.indexed} embedded, ${r.skipped} skipped`
+                : `no embedding key — ${r.skipped} skipped (keyword search only; set POLLINATIONS_KEY in API Keys)`);
+            } catch (e: any) { flash(`RE-INDEX FAILED: ${e?.message || e}`); }
+            finally { setBusy(null); }
+          }}
+          disabled={busy === 'reindex'}
+          title="Re-index the vault for semantic search (needs the Pollinations key — API Keys dialog)"
+          className="px-2 py-1 rounded text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold ring-1 ring-olympus-gold/15 hover:ring-olympus-gold/40 disabled:opacity-40 shrink-0"
+        >
+          {busy === 'reindex' ? <Loader2 size={11} className="animate-spin" /> : 're-index'}
+        </button>
       </div>
 
       {/* The gallery */}

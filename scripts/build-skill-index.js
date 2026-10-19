@@ -2,18 +2,15 @@
 /**
  * build-skill-index.js — Build the per-god skill index for semantic search.
  *
- * v0.0.1 — LOCAL TF-IDF FALLBACK. If no OpenAI API key is configured, this
- * script builds a TF-IDF index (no external API calls) that powers the
- * SkillIndex cosine search. The TF-IDF vectors are lower-dimensional than
- * OpenAI embeddings but provide good enough semantic matching for 330 skills.
+ * v0.0.1 — LOCAL TF-IDF. The index is pure local TF-IDF (no external API
+ * calls) that powers the SkillIndex cosine search. The TF-IDF vectors are
+ * lower-dimensional than embeddings but provide good enough semantic
+ * matching for 330+ skills. (The OLYMPUS_EMBED_* env vars this header once
+ * documented were never read by any code — retired in the RAG-CERT sweep.)
  *
  * Usage:
  *   node scripts/build-skill-index.js                # build
  *   node scripts/build-skill-index.js --rebuild      # drop + rebuild
- *
- * Env vars:
- *   OLYMPUS_EMBED_PROVIDER = "local" (default, TF-IDF) | "openai"
- *   OLYMPUS_EMBED_API_KEY  = OpenAI API key (only if provider=openai)
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */

@@ -16,7 +16,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import olympusGoCache from "../olympus-go-cache/index.js";
-import { isScopeAllowed, getActiveScopeAndAgent, queryInstincts, CONFIDENCE_THRESHOLD } from "./src/instinct-gate.js";
+import { isScopeAllowed, getActiveScopeAndAgent, registerSessionAgent, logShortCircuitEvaluation, queryInstincts, CONFIDENCE_THRESHOLD } from "./src/instinct-gate.js";
 import { getSkillIndex, type SkillHit } from "./src/skill-index.js";
 // Import the canonical tiered MCP map (single source of truth, shared
 // with olympus-dynamic-context and the dispatch tool).
@@ -246,6 +246,11 @@ const plugin: Plugin = async (input, options) => {
 
     "chat.params": async (hookInput, output) => {
       try {
+        // W-A RAG-CERT A5: register the REAL agent for this session — the
+        // only hook whose input carries it. The session-less hooks resolve
+        // through the same map; every god now consults ITS OWN instinct pool
+        // and skill arsenal (not apollo's, the old stub).
+        registerSessionAgent(hookInput.sessionID, hookInput.agent);
         const { scope, agent } = getActiveScopeAndAgent(hookInput.sessionID);
         if (scope !== "god") return;
         const messageText =
@@ -254,6 +259,19 @@ const plugin: Plugin = async (input, options) => {
             : (hookInput.message as { text?: string })?.text ?? "";
         if (messageText.length === 0) return;
         const result = queryInstincts("god", agent, messageText, 3);
+        // W-A RAG-CERT A5: the evaluation is LOGGED — the Short-Circuit
+        // Health panel's data file finally has a writer (AGENTS.md's claim
+        // made true). Non-fatal by contract.
+        logShortCircuitEvaluation({
+          god: agent,
+          session_id: hookInput.sessionID,
+          confidence: result.confidence,
+          short_circuited: result.short_circuit,
+          instinct_id: result.matching_instinct?.id ?? null,
+          instinct_tags: result.matching_instinct?.tags ?? null,
+          task_signature: messageText.slice(0, 120),
+          tokens_saved: 0, // the honest measured zero — the resonance loop backfills real dispatch deltas, never a fabricated estimate
+        });
         output.options = output.options ?? {};
         output.options.olympus_instinct_gate = {
           confidence: result.confidence,

@@ -8,7 +8,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -16,6 +16,76 @@ export const CONFIDENCE_THRESHOLD = 0.85;
 
 const VAULT_ROOT = process.env.OLYMPUS_VAULT_ROOT ?? join(homedir(), "OLYMPUS-VAULT");
 const INSTINCTS_ROOT = join(VAULT_ROOT, "05_Auto_Learning", "instincts");
+
+/** The 10 gods — the scope boundary: an agent in this set runs as a god
+ *  session; anything else (a demigod id) runs as a sub-agent session. */
+const GOD_IDS = new Set([
+  "apollo", "atlas", "artemis", "athena", "dionysus",
+  "hephaestus", "hermes", "persephone", "prometheus", "callimachus",
+]);
+
+/**
+ * W-A RAG-CERT A5: the session->agent map. chat.params is the only hook
+ * whose input carries the REAL agent id — it registers here on every turn;
+ * the session-less hooks (permission.ask, tool.execute.before) consult the
+ * map through getActiveScopeAndAgent. In-memory by design (sessions are
+ * lanes inside the serve process; a restart re-registers on the first turn).
+ */
+const sessionAgentMap = new Map<string, string>();
+
+export function registerSessionAgent(sessionID: string, agent: string): void {
+  const sid = String(sessionID ?? "").trim();
+  const a = String(agent ?? "").trim().toLowerCase();
+  if (sid && a) sessionAgentMap.set(sid, a);
+}
+
+/**
+ * W-A RAG-CERT A5: the un-stub. The old form hardcoded
+ * {scope:'god', agent:'apollo'} for every session — every god's interactive
+ * turn queried APOLLO's instinct pool and the skill hints filtered to
+ * apollo's arsenal. Now: the registered agent for the session (scope = god
+ * iff one of the 10 GOD_IDS, else sub-agent); an unknown session keeps the
+ * honest apollo legacy default.
+ */
+export function getActiveScopeAndAgent(sessionID: string): { scope: "god" | "sub-agent"; agent: string } {
+  const sid = String(sessionID ?? "").trim();
+  const known = sid ? sessionAgentMap.get(sid) : undefined;
+  if (!known) return { scope: "god", agent: "apollo" };
+  return { scope: GOD_IDS.has(known) ? "god" : "sub-agent", agent: known };
+}
+
+/**
+ * W-A RAG-CERT A5: the shortcircuit-log.jsonl WRITER — the telemetry row the
+ * readers (shortcircuit-telemetry.ts, the God Intelligence Dashboard's
+ * Short-Circuit Health panel, vault-prune TTL, doctor) always expected and
+ * nothing ever wrote. The row shape is the ShortCircuitEntry contract.
+ * tokens_saved stays the honest measured 0 until the resonance loop can
+ * backfill real dispatch deltas — never a fabricated estimate.
+ */
+export interface ShortCircuitLogRow {
+  god: string;
+  session_id?: string;
+  confidence: number;
+  short_circuited: boolean;
+  instinct_id: string | null;
+  instinct_tags: string[] | null;
+  task_signature: string;
+  tokens_saved: number;
+}
+
+export function logShortCircuitEvaluation(row: ShortCircuitLogRow): boolean {
+  try {
+    const dir = join(VAULT_ROOT, "05_Auto_Learning");
+    mkdirSync(dir, { recursive: true });
+    appendFileSync(
+      join(dir, "shortcircuit-log.jsonl"),
+      JSON.stringify({ ...row, ts: new Date().toISOString() }) + "\n",
+    );
+    return true;
+  } catch {
+    return false; // telemetry never breaks the gate
+  }
+}
 
 export interface Instinct {
   id: string;
@@ -154,11 +224,18 @@ export function isScopeAllowed(
   return requestedScope === "sub-agent" && requestedAgent === callerAgentName;
 }
 
-export function getActiveScopeAndAgent(_sessionID: string): { scope: "god" | "sub-agent"; agent: string } {
-  return { scope: "god", agent: "apollo" };
-}
+// (The old stub lived here: getActiveScopeAndAgent returned
+//  {scope:'god', agent:'apollo'} for every session — see the un-stub
+//  above, W-A RAG-CERT A5.)
 
 // Assign to a const before exporting as default (eslint import/no-anonymous-
 // default-export requires a named binding for `export default`).
-const instinctGate = { CONFIDENCE_THRESHOLD, queryInstincts, isScopeAllowed, getActiveScopeAndAgent };
+const instinctGate = {
+  CONFIDENCE_THRESHOLD,
+  queryInstincts,
+  isScopeAllowed,
+  getActiveScopeAndAgent,
+  registerSessionAgent,
+  logShortCircuitEvaluation,
+};
 export default instinctGate;

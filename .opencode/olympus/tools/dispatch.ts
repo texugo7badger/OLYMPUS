@@ -558,7 +558,24 @@ const dispatchTool: ToolDefinition = tool({
       const { instinctPriorContext } = await import("../../../src/lib/instinct-rag.js");
       ragPriorContext = instinctPriorContext(String(args.godId || "apollo"), String(args.task || ""));
     } catch { /* the RAG never breaks the dispatch */ }
-    const effectiveTask84 = ragPriorContext ? `${args.task}\n\n${ragPriorContext}` : args.task;
+    // W-A RAG-CERT A6: the Arsenal Resolver quick-circuit layer — the recon
+    // queries the resonance log (the dispatch-tracker's feedback loop) for
+    // the PROVEN arsenal on this task class. HINTS, never mandates: the god
+    // still evaluates the task + instincts at dispatch time and may override
+    // (AGENTS.md doctrine). Lean on no-match — never padded.
+    let arsenalReconBlock: string | null = null;
+    try {
+      const { arsenalRecon } = await import("../../../src/lib/symphony/arsenal-resolver.js");
+      const recon = arsenalRecon(String(args.task || ""), String(args.godId || "apollo"));
+      const reconLines: string[] = [];
+      for (const s of recon.suggestedSkills) reconLines.push(`- skill: ${s.skill} (confidence ${s.confidence.toFixed(2)}, ${s.samples} samples)`);
+      for (const m of recon.suggestedMcps) reconLines.push(`- mcp: ${m.mcp} (confidence ${m.confidence.toFixed(2)}, ${m.samples} samples)`);
+      for (const d of recon.suggestedDemigods) reconLines.push(`- demigod: ${d.demigod} (confidence ${d.confidence.toFixed(2)}, ${d.samples} samples)`);
+      if (reconLines.length > 0) {
+        arsenalReconBlock = `[ARSENAL RECON — proven dispatch outcomes for this task class. HINTS — evaluate and override freely.]\n${reconLines.join('\n')}`;
+      }
+    } catch { /* the recon never breaks the dispatch */ }
+    const effectiveTask84 = [args.task, ragPriorContext, arsenalReconBlock].filter(Boolean).join('\n\n');
     try {
       syncEntry = atlasIngestDispatch({
         godId: String(args.godId || "unknown"),

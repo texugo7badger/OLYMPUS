@@ -12,6 +12,7 @@ import { maybeStartDevServer } from '@/lib/dev-server-trigger';
 import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
 import { watchdogDecision, classifyRetry } from '@/lib/opencode-session';
 import { reconcileProjectPath } from '@/lib/project-context';
+import { composePlannerRag } from '@/lib/rag-inject';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
 // the running server + session (no cold start, context retained).
@@ -371,6 +372,14 @@ export async function POST(req: NextRequest) {
     const intentLaneRoot = intentStage?.slug
       ? reconcileProjectPath(intentStage.slug)?.path ?? null
       : null;
+    // W-A RAG-CERT A3: the planner RAG — the campaign prompt's style words
+    // retrieve the vault's prior assets BEFORE the plan ("style of my
+    // previous assets" as a planning input). composePlannerRag previously
+    // existed with zero callers (dead code); it now rides the planner turn.
+    // Non-fatal by contract: the RAG never breaks the plan.
+    const plannerRagBlock = action === 'prompt' && classification.needsPlanning
+      ? await composePlannerRag(promptText).catch(() => '')
+      : '';
     const plannerMarker = action === 'prompt' && classification.needsPlanning
       ? `[OLYMPUS-PLANNER] This task is architectural/complex. Your deliverable for this turn is THE PLAN, not monolithic code: write dispatch-plan.json${intentLaneRoot ? ` to THIS ABSOLUTE PATH: ${intentLaneRoot}/dispatch-plan.json — at that exact path, NEVER the session cwd or any workspace lane` : ' to the project lane root'} — a DAG of small hops. NEVER write code files yourself — the plan IS your deliverable. The HOP RUNTIME is the ONLY execution engine: it dispatches each hop to the hop's god on the god's model lane. If the walk is parked, the user's next prompt resumes it in the post-run — you do NOT need to (and MUST NOT) execute hops, write component code, or dispatch the plan to Atlas. THE CONTRACT IS INLINE (a minimal canonical plan — do NOT open any source to learn it): {"version":1,"laneRoot":"${intentLaneRoot ?? '<the ABSOLUTE path of this project lane root>'}","hops":[{"id":"shell","god":"hephaestus","prompt":"<the spec SLICE + the DESIGN DIRECTIVES slice for this hop>","artifacts":["app/layout.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/layout.tsx"]},"budgetTokens":8192},{"id":"landing","god":"athena","prompt":"<its own slice + the design tokens>","artifacts":["app/page.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/page.tsx"]},"budgetTokens":8192,"after":["shell"]}]} — the hard rules: version is exactly 1; hop ids unique; one god per hop; artifacts are real deliverable paths relative to the laneRoot; after-edges must stay acyclic; budgetTokens at most 16384 (8192 is the sane default); verify.review is "deterministic" with checks like file-exists:<path>. The hop runtime walks the plan: per-hop dispatch on the god\'s own model lane (concurrency at most 3), deterministic verify (0 tokens), park-on-exhaustion with resume. Sessions are lanes; the disk carries the campaign. HARD RULE: hop prompts must NEVER instruct deletion or cleanup of the lane's runtime files (.opencode, opencode.json, opencode.demigods.json, dispatch-plan.json, .olympus-*, project.md, _handoff.md, _delegations) — residue cleanup is the runtime's post-campaign job (the 10:16 specimen: a build-fix god deleted the machinery mid-walk and killed the campaign). `
       : '';
@@ -391,8 +400,8 @@ Deliverables: the project root must contain ONLY deliverable files. No planning 
 Design review: include a design-review hop as the SECOND-TO-LAST hop (god: athena, artifacts: ["design-review.json"], budgetTokens: 4096). Its prompt must tell the god to: (1) run \`node scripts/extract-page-styles.mjs <preview-url> <project-root>\` to get the REAL visual data (fonts, colors, spacing, slop signals, component quality signals — extracted from the served page, not from source alone). (2) Read the key component files. (3) Rate each dimension 0-10 (typography, color, spacing, components, hierarchy, darkTheme, content, motion). (4) Write design-review.json with {"scores":{...},"overall":N,"issues":[...],"fixInstructions":[...]}. The verify check: design-score:7.`
       : '';
     const runText = unattended
-      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + promptText + plannerMarker + designMarker
-      : sessionMarker + classificationMarker + promptText + plannerMarker + designMarker;
+      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + plannerMarker + designMarker
+      : sessionMarker + classificationMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + plannerMarker + designMarker;
 
     return streamWarm(req, {
       conversationId,

@@ -401,7 +401,7 @@ async function main() {
     /OLYMPUS-PLANNER/.test(routeSrc) && /dispatch-plan\.json/.test(routeSrc) && /hop-runtime/.test(routeSrc) && /the disk carries the campaign/.test(routeSrc),
     'the planner contract block is incomplete');
   expect('PL: the marker rides AFTER the prompt (the session marker still leads every turn type)',
-    /: sessionMarker \+ classificationMarker \+ promptText \+ plannerMarker/.test(routeSrc),
+    /: sessionMarker \+ classificationMarker \+ promptText \+ \(plannerRagBlock \?/.test(routeSrc),
     'the composition broke the #65 marker-order pin');
 
   // ── 8. #119 (PLANO-MASTER-1 B5/F4): the contract rides INLINE — the
@@ -705,14 +705,101 @@ main().then(() => {
   process.exit(0);
 }).catch((e) => { console.error('FIXTURE CRASH:', e); process.exit(1); });
 
-// ─── #164 RAG-AGENTIC (v0.0.6): the retrieval block rides the async twin ──
+// ─── #164 RAG-AGENTIC + W-A RAG-CERT A3/A4 (v0.0.6): the retrieval that ────────
+// actually reaches the god — per-hop query, the #84 instinct fusion at hop
+// level, and the planner RAG wired (the dead composePlannerRag lives).
+// The vault-bearing probes run in a CHILD PROCESS with a fixture vault env
+// (getVaultRoot caches + MEDIAULT dirs bind at module load — the in-process
+// root is already the real vault by this point in the suite).
 {
   const { composeHopPromptWithRag, composeHopPrompt: syncCompose } = await import(OLYMPUS + '/src/lib/hop-runtime/walker.ts');
+
+  // A4 pin: the walker's shared 400-char campaign mush is DEAD — each hop
+  // queries with its OWN slice; the campaignQuery param is a fallback only.
+  const walkerSrc = fs.readFileSync(path.join(OLYMPUS, 'src/lib/hop-runtime/walker.ts'), 'utf-8');
+  expect('RAG-A4: the per-hop query contract — no shared campaign mush at the walker',
+    !walkerSrc.includes('planQueryForRag') && walkerSrc.includes('composeHopPromptWithRag(next, laneRoot)'),
+    'the walker still joins every hop prompt into one 400-char query shared by all hops');
+
+  // A3 pin: the planner RAG is WIRED — composePlannerRag has a live caller
+  // on the action route (the planner marker carries the vault style context).
+  const routeSrc = fs.readFileSync(path.join(OLYMPUS, 'src/app/api/olympus/action/route.ts'), 'utf-8');
+  expect('RAG-A3: composePlannerRag called by the action route (the dead planner RAG lives)',
+    /composePlannerRag\(/.test(routeSrc) && /rag-inject/.test(routeSrc),
+    'composePlannerRag (rag-inject.ts:60) still has zero callers — the planner never sees the vault style context');
+
+  // The fixture vault: one keyword-hittable asset + one proven hephaestus
+  // instinct (overlap-triggered) — never the real ~/OLYMPUS-VAULT.
+  const fxVault = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-rag-fx-'));
+  fs.mkdirSync(path.join(fxVault, '10_Media_Vault', 'entries'), { recursive: true });
+  fs.writeFileSync(path.join(fxVault, '10_Media_Vault', 'entries', '2026-10-19T00-00-00-00-red-min.md'),
+`---
+mime: image/png
+description: red minimalist geometric logo on cream background
+tags: [red, minimalist, logo]
+suggested_use: hero brand marks
+created: 2026-10-19
+size: 1234
+---
+`);
+  fs.mkdirSync(path.join(fxVault, '05_Auto_Learning', 'instincts', 'hephaestus', 'seed'), { recursive: true });
+  fs.writeFileSync(path.join(fxVault, '05_Auto_Learning', 'instincts', 'hephaestus', 'seed', 'red-heroes.md'),
+`---
+confidence: 0.9
+trigger: red hero section branding
+action: pair the red accent with generous cream whitespace on hero sections
+source: seed
+---
+`);
+
+  const probePath = path.join(fxVault, 'probe.mjs');
+  fs.writeFileSync(probePath, `
+const OLYMPUS = process.env.PROBE_OLYMPUS;
+const { composeHopPromptWithRag, composeHopPrompt } = await import(OLYMPUS + '/src/lib/hop-runtime/walker.ts');
+const hopHit = { id: 'h1', god: 'hephaestus', prompt: 'red minimalist hero section', artifacts: [], after: [] };
+const outHit = await composeHopPromptWithRag(hopHit, '/tmp/fake-lane', 'zzz-no-match-xyz');
+const hopMiss = { id: 'h2', god: 'hephaestus', prompt: 'zzz-no-match-xyz nothing here', artifacts: [], after: [] };
+const outMiss = await composeHopPromptWithRag(hopMiss, '/tmp/fake-lane');
+console.log(JSON.stringify({
+  hitAssets: outHit.includes('PRIOR ASSETS') && outHit.includes('red minimalist'),
+  hitInstinct: outHit.includes('[PRIOR CONTEXT') && outHit.includes('pair the red accent'),
+  missLean: outMiss === composeHopPrompt(hopMiss, '/tmp/fake-lane'),
+}));
+`);
+
+  const probeRun = spawnSync('npx', ['tsx', '--tsconfig', path.join(OLYMPUS, 'tsconfig.json'), probePath], {
+    cwd: OLYMPUS,
+    encoding: 'utf-8',
+    timeout: 120_000,
+    env: {
+      ...process.env,
+      OLYMPUS_VAULT: fxVault,
+      OLYMPUS_VAULT_DIR: fxVault,
+      PROBE_OLYMPUS: OLYMPUS,
+      OLYMPUS_ROOT: OLYMPUS,
+    },
+  });
+  let probe = {};
+  try { probe = JSON.parse((probeRun.stdout || '').trim().split('\n').pop()); } catch { /* probe crashed */ }
+  expect('RAG-A4: the hop\'s OWN slice drives the retrieval (per-hop query, not the campaign mush)',
+    probe.hitAssets === true,
+    `probe stdout=${(probeRun.stdout || '').slice(-200)} stderr=${(probeRun.stderr || '').slice(-200)}`);
+  expect('RAG-A4: the #84 instinct fusion at HOP level (the CHANGELOG #164 claim made true)',
+    probe.hitInstinct === true,
+    'the hop prompt carries the vault assets but not the god\'s proven-instinct block');
+  expect('RAG: no-hit/no-match stays LEAN (the plain sync contract, never padded)',
+    probe.missLean === true,
+    'a no-match hop must equal the sync compose form');
+
+  // The in-process degenerate pins (real vault, no-match queries): the twin
+  // stays additive to the sync contract — never crashes, never pads.
   const hop = { id: 'rag-probe', god: 'hephaestus', prompt: 'Build the hero section.', artifacts: [], after: [] };
-  const noRag = await composeHopPromptWithRag(hop, '/tmp/fake-lane', undefined);
-  expect('RAG: no query -> the plain hop prompt (the sync contract intact)',
-    noRag === syncCompose(hop, '/tmp/fake-lane'), 'the twin must equal the sync form without a query');
   const withRag = await composeHopPromptWithRag(hop, '/tmp/fake-lane', 'zzz-no-match-xyz');
-  expect('RAG: no-hit query -> the plain hop prompt (never padded)',
-    withRag === noRag, 'a no-hit retrieval must not add a block');
+  const emptySlice = await composeHopPromptWithRag({ ...hop, prompt: '' }, '/tmp/fake-lane', 'zzz-no-match-xyz');
+  const syncBase = syncCompose({ ...hop, prompt: '' }, '/tmp/fake-lane');
+  expect('RAG: the async twin survives the degenerate shapes (strings out, never a crash)',
+    typeof withRag === 'string' && typeof emptySlice === 'string' && emptySlice === syncBase,
+    `withRag=${typeof withRag} emptySlice=${typeof emptySlice} — the empty-slice hop with a no-hit fallback must equal the sync form`);
+
+  fs.rmSync(fxVault, { recursive: true, force: true });
 }

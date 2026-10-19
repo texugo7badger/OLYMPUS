@@ -34,6 +34,18 @@ const ALLOWED_MCP_KEYS = new Set([
 ]);
 
 /**
+ * W-A RAG-CERT A2: Atelier integration keys managed by OLYMPUS.
+ *
+ * POLLINATIONS_KEY powers the semantic vault lane (embeddings for the
+ * Atelier's semantic search + the hop RAG retrieval — readAtelierKeys in
+ * media-vault-vec.ts reads THIS store canonically). Set via the API Keys
+ * dialog's Atelier section; the honest keyword fallback runs without it.
+ */
+const ALLOWED_ATELIER_KEYS = new Set([
+  'POLLINATIONS_KEY',
+]);
+
+/**
  * Legacy LLM env keys that were previously managed by OLYMPUS.
  * POSTs with non-empty string values for these keys are rejected with a
  * clear error. They can be cleared by sending an empty string.
@@ -52,7 +64,7 @@ const LEGACY_LLM_KEYS = new Set([
   'GOOGLE_AI_API_KEY',
 ]);
 
-const ALLOWED_ALL = new Set([...ALLOWED_LLM_KEYS, ...ALLOWED_MCP_KEYS]);
+const ALLOWED_ALL = new Set([...ALLOWED_LLM_KEYS, ...ALLOWED_MCP_KEYS, ...ALLOWED_ATELIER_KEYS]);
 
 function ensureDir() {
   const dir = path.dirname(CONFIGS_FILE);
