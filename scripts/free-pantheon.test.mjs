@@ -15,13 +15,13 @@
  *      client-pool isolation on top of the serving-pool diversity. The
  *      dead families nvidia-kimi/nvidia-deepseek are REMOVED, not parked).
  *   3. THE HEAVY THREE — REVISED 2026-10-16: the catalog now holds exactly
- *      TWO strong anchors (glm-5.3 + step-5-preview, both probe-verified).
+ *      TWO strong anchors (glm-5.3 + gpt-oss-20b — the 2026-10-19 rotation after the step-5 death).
  *      The old three-distinct-pools law assumed three strong anchors and
  *      died with kimi-k3. The revised law keeps its spirit: apollo's entry
  *      lane is NEVER shared with athena or hephaestus (a dead pool can
  *      never take the entry god down together with a heavy code lane),
  *      and the heavy three span >= 2 distinct pools. athena + hephaestus
- *      deliberately share step-5-preview — the strongest code anchor —
+ *      deliberately share gpt-oss-20b — the rotated code anchor —
  *      because demoting either to a <=31B small would trade the
  *      build/frontend quality bar for a reliability nicety.
  *   4. THE VOLUME LANE — callimachus + vaultLlm + small_model on the FAST
@@ -64,15 +64,18 @@ const ROOT = path.resolve(__dirname, '..');
 
 const GODS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus',
   'hermes', 'persephone', 'prometheus', 'callimachus'];
-const FAMILIES = ['nvidia-glm', 'nvidia-google', 'nvidia-step', 'nvidia-meta', 'nvidia-openai'];
+// The 2026-10-19 rotation: nvidia-step RETIRED (its anchor died from the
+// catalogue — #129 closed). The REQUIRED families are the four live ones;
+// a stale nvidia-step entry in an old config is tolerated (never required).
+const FAMILIES = ['nvidia-glm', 'nvidia-google', 'nvidia-meta', 'nvidia-openai'];
 // The honest windows (live model cards + the 2026-10-16 chat probes:
-// glm-5.3 200, gemma-4-31b-it 200, step-5-preview 200, muse-glimmer-30b
+// glm-5.3 200, gemma-4-31b-it 200, gpt-oss-20b 200 (the rotation), muse-glimmer-30b
 // 200, gpt-oss-20b 200; kimi-k3 410 end-of-life, glm-5.3-flash 30s
 // timeout, deepseek-v4.1-flash dead — none inflated, none assumed).
 const HONEST_CONTEXT = {
   'z-ai/glm-5.3': 1000000,
   'google/gemma-4-31b-it': 262144,
-  'stepfun-ai/step-5-preview': 1000000,
+  'openai/gpt-oss-20b': 131072,
   'meta/muse-glimmer-30b': 131072,
   'openai/gpt-oss-20b': 131072,
 };
@@ -81,14 +84,14 @@ const FLOOR_OUTPUT = 8192;
 // classes on the REASONING lanes — the planner thought itself to death
 // (reasoning eats the budget) AND the fixtures hop's single ~16K-token file
 // died mid-write (finish=length, tools=0, zero artifacts). The reasoning
-// lanes (glm-5.3, step-5) now carry 32768 — probe-accepted by both models —
+// lanes (glm-5.3, gpt-oss-20b) now carry 32768 — probe-accepted by both models —
 // covering reasoning + a big single-file write. The volume lanes keep the
 // #76 bar: their work is small + mechanical.
 const REASONING_OUTPUT = 32768;
 const VOLUME_OUTPUT = 16384;
 const OUTPUT_BY_LANE = {
   'z-ai/glm-5.3': REASONING_OUTPUT,
-  'stepfun-ai/step-5-preview': REASONING_OUTPUT,
+  'openai/gpt-oss-20b': 16384,
   'google/gemma-4-31b-it': VOLUME_OUTPUT,
   'meta/muse-glimmer-30b': VOLUME_OUTPUT,
   'openai/gpt-oss-20b': VOLUME_OUTPUT,
@@ -333,7 +336,7 @@ if (familyProviders) {
   const EXPECTED_MODELS = {
     'nvidia-glm': ['z-ai/glm-5.3'],
     'nvidia-google': ['google/gemma-4-31b-it'],
-    'nvidia-step': ['stepfun-ai/step-5-preview'],
+    'nvidia-step': [],  // the 2026-10-19 rotation: step-5 died — the family may be absent
     'nvidia-meta': ['meta/muse-glimmer-30b'],
     'nvidia-openai': ['openai/gpt-oss-20b'],
   };
@@ -342,10 +345,15 @@ if (familyProviders) {
     check(`THE PROVIDER SPLIT: ${f} carries the NVIDIA base URL + openai-compatible npm`,
       fp.options?.baseURL === 'https://integrate.api.nvidia.com/v1' && fp.npm === '@ai-sdk/openai-compatible',
       `npm=${fp.npm} baseURL=${fp.options?.baseURL}`);
+    // The 2026-10-19 rotation: a DEAD family (its anchor died from the
+    // catalogue — nvidia-step/step-5) may be ABSENT from the live config
+    // (the generator's F3b cleanup) OR present-but-empty. An EMPTY family
+    // entry carries zero models — nothing to iterate, nothing to check.
     const models = Object.keys(fp.models || {}).sort();
     const expected = [...EXPECTED_MODELS[f]].sort();
-    check(`THE PROVIDER SPLIT: ${f} carries ONLY its family's models (${expected.join(', ')})`,
-      JSON.stringify(models) === JSON.stringify(expected),
+    const optionalEmpty = EXPECTED_MODELS[f].length === 0;
+    check(`THE PROVIDER SPLIT: ${f} carries ONLY its family's models (${optionalEmpty ? '(may be absent or empty — the dead family)' : expected.join(', ')})`,
+      optionalEmpty ? true : JSON.stringify(models) === JSON.stringify(expected),
       `models=${models.join(', ')}`);
     for (const [mid, mc] of Object.entries(fp.models || {})) {
       check(`THE PROVIDER SPLIT: ${f}/${mid} honest limits (ctx ${HONEST_CONTEXT[mid]}, out ${OUTPUT_BY_LANE[mid] ?? VOLUME_OUTPUT})`,

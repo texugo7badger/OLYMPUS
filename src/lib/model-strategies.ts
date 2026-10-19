@@ -426,19 +426,19 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'free-nvidia-build': {
     label: 'Free Nvidia Build',
     description:
-      'NVIDIA Build free endpoints (build.nvidia.com) — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchor set, no single pool, NO Nemotron (the user\'s ban). The 2026-10-16 rotation (kimi-k3 410\'d, glm-5.3-flash died): Apollo+Dionysus+Persephone on GLM-5.3 (753B reasoner), Athena+Hephaestus on Step 5 Preview (1M-ctx coder — the frontend+build lane; the strongest code anchor), Atlas+Callimachus on Gemma 4 31B (the volume lane), Artemis+Hermes on Muse Glimmer 30B, Prometheus on GPT-OSS-20B. Apollo\'s entry lane is never shared with Athena or Hephaestus — one dead pool can never take the entry god down with a heavy code lane. Per-family provider entries (nvidia-glm/-google/-step/-meta/-openai) give each lane its own client pool. The anchor set is user-pinned — the refresh verifies availability, never replaces. Symphony carries context between pools — models are lanes, not silos.',
+      'NVIDIA Build free endpoints (build.nvidia.com) — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchor set, no single pool, NO Nemotron (the user\'s ban). The 2026-10-16 rotation (kimi-k3 410\'d, glm-5.3-flash died): Apollo+Dionysus+Persephone on GLM-5.3 (753B reasoner), Athena+Hephaestus on GPT-OSS-20B (the 2026-10-19 rotation: step-5-preview died in the NVIDIA catalogue — the #129 probe evidence; gpt-oss-20b is the strongest live survivor, 200 @ 328ms), Atlas+Callimachus on Gemma 4 31B (the volume lane), Artemis+Hermes on Muse Glimmer 30B, Prometheus joins GPT-OSS-20B (the code+devops pool, 3 gods <= 3). Apollo\'s entry lane is never shared with Athena or Hephaestus — one dead pool can never take the entry god down with a heavy code lane. Per-family provider entries (nvidia-glm/-google/-step/-meta/-openai) give each lane its own client pool. The anchor set is user-pinned — the refresh verifies availability, never replaces. Symphony carries context between pools — models are lanes, not silos.',
     plan: 'CUSTOM',
     tier: 'free',
     reasoningModel: 'z-ai/glm-5.3',
-    codeModel: 'stepfun-ai/step-5-preview',
+    codeModel: 'openai/gpt-oss-20b',
     terminalModel: 'nvidia-glm/z-ai/glm-5.3',
     gods: {
       apollo:      'nvidia-glm/z-ai/glm-5.3',
       atlas:       'nvidia-google/google/gemma-4-31b-it',
       artemis:     'nvidia-meta/meta/muse-glimmer-30b',
-      athena:      'nvidia-step/stepfun-ai/step-5-preview',
+      athena:      'nvidia-openai/openai/gpt-oss-20b',
       dionysus:    'nvidia-glm/z-ai/glm-5.3',
-      hephaestus:  'nvidia-step/stepfun-ai/step-5-preview',
+      hephaestus:  'nvidia-openai/openai/gpt-oss-20b',
       hermes:      'nvidia-meta/meta/muse-glimmer-30b',
       persephone:  'nvidia-glm/z-ai/glm-5.3',
       prometheus:  'nvidia-openai/openai/gpt-oss-20b',
@@ -855,14 +855,16 @@ export const FREE_MODEL_CLASSES = [
   // apply-strategy.js). The anchor set is USER-PINNED — the refresh
   // verifies availability, never replaces. The Nemotron family is banned
   // by the user (low effective context) — zero gods, forever. Probe-verified
-  // 2026-10-16: glm-5.3, gemma-4-31b-it, gpt-oss-20b, muse-glimmer-30b and
-  // step-5-preview (1M ctx, code-test passed) all 200; glm-5.3-flash,
-  // kimi-k3 and deepseek-v4.1-flash are DEAD (30s timeouts / 410 Gone) —
-  // excluded from every assignment, family entries kept only for the
-  // pinned set with zero gods.
+  // 2026-10-16: glm-5.3, gemma-4-31b-it, gpt-oss-20b, muse-glimmer-30b all
+  // 200; glm-5.3-flash, kimi-k3 and deepseek-v4.1-flash are DEAD (30s
+  // timeouts / 410 Gone) — excluded from every assignment, family entries
+  // kept only for the pinned set with zero gods.
+  // 2026-10-19 (#129 closed): step-5-preview DIED from the NVIDIA catalogue
+  // (the 2026-10-17/18 probes: ABSENT + the L4 hard-fail) — the family entry
+  // retired with it; athena+hephaestus rotated onto gpt-oss-20b (the probe
+  // survivor, 200 @ 328ms).
   'nvidia-glm/z-ai/glm-5.3',
   'nvidia-google/google/gemma-4-31b-it',
-  'nvidia-step/stepfun-ai/step-5-preview',
   'nvidia-meta/meta/muse-glimmer-30b',
   'nvidia-openai/openai/gpt-oss-20b',
 ];

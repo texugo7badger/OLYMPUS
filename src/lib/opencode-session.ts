@@ -423,8 +423,30 @@ function sleep(ms: number) {
  * was posted) — the server may have crashed.
  */
 export function invalidateServer() {
-  serverPromise = null;
+  // #STRATEGY-RESPECT (the user's specimen, 2026-10-19): the old
+  // invalidateServer only dropped the CACHED HANDLE — the actual serve
+  // PROCESS kept running with the OLD strategy's models loaded at boot,
+  // and the next ensureServer() DISCOVERED + re-attached to it, so every
+  // session kept riding the previous strategy's lanes after a switch
+  // (the "marked free but kept riding GO" class). A strategy switch now
+  // KILLS the warm serve (the config is loaded at spawn): our own child
+  // gets SIGTERM; a foreign adopted serve gets the stale-kill path. The
+  // pidfile dies with it — the next prompt cold-starts (~5s) against the
+  // fresh opencode.json. THE STRATEGY RESPECTS THE CONFIG.
+  if (serverChild && serverChild.exitCode === null && serverChild.signalCode === null) {
+    try { serverChild.kill('SIGTERM'); } catch { /* already dying */ }
+    console.log('[opencode-session] strategy switch — warm serve SIGTERM (the next prompt cold-starts on the fresh config)');
+  } else {
+    // An adopted (foreign) warm serve: the pidfile names it — reap it.
+    const pidFile = readPidFile();
+    if (pidFile && isProcessAlive(pidFile.pid)) {
+      try { process.kill(pidFile.pid, 'SIGTERM'); } catch { /* already dying */ }
+      console.log(`[opencode-session] strategy switch — adopted serve ${pidFile.pid} SIGTERM`);
+    }
+  }
+  removePidFile();
   serverChild = null;
+  serverPromise = null;
 }
 
 function nextPort(start: number): number {
