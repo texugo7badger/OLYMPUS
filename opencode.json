@@ -570,6 +570,17 @@
       ],
       "enabled": false,
       "_olympus_note": "v0.0.6 COMFY-LOCAL-1: local ComfyUI generation (own GPU, no key). DISABLED by default (probes the ComfyUI server at spawn; enable when the local server runs)."
+    },
+    "rea": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "rea-agents@6.7.0",
+        "mcp"
+      ],
+      "enabled": false,
+      "_olympus_note": "v0.0.6 REA-MCP-1 (#166, morluto/rea, MIT): the Artemis reverse-engineering lane \u2014 binary/Electron/APK. Probe-proven live on this box: rea 6.7.0 on Node 22.23.1, static JS/Electron analysis needs NO engine (the fixture probe produced a sealed Evidence record); native binaries need Hopper/Ghidra/IDA (absent \u2014 optional installs, honest at doctor). DISABLED by default (probes at spawn; Linux needs procps `ps`). Version pinned per REA's own registration doctrine."
     }
   }
 }

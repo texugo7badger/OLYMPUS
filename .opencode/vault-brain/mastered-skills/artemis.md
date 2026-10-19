@@ -35,6 +35,13 @@ last_updated: 2026-07-24
 - sentry (production error tracking for vuln correlation)
 - langfuse (LLM trace observability for prompt-injection detection)
 
+### MCPs (optional — disabled by default, probe at spawn)
+
+- rea (morluto/rea, MIT; opencode.json `mcp.rea`, rea-agents@6.7.0) — the
+  reverse-engineering lane: static JS/Electron application analysis works with
+  no analysis engine (probe-proven live); native binaries/APK/IL need
+  Hopper/Ghidra/IDA/JADX installed. #166 REA-MCP-1.
+
 ## Instinct Sources
 
 - SEED: `~/OLYMPUS-VAULT/05_Auto_Learning/instincts/artemis/seed/*.md`
