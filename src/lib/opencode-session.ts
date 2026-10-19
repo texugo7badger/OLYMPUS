@@ -2426,6 +2426,89 @@ async function runWarmMessageAttempt(
 
       let info: any = null;
       let parts: any[] = [];
+      if (res.ok && server.protocol === 'v2') {
+        // #V2-ASYNC-PROMPT (the no_output root cause): the v2 prompt POST is
+        // FIRE-AND-FORGET — it returns the inbox admission (the QUEUED user
+        // message), NOT the assistant's turn. The v1 POST was synchronous
+        // (its response WAS the completed turn). The entire downstream
+        // machinery reads this block as "the turn completed with these
+        // parts" — on v2 that was ALWAYS empty. THE CURE: poll the session
+        // until it goes IDLE (the turn completes server-side), then read
+        // the LAST assistant message's content blocks and feed them through
+        // the mapper — the live pump already streams the reasoning/text
+        // deltas; this post-idle read is the AUTHORITATIVE catch that
+        // guarantees the text lands even if the pump's event window misses
+        // the fast tail.
+        // The v2 turn lifecycle: POST → inbox → execution starts → model runs →
+        // assistant message → idle. The session is IDLE before AND after the
+        // turn. The correct wait: poll for the ASSISTANT MESSAGE to appear and
+        // its time.completed to be set — that's the deterministic turn-complete
+        // signal on v2 (isTurnAliveServerSide returns false both before and
+        // after, so a bare alive-check races).
+        const turnDeadline = Date.now() + (opts.maxRuntimeMs ?? 10 * 60_000);
+        let assistantDone = false;
+        while (Date.now() < turnDeadline && !eventCtrl.signal.aborted && !assistantDone) {
+          await new Promise(r => setTimeout(r, 2000));
+          try {
+            const pollUrl = `http://127.0.0.1:${server.port}/api/session/${opts.sessionId}/message`;
+            const pollRes = await fetch(pollUrl, {
+              headers: server.authed && server.password ? { Authorization: basicAuth(server.password) } : {},
+              signal: AbortSignal.timeout(10_000),
+            }).catch(() => null);
+            if (!pollRes || !pollRes.ok) continue;
+            const pollData: any = await pollRes.json().catch(() => null);
+            if (!pollData) continue;
+            const pollArr = Array.isArray(pollData) ? pollData : (pollData?.data ?? []);
+            const asst = pollArr.find((m: any) => String(m?.type) === 'assistant' || m?.info?.role === 'assistant');
+            if (asst) {
+              const completed = asst?.time?.completed ?? asst?.time?.completed_at ?? asst?.info?.time?.completed;
+              if (completed) assistantDone = true;
+            }
+          } catch { /* keep polling */ }
+        }
+        // Read the LAST assistant message (the turn's output).
+        try {
+          const auth2 = server.authed ? server.password : null;
+          // The v2 path is EXPLICIT here (this block only runs on protocol v2):
+          const msgUrl = `http://127.0.0.1:${server.port}/api/session/${opts.sessionId}/message`;
+          const msgFetch = await fetch(msgUrl, {
+            headers: auth2 ? { Authorization: basicAuth(auth2 as string) } : {},
+            signal: AbortSignal.timeout(15_000),
+          }).catch(() => null);
+          if (msgFetch && msgFetch.ok) {
+            const msgData: any = await msgFetch.json().catch(() => null);
+            const arr = Array.isArray(msgData) ? msgData : (msgData?.data ?? []);
+            // The v2 message list: newest FIRST (the readback shape). Find the
+            // last ASSISTANT message (with content blocks).
+            const assistant = arr.find((m: any) => String(m?.type) === 'assistant' || m?.info?.role === 'assistant');
+            if (assistant) {
+              const content = Array.isArray(assistant.content) ? assistant.content : [];
+              info = { finish: assistant.finish, error: assistant.finish === 'error' ? assistant.content : null };
+              // Mark the step so text isn't suppressed; the pump already
+              // streamed what it caught.
+              state.stepStarted = true;
+              state.stepFinished = true;
+              for (const blk of content) {
+                if (blk?.type === 'text' && typeof blk.text === 'string') {
+                  mapPart({ type: 'text', id: `v2final-${assistant.id}`, sessionID: opts.sessionId, messageID: assistant.id, text: blk.text }, state, deliver);
+                } else if (blk?.type === 'reasoning' && typeof blk.text === 'string') {
+                  // The final reasoning (if the pump missed the deltas).
+                  mapPart({ type: 'reasoning', id: `v2r-${assistant.id}`, sessionID: opts.sessionId, messageID: assistant.id, text: blk.text }, state, deliver);
+                }
+              }
+              // The step-finish (the cost capture): the v2 assistant message
+              // carries cost + tokens directly.
+              if (typeof assistant.cost === 'number' || assistant.tokens) {
+                mapPart({ type: 'step-finish', id: `v2sf-${assistant.id}`, sessionID: opts.sessionId, tokens: assistant.tokens, cost: assistant.cost }, state, deliver);
+              }
+              // The turn completed.
+              return { code: 0, sessionId: opts.sessionId, receivedEvents: true, postStarted };
+            }
+          }
+        } catch (e: any) { console.log('[v2-post-idle] read failed:', e?.message || e); /* best-effort */ }
+        // No assistant message found — the turn may have failed.
+        return { code: 1, sessionId: opts.sessionId, receivedEvents: true, postStarted: true, error: state.lastErrorText || 'the v2 turn completed but no assistant message was found' };
+      }
       if (res.ok) {
         const data: any = await res.json().catch(() => null);
         info = data?.info ?? null;
@@ -2830,6 +2913,7 @@ async function openEventFeed(
             // process-global; other sessions' traffic must never mask a dead
             // run. The v2 translator only emits events for THIS session.
             if (server.protocol === 'v2') {
+              if (process.env.OLYMPUS_V2_DEBUG === '1') console.log('[v2-pump]', ev?.type, 'sid:', ev?.data?.sessionID, 'want:', sessionId);
               if (ev?.data?.sessionID === sessionId || ev?.data?.sessionID === undefined) {
                 translateV2Event(ev, sessionId, v2ctx, processSynthetic);
               }
@@ -2889,11 +2973,17 @@ async function isTurnAliveServerSide(server: ServerInfo, sessionId: string): Pro
     const auth = server.authed ? server.password : null;
     const res = await apiFetch(server.port, auth, v2Path(server, `/session/${sessionId}/message`), {}, 10_000);
     if (!res.ok) return { alive: false };
-    const messages: any[] = await res.json().catch(() => []);
-    if (!Array.isArray(messages) || messages.length === 0) return { alive: false };
-    const last = messages[messages.length - 1];
-    const info = last?.info;
-    const alive = info?.role === 'assistant' && !info?.time?.completed && !info?.error;
+    const raw: any = await res.json().catch(() => []);
+    // The v2 shape: {data: [messages], cursor: ...} — the v1 was a bare array.
+    // Also: v2's list is newest-FIRST; v1 was oldest-first.
+    const messages: any[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+    if (messages.length === 0) return { alive: false };
+    const last = messages[0]; // v2: newest first
+    const info = last?.info ?? last;
+    const role = info?.role ?? info?.type;
+    const alive = role === 'assistant'
+      && !(info?.time?.completed ?? info?.time?.completed_at ?? last?.time?.completed)
+      && !info?.error;
     if (!alive) return { alive: false };
     // The seed: the newest tool part's state decides the liveness class.
     let childRunning = false;
