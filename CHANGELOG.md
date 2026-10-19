@@ -26,6 +26,10 @@ All notable changes to OLYMPUS are documented in this file.
 - **The skill pack** (#156): art-vlm + art-generate + ffmpeg-asset + asset-inject — the pipeline contract (root-relative refs so check 9 passes; NO Nemotron; honest lane/cost naming).
 - **The battery catch** (a real bug): the GO plugin preset STRIPPED apollo-reasoning.mjs — the PLANNER-1 fix was gone on the paid lanes. Restored; the test now asserts the GLM family on any lane.
 
+**The final cure arc (the user's free-test round):**
+- **#129 closed — the rotation EXECUTED**: step-5-preview (the dead athena+hephaestus anchor) retired from all nine mirrors; both gods rotate onto gpt-oss-20b (probe-verified 200 @ 940ms — the strongest live survivor). The distribution law holds: apollo's entry lane unshared, the code pool at 3 ≤ 3, the heavy three span 2 pools. The dead nvidia-step family retired from the required set.
+- **THE STRATEGY-RESPECT cure** (the "marked free but kept riding GO" specimen): a strategy switch now KILLS the warm serve (`killWarmServerForStrategy` — our child SIGTERM, an adopted serve guarded by alive + isOpencode + not-our-pid) + the pidfile — the next prompt cold-starts on the fresh config. The function split from `invalidateServer()` preserves the #61 transport-retry re-adopt contract (the fixture catch: the first draft broke S6 and even SIGTERM'd a pidfile-carrying-process.pid fixture — both cured, opencode-session 110 PASS / 0 FAIL).
+
 ## [v0.0.4] — 2026-10-18
 
 **"Mission Control"** — the total-visibility release. The v0.0.3 bar was "it runs from the first prompt"; the v0.0.4 bar is **you SEE everything, live**: every task timed, every file clickable, every agent's own thinking, Atlas orchestrating on screen, Callimachus's lane unblocked, honest sub-agent counts, per-god light streams in the brain.
