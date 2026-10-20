@@ -108,6 +108,9 @@ export const GOD_MCP_TIERS: Record<string, GodMcpTiers> = {
       // where the god has explicitly reasoned that it needs the full design
       // token extraction pipeline.
       { server: 'nakkas', domains: ['design-system'] },
+      // W-J UI-REFERENCES: the animated-component inspiration lane (free
+      // ORIGINKIT_API_KEY) — the curated references at art time.
+      { server: 'originkit', domains: ['design-refs'] },
     ],
   },
   dionysus: {
@@ -132,6 +135,9 @@ export const GOD_MCP_TIERS: Record<string, GodMcpTiers> = {
       // W-B: the free Pollinations agent lane (probe-green 1.3.1) — the
       // same cold discipline: equipped per dispatch, never a default spend.
       { server: 'pollinations', domains: ['image-gen', 'forge'] },
+      // W-J UI-REFERENCES: the animated-component library (free key) — the
+      // design references at art time.
+      { server: 'originkit', domains: ['design-refs', 'forge'] },
     ],
   },
   hermes: {

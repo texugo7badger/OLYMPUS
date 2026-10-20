@@ -41,6 +41,7 @@ export const MCP_API_REQUIREMENTS: Record<string, {
   // OpenCode-native (opencode.json mcp block) BYOK MCP — the W-B IMAGE-GEN
   // registration. Keep in sync with src/lib/mcp-api-requirements.ts.
   fal:           { envVars: ["FAL_KEY"] },
+  originkit:     { envVars: ["ORIGINKIT_API_KEY"] },
 };
 
 /**

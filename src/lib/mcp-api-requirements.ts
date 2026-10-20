@@ -76,6 +76,14 @@ export const MCP_API_REQUIREMENTS: McpApiRequirement[] = [
   // registry (src/lib/mcp-registry.ts) consults this SAME map so the panel
   // renders them locked until the key lands (W-E + W-B IMAGE-GEN). ────────
   {
+    names: ['originkit'],
+    label: 'OriginKit (free key)',
+    envVars: [
+      { key: 'ORIGINKIT_API_KEY', label: 'OriginKit API Key', url: 'https://www.originkit.dev', note: 'Free key (Settings > API Integration; 10 component fetches/day). Browse is unlimited + key-free.' },
+    ],
+    note: 'Remote MCP (mcp.originkit.dev) — the animated-component library. Used by Athena + Hephaestus (the design + forge lanes).',
+  },
+  {
     names: ['fal'],
     label: 'fal.ai (BYOK)',
     envVars: [

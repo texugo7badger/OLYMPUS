@@ -116,7 +116,7 @@ const GOD_DISPATCH_CATALOG: Record<string, {
       { task: 'Vision-based UI verification (click-to-element, visual regression)', agent: 'visual-verifier' },
     ],
     skills: ['frontend-patterns', 'frontend-a11y', 'impeccable', 'design-system', 'brand-guidelines', 'verification-before-completion', 'dispatching-parallel-agents'],
-    mcps: ['chrome-devtools', 'playwright', 'nakkas', 'figma', 'opendesign', 'shadcn'],
+    mcps: ['chrome-devtools', 'playwright', 'nakkas', 'figma', 'opendesign', 'shadcn', 'originkit'],
   },
   dionysus: {
     // Dionysus = QA & TESTING. TDD, E2E, evidence collection, performance.
@@ -146,7 +146,7 @@ const GOD_DISPATCH_CATALOG: Record<string, {
       { task: '2D asset crafting (vector-first SVG, the forge canvas, design tokens)', agent: '2d-asset-designer' },
     ],
     skills: ['backend-patterns', 'api-design', 'coding-standards', 'error-handling', 'verification-before-completion', 'dispatching-parallel-agents'],
-    mcps: ['serena', 'context7', 'postgres', 'fal'],
+    mcps: ['serena', 'context7', 'postgres', 'fal', 'originkit'],
   },
   hermes: {
     // Hermes = INTEGRATIONS & MCPs. MCP building, API wiring, research, LLM arch.

@@ -40,7 +40,7 @@ Vault asset ids + the honest lane report. Report to the governing god as: Result
 
 ## Canonical Reference Patterns
 
-*Enriched from (the community websearch, 2026-10-20): the Excalidraw forge lane (#153 FORGE-2D — the asset ON the canvas, export back to the vault); the nakkas animated-SVG MCP; the OLYMPUS-DESIGN markers (the accent discipline, the typography rules); storytold/photocraft (69k stars, Apache-2.0 — the heavy raster lane, agent-ready via CLI/JSON) + storytold/vectorcraft (10k stars — the heavy vector lane); the SVG-craft patterns on skills.sh (viewBox-first authoring, path hygiene).*
+*Enriched from (the community websearch, 2026-10-20): the OriginKit + Skiper UI references (the [OLYMPUS-DESIGN] UI-REFERENCES block — one signature interaction per section, adapted); the Excalidraw forge lane (#153 FORGE-2D — the asset ON the canvas, export back to the vault); the nakkas animated-SVG MCP; the OLYMPUS-DESIGN markers (the accent discipline, the typography rules); storytold/photocraft (69k stars, Apache-2.0 — the heavy raster lane, agent-ready via CLI/JSON) + storytold/vectorcraft (10k stars — the heavy vector lane); the SVG-craft patterns on skills.sh (viewBox-first authoring, path hygiene).*
 
 - The forge-2d lane is LIGHT by design: annotate/compose inside, the heavy editing escalates to PhotoCraft/VectorCraft (the Craft Apps panel — inside OLYMPUS).
 - An SVG logo mark beats a raster logo everywhere it can be used — vector first.

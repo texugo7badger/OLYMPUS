@@ -39,6 +39,12 @@ last_updated: 2026-07-24
 - magic (AI component generation)
 - shadcn (component scaffolding)
 
+### MCPs (optional — disabled by default, probe/lock at spawn)
+
+- originkit (originkit.dev, remote MCP, free `ORIGINKIT_API_KEY`): the
+  animated-component inspiration lane — the curated references at art time
+  (the [OLYMPUS-DESIGN] marker carries the marquee list). #W-J v0.0.7.
+
 ## Instinct Sources
 
 - SEED: `~/OLYMPUS-VAULT/05_Auto_Learning/instincts/athena/seed/*.md`

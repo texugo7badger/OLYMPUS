@@ -13,6 +13,7 @@ import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-
 import { watchdogDecision, classifyRetry } from '@/lib/opencode-session';
 import { reconcileProjectPath } from '@/lib/project-context';
 import { composePlannerRag } from '@/lib/rag-inject';
+import { UI_REFERENCES_MARKER_BLOCK } from '@/lib/ui-references';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
 // the running server + session (no cold start, context retained).
@@ -383,6 +384,12 @@ export async function POST(req: NextRequest) {
     const plannerMarker = action === 'prompt' && classification.needsPlanning
       ? `[OLYMPUS-PLANNER] This task is architectural/complex. Your deliverable for this turn is THE PLAN, not monolithic code: write dispatch-plan.json${intentLaneRoot ? ` to THIS ABSOLUTE PATH: ${intentLaneRoot}/dispatch-plan.json — at that exact path, NEVER the session cwd or any workspace lane` : ' to the project lane root'} — a DAG of small hops. NEVER write code files yourself — the plan IS your deliverable. The HOP RUNTIME is the ONLY execution engine: it dispatches each hop to the hop's god on the god's model lane. If the walk is parked, the user's next prompt resumes it in the post-run — you do NOT need to (and MUST NOT) execute hops, write component code, or dispatch the plan to Atlas. THE CONTRACT IS INLINE (a minimal canonical plan — do NOT open any source to learn it): {"version":1,"laneRoot":"${intentLaneRoot ?? '<the ABSOLUTE path of this project lane root>'}","hops":[{"id":"shell","god":"hephaestus","prompt":"<the spec SLICE + the DESIGN DIRECTIVES slice for this hop>","artifacts":["app/layout.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/layout.tsx"]},"budgetTokens":8192},{"id":"landing","god":"athena","prompt":"<its own slice + the design tokens>","artifacts":["app/page.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/page.tsx"]},"budgetTokens":8192,"after":["shell"]}]} — the hard rules: version is exactly 1; hop ids unique; one god per hop; artifacts are real deliverable paths relative to the laneRoot; after-edges must stay acyclic; budgetTokens at most 16384 (8192 is the sane default); verify.review is "deterministic" with checks like file-exists:<path>. The hop runtime walks the plan: per-hop dispatch on the god\'s own model lane (concurrency at most 3), deterministic verify (0 tokens), park-on-exhaustion with resume. Sessions are lanes; the disk carries the campaign. HARD RULE: hop prompts must NEVER instruct deletion or cleanup of the lane's runtime files (.opencode, opencode.json, opencode.demigods.json, dispatch-plan.json, .olympus-*, project.md, _handoff.md, _delegations) — residue cleanup is the runtime's post-campaign job (the 10:16 specimen: a build-fix god deleted the machinery mid-walk and killed the campaign). `
       : '';
+    // W-J UI-REFERENCES: the curated component inspiration rides the design
+    // marker (bounded — the gods draw from REAL patterns, never invent
+    // generic layouts; the full catalog lives in the Craft Apps pane).
+    const uiReferencesBlock = action === 'prompt' && classification.needsPlanning
+      ? `\n${UI_REFERENCES_MARKER_BLOCK}\n`
+      : '';
     // #DESIGN-INTELLIGENCE D1: the [OLYMPUS-DESIGN] marker — the visual
     // quality directives that make the output DESIGNED, not AI-slop.
     // Every plan MUST reference these in its hop prompts so all hops
@@ -397,7 +404,8 @@ Spacing: sections get py-20 minimum. Cards get p-6 minimum. Whitespace IS the de
 Components: design with PERSONALITY. Each component must have at least ONE distinctive detail (a gradient, a unique border treatment, a custom hover state, a distinctive shadow). Generic shadcn/card clones are FORBIDDEN.
 Assets: for logos, icons, and illustrations — create a simple inline SVG or CSS-based logo mark. If the project needs a vector logo, include a hop that creates it as an SVG.
 Deliverables: the project root must contain ONLY deliverable files. No planning artifacts (dispatch-plan.json, .olympus-* files, opencode.json, .opencode) inside the project — the machine cleans these after the walk. Add a .gitignore that excludes any worklog/ or .olympus-* files.
-Design review: include a design-review hop as the SECOND-TO-LAST hop (god: athena, artifacts: ["design-review.json"], budgetTokens: 4096). Its prompt must tell the god to: (1) run \`node scripts/extract-page-styles.mjs <preview-url> <project-root>\` to get the REAL visual data (fonts, colors, spacing, slop signals, component quality signals — extracted from the served page, not from source alone). (2) Read the key component files. (3) Rate each dimension 0-10 (typography, color, spacing, components, hierarchy, darkTheme, content, motion). (4) Write design-review.json with {"scores":{...},"overall":N,"issues":[...],"fixInstructions":[...]}. The verify check: design-score:7.`
+Design review: include a design-review hop as the SECOND-TO-LAST hop (god: athena, artifacts: ["design-review.json"], budgetTokens: 4096). Its prompt must tell the god to: (1) run \`node scripts/extract-page-styles.mjs <preview-url> <project-root>\` to get the REAL visual data (fonts, colors, spacing, slop signals, component quality signals — extracted from the served page, not from source alone). (2) Read the key component files. (3) Rate each dimension 0-10 (typography, color, spacing, components, hierarchy, darkTheme, content, motion). (4) Write design-review.json with {"scores":{...},"overall":N,"issues":[...],"fixInstructions":[...]}. The verify check: design-score:7.
+${uiReferencesBlock}`
       : '';
     const runText = unattended
       ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + plannerMarker + designMarker

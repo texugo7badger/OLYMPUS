@@ -44,6 +44,8 @@ last_updated: 2026-07-24
 - pollinations (@pinkpixel/mcpollinations, MIT, probe-green 1.3.1): the
   free agent lane (image/text/audio) — cold tier, the image-generator routes'
   parity for dispatch-time generation.
+- originkit (originkit.dev, remote MCP, free `ORIGINKIT_API_KEY`): the
+  animated-component lane — the forge's design references (W-J v0.0.7).
 - blender / comfyui / godot / rea — the tool lanes (see opencode.json mcp).
 
 ## Instinct Sources

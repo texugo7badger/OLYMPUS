@@ -1,6 +1,6 @@
 # CREDITS
 
-> OLYMPUS v0.0.3 — built on the shoulders of giants. This file lists the upstream projects that make OLYMPUS possible.
+> OLYMPUS v0.0.7 — built on the shoulders of giants. This file lists the upstream projects that make OLYMPUS possible.
 
 OLYMPUS is built on the shoulders of giants. This file lists the upstream projects that make OLYMPUS possible.
 
@@ -22,6 +22,11 @@ OLYMPUS is built on the shoulders of giants. This file lists the upstream projec
 | mcp-compressor | Apache-2.0 | [mcp-compressor](https://github.com/atlassian/mcp-compressor) |
 | tamp | MIT | [tamp](https://github.com/obra/tamp) |
 | sqlite-vec | MIT | [sqlite-vec](https://github.com/asg017/sqlite-vec) |
+| @google/model-viewer (FORGE-3D) | Apache-2.0 | [model-viewer](https://github.com/google/model-viewer) |
+| Excalidraw (FORGE-2D) | MIT | [excalidraw](https://github.com/excalidraw/excalidraw) |
+| @pinkpixel/mcpollinations | MIT | [mcpollinations](https://www.npmjs.com/package/@pinkpixel/mcpollinations) |
+| REA (morluto/rea) | MIT | [rea](https://github.com/morluto/rea) |
+| three.js | MIT | [three.js](https://github.com/mrdoob/three.js) |
 | better-sqlite3 | MIT | [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) |
 
 All OLYMPUS-original code is licensed under AGPL-3.0-or-later. Vendored upstream code retains its own license.
@@ -41,6 +46,14 @@ The hooks system (tool.execute.before/after, session.idle, permission.ask) is ba
 ### agency-agents (msitarzewski/agency-agents)
 The 118-demigod fleet's design patterns — phase-gated pipelines, per-demigod specialty with no overlap, god-review protocol, clv2 instinct-querying integration — are adapted from The Agency's 230+ specialized AI agents. Each OLYMPUS god now has 4-5 deeply specialized demigods (identity, mission, critical rules, deliverables, workflow) modeled on this roster.
 - MIT licensed — [github.com/msitarzewski/agency-agents](https://github.com/msitarzewski/agency-agents)
+
+### The ArtCraft Crafting Apps (embedded web builds)
+The Craft Apps pane embeds the live web builds of storytold's thirteen open-source creative apps + the ArtCraft Studio — Apache-2.0 / MIT dual for the Studio. OLYMPUS embeds their served web builds (nothing vendored into the tree); the licenses stay between upstream and the user.
+- [github.com/storytold/artcraft](https://github.com/storytold/artcraft) · [getartcraft.com/apps](https://www.getartcraft.com/apps)
+
+### OriginKit + Skiper UI (UI references — referenced only)
+The curated component inspiration catalog cites OriginKit's free animated-component library (the official MCP; the vellum-ai plugin MIT) and Skiper UI's free shadcn-registry components (PREMIUM = paid upstream, referenced never vendored). OLYMPUS carries the catalog + the demos + the fetch lanes — never the component source.
+- [originkit.dev](https://www.originkit.dev) · [skiper-ui.com](https://skiper-ui.com)
 
 ### Superpowers / Caveman / Impeccable
 The three core skills that form OLYMPUS's compression + quality layer:

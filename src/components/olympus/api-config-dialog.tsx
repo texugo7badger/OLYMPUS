@@ -61,6 +61,12 @@ const ATELIER_REQUIREMENT: McpApiRequirement = {
       url: 'https://aistudio.google.com/apikey',
       note: 'Unlocks the Google Nano Banana rung (generation + editing, ~$0.02/img on your Google account).',
     },
+    {
+      key: 'ORIGINKIT_API_KEY',
+      label: 'OriginKit API key',
+      url: 'https://www.originkit.dev',
+      note: 'FREE key (Settings > API Integration; 10 component fetches/day, browse unlimited) — unlocks the animated-component inspiration MCP for the design lanes.',
+    },
   ],
 };
 

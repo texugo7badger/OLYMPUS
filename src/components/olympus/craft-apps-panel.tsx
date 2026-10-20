@@ -13,7 +13,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft } from 'lucide-react';
+import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CraftApp {
@@ -36,6 +36,19 @@ interface Probe {
 }
 
 type View = { kind: 'grid' } | { kind: 'app'; app: CraftApp; probe: Probe | null };
+type PaneTab = 'apps' | 'references';
+
+interface UiRef {
+  id: string;
+  name: string;
+  library: 'originkit' | 'skiper';
+  category: string;
+  what: string;
+  demoUrl: string;
+  fetchLane: string;
+  free: boolean;
+  probe: { ok: boolean; frameable: boolean; httpStatus: number | null };
+}
 
 export default function CraftAppsPanel({ initialApp }: { initialApp?: string | null }) {
   const [apps, setApps] = useState<CraftApp[]>([]);
@@ -43,6 +56,10 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const [probes, setProbes] = useState<Record<string, Probe>>({});
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>({ kind: 'grid' });
+  const [tab, setTab] = useState<PaneTab>('apps');
+  const [uiRefs, setUiRefs] = useState<UiRef[]>([]);
+  const [refSearch, setRefSearch] = useState('');
+  const [refView, setRefView] = useState<UiRef | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -59,6 +76,20 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // W-J: the references loader (the tab's first paint + the search debounces).
+  const loadRefs = useCallback(async (q: string) => {
+    try {
+      const r = await fetch(`/api/olympus/ui-references${q ? `?q=${encodeURIComponent(q)}` : ''}`, { cache: 'no-store' });
+      const d = await r.json();
+      if (Array.isArray(d?.references)) setUiRefs(d.references);
+    } catch { /* the honest empty */ }
+  }, []);
+  useEffect(() => { loadRefs(''); }, [loadRefs]);
+  useEffect(() => {
+    const t = setTimeout(() => loadRefs(refSearch), 350);
+    return () => clearTimeout(t);
+  }, [refSearch, loadRefs]);
 
   // The asset sheet's artcraft button opens the STUDIO here directly.
   useEffect(() => {
@@ -94,8 +125,12 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
       {/* Header */}
       <div className="h-9 shrink-0 flex items-center gap-2 px-3 border-b border-olympus-gold/10 bg-olympus-panel">
         <Boxes size={13} className="text-olympus-gold" />
-        <span className="text-[11px] font-mono font-semibold text-olympus-gold">Craft Apps</span>
-        <span className="text-[9px] text-olympus-text-dim font-mono ml-1">13 open-source apps · inside OLYMPUS</span>
+        <span className="text-[11px] font-mono font-semibold text-olympus-gold">Craft</span>
+        {/* W-J: the tab bar — Apps | References */}
+        <div className="flex items-center gap-0.5">
+          <button onClick={() => { setTab('apps'); setRefView(null); }} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'apps' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><LayoutGrid size={10} /> apps</button>
+          <button onClick={() => setTab('references')} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'references' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><Lightbulb size={10} /> references</button>
+        </div>
         <div className="ml-auto flex items-center gap-1.5">
           {view.kind === 'app' && (
             <button onClick={() => setView({ kind: 'grid' })} className="flex items-center gap-1 text-[10px] font-mono text-olympus-text-dim hover:text-olympus-gold px-1.5 py-1 rounded hover:bg-olympus-gold/10">
@@ -110,7 +145,61 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
 
       {/* Body */}
       <div className="flex-1 min-h-0 relative">
-        {view.kind === 'grid' ? (
+        {tab === 'references' ? (
+          /* W-J: the REFERENCES tab — the curated inspiration catalog */
+          <div className="absolute inset-0 flex flex-col">
+            {refView ? (
+              <div className="flex-1 min-h-0 flex flex-col">
+                <div className="h-8 shrink-0 flex items-center gap-2 px-3 border-b border-olympus-gold/10 bg-olympus-panel/80">
+                  <button onClick={() => setRefView(null)} className="flex items-center gap-1 text-[10px] font-mono text-olympus-text-dim hover:text-olympus-gold"><ChevronLeft size={11} /> catalog</button>
+                  <span className="text-[10px] font-mono font-semibold text-olympus-gold truncate">{refView.name}</span>
+                  <span className="text-[8px] font-mono text-olympus-text-dim truncate hidden md:block">{refView.what}</span>
+                  <button
+                    onClick={() => { try { navigator.clipboard.writeText(refView.fetchLane); } catch { /* best-effort */ } }}
+                    title="Copy the fetch/install lane"
+                    className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20 shrink-0"
+                  >copy lane</button>
+                  <a href={refView.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold px-1 shrink-0"><ExternalLink size={10} /></a>
+                </div>
+                {refView.probe.frameable ? (
+                  <iframe src={refView.demoUrl} className="flex-1 w-full bg-white" title={refView.name} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals" />
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center p-8">
+                    <p className="text-olympus-text text-xs font-mono">{refView.name}: {refView.probe.ok ? 'the demo blocks embedding (upstream frame policy)' : 'demo unreachable right now'}</p>
+                    <a href={refView.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] font-mono px-2.5 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25"><ExternalLink size={10} /> open the demo externally</a>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="shrink-0 px-3 py-2 border-b border-olympus-gold/10">
+                  <input
+                    value={refSearch}
+                    onChange={(e) => setRefSearch(e.target.value)}
+                    placeholder="search references — black hole, smoky text, carousel, tooltip…"
+                    className="w-full bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50"
+                  />
+                  <p className="text-[8px] font-mono text-[#5A5A5A] mt-1">OriginKit (free key MCP) + Skiper UI (shadcn registry) — curated inspiration; the [OLYMPUS-DESIGN] marker carries the marquee list to the gods.</p>
+                </div>
+                <div className="flex-1 overflow-y-auto custom-scroll p-3">
+                  <div className="grid grid-cols-2 xl:grid-cols-3 gap-2">
+                    {uiRefs.map((r) => (
+                      <button key={r.id} onClick={() => setRefView(r)} className="rounded-lg p-2.5 bg-olympus-card border border-olympus-gold/10 hover:border-olympus-gold/40 transition-colors text-left group">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-mono font-semibold text-olympus-text truncate group-hover:text-olympus-gold">{r.name}</span>
+                          {!r.free && <span className="text-[7px] font-mono px-1 rounded bg-olympus-amber-soft/10 text-olympus-amber-soft ring-1 ring-olympus-amber-soft/25 shrink-0 uppercase">premium</span>}
+                        </div>
+                        <div className="text-[8px] font-mono text-olympus-cyan/80 uppercase tracking-wide mt-0.5">{r.library} · {r.category}</div>
+                        <p className="text-[9px] font-mono text-olympus-text-dim mt-1 leading-relaxed line-clamp-2">{r.what}</p>
+                      </button>
+                    ))}
+                  </div>
+                  {uiRefs.length === 0 && <p className="text-center py-8 text-olympus-text-dim text-xs font-mono">no references match — try a broader term</p>}
+                </div>
+              </>
+            )}
+          </div>
+        ) : view.kind === 'grid' ? (
           <div className="absolute inset-0 overflow-y-auto custom-scroll p-3">
             {loading && apps.length === 0 && (
               <div className="text-center py-10 text-olympus-text-dim text-xs font-mono">

@@ -39,7 +39,12 @@ tokens.md + components/ + stories/ + api-docs.md paths. Report to the governing 
 
 ## Canonical Reference Patterns
 
-*Enriched from: agency-agents UI designer; agency-agents brand guardian*
+*Enriched from (the community websearch, 2026-10-20): agency-agents UI designer; agency-agents brand guardian; the OriginKit animated-component library (originkit.dev — 250+ free components, the official MCP for browsing + fetching; the craft: smoky-text, pixel-reveal, spiral-images, black-hole, weight-hover); Skiper UI (skiper-ui.com — 106+ un-common shadcn components, the Emil Kowalski/Rauno motion-craft school: image-reveal, dynamic-island, vercel-tooltip); the [OLYMPUS-DESIGN] UI-REFERENCES block that rides every architectural prompt (the marquee list — pick at most ONE signature interaction per section and ADAPT it to the design tokens, never copy a demo whole)*
+
+#### The reference discipline
+
+- At design time, cite the reference by name ("the hero uses the pixel-reveal class of interaction") and adapt it — the component is inspiration for a bespoke build, not a paste.
+- OriginKit source arrives via the originkit MCP (the free key); Skiper free ids via the shadcn registry; Skiper PREMIUM is paid upstream — link the demo, never copy the code.
 
 #### From agency-agents UI designer
 

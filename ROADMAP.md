@@ -1,42 +1,31 @@
 # OLYMPUS Roadmap
 
-**v0.0.3 is the current release** (shipped 2026-10-17 — "the fix-OLYMPUS-itself release"). 10 gods, 118 demigods, Symphony dispatch, the hop runtime, VaultBrain, the 8-check exit gate, DESIGN-INTELLIGENCE self-correction, and 9 built-in LLM strategies (3 GO, 3 Zen, 3 free: OpenRouter / Big Pickle / Nvidia Build, plus custom). See [CHANGELOG.md](CHANGELOG.md) for the full arc — two campaigns + five UAT rounds + the Design Intelligence evolution + the late arc (anchor rotation, strategy redesign, PLANNER-1/WALK-1/PANTHEON-RAIL/SELFTEST-1, the #81 cost stamp, the #96 gate check-8) + the CI cure.
+**v0.0.7 is the current release** (shipped 2026-10-20 — "THE CRAFT INSIDE": the thirteen ArtCraft apps embedded, the UI-references lane (OriginKit + Skiper UI), React 19 home, 122 descriptive-named demigods, 25 MCPs, the from-zero test state). See [CHANGELOG.md](CHANGELOG.md) for the full arc.
 
 ---
 
-## SHIPPED — v0.0.3 (2026-10-17)
+## SHIPPED — v0.0.3 through v0.0.7 (2026-10-17 → 2026-10-20)
 
-- The UAT gate passed (the Lumina CRM acceptance: 14/14 hops, gate 7/7 + check 8, HTTP 200).
-- **#81 closed** — the deterministic-spawn cost stamp (`OLYMPUS_LANE_GOD`): agent-less one-shot cost rows resolve the real god, never 'global'.
-- **#96 closed** — the exit gate's check 8: duplicated JSX props (the silent-override class) fail the gate with element + props named; the bench corpus is optional.
-- The CI chain cured (V003-CI): overlay compile, the VERSION straggler, the dead free-list fallback, the L4 skip knob. Release + Eval Harness green at the tag.
-- 20 of 23 filed issues closed with evidence; the machine aligned (battery 31 suites green, sync 9/9).
+- v0.0.3 "the fix-OLYMPUS-itself release": the hop runtime wired end-to-end, the exit gate, the UAT cure (LUMINA walked 14/14).
+- v0.0.4 "Mission Control": task timers, the TASKS sheet, the drill-down, the honest Cost screen.
+- v0.0.5 "THE ATELIER'S TOOLS": the media vault, Argos's describe lane, semantic search.
+- v0.0.6 "THE FORGE COMPLETES" + the premio waves: FORGE-3D, the agentic RAG (the index REBUILT + per-hop + the instinct fusion), GLB ingestion, free+BYOK image generation with the edit lane, every MCP configurable, TOTAL VISIBILITY (the god-selection fix, inFlight telemetry, the project ETA projection, the Sync Map panel, Atlas verdicts), electron 44.
+- v0.0.7 "THE CRAFT INSIDE": the 13 ArtCraft apps + the Studio embedded, the demigod naming law (descriptive end to end), React 19.3.1, the UI-references lane, the UI references catalog + the originkit MCP.
 
-## The near arc (v0.0.4)
+## The next arc — v0.1.0 (the pair + the editors)
 
-1. **STRATEGY-REFRESH-2026-10-17** — sync `MODEL-STRATEGIES.md` + the canonical maps with the 2026-10-17 GO catalog (done for the docs in v0.0.3; the lane economics re-check owed) + a BenchLM-anchored quality-per-dollar table; validate candidate lane swaps (Claude Haiku 5.5 / GPT 6 Luna / MiMo-V2.6-Flash class) with live probes before they become defaults.
-2. **#129 — the NVIDIA anchor rotation** (the user's call, user-pinned): step-5-preview is dead from the catalogue; gemma stalled in the probe window; survivors gpt-oss-20b / muse-glimmer / glm-5.3. Re-probe off-peak, then rotate the pin.
-3. **BENCH-2 — the ambitious benchmark** (the ORBITAL concept: a real-time satellite ground-station mission-control — SQLite via Prisma, SSE live telemetry, ≥8 tables, role-gated auth, award-tier dark UI) + the variation matrix: free-nvidia-build / go-balanced / free-big-pickle / go-max-quality / go-balanced+low — same prompt, per-strategy reports under `reports/bench-2/` (hops, gate, design-score, wall-time, tokens, $, UAT).
-4. **PANELS-TRIO** — the live-UX arc: #85 (the who-is-doing-what panel on the sync-map), #90 (sync-map retention/compaction), #100 (the in-app dev-server preview pane).
-5. **VAULT-RAG-2** — semantic RAG over the vault (embeddings, local/free) upgrading the TF-IDF skill-vec index + the #84 instinct RAG.
-6. **REA-MCP (optional, low)** — wire [morluto/rea](https://github.com/morluto/rea) as an optional Artemis MCP (binary/Electron/APK reverse-engineering) + a reference-analyzer lane for benchmarks.
-7. **N10 cert night** — the planted-defect certification (needs the user's quota top-up decision).
+The user's directives (2026-10-20): **OLYMPUS on OpenCode V2 should leverage PAIR** — send prompts and follow development from the phone or another device — and the **editor extensions get fixed**. The v0.1.0 arc:
 
-## The future arc (v0.0.4 → v0.1, the P2/P3 ladder)
+1. **PAIR-1 — the remote command lane.** OpenCode V2's pair feature (the linked-device session sync) becomes the OLYMPUS mobile/second-device surface: send prompts to a campaign from the phone, watch the Parthenon (the hop feed + the ETA projection) live, answer HITL gates remotely (the plan-walk approval from the phone — the gate routes through the same vault record, no state bifurcation). Investigation first: the pair protocol surface on V2 (the auth, the channel, what syncs), then the OLYMPUS-side bridge (the feed + the gates through pair), then the mobile-facing flow (a web surface or the pair-native client — probe-first, whatever V2 ships).
+2. **EDITORS-2 — the extension audit.** The Editor Bridge ships (Zed/VSCode/VSCodium/Cursor launch + the Terminal Bridge :3740); the v0.1.0 pass: verify each extension surface against the current editors (the VSCode extension in `extensions/vscode-olympus` — build, publish, the bridge handshake), fix what drifted, and ship a store-ready status for each (the EDITORS.md doc re-verified).
+3. **#166 — JET (parked, the user's call).** The structured-decision demigod: the toolchain install (~GBs: mise + Rust 1.98 + cmake + LLVM) or a binary release upstream.
+4. **#140 — BENCH-2 (parked, the user's call).** The GO-plan economy campaign: ORBITAL re-run on `go-balanced` + `go-max-quality` — the paid-lane quality-per-dollar table for MODEL-STRATEGIES.
 
-The still-open issues are the ladder (the v0.0.3 close retired most of the original 23 — #81 and #96 among them):
+## The standing opportunities (candidates, no dates)
 
-1. **Telemetry truth** — [#81](https://github.com/texugo7badger/OLYMPUS/issues/81) (session→god cost linkage) + [#82](https://github.com/texugo7badger/OLYMPUS/issues/82) (whitespace-only text channel): the observability layer tells the whole truth before anything builds on it.
-2. **The drift detector + guard surface** — [#78](https://github.com/texugo7badger/OLYMPUS/issues/78) (the case-INSENSITIVE catalogue detector: the D19/AN10-AN12 class dies structurally) + [#80](https://github.com/texugo7badger/OLYMPUS/issues/80) (the guard declares live-vs-tracked): the config can no longer lie silently.
-3. **The sizing matrix** — [#83](https://github.com/texugo7badger/OLYMPUS/issues/83): firstToken under contention + recovery re-read cost, measured — lane-max and pool sizing become data.
-4. **The live learning loop** — [#79](https://github.com/texugo7badger/OLYMPUS/issues/79): instincts promoted from real sessions (G1, the metabolism's first live cycle).
-5. **Instinct RAG** — [#84](https://github.com/texugo7badger/OLYMPUS/issues/84): proven instincts ride new dispatches as short prior-context blocks.
-6. **Crash recovery** — [#86](https://github.com/texugo7badger/OLYMPUS/issues/86): dispatch journal replay (the R14 incident is the case study).
-
-Where the rest earns its keep:
-
-- **UX** — [#85](https://github.com/texugo7badger/OLYMPUS/issues/85) (the who-is-doing-what panel) rides the sync-map that already exists; [#95](https://github.com/texugo7badger/OLYMPUS/issues/95) (ROOT-LANE-ADOPT) wires the #77 lane into the app terminal.
-- **Harness rigor** — [#87](https://github.com/texugo7badger/OLYMPUS/issues/87) (page-gate ruler), [#91](https://github.com/texugo7badger/OLYMPUS/issues/91) (one-shot retry coverage), [#89](https://github.com/texugo7badger/OLYMPUS/issues/89) (host-mode probe), [#94](https://github.com/texugo7badger/OLYMPUS/issues/94) (the battery contract).
-- **State + certification** — [#90](https://github.com/texugo7badger/OLYMPUS/issues/90) (sync-map retention), [#92](https://github.com/texugo7badger/OLYMPUS/issues/92) (the CERT-CALLIMACHUS re-try), [#93](https://github.com/texugo7badger/OLYMPUS/issues/93) (the GO/Zen mirror divergence), [#88](https://github.com/texugo7badger/OLYMPUS/issues/88) (the browser-automation inventory).
+- **The vendored offline Craft lane** — the WASM builds bundled into the Electron resources (documented in docs/research/craft-apps.md; deferred on size + toolchain).
+- **TRELLIS local 3D** — parked (no NVIDIA GPU on the current box; the honest requirements in docs/research/3d-lanes.md).
+- **Meshy hosted 3D** — the BYOK candidate, wiring deferred until the user opts in.
+- **The multisession per-god pool** — the B6 proposal (readers first, the per-god session pool deliberately last).
 
 **License:** AGPL-3.0-or-later. See [LICENSE](LICENSE).
