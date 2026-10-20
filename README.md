@@ -22,6 +22,7 @@ OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencod
 
 - **Three ways to run.** The GO plan ($10/month flat, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps — full 128-agent OLYMPUS without a GO plan), or **free** (provider-specific strategies — `free-openrouter`, `free-big-pickle`, `free-nvidia-build` — OLYMPUS stays 100% functional at zero cost).
 - **10 gods + 122 demigods (132 agents).** Apollo is the only god who talks to you; the other 9 are dispatched by Apollo via Symphony.
+- **The Craft Apps inside (v0.0.7).** The thirteen open-source ArtCraft apps (image editor, vector illustration, video, PDF, word processing, CAD, spreadsheets + the AI crafting Studio) run EMBEDDED in the app — for the user AND for the agents. Probe-verified live; the local installs drive headlessly via their agent-ready CLI/JSON channel.
 - **Self-curating brain.** Each god maintains an instinct pool — empirical patterns that, at confidence ≥ 0.85, **short-circuit** deliberation. OLYMPUS gets faster and cheaper with use. Live telemetry in the God Intelligence Dashboard shows the short-circuit hit rate + tokens saved.
 - **Always open.** AGPL-3.0-or-later. The public code is the most up-to-date and best version — forever.
 

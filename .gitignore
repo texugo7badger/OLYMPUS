@@ -8,6 +8,9 @@ dist/
 .opencode/olympus/dist/
 *.tsbuildinfo
 
+# ─── Campaign evidence reports (local-only, the 2026-10-20 directive)
+reports/
+
 # ─── Electron build artifacts ───────────────────────────────────────────
 dist-electron-tsc/
 dist-electron/
@@ -112,4 +115,3 @@ vault-sim/
 vault-sim*/
 .tmp-*.mts
 .superpowers
-reports/
