@@ -180,6 +180,9 @@ function Tab({ id, icon: Icon, label, active, onClick }: { id: string; icon: any
 export default function OlympusWorkspace() {
   const setGraphData = useOlympus(s => s.setGraphData);
   const leftPane = useOlympus(s => s.leftPane);
+  // W-G: the craft-app focus — set by the Atelier's artcraft button (the
+  // studio opens EMBEDDED in the Craft Apps pane, never a browser escape).
+  const [craftAppFocus, setCraftAppFocus] = useState<string | null>(null);
   const rightTab = useOlympus(s => s.rightTab);
   const setRightTab = useOlympus(s => s.setRightTab);
   const pushEvent = useOlympus(s => s.pushEvent);
@@ -280,6 +283,16 @@ export default function OlympusWorkspace() {
       .catch(() => {});
   }, [leftPane]);
 
+  // W-G: the atelier -> craft-apps handoff (the 'olympus:open-craft-app' event).
+  useEffect(() => {
+    const onOpenCraftApp = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { app?: string } | undefined;
+      setCraftAppFocus(detail?.app ?? 'artcraft-studio');
+      useOlympus.getState().setLeftPane('craft-apps');
+    };
+    window.addEventListener('olympus:open-craft-app', onOpenCraftApp);
+    return () => window.removeEventListener('olympus:open-craft-app', onOpenCraftApp);
+  }, []);
   useEffect(() => {
     const onFocus = () => {
       fetch('/api/olympus/graph', { cache: 'no-store' })
@@ -456,6 +469,7 @@ export default function OlympusWorkspace() {
                 {leftPane === 'cost' && <ChunkErrorBoundary><CostDashboard /></ChunkErrorBoundary>}
                 {leftPane === 'atelier' && <ChunkErrorBoundary><AtelierPanel /></ChunkErrorBoundary>}
                 {leftPane === 'sync-map' && <ChunkErrorBoundary><SyncMapPanel /></ChunkErrorBoundary>}
+                {leftPane === 'craft-apps' && <ChunkErrorBoundary><CraftAppsPanel initialApp={craftAppFocus} /></ChunkErrorBoundary>}
                 {leftPane === 'benchmarks' && <ChunkErrorBoundary><BenchmarksPanel /></ChunkErrorBoundary>}
                 {leftPane === 'timeline' && <ChunkErrorBoundary><ActivityTimeline /></ChunkErrorBoundary>}
                 {leftPane === 'god-detail' && <ChunkErrorBoundary><GodDetail /></ChunkErrorBoundary>}
@@ -541,3 +555,4 @@ export default function OlympusWorkspace() {
 }
 const AtelierPanel = dynamic(() => import('@/components/olympus/atelier-panel'), { ssr: false, loading: () => null });
 const SyncMapPanel = dynamic(() => import('@/components/olympus/sync-map-panel'), { ssr: false, loading: () => null });
+const CraftAppsPanel = dynamic(() => import('@/components/olympus/craft-apps-panel'), { ssr: false, loading: () => null });

@@ -43,12 +43,18 @@ export function detectDeeplinkTargets(): DeeplinkTarget[] {
     which('artcraft') ??
     which('ArtCraft') ??
     flatpak('app/getartcraft.ArtCraft');
+  // W-G CRAFT-EMBED: the Craft App Launcher (storytold/craft-launcher) — the
+  // one install that carries all 13 apps; detected apps are the strongest
+  // lane (the agents drive them via the CLI/JSON control channel).
+  const craftLauncher =
+    which('craft-launcher') ?? which('craftlauncher') ?? flatpak('app/getartcraft.craft-launcher');
   const godot = which('godot') ?? which('godot4');
   const krita = which('krita') ?? flatpak('org.kde.krita/x86_64/master');
   const blender = which('blender') ?? flatpak('org.blender.Blender');
   const comfy = [join(homedir(), 'ComfyUI'), join(homedir(), 'comfyui'), '/opt/ComfyUI'].find((p) => existsSync(p));
   return [
     { id: 'artcraft', label: 'ArtCraft (the compositing studio)', detected: !!artcraft, path: artcraft ?? undefined, webFallback: ARTCRAFT_WEB },
+    { id: 'craft-launcher', label: 'Craft App Launcher (all 13 Craft Apps)', detected: !!craftLauncher, path: craftLauncher ?? undefined, webFallback: 'https://github.com/storytold/craft-launcher/releases' },
     { id: 'godot', label: 'Godot (games)', detected: !!godot, path: godot ?? undefined },
     { id: 'krita', label: 'Krita (paint)', detected: !!krita, path: krita ?? undefined },
     { id: 'blender', label: 'Blender (3D)', detected: !!blender, path: blender ?? undefined },

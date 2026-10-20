@@ -58,9 +58,16 @@ export default function AtelierPanel() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target: 'artcraft', assetId: id }),
       }).then((x) => x.json());
-      if (r?.result === 'web' && r.url) { window.open(r.url, '_blank'); flash(`ArtCraft web studio opened — the asset is in your vault path`); }
-      else if (r?.result === 'spawned') flash(`ArtCraft launched with the asset`);
-      else flash(`ArtCraft not detected: ${r?.hint ?? 'install it or use the web lane'}`);
+      if (r?.result === 'spawned') flash(`ArtCraft launched with the asset (the local install — the strongest lane)`);
+      else if (r?.result === 'web' && r.url) {
+        // W-G CRAFT-EMBED: the web studio opens INSIDE OLYMPUS — the Craft
+        // Apps pane, embedded (never a browser-tab escape). The vault path
+        // rides along (copy it into the app when it needs file access).
+        window.dispatchEvent(new CustomEvent('olympus:open-craft-app', { detail: { app: 'artcraft-studio' } }));
+        try { await navigator.clipboard.writeText(String(r.vaultPath ?? r.hint ?? '')); } catch { /* clipboard best-effort */ }
+        flash('ArtCraft Studio embedded in the Craft Apps pane — the asset\'s vault path is on your clipboard');
+      }
+      else flash(`ArtCraft not detected: ${r?.hint ?? 'the Craft Apps pane carries the web lane'}`);
     } catch (e: any) { flash(`DEEPLINK FAILED: ${e?.message || e}`); }
   };
   const fileRef = useRef<HTMLInputElement>(null);

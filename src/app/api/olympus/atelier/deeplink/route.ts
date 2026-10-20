@@ -38,6 +38,9 @@ export async function POST(req: NextRequest) {
     const result = openExternal(target, assetPath);
     const res: Record<string, unknown> = { ok: true, result: result.kind, target: result.target.label };
     if (result.kind === 'web') res.url = result.url;
+    // W-G: the vault path rides the web-lane response (the embedded studio's
+    // clipboard handoff — the app loads the asset from this path).
+    if (assetPath) res.vaultPath = assetPath;
     if (result.kind === 'spawned') res.arg = result.arg;
     if (result.kind === 'missing') res.hint = `not detected on this box — install it or use the web lane`;
     return NextResponse.json(res, { headers: NO_CACHE_HEADERS });
