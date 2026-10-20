@@ -106,7 +106,7 @@ function printBanner() {
   console.log(`  ${c.bold}${c.gold}   \\___/|_____|_| |_|  |_|_|    \\___/|____/ ${c.reset}`);
   console.log('');
   console.log(`  ${c.bold}${c.gold}OLYMPUS${c.reset} ${c.gray}v${PKG_VERSION}${c.reset}  ${c.dim}·${c.reset}  ${c.cyan}Low-cost. Excellent quality. Always free.${c.reset}`);
-  console.log(`  ${c.gray}10 gods · 118 demigods · 330 skills · 19 MCPs · 10 plugins · 16 commands${c.reset}`);
+  console.log(`  ${c.gray}10 gods · 122 demigods · 334 skills · 25 MCPs · 10 plugins · 16 commands${c.reset}`);
   console.log(line);
   console.log('');
 }

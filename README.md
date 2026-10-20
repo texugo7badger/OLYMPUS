@@ -21,7 +21,7 @@ OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencod
 </div>
 
 - **Three ways to run.** The GO plan ($10/month flat, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps — full 128-agent OLYMPUS without a GO plan), or **free** (provider-specific strategies — `free-openrouter`, `free-big-pickle`, `free-nvidia-build` — OLYMPUS stays 100% functional at zero cost).
-- **10 gods + 118 demigods (128 agents).** Apollo is the only god who talks to you; the other 9 are dispatched by Apollo via Symphony.
+- **10 gods + 122 demigods (132 agents).** Apollo is the only god who talks to you; the other 9 are dispatched by Apollo via Symphony.
 - **Self-curating brain.** Each god maintains an instinct pool — empirical patterns that, at confidence ≥ 0.85, **short-circuit** deliberation. OLYMPUS gets faster and cheaper with use. Live telemetry in the God Intelligence Dashboard shows the short-circuit hit rate + tokens saved.
 - **Always open.** AGPL-3.0-or-later. The public code is the most up-to-date and best version — forever.
 
@@ -125,7 +125,7 @@ GLM-5.3 is reserved for go-max-quality (Apollo + Artemis). The daily strategies 
                           ↕
 ┌────────────────────────────────────────────────────────────────┐
 │  OpenCode + Agents                                             │
-│  • 10 OLYMPUS gods → 118 demigods → 18 tools + 19 MCP servers  │
+│  • 10 OLYMPUS gods → 122 demigods → 18 tools + 25 MCP servers  │
 │  • Cascading compression (caveman → strategic-compact →        │
 │    Symphony harmonics)                                         │
 │  • Cache instrumentation (olympus-go-cache + context-cache +   │
@@ -165,7 +165,7 @@ bash scripts/install/uninstall.sh
 
 | Document | Description |
 |----------|-------------|
-| [AGENTS.md](AGENTS.md) | The 10 gods, 118 demigods, dispatch protocol, instinct system, Symphony |
+| [AGENTS.md](AGENTS.md) | The 10 gods, 122 demigods, dispatch protocol, instinct system, Symphony |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Layered architecture, plugin/MCP stacks, cache instrumentation, Symphony |
 | [EDITORS.md](EDITORS.md) | Supported external editors (Zed, VSCode, VSCodium, Cursor), per-OS install commands, Terminal Bridge protocol |
 | [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) | LLM strategy reference — GO plan strategies, Zen (pay-as-you-go), Free strategies (OpenRouter / Groq / NVIDIA Build free tiers), custom strategies, demigod inheritance, switching strategies |
