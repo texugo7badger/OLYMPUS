@@ -176,7 +176,7 @@ async function main() {
   expect('B5: the merged registry consults the key requirements for opencode-native entries (fal shows LOCKED)',
     /findMcpRequirement/.test(registryLib) && registryLib.includes('opencode'),
     'opencode-native entries are always requiresApiKey:false — fal renders toggleable without a key');
-  const tiersSrc = read('.opencode/plugins/olympus-router/src/mcp-tiers.ts');
+  const tiersSrc = read('.opencode/src/olympus-router/src/mcp-tiers.ts');
   expect('B5: the god tier table registers fal (hephaestus cold — equip per dispatch)',
     /hephaestus[\s\S]*?cold[\s\S]*?fal/.test(tiersSrc),
     'no god can equip the fal MCP');

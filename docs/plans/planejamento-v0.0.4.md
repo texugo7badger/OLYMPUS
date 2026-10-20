@@ -1,3 +1,5 @@
+> ARCHIVED — the v0.0.4 plan (shipped 2026-10-18). See CHANGELOG.md for what actually landed.
+
 # OLYMPUS v0.0.4 — "Mission Control" Plan
 
 > The user-approved plan (2026-10-18). The v0.0.3 bar was "it runs from the

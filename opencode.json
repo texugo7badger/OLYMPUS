@@ -414,7 +414,13 @@
   "plugin": [
     "./.opencode/olympus",
     "./.opencode/plugins/apollo-reasoning.mjs",
-    "./.opencode/plugins/olympus-router"
+    "./.opencode/plugins/superpowers.mjs",
+    "./.opencode/plugins/opencode-context-cache.mjs",
+    "./.opencode/dist/plugins/index.js",
+    "./.opencode/dist/plugins/olympus-router/index.js",
+    "./.opencode/dist/plugins/olympus-dynamic-context/index.js",
+    "./.opencode/dist/plugins/olympus-go-cache/index.js",
+    "./.opencode/dist/plugins/olympus-skill-registry/index.js"
   ],
   "compaction": {},
   "experimental": {

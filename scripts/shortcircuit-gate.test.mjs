@@ -39,7 +39,7 @@ function expect(name, cond, detail) {
 
 async function main() {
   // ── A5.1: the un-stub — the REAL agent for the session ────────────────────
-  const gate = await import(OLYMPUS + '/.opencode/plugins/olympus-router/src/instinct-gate.ts');
+  const gate = await import(OLYMPUS + '/.opencode/src/olympus-router/src/instinct-gate.ts');
   const hasRegister = typeof gate.registerSessionAgent === 'function';
   if (hasRegister) {
     gate.registerSessionAgent('s-athena-x', 'athena');
@@ -70,7 +70,7 @@ async function main() {
     const probe = path.join(fx, 'probe.mjs');
     fs.writeFileSync(probe, `
 const OLYMPUS = process.env.PROBE_OLYMPUS;
-const gate = await import(OLYMPUS + '/.opencode/plugins/olympus-router/src/instinct-gate.ts');
+const gate = await import(OLYMPUS + '/.opencode/src/olympus-router/src/instinct-gate.ts');
 const ok1 = gate.logShortCircuitEvaluation({ god: 'athena', session_id: 's1', confidence: 0.91, short_circuited: true, instinct_id: 'red-heroes', instinct_tags: ['red', 'hero'], task_signature: 'red hero section', tokens_saved: 0 });
 const ok2 = gate.logShortCircuitEvaluation({ god: 'hephaestus', session_id: 's2', confidence: 0.2, short_circuited: false, instinct_id: null, instinct_tags: null, task_signature: 'unrelated query', tokens_saved: 0 });
 const { getShortCircuitStats } = await import(OLYMPUS + '/src/lib/shortcircuit-telemetry.ts');
@@ -98,7 +98,7 @@ console.log(JSON.stringify({ ok1, ok2, stats }));
   }
 
   // ── A5.3: the router pins — the real agent threads + the gate logs ────────
-  const routerSrc = fs.readFileSync(path.join(OLYMPUS, '.opencode/plugins/olympus-router/index.ts'), 'utf-8');
+  const routerSrc = fs.readFileSync(path.join(OLYMPUS, '.opencode/src/olympus-router/index.ts'), 'utf-8');
   expect('A5: chat.params registers the REAL agent for the session (hookInput.agent)',
     /registerSessionAgent\(hookInput\.sessionID,\s*hookInput\.agent\)/.test(routerSrc),
     'the chat.params gate still resolves every session as apollo');

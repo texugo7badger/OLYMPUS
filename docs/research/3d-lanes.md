@@ -1,4 +1,4 @@
-# The 3D Lanes — the honest state (v0.0.6, W-C FORGE-2D/3D)
+# The 3D Lanes — the honest state (v0.0.6→v0.0.7, W-C FORGE-2D/3D)
 
 > The t2-3D lane, declared with its requirements and its current status on
 > THIS box. No fake "coming soon" — every lane below says what it needs and

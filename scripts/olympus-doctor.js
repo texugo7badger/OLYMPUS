@@ -1008,9 +1008,13 @@ try {
   const isSubagent = callimachus && callimachus.mode === "subagent";
   // Verify the prompt path resolves to gods/callimachus.txt (case-insensitive —
   // some installs use GODS/ others gods/).
-  const promptPath = callimachus && callimachus.prompt ? callimachus.prompt : "";
-  const pathOk = /gods\/callimachus\.txt/i.test(promptPath);
-  const ok = hasDescription && isSubagent && pathOk;
+  const prompt = callimachus && callimachus.prompt ? callimachus.prompt : "";
+  // v1 shape: {file:gods/callimachus.txt} — the marker form.
+  const markerOk = /gods\/callimachus\.txt/i.test(prompt);
+  // v2 shape: the strategy applier INLINES the prompt body — verify by
+  // the Identity header (the god's own name in the first lines).
+  const inlineOk = prompt.length > 100 && prompt.includes("# Callimachus");
+  const ok = hasDescription && isSubagent && (markerOk || inlineOk);
   check("Calimachus in opencode.json",
     ok ? "ok" : "warn",
     ok

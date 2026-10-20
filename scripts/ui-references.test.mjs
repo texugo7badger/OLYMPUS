@@ -64,7 +64,7 @@ async function main() {
   expect('J3: the runtime gate mirror carries originkit',
     /originkit:\s*\{ envVars: \["ORIGINKIT_API_KEY"\] \}/.test(gateMap),
     'the runtime gate lets originkit through without the key');
-  const tiersSrc = read('.opencode/plugins/olympus-router/src/mcp-tiers.ts');
+  const tiersSrc = read('.opencode/src/olympus-router/src/mcp-tiers.ts');
   expect('J3: the tier table registers originkit (athena + hephaestus cold — equip per dispatch)',
     (tiersSrc.match(/server: 'originkit'/g) || []).length >= 2,
     'the design lanes cannot equip the MCP');
