@@ -116,8 +116,10 @@ export default function ContextIndicator({
   // The parent passes `getConversationId` as an inline arrow (new identity
   // per render). Hold it in a ref so `poll` keeps a stable identity and the
   // 5s polling interval isn't torn down/recreated on every chat message.
+  // (react-compiler: the latest-ref assignment lives in the effect below —
+  // never assigned during render.)
   const getConversationIdRef = useRef(getConversationId);
-  getConversationIdRef.current = getConversationId;
+  useEffect(() => { getConversationIdRef.current = getConversationId; });
   // Tracks the last conversationId this indicator polled for. When the
   // parent rotates it (terminal reset / new session), we clear the displayed
   // usage immediately instead of letting the old % linger until the next
@@ -158,7 +160,9 @@ export default function ContextIndicator({
   // 0% instead of lingering on the previous conversation's reading until
   // the next poll (≤5s). The server now returns zeros for unmapped ids,
   // so the follow-up poll confirms the cleared state with fresh data.
-  const convIdNow = getConversationIdRef.current?.() ?? '';
+  // (react-compiler: no ref reads during render — the prop is called
+  // directly; the ref above only serves `poll`'s stable identity.)
+  const convIdNow = getConversationId?.() ?? '';
   useEffect(() => {
     if (lastConvIdRef.current !== null && lastConvIdRef.current !== convIdNow) {
       setUsage(null);

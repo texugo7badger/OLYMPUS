@@ -924,7 +924,6 @@ export default function InteractiveTerminal() {
         addMessage({ type: 'system', text: parts.join(' · ') });
       })
       .catch(() => { /* the banner never breaks the terminal */ });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once at mount; addMessage is stable
   }, []);
   // Issue #46: a pending timeout that outlives its component would answer a
   // permission after the terminal is gone.

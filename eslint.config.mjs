@@ -54,6 +54,9 @@ const eslintConfig = [
       "**/*.d.ts",
       // Compiled Electron output
       "dist-electron-tsc/**",
+      // Electron-builder output (the release artifacts — .deb/.AppImage
+      // unpack trees; never lint build output)
+      "dist-electron/**",
       // Cloned external repos
       "brain-atlas/**",
       "extensions/**",
