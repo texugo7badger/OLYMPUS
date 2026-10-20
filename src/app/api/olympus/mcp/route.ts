@@ -9,6 +9,9 @@ import os from 'os';
 // MCP_API_REQUIREMENTS imported from @/lib/mcp-api-requirements (shared
 // with the API Config dialog for consistent MCP grouping).
 import { findMcpRequirement } from '@/lib/mcp-api-requirements';
+// W-E MCP-UNIFY: the merged registry — opencode-native names (godot /
+// blender / comfyui / rea) resolve here too, never a 404.
+import { listMcpServers } from '@/lib/mcp-registry';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,15 +45,28 @@ export async function GET(req: NextRequest) {
     // process.cwd() returns the project root in both `next dev` and `next build`.
     const root = process.cwd();
     const mcpJsonPath = path.join(/*turbopackIgnore: true*/ root, '.mcp.json');
-    if (!fs.existsSync(mcpJsonPath)) {
-      return NextResponse.json({ ok: false, error: '.mcp.json not found' }, { status: 404 });
+    const rawEntry = (() => {
+      try {
+        const mcpJson = JSON.parse(fs.readFileSync(mcpJsonPath, 'utf-8'));
+        const mcpServers = mcpJson.mcpServers || mcpJson.servers || {};
+        if (mcpServers[name]) return { entry: mcpServers[name], registry: 'mcpjson' as const };
+      } catch { /* fall through to the merged registry */ }
+      // W-E: opencode-native entries resolve from the merged registry
+      // (command is joined there; the _olympus_note is the description).
+      const merged = listMcpServers().servers.find(s => s.name === name);
+      if (merged) {
+        return {
+          entry: { command: merged.command, url: merged.url, _comment: merged.description },
+          registry: merged.registry,
+        };
+      }
+      return null;
+    })();
+    if (!rawEntry) {
+      return NextResponse.json({ ok: false, error: `MCP "${name}" not in any registry` }, { status: 404 });
     }
-    const mcpJson = JSON.parse(fs.readFileSync(mcpJsonPath, 'utf-8'));
-    const mcpServers = mcpJson.mcpServers || mcpJson.servers || {};
-    const entry = mcpServers[name];
-    if (!entry) {
-      return NextResponse.json({ ok: false, error: `MCP "${name}" not in .mcp.json` }, { status: 404 });
-    }
+    const entry = rawEntry.entry;
+    const registry = rawEntry.registry;
 
     // Check API key configuration.
     const apiConfigsPath = path.join(os.homedir(), '.olympus', 'api-configs.json');
@@ -88,6 +104,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       name,
+      registry,
       command: entry.command,
       args: entry.args,
       env: entry.env,

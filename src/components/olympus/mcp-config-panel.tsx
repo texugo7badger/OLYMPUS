@@ -35,6 +35,13 @@ interface McpServerInfo {
   apiKeyEnvVars: string[];
   apiKeysConfigured: boolean;
   enabled: boolean;
+  /** W-E MCP-UNIFY: which registry owns this entry — 'mcpjson' (the
+   *  standard file) or 'opencode' (the opencode.json mcp block:
+   *  godot/blender/comfyui/rea, OpenCode-native, disabled-by-default). */
+  registry?: 'mcpjson' | 'opencode';
+  /** The opencode.json `enabled` flag — the honest DEFAULT for
+   *  opencode-native entries (they ship disabled). */
+  opencodeEnabled?: boolean;
 }
 
 interface McpListResponse {
@@ -75,8 +82,11 @@ export default function MCPConfigPanel() {
 
       const enriched: McpServerInfo[] = mcpData.servers.map(s => {
         const apiKeysConfigured = s.apiKeyEnvVars.every(v => configuredKeys.has(v));
-        // Default to enabled if not in the state map (first load)
-        const enabled = enabledMap[s.name] ?? true;
+        // Default: enabled if not in the state map (first load) — EXCEPT
+        // opencode-native entries, whose honest default is the opencode.json
+        // `enabled` flag (the four tool MCPs ship disabled).
+        const fallback = s.registry === 'opencode' ? (s.opencodeEnabled ?? true) : true;
+        const enabled = enabledMap[s.name] ?? fallback;
         return { ...s, apiKeysConfigured, enabled };
       });
 
@@ -228,6 +238,18 @@ export default function MCPConfigPanel() {
                       <span className={cn('text-[11px] font-mono font-semibold truncate', s.enabled && !isLocked ? 'text-olympus-text' : 'text-olympus-text-dim')}>
                         {s.name}
                       </span>
+                      {/* W-E: the registry source — opencode-native entries
+                          (godot/blender/comfyui/rea) get the tag; their
+                          toggle flips the opencode.json flag too (the
+                          route's dual store). */}
+                      {s.registry === 'opencode' && (
+                        <span
+                          title="OpenCode-native MCP (the opencode.json mcp block) — toggling here flips its enabled flag in opencode.json + the runtime gate"
+                          className="text-[8px] font-mono px-1 py-px rounded ring-1 ring-olympus-cyan/30 text-olympus-cyan shrink-0"
+                        >
+                          oc
+                        </span>
+                      )}
                       {isLocked ? (
                         <Lock size={10} className="text-olympus-amber-soft shrink-0" />
                       ) : s.enabled ? (

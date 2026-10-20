@@ -7,6 +7,11 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+// W-E MCP-UNIFY: the dual-store toggle — a .mcp.json entry flips
+// mcp-state.json (the runtime gate); an opencode-native entry ALSO flips the
+// surgical `enabled` flag in opencode.json (OpenCode reads it at spawn —
+// without the flip the toggle would lie for that registry).
+import { setMcpEnabled } from '@/lib/mcp-registry';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,12 +21,15 @@ const STATE_FILE = path.join(os.homedir(), '.olympus', 'mcp-state.json');
 /**
  * GET /api/olympus/mcp/state
  *   Returns { enabled: { <mcpName>: boolean, ... } }
- *   MCPs not in the map default to enabled (first load).
+ *   MCPs not in the map default to enabled (first load; opencode-native
+ *   entries default to their opencode.json `enabled` flag instead — the
+ *   panel applies that).
  *
  * POST /api/olympus/mcp/state
  *   Body: { name: string, enabled: boolean }
- *   Updates the enabled state for a single MCP. Persists to ~/.olympus/mcp-state.json.
- *   The olympus-router plugin reads this file at runtime to block disabled MCPs.
+ *   Updates the enabled state for a single MCP. Persists to
+ *   ~/.olympus/mcp-state.json (the olympus-router runtime gate) AND — for
+ *   opencode-native entries — the surgical enabled flip in opencode.json.
  */
 export async function GET() {
   try {
@@ -42,25 +50,16 @@ export async function POST(req: NextRequest) {
     if (typeof name !== 'string' || typeof enabled !== 'boolean') {
       return NextResponse.json({ ok: false, error: 'Missing or invalid { name, enabled }' }, { status: 400, headers: NO_CACHE_HEADERS });
     }
-
-    // Load existing state
-    let state: Record<string, boolean> = {};
-    try {
-      if (fs.existsSync(STATE_FILE)) {
-        const data = JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
-        state = data.enabled || data || {};
-      }
-    } catch {}
-
-    // Update + persist
-    state[name] = enabled;
-    const dir = path.dirname(STATE_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    const result = setMcpEnabled(name, enabled);
+    if (!result.ok) {
+      return NextResponse.json({ ok: false, error: result.error || 'toggle failed' }, { status: 500, headers: NO_CACHE_HEADERS });
     }
-    fs.writeFileSync(STATE_FILE, JSON.stringify({ enabled: state }, null, 2), 'utf-8');
-
-    return NextResponse.json({ ok: true, name, enabled, state }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({
+      ok: true, name, enabled,
+      registry: result.registry,
+      opencodeFlagFlipped: result.opencodeFlagFlipped,
+      state: result.state,
+    }, { headers: NO_CACHE_HEADERS });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500, headers: NO_CACHE_HEADERS });
   }
