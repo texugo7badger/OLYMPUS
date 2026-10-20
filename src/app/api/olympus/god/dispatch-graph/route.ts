@@ -142,7 +142,7 @@ const GOD_DISPATCH_CATALOG: Record<string, {
       { task: 'Backend code verification (logic correctness, edge cases, error paths)', agent: 'code-verifier' },
     ],
     skills: ['backend-patterns', 'api-design', 'coding-standards', 'error-handling', 'verification-before-completion', 'dispatching-parallel-agents'],
-    mcps: ['serena', 'context7', 'postgres'],
+    mcps: ['serena', 'context7', 'postgres', 'fal'],
   },
   hermes: {
     // Hermes = INTEGRATIONS & MCPs. MCP building, API wiring, research, LLM arch.

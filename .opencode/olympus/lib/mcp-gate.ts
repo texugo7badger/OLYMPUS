@@ -38,6 +38,9 @@ export const MCP_API_REQUIREMENTS: Record<string, {
   github:        { envVars: ["GITHUB_PERSONAL_ACCESS_TOKEN"] },
   grafana:       { envVars: ["GRAFANA_URL", "GRAFANA_API_KEY"] },
   figma:         { envVars: ["FIGMA_API_KEY"] },
+  // OpenCode-native (opencode.json mcp block) BYOK MCP — the W-B IMAGE-GEN
+  // registration. Keep in sync with src/lib/mcp-api-requirements.ts.
+  fal:           { envVars: ["FAL_KEY"] },
 };
 
 /**

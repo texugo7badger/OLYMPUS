@@ -34,9 +34,11 @@ interface ApiConfig {
 
 type Section = 'llm' | 'mcps' | 'atelier';
 
-/* W-A RAG-CERT A2: the Atelier key requirement — the semantic vault lane
- * (the Pollinations-keyed embeddings behind the Atelier's semantic search +
- * the hop RAG retrieval). Not an MCP — its own section, same dialog. */
+/* W-A RAG-CERT A2 + W-B IMAGE-GEN: the Atelier key requirements — the
+ * semantic vault lane (the Pollinations-keyed embeddings behind the
+ * Atelier's semantic search + the hop RAG retrieval) + the BYOK
+ * generation/editing rungs (fal + Google Nano Banana). Not MCPs — its own
+ * section, same dialog. */
 const ATELIER_REQUIREMENT: McpApiRequirement = {
   names: ['atelier'],
   label: 'Atelier',
@@ -46,6 +48,18 @@ const ATELIER_REQUIREMENT: McpApiRequirement = {
       label: 'Pollinations API key',
       url: 'https://auth.pollinations.ai',
       note: 'Powers the semantic vault search + the hop RAG retrieval (embeddings via Pollinations). Without it the honest keyword fallback runs — nothing breaks, less is found.',
+    },
+    {
+      key: 'FAL_KEY',
+      label: 'fal.ai API key',
+      url: 'https://fal.ai/dashboard/keys',
+      note: 'Unlocks the BYOK generation + editing rungs: SDXL Turbo drafts, FLUX schnell, Nano Banana edit (~$0.0002-0.02/img — pay-as-you-go on your fal account).',
+    },
+    {
+      key: 'GOOGLE_AI_KEY',
+      label: 'Google AI API key',
+      url: 'https://aistudio.google.com/apikey',
+      note: 'Unlocks the Google Nano Banana rung (generation + editing, ~$0.02/img on your Google account).',
     },
   ],
 };
@@ -168,7 +182,7 @@ export default function ApiConfigDialog({ open, onClose }: { open: boolean; onCl
         {/* Section tabs — MCP keys + the Atelier semantic key (GO plan API key configured in OpenCode) */}
         <div className="flex items-center gap-1 px-5 py-2 border-b border-olympus-gold/10 bg-olympus-bg/30">
           <SectionTab active={section === 'mcps'} onClick={() => setSection('mcps')} icon={Key} label="MCPs" count={mcpCount} total={mcpTotal} />
-          <SectionTab active={section === 'atelier'} onClick={() => setSection('atelier')} icon={Palette} label="Atelier" count={isKeyConfigured(configs.POLLINATIONS_KEY) ? 1 : 0} total={1} />
+          <SectionTab active={section === 'atelier'} onClick={() => setSection('atelier')} icon={Palette} label="Atelier" count={ATELIER_REQUIREMENT.envVars.filter(ev => isKeyConfigured(configs[ev.key])).length} total={ATELIER_REQUIREMENT.envVars.length} />
         </div>
 
         {/* Config list */}
@@ -179,19 +193,21 @@ export default function ApiConfigDialog({ open, onClose }: { open: boolean; onCl
             </div>
           ) : (
             <div className="space-y-4">
-              {/* ── The Atelier semantic key (its own section) ─────────── */}
-              {section === 'atelier' && (() => {
-                const ev = ATELIER_REQUIREMENT.envVars[0];
-                return (
-                  <ApiKeyInput
-                    req={ev}
-                    mcpLabel={ATELIER_REQUIREMENT.label}
-                    value={keyValue(configs[ev.key])}
-                    isConfigured={isKeyConfigured(configs[ev.key])}
-                    onChange={v => updateConfig(ev.key, v)}
-                  />
-                );
-              })()}
+              {/* ── The Atelier keys (its own section: embeddings + BYOK gen) ── */}
+              {section === 'atelier' && (
+                <div className="space-y-3">
+                  {ATELIER_REQUIREMENT.envVars.map(ev => (
+                    <ApiKeyInput
+                      key={ev.key}
+                      req={ev}
+                      mcpLabel={ATELIER_REQUIREMENT.label}
+                      value={keyValue(configs[ev.key])}
+                      isConfigured={isKeyConfigured(configs[ev.key])}
+                      onChange={v => updateConfig(ev.key, v)}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* ── Single-field MCPs (flat list) ─────────────────────── */}
               {section === 'mcps' && (

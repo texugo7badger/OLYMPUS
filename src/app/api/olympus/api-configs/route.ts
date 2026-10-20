@@ -34,15 +34,21 @@ const ALLOWED_MCP_KEYS = new Set([
 ]);
 
 /**
- * W-A RAG-CERT A2: Atelier integration keys managed by OLYMPUS.
+ * W-A RAG-CERT A2 + W-B IMAGE-GEN: Atelier integration keys managed by
+ * OLYMPUS.
  *
  * POLLINATIONS_KEY powers the semantic vault lane (embeddings for the
  * Atelier's semantic search + the hop RAG retrieval — readAtelierKeys in
- * media-vault-vec.ts reads THIS store canonically). Set via the API Keys
- * dialog's Atelier section; the honest keyword fallback runs without it.
+ * media-vault-vec.ts reads THIS store canonically).
+ * FAL_KEY + GOOGLE_AI_KEY power the BYOK generation/editing rungs
+ * (SDXL-turbo / FLUX schnell / Nano Banana — src/lib/image-providers.ts).
+ * Set via the API Keys dialog's Atelier section; the honest keyword /
+ * free-lane fallbacks run without them.
  */
 const ALLOWED_ATELIER_KEYS = new Set([
   'POLLINATIONS_KEY',
+  'FAL_KEY',
+  'GOOGLE_AI_KEY',
 ]);
 
 /**

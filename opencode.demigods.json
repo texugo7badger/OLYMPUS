@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "description": "OLYMPUS demigod registry — 118 demigods across 10 gods",
+    "description": "OLYMPUS demigod registry \u2014 120 demigods across 10 gods",
     "version": "1.0.0",
     "generated_from": "opencode.test.json",
     "gods": {
@@ -10,13 +10,13 @@
       "atlas": 6,
       "callimachus": 9,
       "dionysus": 13,
-      "hephaestus": 17,
+      "hephaestus": 19,
       "hermes": 16,
       "persephone": 11,
       "prometheus": 13
     },
-    "total": 118,
-    "usage": "Consumed by scripts/apply-strategy.js to merge demigods into opencode.json when a GO-plan strategy is active, and by scripts/dynamic-dispatch-loader.js to inject a single demigod on-demand for free-tier strategy. This file is NOT read by opencode directly — opencode only sees agents that are present in opencode.json at startup."
+    "total": 120,
+    "usage": "Consumed by scripts/apply-strategy.js to merge demigods into opencode.json when a GO-plan strategy is active, and by scripts/dynamic-dispatch-loader.js to inject a single demigod on-demand for free-tier strategy. This file is NOT read by opencode directly \u2014 opencode only sees agents that are present in opencode.json at startup."
   },
   "demigods": {
     "a11y-auditor": {
@@ -726,6 +726,18 @@
       "mode": "subagent",
       "model": "opencode-go/qwen3.7-plus",
       "prompt": "{file:.opencode/prompts/agents/demigods/hermes/webhook_engineer.txt}"
+    },
+    "pygmalion": {
+      "parent_god": "hephaestus",
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/pygmalion.txt}"
+    },
+    "argos": {
+      "parent_god": "hephaestus",
+      "mode": "subagent",
+      "model": "opencode-go/deepseek-v4-pro",
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/argos.txt}"
     }
   }
 }

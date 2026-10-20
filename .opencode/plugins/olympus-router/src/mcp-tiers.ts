@@ -125,7 +125,14 @@ export const GOD_MCP_TIERS: Record<string, GodMcpTiers> = {
       { server: 'context7', domains: ['backend', 'docs'] },
       { server: 'postgres', domains: ['backend', 'database'] },
     ],
-    cold: [],
+    cold: [
+      // W-B IMAGE-GEN: the BYOK generation/editing MCP — cold (equip per
+      // dispatch via olympus-dispatch's mcp arg; locked until FAL_KEY).
+      { server: 'fal', domains: ['image-gen', 'forge'] },
+      // W-B: the free Pollinations agent lane (probe-green 1.3.1) — the
+      // same cold discipline: equipped per dispatch, never a default spend.
+      { server: 'pollinations', domains: ['image-gen', 'forge'] },
+    ],
   },
   hermes: {
     hot: [

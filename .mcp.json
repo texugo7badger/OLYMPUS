@@ -1,5 +1,13 @@
 {
   "mcpServers": {
+    "pollinations": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@pinkpixel/mcpollinations@1.3.1"
+      ],
+      "_comment": "v0.0.6 IMAGE-GEN W-B (@pinkpixel/mcpollinations, MIT): the Pollinations image/text/audio MCP for the agent lane. Probe-green 2026-10-19 (initialize handshake 1.3.1). Free, no key; version pinned. Generation parity with Pygmalion's routes; the honest price is $0."
+    },
     "context7": {
       "command": "npx",
       "args": [

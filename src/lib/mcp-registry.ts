@@ -101,13 +101,17 @@ export function listMcpServers(opts: ListMcpServersOpts = {}): { servers: McpReg
     const entries = cfg?.mcp && typeof cfg.mcp === 'object' ? cfg.mcp : {};
     for (const [name, conf] of Object.entries(entries as Record<string, any>)) {
       const command = Array.isArray(conf?.command) ? conf.command.join(' ') : conf?.command;
+      // W-B: the shared key-requirements map gates opencode-native BYOK
+      // entries too (fal renders LOCKED until FAL_KEY — the panel + the
+      // runtime gate read the same truth).
+      const req = findMcpRequirement(name);
       servers.push({
         name,
         command: typeof command === 'string' ? command : undefined,
         url: conf?.url,
         description: typeof conf?._olympus_note === 'string' ? conf._olympus_note : (command ? `OpenCode-native: ${command}` : 'OpenCode-native MCP'),
-        requiresApiKey: false,
-        apiKeyEnvVars: [],
+        requiresApiKey: !!req,
+        apiKeyEnvVars: getMcpEnvVarKeys(name),
         registry: 'opencode',
         opencodeEnabled: typeof conf?.enabled === 'boolean' ? conf.enabled : true,
       });

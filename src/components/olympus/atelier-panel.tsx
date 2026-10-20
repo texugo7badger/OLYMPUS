@@ -9,7 +9,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Palette, Search, Sparkles, Upload, Image as ImageIcon, Tag, X, Loader2, PenTool, ExternalLink, Box } from 'lucide-react';
+import { Palette, Search, Sparkles, Upload, Image as ImageIcon, Tag, X, Loader2, PenTool, ExternalLink, Box, Wand2 } from 'lucide-react';
 import Forge2D from './forge-2d';
 import Forge3D from './forge-3d';
 import { cn } from '@/lib/utils';
@@ -33,6 +33,11 @@ export default function AtelierPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [dropping, setDropping] = useState(false);
   const [genPrompt, setGenPrompt] = useState('');
+  // W-B IMAGE-GEN: the model selector + seed (the LIVE ladder) + the edit lane.
+  const [models, setModels] = useState<Array<{ id: string; label: string; tier: string; priceHint: string; available: boolean; needsKey: string | null; supportsEdit: boolean }>>([]);
+  const [genModel, setGenModel] = useState('pollinations/flux');
+  const [genSeed, setGenSeed] = useState('');
+  const [editPrompt, setEditPrompt] = useState<{ assetId: string; value: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [selected, setSelected] = useState<Asset | null>(null);
   const [forging, setForging] = useState<string | null>(null);
@@ -68,6 +73,13 @@ export default function AtelierPanel() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  // W-B: the model catalog (the keys in hand decide what's available).
+  useEffect(() => {
+    fetch('/api/olympus/atelier/models', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d?.models)) setModels(d.models); })
+      .catch(() => {});
+  }, []);
 
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4200); };
 
@@ -94,23 +106,49 @@ export default function AtelierPanel() {
     }
   };
 
-  /** The free generation lane. */
+  /** The generation lane — the LIVE ladder (free default, BYOK behind keys). */
   const generate = async () => {
     if (!genPrompt.trim()) return;
     setBusy('generate');
     try {
       const r = await fetch('/api/olympus/atelier/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: genPrompt.trim(), width: 768, height: 768 }),
+        body: JSON.stringify({
+          prompt: genPrompt.trim(), width: 768, height: 768,
+          model: genModel,
+          ...(genSeed.trim() ? { seed: Number(genSeed) || undefined } : {}),
+        }),
       }).then((r) => r.json());
       if (!r?.ok) throw new Error(r?.error || 'generation failed');
-      flash(`Pygmalion (free lane): ${r.model} — in the vault`);
+      flash(`Pygmalion (${r.label ?? r.model} · ${r.priceHint ?? ''}): in the vault`);
       // Give the new asset the Argos pass too (the full loop).
       void fetch('/api/olympus/atelier/describe', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: r.asset.id }),
       }).then(() => load(query));
     } catch (e: any) { flash(`GEN FAILED: ${e?.message || e}`); }
+    finally { setBusy(null); }
+  };
+
+  /** W-B4: the img2img lane — the vault asset + prompt -> a NEW vault asset
+   *  (the BYOK editing rungs; the honest refusal names the key). */
+  const editAsset = async (assetId: string, prompt: string) => {
+    if (!prompt.trim()) return;
+    setBusy('edit');
+    try {
+      const r = await fetch('/api/olympus/atelier/edit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assetId, prompt: prompt.trim() }),
+      }).then((r) => r.json());
+      if (!r?.ok) throw new Error(r?.error || 'edit failed');
+      flash(`Edited via ${r.label ?? r.model} — new asset in the vault`);
+      setEditPrompt(null);
+      // The Argos pass on the NEW asset (the full loop, same as generate).
+      void fetch('/api/olympus/atelier/describe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: r.asset.id }),
+      }).then(() => load(query));
+    } catch (e: any) { flash(`EDIT FAILED: ${e?.message || e}`); }
     finally { setBusy(null); }
   };
 
@@ -143,12 +181,38 @@ export default function AtelierPanel() {
         <p className="text-[9px] text-olympus-text-dim mt-0.5">Argos will describe + tag it into the Media Vault</p>
       </div>
 
-      {/* The generation lane */}
+      {/* The generation lane — the LIVE ladder: free default, BYOK rungs
+          unlocked by the keys (API Keys dialog), every price honest. */}
       <div className="rounded-lg border border-olympus-cyan/20 bg-olympus-card p-2.5 mb-4">
         <div className="flex items-center gap-1.5 mb-1.5">
           <Sparkles size={11} className="text-olympus-cyan" />
-          <span className="text-[10px] font-mono font-semibold text-olympus-cyan uppercase">pygmalion · free lane</span>
-          <span className="text-[8px] text-olympus-text-dim ml-auto">pollinations/flux · $0</span>
+          <span className="text-[10px] font-mono font-semibold text-olympus-cyan uppercase">pygmalion · the ladder</span>
+          <span className="text-[8px] text-olympus-text-dim ml-auto font-mono">
+            {models.find(m => m.id === genModel)?.priceHint ?? '$0'} · seed optional
+          </span>
+        </div>
+        {/* W-B3: the model selector + seed — the honest catalog (locked rungs
+            name their key, never silently pretend). */}
+        <div className="flex gap-1.5 mb-1.5">
+          <select
+            value={genModel}
+            onChange={(e) => setGenModel(e.target.value)}
+            aria-label="Image model"
+            className="bg-olympus-bg border border-olympus-gold/20 rounded px-1.5 py-1 text-[10px] font-mono text-olympus-text outline-none focus:border-olympus-cyan/50 max-w-[55%]"
+          >
+            {models.map(m => (
+              <option key={m.id} value={m.id} disabled={!m.available}>
+                {m.label} · {m.priceHint}{m.available ? '' : ` (needs ${m.needsKey})`}
+              </option>
+            ))}
+          </select>
+          <input
+            value={genSeed}
+            onChange={(e) => setGenSeed(e.target.value.replace(/[^0-9]/g, ''))}
+            placeholder="seed"
+            aria-label="Seed"
+            className="w-16 bg-olympus-bg border border-olympus-gold/20 rounded px-1.5 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-cyan/50"
+          />
         </div>
         <div className="flex gap-1.5">
           <input
@@ -254,6 +318,7 @@ export default function AtelierPanel() {
               <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/20 uppercase">{selected.source ?? 'vault'}</span>
               <button onClick={() => open3d(selected)} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-1 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30 hover:bg-olympus-purple/25"><Box size={10} /> 3d</button>
               <button onClick={() => setForging(selected.id)} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-1 rounded bg-olympus-cyan/15 text-olympus-cyan ring-1 ring-olympus-cyan/30 hover:bg-olympus-cyan/25"><PenTool size={10} /> forge</button>
+              <button onClick={() => setEditPrompt({ assetId: selected.id, value: '' })} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25"><Wand2 size={10} /> edit</button>
               <button onClick={() => openInArtcraft(selected.id)} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25"><ExternalLink size={10} /> artcraft</button>
               <button onClick={() => setSelected(null)} className="ml-auto text-olympus-text-dim hover:text-olympus-red"><X size={14} /></button>
             </div>
@@ -262,6 +327,31 @@ export default function AtelierPanel() {
                 <img src={`/api/olympus/atelier/assets?id=${selected.id}`} className="max-h-[60vh] object-contain" alt={selected.description ?? ''} />
               </div>
               <div className="md:w-1/2 p-4 space-y-3 overflow-y-auto overscroll-contain custom-scroll">
+                {/* W-B4: the edit lane — the img2img prompt (the BYOK rungs;
+                    the honest refusal names the key when none is set). */}
+                {editPrompt?.assetId === selected.id && (
+                  <div className="rounded-lg border border-olympus-gold/25 bg-olympus-card p-2">
+                    <div className="text-[9px] font-mono text-olympus-gold uppercase mb-1.5">edit this asset</div>
+                    <div className="flex gap-1.5">
+                      <input
+                        autoFocus
+                        value={editPrompt.value}
+                        onChange={(e) => setEditPrompt({ ...editPrompt, value: e.target.value })}
+                        onKeyDown={(e) => { if (e.key === 'Enter') editAsset(selected.id, editPrompt.value); if (e.key === 'Escape') setEditPrompt(null); }}
+                        placeholder="make it dusk, add neon rim light…"
+                        className="flex-1 bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50"
+                      />
+                      <button onClick={() => editAsset(selected.id, editPrompt.value)} disabled={busy === 'edit'}
+                        className="px-2 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 text-[10px] font-mono hover:bg-olympus-gold/25 disabled:opacity-40">
+                        {busy === 'edit' ? '…' : 'go'}
+                      </button>
+                      <button onClick={() => setEditPrompt(null)} className="text-olympus-text-dim hover:text-olympus-red text-[10px] font-mono px-1">✕</button>
+                    </div>
+                    <div className="text-[8px] font-mono text-[#5A5A5A] mt-1">
+                      {models.filter(m => m.supportsEdit).map(m => `${m.label}${m.available ? '' : ` (${m.needsKey})`}`).join(' · ') || 'no editing rung available'}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <div className="text-[9px] font-mono text-olympus-text-dim uppercase mb-1">argos says</div>
                   <p className="text-[11px] text-olympus-text leading-relaxed">{selected.description ?? '— pending —'}</p>

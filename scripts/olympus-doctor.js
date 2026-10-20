@@ -8,7 +8,7 @@
  *   3. Python 3 available (for vault seeding)
  *   4. OLYMPUS home config (~/.olympus/) exists + has llm-providers.json
  *   5. Vault exists + has seed instincts + knowledge files + design-systems
- *   6. opencode.json valid + agents (10 gods + 118 demigods = 128 .txt files on disk) + 10 plugins
+ *   6. opencode.json valid + agents (10 gods + 120 demigods = 130 .txt files on disk) + 10 plugins
  *   7. ECC plugin built (.opencode/dist/plugins/index.js exists)
  *   8. OLYMPUS overlay plugin built (.opencode/olympus/dist/index.js exists)
  *   9. Vendored skills present (330 skills: caveman, impeccable, superpowers,
@@ -31,7 +31,7 @@
  *  24. Prompt format standardized: ALL agent prompts are .txt (no .md remain)
  *  25. Demigod fleet co-located with the gods (demigods/<god>/ + gods/)
  *  26. Demigod prompts are .txt (118 demigod .txt files on disk, 0 .md)
- *  27. Agents registered in opencode.json (10 gods + 118 demigods = 128 .txt files on disk)
+ *  27. Agents registered in opencode.json (10 gods + 120 demigods = 130 .txt files on disk)
  *  28. olympus-dispatch tool FORBIDS ecc-/olympus-/volt- prefixes (Symphony-native)
  *
  * Usage: node scripts/olympus-doctor.js
@@ -766,7 +766,7 @@ check("Demigod prompts (.txt)",
 // Gods identified by GOD_NAMES set, demigods are everything else with a description.
 // The doctor reports both the registered count and the on-disk count so the
 // user can see if any demigods need to be registered.
-// Count .txt files dynamically. The actual count is 10 gods + 118 demigods = 128.
+// Count .txt files dynamically. The actual count is 10 gods + 120 demigods = 130.
 try {
   const oc = JSON.parse(fs.readFileSync(path.join(OLYMPUS_ROOT, "opencode.json"), "utf-8"));
   const agents = oc.agent || {};

@@ -72,6 +72,17 @@ export const MCP_API_REQUIREMENTS: McpApiRequirement[] = [
     ],
     note: 'Grafana metrics. Used by Prometheus.',
   },
+  // ── OpenCode-native (opencode.json mcp block) BYOK MCPs — the merged
+  // registry (src/lib/mcp-registry.ts) consults this SAME map so the panel
+  // renders them locked until the key lands (W-E + W-B IMAGE-GEN). ────────
+  {
+    names: ['fal'],
+    label: 'fal.ai (BYOK)',
+    envVars: [
+      { key: 'FAL_KEY', label: 'fal.ai API Key', url: 'https://fal.ai/dashboard/keys', note: 'The BYOK generation/editing MCP (FLUX, Nano Banana edit). ~$0.0002-0.02/img on your fal account.' },
+    ],
+    note: 'Remote MCP (mcp.fal.ai) — generation + editing lanes. Used by Hephaestus (the Pygmalion forge lane).',
+  },
 ];
 
 /**
