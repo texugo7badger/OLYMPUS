@@ -23,9 +23,70 @@ export default function Forge2D({ assetId, onClose }: { assetId: string; onClose
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
+  // W-C: the ASSET loads into the canvas — initialData built from the vault
+  // bytes (fetch -> dataURL -> an image element), so the selected asset is
+  // ON the scene from the first paint (the sketch-pad gap: the old form
+  // never loaded it; the toolbar image tool was the only way in).
+  const [initialData, setInitialData] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     setToast(null);
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`/api/olympus/atelier/assets?id=${assetId}`, { cache: 'no-store' });
+        if (!r.ok) throw new Error('the asset did not load');
+        const buf = Buffer.from(await r.arrayBuffer());
+        const ct = r.headers.get('content-type') || 'image/png';
+        const dataUrl = `data:${ct};base64,${buf.toString('base64')}`;
+        if (cancelled) return;
+        const fileId = `vault-${assetId}`;
+        // The image element sized to a sane working canvas (the user can
+        // scale/move it — it is a real scene element, not a background).
+        setInitialData({
+          appState: { viewBackgroundColor: '#07090f' },
+          files: {
+            [fileId]: {
+              id: fileId,
+              dataURL: dataUrl,
+              mimeType: ct,
+              created: Date.now(),
+            },
+          },
+          elements: [
+            {
+              id: `img-${assetId}`,
+              type: 'image',
+              fileId,
+              x: 40,
+              y: 40,
+              width: 640,
+              height: 480,
+              status: 'saved',
+              strokeStyle: 'solid',
+              strokeWidth: 1,
+              seed: 1,
+              version: 1,
+              versionNonce: 1,
+              isDeleted: false,
+              boundElements: null,
+              updated: 1,
+              link: null,
+              locked: false,
+              roundness: null,
+              rotate: 0,
+              scale: [1, 1] as [number, number],
+              angle: 0,
+              groupIds: [],
+              frameId: null,
+              opacity: 100,
+              customData: { sourceAssetId: assetId },
+            },
+          ],
+        });
+      } catch { /* the canvas still opens empty — the asset never blocks the editor */ }
+    })();
+    return () => { cancelled = true; };
   }, [assetId]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 4000); };
@@ -80,9 +141,7 @@ export default function Forge2D({ assetId, onClose }: { assetId: string; onClose
         <Excalidraw
           excalidrawAPI={(api) => { apiRef.current = api; setImgLoaded(true); }}
           theme={THEME.DARK}
-          initialData={{
-            appState: { viewBackgroundColor: '#07090f' },
-          }}
+          initialData={initialData ?? { appState: { viewBackgroundColor: '#07090f' } }}
           UIOptions={{ canvasActions: { loadScene: true, saveToActiveFile: false, export: false, saveAsImage: false } }}
         />
       </div>

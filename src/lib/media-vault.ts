@@ -226,4 +226,8 @@ const EXT_BY_MIME: Record<string, string> = {
   'image/webp': 'webp',
   'image/bmp': 'bmp',
   'image/svg+xml': 'svg',
+  // W-C FORGE-2D/3D: the model mimes — a GLB can finally ENTER the vault
+  // (the t2-3D lane's input channel; FORGE-3D's viewer had none).
+  'model/gltf-binary': 'glb',
+  'model/gltf+json': 'gltf',
 };

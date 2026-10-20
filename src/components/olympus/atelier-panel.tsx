@@ -42,11 +42,13 @@ export default function AtelierPanel() {
   const [selected, setSelected] = useState<Asset | null>(null);
   const [forging, setForging] = useState<string | null>(null);
   // #163 FORGE-3D: the GLB viewport (the t2-3D lane's output viewer).
-  const [viewing3d, setViewing3d] = useState<{ src: string; label: string } | null>(null);
+  const [viewing3d, setViewing3d] = useState<{ src: string; label: string; kind: 'model' | 'image' } | null>(null);
   const open3d = (a: Asset) => {
-    // GLB/GLTF assets open the viewport; images fall back to a 2D look.
+    // W-C: the MIME DISPATCH — glb/gltf -> model-viewer; images -> the
+    // honest labeled 2D LOOK inside the same viewport (never the error card).
+    const isModel = a.mime === 'model/gltf-binary' || a.mime === 'model/gltf+json';
     const src = `/api/olympus/atelier/assets?id=${a.id}`;
-    setViewing3d({ src, label: a.description?.slice(0, 60) ?? a.id });
+    setViewing3d({ src, label: a.description?.slice(0, 60) ?? a.id, kind: isModel ? 'model' : 'image' });
   };
   // #154: the ArtCraft deeplink (web fallback carries Linux until desktop
   // binaries ship — the detector decides at click time).
@@ -83,17 +85,24 @@ export default function AtelierPanel() {
 
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4200); };
 
-  /** Drop ANY image → the vault + the Argos describe. */
+  /** Drop ANY image or model -> the vault. Images get the Argos pass;
+   *  GLB/GLTF vault WITHOUT the VLM describe (Argos honestly cannot see a
+   *  3D binary — the vault entry carries source + id until tagged by hand). */
   const ingest = async (files: FileList | File[]) => {
     for (const f of Array.from(files)) {
-      if (!f.type.startsWith('image/')) continue;
+      const isModel = /\.glb$/i.test(f.name) || /\.gltf$/i.test(f.name) || f.type === 'model/gltf-binary' || f.type === 'model/gltf+json';
+      if (!f.type.startsWith('image/') && !isModel) continue;
       setBusy(`upload ${f.name}`);
       try {
         const fd = new FormData();
         fd.append('image', f);
-        fd.append('source', f.name.match(/midjourney|dalle|firefly|flux|stable/i)?.[0]?.toLowerCase() ?? 'user');
+        fd.append('source', isModel ? 'model-upload' : f.name.match(/midjourney|dalle|firefly|flux|stable/i)?.[0]?.toLowerCase() ?? 'user');
         const up = await fetch('/api/olympus/atelier/upload', { method: 'POST', body: fd }).then((r) => r.json());
         if (!up?.ok) throw new Error(up?.error || 'upload failed');
+        if (isModel) {
+          flash(`vaulted ${f.name} — the 3D lane (Argus skips model binaries; tag it by hand or via a note)`);
+          continue;
+        }
         flash(`vaulted ${f.name} — Argos is looking…`);
         const desc = await fetch('/api/olympus/atelier/describe', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -174,7 +183,7 @@ export default function AtelierPanel() {
           dropping ? 'border-olympus-gold bg-olympus-gold/10' : 'border-olympus-gold/25 hover:border-olympus-gold/50 hover:bg-olympus-gold/5',
         )}
       >
-        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+        <input ref={fileRef} type="file" accept="image/*,.glb,.gltf" multiple className="hidden"
           onChange={(e) => e.target.files && ingest(e.target.files)} />
         <Upload size={18} className="mx-auto mb-1.5 text-olympus-gold/70" />
         <p className="text-[11px] text-olympus-text font-mono">Drop ANY image here — from any AI or your own</p>
@@ -305,7 +314,7 @@ export default function AtelierPanel() {
       )}
 
       {forging && <Forge2D assetId={forging} onClose={() => setForging(null)} />}
-      {viewing3d && <Forge3D src={viewing3d.src} label={viewing3d.label} onClose={() => setViewing3d(null)} />}
+      {viewing3d && <Forge3D src={viewing3d.src} label={viewing3d.label} kind={viewing3d.kind} onClose={() => setViewing3d(null)} />}
 
       {/* The asset sheet */}
       {selected && (

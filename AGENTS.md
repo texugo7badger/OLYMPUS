@@ -1,6 +1,6 @@
 # OLYMPUS Agents
 
-> AGPL-3.0-or-later · GO-primary · Apollo-primary · OpenCode-based · 10 gods · 120 demigods · Symphony protocol · Standalone Electron desktop app
+> AGPL-3.0-or-later · GO-primary · Apollo-primary · OpenCode-based · 10 gods · 122 demigods · Symphony protocol · Standalone Electron desktop app
 
 ## The 10 Gods
 
@@ -19,7 +19,7 @@ Gods are `mode: "primary"` or `mode: "subagent"` agents in `opencode.json`. Apol
 | **Prometheus** | DevOps & CI/CD | `opencode-go/qwen3.7-plus` | Docker, Terraform, SRE, incident response, release engineering. |
 | **Callimachus** | Vault curation | `opencode-go/deepseek-v4-flash` | Instinct lifecycle, brain backup/restore, docs verification. Runs the 7-stage brain maintenance loop on `session.idle`. |
 
-**Total: 10 gods + 120 demigods = 130 agents.**
+**Total: 10 gods + 122 demigods = 132 agents.**
 
 Apollo is always on the GLM family (sacred — never downgraded): FULL GLM-5.3 in go-max-quality (shared with Athena/Dionysus/Persephone there) AND in go-balanced (the 2026-10-16 upgrade — the planner is the quality bottleneck, and the hop runtime's small-burst request shape stretches the $3/5h rolling cap far past the old interactive-turn economics); GLM-5.3-Flash only in go-budget (the cap-aware fallback). Atlas is always on Hy3 in the GO strategies (sacred — never downgraded; Zen substitutes GPT 6 Sol/Luna because Hy3 is GO-only). Hy3 excels at agent orchestration — Atlas's domain — and is more cost-effective than alternatives.
 
@@ -27,7 +27,7 @@ Apollo is always on the GLM family (sacred — never downgraded): FULL GLM-5.3 i
 
 ## Demigods
 
-Demigods are `mode: "subagent"` — invoked only by a god, never by the user directly. The fleet of **120 demigods** is organized under `.opencode/prompts/agents/demigods/<god>/`.
+Demigods are `mode: "subagent"` — invoked only by a god, never by the user directly. The fleet of **122 demigods** is organized under `.opencode/prompts/agents/demigods/<god>/`.
 
 | God | Demigods | Count |
 |-----|----------|-------|
@@ -36,7 +36,7 @@ Demigods are `mode: "subagent"` — invoked only by a god, never by the user dir
 | **Artemis**  | security-reviewer, pentester, compliance-auditor, threat-analyst, secrets-scanner, cloud-security-auditor, ai-code-auditor, supply-chain-auditor, appsec-engineer, blockchain-security-auditor, privacy-engineer, security-architect | 12 |
 | **Athena**  | frontend-reviewer, ui-designer, a11y-auditor, visual-verifier, brand-guardian, information-architect, mobile-app-builder, performance-optimizer, responsive-tester, section-508-specialist, state-architect, ux-researcher | 13 |
 | **Dionysus** | tdd-guide, e2e-runner, evidence-collector, performance-tester, api-tester, flaky-test-resolver, gan-planner, harness-optimizer, mutation-tester, reality-checker, test-automation-engineer, test-results-analyzer, unit-test-author | 13 |
-| **Hephaestus** | build-resolver, code-verifier, managed-reviewer, refactor-engineer, api-designer, code-explorer, code-simplifier, comment-analyzer, embedded-firmware-engineer, go-reviewer, script-reviewer, search-relevance-engineer, smart-contract-engineer, systems-reviewer, ts-reviewer, type-design-analyzer, webassembly-engineer, pygmalion, argos | 19 |
+| **Hephaestus** | build-resolver, code-verifier, managed-reviewer, refactor-engineer, api-designer, code-explorer, code-simplifier, comment-analyzer, embedded-firmware-engineer, go-reviewer, script-reviewer, search-relevance-engineer, smart-contract-engineer, systems-reviewer, ts-reviewer, type-design-analyzer, webassembly-engineer, pygmalion, argos, daedalus, apelles | 21 |
 | **Hermes** | mcp-builder, api-integrator, llm-architect, protocol-designer, webhook-engineer, ai-engineer, auth-specialist, email-intelligence-engineer, event-stream-architect, payments-billing-engineer, prompt-engineer, rag-pipeline-engineer, realtime-collaboration-engineer, researcher, video-streaming-engineer, voice-ai-engineer | 16 |
 | **Persephone** | schema-reviewer, migration-engineer, data-engineer, dbre, cache-architect, clickhouse-specialist, data-migration-specialist, etl-pipeline-architect, gaussdb-expert, orm-specialist, query-optimizer | 11 |
 | **Prometheus** | docker-expert, terraform-engineer, sre, incident-responder, release-engineer, finops-analyst, homelab-architect, iot-fleet-engineer, k8s-engineer, network-architect, network-config-reviewer, network-engineer, network-troubleshooter | 13 |

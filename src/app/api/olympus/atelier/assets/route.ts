@@ -26,7 +26,11 @@ export async function GET(req: NextRequest) {
       const hit = fs.readdirSync(dir).find((f) => f.startsWith(safe) && f.replace(/\.[^.]+$/, '') === safe);
       if (!hit) return NextResponse.json({ ok: false, error: 'not found' }, { status: 404, headers: NO_CACHE_HEADERS });
       const buf = fs.readFileSync(`${dir}/${hit}`);
-      const mime = hit.endsWith('.jpg') ? 'image/jpeg' : hit.endsWith('.svg') ? 'image/svg+xml' : `image/${hit.split('.').pop()}`;
+      // W-C: the model mimes serve as themselves — a .glb is
+      // model/gltf-binary (model-viewer's contract), never image/glb.
+      const mime = hit.endsWith('.glb') ? 'model/gltf-binary'
+        : hit.endsWith('.gltf') ? 'model/gltf+json'
+        : hit.endsWith('.jpg') ? 'image/jpeg' : hit.endsWith('.svg') ? 'image/svg+xml' : `image/${hit.split('.').pop()}`;
       return new NextResponse(new Uint8Array(buf), { headers: { 'Content-Type': mime, 'Cache-Control': 'no-store' } });
     } catch (e: any) {
       return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 404, headers: NO_CACHE_HEADERS });

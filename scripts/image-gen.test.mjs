@@ -195,9 +195,16 @@ async function main() {
   const hasArg = registry.demigods?.argos?.parent_god === 'hephaestus';
   expect('B6: pygmalion + argos in the registry (the dispatch refusal dies)',
     hasPyr && hasArg, `pygmalion=${hasPyr} argos=${hasArg}`);
-  expect('B6: the registry counts are true (120 across the pantheon, hephaestus 19)',
-    registry._meta?.total === 120 && registry._meta?.gods?.hephaestus === 19,
-    `meta=${JSON.stringify(registry._meta?.gods)} total=${registry._meta?.total}`);
+  // The count pin is CONSISTENCY (registry total === the disk, the drift is
+  // dead), never a frozen number — waves add demigods.
+  const diskByGod = {};
+  for (const g of fs.readdirSync(path.join(OLYMPUS, '.opencode/prompts/agents/demigods'))) {
+    try { diskByGod[g] = fs.readdirSync(path.join(OLYMPUS, '.opencode/prompts/agents/demigods', g)).filter((f) => f.endsWith('.txt')).length; } catch { diskByGod[g] = 0; }
+  }
+  const diskTotal = Object.values(diskByGod).reduce((a, b) => a + b, 0);
+  expect('B6: the registry counts are TRUE (registry === disk, no drift)',
+    registry._meta?.total === diskTotal && registry._meta?.gods?.hephaestus === diskByGod.hephaestus,
+    `registry total=${registry._meta?.total} disk total=${diskTotal} hephaestus registry=${registry._meta?.gods?.hephaestus} disk=${diskByGod.hephaestus}`);
   const pyrSrc = read('.opencode/prompts/agents/demigods/hephaestus/pygmalion.txt');
   const argSrc = read('.opencode/prompts/agents/demigods/hephaestus/argos.txt');
   const houseSkeleton = (s) => s.includes('## Cognitive Style') && s.includes('## Available Skills') && s.includes('## Quality Gates') && s.includes('## Collaboration Signatures') && s.includes('## Forbidden') && s.includes('## Output Contract');
@@ -206,9 +213,9 @@ async function main() {
   expect('B6: argos re-skeletoned per the house format',
     houseSkeleton(argSrc), 'still ## Your Domain / ## Method');
   const agentsMd = read('AGENTS.md');
-  expect('B6: AGENTS.md census updated (120 demigods, hephaestus 19)',
-    agentsMd.includes('120 demigods') && /\|\s*\*\*Hephaestus\*\*\s*\|.*\|\s*19\s*\|/.test(agentsMd),
-    'the census still says 118/17 — registry/disk drift is a half-add');
+  expect('B6: AGENTS.md census matches the registry (the living number, no drift)',
+    agentsMd.includes(`${registry._meta?.total} demigods`) && agentsMd.includes(`**Hephaestus**`) && new RegExp(`pygmalion, argos(, daedalus, apelles)?[^\n]*\\| ${diskByGod.hephaestus} \\|`).test(agentsMd),
+    'the census is stale vs the registry — registry/disk drift is a half-add');
 
   if (failures > 0) { console.error(`\nimage-gen: ${failures} FAIL`); process.exit(1); }
   console.log('\nimage-gen: all green.');

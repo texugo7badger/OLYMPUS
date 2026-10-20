@@ -13,7 +13,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Box, X, Loader2, RotateCcw } from 'lucide-react';
 
-export default function Forge3D({ src, label, onClose }: { src: string; label: string; onClose: () => void }) {
+export default function Forge3D({ src, label, kind = 'model', onClose }: { src: string; label: string; kind?: 'model' | 'image'; onClose: () => void }) {
   const ref = useRef<any>(null);
   const [ready, setReady] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -45,6 +45,17 @@ export default function Forge3D({ src, label, onClose }: { src: string; label: s
         </div>
       </div>
       <div className="flex-1 min-h-0 relative">
+        {/* W-C: the MIME DISPATCH — a 2D asset gets the honest labeled 2D
+            LOOK (the same dark stage; never model-viewer's error card). */}
+        {kind === 'image' ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#07090f]">
+            <img src={src} alt={label} className="max-h-[75%] max-w-[85%] object-contain rounded ring-1 ring-olympus-gold/15" />
+            <span className="text-[9px] font-mono text-olympus-text-dim">
+              the 2D look — GLB/GLTF assets orbit in 3D; images preview here
+            </span>
+          </div>
+        ) : (
+        <>
         {!ready && !err && (
           <div className="absolute inset-0 flex items-center justify-center text-olympus-text-dim text-xs font-mono gap-2">
             <Loader2 size={13} className="animate-spin" /> loading the viewport…
@@ -54,7 +65,7 @@ export default function Forge3D({ src, label, onClose }: { src: string; label: s
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center p-8">
             <Box size={24} className="text-olympus-red/60" />
             <p className="text-olympus-text text-xs font-mono">{err}</p>
-            <p className="text-olympus-text-dim text-[10px] font-mono">the asset stays in the vault — the viewer is the light lane; heavy 3D deep-links to Blender/ArtCraft</p>
+            <p className="text-olympus-text-dim text-[10px] font-mono">the asset stays in the vault — the viewer is the light lane; heavy 3D deep-links to forge-2d/forge-3d (Blender/ArtCraft), the TRELLIS local lane needs an NVIDIA GPU (docs/research/3d-lanes.md)</p>
           </div>
         ) : (
           <model-viewer
@@ -70,6 +81,8 @@ export default function Forge3D({ src, label, onClose }: { src: string; label: s
             style={{ width: '100%', height: '100%', background: '#07090f' }}
             onError={() => setErr('this asset is not a viewable 3D model (GLB/GLTF expected)')}
           />
+        )}
+        </>
         )}
       </div>
     </div>
