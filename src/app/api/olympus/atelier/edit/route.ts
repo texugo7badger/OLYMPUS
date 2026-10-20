@@ -5,7 +5,7 @@
  * Nano Banana inline-part edit (GOOGLE_AI_KEY) — the free anonymous lane
  * has no editing endpoint (honest: an edit request without keys names the
  * key, never a fake edit). The new image lands BACK in the vault as a new
- * asset (the lineage lives in the source frontmatter) — Argos can tag it.
+ * asset (the lineage lives in the source frontmatter) — the vision-describer can tag it.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */

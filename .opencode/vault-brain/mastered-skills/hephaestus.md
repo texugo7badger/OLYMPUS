@@ -42,7 +42,7 @@ last_updated: 2026-07-24
   FLUX, Nano Banana edit, video lanes. #166 IMAGE-GEN W-B; cold tier (equip
   per dispatch); locked until the key lands in the API Keys dialog.
 - pollinations (@pinkpixel/mcpollinations, MIT, probe-green 1.3.1): the
-  free agent lane (image/text/audio) — cold tier, the Pygmalion routes'
+  free agent lane (image/text/audio) — cold tier, the image-generator routes'
   parity for dispatch-time generation.
 - blender / comfyui / godot / rea — the tool lanes (see opencode.json mcp).
 

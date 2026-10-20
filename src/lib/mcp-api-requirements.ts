@@ -81,7 +81,7 @@ export const MCP_API_REQUIREMENTS: McpApiRequirement[] = [
     envVars: [
       { key: 'FAL_KEY', label: 'fal.ai API Key', url: 'https://fal.ai/dashboard/keys', note: 'The BYOK generation/editing MCP (FLUX, Nano Banana edit). ~$0.0002-0.02/img on your fal account.' },
     ],
-    note: 'Remote MCP (mcp.fal.ai) — generation + editing lanes. Used by Hephaestus (the Pygmalion forge lane).',
+    note: 'Remote MCP (mcp.fal.ai) — generation + editing lanes. Used by Hephaestus (the image-generator forge lane).',
   },
 ];
 

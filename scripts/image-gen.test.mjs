@@ -191,10 +191,10 @@ async function main() {
 
   // ── B6: pygmalion + argos REGISTERED + re-skeletoned ─────────────────────
   const registry = JSON.parse(read('opencode.demigods.json'));
-  const hasPyr = registry.demigods?.pygmalion?.parent_god === 'hephaestus';
-  const hasArg = registry.demigods?.argos?.parent_god === 'hephaestus';
-  expect('B6: pygmalion + argos in the registry (the dispatch refusal dies)',
-    hasPyr && hasArg, `pygmalion=${hasPyr} argos=${hasArg}`);
+  const hasPyr = registry.demigods?.['image-generator']?.parent_god === 'hephaestus';
+  const hasArg = registry.demigods?.['vision-describer']?.parent_god === 'hephaestus';
+  expect('B6: image-generator + vision-describer in the registry (the dispatch refusal dies, the descriptive pattern kept)',
+    hasPyr && hasArg, `image-generator=${hasPyr} vision-describer=${hasArg}`);
   // The count pin is CONSISTENCY (registry total === the disk, the drift is
   // dead), never a frozen number — waves add demigods.
   const diskByGod = {};
@@ -205,16 +205,16 @@ async function main() {
   expect('B6: the registry counts are TRUE (registry === disk, no drift)',
     registry._meta?.total === diskTotal && registry._meta?.gods?.hephaestus === diskByGod.hephaestus,
     `registry total=${registry._meta?.total} disk total=${diskTotal} hephaestus registry=${registry._meta?.gods?.hephaestus} disk=${diskByGod.hephaestus}`);
-  const pyrSrc = read('.opencode/prompts/agents/demigods/hephaestus/pygmalion.txt');
-  const argSrc = read('.opencode/prompts/agents/demigods/hephaestus/argos.txt');
+  const pyrSrc = read('.opencode/prompts/agents/demigods/hephaestus/image_generator.txt');
+  const argSrc = read('.opencode/prompts/agents/demigods/hephaestus/vision_describer.txt');
   const houseSkeleton = (s) => s.includes('## Cognitive Style') && s.includes('## Available Skills') && s.includes('## Quality Gates') && s.includes('## Collaboration Signatures') && s.includes('## Forbidden') && s.includes('## Output Contract');
-  expect('B6: pygmalion re-skeletoned per the house format',
+  expect('B6: image-generator re-skeletoned per the house format (the descriptive rename)',
     houseSkeleton(pyrSrc), 'still ## Your Domain / ## Method — the negative specimen class');
-  expect('B6: argos re-skeletoned per the house format',
+  expect('B6: vision-describer re-skeletoned per the house format (the descriptive rename)',
     houseSkeleton(argSrc), 'still ## Your Domain / ## Method');
   const agentsMd = read('AGENTS.md');
   expect('B6: AGENTS.md census matches the registry (the living number, no drift)',
-    agentsMd.includes(`${registry._meta?.total} demigods`) && agentsMd.includes(`**Hephaestus**`) && new RegExp(`pygmalion, argos(, daedalus, apelles)?[^\n]*\\| ${diskByGod.hephaestus} \\|`).test(agentsMd),
+    agentsMd.includes(`${registry._meta?.total} demigods`) && agentsMd.includes('image-generator, vision-describer, 3d-asset-engineer, 2d-asset-designer | ' + diskByGod.hephaestus + ' |'),
     'the census is stale vs the registry — registry/disk drift is a half-add');
 
   if (failures > 0) { console.error(`\nimage-gen: ${failures} FAIL`); process.exit(1); }

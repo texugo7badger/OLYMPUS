@@ -40,7 +40,22 @@ node scripts/olympus-doctor.js
 
 ## Adding a new demigod
 
-1. Create `.opencode/prompts/agents/demigods/<god>/<name>.txt`:
+1. **Research the community FIRST** (the standing rule, effective 2026-10-20):
+   before authoring or editing a demigod for a tool/domain, websearch what
+   the community has already built — (a) the tool's OWN agent rules
+   (its `AGENTS.md` / `CLAUDE.md` / `.claude/` — the maintainers' own
+   guidance), (b) skills.sh + GitHub topics for the tool (community skills
+   + agents), (c) the ECC/superpowers skills already in
+   `.opencode/skills/`, (d) the tool's MCP repos' usage patterns. Fold the
+   best into the demigod's `## Canonical Reference Patterns` WITH the
+   source named (the `*Enriched from: ...*` line). A demigod written from
+   imagination alone is a defect — the arsenal must be vast AND studied.
+
+2. Create `.opencode/prompts/agents/demigods/<god>/<name>.txt` — the name is
+   a DESCRIPTION of what the demigod does (kebab-case in the registry,
+   underscored filename: `build_resolver.txt` -> `build-resolver`), NEVER a
+   mythic/god-style proper name (the pygmalion/argos/daedalus/apelles class
+   was renamed for exactly this — the fleet is descriptive, end to end):
 
    ```markdown
    # <Title-Case Name> — Demigod of <Domain> (under <God>)
@@ -81,7 +96,7 @@ node scripts/olympus-doctor.js
    <The deliverable — a file path / asset ids.> Report to the governing god as: Result (one sentence), Changes (files touched), Verification (what was run), Confidence (high/medium/low + why), Needs Review (what the god should double-check). Never mark your own work complete — the god approves. Escalate blockers immediately. Be token-dense; do not repeat context the god already has; do not dump raw tool output — summarise; return file paths, not contents.
    ```
 
-2. Register the demigod in `opencode.demigods.json` under `demigods` (the
+3. Register the demigod in `opencode.demigods.json` under `demigods` (the
    registry — NOT hand-registered in opencode.json; the GO merge
    (scripts/apply-strategy.js) or the free-tier on-demand injection feeds
    opencode.json from the registry):
@@ -102,8 +117,8 @@ node scripts/olympus-doctor.js
    WITHOUT the registry entry the demigod is visible in rosters but
    olympus-dispatch REFUSES it (the argos/pygmalion drift class).
 
-3. The demigod appears in the God Detail panel + Cost Dashboard automatically (the dispatch-graph API reads from disk).
-4. If the demigod should appear in the GOD_DISPATCH_CATALOG (for rich task descriptions), add it to `src/app/api/olympus/god/dispatch-graph/route.ts`.
+4. The demigod appears in the God Detail panel + Cost Dashboard automatically (the dispatch-graph API reads from disk).
+5. If the demigod should appear in the GOD_DISPATCH_CATALOG (for rich task descriptions), add it to `src/app/api/olympus/god/dispatch-graph/route.ts`.
 
 ---
 

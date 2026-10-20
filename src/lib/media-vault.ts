@@ -1,6 +1,6 @@
 /**
  * media-vault.ts — #149 MEDIA-VAULT-1 (v0.0.5 ATELIER): the image layer of
- * the Vault. Any image from ANY AI (or the user's own) drops in; Argos (the
+ * the Vault. Any image from ANY AI (or the user's own) drops in; the vision-describer (the
  * VLM cascade) describes + tags it; the entry becomes a vault memory with
  * frontmatter; sqlite-vec (the wrap — #150) will power "style of my
  * previous assets" retrieval. The layout:
@@ -94,7 +94,7 @@ function writeEntry(asset: MediaAsset, statusNote: string): void {
     '',
     `![${asset.id}](${path.relative(ENTRIES_DIR, asset.imagePath)})`,
     '',
-    asset.description ?? '(pending Argos description)',
+    asset.description ?? '(pending vision-describer description)',
     '',
   ].join('\n');
   fs.writeFileSync(asset.entryPath, fm);

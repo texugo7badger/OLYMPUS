@@ -1,5 +1,5 @@
 /**
- * POST /api/olympus/atelier/generate — #151 PYGMALION-GEN + W-B IMAGE-GEN
+ * POST /api/olympus/atelier/generate — #151 IMAGE-GEN (the image-generator lane) + W-B
  * (v0.0.6-premio): text-to-image via the LIVE ladder. Body:
  * { prompt, width?, height?, seed?, model? }. The model resolves against
  * the keys in hand: the FREE anonymous Pollinations lane is the always-on
@@ -7,7 +7,7 @@
  * behind FAL_KEY / GOOGLE_AI_KEY in the API Keys dialog. A locked rung is
  * refused HONESTLY (the key env named) — never a silent fallback that
  * pretends the premium lane ran. The generated image lands in the Media
- * Vault (the Argos describe tags it — the full loop).
+ * Vault (the vision-describer tags it — the full loop).
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */

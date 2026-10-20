@@ -1,6 +1,6 @@
 /**
  * atelier-panel.tsx — #152 ATELIER-UI-1 (v0.0.5): the Atelier tab — the
- * Media Vault gallery. Drop ANY AI image (or your own) → Argos describes +
+ * Media Vault gallery. Drop ANY AI image (or your own) → the vision-describer describes +
  * tags it; generate via the free Pollinations lane; search the vault.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
@@ -85,8 +85,8 @@ export default function AtelierPanel() {
 
   const flash = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4200); };
 
-  /** Drop ANY image or model -> the vault. Images get the Argos pass;
-   *  GLB/GLTF vault WITHOUT the VLM describe (Argos honestly cannot see a
+  /** Drop ANY image or model -> the vault. Images get the vision-describer pass;
+   *  GLB/GLTF vault WITHOUT the VLM describe (the vision-describer honestly cannot see a
    *  3D binary — the vault entry carries source + id until tagged by hand). */
   const ingest = async (files: FileList | File[]) => {
     for (const f of Array.from(files)) {
@@ -103,12 +103,12 @@ export default function AtelierPanel() {
           flash(`vaulted ${f.name} — the 3D lane (Argus skips model binaries; tag it by hand or via a note)`);
           continue;
         }
-        flash(`vaulted ${f.name} — Argos is looking…`);
+        flash(`vaulted ${f.name} — vision-describer is looking…`);
         const desc = await fetch('/api/olympus/atelier/describe', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: up.asset.id }),
         }).then((r) => r.json());
-        if (desc?.ok) flash(`Argos: "${(desc.asset.description || '').slice(0, 80)}…"`);
+        if (desc?.ok) flash(`vision-describer: "${(desc.asset.description || '').slice(0, 80)}…"`);
         else flash(`vaulted, but Argus could not describe (${desc?.error || 'unknown'})`);
       } catch (e: any) { flash(`FAILED: ${e?.message || e}`); }
       finally { setBusy(null); load(query); }
@@ -129,8 +129,8 @@ export default function AtelierPanel() {
         }),
       }).then((r) => r.json());
       if (!r?.ok) throw new Error(r?.error || 'generation failed');
-      flash(`Pygmalion (${r.label ?? r.model} · ${r.priceHint ?? ''}): in the vault`);
-      // Give the new asset the Argos pass too (the full loop).
+      flash(`image-generator (${r.label ?? r.model} · ${r.priceHint ?? ''}): in the vault`);
+      // Give the new asset the vision-describer pass too (the full loop).
       void fetch('/api/olympus/atelier/describe', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: r.asset.id }),
@@ -152,7 +152,7 @@ export default function AtelierPanel() {
       if (!r?.ok) throw new Error(r?.error || 'edit failed');
       flash(`Edited via ${r.label ?? r.model} — new asset in the vault`);
       setEditPrompt(null);
-      // The Argos pass on the NEW asset (the full loop, same as generate).
+      // The vision-describer pass on the NEW asset (the full loop, same as generate).
       void fetch('/api/olympus/atelier/describe', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: r.asset.id }),
@@ -172,7 +172,7 @@ export default function AtelierPanel() {
       <div className="flex items-center gap-2 mb-4">
         <Palette size={16} className="text-olympus-gold" />
         <h2 className="text-sm font-semibold text-olympus-gold">Atelier</h2>
-        <span className="text-[9px] text-olympus-text-dim font-mono ml-auto">{assets.length} assets · Hephaestus · Argos · Pygmalion</span>
+        <span className="text-[9px] text-olympus-text-dim font-mono ml-auto">{assets.length} assets · Hephaestus · the forge lanes</span>
       </div>
 
       {/* The drop zone */}
@@ -195,7 +195,7 @@ export default function AtelierPanel() {
       <div className="rounded-lg border border-olympus-cyan/20 bg-olympus-card p-2.5 mb-4">
         <div className="flex items-center gap-1.5 mb-1.5">
           <Sparkles size={11} className="text-olympus-cyan" />
-          <span className="text-[10px] font-mono font-semibold text-olympus-cyan uppercase">pygmalion · the ladder</span>
+          <span className="text-[10px] font-mono font-semibold text-olympus-cyan uppercase">image-generator · the ladder</span>
           <span className="text-[8px] text-olympus-text-dim ml-auto font-mono">
             {models.find(m => m.id === genModel)?.priceHint ?? '$0'} · seed optional
           </span>

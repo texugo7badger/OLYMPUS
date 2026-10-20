@@ -727,29 +727,29 @@
       "model": "opencode-go/qwen3.7-plus",
       "prompt": "{file:.opencode/prompts/agents/demigods/hermes/webhook_engineer.txt}"
     },
-    "pygmalion": {
+    "image-generator": {
       "parent_god": "hephaestus",
       "mode": "subagent",
       "model": "opencode-go/deepseek-v4-pro",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/pygmalion.txt}"
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/image_generator.txt}"
     },
-    "argos": {
+    "vision-describer": {
       "parent_god": "hephaestus",
       "mode": "subagent",
       "model": "opencode-go/deepseek-v4-pro",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/argos.txt}"
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/vision_describer.txt}"
     },
-    "daedalus": {
+    "3d-asset-engineer": {
       "parent_god": "hephaestus",
       "mode": "subagent",
       "model": "opencode-go/deepseek-v4-pro",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/daedalus.txt}"
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/3d_asset_engineer.txt}"
     },
-    "apelles": {
+    "2d-asset-designer": {
       "parent_god": "hephaestus",
       "mode": "subagent",
       "model": "opencode-go/deepseek-v4-pro",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/apelles.txt}"
+      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/2d_asset_designer.txt}"
     }
   }
 }

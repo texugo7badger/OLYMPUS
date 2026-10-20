@@ -1,5 +1,5 @@
 /**
- * POST /api/olympus/atelier/describe — #149: run the Argos VLM cascade on a
+ * POST /api/olympus/atelier/describe — #149: run the vision-describer VLM cascade on a
  * vault asset. Body: { id: string } — the asset id from /atelier/upload.
  * Returns { ok, asset } with description/tags/colors filled, or the honest
  * cascade-exhaustion error.

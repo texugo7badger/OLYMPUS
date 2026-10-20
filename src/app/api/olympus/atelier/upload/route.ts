@@ -5,7 +5,7 @@
  *   source: string (optional) — 'midjourney' | 'dalle' | 'user' | ...
  *
  * Returns { ok, asset } — the entry lands pending-description; the client
- * then calls /atelier/describe to run the Argos VLM cascade.
+ * then calls /atelier/describe to run the vision-describer VLM cascade.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 
 const ALLOWED = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml',
   // W-C FORGE-2D/3D: the model mimes — GLB/GLTF enter the vault (the 3D
-  // lane's input channel; model-viewer renders them, Argos honestly skips
+  // lane's input channel; model-viewer renders them, the vision-describer honestly skips
   // the VLM pass for 3D binaries).
   'model/gltf-binary', 'model/gltf+json']);
 const MAX_BYTES = 12 * 1024 * 1024;

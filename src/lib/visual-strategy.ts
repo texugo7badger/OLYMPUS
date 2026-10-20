@@ -2,14 +2,14 @@
  * visual-strategy.ts — #148 VISUAL-STRATEGY (v0.0.5 ATELIER): the vision +
  * image modality of the OLYMPUS strategy system. Two cascades:
  *
- *   VISION (understand/describe/tag — Argos):
+ *   VISION (understand/describe/tag — the vision-describer):
  *     OpenRouter :free vision (the SAME key as free-openrouter — probed
  *     live 2026-10-18: gemma-4-31b-it:free / gemma-4-26b-a4b-it:free /
  *     dots-3-note-preview:free — the dots probe returned a perfect
  *     describe while both gemmas sat rate-limited: the cascade IS the
  *     design) — NO Nemotron (the user's ban, forever).
  *
- *   GENERATION (create — Pygmalion, price-routed BYOK):
+ *   GENERATION (create — the image-generator, price-routed BYOK):
  *     Pollinations free tier first (pollen/anon), then the price ladder:
  *     SDXL-turbo ~$0.0002 (mass drafts) → FLUX schnell ~$0.0005-0.003 →
  *     Nano Banana / Imagen-4-Fast ~$0.02 (finals only). Draft-to-final
@@ -41,8 +41,8 @@ export const GENERATION_LADDER: {
   { id: 'byok/imagen-4-fast', label: 'Imagen 4 Fast', tier: 'final', priceHint: '~$0.02/img', provider: 'byok' },
 ];
 
-/** The Argos describe prompt — one JSON block, tags bounded, honest. */
-export const ARGUS_DESCRIBE_PROMPT = `You are Argos, the all-seeing VLM demigod of OLYMPUS. Describe this image for an artist's asset vault. Reply with ONLY a compact JSON object:
+/** The vision-describer prompt — one JSON block, tags bounded, honest. */
+export const ARGUS_DESCRIBE_PROMPT = `You are Vision-describer, the all-seeing VLM demigod of OLYMPUS. Describe this image for an artist's asset vault. Reply with ONLY a compact JSON object:
 {"description": "<2-3 sentences: subject, style, mood, notable details>", "tags": ["<6-10 lowercase tags: subject, style, medium, palette, mood>"], "dominant_colors": ["<#hex x2-4>"], "suggested_use": "<one line: where this asset fits (landing hero, game sprite, texture, reference, ...)>"}
 No prose outside the JSON.`;
 

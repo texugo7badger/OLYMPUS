@@ -48,10 +48,10 @@ the user opts in — no new paid dependency ships by default.
 
 ## The demigods that own the lanes
 
-- `daedalus` (hephaestus) — the 3D specialist: GLB/mesh pipelines, Blender
+- `3d-asset-engineer` (hephaestus) — the 3D specialist: GLB/mesh pipelines, Blender
   via the MCP, the TRELLIS local lane operator (when the GPU exists), the
   hosted-candidate evaluator.
-- `apelles` (hephaestus) — the 2D specialist: vector/raster/SVG, the
+- `2d-asset-designer` (hephaestus) — the 2D specialist: vector/raster/SVG, the
   Excalidraw forge lane, Krita/Inkscape deep-links.
 
 Both carry the honest-lane doctrine: a lane that cannot run here says so,
