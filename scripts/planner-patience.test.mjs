@@ -138,11 +138,13 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
   const glmOut = cfg?.provider?.['nvidia-glm']?.models?.['z-ai/glm-5.3']?.limit?.output;
   const stepOut = cfg?.provider?.['nvidia-step']?.models?.['stepfun-ai/step-5-preview']?.limit?.output;
   const gemmaOut = cfg?.provider?.['nvidia-google']?.models?.['google/gemma-4-31b-it']?.limit?.output;
-  check('the MOUTH revision: reasoning lanes 32768 (glm + step), volume lanes keep the #76 bar 16384',
+  check('the MOUTH revision: reasoning lanes 32768, volume lanes keep the #76 bar 16384',
     /const REASONING_OUTPUT = 32768;/.test(pantheonSrc)
       && /const VOLUME_OUTPUT = 16384;/.test(pantheonSrc)
-      && glmOut === 32768 && stepOut === 32768 && gemmaOut === 16384,
-    `glm=${glmOut} step=${stepOut} gemma=${gemmaOut} — an unauthorized bar move`);
+      && glmOut === 32768
+      && (stepOut === 32768 || stepOut === undefined)
+      && gemmaOut === 16384,
+    `glm=${glmOut} step=${stepOut} gemma=${gemmaOut} — an unauthorized bar move (the nvidia-step lane may be ABSENT: #129 retired it — step-5-preview died from the catalogue; an absent lane is the honest state, a present one must keep the reasoning bar)`);
 }
 
 // ── 5. THE 22:27-22:41 SPECIMEN CHAIN: walk durability + execution law ─────

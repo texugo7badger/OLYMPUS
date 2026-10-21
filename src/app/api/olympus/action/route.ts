@@ -1032,14 +1032,24 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         child.on('close', (code) => {
           clearInterval(stallTimer);
           if (lineBuf.length) handler.onLine(lineBuf.shift()!);
+          // W-O ORPHAN-CURE (the 16:04 specimen): the nudge re-attempt fires
+          // REGARDLESS of receivedOutput — the stall hit MID-STREAM (output
+          // seen, then 150s silent), and the old !receivedOutput gate skipped
+          // the promised re-attempt: "re-attempting once" was a lie and the
+          // task died at exit 130. attempt===0 keeps it exactly once.
+          if (code !== 0 && attempt === 0 && nudged) {
+            send({ type: 'log', msg: 'One-shot nudge path — one re-attempt (mid-stream stall class).', ts: new Date().toISOString() });
+            fallbackOneShot(sessionId, 1);
+            return;
+          }
           if (code !== 0 && !handler.receivedOutput) {
             // #91 (HIGIENIA-2 H3a): the fast-fail retry — a provider-error
             // class on the close (the #107 classification, one-shot-shaped)
             // re-attempts ONCE; anything else stays terminal (honest).
             if (attempt === 0) {
               const kind = classifyRetry({ code: code ?? -1, error: handler.getStderr().slice(-2000), statusCode: undefined } as never);
-              if (kind || nudged) {
-                send({ type: 'log', msg: `One-shot ${nudged ? 'nudge' : kind} path — one re-attempt.`, ts: new Date().toISOString() });
+              if (kind) {
+                send({ type: 'log', msg: `One-shot ${kind} path — one re-attempt.`, ts: new Date().toISOString() });
                 fallbackOneShot(sessionId, 1);
                 return;
               }

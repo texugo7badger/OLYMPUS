@@ -343,14 +343,17 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'free-openrouter': {
     label: 'Free OpenRouter',
     description:
-      'All 10 gods on OpenRouter\'s strongest free model live right now (cohere/north-mini-code:free — probe-verified 2026-10-16, 256K context, 64K output). One pool, zero cost, one key. Refreshed automatically. Requires an OpenRouter key.',
+      'The OpenRouter free split — apollo rides the GLM family (the sacred law: no GLM free exists on OpenRouter today, so the NVIDIA GLM anchor carries the planner), the heavy trio and specialists on OpenRouter\'s strongest free models (live-refreshed), Callimachus on a fast background lane. Two keys (OpenRouter + NVIDIA, both free). Zero cost. Requires an OpenRouter key + the NVIDIA key.',
     plan: 'CUSTOM',
     tier: 'free',
     reasoningModel: 'cohere/north-mini-code:free',
     codeModel: 'cohere/north-mini-code:free',
     terminalModel: 'openrouter/cohere/north-mini-code:free',
     gods: {
-      apollo: 'openrouter/cohere/north-mini-code:free',
+      // The GLM-family law (the planner stays sacred — never downgraded):
+      // no GLM free exists on OpenRouter today, so apollo rides the NVIDIA
+      // GLM anchor (mirrors scripts/apply-strategy.js — check-strategy-sync).
+      apollo: 'nvidia-glm/z-ai/glm-5.3',
       atlas: 'openrouter/cohere/north-mini-code:free',
       artemis: 'openrouter/cohere/north-mini-code:free',
       athena: 'openrouter/cohere/north-mini-code:free',

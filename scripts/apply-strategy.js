@@ -285,11 +285,16 @@ const BUILTIN_STRATEGIES = {
   // Free OpenRouter — the OpenRouter-only split: primary trio on the
   // strongest OpenRouter free model live right now, specialists
   // on the second-strongest, Callimachus on a fast background model (Nemotron
-  // nano). When the refresh file is fresh, getModelMap() routes gods to the
-  // CURRENT top models from the live OpenRouter list.
+  // nano). APOLLO EXCEPTED: the planner stays sacred — the GLM family,
+  // never downgraded (the AGENTS.md law). The OpenRouter free catalog
+  // carries NO GLM today (the 2026-10-21 live probe: zero glm*:free ids),
+  // so the law lands on the NVIDIA GLM anchor (nvidia-glm/z-ai/glm-5.3 —
+  // the #106 entry lane, probe-verified; the nvapi key mirrors to the
+  // family id automatically). When a GLM free ever lands on OpenRouter,
+  // the live pick takes it (buildOpenRouterMixed's GLM-first apollo pick).
   // Mirrors free-openrouter in src/lib/model-strategies.ts (check-strategy-sync).
   'free-openrouter': {
-    apollo:       'openrouter/cohere/north-mini-code:free',
+    apollo:       'nvidia-glm/z-ai/glm-5.3',
     atlas:        'openrouter/cohere/north-mini-code:free',
     artemis:      'openrouter/cohere/north-mini-code:free',
     athena:       'openrouter/cohere/north-mini-code:free',
@@ -788,8 +793,25 @@ function buildOpenRouterMixed() {
   const refresh = loadFreeModelsRefresh(); // re-read so a mid-run refresh is picked up
   const orTop = refresh?.openrouter?.top || [];
 
-  // Primary trio (Apollo/Atlas/Hephaestus) → the strongest free model live
-  // right now (curated default: nemotron-3-ultra-550b, 1M context).
+  // APOLLO'S GLM LAW (the planner stays sacred — never downgraded): prefer
+  // a live GLM free on OpenRouter; the catalog carries none today (the
+  // 2026-10-21 live probe: zero glm*:free ids), so the law lands on the
+  // NVIDIA GLM anchor (nvidia-glm/z-ai/glm-5.3 — the #106 entry lane; the
+  // nvapi key mirrors to the family id automatically). NEVER the strongest-
+  // scorer generic: the planner is the quality bottleneck (the AGENTS.md law).
+  const pickApollo = () => {
+    const glm = orTop.find((m) => /glm/i.test(String(m.id)) && /:free$/.test(String(m.id)));
+    if (glm) {
+      const live = normalizeLiveId(glm.id);
+      log(`  Free OpenRouter: apollo -> ${live} (a live GLM free on OpenRouter — the sacred law)`);
+      return live;
+    }
+    log('  Free OpenRouter: apollo -> nvidia-glm/z-ai/glm-5.3 (the GLM-family law — no GLM free on OpenRouter today, the NVIDIA anchor carries it)');
+    return 'nvidia-glm/z-ai/glm-5.3';
+  };
+
+  // Primary duo (Atlas/Hephaestus) → the strongest free model live
+  // right now (curated default: north-mini-code).
   const pickPrimary = () => {
     const live = normalizeLiveId(orTop[0]?.id);
     if (live) {
@@ -816,7 +838,8 @@ function buildOpenRouterMixed() {
   };
 
   const map = { ...BUILTIN_STRATEGIES['free-openrouter'] };
-  for (const g of ['apollo', 'atlas', 'hephaestus']) map[g] = pickPrimary();
+  map.apollo = pickApollo();
+  for (const g of ['atlas', 'hephaestus']) map[g] = pickPrimary();
   for (const g of ['artemis', 'athena', 'dionysus', 'hermes', 'persephone', 'prometheus']) {
     map[g] = pickSpecialist();
   }

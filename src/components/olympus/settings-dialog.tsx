@@ -344,7 +344,8 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     callimachus: 'nvidia-glm/z-ai/glm-5.3',
   },
   'free-openrouter': {
-    apollo: 'openrouter/cohere/north-mini-code:free',
+    // The GLM-family law (the planner stays sacred) — no GLM free on OpenRouter today; the NVIDIA anchor carries it.
+    apollo: 'nvidia-glm/z-ai/glm-5.3',
     atlas: 'openrouter/cohere/north-mini-code:free',
     artemis: 'openrouter/cohere/north-mini-code:free',
     athena: 'openrouter/cohere/north-mini-code:free',

@@ -498,7 +498,16 @@ export function resolveWorkspaceLane(): WorkspaceLane {
  * the OLYMPUS root — a dispatch can never write into the working tree.
  */
 export function resolveDispatchCwd(projectSlug?: string | null): string {
-  const laneDir = workspaceLaneDir();
+  // W-O ORPHAN-CURE (the 17:33 specimen — the fossil lane): the one-shot
+  // dispatch read the PURE workspaceLaneDir, never the SYNCED mirror —
+  // apply-strategy rewrote the ROOT opencode.json and killed the serve,
+  // the warm lane fell back to one-shot, and the fallback served the
+  // NEVER-REFRESHED workspace config (the fossil kept pointing at the
+  // lane the strategy had just retired). resolveWorkspaceLane carries the
+  // REFRESH-ON-DRIFT law (#LANE-DRIFT: "the copies are REFRESH-ON-DRIFT,
+  // operator edits belong in the root") — every dispatch serves the
+  // current truth, never a fossil.
+  const laneDir = resolveWorkspaceLane().dir;
   if (!projectSlug) return laneDir;
   const projectDir = join(laneDir, projectSlug);
   return existsSync(projectDir) ? projectDir : laneDir;

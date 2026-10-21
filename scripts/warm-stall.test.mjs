@@ -98,6 +98,42 @@ async function main() {
     read('public/header.svg').includes('28 MCPs'),
     'the count lies after the registration');
 
+  // ── N4: the ORPHAN-CURE (the 16:04 specimen — the warm lane's death) ───
+  const sessionSrc = read('src/lib/opencode-session.ts');
+  expect('N4: probeServer fingerprints the v2 orphan BEFORE the /config early-return',
+    /W-O ORPHAN-CURE/.test(sessionSrc) && /infoStatus === 401 \|\| infoStatus === 403/.test(sessionSrc),
+    'a password-protected v2 serve gets adopted as v1-unauthed (the 405 chain)');
+  expect('N4: the 401 orphan verdict rides the EXISTING kill branch (findPortOwnerPid + killStaleServe)',
+    /probe\.status === 401/.test(sessionSrc) && /orphaned password-protected serve/.test(sessionSrc),
+    'the orphan would survive the scan');
+  expect('N4: the create-session debug still names the transport truth (the 16:04 specimen line)',
+    sessionSrc.includes('create session failed (HTTP ${res.status}'),
+    'the debug line lost its shape');
+
+  // ── N5: the one-shot nudge re-attempt (the exit-130 lie) ───────────────
+  const routeSrc2 = read('src/app/api/olympus/action/route.ts');
+  expect('N5: the nudge re-attempt fires REGARDLESS of receivedOutput (the mid-stream class)',
+    /if \(code !== 0 && attempt === 0 && nudged\) \{/.test(routeSrc2) && /mid-stream stall class/.test(routeSrc2),
+    '"re-attempting once" stays a lie for mid-stream stalls (exit 130)');
+  expect('N5: the re-attempt stays bounded at once (attempt===0 + fresh closure)',
+    routeSrc2.includes('fallbackOneShot(sessionId, 1);'),
+    'the re-attempt could loop');
+
+  // ── N6: the logo overlay (the 16:04 specimen: letters ON TOP of logos) ─
+  const panelSrc2 = read('src/components/olympus/craft-apps-panel.tsx');
+  expect('N6: the Studio card carries the mark ALONE (no AC monogram overlay)',
+    panelSrc2.includes('/craft-apps/logos/artcraft-icon.svg') && !panelSrc2.includes('>AC<'),
+    'the AC letters still sit on top of the ArtCraft mark');
+  expect('N6: the app tiles letter-fallback renders ONLY on image error (never over the logo)',
+    /onError=\{\(\) => setFailed\(true\)\}/.test(panelSrc2) && !panelSrc2.includes('pointer-events-none">{letterMark'),
+    'the letter overlay still renders over every logo');
+
+  // ── N7: the dispatch lane serves the SYNCED mirror (the fossil cure) ──
+  const spawnSrc = read('src/lib/opencode-spawn.ts');
+  expect('N7: resolveDispatchCwd serves from resolveWorkspaceLane (the REFRESH-ON-DRIFT law on EVERY dispatch)',
+    /resolveWorkspaceLane\(\)\.dir/.test(spawnSrc) && /W-O ORPHAN-CURE/.test(spawnSrc),
+    'a one-shot dispatch can serve a fossil workspace config (the 17:33 specimen)');
+
   if (failures > 0) { console.error(`\nwarm-stall: ${failures} FAIL`); process.exit(1); }
   console.log('\nwarm-stall: all green.');
 }

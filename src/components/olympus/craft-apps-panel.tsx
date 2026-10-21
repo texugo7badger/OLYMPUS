@@ -232,6 +232,20 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
 
   const letterMark = (name: string) => name.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase();
 
+  /** The app tile: the REAL logo, with the letter mark only as the
+   *  on-error fallback (never rendered over the image — the 16:04
+   *  specimen: the absolute overlay sat ON TOP of every logo). */
+  const AppLogo = ({ id, name, tileCls, imgCls, letterCls }: { id: string; name: string; tileCls: string; imgCls: string; letterCls: string }) => {
+    const [failed, setFailed] = useState(false);
+    return (
+      <span className={tileCls}>
+        {failed
+          ? <span className={letterCls}>{letterMark(name)}</span>
+          : <img src={`/craft-apps/logos/${id}.png`} alt="" className={imgCls} loading="lazy" onError={() => setFailed(true)} />}
+      </span>
+    );
+  };
+
   const jobFor = (id: string): VendorJob | null => {
     const live = Object.values(jobs).filter((j) => j.app === id && j.phase !== 'done' && j.phase !== 'error');
     return live[0] ?? null;
@@ -332,10 +346,8 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                 onClick={() => openStudio(studio)}
                 className="w-full mb-3 rounded-lg p-3 flex items-center gap-3 bg-olympus-card border border-olympus-gold/25 ring-1 ring-olympus-gold/15 hover:border-olympus-gold/50 transition-colors text-left"
               >
-                <span className="relative w-10 h-10 rounded-lg bg-olympus-gold/15 ring-1 ring-olympus-gold/30 flex items-center justify-center shrink-0 overflow-hidden">
-                  <img src="/craft-apps/logos/artcraft-icon.svg" alt="" className="w-7 h-7 object-contain" loading="lazy"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  <span className="absolute inset-0 flex items-center justify-center text-olympus-gold font-mono font-bold text-[13px] pointer-events-none">AC</span>
+                <span className="w-10 h-10 rounded-lg bg-olympus-gold/15 ring-1 ring-olympus-gold/30 flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src="/craft-apps/logos/artcraft-icon.svg" alt="" className="w-7 h-7 object-contain" loading="lazy" />
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[12px] font-mono font-semibold text-olympus-gold">{studio.name}</span>
@@ -356,11 +368,13 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   >
                     <button onClick={() => openApp(a)} className="w-full text-left">
                       <div className="flex items-center gap-2">
-                        <span className="relative w-8 h-8 rounded-md bg-olympus-cyan/10 ring-1 ring-olympus-cyan/25 flex items-center justify-center shrink-0 overflow-hidden">
-                          <img src={`/craft-apps/logos/${a.id}.png`} alt="" className="w-6 h-6 object-contain" loading="lazy"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                          <span className="absolute inset-0 flex items-center justify-center text-olympus-cyan font-mono font-bold text-[11px] pointer-events-none">{letterMark(a.name)}</span>
-                        </span>
+                        <AppLogo
+                          id={a.id}
+                          name={a.name}
+                          tileCls="w-8 h-8 rounded-md bg-olympus-cyan/10 ring-1 ring-olympus-cyan/25 flex items-center justify-center shrink-0 overflow-hidden"
+                          imgCls="w-6 h-6 object-contain"
+                          letterCls="text-olympus-cyan font-mono font-bold text-[11px]"
+                        />
                         <span className="flex-1 min-w-0">
                           <span className="block text-[11px] font-mono font-semibold text-olympus-text truncate group-hover:text-olympus-gold">{a.name}</span>
                           <span className="block text-[8px] font-mono text-olympus-text-dim truncate">{a.category}</span>

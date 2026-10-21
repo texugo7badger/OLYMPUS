@@ -310,7 +310,23 @@ async function probeServer(
   }
   try {
     const r = await apiFetch(port, null, '/config', {}, SERVER_PROBE_TIMEOUT_MS);
-    if (r.ok && !password) return { ok: true, authed: false };
+    if (r.ok && !password) {
+      // W-O ORPHAN-CURE (the 2026-10-21 16:04 specimen): a v2 serve keeps
+      // the v1-legacy /config answering 200 UNAUTHED — this early-return
+      // adopted a PASSWORD-PROTECTED v2 serve as v1-unauthed (authed=false →
+      // protocol v1 → POST /session → 405 → the whole warm lane dead → the
+      // one-shot fallback). The v2 fingerprint: /api/info WITHOUT auth
+      // answers 401 on a passworded serve (200 on an unauthed one, and
+      // nothing on a v1 serve). Fingerprint FIRST — an orphan we hold no
+      // password for is NEVER adoptable (the port-scan's 401 branch kills
+      // it and respawns with the instance password).
+      const info = await probeOne('/api/info', null);
+      const infoStatus = (info as any)?.status;
+      if (info && (infoStatus === 401 || infoStatus === 403)) {
+        return { ok: false, authed: false, status: 401 };
+      }
+      return { ok: true, authed: false };
+    }
     // A v2 serve with a password: /config 200 unauthed is NOT the v1
     // unauthed-serve signal — keep probing below for the authed truth.
     if (r.ok && password) {
