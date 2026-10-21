@@ -2,7 +2,7 @@
 
 > Embed the live OLYMPUS interactive terminal inside your editor. The terminal is shared with the one running in the OLYMPUS Electron app — type in either, see it in both.
 
-**Version:** 0.0.3
+**Version:** 0.0.8
 **License:** AGPL-3.0-or-later
 
 ## What it does
@@ -29,7 +29,7 @@ node extensions/vscode-olympus/scripts/vendor-xterm.js   # one-time: copy xterm.
 cd extensions/vscode-olympus
 npm install
 npm run compile
-npm run package    # produces olympus-bridge-0.0.3.vsix
+npm run package    # produces olympus-bridge-0.0.8.vsix
 ```
 
 Then in VSCode/VSCodium/Cursor:

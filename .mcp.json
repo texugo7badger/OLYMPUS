@@ -222,7 +222,7 @@
       "cascading_compression": "5-layer strategy: Layer 1 (User↔Apollo, no compression) → Layer 2 (Apollo↔Gods, caveman) → Layer 3 (Gods↔Demigods, strategic-compact) → Layer 4 (Demigods↔Tools, no LLM) → Layer 5 (Gods↔Demigods latent, Symphony 70-90% transport reduction). See ARCHITECTURE.md."
     },
     "adopted_plugins": {
-      "opencode-pty": "In opencode.json plugin array (10 entries total). Embedded terminal for the desktop app.",
+      "opencode-pty": "In the opencode.json plugin array (9 entries). Embedded terminal for the desktop app.",
       "opencode-token-monitor": "npm dependency (package.json). Cost tracking MCP feeding the OLYMPUS cost dashboard.",
       "opencode-vibeguard": "npm dependency (package.json). Secret redaction before LLM requests.",
       "http-recorder": "Dev dependency for eval harness — install via: bun add -d @opencode-ai/http-recorder@beta"
