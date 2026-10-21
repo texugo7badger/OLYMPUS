@@ -48,7 +48,7 @@ The 118-demigod fleet's design patterns — phase-gated pipelines, per-demigod s
 - MIT licensed — [github.com/msitarzewski/agency-agents](https://github.com/msitarzewski/agency-agents)
 
 ### The ArtCraft Crafting Apps (embedded web builds)
-The Craft Apps pane embeds the live web builds of storytold's thirteen open-source creative apps + the ArtCraft Studio — Apache-2.0 / MIT dual for the Studio. OLYMPUS embeds their served web builds (nothing vendored into the tree); the licenses stay between upstream and the user.
+The Craft Apps pane (W-M CRAFT-VENDOR, v0.0.8) DOWNLOADS the thirteen open-source Craft apps (Apache-2.0, github.com/storytold/*) into `~/.olympus/craft-apps/` — the self-hosted WebAssembly builds (SHA-256-verified official release artifacts) served from the OLYMPUS origin, plus the optional per-OS native portable builds; the ArtCraft Studio rides the live web lane (their hosted product). The vendored app icons in `public/craft-apps/logos/` are each app's own icon, copied unmodified from its repository, licensed like that app (MIT OR Apache-2.0). The ArtCraft name, logo and "A" mark are trademarks of the ArtCraft Team and are NOT vendored.
 - [github.com/storytold/artcraft](https://github.com/storytold/artcraft) · [getartcraft.com/apps](https://www.getartcraft.com/apps)
 
 ### OriginKit + Skiper UI (UI references — referenced only)

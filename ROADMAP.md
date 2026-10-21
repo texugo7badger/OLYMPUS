@@ -35,7 +35,7 @@
 
 ## The standing opportunities (candidates, no dates)
 
-- **The vendored offline Craft lane** — the WASM builds bundled into the Electron resources (documented in docs/research/craft-apps.md; deferred on size + toolchain).
+- **The vendored Craft lane — SHIPPED (v0.0.8 W-M)**: the self-hosted WASM web builds download into `~/.olympus/craft-apps/` (7-14 MB each, SHA-256-verified, auto-updated) and the pane serves them from the OLYMPUS origin; the native portable lane + the `olympus-craft` MCP ride alongside. The old "Electron-resources bundling" idea stays retired — the runtime-download lane wins on size honesty.
 - **TRELLIS local 3D** — parked (no NVIDIA GPU on the current box; the honest requirements in docs/research/3d-lanes.md).
 - **Meshy hosted 3D** — the BYOK candidate, wiring deferred until the user opts in.
 - **Voice input** — the app listens (a candidate for v0.1.0 if the user calls it).

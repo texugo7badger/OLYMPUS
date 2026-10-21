@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import fs from "fs";
+import path from "path";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -12,6 +14,24 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+/**
+ * W-M VERSION-STAMP (v0.0.8): the status-bar badge reads
+ * window.__OLYMPUS_VERSION__ — which was NEVER defined anywhere, so the
+ * badge fell into its '0.0.6' fallback forever (the user's specimen: the
+ * badge next to Compact Brain one version behind package.json). The fix:
+ * the root layout injects the REAL package.json version as an inline
+ * script — the badge can never go stale again.
+ */
+const APP_VERSION: string = (() => {
+  try {
+    // The same read pattern as /api/olympus/build-info (process.cwd() is
+    // the app root in dev and in the packaged Electron app).
+    return String(JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf-8")).version ?? "");
+  } catch {
+    return "";
+  }
+})();
 
 export const metadata: Metadata = {
   title: "OLYMPUS",
@@ -113,6 +133,8 @@ export default function RootLayout({
             src/app/apple-icon.png with cache-busting ?url=<hash> params.
             Adding manual <link> tags here would conflict with the
             file-based ones and could cause stale-cache issues. */}
+        {/* W-M: the version stamp — the status-bar badge source of truth */}
+        <script dangerouslySetInnerHTML={{ __html: `window.__OLYMPUS_VERSION__=${JSON.stringify(APP_VERSION)};` }} />
         {/* Synchronous script - runs before React hydration, disables
             DarkReader if it's already loaded, and sets flags for
             content-script-based versions */}

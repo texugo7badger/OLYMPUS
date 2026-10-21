@@ -1,68 +1,116 @@
-# The Craft Apps Lane — the 13 ArtCraft apps inside OLYMPUS (W-G, v0.0.7)
+# The Craft Apps Lane — the 13 ArtCraft apps vendored INSIDE OLYMPUS (W-M, v0.0.8)
 
-> The user's directive: everything inside OLYMPUS — the free open-source
-> creative apps available to BOTH the user and the agents, without leaving
-> the window. This doc is the honest state (the TRELLIS discipline).
+> The user's directive (2026-10-21): no live-site embeds as the primary
+> lane — DOWNLOAD every released app, keep auto-update ON, run them
+> INSIDE OLYMPUS with no login, ever. This doc is the honest state (the
+> TRELLIS discipline); it supersedes the v0.0.7 deferral.
 
-## What ships (all probe-verified live, 2026-10-20)
+## What ships (the vendored lanes)
 
-- **The Craft Apps pane** (activity bar) — the Studio card + the 13-app
-  grid; every click EMBEDS the app's live web build in the panel
-  (probe-green: **14/14 reachable, 14/14 embeddable** — the full table via
-  `node scripts/refresh-craft-apps.js`).
-- **The Atelier's artcraft button opens the Studio INSIDE** the pane
-  (the web lane; the local install stays the strongest lane when detected)
-  with the asset's vault path on the clipboard.
-- **The auto-update truth layer**: the panel route probes every app on
-  every open (reachability + the X-Frame-Options/CSP embed check); the
-  refresh script re-verifies on demand — the catalog never goes stale
-  silently, and a frame-blocking upstream honestly falls back to the
-  external-open chip (never a dead frame).
-- **The agent lane**: the Craft Apps are agent-ready by upstream design
-  ("Drive every app from a CLI, a JSON control channel or an MCP server" —
-  their own docs). The deeplink detection covers the craft-launcher; the
-  forge demigods (image-generator, 2d-asset-designer, 3d-asset-engineer)
-  cite the control channel as their heavy-editor escalation.
+- **The WEB lane (primary)**: every app publishes a **self-hostable
+  WebAssembly build** in its GitHub releases (`<id>-web-<ver>.zip` —
+  upstream's own "The WebAssembly app, to host yourself", probe-verified
+  2026-10-21: **13/13 publish one**, FilmCraft included). The manager
+  (`src/lib/craft-vendor.ts`) downloads + **SHA-256-verifies** (the
+  release `SHA256SUMS.txt`) + extracts + **atomically swaps** it into
+  `~/.olympus/craft-apps/web/<id>/current` (one previous generation
+  kept at `prev`), and the serve route
+  (`/api/olympus/craft-apps/serve/<id>/…`) hosts it on the **OLYMPUS
+  origin** — the pane embeds OUR copy. No `app.getartcraft.com` round
+  trip, no account, no login: the app runs from our disk.
+- **The NATIVE lane (the "downloaded app" escalation)**: the per-OS
+  portable build (Linux AppImage / Windows portable zip / macOS dmg —
+  no sudo, no system install) into `~/.olympus/craft-apps/native/<id>/`
+  — launched as its own OS window, driven headless by the agents via
+  the upstream agent-ready CLI/JSON channel. A running native app is
+  never replaced (the upstream launcher law).
+- **The LIVE WEB lane (fallback only)**: when nothing is vendored, the
+  W-G probe layer (v0.0.7) still tells the truth about
+  `app.getartcraft.com/<app>` — the Get view offers the live web build
+  as the explicit fallback, never a dead frame.
+- **Auto-update is ON** (the user's directive): the background sweep
+  starts with the pane (one timer per process), checks the
+  `releases/latest` redirect (zero GitHub API quota — the craftcenter
+  lesson), re-vendors web builds with newer releases, and defers
+  native updates while the app runs. The refresh button forces a
+  re-check.
+- **The STUDIO stays live**: the ArtCraft Studio is their hosted AI
+  product (the 62-model catalog on their infra) — outside the 13
+  released apps. Its card keeps the live embed + the "AC" monogram
+  (the ArtCraft mark is a TRADEMARK — deliberately not vendored).
+
+## The sizes (the honest numbers that reopened the lane)
+
+The v0.0.7 deferral assumed "hundreds of MB across 13 apps" — that was
+the NATIVE estimate. The web builds are an order smaller:
+
+| Lane | Per app | All 13 |
+|------|---------|--------|
+| Web build (`<id>-web-<ver>.zip`) | 7–14 MB | ~150 MB |
+| Native portable | 8–95 MB | ~1 GB |
+| App icons (vendored, `public/craft-apps/logos/`) | 3–20 KB | ~160 KB |
+
+Nothing is bundled into the repo or the AppImage — downloads land in
+`~/.olympus/craft-apps/` at runtime.
+
+## The agent lane: the `olympus-craft` MCP (OLYMPUS-built)
+
+Upstream ships NO MCP server (the org census 2026-10-21: 66 repos, none
+MCP; `craft-ai-integrations` is the AI-provider layer, not a control
+channel) — per the user's directive ("se não tiver criaremos") OLYMPUS
+builds one: **`olympus-craft`** (`scripts/mcp-craft-server.mjs`,
+registered in `.mcp.json`) — a stdio JSON-RPC server that drives the
+vendored apps through the app route (one source of truth — the same
+manager + manifest the pane uses):
+
+- `craft_catalog` / `craft_status` — what is vendored, versions, updates
+- `craft_install {app, lane: web|native}` — vendor one app
+- `craft_update` — the sweep
+- `craft_launch {app, file?}` — the native window
+- `craft_exec {app, args}` — the upstream agent-ready CLI, headless
+
+The forge demigods (image-generator, 2d-asset-designer,
+3d-asset-engineer) cite the vendored lane + the MCP as their
+heavy-editor escalation.
 
 ## The 13 apps (Apache-2.0, github.com/storytold/*)
 
-| App          | Category                 | Status (upstream)  | Repo stars |
-|--------------|--------------------------|-------------------|------------|
-| PhotoCraft   | Image editor             | Early alpha       | 69k        |
-| VectorCraft  | Vector illustration      | In development    | 10k        |
-| FilmCraft    | Video editor             | In development    | 15k        |
-| LightCraft   | Photo library & raw      | In development    | 14k        |
-| PdfCraft     | PDF workbench            | Early alpha       | 17k        |
-| EffectCraft  | Motion graphics & VFX    | In development    | 7.5k       |
-| DesignCraft  | Page layout & publishing | In development    | 4.5k       |
-| FigCraft     | Interface design         | Early alpha       | 2.9k       |
-| WordCraft    | Word processing           | In development    | 15k        |
-| SoundCraft   | Audio workstation        | In development    | 3.4k       |
-| DeckCraft    | Presentations            | In development    | 4k         |
-| CADCraft     | CAD & drafting           | In development    | 6.1k       |
-| GridCraft    | Spreadsheets & data      | In development    | 6k         |
+| App          | Category                 | Status (upstream)  |
+|--------------|--------------------------|-------------------|
+| PhotoCraft   | Image editor             | Early alpha       |
+| VectorCraft  | Vector illustration      | In development    |
+| FilmCraft    | Video editor             | In development    |
+| LightCraft   | Photo library & raw      | In development    |
+| PdfCraft     | PDF workbench            | Early alpha       |
+| EffectCraft  | Motion graphics & VFX    | In development    |
+| DesignCraft  | Page layout & publishing | In development    |
+| FigCraft     | Interface design         | Early alpha       |
+| WordCraft    | Word processing          | In development    |
+| SoundCraft   | Audio workstation        | In development    |
+| DeckCraft    | Presentations            | In development    |
+| CADCraft     | CAD & drafting           | In development    |
+| GridCraft    | Spreadsheets & data      | In development    |
 
-Plus the **ArtCraft Studio** (34k stars, MIT/Apache-2.0 dual) — the AI
-crafting engine (2D/3D compositing, posing, image-to-3D-mesh, the
-62-model catalog), embedded at the top of the pane.
+## Version-stamp honesty (the badge law)
 
-## The vendored-offline lane (DEFERRED, honest)
-
-The apps compile to WebAssembly; a fully-offline OLYMPUS could vendor the
-WASM builds into the Electron resources. Deferred because: (a) the size —
-hundreds of MB across 13 apps on a 653MB AppImage, (b) the build pipeline —
-vendoring prebuilt WASM needs a pinning + refresh chain, building from
-source needs the Rust/WASM toolchain this box does not carry (the JET-class
-honesty), (c) the live web lane serves 14/14 today with zero bundle cost.
-The lane reopens when the user calls for offline-capable craft.
+The status-bar badge next to Compact Brain read
+`window.__OLYMPUS_VERSION__` — which was never defined, so it fell back
+to `'0.0.6'` while package.json moved on (the user's specimen). The
+root layout now injects the real package.json version (W-M
+VERSION-STAMP) — the badge can never go stale again.
 
 ## Licensing
 
-All thirteen apps + the launcher: Apache-2.0. The Studio: MIT/Apache-2.0
-dual. OLYMPUS embeds their WEB BUILDS (loaded from app.getartcraft.com —
-their runtime, their serving); no source is vendored into the OLYMPUS
-tree, so the AGPL boundary is clean (the brain-atlas precedent embedded
-MIT source; here nothing is copied — the pane is a live embed + the
-catalog + the probe layer).
+All thirteen apps: Apache-2.0 (github.com/storytold/*). The app icons
+vendored into `public/craft-apps/logos/` are each app's own icon,
+copied unmodified from its repository, licensed like the app (MIT OR
+Apache-2.0 — upstream's own rule). The **ArtCraft name, logo and "A"
+mark are trademarks** of the ArtCraft Team — NOT vendored (the Studio
+card keeps the monogram treatment); the pane uses the app names
+nominatively. The downloads are official upstream release artifacts,
+SHA-256-verified — nothing is modified, so the AGPL boundary is clean
+(the brain-atlas precedent vendored MIT source; here the vendored
+artifacts are Apache-2.0 binaries + assets, and the OLYMPUS-side code
+is original).
 
 *License: AGPL-3.0-or-later (original OLYMPUS code).*

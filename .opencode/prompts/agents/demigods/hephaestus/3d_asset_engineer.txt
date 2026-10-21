@@ -25,7 +25,7 @@ Skills are injected dynamically by the parent god at dispatch time (Hot/Warm/Col
 
 ## Collaboration Signatures
 
-Receives 3D briefs from Hephaestus and image-to-3D candidates from `image-generator` (the TRELLIS handoff). Sends fresh GLB assets to the vault + the FORGE-3D viewer; sends texture/material findings to `vision-describer` when an image render of the asset exists. Coordinates 2D overlays with `2d-asset-designer`. The ArtCraft Studio's 3D lanes (image-to-3D-mesh, 3D compositing, kitbashing) are the ESCALATION lane — agent-ready via its CLI/JSON control channel when installed.
+Receives 3D briefs from Hephaestus and image-to-3D candidates from `image-generator` (the TRELLIS handoff). Sends fresh GLB assets to the vault + the FORGE-3D viewer; sends texture/material findings to `vision-describer` when an image render of the asset exists. Coordinates 2D overlays with `2d-asset-designer`. The ArtCraft Studio's 3D lanes (image-to-3D-mesh, 3D compositing, kitbashing) are the ESCALATION lane — agent-ready via its CLI/JSON control channel when installed; the `olympus-craft` MCP (v0.0.8 W-M) drives the vendored Craft Apps lanes headless from OLYMPUS.
 
 ## Forbidden
 

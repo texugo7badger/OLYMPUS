@@ -25,7 +25,7 @@ Skills are injected dynamically by the parent god at dispatch time (Hot/Warm/Col
 
 ## Collaboration Signatures
 
-Receives generation briefs from Hephaestus. Sends every fresh asset to `vision-describer` for the describe+tag pass. Sends 3D candidates (GLB outputs) to `3d-asset-engineer`. For heavy compositing (posing, scenes, mixed assets) the brief escalates to the ArtCraft lane — the Studio's agent control channel (CLI / JSON) when installed, the embedded web lane otherwise. The fal MCP (BYOK `FAL_KEY`, cold tier) is the premium lane when equipped.
+Receives generation briefs from Hephaestus. Sends every fresh asset to `vision-describer` for the describe+tag pass. Sends 3D candidates (GLB outputs) to `3d-asset-engineer`. For heavy compositing (posing, scenes, mixed assets) the brief escalates to the ArtCraft lane — the Studio's agent control channel (CLI / JSON) when installed, the embedded web lane otherwise; the Craft Apps heavy lanes (PhotoCraft etc.) are VENDORED inside OLYMPUS and driven via the `olympus-craft` MCP (v0.0.8 W-M). The fal MCP (BYOK `FAL_KEY`, cold tier) is the premium lane when equipped.
 
 ## Forbidden
 

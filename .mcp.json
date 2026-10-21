@@ -197,6 +197,14 @@
       ],
       "env": {},
       "_comment": "OpenDesign MCP -- 71+ production design systems (Linear, Stripe, Vercel, Apple, etc.). Free, open-source, BYOK. Queries on-demand via od_list_projects + od_get_project to keep input tokens low. Used by Athena (frontend/design). Replaces magic-mcp (paid)."
+    },
+    "olympus-craft": {
+      "command": "node",
+      "args": [
+        "scripts/mcp-craft-server.mjs"
+      ],
+      "env": {},
+      "_comment": "W-M CRAFT-VENDOR (v0.0.8): the vendored Craft Apps MCP — OLYMPUS-BUILT (upstream ships none; the org census 2026-10-21). Drives the 13 ArtCraft apps downloaded INSIDE OLYMPUS: craft_catalog/craft_status (what is vendored + versions), craft_install (web lane = the self-hosted WASM build embedded in the pane, no login; native lane = the per-OS portable build), craft_update (the auto-update sweep), craft_launch (the native window), craft_exec (the agent-ready CLI/JSON channel). Free, local-only, no key; talks to the app route on OLYMPUS_APP_PORT (default 3737)."
     }
   },
   "_olympus_notes": {

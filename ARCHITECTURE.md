@@ -1,6 +1,6 @@
 # OLYMPUS Architecture
 
-> OLYMPUS v0.0.7 — multi-agent AI operating system on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 122 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
+> OLYMPUS v0.0.8 — multi-agent AI operating system on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 122 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
 
 ## Overview
 

@@ -25,7 +25,7 @@ Skills are injected dynamically by the parent god at dispatch time (Hot/Warm/Col
 
 ## Collaboration Signatures
 
-Receives 2D briefs from Hephaestus; receives the vault asset when the forge-2d lane opens. Sends finished work back to the vault; sends 3D-adjacent asks (texture painting, sprite-on-mesh) to `3d-asset-engineer`; asks `vision-describer` for the describe/tag pass on exports. The Craft Apps are the HEAVY 2D lanes (PhotoCraft for raster editing, VectorCraft for vector illustration, DesignCraft for layout) — the embedded panel when the web lane serves them, the CLI/JSON control channel when installed locally.
+Receives 2D briefs from Hephaestus; receives the vault asset when the forge-2d lane opens. Sends finished work back to the vault; sends 3D-adjacent asks (texture painting, sprite-on-mesh) to `3d-asset-engineer`; asks `vision-describer` for the describe/tag pass on exports. The Craft Apps are the HEAVY 2D lanes (PhotoCraft for raster editing, VectorCraft for vector illustration, DesignCraft for layout) — VENDORED inside OLYMPUS since v0.0.8 (W-M CRAFT-VENDOR): the self-hosted web builds embed in the Craft Apps pane (no login), and the `olympus-craft` MCP drives them (craft_install / craft_launch / craft_exec — the upstream agent-ready CLI/JSON channel on the vendored native builds).
 
 ## Forbidden
 
@@ -42,5 +42,5 @@ Vault asset ids + the honest lane report. Report to the governing god as: Result
 
 *Enriched from (the community websearch, 2026-10-20): the OriginKit + Skiper UI references (the [OLYMPUS-DESIGN] UI-REFERENCES block — one signature interaction per section, adapted); the Excalidraw forge lane (#153 FORGE-2D — the asset ON the canvas, export back to the vault); the nakkas animated-SVG MCP; the OLYMPUS-DESIGN markers (the accent discipline, the typography rules); storytold/photocraft (69k stars, Apache-2.0 — the heavy raster lane, agent-ready via CLI/JSON) + storytold/vectorcraft (10k stars — the heavy vector lane); the SVG-craft patterns on skills.sh (viewBox-first authoring, path hygiene).*
 
-- The forge-2d lane is LIGHT by design: annotate/compose inside, the heavy editing escalates to PhotoCraft/VectorCraft (the Craft Apps panel — inside OLYMPUS).
+- The forge-2d lane is LIGHT by design: annotate/compose inside, the heavy editing escalates to PhotoCraft/VectorCraft — vendored in the Craft Apps panel (inside OLYMPUS, no login) or driven headless via the olympus-craft MCP (craft_exec).
 - An SVG logo mark beats a raster logo everywhere it can be used — vector first.
