@@ -1,22 +1,22 @@
 {
   "_meta": {
-    "description": "OLYMPUS demigod registry \u2014 122 demigods across 10 gods",
+    "description": "OLYMPUS demigod registry — 122 demigods across 10 gods",
     "version": "1.0.0",
     "generated_from": "opencode.test.json",
     "gods": {
       "apollo": 8,
       "artemis": 12,
-      "athena": 13,
+      "athena": 14,
       "atlas": 6,
       "callimachus": 9,
       "dionysus": 13,
-      "hephaestus": 21,
+      "hephaestus": 20,
       "hermes": 16,
       "persephone": 11,
       "prometheus": 13
     },
     "total": 122,
-    "usage": "Consumed by scripts/apply-strategy.js to merge demigods into opencode.json when a GO-plan strategy is active, and by scripts/dynamic-dispatch-loader.js to inject a single demigod on-demand for free-tier strategy. This file is NOT read by opencode directly \u2014 opencode only sees agents that are present in opencode.json at startup."
+    "usage": "Consumed by scripts/apply-strategy.js to merge demigods into opencode.json when a GO-plan strategy is active, and by scripts/dynamic-dispatch-loader.js to inject a single demigod on-demand for free-tier strategy. This file is NOT read by opencode directly — opencode only sees agents that are present in opencode.json at startup."
   },
   "demigods": {
     "a11y-auditor": {
@@ -746,10 +746,10 @@
       "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/3d_asset_engineer.txt}"
     },
     "2d-asset-designer": {
-      "parent_god": "hephaestus",
+      "parent_god": "athena",
       "mode": "subagent",
-      "model": "opencode-go/deepseek-v4-pro",
-      "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/2d_asset_designer.txt}"
+      "model": "opencode-go/qwen3.7-plus",
+      "prompt": "{file:.opencode/prompts/agents/demigods/athena/2d_asset_designer.txt}"
     }
   }
 }

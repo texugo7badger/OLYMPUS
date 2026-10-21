@@ -247,7 +247,7 @@ async function main() {
     deeplinkSrc.includes('craft-launcher'),
     'the launcher that installs all 13 apps is undetected');
   const ig = read('.opencode/prompts/agents/demigods/hephaestus/image_generator.txt');
-  const ad = read('.opencode/prompts/agents/demigods/hephaestus/2d_asset_designer.txt');
+  const ad = read('.opencode/prompts/agents/demigods/athena/2d_asset_designer.txt');
   const td = read('.opencode/prompts/agents/demigods/hephaestus/3d_asset_engineer.txt');
   expect('G3: the forge demigods cite the Craft Apps as the escalation lane (agent-ready CLI/JSON)',
     /ArtCraft/.test(ig) && /Craft Apps/.test(ad),

@@ -86,17 +86,17 @@ function main() {
   // ── C5: the new-area demigods — the full checklist ────────────────────────
   const registry = JSON.parse(read('opencode.demigods.json'));
   const hasDaedalus = registry.demigods?.['3d-asset-engineer']?.parent_god === 'hephaestus';
-  const hasApelles = registry.demigods?.['2d-asset-designer']?.parent_god === 'hephaestus';
-  expect('C5: 3d-asset-engineer + 2d-asset-designer in the registry (the descriptive-named specialists dispatchable)',
+  const hasApelles = registry.demigods?.['2d-asset-designer']?.parent_god === 'athena';
+  expect('C5: 3d-asset-engineer (Hephaestus) + 2d-asset-designer (Athena — the design lane moved home, v0.0.8) in the registry',
     hasDaedalus && hasApelles, `3d-asset-engineer=${hasDaedalus} 2d-asset-designer=${hasApelles}`);
-  expect('C5: the registry counts are true (122 across the pantheon, hephaestus 21)',
-    registry._meta?.total === 122 && registry._meta?.gods?.hephaestus === 21,
+  expect('C5: the registry counts are true (122 across the pantheon, hephaestus 20, athena 14)',
+    registry._meta?.total === 122 && registry._meta?.gods?.hephaestus === 20 && registry._meta?.gods?.athena === 14,
     `gogs=${JSON.stringify(registry._meta?.gods)} total=${registry._meta?.total}`);
   const houseSkeleton = (s) => s.includes('## Cognitive Style') && s.includes('## Available Skills') && s.includes('## Quality Gates') && s.includes('## Collaboration Signatures') && s.includes('## Forbidden') && s.includes('## Output Contract');
   const daedalusSrc = fs.existsSync(path.join(OLYMPUS, '.opencode/prompts/agents/demigods/hephaestus/3d_asset_engineer.txt'))
     ? read('.opencode/prompts/agents/demigods/hephaestus/3d_asset_engineer.txt') : '';
-  const apellesSrc = fs.existsSync(path.join(OLYMPUS, '.opencode/prompts/agents/demigods/hephaestus/2d_asset_designer.txt'))
-    ? read('.opencode/prompts/agents/demigods/hephaestus/2d_asset_designer.txt') : '';
+  const apellesSrc = fs.existsSync(path.join(OLYMPUS, '.opencode/prompts/agents/demigods/athena/2d_asset_designer.txt'))
+    ? read('.opencode/prompts/agents/demigods/athena/2d_asset_designer.txt') : '';
   expect('C5: 3d-asset-engineer authored per the house skeleton (3D: mesh/GLB/Blender/TRELLIS)',
     houseSkeleton(daedalusSrc) && /GLB|3D/i.test(daedalusSrc) && /TRELLIS|Blender/.test(daedalusSrc),
     'the 3D specialist is absent or off-format');
@@ -104,13 +104,12 @@ function main() {
     houseSkeleton(apellesSrc) && /vector|SVG|raster/i.test(apellesSrc),
     'the 2D specialist is absent or off-format');
   const agentsMd = read('AGENTS.md');
-  expect('C5: the AGENTS.md census is true (122 demigods, hephaestus 21)',
-    agentsMd.includes('122 demigods') && /\|\s*\*\*Hephaestus\*\*\s*\|.*\|\s*21\s*\|/.test(agentsMd),
+  expect('C5: the AGENTS.md census is true (122 demigods, hephaestus 20, athena 14 — the design lane moved home v0.0.8)',
+    agentsMd.includes('122 demigods') && /\|\s*\*\*Hephaestus\*\*\s*\|.*\|\s*20\s*\|/.test(agentsMd) && /\|\s*\*\*Athena\*\*\s*\|.*\|\s*14\s*\|/.test(agentsMd),
     'the census still says 120/19');
   // The instinct seeds (the demigod-author tool's pattern — the real vault).
-  const seedDir = path.join(os.homedir(), 'OLYMPUS-VAULT', '05_Auto_Learning', 'instincts', 'hephaestus', 'seed');
-  const daedalusSeed = fs.existsSync(path.join(seedDir, '3d_asset_engineer.md'));
-  const apellesSeed = fs.existsSync(path.join(seedDir, '2d_asset_designer.md'));
+  const daedalusSeed = fs.existsSync(path.join(os.homedir(), 'OLYMPUS-VAULT', '05_Auto_Learning', 'instincts', 'hephaestus', 'seed', '3d_asset_engineer.md'));
+  const apellesSeed = fs.existsSync(path.join(os.homedir(), 'OLYMPUS-VAULT', '05_Auto_Learning', 'instincts', 'athena', 'seed', '2d_asset_designer.md'));
   expect('C5: the seed instincts land in the vault (renamed with their demigods)',
     daedalusSeed && apellesSeed, `daedalus=${daedalusSeed} apelles=${apellesSeed}`);
   expect('C5: the registry reload sentinel touched (the live dispatch picks the pair up)',

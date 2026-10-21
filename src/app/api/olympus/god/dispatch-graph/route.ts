@@ -108,12 +108,14 @@ const GOD_DISPATCH_CATALOG: Record<string, {
   },
   athena: {
     // Athena = FRONTEND & DESIGN. React, Next.js, a11y, design systems.
-    // 4 demigods: code review, UI design, accessibility, visual verification.
+    // 5 demigods: code review, UI design, accessibility, visual
+    // verification, 2D asset design (the design lane moved home v0.0.8).
     demigods: [
       { task: 'Frontend code review (React/Next.js patterns, performance, hooks)', agent: 'frontend-reviewer' },
       { task: 'UI design + design system + component library authoring', agent: 'ui-designer' },
       { task: 'Accessibility audit (WCAG 2.1, Section 508, ARIA, keyboard nav)', agent: 'a11y-auditor' },
       { task: 'Vision-based UI verification (click-to-element, visual regression)', agent: 'visual-verifier' },
+      { task: '2D asset crafting (vector-first SVG, the forge canvas, design tokens)', agent: '2d-asset-designer' },
     ],
     skills: ['frontend-patterns', 'frontend-a11y', 'impeccable', 'design-system', 'brand-guidelines', 'verification-before-completion', 'dispatching-parallel-agents'],
     mcps: ['chrome-devtools', 'playwright', 'nakkas', 'figma', 'opendesign', 'shadcn', 'originkit'],
@@ -131,9 +133,9 @@ const GOD_DISPATCH_CATALOG: Record<string, {
     mcps: ['playwright'],
   },
   hephaestus: {
-    // Hephaestus = BACKEND CODE. Multi-language review + build + API + refactor.
-    // 5 demigods. Consolidated the 15+ language-specific reviewers into
-    // a single smart reviewer that adapts to the language detected.
+    // Hephaestus = BACKEND CODE. Multi-language review + build + API + refactor
+    // + the generation lanes. 8 demigods (the 2D design lane moved to Athena
+    // in v0.0.8 — the user's directive: design lives with the designer god).
     demigods: [
       { task: 'Multi-language code review (Rust, Python, Go, C++, Java, Kotlin, PHP, TS/JS)', agent: 'managed-reviewer' },
       { task: 'Multi-language build error resolution (compiler + linker + type errors)', agent: 'build-resolver' },
@@ -143,7 +145,6 @@ const GOD_DISPATCH_CATALOG: Record<string, {
       { task: 'Image generation + editing (the price ladder: free -> BYOK finals)', agent: 'image-generator' },
       { task: 'Vision describe + tag (the VLM pass that makes vault assets searchable)', agent: 'vision-describer' },
       { task: '3D asset engineering (GLB/mesh, Blender via MCP, the honest lane discipline)', agent: '3d-asset-engineer' },
-      { task: '2D asset crafting (vector-first SVG, the forge canvas, design tokens)', agent: '2d-asset-designer' },
     ],
     skills: ['backend-patterns', 'api-design', 'coding-standards', 'error-handling', 'verification-before-completion', 'dispatching-parallel-agents'],
     mcps: ['serena', 'context7', 'postgres', 'fal', 'originkit'],

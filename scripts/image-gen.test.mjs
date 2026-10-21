@@ -213,8 +213,11 @@ async function main() {
   expect('B6: vision-describer re-skeletoned per the house format (the descriptive rename)',
     houseSkeleton(argSrc), 'still ## Your Domain / ## Method');
   const agentsMd = read('AGENTS.md');
+  const athenaRow = agentsMd.split('\n').find((l) => l.includes('| **Athena**') && l.includes('frontend-reviewer')) || '';
   expect('B6: AGENTS.md census matches the registry (the living number, no drift)',
-    agentsMd.includes(`${registry._meta?.total} demigods`) && agentsMd.includes('image-generator, vision-describer, 3d-asset-engineer, 2d-asset-designer | ' + diskByGod.hephaestus + ' |'),
+    agentsMd.includes(`${registry._meta?.total} demigods`)
+      && agentsMd.includes('image-generator, vision-describer, 3d-asset-engineer | ' + diskByGod.hephaestus + ' |')
+      && athenaRow.includes('2d-asset-designer') && /\|\s*14\s*\|/.test(athenaRow),
     'the census is stale vs the registry — registry/disk drift is a half-add');
 
   if (failures > 0) { console.error(`\nimage-gen: ${failures} FAIL`); process.exit(1); }

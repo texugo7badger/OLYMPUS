@@ -36,8 +36,11 @@
   re-check.
 - **The STUDIO stays live**: the ArtCraft Studio is their hosted AI
   product (the 62-model catalog on their infra) — outside the 13
-  released apps. Its card keeps the live embed + the "AC" monogram
-  (the ArtCraft mark is a TRADEMARK — deliberately not vendored).
+  released apps. Its card carries the **official ArtCraft mark**
+  (`public/craft-apps/logos/artcraft-icon.svg`, copied unmodified from
+  getartcraft.com — the user's directive) with the full credit in
+  CREDITS.md: the mark remains an ArtCraft Team trademark, used here to
+  identify their product, never as an OLYMPUS mark.
 
 ## The sizes (the honest numbers that reopened the lane)
 
@@ -104,13 +107,13 @@ VERSION-STAMP) — the badge can never go stale again.
 All thirteen apps: Apache-2.0 (github.com/storytold/*). The app icons
 vendored into `public/craft-apps/logos/` are each app's own icon,
 copied unmodified from its repository, licensed like the app (MIT OR
-Apache-2.0 — upstream's own rule). The **ArtCraft name, logo and "A"
-mark are trademarks** of the ArtCraft Team — NOT vendored (the Studio
-card keeps the monogram treatment); the pane uses the app names
-nominatively. The downloads are official upstream release artifacts,
-SHA-256-verified — nothing is modified, so the AGPL boundary is clean
-(the brain-atlas precedent vendored MIT source; here the vendored
-artifacts are Apache-2.0 binaries + assets, and the OLYMPUS-side code
-is original).
+Apache-2.0 — upstream's own rule). The **ArtCraft mark** is a trademark
+of the ArtCraft Team — carried unmodified for identification (the
+Studio card, per the user's directive) with the credit in CREDITS.md;
+OLYMPUS never presents it as its own. The downloads are official
+upstream release artifacts, SHA-256-verified — nothing is modified, so
+the AGPL boundary is clean (the brain-atlas precedent vendored MIT
+source; here the vendored artifacts are Apache-2.0 binaries + assets,
+and the OLYMPUS-side code is original).
 
 *License: AGPL-3.0-or-later (original OLYMPUS code).*

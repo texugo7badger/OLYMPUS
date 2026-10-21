@@ -256,7 +256,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
               <ChevronLeft size={11} /> grid
             </button>
           )}
-          <button onClick={() => load(true)} aria-label="Refresh — re-probe + re-check versions" className="text-olympus-text-dim hover:text-olympus-gold transition-colors p-1" title="re-check the latest releases">
+          <button onClick={() => load(true)} aria-label="Refresh" className="text-olympus-text-dim hover:text-olympus-gold transition-colors p-1">
             <RefreshCw size={11} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
@@ -332,7 +332,11 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                 onClick={() => openStudio(studio)}
                 className="w-full mb-3 rounded-lg p-3 flex items-center gap-3 bg-olympus-card border border-olympus-gold/25 ring-1 ring-olympus-gold/15 hover:border-olympus-gold/50 transition-colors text-left"
               >
-                <span className="w-10 h-10 rounded-lg bg-olympus-gold/15 ring-1 ring-olympus-gold/30 flex items-center justify-center text-olympus-gold font-mono font-bold text-[13px] shrink-0">AC</span>
+                <span className="relative w-10 h-10 rounded-lg bg-olympus-gold/15 ring-1 ring-olympus-gold/30 flex items-center justify-center shrink-0 overflow-hidden">
+                  <img src="/craft-apps/logos/artcraft-icon.svg" alt="" className="w-7 h-7 object-contain" loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  <span className="absolute inset-0 flex items-center justify-center text-olympus-gold font-mono font-bold text-[13px] pointer-events-none">AC</span>
+                </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[12px] font-mono font-semibold text-olympus-gold">{studio.name}</span>
                   <span className="block text-[9px] font-mono text-olympus-text-dim truncate">{studio.category} · {studio.license} · {studio.repo}</span>
@@ -374,21 +378,21 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                       <div className="flex items-center gap-1.5 mt-2">
                         {v?.vendored ? (
                           v.updateAvailable ? (
-                            <button onClick={() => install(a, 'web')} className="text-[8px] font-mono px-1 py-px rounded ring-1 bg-olympus-amber-soft/10 text-olympus-amber-soft ring-olympus-amber-soft/25 hover:bg-olympus-amber-soft/20 shrink-0" title={`update to v${v.latestVersion}`}>
+                            <button onClick={() => install(a, 'web')} className="text-[8px] font-mono px-1 py-px rounded ring-1 bg-olympus-amber-soft/10 text-olympus-amber-soft ring-olympus-amber-soft/25 hover:bg-olympus-amber-soft/20 shrink-0">
                               v{v.version} → v{v.latestVersion}
                             </button>
                           ) : (
-                            <span className="text-[8px] font-mono px-1 py-px rounded ring-1 bg-olympus-green/10 text-olympus-green ring-olympus-green/25 shrink-0" title="vendored — served from inside OLYMPUS, no login">
+                            <span className="text-[8px] font-mono px-1 py-px rounded ring-1 bg-olympus-green/10 text-olympus-green ring-olympus-green/25 shrink-0">
                               v{v.version} vendored
                             </span>
                           )
                         ) : (
-                          <button onClick={() => openApp(a)} className="text-[8px] font-mono px-1 py-px rounded ring-1 bg-olympus-cyan/10 text-olympus-cyan ring-olympus-cyan/25 hover:bg-olympus-cyan/20 shrink-0" title="download the self-hosted web build into OLYMPUS">
+                          <button onClick={() => openApp(a)} className="text-[8px] font-mono px-1 py-px rounded ring-1 bg-olympus-cyan/10 text-olympus-cyan ring-olympus-cyan/25 hover:bg-olympus-cyan/20 shrink-0">
                             get v{v?.latestVersion ?? ''}
                           </button>
                         )}
                         {v?.nativeInstalled && (
-                          <button onClick={() => launchNative(a)} className="text-[8px] font-mono px-1 py-px rounded ring-1 bg-olympus-purple/10 text-olympus-purple ring-olympus-purple/25 hover:bg-olympus-purple/20 shrink-0" title={v.nativeRunning ? 'running' : `launch the vendored native app v${v.nativeVersion}`}>
+                          <button onClick={() => launchNative(a)} className="text-[8px] font-mono px-1 py-px rounded ring-1 bg-olympus-purple/10 text-olympus-purple ring-olympus-purple/25 hover:bg-olympus-purple/20 shrink-0">
                             {v.nativeRunning ? '● native' : 'launch'}
                           </button>
                         )}
@@ -438,7 +442,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   <button onClick={() => install(view.app, 'web')} className="flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">
                     <Download size={11} /> Download web build{vendor[view.app.id]?.latestVersion ? ` (v${vendor[view.app.id].latestVersion})` : ''}
                   </button>
-                  <button onClick={() => install(view.app, 'native')} className="flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20" title="the downloaded-app lane — its own OS window + the agent CLI">
+                  <button onClick={() => install(view.app, 'native')} className="flex items-center gap-1.5 text-[11px] font-mono px-3 py-1.5 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20">
                     <HardDriveDownload size={11} /> native app
                   </button>
                 </div>
@@ -466,11 +470,11 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
               </span>
               <div className="ml-auto flex items-center gap-1.5">
                 {vendor[view.app.id]?.nativeInstalled ? (
-                  <button onClick={() => launchNative(view.app)} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20 shrink-0" title="open the vendored native app window">
+                  <button onClick={() => launchNative(view.app)} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20 shrink-0">
                     <Play size={9} /> native window
                   </button>
                 ) : view.app.id !== 'artcraft-studio' && (
-                  <button onClick={() => install(view.app, 'native')} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20 shrink-0" title="download the per-OS native build (its own window + the agent CLI)">
+                  <button onClick={() => install(view.app, 'native')} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20 shrink-0">
                     <MonitorUp size={9} /> install native
                   </button>
                 )}

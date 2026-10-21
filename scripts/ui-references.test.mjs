@@ -101,7 +101,7 @@ async function main() {
   expect('J5: the ui-designer carries the references doctrine (the websearch rule executed)',
     /OriginKit/.test(uiDesigner) && /Skiper/.test(uiDesigner) && /at most ONE/.test(uiDesigner),
     'the design demigod does not cite the references');
-  const d2 = read('.opencode/prompts/agents/demigods/hephaestus/2d_asset_designer.txt');
+  const d2 = read('.opencode/prompts/agents/demigods/athena/2d_asset_designer.txt');
   expect('J5: the forge demigods cite the references (2d-asset-designer)',
     /UI-REFERENCES/.test(d2), 'the 2D lane is blind to the catalog');
   const doc = fs.existsSync(path.join(OLYMPUS, 'docs/research/ui-references.md'))
