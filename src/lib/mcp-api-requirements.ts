@@ -84,6 +84,14 @@ export const MCP_API_REQUIREMENTS: McpApiRequirement[] = [
     note: 'Remote MCP (mcp.originkit.dev) — the animated-component library. Used by Athena + Hephaestus (the design + forge lanes).',
   },
   {
+    names: ['brave-search'],
+    label: 'Brave Search (free tier)',
+    envVars: [
+      { key: 'BRAVE_API_KEY', label: 'Brave Search API Key', url: 'https://api-dashboard.search.brave.com/app/documentation', note: 'Free plan: 2,000 queries/month. Register at api-dashboard.search.brave.com → API Keys.' },
+    ],
+    note: 'The websearch lane for the FREE strategies (on GO the websearch tool rides Exa free; on free-openrouter/free-nvidia-build this is the search lane). Used by Hermes + the researcher lane.',
+  },
+  {
     names: ['fal'],
     label: 'fal.ai (BYOK)',
     envVars: [

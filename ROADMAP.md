@@ -17,11 +17,12 @@
 
 ### v0.0.9 — "THE FIELD POLISH + THE EDITORS + THE PAIR FOUNDATION" (the devices release)
 
-1. **The UAT wave** — every finding from the user's from-zero manual test (Lumina, Orbital, or any project) becomes a fix/feat with taxonomy. The release's real content is the field.
-2. **The Originkit fetch guard** — the free key is 10 fetches/day; a budget counter surfaced in the References tab + the god flow (the honest "you have N left today").
-3. **The first-run verifications** — the Terminal Bridge :3740 + the short-circuit log lighting up on the first instinct gate (the test observations that become fixes if they surface issues).
-4. **EDITORS-2 (#171)**: every bridge re-verified against the current editors — the vscode-olympus extension (build, publish, the bridge handshake), Zed/VSCodium/Cursor detection, the Terminal Bridge — plus EDITORS.md re-validated and a store-ready status for each surface.
-5. **PAIR-1 phase 1 (#170)**: the probe-first investigation of the OpenCode V2 pair protocol (the auth, the channel, what syncs), the OLYMPUS-side bridge design (the feed + the gates through the pair channel), and the first wired proof: a prompt sent from a second device reaching the campaign.
+1. **The UAT wave** — every finding from the user's from-zero manual test becomes a fix/feat with taxonomy. **The 2026-10-21 first harvest**: the 15-minute silent stall (the #129 free-anchor class — FIXED in the v0.0.8 correction commit: the warm-stall bound + the lane-probe pre-flight), and the plugin surface finding (below).
+2. **PLUGIN-V2 — the Effect API migration** (the correction-commit finding): the installed CLI's loader expects the Effect-based v2 plugin shape (`{ id, effect/setup }`, `server()` entrypoints) — all 9 OLYMPUS plugins still ship the old Promise-hooks shape and fail to load in spawned runs ("Plugin export is not a function"). Migrate the router/context-cache/reasoning/skill-registry surface, rebuild, verify with `opencode plugin list` in a spawned run. This also revives the **context-cache** — free-tier oxygen.
+3. **The Originkit fetch guard** — the free key is 10 fetches/day; a budget counter surfaced in the References tab + the god flow (the honest "you have N left today").
+4. **The first-run verifications** — the Terminal Bridge :3740 + the short-circuit log lighting up on the first instinct gate (the test observations that become fixes if they surface issues).
+5. **EDITORS-2 (#171)**: every bridge re-verified against the current editors — the vscode-olympus extension (build, publish, the bridge handshake), Zed/VSCodium/Cursor detection, the Terminal Bridge — plus EDITORS.md re-validated and a store-ready status for each surface.
+6. **PAIR-1 phase 1 (#170)**: the probe-first investigation of the OpenCode V2 pair protocol (the auth, the channel, what syncs), the OLYMPUS-side bridge design (the feed + the gates through the pair channel), and the first wired proof: a prompt sent from a second device reaching the campaign.
 
 ### v0.1.0 — "THE MILESTONE" (OLYMPUS on every device)
 

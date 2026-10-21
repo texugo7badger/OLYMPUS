@@ -205,6 +205,17 @@
       ],
       "env": {},
       "_comment": "W-M CRAFT-VENDOR (v0.0.8): the vendored Craft Apps MCP — OLYMPUS-BUILT (upstream ships none; the org census 2026-10-21). Drives the 13 ArtCraft apps downloaded INSIDE OLYMPUS: craft_catalog/craft_status (what is vendored + versions), craft_install (web lane = the self-hosted WASM build embedded in the pane, no login; native lane = the per-OS portable build), craft_update (the auto-update sweep), craft_launch (the native window), craft_exec (the agent-ready CLI/JSON channel). Free, local-only, no key; talks to the app route on OLYMPUS_APP_PORT (default 3737)."
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-brave-search@latest"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      },
+      "_comment": "W-N FIELD-POLISH (v0.0.8): the websearch lane for the FREE strategies — on the GO plan websearch rides Exa free; on free-openrouter/free-nvidia-build there was NO search lane at all. Brave Search API: free tier 2,000 queries/month, key at api-dashboard.search.brave.com (register → API Keys → free plan). Used by Hermes + the researcher demigod; locked until BRAVE_API_KEY lands (the Originkit free-key pattern)."
     }
   },
   "_olympus_notes": {

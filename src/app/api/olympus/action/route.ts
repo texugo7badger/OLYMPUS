@@ -11,6 +11,7 @@ import { resolveAndRegisterIntent } from '@/lib/project-intent';
 import { maybeStartDevServer } from '@/lib/dev-server-trigger';
 import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
 import { watchdogDecision, classifyRetry } from '@/lib/opencode-session';
+import { probeLane } from '@/lib/lane-probe';
 import { reconcileProjectPath } from '@/lib/project-context';
 import { composePlannerRag } from '@/lib/rag-inject';
 import { UI_REFERENCES_MARKER_BLOCK } from '@/lib/ui-references';
@@ -834,6 +835,9 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
     start(controller) {
       let closed = false;
       let firstEventAt: number | null = null;
+      // W-N: the warm-stall holder (the errSessionId precedent — declared
+      // before finish() to keep the block-scoped order legal).
+      let warmStallTimer: ReturnType<typeof setInterval> | null = null;
 
       const send = (obj: any) => {
         if (closed) return;
@@ -844,10 +848,56 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         if (closed) return;
         clearTimeout(startupTimer);
         clearTimeout(maxRuntimeTimer);
+        if (warmStallTimer) clearInterval(warmStallTimer);
         send({ type: 'action_done', action: opts.meta.action, node: opts.meta.node, code, ts: new Date().toISOString() });
         try { controller.close(); } catch {}
         closed = true;
       };
+
+      // W-N WARM-STALL (the 2026-10-21 13:21 specimen — the 15-minute silent
+      // death): the warm lane had ONLY the startup timer (defeated the
+      // moment any internal log line lands) and the max-runtime ceiling. A
+      // turn posted to a dead free endpoint (the #129 free-anchor stall
+      // class) streamed NOTHING for the full 15 minutes and died with a
+      // ceiling message that named no cause. The warm-stall watchdog is the
+      // route-level bound the session layer's own stall-kill already
+      // enforces server-side: zero REAL turn activity for
+      // OLYMPUS_WARM_STALL_MS → the loud diagnosis + the honest early end.
+      // "Real" excludes OLYMPUS's own pre-post narration (the exact lines
+      // that defeat the startup timer) — everything server-side counts,
+      // including the session layer's stall/child/permission narrations
+      // (every heartbeat re-stamps: a LIVE wait never trips this bound).
+      let lastTurnAt = Date.now();
+      const WARM_STALL_MS = Number(process.env.OLYMPUS_WARM_STALL_MS || 180_000);
+      const INTERNAL_LOG_PREFIXES = [
+        '▶', 'Starting OpenCode', 'Pre-flight', 'classified:', 'Created project',
+        'Routed to', 'Routing to', 'Falling back', 'One-shot re-attempt', 'Gate resolution',
+      ];
+      warmStallTimer = setInterval(() => {
+        if (closed) return;
+        if (Date.now() - lastTurnAt < WARM_STALL_MS) return;
+        fail(
+          `The model lane stalled — zero turn activity for ${Math.round(WARM_STALL_MS / 1000)}s ` +
+          `(the #129 free-anchor stall class: the provider accepted the turn and never streamed). ` +
+          `Resend the prompt (the warm session and its context are preserved) or switch the free ` +
+          `strategy in Settings (free-openrouter fails loudly; a dead lane re-tries the same death).`
+        );
+      }, 15_000);
+
+      // W-N LANE-PROBE: one token asked of the active lane BEFORE the real
+      // turn posts — fire-and-forget (zero latency added to a healthy lane);
+      // a lane that cannot answer "ping" in the probe window gets named in
+      // seconds, not discovered after the ceiling.
+      void probeLane().then((r) => {
+        if (closed || !r) return;
+        if (!r.ok) {
+          send({
+            type: 'log',
+            msg: `⚠ Pre-flight: the active lane ${r.model} did not answer a 1-token probe (${r.error ?? 'no response'}; ${r.latencyMs}ms) — the free-anchor stall class (#129). The turn may hang; if it stalls, resend or switch the free strategy in Settings.`,
+            ts: new Date().toISOString(),
+          });
+        }
+      });
 
       // Issue #35: sessionId lands here once known; fail() may fire before
       // that (startup timeout), so hold it in a pre-declared holder (no TDZ).
@@ -885,6 +935,15 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
       // routes events into the SSE stream.
       const onEvent = (ev: any) => {
         if (firstEventAt === null) firstEventAt = Date.now();
+        // W-N WARM-STALL: only REAL turn activity re-stamps the clock —
+        // OLYMPUS's own pre-post narration (the lines that defeat the
+        // startup timer) must not defeat the stall bound too. Everything
+        // server-side counts, including the session layer's stall/child
+        // narrations (a LIVE wait re-stamps every heartbeat).
+        const isInternal =
+          ev?.type === 'action_start' || ev?.type === 'classification' ||
+          (ev?.type === 'log' && INTERNAL_LOG_PREFIXES.some((p) => String(ev.msg || '').startsWith(p)));
+        if (!isInternal) lastTurnAt = Date.now();
         // W-D7 (v0.0.6 MISSION-CONTROL-TRUE): the TODO EMITTER — the god's
         // todowrite calls feed the Plan panel (plan-panel.tsx shipped with a
         // full normalizer and NO emitter; this is the missing half). The

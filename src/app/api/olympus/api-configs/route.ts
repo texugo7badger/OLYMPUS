@@ -51,6 +51,8 @@ const ALLOWED_ATELIER_KEYS = new Set([
   'GOOGLE_AI_KEY',
   // W-J UI-REFERENCES: the animated-component lane's free key.
   'ORIGINKIT_API_KEY',
+  // W-N FIELD-POLISH: the free-strategies websearch lane (Brave free tier).
+  'BRAVE_API_KEY',
 ]);
 
 /**
