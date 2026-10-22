@@ -45,6 +45,7 @@ function detectStaticHtmlEntry(laneRoot: string): string | null {
     const lower = entries.map((f) => f.toLowerCase());
     if (lower.includes('index.html')) return 'index.html';
     if (lower.includes('atlas.html')) return 'atlas.html';
+    if (lower.includes('dashboard.html')) return 'dashboard.html';
     return entries.sort()[0];
   } catch {
     return null;

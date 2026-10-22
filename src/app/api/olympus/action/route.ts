@@ -383,7 +383,7 @@ export async function POST(req: NextRequest) {
       ? await composePlannerRag(promptText).catch(() => '')
       : '';
     const plannerMarker = action === 'prompt' && classification.needsPlanning
-      ? `[OLYMPUS-PLANNER] This task is architectural/complex. Your deliverable for this turn is THE PLAN, not monolithic code: write dispatch-plan.json${intentLaneRoot ? ` to THIS ABSOLUTE PATH: ${intentLaneRoot}/dispatch-plan.json — at that exact path, NEVER the session cwd or any workspace lane` : ' to the project lane root'} — a DAG of small hops. NEVER write code files yourself — the plan IS your deliverable. The HOP RUNTIME is the ONLY execution engine: it dispatches each hop to the hop's god on the god's model lane. If the walk is parked, the user's next prompt resumes it in the post-run — you do NOT need to (and MUST NOT) execute hops, write component code, or dispatch the plan to Atlas. THE CONTRACT IS INLINE (a minimal canonical plan — do NOT open any source to learn it): {"version":1,"laneRoot":"${intentLaneRoot ?? '<the ABSOLUTE path of this project lane root>'}","hops":[{"id":"shell","god":"hephaestus","prompt":"<the spec SLICE + the DESIGN DIRECTIVES slice for this hop>","artifacts":["app/layout.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/layout.tsx"]},"budgetTokens":8192},{"id":"landing","god":"athena","prompt":"<its own slice + the design tokens>","artifacts":["app/page.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/page.tsx"]},"budgetTokens":8192,"after":["shell"]}]} — the hard rules: version is exactly 1; hop ids unique; one god per hop; artifacts are real deliverable paths relative to the laneRoot; after-edges must stay acyclic; budgetTokens at most 16384 (8192 is the sane default); verify.review is "deterministic" with checks like file-exists:<path>. The hop runtime walks the plan: per-hop dispatch on the god\'s own model lane (concurrency at most 3), deterministic verify (0 tokens), park-on-exhaustion with resume. Sessions are lanes; the disk carries the campaign. HARD RULE: hop prompts must NEVER instruct deletion or cleanup of the lane's runtime files (.opencode, opencode.json, opencode.demigods.json, dispatch-plan.json, .olympus-*, project.md, _handoff.md, _delegations) — residue cleanup is the runtime's post-campaign job (the 10:16 specimen: a build-fix god deleted the machinery mid-walk and killed the campaign). STRICT JSON: the file must parse with JSON.parse on the first try — inside string values NEVER write raw line breaks or control characters (escape them as \\n); a 'Bad control character' parse error refuses the whole walk (the 23:32 specimen). `
+      ? `[OLYMPUS-PLANNER] This task is architectural/complex. Your deliverable for this turn is THE PLAN, not monolithic code: write dispatch-plan.json${intentLaneRoot ? ` to THIS ABSOLUTE PATH: ${intentLaneRoot}/dispatch-plan.json — at that exact path, NEVER the session cwd or any workspace lane` : ' to the project lane root'} — a DAG of small hops. NEVER write code files yourself — the plan IS your deliverable. The HOP RUNTIME is the ONLY execution engine: it dispatches each hop to the hop's god on the god's model lane. If the walk is parked, the user's next prompt resumes it in the post-run — you do NOT need to (and MUST NOT) execute hops, write component code, or dispatch the plan to Atlas. THE CONTRACT IS INLINE (a minimal canonical plan — do NOT open any source to learn it): {"version":1,"laneRoot":"${intentLaneRoot ?? '<the ABSOLUTE path of this project lane root>'}","hops":[{"id":"shell","god":"hephaestus","prompt":"<the spec SLICE + the DESIGN DIRECTIVES slice for this hop>","artifacts":["app/layout.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/layout.tsx"]},"budgetTokens":8192},{"id":"landing","god":"athena","prompt":"<its own slice + the design tokens>","artifacts":["app/page.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/page.tsx"]},"budgetTokens":8192,"after":["shell"]}]} — the hard rules: version is exactly 1; hop ids unique; one god per hop; artifacts are real deliverable paths relative to the laneRoot; after-edges must stay acyclic; budgetTokens at most 16384 (8192 is the sane default); verify.review is "deterministic" with checks like file-exists:<path>. The hop runtime walks the plan: per-hop dispatch on the god\'s own model lane (concurrency at most 3), deterministic verify (0 tokens), park-on-exhaustion with resume. Sessions are lanes; the disk carries the campaign. HARD RULE: hop prompts must NEVER instruct deletion or cleanup of the lane's runtime files (.opencode, opencode.json, opencode.demigods.json, dispatch-plan.json, .olympus-*, project.md, _handoff.md, _delegations) — residue cleanup is the runtime's post-campaign job (the 10:16 specimen: a build-fix god deleted the machinery mid-walk and killed the campaign). STRICT JSON: the file must parse with JSON.parse on the first try — inside string values NEVER write raw line breaks or control characters (escape them as \\n); a 'Bad control character' parse error refuses the whole walk (the 23:32 specimen). USE THE WRITE TOOL to create the file — a chat-text plan is NOT a delivery: the post-run reads the FILE (it may HARVEST your narrated text as a fallback, but the write tool is the contract). `
       : '';
     // W-J UI-REFERENCES: the curated component inspiration rides the design
     // marker (bounded — the gods draw from REAL patterns, never invent
@@ -835,9 +835,11 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
     start(controller) {
       let closed = false;
       let firstEventAt: number | null = null;
-      // W-N: the warm-stall holder (the errSessionId precedent — declared
+      // W-U PLAN-HARVEST: the warm stall holder (the errSessionId precedent — declared
       // before finish() to keep the block-scoped order legal).
       let warmStallTimer: ReturnType<typeof setInterval> | null = null;
+      // W-U: the planner's turn text buffer (harvested when the write never lands).
+      let turnTextBuf = '';
 
       const send = (obj: any) => {
         if (closed) return;
@@ -935,6 +937,11 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
       // routes events into the SSE stream.
       const onEvent = (ev: any) => {
         if (firstEventAt === null) firstEventAt = Date.now();
+        // W-U PLAN-HARVEST: the turn's TEXT accumulates — when the free
+        // planner NARRATES the plan instead of writing it, the post-run
+        // harvests the JSON from this very buffer (the model's prose IS
+        // the deliverable; the write-tool gap stops blocking the walk).
+        if (ev?.type === 'text' && typeof ev?.part?.text === 'string') turnTextBuf += ev.part.text + '\n';
         // W-N WARM-STALL: only REAL turn activity re-stamps the clock —
         // OLYMPUS's own pre-post narration (the lines that defeat the
         // startup timer) must not defeat the stall bound too. Everything
@@ -1225,6 +1232,9 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
                 // new plan but never wrote it — the 00:53 specimen walked
                 // the old plan from a prior session).
                 turnStartedAt,
+                // W-U PLAN-HARVEST: the turn's text — when the plan never
+                // lands on disk, the post-run extracts it from this buffer.
+                turnText: turnTextBuf,
                 // W-S TURN-SETTLE: the v2 prompt resolves a step early — the
                 // walk waits for the planner's turn to finish server-side
                 // before reading any plan (the 23:31 hybrid-state specimen).

@@ -138,6 +138,32 @@ async function main() {
     read('src/lib/hop-runtime/walker.ts').includes('hop_heartbeat') && prSrc.includes('hop_heartbeat'),
     'a silent 2-minute spawn reads as a hang');
 
+  // ── S11/S12/S13: the 01:50 specimen — the narration loop, the accent, the
+  //    invented check ──
+  expect('S11: the freshness gate HARVESTS the narrated plan before refusing',
+    prSrc.includes('W-U PLAN-HARVEST') && prSrc.includes('harvestPlanFromTurnText'),
+    'the 01:56 loop: four turns of REESCREVENDO claims with the mtime frozen — the prose never became the file');
+  const narrated = `Pronto! O plano está aqui:\n\n\`\`\`json\n{"version":1,"hops":[{"id":"a","god":"athena","prompt":"fa\u00e7a o layout","artifacts":["dashboard.html"],"verify":{"review":"determin\u00edstico","checks":["design-score:7"]},"budgetTokens":8192}]}\n\`\`\`\nPronto, execu\u00e7\u00e3o agendada.`;
+  const harvested = postRun.harvestPlanFromTurnText(narrated);
+  expect('S11: the narrated fenced plan IS harvested (fenced-json extraction)',
+    !!harvested, 'a complete narrated plan slipped through');
+  if (harvested) {
+    const hp = JSON.parse(harvested.strict);
+    expect('S12: the translated enum folds (determinístico → deterministic)',
+      hp.hops[0].verify.review === 'deterministic' && harvested.notes.some((n) => n.includes('determinístico')),
+      `review stayed: ${hp.hops[0].verify.review}`);
+    expect('S13: the invented check demotes to file-exists (loudly)',
+      hp.hops[0].verify.checks[0] === 'file-exists:dashboard.html' && harvested.notes.some((n) => n.includes('demoted')),
+      `checks: ${JSON.stringify(hp.hops[0].verify.checks)}`);
+  }
+  expect('S11: a planless narration harvests nothing (the honest null)',
+    postRun.harvestPlanFromTurnText('oi tudo bem, sem plano aqui') === null,
+    'garbage extraction would write junk plans');
+  const normDirect = postRun.normalizePlanForWalk({ hops: [{ id: 'x', verify: { review: 'determin\u00edstico', checks: ['lint'] }, artifacts: ['a.html'] }] });
+  expect('S13: the normalize pass leaves supported checks untouched',
+    normDirect.plan.hops[0].verify.checks[0] === 'lint' && normDirect.notes.length === 1,
+    'the demotion fired on a valid check');
+
   if (failures > 0) { console.error(`\ncontinuation-cure: ${failures} FAIL`); process.exit(1); }
   console.log('\ncontinuation-cure: all green.');
 }

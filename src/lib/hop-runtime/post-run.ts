@@ -69,6 +69,87 @@ function readHopStateSafe(laneRoot: string): { completed?: string[]; parked?: { 
     return null;
   }
 }
+
+/**
+ * W-U PLAN-NORMALIZE: the free planner writes near-canonical plans with
+ * translated enum values and invented verify checks — 'determinístico'
+ * instead of 'deterministic' (the 01:55 specimen: the schema refused 4/4
+ * hops on an ACCENT) and 'design-score:7' (an unsupported check class).
+ * The normalize pass folds the enums accent-insensitively and demotes
+ * unsupported checks to file-exists:<first-artifact> (loudly — every
+ * demotion is returned for the caller to narrate; the artifact-existence
+ * verification stays real).
+ */
+export function normalizePlanForWalk(plan: any): { plan: any; notes: string[] } {
+  const notes: string[] = [];
+  const norm = (v: unknown): string | undefined => {
+    const s = String(v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (s.includes('determin')) return 'deterministic';
+    if (s === 'llm') return 'llm';
+    return undefined;
+  };
+  const SUPPORTED = /^(file-exists:|build$|lint$)/;
+  if (Array.isArray(plan?.hops)) {
+    for (const hop of plan.hops) {
+      if (hop?.verify?.review !== undefined) {
+        const folded = norm(hop.verify.review);
+        if (folded && hop.verify.review !== folded) {
+          notes.push(`hop '${hop.id}': review '${hop.verify.review}' folded to '${folded}'`);
+          hop.verify.review = folded;
+        }
+      }
+      if (Array.isArray(hop?.verify?.checks)) {
+        const fixed: string[] = [];
+        for (const check of hop.verify.checks) {
+          const c = String(check ?? '');
+          if (SUPPORTED.test(c)) { fixed.push(c); continue; }
+          const artifact = Array.isArray(hop?.artifacts) && hop.artifacts[0] ? String(hop.artifacts[0]) : `${hop.id}.html`;
+          const demoted = `file-exists:${artifact}`;
+          notes.push(`hop '${hop.id}': check '${c}' is not a supported class — demoted to '${demoted}'`);
+          fixed.push(demoted);
+        }
+        hop.verify.checks = fixed;
+      }
+    }
+  }
+  return { plan, notes };
+}
+
+/**
+ * W-U PLAN-HARVEST: extract a dispatch plan from the planner's turn text.
+ * The free planner NARRATES complete, valid plans in chat (fenced or bare)
+ * and then fails to call the write tool — four turns in a row on the 01:56
+ * specimen, each claiming "REESCREVENDO EM DISCO" with the file's mtime
+ * frozen. The harvest finds the outermost JSON object carrying "hops",
+ * sanitizes it (the control-character repair), normalizes it (the enum
+ * folding), and returns the STRICT text — the caller writes it to disk so
+ * the mtime tells the truth again. Returns null when the text carries no
+ * plan-shaped JSON.
+ */
+export function harvestPlanFromTurnText(turnText: string): { strict: string; notes: string[] } | null {
+  if (!turnText || turnText.length < 20) return null;
+  // The candidate windows: fenced ```json blocks first, then any brace
+  // substring carrying "hops". The outermost-object scan is bounded (the
+  // plans are <32KB; the turn text <2MB).
+  const candidates: string[] = [];
+  for (const m of turnText.matchAll(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/g)) candidates.push(m[1]);
+  for (let i = turnText.indexOf('{"version"'); i >= 0; i = turnText.indexOf('{"version"', i + 1)) {
+    let depth = 0;
+    for (let j = i; j < Math.min(turnText.length, i + 200_000); j++) {
+      if (turnText[j] === '{') depth++;
+      else if (turnText[j] === '}') { depth--; if (depth === 0) { candidates.push(turnText.slice(i, j + 1)); break; } }
+    }
+  }
+  for (const cand of candidates) {
+    try {
+      const parsed = JSON.parse(sanitizePlanJson(cand));
+      if (!Array.isArray(parsed?.hops) || parsed.hops.length === 0) continue;
+      const { plan, notes } = normalizePlanForWalk(parsed);
+      return { strict: JSON.stringify(plan, null, 2), notes };
+    } catch { /* next candidate */ }
+  }
+  return null;
+}
 import { join } from 'node:path';
 import { walkPlan, resolveGodModelLane, type HopDispatcher, type HopWalkEvent } from './walker';
 import { hopStatePath, saveHopState } from './hop-state';
@@ -196,6 +277,12 @@ export async function maybeWalkThePlan(opts: {
    *  turn is still ALIVE server-side. The walk waits for it to settle
    *  before reading the plan (the v2 prompt resolves a step early). */
   turnStillAlive?: () => Promise<boolean>;
+  /** W-U PLAN-HARVEST: the planning turn's text. When the free planner
+   *  NARRATES the plan instead of writing it (the 01:56 specimen: four
+   *  turns of "REESCREVENDO... RE-AÇÃO IMEDIATA" with the file's mtime
+   *  frozen), the walk extracts the JSON plan from this buffer and writes
+   *  it to disk itself — the model's prose IS the deliverable. */
+  turnText?: string;
   /** #120 (B6d): publish hop events to the durable activity feed. The
    *  product flow opts in; fixtures never touch the real vault. */
   publishActivity?: boolean;
@@ -252,21 +339,45 @@ export async function maybeWalkThePlan(opts: {
     }
   }
   if (!existsSync(planPath)) {
-    // #U1d (UAT-2-FIX): the honest no-plan — when a plan was EXPECTED, the
-    // silence is a lie by omission (the 16:29 specimen: the planner wrote
-    // elsewhere; the walk skipped silently; "Task completed" printed over
-    // a 25-hop plan that would never walk). The note names the expected
-    // path so the wrong-place plan surfaces in seconds.
-    if (opts.expectPlan) {
-      const msg = `No dispatch-plan.json found at ${planPath} — this task was classified as needing a plan, so NOTHING will walk. If the plan was written elsewhere, move it to that exact path and resend any prompt.`;
-      opts.send?.({ type: 'walk_summary', completed: 0, total: 0, parked: null, msg, ts: new Date().toISOString() });
-      return { walked: false, reason: 'no-plan-expected', completed: 0, total: 0, parked: null, summaryLine: msg };
+    // W-U PLAN-HARVEST: no plan on disk, but the planner may have NARRATED
+    // one in its turn text — harvest it before the honest no-plan fires
+    // (the free planner's write-tool gap is cured by extraction).
+    if (opts.expectPlan && opts.turnText) {
+      const harvested = harvestPlanFromTurnText(opts.turnText);
+      if (harvested) {
+        try {
+          mkdirSync(opts.laneRoot, { recursive: true });
+          writeFileSync(planPath, harvested.strict, 'utf-8');
+          opts.send?.({ type: 'log', msg: `Plan HARVESTED from the planner's turn text — the narrated JSON is now dispatch-plan.json on disk${harvested.notes.length ? ` (${harvested.notes.join('; ')})` : ''}.`, ts: new Date().toISOString() });
+        } catch { /* the write failure falls to the honest no-plan */ }
+      }
     }
-    return { walked: false, reason: 'no plan', completed: 0, total: 0, parked: null, summaryLine: '' };
+    if (!existsSync(planPath)) {
+      // #U1d (UAT-2-FIX): the honest no-plan — when a plan was EXPECTED, the
+      // silence is a lie by omission (the 16:29 specimen: the planner wrote
+      // elsewhere; the walk skipped silently; "Task completed" printed over
+      // a 25-hop plan that would never walk). The note names the expected
+      // path so the wrong-place plan surfaces in seconds.
+      if (opts.expectPlan) {
+        const msg = `No dispatch-plan.json found at ${planPath} — this task was classified as needing a plan, so NOTHING will walk. If the plan was written elsewhere, move it to that exact path and resend any prompt.`;
+        opts.send?.({ type: 'walk_summary', completed: 0, total: 0, parked: null, msg, ts: new Date().toISOString() });
+        return { walked: false, reason: 'no-plan-expected', completed: 0, total: 0, parked: null, summaryLine: msg };
+      }
+      return { walked: false, reason: 'no plan', completed: 0, total: 0, parked: null, summaryLine: '' };
+    }
   }
   let plan: unknown;
   try {
-    plan = JSON.parse(sanitizePlanJson(readFileSync(planPath, 'utf-8')));
+    // W-U PLAN-NORMALIZE (the 01:55 specimen): the fresh write carried
+    // 'determinístico' (the translated enum — the schema refused 4/4
+    // hops) and 'design-score:7' (an unsupported check class). Every plan,
+    // disk or harvested, passes the folding before the schema sees it.
+    const rawPlan = JSON.parse(sanitizePlanJson(readFileSync(planPath, 'utf-8')));
+    const norm = normalizePlanForWalk(rawPlan);
+    plan = norm.plan;
+    if (norm.notes.length > 0) {
+      opts.send?.({ type: 'log', msg: `Plan normalized: ${norm.notes.join('; ')}.`, ts: new Date().toISOString() });
+    }
   } catch (e) {
     const msg = `dispatch-plan.json is unparseable in '${opts.slug}' — the walk is refused: ${e instanceof Error ? e.message : String(e)}. Ask Apollo to rewrite the plan as STRICT JSON (no raw line breaks inside string values — escape them as \\n).`;
     opts.send?.({ type: 'walk_summary', completed: 0, total: 0, parked: null, msg, ts: new Date().toISOString() });
@@ -283,11 +394,29 @@ export async function maybeWalkThePlan(opts: {
     try {
       const mtimeMs = statSync(planPath).mtimeMs;
       if (mtimeMs < opts.turnStartedAt - 2_000) {
-        const msg = `The plan on disk PREDATES this turn (written ${new Date(mtimeMs).toISOString()}, the turn started ${new Date(opts.turnStartedAt).toISOString()}) — Apollo described a plan but did not WRITE dispatch-plan.json. The stale plan was NOT walked. Resend the ask with the words: escreva o dispatch-plan.json em disco, sobrescrevendo.`;
-        opts.send?.({ type: 'walk_summary', completed: 0, total: 0, parked: null, msg, ts: new Date().toISOString() });
-        return { walked: false, reason: 'plan-not-written', completed: 0, total: 0, parked: null, summaryLine: msg };
+        // W-U PLAN-HARVEST (the 01:56 specimen — the narration loop): the
+        // free planner NARRATED a complete plan four turns in a row while
+        // the file's mtime stayed frozen. The harvest writes the narrated
+        // JSON to disk — the prose IS the deliverable — and the walk
+        // proceeds on the FRESH file instead of refusing.
+        let harvestedNow = false;
+        if (opts.turnText) {
+          const harvested = harvestPlanFromTurnText(opts.turnText);
+          if (harvested) {
+            try {
+              writeFileSync(planPath, harvested.strict, 'utf-8');
+              harvestedNow = true;
+              opts.send?.({ type: 'log', msg: `Plan HARVESTED from the planner's turn text (the file was narrated, never written — the 01:56 loop class) — dispatch-plan.json is now fresh on disk${harvested.notes.length ? ` (${harvested.notes.join('; ')})` : ''}.`, ts: new Date().toISOString() });
+            } catch { /* the write failure falls to the refusal */ }
+          }
+        }
+        if (!harvestedNow) {
+          const msg = `The plan on disk PREDATES this turn (written ${new Date(mtimeMs).toISOString()}, the turn started ${new Date(opts.turnStartedAt).toISOString()}) — Apollo described a plan but did not WRITE dispatch-plan.json. The stale plan was NOT walked. Resend the ask with the words: escreva o dispatch-plan.json em disco, sobrescrevendo.`;
+          opts.send?.({ type: 'walk_summary', completed: 0, total: 0, parked: null, msg, ts: new Date().toISOString() });
+          return { walked: false, reason: 'plan-not-written', completed: 0, total: 0, parked: null, summaryLine: msg };
+        }
       }
-    } catch { /* absent plan falls to the no-plan branch below */ }
+    } catch { /* absent plan falls to the no-plan branch */ }
   }
   // W-S THE STATE MACHINE (the 23:31 specimen — the hybrid "12/5 hops
   // GREEN"): the old resume doctrine keyed on the STATE FILE's existence —

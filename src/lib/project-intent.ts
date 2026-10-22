@@ -32,6 +32,10 @@ const STOPWORDS = new Set([
   'make', 'build', 'create', 'write', 'design', 'give', 'want', 'need',
   'please', 'using', 'use', 'add', 'app', 'application', 'project', 'site',
   'website', 'page', 'pages', 'new', 'some', 'like', 'about',
+  // W-U: the PT verb openers (the 'Crie AURORA PULSE Painel' specimen —
+  // the imperative verb leaked into the derived project name).
+  'crie', 'criar', 'cria', 'construa', 'construir', 'faça', 'fazer',
+  'pode', 'podemos', 'vamos', 'quero', 'preciso', 'seja',
 ]);
 
 /**
