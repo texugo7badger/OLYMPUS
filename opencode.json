@@ -63,7 +63,10 @@
         "olympus-integration-review": true
       },
       "color": "#D4A574",
-      "reasoning_effort": "low"
+      "reasoning_effort": "low",
+      "permission": {
+        "execute": "deny"
+      }
     },
     "atlas": {
       "description": "Orchestrator & Dispatch Executor — Receives execution DAG from Apollo, dispatches waves to specialist gods, tracks progress, detects failures, compiles results.",

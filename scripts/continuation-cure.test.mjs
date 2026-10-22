@@ -164,6 +164,19 @@ async function main() {
     normDirect.plan.hops[0].verify.checks[0] === 'lint' && normDirect.notes.length === 1,
     'the demotion fired on a valid check');
 
+  // ── S14/S15: the W-V PLANNER LANE (the 11:53 Code Mode lottery) ───────
+  const wsCfg = JSON.parse(fs.readFileSync('/home/texugo/.local/share/olympus/workspace/opencode.json', 'utf-8'));
+  const repoCfg = JSON.parse(read('opencode.json'));
+  expect('S14: apollo.permission.execute = deny (the planner rides CLASSIC mode — write is direct)',
+    wsCfg.agent.apollo.permission?.execute === 'deny' && repoCfg.agent.apollo.permission?.execute === 'deny',
+    'the Code Mode lottery survives: the free planner searches the catalog for write (never cataloged) and reports itself BLOCKED');
+  expect('S14: the apply re-asserts the flip (a re-apply never loses it)',
+    read('scripts/apply-strategy.js').includes('W-V THE PLANNER LANE') && read('scripts/apply-strategy.js').includes("permission.execute !== 'deny'"),
+    'the next strategy apply would strip the planner lane');
+  expect('S15: the planner marker states the DIRECT-tools contract (the belt for any residual code-mode session)',
+    routeSrc.includes('YOUR FILE TOOLS ARE DIRECT') && routeSrc.includes('the catalog search will NOT find them'),
+    'a code-mode session keeps misreading the contract');
+
   if (failures > 0) { console.error(`\ncontinuation-cure: ${failures} FAIL`); process.exit(1); }
   console.log('\ncontinuation-cure: all green.');
 }

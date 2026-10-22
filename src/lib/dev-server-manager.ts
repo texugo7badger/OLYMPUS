@@ -32,6 +32,8 @@
  */
 
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import { execSync } from 'node:child_process';
 import {
   existsSync, mkdirSync, openSync, readFileSync, readdirSync, unlinkSync, writeFileSync, appendFileSync, closeSync,
 } from 'node:fs';
@@ -399,6 +401,26 @@ export async function start(projectSlug: string, port?: number): Promise<DevServ
   return { ok: true, alreadyRunning: false, slug: projectSlug, pid: state.pid, port: state.port, projectPath, state };
 }
 
+
+/** W-V: find the PID listening on a TCP port (lsof first, ss as the
+ *  fallback — the opencode-session precedent). */
+function findPortOwnerPid(port: number): number | null {
+  try {
+    const out = execSync(`lsof -t -i :${port} -sTCP:LISTEN 2>/dev/null`, { timeout: 3000 }).toString().trim();
+    const pid = parseInt(out.split('\n')[0] || '', 10);
+    if (Number.isFinite(pid) && pid > 0) return pid;
+  } catch {}
+  try {
+    const out = execSync(`ss -ltnp "sport = :${port}" 2>/dev/null`, { timeout: 3000 }).toString();
+    const m = out.match(/pid=(\d+)/);
+    if (m) {
+      const pid = parseInt(m[1], 10);
+      if (Number.isFinite(pid) && pid > 0) return pid;
+    }
+  } catch {}
+  return null;
+}
+
 /**
  * W-S STATIC-PREVIEW: start the tiny static file server for an HTML lane
  * (atlas.html / index.html / any root *.html, no package.json needed).
@@ -442,6 +464,31 @@ export async function startStatic(projectSlug: string, port?: number): Promise<D
   }
   const pre = await probeDevServer(resolvedPort, 1000);
   if (pre.running) {
+    // W-V ORPHAN-STATIC (the 14:30 specimen): a static server from a
+    // DELETED project held the port with a dead cwd (every request 404ed)
+    // while the adopt branch called it "already serving". An adopt requires
+    // the manager's OWN state file; a stateless port owner that is one of
+    // OUR static-preview-server processes is an ORPHAN — kill it, wait,
+    // and re-probe (the never-kill-a-foreign-process law intact: the /proc
+    // cmdline must name static-preview-server).
+    if (!existing) {
+      try {
+        const ownerPid = findPortOwnerPid(resolvedPort);
+        if (ownerPid) {
+          const cmdline = fs.readFileSync(`/proc/${ownerPid}/cmdline`, 'utf-8');
+          if (cmdline.includes('static-preview-server')) {
+            console.log(`[dev-server-manager] killing ORPHAN static preview (pid ${ownerPid}) on port ${resolvedPort} — a stale server from a deleted project`);
+            try { process.kill(ownerPid, 'SIGTERM'); } catch { /* already gone */ }
+            await new Promise((r) => setTimeout(r, 1500));
+            const re = await probeDevServer(resolvedPort, 1000);
+            if (!re.running) {
+              const retried = await startStatic(projectSlug, resolvedPort);
+              return retried;
+            }
+          }
+        }
+      } catch { /* the orphan cure is best-effort — the refusal below stays honest */ }
+    }
     return { ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: resolvedPort, projectPath, state: null, error: `port ${resolvedPort} is busy by a process this manager does not own — refusing to double-spawn` };
   }
 

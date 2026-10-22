@@ -1641,6 +1641,20 @@ function applyFreeConfigShape(config, modelMap, strategy) {
     }
   }
 
+  // W-V THE PLANNER LANE (the 11:53 specimen — the Code Mode lottery): the
+  // free planner misread the Code Mode contract — it searched the catalog
+  // for a write tool (the FILE tools are classic, never cataloged) and
+  // declared itself BLOCKED while write sat available as a direct tool.
+  // Denying `execute` for APOLLO flips the planner's sessions to CLASSIC
+  // mode: write/read/bash direct, no code-mode instruction, no broken
+  // catalog tools in the prompt. Surgical — the other nine gods keep code
+  // mode (the MCP lane). Idempotent assert: never lost to a re-apply.
+  if (!config.agent.apollo.permission || config.agent.apollo.permission.execute !== 'deny') {
+    config.agent.apollo.permission = { ...(config.agent.apollo.permission || {}), execute: 'deny' };
+    log('  apollo.permission.execute = deny — the planner rides CLASSIC mode (write is a direct tool; the Code Mode lottery ends)');
+    changes++;
+  }
+
   // --- 1. Inline + truncate god prompts (the free-tier token budget) ---
   // L1 (MADRUGA-3 p1): the 1000-char inline is a DESIGNED, loudly-logged
   // reduction (it keeps the request inside the provider's free rate
