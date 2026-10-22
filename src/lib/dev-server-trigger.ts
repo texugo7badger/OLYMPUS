@@ -16,7 +16,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import * as devServerManager from './dev-server-manager';
 import { probeDevServer } from './dev-server-probe';
@@ -29,12 +29,38 @@ export interface FrontendGate {
   ok: boolean;
   reason: string;
   devScript?: string;
+  /** W-S STATIC-PREVIEW: an HTML entry with no package.json is a static
+   *  lane — the preview serves it via the tiny static server, never the
+   *  "not a runnable project" refusal (the 23:36 specimen). */
+  kind?: 'dev' | 'static';
+  entry?: string;
+}
+
+/** The W-S static entry — mirrored from the dev-server-manager (the manager
+ *  owns the spawn; the trigger only names the lane class honestly). */
+function detectStaticHtmlEntry(laneRoot: string): string | null {
+  try {
+    const entries = readdirSync(laneRoot).filter((f) => f.toLowerCase().endsWith('.html'));
+    if (entries.length === 0) return null;
+    const lower = entries.map((f) => f.toLowerCase());
+    if (lower.includes('index.html')) return 'index.html';
+    if (lower.includes('atlas.html')) return 'atlas.html';
+    return entries.sort()[0];
+  } catch {
+    return null;
+  }
 }
 
 /** The deterministic gate: dev script + frontend marker, read from disk. */
 export function detectFrontendDevScript(laneRoot: string): FrontendGate {
   const pkgPath = join(laneRoot, 'package.json');
-  if (!existsSync(pkgPath)) return { ok: false, reason: 'no package.json — not a runnable project yet' };
+  if (!existsSync(pkgPath)) {
+    // W-S STATIC-PREVIEW: no package.json BUT a root HTML entry = the
+    // static lane — the atlas.html class is a real previewable deliverable.
+    const entry = detectStaticHtmlEntry(laneRoot);
+    if (entry) return { ok: true, reason: `static HTML entry '${entry}' (no package.json — the static preview lane)`, kind: 'static', entry };
+    return { ok: false, reason: 'no package.json and no HTML entry — not a previewable project yet' };
+  }
   let pkg: { scripts?: Record<string, unknown>; dependencies?: Record<string, unknown>; devDependencies?: Record<string, unknown> };
   try {
     pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
@@ -110,6 +136,37 @@ export async function maybeStartDevServer(projectSlug: string, laneRoot: string)
   try {
     const gate = detectFrontendDevScript(laneRoot);
     if (!gate.ok) return { triggered: false, reason: `not triggered — ${gate.reason}` };
+
+    // W-S STATIC-PREVIEW: the HTML lane serves via the tiny static server —
+    // no deps step, a ~1s bind, the same durable state + the panel's port.
+    if (gate.kind === 'static') {
+      const started = await devServerManager.startStatic(projectSlug);
+      if (!started.ok) {
+        const portMatch = String(started.error || '').match(/port (\d+) is busy/);
+        if (portMatch) {
+          const port = Number(portMatch[1]);
+          const probe = await probeDevServer(port, 2500);
+          if (probe.running) {
+            return {
+              triggered: true,
+              reason: `static preview already serving on :${port} (probe: ${probe.host}, ${probe.responseTimeMs}ms)`,
+              status: { running: true, host: probe.host, port, url: probe.url, responseTimeMs: probe.responseTimeMs, note: 'static lane' },
+            };
+          }
+        }
+        return { triggered: false, reason: `static start refused — ${started.error ?? 'unknown error'}` };
+      }
+      const probe = await probeDevServer(started.port ?? 0, 10_000);
+      return {
+        triggered: true,
+        reason: probe.running
+          ? `static preview LIVE on :${started.port} — ${gate.entry} (probe: ${probe.host}, ${probe.responseTimeMs}ms) — open the Live Preview panel`
+          : `static preview starting on :${started.port} (${gate.entry}) — the panel goes green in a second`,
+        status: probe.running
+          ? { running: true, host: probe.host, port: started.port ?? null, url: probe.url, responseTimeMs: probe.responseTimeMs, note: 'static lane' }
+          : undefined,
+      };
+    }
 
     const started = await devServerManager.start(projectSlug);
     if (!started.ok) {

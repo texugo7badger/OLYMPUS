@@ -400,6 +400,106 @@ export async function start(projectSlug: string, port?: number): Promise<DevServ
 }
 
 /**
+ * W-S STATIC-PREVIEW: start the tiny static file server for an HTML lane
+ * (atlas.html / index.html / any root *.html, no package.json needed).
+ * Shares the dev server's whole durable lane — the state file, the probe,
+ * the panel's port — the Live Preview panel goes green for static
+ * deliverables exactly like it does for npm-run-dev projects. Idempotent:
+ * an already-running server returns alreadyRunning:true.
+ */
+export async function startStatic(projectSlug: string, port?: number): Promise<DevServerStartResult> {
+  const reconciled = reconcileProjectPath(projectSlug);
+  const legacyPath = join(workspaceLaneDir(), projectSlug);
+  const projectPath = reconciled && reconciled.path !== workspaceLaneDir() ? reconciled.path : legacyPath;
+  if (!existsSync(projectPath)) {
+    return { ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: null, projectPath: null, state: null, error: `no lane project directory at ${projectPath}` };
+  }
+  if (insideOlympusRoot(projectPath)) {
+    return { ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: null, projectPath: null, state: null, error: `refusing to spawn inside the OLYMPUS root (${projectPath}) — the never-the-repo guard (#99)` };
+  }
+
+  // Idempotence: a live static server answers as-is.
+  const existing = readStateFile(projectSlug);
+  if (existing && isPidAlive(existing.pid)) {
+    const p = await probeState(existing);
+    if (p.running) {
+      return { ok: true, alreadyRunning: true, slug: projectSlug, pid: existing.pid, port: existing.port, projectPath: existing.projectPath, state: existing };
+    }
+  }
+  if (existing && !isPidAlive(existing.pid)) {
+    try { unlinkSync(stateFilePath(projectSlug)); } catch {}
+  }
+
+  // The entry: the note's entry, else index.html, else atlas.html, else
+  // the first root *.html — the honest static deliverable.
+  let resolvedPort = port ?? null;
+  if (resolvedPort === null || resolvedPort === undefined) {
+    const project = getProject(projectSlug);
+    resolvedPort = project?.livePreviewPort ?? null;
+  }
+  if (resolvedPort === null || resolvedPort === undefined) {
+    resolvedPort = await freeEphemeralPort();
+  }
+  const pre = await probeDevServer(resolvedPort, 1000);
+  if (pre.running) {
+    return { ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: resolvedPort, projectPath, state: null, error: `port ${resolvedPort} is busy by a process this manager does not own — refusing to double-spawn` };
+  }
+
+  const entry = detectStaticEntry(projectPath);
+  if (!entry) {
+    return { ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: resolvedPort, projectPath, state: null, error: `no HTML entry in ${projectPath}` };
+  }
+
+  const logDir = join(devServersDir(), 'logs');
+  mkdirSync(logDir, { recursive: true });
+  const logFile = join(logDir, `${projectSlug}-static-${Date.now()}.log`);
+  const outFd = openSync(logFile, 'a');
+  const serverScript = join(findOlympusRoot(), 'scripts', 'static-preview-server.mjs');
+  const child = spawn(process.execPath, [serverScript, String(resolvedPort), projectPath, entry], {
+    cwd: projectPath,
+    detached: true,
+    stdio: ['ignore', outFd, outFd],
+  });
+  child.unref();
+  try { closeSync(outFd); } catch { /* the detached child holds it */ }
+
+  if (typeof child.pid !== 'number') {
+    return { ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: resolvedPort, projectPath, state: null, error: `spawn failed for the static preview of "${projectSlug}" — see ${logFile}` };
+  }
+
+  const state: DevServerState = {
+    pid: child.pid,
+    port: resolvedPort,
+    host: null,
+    projectPath,
+    startedAt: new Date().toISOString(),
+    logFile,
+    lastProbe: null,
+  };
+  mkdirSync(devServersDir(), { recursive: true });
+  writeFileSync(stateFilePath(projectSlug), JSON.stringify(state, null, 2), 'utf-8');
+  return { ok: true, alreadyRunning: false, slug: projectSlug, pid: state.pid, port: state.port, projectPath, state };
+}
+
+/**
+ * The W-S STATIC-PREVIEW entry detection — the honest HTML deliverable at
+ * the project root (atlas.html class). Preference: index.html, then
+ * atlas.html, then the first root *.html alphabetically.
+ */
+export function detectStaticEntry(projectPath: string): string | null {
+  try {
+    const entries = readdirSync(projectPath).filter((f) => f.toLowerCase().endsWith('.html'));
+    if (entries.length === 0) return null;
+    const lower = entries.map((f) => f.toLowerCase());
+    if (lower.includes('index.html')) return 'index.html';
+    if (lower.includes('atlas.html')) return 'atlas.html';
+    return entries.sort()[0];
+  } catch {
+    return null;
+  }
+}
+
+/**
  * status(slugOrPort) — the ONLY legitimate source of the phrase "running".
  * The state file is the durable claim; the probe is the live truth; the
  * two are reconciled honestly on every call:

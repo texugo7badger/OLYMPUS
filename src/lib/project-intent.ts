@@ -86,7 +86,19 @@ export function extractProjectName(prompt: string): string | null {
     return null;
   }
   const quoted = prompt.match(/["“]([^"”\n]{2,60})["”]/);
-  if (quoted) return quoted[1].trim();
+  if (quoted) {
+    const candidate = quoted[1].trim();
+    // W-S CRITERION-NOT-NAME (the 'eu publicaria isso' specimen, 23:12):
+    // a quoted CRITERION is not a project name. Acceptance bars and
+    // answer phrases open with pronouns/sentence shapes ("eu publicaria
+    // isso", "pronto, isso vai pro ar") — the #144 distinct-name law
+    // grabbed them as project declarations and CREATED junk lanes while
+    // the similarity matcher (0.55 on the real project) waited behind the
+    // law. A name is title-like: no leading personal pronoun or sentence
+    // opener. Rejected candidates fall through — the matcher decides.
+    const sentenceShaped = /^(eu|tu|ele|ela|isso|aquilo|voc\u00ea|voc\u00eas|n\u00f3s|aqui|l\u00e1|vai|vou|est\u00e1|estou|sou|pronto|agora|the|this|that|these|those|you|it|i)\b/i.test(candidate);
+    if (!sentenceShaped && candidate.split(/\s+/).length <= 6) return candidate;
+  }
   // #144 (the unquoted-headline class): prompts open with "Build AURORA
   // FOCUS — a focus-session tracker" — the project name as a TITLE-CASED
   // headline before the em-dash, no quotes. Catch it or the distinct-name

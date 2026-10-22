@@ -253,6 +253,18 @@ function estimateComplexity(
     return { complexity: 'trivial', estimatedTokens: 5000, needsPlanning: false };
   }
 
+  // W-S CONTINUATION-PLANNING (the 23:31 specimen): a continuation prompt
+  // that asks for NEW WORK — a fresh dispatch-plan, TRABALHO NOVO, a
+  // numbered hop scope — is architectural planning, whatever its length.
+  // The old English-only architectural regex missed the Portuguese scope
+  // and the >200-char length gate demoted the whole new-work brief to
+  // moderate/80k with planning=false: Apollo narrated instead of writing
+  // the plan, and the walk consumed the STALE one. Plan vocabulary is a
+  // plan ask.
+  if (/(dispatch-plan|re-?plan|plano novo|trabalho novo|novo plano|new plan|fresh plan|new scope|novo escopo|write a plan|escreva um plano)/.test(lower)) {
+    return { complexity: 'architectural', estimatedTokens: 150000, needsPlanning: true };
+  }
+
   // Architectural — explicit design / spec / refactor keywords.
   if (/\b(design|architect|spec|interview|from scratch|new system|rewrite|refactor (the|entire|whole))\b/.test(lower)) {
     return { complexity: 'architectural', estimatedTokens: 150000, needsPlanning: true };

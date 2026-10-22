@@ -1,0 +1,131 @@
+#!/usr/bin/env node
+/**
+ * continuation-cure.test.mjs — W-S CONTINUATION-CURE (v0.0.8): the 23:31
+ * specimen chain — a continuation prompt that asked for NEW work walked the
+ * STALE plan while the planner's turn was still writing the NEW one
+ * (hybrid "12/5 hops GREEN" state, a corrupt plan refusing every walk, the
+ * user's approval narrated away, and no previewable front). One suite pins
+ * every cure.
+ *
+ * Run: npx tsx scripts/continuation-cure.test.mjs   (exit 0 = pass)
+ *
+ * License: AGPL-3.0-or-later (original OLYMPUS code).
+ */
+
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+
+const OLYMPUS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const read = (p) => fs.readFileSync(path.join(OLYMPUS, p), 'utf-8');
+
+let failures = 0;
+function expect(name, cond, detail) {
+  console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${cond ? '' : ' — ' + String(detail).slice(0, 240)}`);
+  if (!cond) failures++;
+}
+
+async function main() {
+  // ── S1: the classifier escalates NEW-WORK continuations to planning ────
+  const classifierSrc = read('src/lib/task-classifier.ts');
+  expect('S1: plan vocabulary (dispatch-plan / TRABALHO NOVO / new plan) forces planning=true',
+    classifierSrc.includes('W-S CONTINUATION-PLANNING') && classifierSrc.includes('trabalho novo'),
+    'the 23:31 continuation was classified moderate/planning=false — Apollo narrated, the stale plan walked');
+
+  // ── S2: a quoted CRITERION is not a project name ───────────────────────
+  const intent = await import(OLYMPUS + '/src/lib/project-intent.ts');
+  expect('S2: the acceptance-bar phrase never becomes a project name',
+    intent.extractProjectName('Continue o Atlas — a barra de aceite: "eu publicaria isso" sem reservas') === null,
+    'the eu-publicaria-isso junk-lane class survives');
+  expect('S2: a REAL quoted name still routes (the #144 law intact)',
+    intent.extractProjectName('Build "STARLIGHT CIDER" — a craft cider site') === 'STARLIGHT CIDER',
+    'the distinct-name law lost its teeth');
+
+  // ── S3: the plan JSON sanitizer (the corrupt-plan specimen) ────────────
+  const postRun = await import(OLYMPUS + '/src/lib/hop-runtime/post-run.ts');
+  const corrupt = '{\n  "hops": [\n    { "id": "a", "prompt": "linha um\nlinha dois\tTabbed" }\n  ]\n}';
+  const sanitized = postRun.sanitizePlanJson(corrupt);
+  let parsedOk = false;
+  try { JSON.parse(sanitized); parsedOk = true; } catch { parsedOk = false; }
+  expect('S3: sanitizePlanJson repairs raw control chars inside strings (the 23:32 Bad-control-character specimen)',
+    parsedOk, `sanitized still unparseable: ${sanitized.slice(0, 80)}`);
+  const clean = JSON.stringify({ version: 1, hops: [{ id: 'x', prompt: 'a\nb' }] });
+  expect('S3: an ALREADY-VALID plan passes through unchanged semantics',
+    JSON.parse(postRun.sanitizePlanJson(clean)).hops[0].prompt === 'a\nb',
+    'the sanitizer corrupts valid plans');
+
+  // ── S4: the state machine (fresh / resume / stale-complete) ────────────
+  const prSrc = read('src/lib/hop-runtime/post-run.ts');
+  expect('S4: the stale-complete echo is honest (never the liar\'s GREEN on a fresh ask)',
+    prSrc.includes('stale-complete') && prSrc.includes('no NEW plan was written this turn'),
+    'the 12/5 hybrid: a fully-walked plan re-echoes GREEN at a new prompt');
+  expect('S4: a fresh plan on a lane with unrelated state RESETS the campaign memory',
+    prSrc.includes("if (stateExists && !resume)") && prSrc.includes('unlinkSync(hopStatePath'),
+    'retired-plan ids leak into new walks (the 12/5 specimen)');
+  expect('S4: the counts are PLAN-SCOPED',
+    prSrc.includes('result.completed.filter((id) => planIds.has(id)).length'),
+    'cross-plan completed ids inflate the summary');
+
+  // ── S5: the walk waits for the planning turn to SETTLE ──────────────────
+  expect('S5: maybeWalkThePlan carries the turn-settle probe (OLYMPUS_TURN_SETTLE_MS)',
+    prSrc.includes('turnStillAlive') && prSrc.includes('OLYMPUS_TURN_SETTLE_MS'),
+    'the v2 prompt resolves a step early — the walk read the stale plan mid-write');
+  const routeSrc = read('src/app/api/olympus/action/route.ts');
+  expect('S5: the route wires the probe (isTurnAliveServerSide via ensureServer + getOrCreateSession)',
+    routeSrc.includes('turnStillAlive') && routeSrc.includes('isTurnAliveServerSide'),
+    'the settle wait never runs');
+
+  // ── S6: the strict-JSON planner directive ───────────────────────────────
+  expect('S6: the planner marker demands STRICT JSON (no raw line breaks in strings)',
+    routeSrc.includes('STRICT JSON') && routeSrc.includes('Bad control character'),
+    'the planner keeps writing corrupt plans');
+
+  // ── S7: the static preview lane ───────────────────────────────────────
+  const triggerSrc = read('src/lib/dev-server-trigger.ts');
+  expect('S7: an HTML entry with no package.json is the STATIC lane (never "not a runnable project")',
+    triggerSrc.includes('kind: \'static\'') && triggerSrc.includes('detectStaticHtmlEntry'),
+    'the 23:36 specimen: the atlas front was invisible to the panel');
+  const managerSrc = read('src/lib/dev-server-manager.ts');
+  expect('S7: the manager gains startStatic (the durable static host, same state + probe lane)',
+    managerSrc.includes('export async function startStatic') && managerSrc.includes('detectStaticEntry'),
+    'the static lane has no durable host');
+  expect('S7: the static server script ships',
+    fs.existsSync(path.join(OLYMPUS, 'scripts', 'static-preview-server.mjs')),
+    'no server to host the static lane');
+  // The LIVE static server: a fixture lane + spawn + probe the entry.
+  const FIX = fs.mkdtempSync(path.join(os.tmpdir(), 'static-preview-test-'));
+  fs.writeFileSync(path.join(FIX, 'atlas.html'), '<!doctype html><title>F</title><h1>fixture-front</h1>');
+  fs.writeFileSync(path.join(FIX, 'data.json'), '{"ok":true}');
+  const live = await new Promise((resolve) => {
+    const child = spawn('node', [path.join(OLYMPUS, 'scripts', 'static-preview-server.mjs'), '0', FIX, 'atlas.html'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let out = '';
+    child.stdout.on('data', (d) => {
+      out += d.toString();
+      const m = /http:\/\/127\.0\.0\.1:(\d+)/.exec(out);
+      if (m) resolve({ port: Number(m[1]), child });
+    });
+    setTimeout(() => resolve(null), 8000);
+  });
+  expect('S7: the static server boots and reports its port', !!live, 'no boot line in 8s');
+  if (live) {
+    const html = await fetch(`http://127.0.0.1:${live.port}/`).then((r) => r.text()).catch(() => null);
+    const json = await fetch(`http://127.0.0.1:${live.port}/data.json`).then((r) => r.text()).catch(() => null);
+    const mime = await fetch(`http://127.0.0.1:${live.port}/data.json`).then((r) => r.headers.get('content-type')).catch(() => null);
+    const trav = await fetch(`http://127.0.0.1:${live.port}/../../../etc/passwd`).then((r) => r.status).catch(() => 'err');
+    expect('S7: the entry serves (the fixture front)',
+      typeof html === 'string' && html.includes('fixture-front'), 'no HTML at the root');
+    expect('S7: sibling assets serve with the right MIME',
+      json === '{"ok":true}' && String(mime).includes('application/json'), 'data.json unreachable or mistyped');
+    expect('S7: traversal falls to the SPA entry (never escapes the lane)',
+      trav === 200, `traversal status ${trav}`);
+    live.child.kill();
+  }
+  fs.rmSync(FIX, { recursive: true, force: true });
+
+  if (failures > 0) { console.error(`\ncontinuation-cure: ${failures} FAIL`); process.exit(1); }
+  console.log('\ncontinuation-cure: all green.');
+}
+
+main().catch((e) => { console.error('FIXTURE CRASH:', e); process.exit(1); });

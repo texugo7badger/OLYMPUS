@@ -21,6 +21,54 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import { existsSync, readFileSync, writeFileSync, unlinkSync, rmSync, lstatSync, mkdirSync } from 'node:fs';
+
+/**
+ * W-S PLAN-SANITIZE (the 23:32 specimen — 'Bad control character in
+ * string literal'): model-written plans carry raw control characters
+ * (literal line breaks) inside JSON string values; JSON.parse refuses
+ * them and the walk died 4x in a row on a mechanically-repairable file.
+ * The repair: a string-aware pass — inside a string literal, every raw
+ * control character (including newlines) becomes its \\uXXXX escape;
+ * outside strings, whitespace stays untouched (legal JSON).
+ */
+export function sanitizePlanJson(raw: string): string {
+  let out = '';
+  let inString = false;
+  let escaped = false;
+  for (const ch of raw) {
+    if (escaped) {
+      out += ch;
+      escaped = false;
+      continue;
+    }
+    if (inString && ch === '\\') {
+      out += ch;
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      out += ch;
+      continue;
+    }
+    if (inString && ch.charCodeAt(0) < 0x20) {
+      out += '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0');
+      continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
+/** The hop state read, failure-safe (a corrupt state file never blocks a
+ *  walk — it degrades to fresh). */
+function readHopStateSafe(laneRoot: string): { completed?: string[]; parked?: { hopId: string } | null; updatedAt?: string } | null {
+  try {
+    return JSON.parse(readFileSync(hopStatePath(laneRoot), 'utf-8'));
+  } catch {
+    return null;
+  }
+}
 import { join } from 'node:path';
 import { walkPlan, resolveGodModelLane, type HopDispatcher, type HopWalkEvent } from './walker';
 import { hopStatePath, saveHopState } from './hop-state';
@@ -141,10 +189,37 @@ export async function maybeWalkThePlan(opts: {
    *  names the expected path so a plan-in-the-wrong-place surfaces in
    *  seconds (the 16:29 specimen sat invisible for 27 minutes). */
   expectPlan?: boolean;
+  /** W-S TURN-SETTLE: a probe wired by the route — true while the planning
+   *  turn is still ALIVE server-side. The walk waits for it to settle
+   *  before reading the plan (the v2 prompt resolves a step early). */
+  turnStillAlive?: () => Promise<boolean>;
   /** #120 (B6d): publish hop events to the durable activity feed. The
    *  product flow opts in; fixtures never touch the real vault. */
   publishActivity?: boolean;
 }): Promise<PostRunWalkOutcome> {
+  // W-P/W-S TURN-SETTLE (the 23:31 specimen — the walk raced the planner):
+  // the v2 prompt resolves after the FIRST step while Apollo's turn KEEPS
+  // RUNNING server-side (the plan write lands minutes later). The old
+  // walk-check fired on the plan that was already on disk — walking the
+  // STALE plan while the NEW one was mid-write, corrupting the campaign
+  // state into hybrids ("12/5 hops GREEN"). The cure: the walk waits for
+  // the turn to SETTLE server-side before it reads any plan.
+  if (opts.turnStillAlive) {
+    const SETTLE_MS = Number(process.env.OLYMPUS_TURN_SETTLE_MS || 150_000);
+    const t0 = Date.now();
+    let narratedAt = 0;
+    try {
+      while (await opts.turnStillAlive()) {
+        if (Date.now() - t0 >= SETTLE_MS) break;
+        if (Date.now() - narratedAt >= 15_000) {
+          narratedAt = Date.now();
+          opts.send?.({ type: 'log', msg: `⏳ the planning turn is still running server-side — the walk waits for it to settle (bound ${Math.round((SETTLE_MS - (Date.now() - t0)) / 1000)}s left)`, ts: new Date().toISOString() });
+        }
+        await new Promise((r) => setTimeout(r, 3_000));
+      }
+    } catch { /* the probe failing = settle now — the walk proceeds */ }
+  }
+
   const planPath = join(opts.laneRoot, DISPATCH_PLAN_FILENAME);
   // W-P PLAN-WAIT (the 2026-10-21 20:11 specimen): the v2 prompt resolves
   // after the FIRST step while the planner's plan write lands in a LATER
@@ -182,16 +257,46 @@ export async function maybeWalkThePlan(opts: {
   }
   let plan: unknown;
   try {
-    plan = JSON.parse(readFileSync(planPath, 'utf-8'));
+    plan = JSON.parse(sanitizePlanJson(readFileSync(planPath, 'utf-8')));
   } catch (e) {
-    const msg = `dispatch-plan.json is unparseable in '${opts.slug}' — the walk is refused: ${e instanceof Error ? e.message : String(e)}`;
+    const msg = `dispatch-plan.json is unparseable in '${opts.slug}' — the walk is refused: ${e instanceof Error ? e.message : String(e)}. Ask Apollo to rewrite the plan as STRICT JSON (no raw line breaks inside string values — escape them as \\n).`;
     opts.send?.({ type: 'walk_summary', completed: 0, total: 0, parked: null, msg, ts: new Date().toISOString() });
     return { walked: false, reason: 'plan-unparseable', completed: 0, total: 0, parked: null, summaryLine: msg };
   }
-  // Resume doctrine: the state file on disk is the campaign's memory — a
-  // parked or half-walked plan resumes (its approval already happened);
-  // a FRESH plan opens the approval gate (#120).
-  const resume = existsSync(hopStatePath(opts.laneRoot));
+  // W-S THE STATE MACHINE (the 23:31 specimen — the hybrid "12/5 hops
+  // GREEN"): the old resume doctrine keyed on the STATE FILE's existence —
+  // so a NEW plan on a lane with ANY prior state resumed blindly: old
+  // completed ids from retired plans leaked into the new walk's counts, a
+  // fully-walked plan re-echoed "GREEN" at a fresh prompt, and no gate
+  // ever opened for genuinely new scope. The plan-to-state relation
+  // decides:
+  //   - parked hop ∈ plan            → RESUME (re-run the parked + rest; the
+  //                                     approval already happened)
+  //   - every plan hop already done  → STALE-COMPLETE (the honest echo — a
+  //                                     fresh prompt needs a fresh plan)
+  //   - completed ∩ plan == ∅        → FRESH (reset the state; the #120 gate
+  //                                     opens)
+  //   - partial overlap              → RESUME (same plan, some done)
+  const stateExists = existsSync(hopStatePath(opts.laneRoot));
+  const planIds = new Set<string>(Array.isArray((plan as any)?.hops) ? (plan as any).hops.map((h: any) => String(h?.id ?? '')) : []);
+  const priorState = stateExists ? readHopStateSafe(opts.laneRoot) : null;
+  const priorCompleted = new Set<string>(priorState?.completed ?? []);
+  const priorParkedId = priorState?.parked?.hopId ?? null;
+  const allPlanHopsDone = planIds.size > 0 && [...planIds].every((id) => priorCompleted.has(id)) && !priorParkedId;
+  const anyPlanHopDone = [...planIds].some((id) => priorCompleted.has(id));
+  let resume = stateExists && (priorParkedId ? planIds.has(priorParkedId) : anyPlanHopDone);
+  if (stateExists && allPlanHopsDone) {
+    // STALE-COMPLETE: the previous plan is fully walked and this turn wrote
+    // no replacement — never the liar's "walked N/N GREEN" for a NEW ask.
+    const msg = `The previous plan is already fully walked (${planIds.size}/${planIds.size} GREEN, ${priorState?.updatedAt ?? 'earlier'}) and no NEW plan was written this turn. This prompt's NEW work needs a fresh dispatch-plan.json — resend the ask (the word 're-plan' or 'TRABALHO NOVO' guarantees Apollo writes one) or delete ${planPath} and resend.`;
+    opts.send?.({ type: 'walk_summary', completed: planIds.size, total: planIds.size, parked: null, msg, ts: new Date().toISOString() });
+    return { walked: false, reason: 'stale-complete', completed: planIds.size, total: planIds.size, parked: null, summaryLine: msg };
+  }
+  if (stateExists && !resume) {
+    // FRESH plan on a lane with unrelated state: reset the campaign memory
+    // (retired ids must not leak into the new counts — the "12/5" hybrid).
+    try { unlinkSync(hopStatePath(opts.laneRoot)); } catch { /* best-effort */ }
+  }
   if (!resume) {
     const total = planHopCount(plan);
     const gates = listGates().filter((g) => g.phase === PLAN_WALK_PHASE && g.targetFile === planPath);
@@ -234,7 +339,9 @@ export async function maybeWalkThePlan(opts: {
     return { walked: false, reason: 'plan-invalid', completed: 0, total: 0, parked: null, summaryLine: msg };
   }
   const totalHops = planHopCount(plan);
-  const completed = result.completed.length;
+  // W-S PLAN-SCOPED TRUTH: the counts answer THIS plan — completed ids
+  // from retired plans never inflate the number (the "12/5" hybrid).
+  const completed = result.completed.filter((id) => planIds.has(id)).length;
   const parked = result.parked ? { hopId: result.parked.hopId, reason: result.parked.reason } : null;
   // W-D3: the parked summary carries the projected remaining time — the
   // tasks sheet's critical-path model over the same lane artifacts.

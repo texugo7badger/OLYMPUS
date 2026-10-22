@@ -2982,7 +2982,7 @@ async function openEventFeed(
  * stamps childPending/permissionPending BEFORE the first frame arrives,
  * so a silently-working child is never misread as a stall.
  */
-async function isTurnAliveServerSide(server: ServerInfo, sessionId: string): Promise<
+export async function isTurnAliveServerSide(server: ServerInfo, sessionId: string): Promise<
   { alive: true; childRunning: boolean; permissionPending: boolean } | { alive: false }
 > {
   try {
