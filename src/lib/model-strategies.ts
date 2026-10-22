@@ -343,17 +343,18 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'free-openrouter': {
     label: 'Free OpenRouter',
     description:
-      'The OpenRouter free split — apollo rides the GLM family (the sacred law: no GLM free exists on OpenRouter today, so the NVIDIA GLM anchor carries the planner), the heavy trio and specialists on OpenRouter\'s strongest free models (live-refreshed), Callimachus on a fast background lane. Two keys (OpenRouter + NVIDIA, both free). Zero cost. Requires an OpenRouter key + the NVIDIA key.',
+      'The OpenRouter free split — apollo rides the strongest SERVABLE free reasoner (the free-tier planner clause: the nvidia-glm lane stalls first-byte on large prompts 4/4, so the proven north-mini reasoner carries the planner until a GLM free exists), the heavy trio and specialists on OpenRouter\'s strongest free models (live-refreshed), Callimachus on a fast background lane. Two keys (OpenRouter + NVIDIA, both free). Zero cost.',
     plan: 'CUSTOM',
     tier: 'free',
     reasoningModel: 'cohere/north-mini-code:free',
     codeModel: 'cohere/north-mini-code:free',
     terminalModel: 'openrouter/cohere/north-mini-code:free',
     gods: {
-      // The GLM-family law (the planner stays sacred — never downgraded):
-      // no GLM free exists on OpenRouter today, so apollo rides the NVIDIA
-      // GLM anchor (mirrors scripts/apply-strategy.js — check-strategy-sync).
-      apollo: 'nvidia-glm/z-ai/glm-5.3',
+      // The free-tier planner clause: the planner stays sacred — SERVABLE.
+      // No GLM free exists on OpenRouter, and the nvidia-glm free lane
+      // stalls first-byte on large planning prompts 4/4 (#129). The north-
+      // mini reasoner is the proven free planner (the 7/7 builder walk).
+      apollo: 'openrouter/cohere/north-mini-code:free',
       atlas: 'openrouter/cohere/north-mini-code:free',
       artemis: 'openrouter/cohere/north-mini-code:free',
       athena: 'openrouter/cohere/north-mini-code:free',

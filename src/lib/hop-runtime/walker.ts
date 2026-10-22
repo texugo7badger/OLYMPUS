@@ -22,8 +22,9 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { appendFileSync, existsSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { appendFileSync, existsSync, readFileSync, symlinkSync, writeFileSync, mkdirSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, isAbsolute } from 'node:path';
 import { spawn } from 'node:child_process';
 import { syncLaneFile } from '@/lib/lane-config';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
@@ -507,6 +508,73 @@ export function ensureLaneConfig(laneRoot: string): void {
         symlinkSync(srcDotOpenCode, dstDotOpenCode, 'dir');
       }
     }
+    // (e) W-R THE GLOBAL CRAFT MCP — the discovery truth (the 21:5X
+    // specimens): the repo-root run loads the repo .mcp.json, but hop
+    // spawns with cwd = the LANE see NONE of it (the lane .mcp.json above
+    // was still invisible to the run — the opencode config discovery does
+    // not resolve it from a non-repo cwd). The ONE config surface every
+    // opencode process reads — the app's serve, every `opencode run`,
+    // every hop, any cwd — is the GLOBAL config (~/.config/opencode/
+    // opencode.json). The craft MCP rides it, machine-local by nature
+    // (it talks to the app server on OLYMPUS_APP_PORT), the path anchored
+    // to THIS app root at runtime. Idempotent: only the olympus-craft
+    // entry is asserted; the user's own config stays untouched.
+    try {
+      const globalCfgPath = join(homedir(), '.config', 'opencode', 'opencode.json');
+      let globalCfg: any = {};
+      try { globalCfg = JSON.parse(readFileSync(globalCfgPath, 'utf-8')); } catch { /* absent = create fresh */ }
+      if (!globalCfg || typeof globalCfg !== 'object') globalCfg = {};
+      if (!globalCfg.mcp || typeof globalCfg.mcp !== 'object') globalCfg.mcp = {};
+      const desired = {
+        type: 'local',
+        command: ['node', join(root, 'scripts', 'mcp-craft-server.mjs')],
+        enabled: true,
+      };
+      const current = globalCfg.mcp['olympus-craft'];
+      const same = Array.isArray(current?.command)
+        && current.command[0] === desired.command[0]
+        && current.command[1] === desired.command[1]
+        && current.enabled === true;
+      if (!same) {
+        globalCfg.mcp['olympus-craft'] = desired;
+        mkdirSync(dirname(globalCfgPath), { recursive: true });
+        writeFileSync(globalCfgPath, JSON.stringify(globalCfg, null, 2), 'utf-8');
+        console.log(`[lane-config] global craft MCP asserted (the one surface every opencode process reads — path anchored to ${root})`);
+      }
+    } catch { /* the global MCP assert is best-effort — the dispatch names the failure */ }
+    // the hop spawns run with cwd = the LANE, and opencode resolves
+    // .mcp.json relative to it — the repo's MCP file never reaches the
+    // hops, so `olympus-craft` (command: `node scripts/mcp-craft-server.mjs`,
+    // a RELATIVE path) died "module not found" in every hop while working
+    // at the repo root. The lane gets its own .mcp.json: the repo registry
+    // copied, with every `node <relative-script>` entry rewritten to the
+    // ABSOLUTE repo path (npx/uvx entries are cwd-independent already).
+    // REFRESH-ON-DRIFT like the config copies — the root is the truth.
+    try {
+      const srcMcp = join(root, '.mcp.json');
+      const dstMcp = join(laneRoot, '.mcp.json');
+      if (existsSync(srcMcp)) {
+        const reg = JSON.parse(readFileSync(srcMcp, 'utf-8'));
+        for (const entry of Object.values<any>(reg.mcpServers || {})) {
+          if (typeof entry?.command === 'string' && entry.command === 'node'
+            && Array.isArray(entry.args) && typeof entry.args[0] === 'string'
+            && !isAbsolute(entry.args[0]) && !entry.args[0].startsWith('.')) {
+            // a bare relative script (scripts/...) — anchor it to the repo.
+            const resolved = join(root, entry.args[0]);
+            if (existsSync(resolved)) entry.args[0] = resolved;
+          }
+        }
+        const laneMcp = JSON.stringify(reg, null, 2);
+        let drifted = true;
+        try {
+          drifted = readFileSync(dstMcp, 'utf-8') !== laneMcp;
+        } catch { /* absent = drifted */ }
+        if (drifted) {
+          writeFileSync(dstMcp, laneMcp, 'utf-8');
+          console.log(`[lane-config] lane .mcp.json refreshed (the MCP registry, craft paths anchored to ${root})`);
+        }
+      }
+    } catch { /* the MCP lane is best-effort — the dispatch names the failure */ }
   } catch { /* the dispatch itself will name the failure */ }
 }
 

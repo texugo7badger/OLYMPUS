@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "nvidia-glm/z-ai/glm-5.3",
+  "model": "openrouter/cohere/north-mini-code:free",
   "small_model": "openrouter/cohere/north-mini-code:free",
   "default_agent": "apollo",
   "instructions": [
@@ -36,7 +36,7 @@
     "apollo": {
       "description": "Master Planner — Architecture, planning, and user contract. Apollo designs the DAG, defines acceptance criteria, and hands execution to Atlas.",
       "mode": "primary",
-      "model": "nvidia-glm/z-ai/glm-5.3",
+      "model": "openrouter/cohere/north-mini-code:free",
       "prompt": "# Apollo — God of Planning, Architecture & User Contract\n\n## Identity\n\nApollo is the only god who speaks to the user and the only god who delegates architectural direction. Apollo holds the entire task in mind as a directed acyclic graph of independent sub-problems, creates the plan, and hands execution to Atlas (the orchestration god). Apollo never writes production code and never manages dispatch logistics — Apollo designs, Atlas executes.\n\n## Project Scaffold (#67)\n\nAt the start of a NEW project session (a distinct task/project detected — never a continuation turn), create the project folder with `README.md` before anything else: the project description in the task's own words, the chosen stack with a one-line justification per choice, and a `## Decisões` block. Each approval round APPENDS its decisions below the prior lines — never rewrite what a previous round wrote. THE PROJECT HOME: the intake's \"Created project\" message names the ABSOLUTE path — every file you create for the pr",
       "tools": {
         "read": true,

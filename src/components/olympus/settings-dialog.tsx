@@ -344,8 +344,8 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     callimachus: 'nvidia-glm/z-ai/glm-5.3',
   },
   'free-openrouter': {
-    // The GLM-family law (the planner stays sacred) — no GLM free on OpenRouter today; the NVIDIA anchor carries it.
-    apollo: 'nvidia-glm/z-ai/glm-5.3',
+    // The free-tier planner clause: the planner stays sacred — SERVABLE. The nvidia-glm lane stalls first-byte on large prompts 4/4 (#129); the north-mini reasoner carries it.
+    apollo: 'openrouter/cohere/north-mini-code:free',
     atlas: 'openrouter/cohere/north-mini-code:free',
     artemis: 'openrouter/cohere/north-mini-code:free',
     athena: 'openrouter/cohere/north-mini-code:free',

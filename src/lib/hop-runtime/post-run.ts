@@ -146,6 +146,27 @@ export async function maybeWalkThePlan(opts: {
   publishActivity?: boolean;
 }): Promise<PostRunWalkOutcome> {
   const planPath = join(opts.laneRoot, DISPATCH_PLAN_FILENAME);
+  // W-P PLAN-WAIT (the 2026-10-21 20:11 specimen): the v2 prompt resolves
+  // after the FIRST step while the planner's plan write lands in a LATER
+  // step — the walk-check raced the write and told the user "no plan,
+  // resend" 80 seconds BEFORE the plan arrived on disk. The grace window:
+  // when a plan is EXPECTED and absent, poll for it (the planner is still
+  // writing) before declaring the honest no-plan.
+  if (!existsSync(planPath) && opts.expectPlan) {
+    const PLAN_WAIT_MS = Number(process.env.OLYMPUS_PLAN_WAIT_MS || 120_000);
+    const t0 = Date.now();
+    let narratedAt = 0;
+    while (!existsSync(planPath) && Date.now() - t0 < PLAN_WAIT_MS) {
+      await new Promise((r) => setTimeout(r, 2_000));
+      if (Date.now() - narratedAt >= 15_000) {
+        narratedAt = Date.now();
+        opts.send?.({ type: 'log', msg: `⏳ waiting for dispatch-plan.json — the planner is still writing (grace window ${Math.round((PLAN_WAIT_MS - (Date.now() - t0)) / 1000)}s left)`, ts: new Date().toISOString() });
+      }
+    }
+    if (existsSync(planPath)) {
+      opts.send?.({ type: 'log', msg: `dispatch-plan.json landed after ${Math.round((Date.now() - t0) / 1000)}s (the post-turn write) — proceeding to the walk check.`, ts: new Date().toISOString() });
+    }
+  }
   if (!existsSync(planPath)) {
     // #U1d (UAT-2-FIX): the honest no-plan — when a plan was EXPECTED, the
     // silence is a lie by omission (the 16:29 specimen: the planner wrote
@@ -251,7 +272,20 @@ export async function maybeWalkThePlan(opts: {
           ].join('\n'),
           artifacts: [],
         };
-        const r = await spawnHopDispatcher(verdictHop, { laneRoot: opts.laneRoot, prompt: verdictHop.prompt });
+        // W-Q VERDICT-BOUND (the 2026-10-21 20:30 specimen): the verdict
+        // call sat IN THE CRITICAL PATH with no wall-clock bound — a slow
+        // free-lane dispatch held the walk summary (and the whole stream)
+        // hostage for 25+ minutes after the walk itself had resolved. The
+        // verdict is a nicety, never a gate: past the bound it is skipped
+        // and the summary ships.
+        const VERDICT_TIMEOUT_MS = Number(process.env.OLYMPUS_ATLAS_VERDICT_MS || 120_000);
+        const r = await Promise.race([
+          spawnHopDispatcher(verdictHop, { laneRoot: opts.laneRoot, prompt: verdictHop.prompt }),
+          new Promise<null>((resolveTimeout) => setTimeout(() => resolveTimeout(null), VERDICT_TIMEOUT_MS)),
+        ]);
+        if (r === null) {
+          opts.send?.({ type: 'log', msg: `Atlas verdict skipped — the call exceeded the ${Math.round(VERDICT_TIMEOUT_MS / 1000)}s bound (the walk summary ships without it; the lane verdict lands on the next resume).`, ts: new Date().toISOString() });
+        }
         if (r?.ok && r.output) {
           atlasVerdict = String(r.output).trim().slice(0, 1200);
           try { writeFileSync(join(opts.laneRoot, '.olympus-atlas-verdict.md'), `# Atlas verification verdict — ${new Date().toISOString()}\n\n${atlasVerdict}\n`, 'utf-8'); } catch { /* the file is best-effort */ }

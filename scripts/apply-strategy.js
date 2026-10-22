@@ -285,16 +285,14 @@ const BUILTIN_STRATEGIES = {
   // Free OpenRouter — the OpenRouter-only split: primary trio on the
   // strongest OpenRouter free model live right now, specialists
   // on the second-strongest, Callimachus on a fast background model (Nemotron
-  // nano). APOLLO EXCEPTED: the planner stays sacred — the GLM family,
-  // never downgraded (the AGENTS.md law). The OpenRouter free catalog
-  // carries NO GLM today (the 2026-10-21 live probe: zero glm*:free ids),
-  // so the law lands on the NVIDIA GLM anchor (nvidia-glm/z-ai/glm-5.3 —
-  // the #106 entry lane, probe-verified; the nvapi key mirrors to the
-  // family id automatically). When a GLM free ever lands on OpenRouter,
-  // the live pick takes it (buildOpenRouterMixed's GLM-first apollo pick).
+  // nano). APOLLO carries the FREE-TIER PLANNER CLAUSE (2026-10-21): the
+  // planner rides the strongest SERVABLE free reasoner — the nvidia-glm
+  // lane stalls first-byte on large planning prompts 4/4 (#129), so the
+  // default is the proven north-mini reasoner (the 7/7 builder walk); a
+  // live GLM free on OpenRouter takes precedence the moment one exists.
   // Mirrors free-openrouter in src/lib/model-strategies.ts (check-strategy-sync).
   'free-openrouter': {
-    apollo:       'nvidia-glm/z-ai/glm-5.3',
+    apollo:       'openrouter/cohere/north-mini-code:free',
     atlas:        'openrouter/cohere/north-mini-code:free',
     artemis:      'openrouter/cohere/north-mini-code:free',
     athena:       'openrouter/cohere/north-mini-code:free',
@@ -793,12 +791,15 @@ function buildOpenRouterMixed() {
   const refresh = loadFreeModelsRefresh(); // re-read so a mid-run refresh is picked up
   const orTop = refresh?.openrouter?.top || [];
 
-  // APOLLO'S GLM LAW (the planner stays sacred — never downgraded): prefer
-  // a live GLM free on OpenRouter; the catalog carries none today (the
-  // 2026-10-21 live probe: zero glm*:free ids), so the law lands on the
-  // NVIDIA GLM anchor (nvidia-glm/z-ai/glm-5.3 — the #106 entry lane; the
-  // nvapi key mirrors to the family id automatically). NEVER the strongest-
-  // scorer generic: the planner is the quality bottleneck (the AGENTS.md law).
+  // APOLLO'S PLANNER LAW (the free-tier clause, 2026-10-21 — the 19:27
+  // specimen): the planner stays sacred — but "sacred" means SERVABLE. The
+  // nvidia-glm free endpoint stalls first-byte on large planning prompts
+  // FOUR-FOR-FOUR (13:21, 16:04, 17:33, 19:27 — the #129 class), while the
+  // OpenRouter north-mini reasoner planned the full 7/7 builder walk. The
+  // law's intent (the planner is the quality bottleneck — never downgrade
+  // to a small) is upheld: the free planner rides the strongest SERVABLE
+  // free reasoner. When a GLM free ever lands on OpenRouter, the live pick
+  // takes it first (the GLM preference below).
   const pickApollo = () => {
     const glm = orTop.find((m) => /glm/i.test(String(m.id)) && /:free$/.test(String(m.id)));
     if (glm) {
@@ -806,8 +807,10 @@ function buildOpenRouterMixed() {
       log(`  Free OpenRouter: apollo -> ${live} (a live GLM free on OpenRouter — the sacred law)`);
       return live;
     }
-    log('  Free OpenRouter: apollo -> nvidia-glm/z-ai/glm-5.3 (the GLM-family law — no GLM free on OpenRouter today, the NVIDIA anchor carries it)');
-    return 'nvidia-glm/z-ai/glm-5.3';
+    const reasoner = orTop.find((m) => /north-mini|thinking|reason/i.test(String(m.id)) && /:free$/.test(String(m.id)));
+    const pick = reasoner ? normalizeLiveId(reasoner.id) : 'openrouter/cohere/north-mini-code:free';
+    log(`  Free OpenRouter: apollo -> ${pick} (the free-tier clause: no GLM free exists and the nvidia-glm lane stalls first-byte on large prompts 4/4 — the strongest SERVABLE free reasoner carries the planner)`);
+    return pick;
   };
 
   // Primary duo (Atlas/Hephaestus) → the strongest free model live

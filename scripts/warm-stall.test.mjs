@@ -134,6 +134,35 @@ async function main() {
     /resolveWorkspaceLane\(\)\.dir/.test(spawnSrc) && /W-O ORPHAN-CURE/.test(spawnSrc),
     'a one-shot dispatch can serve a fossil workspace config (the 17:33 specimen)');
 
+  // ── N8: the PLAN-WAIT grace window (the 20:11 specimen — the race) ────
+  const postRunSrc = read('src/lib/hop-runtime/post-run.ts');
+  expect('N8: the walk-check waits for the late plan write (OLYMPUS_PLAN_WAIT_MS, default 120s)',
+    postRunSrc.includes('OLYMPUS_PLAN_WAIT_MS') && postRunSrc.includes('W-P PLAN-WAIT'),
+    'the v2 prompt resolves after step 1 while the plan write lands later — the race tells the user "no plan" 80s early');
+  expect('N8: the grace window narrates (the user sees the planner is still writing)',
+    postRunSrc.includes('waiting for dispatch-plan.json'),
+    'silent polling reads as a hang');
+
+  // ── N9: the VERDICT-BOUND (the 20:30 specimen — the post-walk hostage) ─
+  expect('N9: the Atlas verdict call is wall-clock bounded (OLYMPUS_ATLAS_VERDICT_MS, default 120s)',
+    postRunSrc.includes('OLYMPUS_ATLAS_VERDICT_MS') && postRunSrc.includes('W-Q VERDICT-BOUND'),
+    'an unbounded verdict dispatch holds the walk summary + stream hostage after a park');
+  expect('N9: the verdict timeout SKIPS + narrates (a nicety, never a gate)',
+    postRunSrc.includes('Atlas verdict skipped'),
+    'the summary waits on the verdict forever');
+
+  // ── N10/N11: the craft-catalog specimen — the MCP surfaces ────────────
+  const walkerSrc = read('src/lib/hop-runtime/walker.ts');
+  expect('N10: ensureLaneConfig writes the lane .mcp.json (craft paths anchored ABSOLUTE)',
+    /The lane gets its own \.mcp\.json/.test(walkerSrc) && walkerSrc.includes("join(root, entry.args[0])"),
+    "hops spawn with cwd = lane — the repo's relative MCP paths never reach them (the craft-catalog park class)");
+  expect('N10: the lane MCP registry rides REFRESH-ON-DRIFT (the root is the truth)',
+    /lane \.mcp\.json refreshed/.test(walkerSrc),
+    'the lane MCP registry would fossilize');
+  expect('N11: the GLOBAL craft MCP is asserted (the one surface every opencode process reads)',
+    walkerSrc.includes('THE GLOBAL CRAFT MCP') && walkerSrc.includes("join(homedir(), '.config', 'opencode', 'opencode.json')"),
+    'hop runs at a non-repo cwd see no MCP registry — the craft MCP must ride the global config (probe-proven: the lane run answered the vendored truth only after the global assert)');
+
   if (failures > 0) { console.error(`\nwarm-stall: ${failures} FAIL`); process.exit(1); }
   console.log('\nwarm-stall: all green.');
 }

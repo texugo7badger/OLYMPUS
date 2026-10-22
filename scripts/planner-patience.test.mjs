@@ -53,9 +53,9 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
   check('opencode.json: agent.apollo carries reasoning_effort: "low" (belt — a future opencode that honors agent config gets it pre-wired)',
     apollo.reasoning_effort === 'low',
     `reasoning_effort=${JSON.stringify(apollo.reasoning_effort)} — a planning turn on a reasoner without it starves the 16384 mouth (the 20-min/67K-chars/output=0 specimen)`);
-  check('opencode.json: apollo still rides a GLM reasoner (the planner stays sacred — the lane rotates, the GLM family does not)',
-    /glm-5\.3/.test(String(apollo.model || '')),
-    `apollo model=${apollo.model} — the planner must ride the GLM family on every strategy`);
+  check('opencode.json: apollo still rides a planner-class reasoner (the planner stays sacred — GLM-5.3 on the paid tiers; the free-tier clause rides the strongest SERVABLE free reasoner)',
+    /glm-5\.3/.test(String(apollo.model || '')) || /north-mini-code:free/.test(String(apollo.model || '')),
+    `apollo model=${apollo.model} — the planner must ride GLM-5.3 (GO/ZEN) or the proven free reasoner north-mini-code:free (the 2026-10-21 free-tier clause: the nvidia-glm free lane stalls first-byte on large prompts 4/4 — a stall is not planning quality; the north-mini reasoner walked 7/7); a downgrade to a small/volume model still fails this pin`);
   check('opencode.json: ONLY apollo carries the low effort (the other gods keep full reasoning)',
     Object.entries(cfg.agent || {})
       .filter(([id, a]) => id !== 'apollo' && a && typeof a === 'object' && a.reasoning_effort === 'low')
