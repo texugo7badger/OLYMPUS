@@ -124,6 +124,20 @@ async function main() {
   }
   fs.rmSync(FIX, { recursive: true, force: true });
 
+  // ── S8/S9/S10: the 00:53 specimen chain — the echo, the kill, the silence ─
+  expect('S8: the walk RETIRES the warm-stall timer (a silent hop never kills a healthy stream mid-walk)',
+    routeSrc.includes('WALK-STALL-RETIRE') && routeSrc.includes('clearInterval(warmStallTimer)'),
+    'the 00:56 death: the stall bound fired over the running walk');
+  expect('S9: the plan-freshness gate (an echoed plan that was never written never walks)',
+    prSrc.includes('W-T PLAN-FRESHNESS') && prSrc.includes('plan-not-written'),
+    "the 00:53 specimen: the model's chat-text plan walked the STALE file from a prior session");
+  expect('S9: the route passes the turn start (turnStartedAt) to the walk',
+    routeSrc.includes('turnStartedAt = Date.now()') && routeSrc.includes('turnStartedAt,'),
+    'the freshness gate has no clock');
+  expect('S10: the walker heartbeats long hops (the demora-mt visibility cure)',
+    read('src/lib/hop-runtime/walker.ts').includes('hop_heartbeat') && prSrc.includes('hop_heartbeat'),
+    'a silent 2-minute spawn reads as a hang');
+
   if (failures > 0) { console.error(`\ncontinuation-cure: ${failures} FAIL`); process.exit(1); }
   console.log('\ncontinuation-cure: all green.');
 }

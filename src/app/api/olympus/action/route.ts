@@ -1132,6 +1132,9 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         errSessionId = sessionId;
 
         // 3. Run the message on the warm session.
+        // W-T PLAN-FRESHNESS: the turn's start — the walk uses it to tell a
+        // plan the turn WROTE from a stale one the turn only echoed about.
+        const turnStartedAt = Date.now();
         const result = await runWarmMessage({
           sessionId,
           text: opts.text,
@@ -1181,7 +1184,9 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
               send({
                 type: 'log',
                 msg: t.triggered
-                  ? `Live preview ready: ${t.status?.url} — ${t.reason}`
+                  ? t.status?.url
+                    ? `Live preview ready: ${t.status.url} — ${t.reason}`
+                    : `Live preview: ${t.reason}`
                   : `Dev server: ${t.reason}`,
                 ts: new Date().toISOString(),
               });
@@ -1203,10 +1208,23 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
             // turn is over — its timer retires; the walk bounds itself.
             clearTimeout(maxRuntimeTimer);
             clearTimeout(startupTimer);
+            // W-T WALK-STALL-RETIRE (the 00:56 specimen): the warm-stall
+            // timer is ALSO a turn budget — a hop running silently in its
+            // spawn for >180s tripped it MID-WALK and killed the stream over
+            // a healthy walk (hop-by-hop-corrections was alive, the client
+            // saw "Task failed"). The walk bounds itself (per-hop ceiling +
+            // first-byte deadline + park-on-exhaustion); the stall bound
+            // retires with the turn.
+            if (warmStallTimer) clearInterval(warmStallTimer);
             try {
               const walk = await maybeWalkThePlan({
                 slug: opts.intent.slug, laneRoot, send, sessionId: opts.conversationId, publishActivity: true,
                 expectPlan: opts.classification?.needsPlanning === true,
+                // W-T PLAN-FRESHNESS: the planning turn's start — a plan on
+                // disk older than this is the STALE one (the model echoed a
+                // new plan but never wrote it — the 00:53 specimen walked
+                // the old plan from a prior session).
+                turnStartedAt,
                 // W-S TURN-SETTLE: the v2 prompt resolves a step early — the
                 // walk waits for the planner's turn to finish server-side
                 // before reading any plan (the 23:31 hybrid-state specimen).

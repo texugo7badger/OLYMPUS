@@ -592,6 +592,10 @@ export interface WalkResult {
  * what happened) so the walk is visible while it runs. */
 export type HopWalkEvent =
   | { type: 'hop_start'; hop: string; god: string; artifacts?: string[] }
+  /** W-T HOP-HEARTBEAT: the long-hop visibility — every 45s the in-flight
+   *  hops narrate their elapsed time (the 'demora mt' cure: a silent
+   *  2-minute spawn reads as a hang; a heartbeat reads as work). */
+  | { type: 'hop_heartbeat'; hop: string; god: string; elapsedMs: number }
   | { type: 'hop_done'; hop: string; god: string; durationMs: number; tokensIn: number | null; tokensOut: number | null; retriesAbsorbed: number }
   | { type: 'hop_parked'; hop: string; god: string; reason: string; error?: string };
 
@@ -828,6 +832,19 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       // the campaign. The result tells the truth.
       resolveWalk();
     };
+    const stopHeartbeat = (inFlight as any).__stopHeartbeat as (() => void) | undefined;
+    if (stopHeartbeat) stopHeartbeat();
+    // W-T HOP-HEARTBEAT: the long-hop narration loop.
+    const heartbeat = setInterval(() => {
+      const now = Date.now();
+      for (const t of inFlight.values()) {
+        const elapsed = now - t.startedAt;
+        if (elapsed >= 45_000) {
+          opts.onEvent?.({ type: 'hop_heartbeat', hop: t.hop.id, god: t.hop.god, elapsedMs: elapsed });
+        }
+      }
+    }, 45_000);
+    (inFlight as any).__stopHeartbeat = () => clearInterval(heartbeat);
     launch();
     void settle();
   });

@@ -202,9 +202,12 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
   check('law: the route retires the TURN timers before the walk phase (the walk bounds itself per-hop)',
     walkBudgetIdx >= 0
       && walkCallIdx > walkBudgetIdx
-      && walkCallIdx - walkBudgetIdx < 1000
+      && walkCallIdx - walkBudgetIdx < 2000
       && routeSrc.slice(walkBudgetIdx, walkCallIdx).includes('clearTimeout(maxRuntimeTimer)')
-      && routeSrc.slice(walkBudgetIdx, walkCallIdx).includes('clearTimeout(startupTimer)'),
+      && routeSrc.slice(walkBudgetIdx, walkCallIdx).includes('clearTimeout(startupTimer)')
+      // W-T: the WARM-STALL bound retires with the turn too — a silent
+      // hop never kills a healthy stream mid-walk (the 00:56 specimen).
+      && routeSrc.slice(walkBudgetIdx, walkCallIdx).includes('clearInterval(warmStallTimer)'),
     'the turn budget still bounds the walk — long campaigns die at 15 min mid-hop');
 }
 

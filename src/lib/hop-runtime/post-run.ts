@@ -20,7 +20,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { existsSync, readFileSync, writeFileSync, unlinkSync, rmSync, lstatSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, unlinkSync, rmSync, lstatSync, mkdirSync, statSync } from 'node:fs';
 
 /**
  * W-S PLAN-SANITIZE (the 23:32 specimen — 'Bad control character in
@@ -112,6 +112,9 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
   if (ev.type === 'hop_start') {
     msg = `Hop '${ev.hop}' started — god ${ev.god}${poolNote}, lane ${laneRoot}`;
     if (send) send({ type: 'hop_start', hop: ev.hop, god: ev.god, pool, lane: laneRoot, artifacts: ev.artifacts, msg, ts });
+  } else if (ev.type === 'hop_heartbeat') {
+    msg = `Hop '${ev.hop}' running — god ${ev.god}${poolNote}, ${Math.round(ev.elapsedMs / 1000)}s (the spawn works; the next event lands on completion)`;
+    if (send) send({ type: 'log', msg, ts });
   } else if (ev.type === 'hop_done') {
     msg = `Hop '${ev.hop}' GREEN — god ${ev.god}${poolNote}, ${Math.round(ev.durationMs / 1000)}s, ${fmt(ev.tokensIn)} in / ${fmt(ev.tokensOut)} out`;
     if (send) send({ type: 'hop_done', hop: ev.hop, god: ev.god, pool, lane: laneRoot, durationMs: ev.durationMs, tokensIn: ev.tokensIn, tokensOut: ev.tokensOut, msg, ts });
@@ -196,6 +199,12 @@ export async function maybeWalkThePlan(opts: {
   /** #120 (B6d): publish hop events to the durable activity feed. The
    *  product flow opts in; fixtures never touch the real vault. */
   publishActivity?: boolean;
+  /** W-T PLAN-FRESHNESS: the planning turn's start (epoch ms). When a plan
+   *  is EXPECTED and the file on disk predates the turn, the model ECHOED
+   *  a plan but never WROTE one (the 00:53 specimen: the walk consumed the
+   *  stale plan from a prior session while the new one existed only in the
+   *  model's chat text). The stale file never answers a planning turn. */
+  turnStartedAt?: number;
 }): Promise<PostRunWalkOutcome> {
   // W-P/W-S TURN-SETTLE (the 23:31 specimen — the walk raced the planner):
   // the v2 prompt resolves after the FIRST step while Apollo's turn KEEPS
@@ -262,6 +271,23 @@ export async function maybeWalkThePlan(opts: {
     const msg = `dispatch-plan.json is unparseable in '${opts.slug}' — the walk is refused: ${e instanceof Error ? e.message : String(e)}. Ask Apollo to rewrite the plan as STRICT JSON (no raw line breaks inside string values — escape them as \\n).`;
     opts.send?.({ type: 'walk_summary', completed: 0, total: 0, parked: null, msg, ts: new Date().toISOString() });
     return { walked: false, reason: 'plan-unparseable', completed: 0, total: 0, parked: null, summaryLine: msg };
+  }
+  // W-T PLAN-FRESHNESS (the 00:53 specimen — the echo without the write):
+  // a PLANNING turn whose plan file predates the turn never delivered. The
+  // old walk consumed the stale plan from a prior session (complete with
+  // its retired hop ids and malformed checks) while the new scope lived
+  // only in the model's chat text. The honest refusal names the gap; the
+  // stale file never answers a planning turn. Resumes are safe: a resume
+  // prompt is short (classified planning=no) so expectPlan is false.
+  if (opts.expectPlan && typeof opts.turnStartedAt === 'number') {
+    try {
+      const mtimeMs = statSync(planPath).mtimeMs;
+      if (mtimeMs < opts.turnStartedAt - 2_000) {
+        const msg = `The plan on disk PREDATES this turn (written ${new Date(mtimeMs).toISOString()}, the turn started ${new Date(opts.turnStartedAt).toISOString()}) — Apollo described a plan but did not WRITE dispatch-plan.json. The stale plan was NOT walked. Resend the ask with the words: escreva o dispatch-plan.json em disco, sobrescrevendo.`;
+        opts.send?.({ type: 'walk_summary', completed: 0, total: 0, parked: null, msg, ts: new Date().toISOString() });
+        return { walked: false, reason: 'plan-not-written', completed: 0, total: 0, parked: null, summaryLine: msg };
+      }
+    } catch { /* absent plan falls to the no-plan branch below */ }
   }
   // W-S THE STATE MACHINE (the 23:31 specimen — the hybrid "12/5 hops
   // GREEN"): the old resume doctrine keyed on the STATE FILE's existence —
