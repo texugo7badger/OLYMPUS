@@ -498,7 +498,7 @@ function getGodModel(godId: string): string {
         },
         "free-openrouter": {
           // The free-tier planner clause: the planner stays sacred — SERVABLE. The nvidia-glm lane stalls first-byte on large prompts 4/4 (#129); the north-mini reasoner carries it.
-          apollo:       "openrouter/cohere/north-mini-code:free",
+          apollo:       "openrouter/thinkingmachines/inkling:free",
           atlas:        "openrouter/cohere/north-mini-code:free",
           artemis:      "openrouter/cohere/north-mini-code:free",
           athena:       "openrouter/cohere/north-mini-code:free",

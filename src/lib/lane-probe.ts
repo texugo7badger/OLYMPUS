@@ -112,6 +112,13 @@ export async function probeLane(
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${key}`,
+        // W-X: OpenRouter's attribution headers — a bare probe 403s on
+        // lanes that serve fine through opencode (the 15:38 specimen: the
+        // inkling lane answered every hop all day; the raw probe 403'd and
+        // the pre-flight warned over a HEALTHY lane).
+        'User-Agent': 'OLYMPUS',
+        'HTTP-Referer': 'https://olympus.local',
+        'X-Title': 'OLYMPUS lane probe',
       },
       body: JSON.stringify({
         model: model.modelId,
@@ -122,6 +129,23 @@ export async function probeLane(
       signal: AbortSignal.timeout(opts.timeoutMs ?? 15_000),
     });
     const latencyMs = Date.now() - t0;
+    // W-X AGENTIC-ONLY (the 15:38 specimen): OpenRouter serves some :free
+    // lanes (the inkling family) ONLY to agentic harnesses — the raw probe
+    // 403s with that exact message while opencode (a harness) serves the
+    // lane fine. The 403-harness class means ALIVE-FOR-US, not dead: the
+    // pre-flight must stay quiet (opencode is the real verifier).
+    const bodyText = await r.clone().text().catch(() => '');
+    if (r.status === 403 && bodyText.includes('agentic harness')) {
+      return {
+        ok: true,
+        model: model.full,
+        provider: model.providerId,
+        apiModel: model.modelId,
+        latencyMs,
+        httpStatus: r.status,
+        error: undefined,
+      };
+    }
     return {
       ok: r.ok,
       model: model.full,

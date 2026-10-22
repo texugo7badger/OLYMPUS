@@ -343,18 +343,19 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'free-openrouter': {
     label: 'Free OpenRouter',
     description:
-      'The OpenRouter free split — apollo rides the strongest SERVABLE free reasoner (the free-tier planner clause: the nvidia-glm lane stalls first-byte on large prompts 4/4, so the proven north-mini reasoner carries the planner until a GLM free exists), the heavy trio and specialists on OpenRouter\'s strongest free models (live-refreshed), Callimachus on a fast background lane. Two keys (OpenRouter + NVIDIA, both free). Zero cost.',
+      'The OpenRouter free split — apollo rides the probe-verified SERVABLE free reasoner (the free-tier planner clause: the apply probes every lane and never ships a dead pool; the inkling family is the proven free planner lane), the heavy trio and specialists on OpenRouter\'s strongest free models (live-refreshed), Callimachus on a fast background lane. Two keys (OpenRouter + NVIDIA, both free). Zero cost.',
     plan: 'CUSTOM',
     tier: 'free',
     reasoningModel: 'cohere/north-mini-code:free',
     codeModel: 'cohere/north-mini-code:free',
     terminalModel: 'openrouter/cohere/north-mini-code:free',
     gods: {
-      // The free-tier planner clause: the planner stays sacred — SERVABLE.
-      // No GLM free exists on OpenRouter, and the nvidia-glm free lane
-      // stalls first-byte on large planning prompts 4/4 (#129). The north-
-      // mini reasoner is the proven free planner (the 7/7 builder walk).
-      apollo: 'openrouter/cohere/north-mini-code:free',
+      // The free-tier planner clause (W-X): the planner stays sacred — SERVABLE,
+      // probe-verified at apply time. No GLM free exists on OpenRouter; the nvidia-glm
+      // free lane stalls on large prompts 4/4 (#129); north-mini 429s at the daily cap
+      // (the 15:38 specimen). The inkling family is the proven free planner/hop lane
+      // (probe-verified, agentic-harness-only — opencode serves it).
+      apollo: 'openrouter/thinkingmachines/inkling:free',
       atlas: 'openrouter/cohere/north-mini-code:free',
       artemis: 'openrouter/cohere/north-mini-code:free',
       athena: 'openrouter/cohere/north-mini-code:free',

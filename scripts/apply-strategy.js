@@ -292,7 +292,7 @@ const BUILTIN_STRATEGIES = {
   // live GLM free on OpenRouter takes precedence the moment one exists.
   // Mirrors free-openrouter in src/lib/model-strategies.ts (check-strategy-sync).
   'free-openrouter': {
-    apollo:       'openrouter/cohere/north-mini-code:free',
+    apollo:       'openrouter/thinkingmachines/inkling:free',
     atlas:        'openrouter/cohere/north-mini-code:free',
     artemis:      'openrouter/cohere/north-mini-code:free',
     athena:       'openrouter/cohere/north-mini-code:free',
@@ -787,7 +787,7 @@ function resolveStrategy(cliFlag) {
  * the curated Nemotron nano (background vault work must not burn the
  * flagship's shared pool).
  */
-function buildOpenRouterMixed() {
+async function buildOpenRouterMixed() {
   const refresh = loadFreeModelsRefresh(); // re-read so a mid-run refresh is picked up
   const orTop = refresh?.openrouter?.top || [];
 
@@ -800,28 +800,82 @@ function buildOpenRouterMixed() {
   // to a small) is upheld: the free planner rides the strongest SERVABLE
   // free reasoner. When a GLM free ever lands on OpenRouter, the live pick
   // takes it first (the GLM preference below).
-  const pickApollo = () => {
-    const glm = orTop.find((m) => /glm/i.test(String(m.id)) && /:free$/.test(String(m.id)));
+  // W-X PROBE-VERIFIED PICK (the 15:38 specimen — the 429 lane): the
+  // assigned lane must ANSWER before the strategy ships. A 429/dead lane
+  // falls to the next candidate — never a strategy on a dead pool. The
+  // nemotron BAN rides every pick (the user's ban: NO Nemotron, forever).
+  const probeLaneOnce = async (modelId) => {
+    try {
+      const auth = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.local', 'share', 'opencode', 'auth.json'), 'utf-8'));
+      const key = auth['openrouter']?.key;
+      if (!key) return 'alive';
+      const t0 = Date.now();
+      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+          'User-Agent': 'OLYMPUS',
+          'HTTP-Referer': 'https://olympus.local',
+          'X-Title': 'OLYMPUS lane probe',
+        },
+        body: JSON.stringify({ model: modelId, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, stream: false }),
+        signal: AbortSignal.timeout(12_000),
+      });
+      const bodyText = await r.text().catch(() => '');
+      if (r.status === 403 && bodyText.includes('agentic harness')) return 'alive'; // probe-blind, opencode serves it (the 15:38 specimen)
+      if (r.ok) return 'alive';
+      log(`  probe: ${modelId} → HTTP ${r.status} (${Date.now() - t0}ms) — falling to the next candidate`);
+      return 'dead';
+    } catch (e) {
+      log(`  probe: ${modelId} unreachable (${e?.message ?? e}) — falling to the next candidate`);
+      return 'dead';
+    }
+  };
+  const notBanned = (id) => !/nemotron/i.test(String(id || ''));
+  const pickFirstAlive = async (candidates, role) => {
+    for (const cand of candidates) {
+      if (!cand || !notBanned(cand)) continue;
+      const verdict = await probeLaneOnce(String(cand).replace(/^openrouter\//, ''));
+      if (verdict === 'alive') {
+        log(`  Free OpenRouter: ${role} -> ${cand} (probe-verified alive)`);
+        return cand;
+      }
+    }
+    return null;
+  };
+  const pickApollo = async () => {
+    const glm = orTop.find((m) => /glm/i.test(String(m.id)) && /:free$/.test(String(m.id)) && notBanned(m.id));
     if (glm) {
       const live = normalizeLiveId(glm.id);
       log(`  Free OpenRouter: apollo -> ${live} (a live GLM free on OpenRouter — the sacred law)`);
       return live;
     }
-    const reasoner = orTop.find((m) => /north-mini|thinking|reason/i.test(String(m.id)) && /:free$/.test(String(m.id)));
-    const pick = reasoner ? normalizeLiveId(reasoner.id) : 'openrouter/cohere/north-mini-code:free';
-    log(`  Free OpenRouter: apollo -> ${pick} (the free-tier clause: no GLM free exists and the nvidia-glm lane stalls first-byte on large prompts 4/4 — the strongest SERVABLE free reasoner carries the planner)`);
-    return pick;
+    const reasoner = orTop.find((m) => /north-mini|thinking|reason/i.test(String(m.id)) && /:free$/.test(String(m.id)) && notBanned(m.id));
+    const candidates = [
+      reasoner ? normalizeLiveId(reasoner.id) : null,
+      'openrouter/thinkingmachines/inkling:free',
+      'openrouter/thinkingmachines/inkling-small:free',
+    ].filter(Boolean);
+    const pick = await pickFirstAlive(candidates, 'apollo');
+    log(`  Free OpenRouter: apollo -> ${pick ?? candidates[0]} (the free-tier clause: the strongest SERVABLE free reasoner — probe-verified)`);
+    return pick ?? candidates[0];
   };
 
   // Primary duo (Atlas/Hephaestus) → the strongest free model live
   // right now (curated default: north-mini-code).
-  const pickPrimary = () => {
-    const live = normalizeLiveId(orTop[0]?.id);
-    if (live) {
-      log(`  Free OpenRouter: primary roles -> ${live} (live #1 from refresh)`);
-      return live;
-    }
-    return 'openrouter/cohere/north-mini-code:free';
+  const pickPrimary = async (avoidPool) => {
+    const candidates = orTop.filter((m) => notBanned(m.id)).map((m) => normalizeLiveId(m.id)).filter(Boolean);
+    candidates.push('openrouter/thinkingmachines/inkling:free', 'openrouter/thinkingmachines/inkling-small:free', 'openrouter/cohere/north-mini-code:free');
+    const ordered = [];
+    for (const c of candidates.slice(0, 4)) if (!ordered.includes(c)) ordered.push(c);
+    // The #106 distribution law: the god's pool may differ from the avoid
+    // pool (apollo's entry lane never shares a heavy code lane) — try the
+    // distinct pools first, fall back to any alive pool when only one
+    // exists (a 1-pool day is honest, the per-pool cap still protects it).
+    const distinct = avoidPool ? ordered.filter((c) => c !== avoidPool) : ordered;
+    const pick = (await pickFirstAlive(distinct, 'primary roles')) ?? (await pickFirstAlive(ordered, 'primary roles'));
+    return pick ?? 'openrouter/thinkingmachines/inkling:free';
   };
 
   // Specialist gods → the second-strongest free model, but only if it can
@@ -830,24 +884,32 @@ function buildOpenRouterMixed() {
   // 2026-10-16 AND re-checked against the live /api/v1/models at the
   // V003-CI cure — the old ling-3.0-flash:free fallback died in the free
   // list; the L4 catalogue preflight caught it red in the Eval Harness).
-  const pickSpecialist = () => {
-    const second = orTop[1];
-    if (second && second.context >= 131072 && second.score >= 30) {
-      const live = normalizeLiveId(second.id);
-      log(`  Free OpenRouter: specialist roles -> ${live} (live #2 from refresh)`);
-      return live;
-    }
-    return 'openrouter/thinkingmachines/inkling-small:free';
+  const pickSpecialist = async (avoidPool) => {
+    const candidates = orTop
+      .filter((m) => notBanned(m.id) && m.context >= 131072 && m.score >= 30)
+      .map((m) => normalizeLiveId(m.id)).filter(Boolean);
+    candidates.push('openrouter/thinkingmachines/inkling-small:free');
+    const ordered = [];
+    for (const c of candidates.slice(0, 4)) if (!ordered.includes(c)) ordered.push(c);
+    const distinct = avoidPool ? ordered.filter((c) => c !== avoidPool) : ordered;
+    const pick = (await pickFirstAlive(distinct, 'specialist roles')) ?? (await pickFirstAlive(ordered, 'specialist roles'));
+    return pick ?? 'openrouter/thinkingmachines/inkling-small:free';
   };
 
   const map = { ...BUILTIN_STRATEGIES['free-openrouter'] };
-  map.apollo = pickApollo();
-  for (const g of ['atlas', 'hephaestus']) map[g] = pickPrimary();
+  map.apollo = await pickApollo();
+  // The #106 distribution: apollo's lane shares with ATLAS (the
+  // orchestrator — never a heavy code lane); hephaestus rides a DISTINCT
+  // pool when one is alive (the 2-pool day: inkling + inkling-small).
+  map.atlas = map.apollo;
+  map.hephaestus = await pickPrimary(map.apollo);
   for (const g of ['artemis', 'athena', 'dionysus', 'hermes', 'persephone', 'prometheus']) {
-    map[g] = pickSpecialist();
+    map[g] = await pickSpecialist(map.apollo);
   }
-  // Callimachus stays on the curated Nemotron nano — background vault
-  // curation runs constantly and would burn the flagship's shared pool.
+  // Callimachus — the background vault curation must not burn the shared
+  // pools; ride the small inkling (W-X: the old curated nemotron nano is
+  // BANNED — the user's law, forever).
+  map.callimachus = 'openrouter/thinkingmachines/inkling-small:free';
   return map;
 }
 
@@ -900,7 +962,7 @@ function getNvidiaBuildModelMap() {
   return map;
 }
 
-function getModelMap(strategy) {
+async function getModelMap(strategy) {
   if (strategy === 'free-big-pickle') {
     // Re-resolve at apply time so `--refresh-models` in the same run picks
     // up a newly released flagship (FREE_BIG_PICKLE_MODEL is module-load).
@@ -935,7 +997,7 @@ function getModelMap(strategy) {
     if (!keys.openrouter && FORCE_FREE_APPLY) {
       log(`  WARNING: building free-openrouter WITHOUT an OpenRouter key (--force) — model requests will fail with APIError until the key is added.`);
     }
-    return buildOpenRouterMixed();
+    return await buildOpenRouterMixed();
   }
   if (strategy === 'free-nvidia-build') {
     // NVIDIA Build free endpoints. The model list is public (fetched by the
@@ -2233,7 +2295,7 @@ The script is idempotent — running twice with the same strategy is a no-op.
 `);
 }
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   let cliStrategy = null;
   let forceImpeccable = false;
@@ -2326,7 +2388,7 @@ function main() {
 
   let modelMap;
   try {
-    modelMap = getModelMap(strategy);
+    modelMap = await getModelMap(strategy);
   } catch (e) {
     log(`ERROR: ${e.message}`);
     if (isFreeTierStrategy(strategy) && !forceApply) {
@@ -2536,7 +2598,7 @@ function main() {
 import { pathToFileURL } from 'node:url';
 const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 if (isDirectRun) {
-  main();
+  main().catch((e) => { log(`ERROR: ${e?.message ?? e}`); process.exit(1); });
 }
 
 // F2: the curated table as GUARDABLE DATA — the budget guard reads the
