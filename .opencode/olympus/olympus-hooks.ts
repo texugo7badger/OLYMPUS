@@ -48,6 +48,10 @@ import type { PluginInput } from "@opencode-ai/plugin";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+// #181: the shared pricing module — live catalog first, the pinned 2026-09-28
+// snapshot as FALLBACK only. estimateSpendUsd() below delegates here; the
+// old in-file MODEL_PRICING_USD_PER_1M table moved into this module verbatim.
+import { priceTokens } from "../../src/lib/model-pricing.js";
 import {
   initTracker,
   updateActiveAgent,
@@ -307,76 +311,13 @@ function appendActivityFeed(event: Record<string, unknown>): void {
  *   - src/app/api/olympus/god/dispatch-graph/route.ts getLiveGodCost()
  *     → live "Sub-agent routes" column in the cost dashboard
  *
- * Pricing is a flat approximation per the OpenCode GO plan; we don't try
- * to be exact because (a) OpenCode's plugin contract doesn't expose the
- * real per-call token usage, and (b) the GO plan is a flat subscription
- * ($10/mo) with caps — the dashboard is informational, not billing.
- *
- * Pricing table (USD per 1M tokens, summed input+output for spend):
- *   glm-5.2:            $0.42  (Apollo's reserved model)
- *   kimi-k3:            $0.55
- *   kimi-k2.7-code:     $0.30
- *   deepseek-v4-pro:    $0.27
- *   deepseek-v4-flash:  $0.07
- *   qwen3.7-plus:       $0.22
- *   grok-4.5:           $0.60
- *   minimax-m3:         $0.40
- *   mimo-v2.5:          $0.10
- *
- * These numbers match the published OpenCode rates and are conservative
- * (tiered models use the higher/peak tier) so the dashboard never
- * under-reports.
- *
- * Prices verified against https://opencode.ai/docs/go/ and
- * https://opencode.ai/docs/zen/ on 2026-09-28.
+ * Pricing: the per-tool rows written here are ESTIMATES — estimateSpendUsd()
+ * delegates to src/lib/model-pricing.ts (#181), which reads the live model
+ * catalog (~/.cache/opencode/models.json) with the pinned 2026-09-28 table
+ * as FALLBACK. The rows land with source: 'estimate' so readRealCosts()
+ * (src/lib/olympus.ts, #179) never mixes them with the authoritative
+ * step-finish spend (source: 'sdk-event').
  */
-const MODEL_PRICING_USD_PER_1M: Record<string, { input: number; output: number }> = {
-  // OpenCode GO (https://opencode.ai/docs/go/, verified 2026-09-28).
-  "opencode-go/glm-5.3":            { input: 1.40, output: 4.40 },
-  "opencode-go/glm-5.3-flash":      { input: 0.15, output: 0.50 },
-  "opencode-go/glm-5.2":            { input: 1.40, output: 4.40 },
-  "opencode-go/kimi-k3":            { input: 3.00, output: 15.00 },
-  "opencode-go/kimi-k2.7-code":     { input: 0.95, output: 4.00 },
-  "opencode-go/minimax-m3":         { input: 0.30, output: 1.20 },
-  "opencode-go/qwen3.7-plus":       { input: 0.40, output: 1.60 },
-  "opencode-go/hy3":                { input: 0.14, output: 0.58 },
-  "opencode-go/deepseek-v4-flash":  { input: 0.30, output: 1.20 },
-  "opencode-go/deepseek-v4-pro":    { input: 1.32, output: 3.96 },
-  "opencode-go/deepseek-v4.1-flash":{ input: 0.30, output: 1.20 },
-  "opencode-go/grok-4.7":           { input: 4.00, output: 12.00 },
-  "opencode-go/grok-4.6":           { input: 4.00, output: 12.00 },
-  "opencode-go/grok-4.5":           { input: 4.00, output: 12.00 },
-  "opencode-go/mimo-v2.5":          { input: 0.14, output: 0.28 },
-  // OpenCode Zen (pay-as-you-go) — published per-1M rates
-  // (https://opencode.ai/docs/zen/, verified 2026-09-28).
-  "opencode/glm-5.3":               { input: 1.40, output: 4.40 },
-  "opencode/glm-5.3-flash":         { input: 0.15, output: 0.50 },
-  "opencode/glm-5.2":               { input: 1.40, output: 4.40 },
-  "opencode/kimi-k3":               { input: 3.00, output: 15.00 },
-  "opencode/kimi-k2.7-code":        { input: 0.95, output: 4.00 },
-  "opencode/deepseek-v4-pro":       { input: 1.74, output: 3.48 },
-  "opencode/deepseek-v4-flash":     { input: 0.14, output: 0.28 },
-  "opencode/deepseek-v4.1-flash":   { input: 0.30, output: 1.20 },
-  "opencode/qwen3.7-plus":          { input: 0.40, output: 1.60 },
-  "opencode/qwen3.7-max":           { input: 2.50, output: 7.50 },
-  "opencode/qwen3.8-max":           { input: 2.00, output: 6.00 },
-  "opencode/qwen3.8-flash":         { input: 0.15, output: 0.47 },
-  "opencode/grok-4.7":              { input: 4.00, output: 12.00 },
-  "opencode/grok-4.6":              { input: 4.00, output: 12.00 },
-  "opencode/grok-4.5":              { input: 2.00, output: 6.00 },
-  "opencode/grok-build-0.1":        { input: 1.00, output: 2.00 },
-  "opencode/minimax-m3":            { input: 0.30, output: 1.20 },
-  "opencode/minimax-m2.7":          { input: 0.30, output: 1.20 },
-  "opencode/gemini-3.1-pro":        { input: 4.00, output: 18.00 },
-  "opencode/gemini-3.5-flash":      { input: 1.50, output: 9.00 },
-  "opencode/claude-sonnet-5":       { input: 2.00, output: 10.00 },
-  "opencode/claude-haiku-4-5":      { input: 1.00, output: 5.00 },
-  "opencode/gpt-6-sol":             { input: 4.00, output: 15.00 },
-  "opencode/gpt-6-luna":            { input: 0.20, output: 0.75 },
-  "opencode/gpt-5.6-terra":         { input: 4.00, output: 18.00 },
-  "opencode/gpt-5.6-luna":          { input: 0.40, output: 1.80 },
-  "opencode/gpt-5.4-mini":          { input: 0.75, output: 4.50 },
-};
 
 /**
  * Read the active LLM strategy id from ~/.olympus/llm-providers.json
@@ -429,24 +370,26 @@ function getGodModel(godId: string): string {
           atlas:        "opencode-go/hy3",
           artemis:      "opencode-go/glm-5.3-flash",
           athena:       "opencode-go/qwen3.7-plus",
-          dionysus:     "opencode-go/glm-5.3-flash",
+          // #194: DeepSeek V4.1 Flash ($0.15/$0.60, 1M ctx/384k out).
+          dionysus:     "opencode-go/deepseek-v4.1-flash",
           hephaestus:   "opencode-go/kimi-k2.7-code",
           hermes:       "opencode-go/kimi-k2.7-code",
-          persephone:   "opencode-go/qwen3.7-plus",
+          persephone:   "opencode-go/deepseek-v4.1-flash",
           prometheus:   "opencode-go/minimax-m3",
           callimachus:  "opencode-go/glm-5.3-flash",
         },
         "go-budget": {
           apollo:       "opencode-go/glm-5.3-flash",
           atlas:        "opencode-go/hy3",
-          artemis:      "opencode-go/glm-5.3-flash",
-          athena:       "opencode-go/glm-5.3-flash",
-          dionysus:     "opencode-go/glm-5.3-flash",
-          hephaestus:   "opencode-go/glm-5.3-flash",
-          hermes:       "opencode-go/glm-5.3-flash",
-          persephone:   "opencode-go/glm-5.3-flash",
-          prometheus:   "opencode-go/glm-5.3-flash",
-          callimachus:  "opencode-go/glm-5.3-flash",
+          // #194: every volume god rides DeepSeek V4.1 Flash.
+          artemis:      "opencode-go/deepseek-v4.1-flash",
+          athena:       "opencode-go/deepseek-v4.1-flash",
+          dionysus:     "opencode-go/deepseek-v4.1-flash",
+          hephaestus:   "opencode-go/deepseek-v4.1-flash",
+          hermes:       "opencode-go/deepseek-v4.1-flash",
+          persephone:   "opencode-go/deepseek-v4.1-flash",
+          prometheus:   "opencode-go/deepseek-v4.1-flash",
+          callimachus:  "opencode-go/deepseek-v4.1-flash",
         },
         "zen-max-quality": {
           apollo:       "opencode/glm-5.3",
@@ -485,16 +428,17 @@ function getGodModel(godId: string): string {
           callimachus:  "opencode/claude-haiku-4-5",
         },
         "free-big-pickle": {
-          apollo:       "nvidia-glm/z-ai/glm-5.3",
-          atlas:        "nvidia-glm/z-ai/glm-5.3",
-          artemis:      "nvidia-glm/z-ai/glm-5.3",
-          athena:       "nvidia-glm/z-ai/glm-5.3",
-          dionysus:     "nvidia-glm/z-ai/glm-5.3",
-          hephaestus:   "nvidia-glm/z-ai/glm-5.3",
-          hermes:       "nvidia-glm/z-ai/glm-5.3",
-          persephone:   "nvidia-glm/z-ai/glm-5.3",
-          prometheus:   "nvidia-glm/z-ai/glm-5.3",
-          callimachus:  "nvidia-glm/z-ai/glm-5.3",
+          // #190: the Beam 1.0 flagship (GO free promotional model).
+          apollo:       "opencode-go/beam-free",
+          atlas:        "opencode-go/beam-free",
+          artemis:      "opencode-go/beam-free",
+          athena:       "opencode-go/beam-free",
+          dionysus:     "opencode-go/beam-free",
+          hephaestus:   "opencode-go/beam-free",
+          hermes:       "opencode-go/beam-free",
+          persephone:   "opencode-go/beam-free",
+          prometheus:   "opencode-go/beam-free",
+          callimachus:  "opencode-go/beam-free",
         },
         "free-openrouter": {
           // The free-tier planner clause: the planner stays sacred — SERVABLE. The nvidia-glm lane stalls first-byte on large prompts 4/4 (#129); the north-mini reasoner carries it.
@@ -511,7 +455,7 @@ function getGodModel(godId: string): string {
         },
         "free-nvidia-build": {
           apollo:       "nvidia-glm/z-ai/glm-5.3",
-          atlas:        "nvidia-google/google/gemma-4-31b-it",
+          atlas:        "nvidia-minimaxai/minimaxai/minimax-m3.1-flash",
           artemis:      "nvidia-meta/meta/muse-glimmer-30b",
           athena:       "nvidia-openai/openai/gpt-oss-20b",
           dionysus:     "nvidia-glm/z-ai/glm-5.3",
@@ -519,7 +463,7 @@ function getGodModel(godId: string): string {
           hermes:       "nvidia-meta/meta/muse-glimmer-30b",
           persephone:   "nvidia-glm/z-ai/glm-5.3",
           prometheus:   "nvidia-openai/openai/gpt-oss-20b",
-          callimachus:  "nvidia-google/google/gemma-4-31b-it",
+          callimachus:  "nvidia-minimaxai/minimaxai/minimax-m3.1-flash",
         },
       };
       const models = STRATEGY_GODS[strategy] || STRATEGY_GODS["go-balanced"];
@@ -536,13 +480,15 @@ function getGodModel(godId: string): string {
 /**
  * Estimate spend_usd for a single tool call given the god's model and
  * the input/output token estimate. Used by the cost.jsonl writer below.
+ *
+ * #181: delegates to src/lib/model-pricing.ts — the LIVE model catalog
+ * (~/.cache/opencode/models.json) is the source of truth; the pinned
+ * 2026-09-28 table lives there as FALLBACK only. New lanes
+ * (deepseek-v4.1-flash, beam-free, kimi-k3...) price correctly without an
+ * overlay edit; unknown models are $0 honestly.
  */
 function estimateSpendUsd(model: string, inputTokens: number, outputTokens: number): number {
-  const pricing = MODEL_PRICING_USD_PER_1M[model];
-  if (!pricing) return 0;
-  const inCost = (inputTokens / 1_000_000) * pricing.input;
-  const outCost = (outputTokens / 1_000_000) * pricing.output;
-  return Math.round((inCost + outCost) * 1_000_000) / 1_000_000; // 6dp
+  return priceTokens(model, { input: inputTokens, output: outputTokens }).spendUsd;
 }
 
 /**
@@ -602,6 +548,10 @@ function appendCostFeed(input: {
       // Issue #25: makes a cost line sliceable to its run. Appended LAST so
       // pre-existing lines keep their shape; old lines have no such field.
       session_id: input.sessionId ?? null,
+      // #179: the honesty label — this row is a heuristic ESTIMATE, never
+      // provider-reported spend. readRealCosts() splits on this: real rows
+      // carry source 'sdk-event' (the step-finish writer below).
+      source: "estimate",
     };
     fs.appendFileSync(COST_FEED, JSON.stringify(event) + "\n", "utf-8");
   } catch {
@@ -640,7 +590,10 @@ function isToolOutputError(tool: string, output: unknown): boolean {
  *   - write/edit: input = content length / 4, output = 0
  *   - bash: input = command length / 4, output = stdout length / 4
  *   - read: input = 0, output = file size / 4 (capped at 32K)
- *   - default: input = 100, output = 100 (placeholder)
+ *   - default: { input: 0, output = 0 } — #179: the old flat 100/100
+ *     placeholder invented tokens (and therefore spend, once #181 priced
+ *     estimates against the live catalog) for every unclassifiable tool;
+ *     an honest estimate row carries NO guessed tokens.
  *
  * The 4-chars-per-token ratio is the standard approximation for English text.
  */
@@ -671,7 +624,7 @@ function estimateTokens(tool: string, input: ToolInput, output: unknown): { inpu
   } catch {
     // fall through to default
   }
-  return { input: 100, output: 100 };
+  return { input: 0, output: 0 }; // #179: honest zero — never a 100/100 guess
 }
 
 /**
@@ -1679,60 +1632,78 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
     /**
      * REAL cost capture via the OpenCode SDK event stream.
      *
-     * The `event` hook receives every Event from the OpenCode server,
-     * including `message.part.updated` events that carry `step-finish`
-     * parts with REAL token usage + cost reported by the LLM provider
-     * (not our heuristic estimate).
+     * The `event` hook receives every Event from the OpenCode server.
+     * BOTH runtime vocabularies land here (#180 — the v2 step-finish
+     * capture that used to be missing entirely):
      *
-     * Schema (from @opencode-ai/sdk types.gen.d.ts):
-     *   StepFinishPart = {
-     *     type: "step-finish",
-     *     cost: number,             ← provider-reported cost in USD
-     *     tokens: {
-     *       input: number,          ← real input tokens
-     *       output: number,         ← real output tokens
-     *       reasoning: number,      ← reasoning tokens (o1-style)
-     *       cache: { read: number, write: number },  ← cache hits
-     *     },
-     *     ...
+     *   v1: `message.part.updated` carrying a `step-finish` part
+     *       { type, cost, tokens } — the 1.18.10 lane.
+     *   v2: `session.step.ended` { finish, cost, tokens } — the v2
+     *       runtime's native step-end event (proof of shape:
+     *       src/lib/opencode-session.ts translateV2Event, the
+     *       'session.step.ended' case). The v2-bridge forwards it here
+     *       SYNTHESIZED as a step-finish part; this handler also accepts
+     *       the RAW v2 event so the capture survives any caller shape.
+     *
+     * Token schema (both vocabularies):
+     *   tokens: {
+     *     input: number, output: number, reasoning: number,
+     *     cache: { read: number, write: number },
      *   }
+     * Flat cache_read/cache_write variants are honored defensively — the
+     * wire shapes have proven mutable across CLI builds.
      *
      * We match each step-finish event to the active god (via the
      * active-agent tracker) and append it to ~/.olympus/metrics/cost.jsonl.
      * This is the AUTHORITATIVE cost record — the per-tool estimates
-     * from tool.execute.after (also written to cost.jsonl) are kept as
-     * a fallback for tools that fire without a matching step-finish.
+     * from tool.execute.after (also written to cost.jsonl, source
+     * 'estimate') are a labeled fallback, never summed with these (#179).
      *
      * Why this is better than the per-tool estimate:
      *   1. Real provider-reported cost (not our heuristic $/1M-token table).
      *   2. Includes cache hit/miss breakdown (the heuristic can't see this).
      *   3. Includes reasoning tokens (o1/claude-thinking-style chains).
      *   4. Covers ALL costs, not just tool calls (greetings, questions,
-     *      plan.md writes — all get a step-finish event).
+     *      plan.md writes — all get a step-end event).
      */
     "event": async (input: { event: any }) => {
       try {
         const evt = input.event;
         if (!evt || typeof evt !== "object") return;
 
-        // Event shape: { type: "message.part.updated", info: Message, part: Part }
-        // We only care about step-finish parts.
         const evtType = evt.type || (evt as any).properties?.type;
-        if (evtType !== "message.part.updated") return;
+        let part: any = null;
 
-        const part = evt.part || (evt as any).properties?.part;
-        // Issue #25: record the calling agent before the step-finish filter.
-        const evtInfo0 = (evt as any).properties?.info ?? evt.info ?? null;
-        if (part?.type === "tool") rememberCallAgent(part.callID, evtInfo0?.agent);
-        // RLM P2 (BATCH 13): fold-back capture — the latest assistant text
-        // for a demigod's in-flight work becomes the dispatch's
-        // findings_summary at finalize (sliced ≤2000 chars on the outcome
-        // event). evtInfo.agent is the producing agent; last write wins.
-        if (part?.type === "text" && typeof part.text === "string" && part.text) {
-          recordDispatchFinding(String(evtInfo0?.agent ?? ""), part.text);
+        if (evtType === "message.part.updated") {
+          // ── v1 vocabulary: the part rides the event ────────────────────
+          part = evt.part || (evt as any).properties?.part;
+          // Issue #25: record the calling agent before the step-finish filter.
+          const evtInfo0 = (evt as any).properties?.info ?? evt.info ?? null;
+          if (part?.type === "tool") rememberCallAgent(part.callID, evtInfo0?.agent);
+          // RLM P2 (BATCH 13): fold-back capture — the latest assistant text
+          // for a demigod's in-flight work becomes the dispatch's
+          // findings_summary at finalize (sliced ≤2000 chars on the outcome
+          // event). evtInfo.agent is the producing agent; last write wins.
+          if (part?.type === "text" && typeof part.text === "string" && part.text) {
+            recordDispatchFinding(String(evtInfo0?.agent ?? ""), part.text);
+          }
+          if (!part || part.type !== "step-finish") return;
+        } else {
+          // ── v2 vocabulary: session.step.ended (#180) ────────────────────
+          if (evtType !== "session.step.ended" && evtType !== "session.step_ended" && evtType !== "step.ended") {
+            return;
+          }
+          const d = (evt as any).data ?? (evt as any).properties?.data ?? evt;
+          if (!d || typeof d !== "object") return;
+          part = {
+            type: "step-finish",
+            cost: d.cost,
+            tokens: d.tokens,
+            sessionID: d.sessionID ?? null,
+            messageID: d.assistantMessageID ?? d.messageID ?? null,
+            agent: typeof d.agent === "string" ? d.agent : null,
+          };
         }
-
-        if (!part || part.type !== "step-finish") return;
 
         const tokens = part.tokens;
         const cost = typeof part.cost === "number" ? part.cost : 0;
@@ -1746,7 +1717,8 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         // "system", leaving the Cost dashboard at zeros).
         const state = getActiveAgent();
         const evtInfo = evt.properties?.info ?? evt.info ?? null;
-        let godId = resolveGodForStepFinish(evtInfo?.agent, state, demigodGodMap);
+        const agentHint = evtInfo?.agent ?? part.agent ?? null;
+        let godId = resolveGodForStepFinish(agentHint, state, demigodGodMap);
 
         // Fallback: the event didn't carry message info — ask the server for
         // the message that owns this step-finish part (same data as
@@ -1781,9 +1753,9 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           input_tokens: tokens.input || 0,
           output_tokens: tokens.output || 0,
           reasoning_tokens: tokens.reasoning || 0,
-          cached_tokens: tokens.cache?.read || 0,  // cache hits = "cached_tokens" for compat with readRealCosts
-          cache_write_tokens: tokens.cache?.write || 0,
-          spend_usd: cost,                        // ← REAL provider cost, not estimated
+          cached_tokens: tokens.cache?.read ?? tokens.cache_read ?? 0,  // cache hits = "cached_tokens" for compat with readRealCosts
+          cache_write_tokens: tokens.cache?.write ?? tokens.cache_write ?? 0,
+          spend_usd: cost,                        // ← REAL provider cost, never re-estimated
           latency_ms: null,
           success: true,
           source: "sdk-event",                    // ← tag so cost-dashboard can show "live"

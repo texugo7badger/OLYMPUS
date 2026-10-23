@@ -142,8 +142,8 @@ const GOD_META: Record<string, { icon: string; domain: string; model: string; ca
   athena:      { icon: 'athena',     domain: 'Frontend / UX-UI / Design',          model: 'opencode-go/qwen3.7-plus',    caveman: 'never', army: 7 },
   hermes:      { icon: 'hermes',     domain: 'Integrations / APIs / MCPs',         model: 'opencode-go/kimi-k2.7-code',  caveman: 'full',  army: 2 },
   artemis:     { icon: 'artemis',    domain: 'Security / Auditing',                model: 'opencode-go/glm-5.3-flash',   caveman: 'lite',  army: 3 },
-  dionysus:    { icon: 'dionysus',   domain: 'QA / Testing / Edge Cases',          model: 'opencode-go/glm-5.3-flash',   caveman: 'full',  army: 6 },
-  persephone:  { icon: 'persephone', domain: 'Database / Persistence',             model: 'opencode-go/qwen3.7-plus',    caveman: 'full',  army: 2 },
+  dionysus:    { icon: 'dionysus',   domain: 'QA / Testing / Edge Cases',          model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full',  army: 6 },
+  persephone:  { icon: 'persephone', domain: 'Database / Persistence',             model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full',  army: 2 },
   prometheus:  { icon: 'prometheus', domain: 'DevOps / CI-CD / Deploy',            model: 'opencode-go/minimax-m3',      caveman: 'full',  army: 6 },
   callimachus: { icon: 'callimachus', domain: 'Vault curator — Instincts, Compaction', model: 'opencode-go/glm-5.3-flash', caveman: 'full', army: 0 },
 };
@@ -1038,11 +1038,22 @@ export interface GodCost {
   god: string;
   icon: string;
   model: string;
+  /** #179: REAL provider steps only (tool '_step-finish_' / source
+   *  'sdk-event') — per-tool heuristic estimates never inflate the
+   *  request count (or the GO cap math). */
   requests: number;
+  /** #179: REAL-row token usage only (provider-reported). */
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
+  /** #179 additive: real + estimated — the sum of the two split figures
+   *  below; dashboards must label the parts, never sum them silently. */
   spend: number;
+  spendRealUsd: number;
+  spendEstimatedUsd: number;
+  /** #179 additive: reasoning + cache-write tokens (real rows). */
+  reasoningTokens: number;
+  cachedWriteTokens: number;
   cap5h: number | null;
   pctOfCap: number | null;
   avgLatencyMs: number;
@@ -1117,47 +1128,151 @@ function emptyGodCosts(): GodCost[] {
   return GOD_ICON_KEYS.map(god => ({
     god, icon: god, model: godModels[god] || 'opencode-go/glm-5.2',
     requests: 0, inputTokens: 0, outputTokens: 0, cachedTokens: 0,
-    spend: 0, cap5h: null, pctOfCap: null, avgLatencyMs: 0, successRate: 0, sparkline: [],
+    spend: 0, spendRealUsd: 0, spendEstimatedUsd: 0,
+    reasoningTokens: 0, cachedWriteTokens: 0,
+    cap5h: null, pctOfCap: null, avgLatencyMs: 0, successRate: 0, sparkline: [],
   }));
 }
 
-function readRealCosts(): GodCost[] {
-  const costFile = path.join(METRICS_DIR, 'cost.jsonl');
-  const costs = emptyGodCosts();
-  const byGod: Record<string, { requests: number; input: number; output: number; cached: number; spend: number; latencies: number[]; successes: number }> = {};
-  const tickBuckets: Record<string, number[]> = {};
+/** The 5h rolling window every cost figure below aggregates over. */
+const COST_WINDOW_MS = 5 * 60 * 60 * 1000;
 
+/**
+ * #179: a cost.jsonl row is REAL when it came from the provider via a
+ * step-finish event (tool sentinel '_step-finish_' or source 'sdk-event'
+ * — the olympus-hooks.ts writers). Everything else is a heuristic
+ * per-tool ESTIMATE (source 'estimate') and must never be summed with
+ * real spend without a label.
+ */
+function isRealCostRow(ev: any): boolean {
+  return ev?.tool === '_step-finish_' || ev?.source === 'sdk-event';
+}
+
+/**
+ * Parse the cost.jsonl rows inside the rolling window. Shared by the
+ * aggregate (readRealCosts) and the per-god rows (readGodCosts) so one
+ * disk read feeds both.
+ */
+function readCostRows(windowMs: number = COST_WINDOW_MS): any[] {
+  const costFile = path.join(METRICS_DIR, 'cost.jsonl');
+  const rows: any[] = [];
   try {
-    if (!fs.existsSync(costFile)) return costs;
+    if (!fs.existsSync(costFile)) return rows;
     const raw = fs.readFileSync(costFile, 'utf-8');
-    if (!raw.trim()) return costs;
-    const fiveHrsAgo = Date.now() - 5 * 60 * 60 * 1000;
+    if (!raw.trim()) return rows;
+    const cutoff = Date.now() - windowMs;
     for (const line of raw.split('\n')) {
       if (!line.trim()) continue;
       try {
         const ev = JSON.parse(line);
         const ts = new Date(ev.ts).getTime();
-        if (ts < fiveHrsAgo) continue;
-        // Issue #25: "ecc" was a phantom god written whenever a call had no
-        // identifiable agent. Newer lines say "global"; fold the history into
-        // the same bucket so the two do not read as two different things.
-        const rawGod = typeof ev.god === 'string' ? ev.god : '';
-        const god = rawGod === 'ecc' ? 'global' : rawGod;
-        if (!god) continue;
-        if (!byGod[god]) byGod[god] = { requests: 0, input: 0, output: 0, cached: 0, spend: 0, latencies: [], successes: 0 };
-        byGod[god].requests++;
-        byGod[god].input += ev.input_tokens || 0;
-        byGod[god].output += ev.output_tokens || 0;
-        byGod[god].cached += ev.cached_tokens || 0;
-        byGod[god].spend += ev.spend_usd || 0;
-        if (ev.latency_ms) byGod[god].latencies.push(ev.latency_ms);
-        if (ev.success) byGod[god].successes++;
-        if (!tickBuckets[god]) tickBuckets[god] = new Array(12).fill(0);
-        const bucketIdx = Math.min(11, Math.floor((ts - fiveHrsAgo) / (5 * 60 * 60 * 1000 / 12)));
-        tickBuckets[god][bucketIdx] += ev.spend_usd || 0;
+        if (!Number.isFinite(ts) || ts < cutoff) continue;
+        rows.push(ev);
       } catch {}
     }
-  } catch { return costs; }
+  } catch {}
+  return rows;
+}
+
+/** #179: the aggregate over the window — real and estimated NEVER mixed. */
+export interface RealCostAggregate {
+  /** Provider-reported spend (step-finish rows) — $0.00 on free lanes,
+   *  honestly. */
+  spendRealUsd: number;
+  /** Heuristic per-tool estimates — labeled, never summed silently. */
+  spendEstimatedUsd: number;
+  /** REAL-row token usage, reasoning + cache fields included (#179). */
+  tokens: { input: number; output: number; reasoning: number; cachedRead: number; cachedWrite: number };
+  /** REAL provider steps only (#179) — never the per-tool estimates. */
+  requests: number;
+  /** The aggregation window (ms) every figure above covers. */
+  windowMs: number;
+}
+
+/**
+ * readRealCosts — #179: the aggregate cost truth over the 5h window,
+ * SPLIT by row class. REAL rows (tool '_step-finish_' / source
+ * 'sdk-event') carry the provider-reported spend; every other row is a
+ * heuristic estimate. The two figures are returned separately —
+ * consumers label both, they never sum them silently.
+ */
+function readRealCosts(rows: any[] = readCostRows()): RealCostAggregate {
+  const agg: RealCostAggregate = {
+    spendRealUsd: 0,
+    spendEstimatedUsd: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cachedRead: 0, cachedWrite: 0 },
+    requests: 0,
+    windowMs: COST_WINDOW_MS,
+  };
+  for (const ev of rows) {
+    const spend = typeof ev.spend_usd === 'number' ? ev.spend_usd : 0;
+    if (isRealCostRow(ev)) {
+      agg.requests++;
+      agg.spendRealUsd += spend;
+      agg.tokens.input += ev.input_tokens || 0;
+      agg.tokens.output += ev.output_tokens || 0;
+      agg.tokens.reasoning += ev.reasoning_tokens || 0;
+      agg.tokens.cachedRead += ev.cached_tokens || 0;
+      agg.tokens.cachedWrite += ev.cache_write_tokens || 0;
+    } else {
+      agg.spendEstimatedUsd += spend;
+    }
+  }
+  agg.spendRealUsd = Math.round(agg.spendRealUsd * 100) / 100;
+  agg.spendEstimatedUsd = Math.round(agg.spendEstimatedUsd * 100) / 100;
+  return agg;
+}
+
+/**
+ * The per-god cost rows for the dashboard (the old readRealCosts body,
+ * split per #179): requests + token columns count REAL provider steps
+ * only; spend splits into spendRealUsd / spendEstimatedUsd with `spend`
+ * kept as their sum (the total matches the sum of its parts). The
+ * sparkline stays the all-rows activity pulse it always was.
+ */
+function readGodCosts(rows: any[] = readCostRows()): GodCost[] {
+  const costs = emptyGodCosts();
+  const byGod: Record<string, {
+    requests: number; allRows: number; input: number; output: number;
+    cached: number; cacheWrite: number; reasoning: number;
+    spendReal: number; spendEstimated: number;
+    latencies: number[]; successes: number;
+  }> = {};
+  const tickBuckets: Record<string, number[]> = {};
+
+  for (const ev of rows) {
+    // Issue #25: "ecc" was a phantom god written whenever a call had no
+    // identifiable agent. Newer lines say "global"; fold the history into
+    // the same bucket so the two do not read as two different things.
+    const rawGod = typeof ev.god === 'string' ? ev.god : '';
+    const god = rawGod === 'ecc' ? 'global' : rawGod;
+    if (!god) continue;
+    if (!byGod[god]) byGod[god] = {
+      requests: 0, allRows: 0, input: 0, output: 0, cached: 0, cacheWrite: 0,
+      reasoning: 0, spendReal: 0, spendEstimated: 0, latencies: [], successes: 0,
+    };
+    const r = byGod[god];
+    const spend = typeof ev.spend_usd === 'number' ? ev.spend_usd : 0;
+    if (isRealCostRow(ev)) {
+      r.requests++;
+      r.input += ev.input_tokens || 0;
+      r.output += ev.output_tokens || 0;
+      r.cached += ev.cached_tokens || 0;
+      r.cacheWrite += ev.cache_write_tokens || 0;
+      r.reasoning += ev.reasoning_tokens || 0;
+      r.spendReal += spend;
+    } else {
+      r.spendEstimated += spend;
+    }
+    r.allRows++;
+    if (ev.latency_ms) r.latencies.push(ev.latency_ms);
+    if (ev.success) r.successes++;
+    if (!tickBuckets[god]) tickBuckets[god] = new Array(12).fill(0);
+    const ts = new Date(ev.ts).getTime();
+    const windowStart = Date.now() - COST_WINDOW_MS;
+    const bucketIdx = Math.min(11, Math.max(0, Math.floor((ts - windowStart) / (COST_WINDOW_MS / 12))));
+    tickBuckets[god][bucketIdx] += spend;
+  }
 
   for (const c of costs) {
     const r = byGod[c.god];
@@ -1166,9 +1281,16 @@ function readRealCosts(): GodCost[] {
     c.inputTokens = r.input;
     c.outputTokens = r.output;
     c.cachedTokens = r.cached;
-    c.spend = Math.round(r.spend * 100) / 100;
+    c.cachedWriteTokens = r.cacheWrite;
+    c.reasoningTokens = r.reasoning;
+    c.spendRealUsd = Math.round(r.spendReal * 100) / 100;
+    c.spendEstimatedUsd = Math.round(r.spendEstimated * 100) / 100;
+    c.spend = Math.round((r.spendReal + r.spendEstimated) * 100) / 100;
     c.avgLatencyMs = r.latencies.length ? Math.round(r.latencies.reduce((s, l) => s + l, 0) / r.latencies.length) : 0;
-    c.successRate = r.requests ? Math.round((r.successes / r.requests) * 100) / 100 : 0;
+    // Success rate rides every row (the step-finish rows never fail — the
+    // per-tool rows carry the tool success/failure signal), over its own
+    // all-rows denominator.
+    c.successRate = r.allRows ? Math.round((r.successes / r.allRows) * 100) / 100 : 0;
     c.sparkline = tickBuckets[c.god] || [];
   }
 
@@ -1184,13 +1306,17 @@ function readRealCosts(): GodCost[] {
       inputTokens: globalRow.input,
       outputTokens: globalRow.output,
       cachedTokens: globalRow.cached,
-      spend: Math.round(globalRow.spend * 100) / 100,
+      cachedWriteTokens: globalRow.cacheWrite,
+      reasoningTokens: globalRow.reasoning,
+      spendRealUsd: Math.round(globalRow.spendReal * 100) / 100,
+      spendEstimatedUsd: Math.round(globalRow.spendEstimated * 100) / 100,
+      spend: Math.round((globalRow.spendReal + globalRow.spendEstimated) * 100) / 100,
       cap5h: null, pctOfCap: 0,
       avgLatencyMs: globalRow.latencies.length
         ? Math.round(globalRow.latencies.reduce((s, l) => s + l, 0) / globalRow.latencies.length)
         : 0,
-      successRate: globalRow.requests
-        ? Math.round((globalRow.successes / globalRow.requests) * 100) / 100
+      successRate: globalRow.allRows
+        ? Math.round((globalRow.successes / globalRow.allRows) * 100) / 100
         : 0,
       sparkline: tickBuckets['global'] || [],
     });
@@ -1266,10 +1392,14 @@ export function getProviderInfo(): ProviderInfo {
   };
 }
 
-export function godCosts(): GodCost[] { return readRealCosts(); }
+export function godCosts(): GodCost[] { return readGodCosts(); }
 
 export function costSummary() {
-  const costs = godCosts();
+  // One disk read feeds both views (#179): the split aggregate and the
+  // per-god rows.
+  const rows = readCostRows();
+  const real = readRealCosts(rows);
+  const costs = readGodCosts(rows);
   const prov = getProviderInfo();
   const totalSpend = costs.reduce((s, c) => s + c.spend, 0);
   const totalReqs = costs.reduce((s, c) => s + c.requests, 0);
@@ -1282,9 +1412,23 @@ export function costSummary() {
   // and the free strategies cost nothing — their dashboards show token
   // usage instead of spend.
   const cap5hTotal = prov.name === 'opencode-go' ? 12 : null;
-  const pctOfCap = cap5hTotal != null ? Math.round((totalSpend / cap5hTotal) * 100) : null;
+  // #179 + #181: the cap tracks REAL provider-reported spend (the metered
+  // figure the step-finish rows carry) — heuristic estimates never count
+  // against the cap.
+  const pctOfCap = cap5hTotal != null ? Math.round((real.spendRealUsd / cap5hTotal) * 100) : null;
   return {
+    /** Mixed total (real + estimated) — kept for compatibility; the split
+     *  figures below are the honest display pair. */
     totalSpend: Math.round(totalSpend * 100) / 100,
+    /** #179: the split figures — Real is provider-reported spend (honestly
+     *  $0.00 on free lanes), Estimated is the heuristic per-tool figure.
+     *  Consumers show "Real $X · Est $Y", never a silent sum. */
+    totalSpendRealUsd: real.spendRealUsd,
+    totalSpendEstimatedUsd: real.spendEstimatedUsd,
+    /** #179: the real-row token aggregate incl. reasoning + cache. */
+    realTokens: real.tokens,
+    realRequests: real.requests,
+    windowMs: real.windowMs,
     totalReqs, totalInput, totalOutput, avgLatency, avgSuccess,
     cap5h: cap5hTotal, pctOfCap, activeGods: activeCosts.length, costs, provider: prov,
   };

@@ -64,7 +64,11 @@ export default function StatusBar({ health }: { health: any }) {
  const setLeftPane = useOlympus(s => s.setLeftPane);
  const focusMode = useOlympus(s => s.focusMode);
  const toggleFocusMode = useOlympus(s => s.toggleFocusMode);
- const [cost, setCost] = useState<{ totalSpend: number; totalTokens: number; provider: ProviderInfo } | null>(null);
+ // #179: the split cost pair — Real (provider-reported, honestly $0.00 on
+ // free lanes) + Estimated (heuristic per-tool figure). Never a mixed total.
+ const [cost, setCost] = useState<{
+	 realUsd: number; estimatedUsd: number; totalTokens: number; provider: ProviderInfo;
+ } | null>(null);
  const [apiConfigOpen, setApiConfigOpen] = useState(false);
  const [apiConfigsCount, setApiConfigsCount] = useState(0);
  const [winWidth, setWinWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1920);
@@ -107,9 +111,17 @@ export default function StatusBar({ health }: { health: any }) {
  }, [apiConfigOpen]);
 
  useEffect(() => {
- 	// Use cache: 'no-store' so cost reflects the latest events.
+	// Use cache: 'no-store' so cost reflects the latest events.
 	 const load = () => fetch('/api/olympus/costs', { cache: 'no-store' }).then(r => r.json()).then(d => {
-	 setCost({ totalSpend: d.totalSpend, totalTokens: (d.totalInput ?? 0) + (d.totalOutput ?? 0), provider: d.provider });
+	 // #179: prefer the real provider-reported token aggregate; the mixed
+	 // input+output totals are only the pre-split fallback.
+	 const realTok = d.realTokens ? (d.realTokens.input ?? 0) + (d.realTokens.output ?? 0) : null;
+	 setCost({
+		 realUsd: d.totalSpendRealUsd ?? d.totalSpend ?? 0,
+		 estimatedUsd: d.totalSpendEstimatedUsd ?? 0,
+		 totalTokens: realTok ?? (d.totalInput ?? 0) + (d.totalOutput ?? 0),
+		 provider: d.provider,
+	 });
 	 }).catch(() => {});
  load();
  const iv = setInterval(load, 10000);
@@ -118,7 +130,8 @@ export default function StatusBar({ health }: { health: any }) {
 
 	 const prov = cost?.provider;
 	 const isFree = prov?.isFree ?? false;
-	 const spend = cost?.totalSpend ?? 0;
+	 const realUsd = cost?.realUsd ?? 0;
+	 const estimatedUsd = cost?.estimatedUsd ?? 0;
 	 const totalTokens = cost?.totalTokens ?? 0;
  const ActiveGodIcon = fallbackGod ? GOD_ICONS[fallbackGod] : null;
 
@@ -231,10 +244,10 @@ export default function StatusBar({ health }: { health: any }) {
  >
 	 <DollarSign size={11} className={isFree ? 'text-olympus-green' : 'text-olympus-gold'} />
 	 <span className={cn('font-semibold', isFree ? 'text-olympus-green' : 'text-olympus-gold')}>
-	 {isFree ? `${(totalTokens >= 1000 ? (totalTokens / 1000).toFixed(1) + 'k' : String(totalTokens))} tok` : `$${spend.toFixed(2)}`}
+	 {isFree ? `${(totalTokens >= 1000 ? (totalTokens / 1000).toFixed(1) + 'k' : String(totalTokens))} tok` : `$${realUsd.toFixed(2)}`}
 	 </span>
-	 <span className="text-olympus-text-dim text-[10px] hidden sm:inline">
-	 {isFree && spend === 0 ? '(free)' : `· ${prov?.name ?? '-'}`}
+	 <span className="text-olympus-text-dim text-[10px] hidden sm:inline" title={estimatedUsd > 0 ? `Est. $${estimatedUsd.toFixed(2)} (heuristic) + real provider spend` : undefined}>
+	 {isFree && realUsd === 0 ? '(free)' : `· ${prov?.name ?? '-'}${estimatedUsd > 0 ? ` +~$${estimatedUsd.toFixed(2)} est` : ''}`}
 	 </span>
  </button>
  <div className="w-px h-3 bg-olympus-gold/15" />

@@ -162,12 +162,61 @@ export const OlympusV2Plugin = Plugin.define({
     const idleHandler = (v1 as any)["session.idle"];
     if (typeof eventHandler === "function" || typeof idleHandler === "function") {
       const controller = new AbortController();
+      // #180: the v2 step context — session.step.ended carries NO agent, so
+      // the bridge remembers the last agent the stream announced (the
+      // session.step.started data.agent + the message.part.updated info.agent,
+      // mirroring the app-side translator's V2StepCtx) and stamps it onto the
+      // synthesized step-finish so the cost writer attributes the REAL spend
+      // to the right god instead of dropping it to 'global'.
+      let lastStepAgent: string | null = null;
       void (async () => {
         try {
           for await (const ev of ctx.event.subscribe({ signal: controller.signal })) {
             const anyEv = ev as any;
+            if (anyEv?.type === "session.step.started") {
+              const agent = anyEv?.data?.agent;
+              if (typeof agent === "string" && agent) lastStepAgent = agent;
+            }
             if (typeof eventHandler === "function" && anyEv?.type === "message.part.updated") {
+              const info = anyEv?.properties?.info ?? anyEv?.info;
+              if (typeof info?.agent === "string" && info.agent) lastStepAgent = info.agent;
               void eventHandler({ event: anyEv });
+            }
+            // #180: THE V2 STEP-FINISH CAPTURE — the v2 runtime speaks
+            // session.step.ended {finish, cost, tokens{input,output,
+            // reasoning, cache{read,write}}}, NOT the v1 step-finish part.
+            // Without this forward, only heuristic estimates land in
+            // cost.jsonl on v2 ('cost is wrong'). The hook's cost writer
+            // receives it SYNTHESIZED as the v1 message.part.updated shape
+            // (the same wrap translateV2Event builds app-side); the raw
+            // message.part.updated path above stays intact for v1 parts.
+            if (typeof eventHandler === "function" && anyEv?.type === "session.step.ended") {
+              const d = anyEv?.data ?? {};
+              const sid = typeof d.sessionID === "string" ? d.sessionID : undefined;
+              void eventHandler({
+                event: {
+                  type: "message.part.updated",
+                  properties: {
+                    sessionID: sid,
+                    info: { agent: lastStepAgent ?? undefined, sessionID: sid },
+                    part: {
+                      type: "step-finish",
+                      cost: typeof d.cost === "number" ? d.cost : 0,
+                      tokens: {
+                        input: d.tokens?.input ?? 0,
+                        output: d.tokens?.output ?? 0,
+                        reasoning: d.tokens?.reasoning ?? 0,
+                        cache: {
+                          read: d.tokens?.cache?.read ?? d.tokens?.cache_read ?? 0,
+                          write: d.tokens?.cache?.write ?? d.tokens?.cache_write ?? 0,
+                        },
+                      },
+                      sessionID: sid,
+                      messageID: typeof d.assistantMessageID === "string" ? d.assistantMessageID : undefined,
+                    },
+                  },
+                },
+              });
             }
             if (typeof idleHandler === "function" && anyEv?.type === "session.idle") {
               void idleHandler({});
