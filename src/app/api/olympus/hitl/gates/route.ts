@@ -43,16 +43,26 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { gateId, decision, userNote } = body;
+    const { gateId, rider, userNote } = body;
+    // #204: the structured decision shape — {decision, rider}. The three UI
+    // actions (accept / reject / request-different) map onto the persisted
+    // decisions; the legacy names stay accepted.
+    const DECISION_ALIASES: Record<string, 'approve' | 'patch' | 'abort'> = {
+      accept: 'approve', approve: 'approve',
+      reject: 'abort', abort: 'abort',
+      'request-different': 'patch', request_different: 'patch', patch: 'patch',
+    };
+    const decision = DECISION_ALIASES[String(body?.decision || '')];
+    const note = typeof rider === 'string' && rider.trim() ? rider.trim() : userNote;
 
     if (!gateId || typeof gateId !== 'string') {
       return NextResponse.json({ ok: false, error: 'Missing "gateId" in body' }, { status: 400 });
     }
-    if (!['approve', 'patch', 'abort'].includes(decision)) {
-      return NextResponse.json({ ok: false, error: 'Invalid "decision". Expected "approve", "patch", or "abort".' }, { status: 400 });
+    if (!decision) {
+      return NextResponse.json({ ok: false, error: 'Invalid "decision". Expected "accept", "reject", or "request-different".' }, { status: 400 });
     }
 
-    const gate = resolveGate(gateId, decision, userNote);
+    const gate = resolveGate(gateId, decision, typeof note === 'string' ? note : undefined);
     if (!gate) {
       return NextResponse.json({ ok: false, error: `Gate "${gateId}" not found` }, { status: 404 });
     }
@@ -82,16 +92,30 @@ export async function POST(req: NextRequest) {
       } catch { /* the walk trigger never breaks the gate resolution */ }
     }
 
+    // #204: the refusal path is AUDIBLE — every resolution lands on the
+    // durable activity feed with the decision + rider, so a rejection with a
+    // reason is visible in the session/feed, not just in a toast.
+    try {
+      appendActivity({
+        god: 'system',
+        action: 'hitl-decision',
+        msg: `HITL gate ${gate.id} (${gate.phase}) ${decision}${note ? ` — “${String(note).slice(0, 300)}”` : ''}`,
+        meta: { gateId: gate.id, phase: gate.phase, decision, rider: note ?? null, sessionId: gate.sessionId },
+      });
+    } catch { /* the feed never blocks a decision */ }
+
     return NextResponse.json({
       ok: true,
       gate,
+      decision,
+      rider: note ?? null,
       message: decision === 'approve'
         ? gate.phase === 'plan-walk'
-          ? 'Gate approved — the plan walk is starting (watch any terminal or the activity feed for the hop narration).'
-          : 'Gate approved — dispatch will resume.'
+          ? 'Gate accepted — the plan walk is starting (watch any terminal or the activity feed for the hop narration).'
+          : 'Gate accepted — dispatch will resume.'
         : decision === 'patch'
-        ? 'Gate patched — dispatch will resume with your modifications.'
-        : 'Gate aborted — dispatch cancelled.',
+        ? 'Request-different recorded — dispatch will resume with your modifications.'
+        : 'Gate rejected — dispatch cancelled (the refusal path is recorded on the feed).',
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });

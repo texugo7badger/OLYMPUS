@@ -41,7 +41,7 @@ expect('detector NEGATIVE: bash mentions but does not append', checkpointWriteTa
 // ── 2. Route marker composition (content assertions) ──
 const route = readFileSync(new URL('../src/app/api/olympus/action/route.ts', import.meta.url), 'utf-8');
 expect('route: session marker composed', /const sessionMarker = `\[OLYMPUS-SESSION \$\{conversationId\}\] `;/.test(route), 'marker missing');
-expect('route: marker rides ALL turn types', /: sessionMarker \+ classificationMarker \+ promptText/.test(route), 'not wired for all types');
+expect('route: marker rides ALL turn types', /: sessionMarker \+ classificationMarker \+ (?:addressMarker \+ )?promptText/.test(route), 'not wired for all types');
 expect('route: classification marker still prompt-only', /classificationMarker = action === 'prompt'/.test(route), 'classification marker changed');
 
 // ── 3. Prompt-layer instructions ──

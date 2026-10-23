@@ -29,7 +29,7 @@ import {
   forgetConversation,
 } from '@/lib/opencode-session';
 // Dynamic input token routing via task classifier.
-import { classifyTask, classifyTurnWithInheritance, isNewTaskMarker, noQuestionsIntent, serializeClassification, type TaskClassification } from '@/lib/task-classifier';
+import { classifyTask, classifyTurnWithInheritance, isNewTaskMarker, noQuestionsIntent, serializeClassification, addressedGodFromText, type TaskClassification } from '@/lib/task-classifier';
 import { appendActivity } from '@/lib/activity-feed';
 // Issue #41: persisting an "always" grant so the next ask for the same tool
 // is settled by policy instead of by another card.
@@ -410,18 +410,24 @@ Deliverables: the project root must contain ONLY deliverable files. No planning 
 Design review: include a design-review hop as the SECOND-TO-LAST hop (god: athena, artifacts: ["design-review.json"], budgetTokens: 4096). Its prompt must tell the god to: (1) run \`node scripts/extract-page-styles.mjs <preview-url> <project-root>\` to get the REAL visual data (fonts, colors, spacing, slop signals, component quality signals — extracted from the served page, not from source alone). (2) Read the key component files. (3) Rate each dimension 0-10 (typography, color, spacing, components, hierarchy, darkTheme, content, motion). (4) Write design-review.json with {"scores":{...},"overall":N,"issues":[...],"fixInstructions":[...]}. The verify check: design-score:7.
 ${uiReferencesBlock}`
       : '';
+    // #206: the user can address a god directly (@athena / "para a Athena" /
+    // godId=athena). The addressed god's session answers the turn — Apollo
+    // stays the DEFAULT planner (no address → apollo).
+    const directGod = action === 'prompt' ? addressedGodFromText(text) : null;
+    const agent = directGod ?? 'apollo';
+    const addressMarker = directGod ? `[OLYMPUS-ADDRESS god=${directGod}] ` : '';
     const runText = unattended
-      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + plannerMarker + designMarker
-      : sessionMarker + classificationMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + plannerMarker + designMarker;
+      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + plannerMarker + designMarker
+      : sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + plannerMarker + designMarker;
 
     return streamWarm(req, {
       conversationId,
       text: runText,
-      agent: 'apollo',
+      agent,
       extraEnv: unattended
         ? { OLYMPUS_TASK_CLASSIFICATION: classificationEnv, OLYMPUS_UNATTENDED: '1' }
         : { OLYMPUS_TASK_CLASSIFICATION: classificationEnv },
-      meta: { action, node: undefined, cli: `opencode run --format json --agent apollo <text>` },
+      meta: { action, node: undefined, cli: `opencode run --format json --agent ${agent} <text>` },
       classification,
       intent: intentStage,
     });
@@ -978,7 +984,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
       const fallbackOneShot = (sessionId?: string, attempt: number = 0) => {
         // Prepend the authoritative strategy block (same as the warm path) so
         // the model never infers the strategy from model IDs.
-        const text = `${buildStrategyContextBlock()}\n\n${opts.text}`;
+        const text = `${buildStrategyContextBlock({ sessionId: opts.conversationId, userText: opts.text })}\n\n${opts.text}`;
         const args = [
           'run', '--format', 'json',
           ...(sessionId ? ['--session', sessionId] : []),

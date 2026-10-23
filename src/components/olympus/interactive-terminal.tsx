@@ -9,7 +9,7 @@ import {
   Send, Loader2, CornerDownLeft, ChevronRight,
   Zap, CheckCircle2, AlertCircle, Users, Sun, Hammer, Bird,
   Compass, Target, Wine, Flower2, Flame, Square, RefreshCw, Paperclip, type LucideIcon,
-  Landmark, Terminal as TerminalIcon, ImageIcon, Globe,
+  Landmark, Terminal as TerminalIcon, ImageIcon, Globe, X, Pencil, Palette,
 } from 'lucide-react';
 import { marked } from 'marked';
 import { useOlympus } from '@/lib/olympus-store';
@@ -30,6 +30,10 @@ import PlanPanel, { normalizeTodoEvent, type PlanItem } from './plan-panel';
 // Issue #47 — /permissions panel (list + revoke). Separate file so the
 // terminal's own surface doesn't keep growing.
 import PermissionsPanel from './permissions-panel';
+// #208 — Athena's Design Studio: reference cards, palettes, and logo
+// concepts proposed at design decision moments; a chosen proposal is saved
+// to <project>/design-decisions.jsonl.
+import DesignStudio from './design-studio';
 // Issue #44: file-touching tool frames show the shape of the change (M/A
 // badge, +/- counts, a truncated preview) instead of just naming a path.
 import { ToolFrame } from './tool-frame';
@@ -122,6 +126,22 @@ function makeConversationId(): string {
   }
 }
 
+// #210: the conversation id is PERSISTED so a restart resumes the same warm
+// session (the queue auto-posts into it — continuity, not a fresh context).
+const ACTIVE_CONVERSATION_KEY = 'olympus-active-conversation';
+function restoreConversationId(): string {
+  try {
+    if (typeof window !== 'undefined') {
+      const v = window.localStorage.getItem(ACTIVE_CONVERSATION_KEY);
+      if (v && /^[A-Za-z0-9-]{8,}$/.test(v)) return v;
+    }
+  } catch {}
+  return makeConversationId();
+}
+function persistConversationId(id: string): void {
+  try { window.localStorage.setItem(ACTIVE_CONVERSATION_KEY, id); } catch {}
+}
+
 type MessageType = 'system' | 'user' | 'response' | 'god' | 'question' | 'todo' | 'error' | 'delegation' | 'demigod' | 'tool' | 'context_request' | 'permission' | 'permission_pending' | 'thinking';
 
 /**
@@ -153,6 +173,15 @@ function toolCallTarget(toolInput: any): string {
     const s = JSON.stringify(toolInput || {});
     return s === '{}' ? 'no args' : (s.length > 80 ? `${s.slice(0, 77)}…` : s);
   } catch { return 'no args'; }
+}
+
+/** #210: a message submitted while a turn streams — visible, editable,
+ *  cancellable, and auto-posted FIFO when the run idles. Persisted per
+ *  conversation (localStorage) so an app restart keeps the queue. */
+interface QueuedMessage {
+  id: string;
+  text: string;
+  context?: string;
 }
 
 interface ChatMessage {
@@ -218,6 +247,10 @@ export default function InteractiveTerminal() {
   const [context, setContext] = useState('');
   const [showContext, setShowContext] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // #210: the chat queue (long-run companion).
+  const [queued, setQueued] = useState<QueuedMessage[]>([]);
+  // A stop() must NOT auto-post the queue (the user asked for quiet).
+  const queuePausedRef = useRef(false);
   const [awaitingAnswer, setAwaitingAnswer] = useState(false);
   const runHadText = useRef(false);
   const runHadError = useRef(false);
@@ -296,6 +329,8 @@ export default function InteractiveTerminal() {
   // top-of-component state) because `submit` reads it — see the comment
   // above `submit` about the TDZ this file already fixed once.
   const [showPermissions, setShowPermissions] = useState(false);
+  // #208 — Design Studio modal (Athena's proposal surface).
+  const [showDesignStudio, setShowDesignStudio] = useState(false);
   // Removed the terminalMode toggle. The Olympus
   // Terminal now renders ONLY the Interactive (Apollo) chat. The OpenCode
   // Chat pane and the TUI are gone from this surface. (The opencode one-shot
@@ -355,7 +390,7 @@ export default function InteractiveTerminal() {
   // The server maps it to a warm opencode session (src/lib/opencode-session.ts)
   // so every message reuses the same session — cold start happens only on
   // the first message of the app run, not per message.
-  const conversationIdRef = useRef<string>(makeConversationId());
+  const conversationIdRef = useRef<string>(restoreConversationId());
 
   const addMessage = useCallback((msg: Omit<ChatMessage, 'id' | 'ts'>) => {
     setMessages(prev => [...prev, { ...msg, id: `msg-${Date.now()}-${Math.random()}`, ts: new Date().toISOString() }]);
@@ -1090,7 +1125,21 @@ export default function InteractiveTerminal() {
       setShowPermissions(prev => !prev);
       return;
     }
-    if (!text.trim() || submitting) return;
+    if (!text.trim()) return;
+    // #210: a message typed while the run streams lands in the visible queue
+    // instead of being dropped; it auto-posts FIFO when the run idles.
+    if (submitting) {
+      setQueued(prev => [...prev, {
+        id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        text: text.trim(),
+        context: contextText?.trim() || undefined,
+      }]);
+      setInput('');
+      queuePausedRef.current = false;
+      return;
+    }
+    // A manual idle send resumes a paused queue (the user is driving again).
+    queuePausedRef.current = false;
 
     // Build the uploaded-files prefix including the file tree for any
     // extracted archives. This gives Apollo full context: which files were
@@ -1217,6 +1266,37 @@ export default function InteractiveTerminal() {
     }
   }, [submitting, addMessage, updateGodActivity, pushEvent, pushPulse, setActiveGod, handleServerEvent, uploadedFileDetails]);
 
+  // #210: queue persistence (per conversation) — hydrate on mount and write
+  // on every change. A restart resumes exactly what was pending.
+  const queueKeyFor = useCallback((id: string) => `olympus-chat-queue:${id}`, []);
+  useEffect(() => {
+    persistConversationId(conversationIdRef.current);
+    try {
+      const raw = localStorage.getItem(queueKeyFor(conversationIdRef.current));
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setQueued(parsed.filter((q: any) => q && typeof q.text === 'string' && q.text.trim())
+          .map((q: any) => ({ id: String(q.id || `q-${Math.random().toString(36).slice(2, 7)}`), text: String(q.text), context: typeof q.context === 'string' ? q.context : undefined })));
+      }
+    } catch { /* a corrupt queue is dropped, never fatal */ }
+  }, [queueKeyFor]);
+  useEffect(() => {
+    try { localStorage.setItem(queueKeyFor(conversationIdRef.current), JSON.stringify(queued)); } catch {}
+  }, [queued, queueKeyFor]);
+
+  // #210: FIFO auto-post — when the run idles (and nobody is waiting on an
+  // answer/context), the head of the queue posts to the same warm session.
+  // `queuePausedRef` keeps a user STOP from posting the rest.
+  useEffect(() => {
+    if (submitting || awaitingAnswer || awaitingContext) return;
+    if (queuePausedRef.current) return;
+    if (queued.length === 0) return;
+    const next = queued[0];
+    setQueued(prev => prev.slice(1));
+    void submit(next.text, next.context);
+  }, [submitting, awaitingAnswer, awaitingContext, queued, submit]);
+
   // DesignReviewCard onSelect handler.
   // Declared AFTER `submit` to avoid the block-scoped TDZ (submit referenced
   // before its declaration). Both handlers are consumed by <DesignReviewCard>
@@ -1315,6 +1395,8 @@ export default function InteractiveTerminal() {
     // req.signal, cancelling the warm opencode run (not just local state).
     actionAbortRef.current?.abort();
     actionAbortRef.current = null;
+    // #210: a stop is a request for quiet — do NOT auto-post the queue.
+    queuePausedRef.current = true;
     setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false);
     updateGodActivity('apollo', 'idle');
     addMessage({ type: 'system', text: 'Stopped.' });
@@ -1342,7 +1424,13 @@ export default function InteractiveTerminal() {
     actionAbortRef.current?.abort();
     actionAbortRef.current = null;
     // Fresh conversation → fresh warm opencode session on the next message.
+    // #210: the queue belonged to the old conversation — drop it (and its
+    // persisted copy) instead of leaking pending prompts into a fresh run.
+    try { localStorage.removeItem(`olympus-chat-queue:${conversationIdRef.current}`); } catch {}
+    setQueued([]);
+    queuePausedRef.current = false;
     conversationIdRef.current = makeConversationId();
+    persistConversationId(conversationIdRef.current);
     // Fix B: messages are replaced wholesale below, which drops any open
     // thinking line — keep the mirror honest or the next step_finish would
     // see a stale "still working" and never report done again.
@@ -1692,6 +1780,14 @@ export default function InteractiveTerminal() {
               <span>{todos.filter(t => t.status !== 'done').length}/{todos.length} todos</span>
             </>
           )}
+          <OlympusTooltip content="Athena's Design Studio — references, palettes, logos" side="bottom">
+            <button
+              onClick={() => setShowDesignStudio(true)}
+              className="ml-2 text-olympus-text-dim hover:text-olympus-gold transition-colors"
+            >
+              <Palette size={10} />
+            </button>
+          </OlympusTooltip>
           <OlympusTooltip content="Reset terminal (clears all messages + context)" side="bottom">
             <button
               onClick={() => setShowResetConfirm(true)}
@@ -1753,6 +1849,21 @@ export default function InteractiveTerminal() {
       {/* Issue #47 — toggled by typing /permissions. Owns its own fetch and
           revoke confirmations, so it stays out of the terminal's state. */}
       {showPermissions && <PermissionsPanel onClose={() => setShowPermissions(false)} />}
+
+      {/* #208 — Design Studio. The last user turn seeds the reference query
+          so the proposals match the task being discussed. A saved decision
+          is echoed into the chat so the transcript records the choice. */}
+      <DesignStudio
+        open={showDesignStudio}
+        project={activeProject ? { slug: activeProject.slug, name: activeProject.name } : null}
+        conversationId={conversationIdRef.current || ''}
+        query={messages.filter(m => m.type === 'user').slice(-1)[0]?.text?.slice(0, 400)}
+        onClose={() => setShowDesignStudio(false)}
+        onSaved={(record) => addMessage({
+          type: 'system',
+          text: `[DESIGN] ${record.kind} saved to ${record.project}/design-decisions.jsonl: ${record.decision?.name || record.decision?.title || record.decision?.id}`,
+        })}
+      />
 
       <div className="flex-1 min-h-0 flex">
         {/* Only the Interactive (Apollo) chat remains.
@@ -1821,6 +1932,43 @@ export default function InteractiveTerminal() {
             </div>
           )}
 
+          {/* #210: the visible queue — numbered chips, editable, cancellable. */}
+          {queued.length > 0 && (
+            <div className="shrink-0 border-t border-olympus-gold/10 bg-olympus-panel/80 px-3 py-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="text-[9px] font-mono text-olympus-text-dim shrink-0">
+                queued ({queued.length}){queuePausedRef.current ? ' · paused — send or click to resume' : ''}
+              </span>
+              {queued.map((q, i) => (
+                <span
+                  key={q.id}
+                  className="group flex items-center gap-1 max-w-[260px] rounded border border-olympus-gold/20 bg-olympus-card/70 px-1.5 py-0.5 text-[9px] font-mono text-olympus-text"
+                >
+                  <span className="text-olympus-gold/70">{i + 1}.</span>
+                  <span className="truncate">{q.text}</span>
+                  <button
+                    title="Edit (loads back into the input)"
+                    onClick={() => {
+                      setInput(q.text);
+                      if (q.context) { setContext(q.context); setShowContext(true); }
+                      setQueued(prev => prev.filter(x => x.id !== q.id));
+                      queuePausedRef.current = false;
+                    }}
+                    className="text-olympus-text-dim hover:text-olympus-gold shrink-0"
+                  >
+                    <Pencil size={9} />
+                  </button>
+                  <button
+                    title="Cancel this queued message"
+                    onClick={() => setQueued(prev => prev.filter(x => x.id !== q.id))}
+                    className="text-olympus-text-dim hover:text-olympus-red shrink-0"
+                  >
+                    <X size={9} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="shrink-0 border-t border-olympus-gold/10 bg-olympus-panel px-3 py-2 flex items-center gap-2">
             <span style={{ color: GOD_COLOR }} className="font-mono text-[12px] shrink-0">$</span>
             <input
@@ -1830,8 +1978,8 @@ export default function InteractiveTerminal() {
               onKeyDown={e => {
                 if (e.key === 'Enter' && !awaitingAnswer && !awaitingContext) submit(input, context);
               }}
-              disabled={submitting || awaitingAnswer || awaitingContext}
-              placeholder={awaitingAnswer ? 'click a choice above (or type optional context in the box under the question)...' : awaitingContext ? 'type context below (Cmd+Enter)...' : 'Ask Apollo anything...'}
+              disabled={awaitingAnswer || awaitingContext}
+              placeholder={awaitingAnswer ? 'click a choice above (or type optional context in the box under the question)...' : awaitingContext ? 'type context below (Cmd+Enter)...' : submitting ? 'Type to queue the next message (posts when this run idles)…' : 'Ask Apollo anything...'}
               className="flex-1 bg-transparent border-0 outline-none text-[12px] font-mono text-olympus-text placeholder:text-[#5A5A5A] disabled:opacity-50"
             />
             {/* Task 3 — the always-visible "ctx" toggle button is gone.
@@ -1908,14 +2056,29 @@ export default function InteractiveTerminal() {
               </button>
             </OlympusTooltip>
             {submitting ? (
-              <OlympusTooltip content="Stop generation" side="top">
-                <button
-                  onClick={stop}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-olympus-red/20 text-olympus-red hover:bg-olympus-red/30 transition-all shrink-0"
-                >
-                  <Square size={11} /> stop
-                </button>
-              </OlympusTooltip>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <OlympusTooltip content="Queue this message (posts when the run idles)" side="top">
+                  <button
+                    onClick={() => submit(input, context)}
+                    disabled={!input.trim()}
+                    className={cn(
+                      'flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono transition-all shrink-0',
+                      input.trim() ? 'bg-olympus-gold/15 ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25 cursor-pointer' : 'bg-olympus-card/50 ring-1 ring-olympus-red/10 opacity-50',
+                    )}
+                    style={input.trim() ? { color: GOD_COLOR } : { color: '#5A5A5A' }}
+                  >
+                    <Send size={11} /> queue
+                  </button>
+                </OlympusTooltip>
+                <OlympusTooltip content="Stop generation" side="top">
+                  <button
+                    onClick={stop}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-olympus-red/20 text-olympus-red hover:bg-olympus-red/30 transition-all shrink-0"
+                  >
+                    <Square size={11} /> stop
+                  </button>
+                </OlympusTooltip>
+              </div>
             ) : (
               <OlympusTooltip content={input.trim() ? 'Send to Apollo (Enter)' : 'Type something to send'} side="top">
                 {/* empty-input: keep Send icon */}

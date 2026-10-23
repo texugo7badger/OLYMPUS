@@ -38,6 +38,10 @@ export default function HitlGateToast() {
   const [gates, setGates] = useState<HitlGate[]>([]);
   const [resolving, setResolving] = useState<Set<string>>(new Set());
   const [seenGateIds, setSeenGateIds] = useState<Set<string>>(new Set());
+  // #204: the rider — an optional message that rides EVERY decision (accept,
+  // reject, or request-different). Kept per gate so two pending gates never
+  // share a note.
+  const [riders, setRiders] = useState<Record<string, string>>({});
 
   const fetchGates = useCallback(async () => {
     try {
@@ -75,25 +79,27 @@ export default function HitlGateToast() {
 
   const resolveGate = useCallback(async (gateId: string, decision: 'approve' | 'patch' | 'abort') => {
     setResolving(prev => new Set(prev).add(gateId));
+    const rider = (riders[gateId] || '').trim();
     try {
-      const note = decision === 'patch'
-        ? prompt('Enter your patch instructions (the dispatch will resume with these modifications):') || ''
-        : undefined;
+      // #204: the structured decision — {decision, rider}. `userNote` is the
+      // legacy alias the server still accepts (backward compatible).
       const r = await fetch('/api/olympus/hitl/gates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gateId, decision, userNote: note }),
+        body: JSON.stringify({ gateId, decision, rider, userNote: rider || undefined }),
       });
       const d = await r.json();
       if (!r.ok || !d.ok) {
         throw new Error(d.error || `HTTP ${r.status}`);
       }
       toast.dismiss(gateId);
-      toast.success(decision === 'approve'
+      setRiders(prev => { const n = { ...prev }; delete n[gateId]; return n; });
+      const base = String(d.message || (decision === 'approve'
         ? 'Gate approved — dispatch resuming'
         : decision === 'patch'
         ? 'Gate patched — dispatch resuming with modifications'
-        : 'Gate aborted — dispatch cancelled');
+        : 'Gate rejected — dispatch cancelled'));
+      toast.success(rider ? `${base} — “${rider}”` : base);
     } catch (e: any) {
       toast.error(`Failed to resolve gate: ${e.message}`);
     } finally {
@@ -103,7 +109,7 @@ export default function HitlGateToast() {
         return n;
       });
     }
-  }, []);
+  }, [riders]);
 
   if (gates.length === 0) return null;
 
@@ -134,6 +140,13 @@ export default function HitlGateToast() {
               {g.targetCommand && <div>Command: <code className="text-olympus-gold">{g.targetCommand}</code></div>}
             </div>
           )}
+          {/* #204: the rider — optional, rides any decision. */}
+          <input
+            value={riders[g.id] || ''}
+            onChange={(e) => setRiders(prev => ({ ...prev, [g.id]: e.target.value }))}
+            placeholder="Optional message (rides your decision)…"
+            className="w-full bg-olympus-bg/60 border border-olympus-gold/15 rounded px-2 py-1.5 text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim/50 focus:outline-none focus:border-olympus-gold/40"
+          />
           <div className="flex items-center gap-1.5 mt-1">
             <button
               onClick={() => resolveGate(g.id, 'approve')}
@@ -141,7 +154,7 @@ export default function HitlGateToast() {
               className="flex-1 flex items-center justify-center gap-1 text-[10px] font-mono px-2 py-1.5 rounded bg-olympus-green/20 text-olympus-green hover:bg-olympus-green/30 transition-colors disabled:opacity-50"
             >
               {resolving.has(g.id) ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
-              Resume
+              Accept
             </button>
             <button
               onClick={() => resolveGate(g.id, 'patch')}
@@ -149,7 +162,7 @@ export default function HitlGateToast() {
               className="flex-1 flex items-center justify-center gap-1 text-[10px] font-mono px-2 py-1.5 rounded bg-olympus-amber-soft/20 text-olympus-amber-soft hover:bg-olympus-amber-soft/30 transition-colors disabled:opacity-50"
             >
               <Edit size={11} />
-              Patch
+              Request different
             </button>
             <button
               onClick={() => resolveGate(g.id, 'abort')}
@@ -157,7 +170,7 @@ export default function HitlGateToast() {
               className="flex-1 flex items-center justify-center gap-1 text-[10px] font-mono px-2 py-1.5 rounded bg-olympus-red/20 text-olympus-red hover:bg-olympus-red/30 transition-colors disabled:opacity-50"
             >
               <X size={11} />
-              Abort
+              Reject
             </button>
           </div>
         </div>

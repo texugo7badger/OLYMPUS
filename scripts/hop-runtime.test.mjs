@@ -401,7 +401,7 @@ async function main() {
     /OLYMPUS-PLANNER/.test(routeSrc) && /dispatch-plan\.json/.test(routeSrc) && /hop-runtime/.test(routeSrc) && /the disk carries the campaign/.test(routeSrc),
     'the planner contract block is incomplete');
   expect('PL: the marker rides AFTER the prompt (the session marker still leads every turn type)',
-    /: sessionMarker \+ classificationMarker \+ promptText \+ \(plannerRagBlock \?/.test(routeSrc),
+    /: sessionMarker \+ classificationMarker \+ (?:addressMarker \+ )?promptText \+ \(plannerRagBlock \?/.test(routeSrc),
     'the composition broke the #65 marker-order pin');
 
   // ── 8. #119 (PLANO-MASTER-1 B5/F4): the contract rides INLINE — the

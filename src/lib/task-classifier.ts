@@ -141,11 +141,44 @@ const GOD_DOMAINS: Record<GodId, TaskClassification['domain']> = {
  */
 const GOD_ID_UNION = 'apollo|atlas|artemis|athena|dionysus|hephaestus|hermes|persephone|prometheus|callimachus';
 const EXPLICIT_GOD_RE = new RegExp(`\\bgod(?:Id)?\\s*[:=]\\s*["']?(${GOD_ID_UNION})\\b`, 'i');
+// #206: @god mentions — '@athena use a dark palette' addresses the god
+// directly (the prompt routes to her session, she answers in the chat).
+// Aliases are accepted too ('@hefesto', '@prometeu'), mapped below.
+const AT_GOD_RE = new RegExp(`(?:^|\\s)@(${GOD_ID_UNION}|hefesto|hefestu|hefaisto|dioniso|dionisio|persefone|prometeu|prometeo|calimaco|athenas)\\b`, 'i');
+// pt-BR/EN aliases used by the free-text redirect ("para a Athena", "com o Hefesto").
+const GOD_ALIAS_MAP: Record<string, GodId> = {
+  apollo: 'apollo', atlas: 'atlas', artemis: 'artemis',
+  athena: 'athena', athenas: 'athena',
+  dionysus: 'dionysus', dioniso: 'dionysus', dionisio: 'dionysus',
+  hephaestus: 'hephaestus', hefesto: 'hephaestus', hefestu: 'hephaestus', hefaisto: 'hephaestus',
+  hermes: 'hermes',
+  persephone: 'persephone', persefone: 'persephone',
+  prometheus: 'prometheus', prometeu: 'prometheus', prometeo: 'prometheus',
+  callimachus: 'callimachus', calimaco: 'callimachus',
+};
+
+/**
+ * #206: which god the user addressed, if any. Three forms, in precedence
+ * order: structured `godId=`/`god:`, `@god` mention, free-text redirect
+ * ("para a Athena", "with Hephaestus", "switch to Prometeus").
+ */
+export function addressedGodFromText(prompt: string): GodId | null {
+  const raw = String(prompt || '');
+  const structured = raw.match(EXPLICIT_GOD_RE);
+  if (structured) return structured[1].toLowerCase() as GodId;
+  const at = raw.match(AT_GOD_RE);
+  if (at) {
+    const name = at[1].toLowerCase();
+    return (GOD_ALIAS_MAP[name] ?? name) as GodId;
+  }
+  const free = raw.match(FREE_TEXT_REDIRECT_RE);
+  if (free) return GOD_ALIAS_MAP[free[1].toLowerCase()] ?? null;
+  return null;
+}
 
 function explicitGodAddress(prompt: string): { god: GodId; domain: TaskClassification['domain'] } | null {
-  const m = prompt.match(EXPLICIT_GOD_RE);
-  if (!m) return null;
-  const god = m[1].toLowerCase() as GodId;
+  const god = addressedGodFromText(prompt);
+  if (!god) return null;
   return { god, domain: GOD_DOMAINS[god] };
 }
 

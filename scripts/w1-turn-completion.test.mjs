@@ -333,6 +333,7 @@ async function main() {
     expect('S8: the password really rotated', stub.password === ROTATED, stub.password);
   }
 
+  server.closeAllConnections?.();
   server.close();
   if (savedPidfile !== null) fs.writeFileSync(PIDFILE, savedPidfile, 'utf-8');
   else { try { fs.unlinkSync(PIDFILE); } catch {} }
@@ -343,6 +344,9 @@ async function main() {
     process.exit(1);
   }
   console.log('w1-turn-completion: all green.');
+  // The stub SSE keepalive can outlive server.close() when a socket never
+  // fired 'close' — the suite is done; exit explicitly instead of hanging.
+  process.exit(0);
 }
 
 main().catch((err) => {

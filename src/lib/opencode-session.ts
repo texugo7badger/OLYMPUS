@@ -117,13 +117,151 @@ export function activeStrategyId(): string {
   return 'go-balanced';
 }
 
+// ─── #207: user-language adaptation ────────────────────────────────────────
+// The strategy block + god prompts were English-only, and gods answered in
+// English to Portuguese prompts (observed: plan.md mixed EN/PT). The language
+// is derived from the user's prompt, STICKY per conversation (a short
+// continuation like "s" must not reset it), and rides every strategy block as
+// a one-line law. Responses never switch to English unless the user does;
+// internal reasoning may stay English when the model requires it.
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  pt: 'Portuguese', es: 'Spanish', fr: 'French', it: 'Italian', de: 'German',
+  nl: 'Dutch', en: 'English', ru: 'Russian', uk: 'Ukrainian', el: 'Greek',
+  ar: 'Arabic', he: 'Hebrew', hi: 'Hindi', th: 'Thai', zh: 'Chinese',
+  ja: 'Japanese', ko: 'Korean', tr: 'Turkish', pl: 'Polish', sv: 'Swedish',
+};
+
+/** Marker words per Latin-script language (word-boundary scored). */
+const LANGUAGE_MARKERS: Record<string, string[]> = {
+  pt: ['não', 'nao', 'você', 'voce', 'para', 'com', 'uma', 'isso', 'fazer', 'preciso', 'quero', 'está', 'esta', 'são', 'sao', 'também', 'tambem', 'obrigado', 'obrigada', 'por favor', 'aqui', 'agora', 'depois', 'antes', 'mas', 'muito', 'bem', 'projeto', 'tela', 'mensagem', 'usuário', 'usuario', 'configuração', 'configuracao', 'arquivo', 'então', 'entao', 'porque', 'qual', 'quais', 'como', 'quando', 'onde', 'tudo', 'nada', 'sim', 'beleza', 'vamos', 'precisamos', 'funcionar', 'corrigir', 'testar', 'rodar', 'subir', 'abrir', 'fechar', 'mostrar', 'olha', 'veja', 'código', 'codigo', 'erro', 'problema', 'ajuda', 'favor'],
+  es: ['el', 'la', 'los', 'las', 'una', 'pero', 'también', 'tambien', 'usted', 'ustedes', 'porque', 'cómo', 'como', 'cuando', 'dónde', 'donde', 'todo', 'nada', 'sí', 'gracias', 'por favor', 'ahora', 'después', 'despues', 'antes', 'muy', 'bien', 'proyecto', 'pantalla', 'mensaje', 'usuario', 'configuración', 'configuracion', 'archivo', 'entonces', 'qué', 'que', 'vamos', 'hacer', 'funcionar', 'corregir', 'probar', 'abrir', 'cerrar', 'mostrar', 'mira', 'código', 'codigo', 'error', 'problema', 'ayuda'],
+  fr: ['les', 'une', 'des', 'vous', 'nous', 'avec', 'pour', 'pas', 'est', 'sont', 'dans', 'sur', 'mais', 'très', 'tres', 'merci', 'bonjour', 'salut', 'aussi', 'tout', 'rien', 'oui', 'non', 'maintenant', 'après', 'apres', 'avant', 'projet', 'écran', 'ecran', 'message', 'utilisateur', 'configuration', 'fichier', 'alors', 'pourquoi', 'comment', 'quand', 'faire', 'fonctionner', 'corriger', 'tester', 'ouvrir', 'fermer', 'montrer', 'voir', 'regarde', 'erreur', 'problème', 'probleme', 'aide'],
+  it: ['gli', 'una', 'però', 'pero', 'anche', 'lei', 'noi', 'con', 'per', 'non', 'sono', 'nel', 'sul', 'ma', 'molto', 'grazie', 'ciao', 'salve', 'tutto', 'niente', 'sì', 'adesso', 'dopo', 'prima', 'progetto', 'schermo', 'messaggio', 'utente', 'configurazione', 'file', 'allora', 'perché', 'perche', 'come', 'quando', 'dove', 'fare', 'funzionare', 'correggere', 'testare', 'aprire', 'chiudere', 'mostrare', 'vedere', 'guarda', 'errore', 'problema', 'aiuto'],
+  de: ['der', 'die', 'das', 'und', 'nicht', 'ist', 'sind', 'mit', 'für', 'fur', 'auf', 'aber', 'sehr', 'danke', 'hallo', 'auch', 'alles', 'nichts', 'ja', 'nein', 'jetzt', 'nach', 'vor', 'projekt', 'bildschirm', 'nachricht', 'benutzer', 'konfiguration', 'datei', 'dann', 'warum', 'wie', 'wann', 'wo', 'machen', 'funktionieren', 'korrigieren', 'testen', 'öffnen', 'offnen', 'schließen', 'schliessen', 'zeigen', 'sehen', 'schau', 'fehler', 'problem', 'hilfe'],
+  nl: ['het', 'een', 'niet', 'zijn', 'met', 'voor', 'maar', 'zeer', 'dank', 'hallo', 'ook', 'alles', 'niets', 'ja', 'nee', 'nu', 'na', 'project', 'scherm', 'bericht', 'gebruiker', 'configuratie', 'bestand', 'dan', 'waarom', 'hoe', 'wanneer', 'waar', 'maken', 'werken', 'corrigeren', 'testen', 'openen', 'sluiten', 'tonen', 'zien', 'kijk', 'fout', 'probleem', 'hulp'],
+  en: ['the', 'and', 'is', 'are', 'with', 'for', 'this', 'that', 'not', 'but', 'you', 'your', 'please', 'thanks', 'hello', 'also', 'all', 'nothing', 'yes', 'no', 'now', 'after', 'before', 'project', 'screen', 'message', 'user', 'configuration', 'file', 'then', 'why', 'how', 'when', 'where', 'make', 'work', 'fix', 'test', 'open', 'close', 'show', 'see', 'look', 'error', 'problem', 'help'],
+};
+
+/** Script detection for non-Latin prompts (answer in the user's language). */
+const SCRIPT_TESTS: Array<{ re: RegExp; lang: string }> = [
+  { re: /[\u3040-\u30ff]/, lang: 'ja' },       // kana
+  { re: /[\uac00-\ud7af]/, lang: 'ko' },       // hangul
+  { re: /[\u4e00-\u9fff]/, lang: 'zh' },       // CJK ideographs
+  { re: /[\u0400-\u04ff]/, lang: 'ru' },       // cyrillic
+  { re: /[\u0370-\u03ff]/, lang: 'el' },       // greek
+  { re: /[\u0600-\u06ff]/, lang: 'ar' },       // arabic
+  { re: /[\u0590-\u05ff]/, lang: 'he' },       // hebrew
+  { re: /[\u0900-\u097f]/, lang: 'hi' },       // devanagari
+  { re: /[\u0e00-\u0e7f]/, lang: 'th' },       // thai
+];
+
+/**
+ * Detect the user's language from a prompt. Returns an ISO-639-1 code or null
+ * when the signal is too weak (short continuation turns keep the sticky
+ * conversation language instead of guessing).
+ */
+export function detectUserLanguage(text: string): string | null {
+  const raw = String(text || '');
+  if (!raw.trim()) return null;
+  for (const { re, lang } of SCRIPT_TESTS) {
+    if (re.test(raw)) return lang;
+  }
+  const lower = ` ${raw.toLowerCase().replace(/[^\p{L}\s']/gu, ' ').replace(/\s+/g, ' ')} `;
+  let best: { lang: string; score: number } | null = null;
+  for (const [lang, markers] of Object.entries(LANGUAGE_MARKERS)) {
+    let score = 0;
+    for (const m of markers) {
+      if (lower.includes(` ${m} `)) score += m.includes(' ') ? 2 : 1;
+    }
+    // Strong diacritic hints.
+    if (lang === 'pt' && /[ãõçáéíóúâêô]/i.test(raw)) score += 2;
+    if (lang === 'es' && /[ñ¿¡]/i.test(raw)) score += 2;
+    if (lang === 'fr' && /[àèùêâîôûœ]/i.test(raw)) score += 1;
+    if (lang === 'de' && /[ßäöü]/i.test(raw)) score += 1;
+    if (!best || score > best.score) best = { lang, score };
+  }
+  // The threshold: two marker hits (or one + a diacritic). A single shared
+  // word ("para", "como") is noise — keep the sticky language.
+  if (!best || best.score < 2) return null;
+  return best.lang;
+}
+
+interface LanguageState { last: string | null; bySession: Record<string, string> }
+let languageState: LanguageState | null = null;
+
+function languageFile(): string {
+  return path.join(process.env.OLYMPUS_HOME || OLYMPUS_HOME, 'conversation-language.json');
+}
+
+function loadLanguageState(): LanguageState {
+  if (languageState) return languageState;
+  try {
+    const raw = JSON.parse(fs.readFileSync(languageFile(), 'utf-8'));
+    languageState = {
+      last: typeof raw?.last === 'string' ? raw.last : null,
+      bySession: raw?.bySession && typeof raw.bySession === 'object' ? raw.bySession : {},
+    };
+  } catch {
+    languageState = { last: null, bySession: {} };
+  }
+  return languageState;
+}
+
+function saveLanguageState(): void {
+  try {
+    const st = loadLanguageState();
+    fs.mkdirSync(path.dirname(languageFile()), { recursive: true });
+    fs.writeFileSync(languageFile(), JSON.stringify(st, null, 2), 'utf-8');
+  } catch { /* the language hint never breaks a turn */ }
+}
+
+/**
+ * Record the language of a user turn. Sticky: a detected language updates the
+ * conversation's record + the global last; an undetected turn (short "s",
+ * "ok", a choice click) leaves both untouched.
+ */
+export function recordUserLanguage(conversationKey: string | null | undefined, text: string): string | null {
+  const lang = detectUserLanguage(text);
+  if (!lang) return conversationLanguage(conversationKey);
+  const st = loadLanguageState();
+  st.last = lang;
+  if (conversationKey) {
+    st.bySession[conversationKey] = lang;
+    // Bound the map (the session map is capped at 50 anyway).
+    const keys = Object.keys(st.bySession);
+    if (keys.length > 200) {
+      for (const k of keys.slice(0, keys.length - 200)) delete st.bySession[k];
+    }
+  }
+  saveLanguageState();
+  return lang;
+}
+
+/** The sticky language for a conversation (falls back to the global last). */
+export function conversationLanguage(conversationKey?: string | null): string | null {
+  const st = loadLanguageState();
+  if (conversationKey && st.bySession[conversationKey]) return st.bySession[conversationKey];
+  return st.last;
+}
+
+/** The one-line LANGUAGE LAW appended to every strategy block. */
+export function languageDirective(lang: string | null): string | null {
+  if (!lang) return null;
+  const name = LANGUAGE_NAMES[lang] || lang.toUpperCase();
+  return `LANGUAGE LAW: this conversation's language is ${name} (${lang}) — ALL user-facing text (answers, summaries, questions, plan.md) must be written in ${name}; never switch to English unless the user writes English. Internal reasoning may stay English only when the model requires it.`;
+}
+
 /**
  * Compact authoritative strategy block prepended to every message sent to the
  * model. Fixes the strategy self-report: without this, the model infers the
  * strategy from model IDs + AGENTS.md and hallucinates (e.g. quoting
  * "free-nvidia-build" while on free-openrouter). Kept ≤ ~150 tokens.
+ *
+ * #207: opts carries the conversation + the raw user turn — the language is
+ * recorded (sticky) and the LANGUAGE LAW line rides every block.
  */
-export function buildStrategyContextBlock(): string {
+export function buildStrategyContextBlock(opts?: { sessionId?: string | null; userText?: string | null }): string {
   const id = activeStrategyId();
   const builtin = LLM_STRATEGIES[id as keyof typeof LLM_STRATEGIES];
   let label = id;
@@ -172,6 +310,12 @@ export function buildStrategyContextBlock(): string {
   // hand-dispatching the DAG is forbidden, and a parked walk resumes in the
   // post-run by itself.
   lines.push('EXECUTION LAW: if the active project lane carries a dispatch-plan.json, the HOP RUNTIME is the ONLY execution engine — NEVER execute hops yourself, NEVER write component code, NEVER dispatch ANY hop of the plan to ANY god via the task tool (not Atlas, not Athena, not Hephaestus — NOBODY; the 00:49 specimen dispatched hop 3 to Athena by hand and the watchdog fought the child for nine minutes). The post-run walks the plan by itself after your turn ends — you only answer, plan, or interview. If the walk is parked, the user\'s next prompt resumes it automatically.');
+  // #207: the user's language — recorded sticky from this turn's raw text.
+  const lang = opts?.userText
+    ? recordUserLanguage(opts?.sessionId ?? null, opts.userText)
+    : conversationLanguage(opts?.sessionId ?? null);
+  const directive = languageDirective(lang);
+  if (directive) lines.push(directive);
   return lines.join('\n');
 }
 
@@ -2698,13 +2842,13 @@ async function runWarmMessageAttempt(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(server.protocol === 'v2' ? {
               // v2 prompt body: {text} (the strategy block rides inline).
-              text: `${buildStrategyContextBlock()}\n\n${opts.text}`,
+              text: `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}`,
               ...(opts.agent ? { agent: opts.agent } : {}),
             } : {
               // Prepend the authoritative strategy block so the model never has
               // to infer the active strategy from model IDs (it hallucinated
               // "free-nvidia-build" / "via OpenRouter" before this existed).
-              parts: [{ type: 'text', text: `${buildStrategyContextBlock()}\n\n${opts.text}` }],
+              parts: [{ type: 'text', text: `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}` }],
               ...(opts.agent ? { agent: opts.agent } : {}),
             }),
           },
