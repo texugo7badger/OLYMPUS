@@ -227,9 +227,10 @@ async function main() {
   expect('M7: the layout injects window.__OLYMPUS_VERSION__ (the badge source of truth)',
     layoutSrc.includes('__OLYMPUS_VERSION__') && layoutSrc.includes('package.json'),
     'the badge global is never defined');
+  const versionFile = read('VERSION').trim();
   expect(`M7: the badge + package.json agree (v${pkg.version})`,
-    statusBarSrc.includes(`'${pkg.version}'`) && pkg.version === '0.0.8',
-    `package=${pkg.version} — the fallback or the stamp drifted`);
+    statusBarSrc.includes(`'${pkg.version}'`) && pkg.version === versionFile,
+    `package=${pkg.version} VERSION=${versionFile} — the fallback or the stamp drifted`);
 
   // ── G2: the atelier handoff ──────────────────────────────────────────────
   const atelierSrc = read('src/components/olympus/atelier-panel.tsx');

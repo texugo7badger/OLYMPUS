@@ -22,7 +22,7 @@ import readline from 'node:readline';
 
 const PORT = Number(process.env.OLYMPUS_APP_PORT || 3737);
 const BASE = `http://localhost:${PORT}/api/olympus/craft-apps`;
-const SERVER_INFO = { name: 'olympus-craft', version: '0.0.8' };
+const SERVER_INFO = { name: 'olympus-craft', version: '0.0.9' };
 const PROTOCOL_VERSION = '2025-06-18';
 
 async function api(path, init) {

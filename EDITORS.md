@@ -28,7 +28,7 @@ run it with `npx tsx scripts/editor-bridge.test.mjs`.
 | `olympus terminal --status` | ✅ verified | the CLI reads the token file and reports the live bridge |
 | Editor status route | ✅ verified | `GET /api/olympus/editor/status` sees the listening bridge |
 | Detection + resolution (4 editors) | ✅ verified | auto / preferred / fallback / no-editor rules |
-| VSCode-family extension build | ✅ verified | `npm run compile` → `out/extension.js`; `npm run package` → `olympus-bridge-0.0.8.vsix` (9 files) |
+| VSCode-family extension build | ✅ verified | `npm run compile` → `out/extension.js`; `npm run package` → `olympus-bridge-0.0.9.vsix` (9 files) |
 | VSCode / VSCodium / Cursor webview panels | ⚠️ unverified — none installed on this machine | honest refusal, not a green claim |
 | Zed GUI launch | ⚠️ unverified — Zed is detected on `PATH`, but a launch needs a desktop session | honest refusal |
 | Marketplace publish | ⛔ not done — no `VSCE_PAT` credential in this environment | the `.vsix` is packaged and ready |

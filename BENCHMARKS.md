@@ -2,7 +2,7 @@
 
 > How to measure OLYMPUS's performance — both in CI (golden tasks) and in real-world use (always-on opt-in recording).
 
-**Version:** v0.0.8
+**Version:** v0.0.9
 **License:** AGPL-3.0-or-later
 
 ## Two complementary systems
