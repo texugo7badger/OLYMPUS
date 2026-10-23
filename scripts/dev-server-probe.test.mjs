@@ -118,8 +118,14 @@ const check = (n, ok, d = '') => { checked++; console.log(`${ok ? 'PASS' : 'FAIL
   check('G3 the component declares effectiveUrl = status?.url (server-verified) with previewUrl only as fallback',
     /const\s+effectiveUrl\s*=\s*status\?\.url\s*(?:\|\||\?\?)\s*previewUrl/.test(src),
     'the iframe/open href must use the REACHABLE url the server proved, not the hardcoded 127.0.0.1 guess');
-  check('G3 the iframe src threads effectiveUrl (the server-verified url)', /<iframe[^>]*\ssrc=\{effectiveUrl\}/.test(src), '');
-  check('G3 the "open ↗" href threads effectiveUrl', /href=\{effectiveUrl\}/.test(src), '');
+  // #202: the frame follows a user-pinned URL first; effectiveUrl remains the
+  // probe-verified default, so the pin can never silently mask a dead server.
+  check('G3 frameUrl prefers the pinned URL and falls back to effectiveUrl',
+    /const\s+frameUrl\s*=\s*customUrl\s*\?\?\s*effectiveUrl/.test(src),
+    'the pin and the probe must compose, not replace each other');
+  check('G3 the iframe src threads frameUrl (pinned ?? server-verified)',
+    /<iframe[^>]*\ssrc=\{frameUrl\}/.test(src), '');
+  check('G3 the "open ↗" href threads frameUrl', /href=\{frameUrl\}/.test(src), '');
 
   const route = readFileSync(ROUTE, 'utf-8');
   check('G3 the route uses probeDevServer (the shared dual-stack probe, not a private TCP probe)', /probeDevServer\(/.test(route) && !/function tcpProbe/.test(route), '');
