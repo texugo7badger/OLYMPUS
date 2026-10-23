@@ -87,6 +87,8 @@ import {
 } from "./lib/instinct-mutations.js";
 // MCP API key gate.
 import { isMcpApiKeyConfigured, mcpGateErrorMessage } from "./lib/mcp-gate.js";
+// #198 — OriginKit free-tier budget (10 fetches/day, honest refusal at 0).
+import { consumeOriginkitFetch, isOriginkitFetchTool } from "./lib/originkit-budget.js";
 import { rememberClassificationId, getClassificationId } from "./lib/classification-context.js";
 import instinctQueryTool from "./tools/instinct-query.js";
 import subAgentInstinctQueryTool from "./tools/sub-agent-instinct-query.js";
@@ -928,6 +930,17 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           const msg = mcpGateErrorMessage(serverName, gate.missing);
           log("warn", `[Olympus] BLOCKED MCP call — ${msg}`);
           return { approved: false, reason: msg };
+        }
+        // #198 — the OriginKit free key allows 10 fetches/day. Count every
+        // fetch-shaped call; the 11th refuses HERE, synchronously, with the
+        // reset time. Browsing/listing stays free.
+        if (serverName === "originkit" && isOriginkitFetchTool(event.tool)) {
+          const consumed = consumeOriginkitFetch();
+          if (!consumed.ok) {
+            log("warn", `[Olympus] BLOCKED Originkit fetch — ${consumed.error}`);
+            return { approved: false, reason: consumed.error };
+          }
+          log("info", `[Olympus] Originkit fetch ${consumed.budget.used}/${consumed.budget.limit} today (${consumed.budget.remaining} left)`);
         }
       }
 

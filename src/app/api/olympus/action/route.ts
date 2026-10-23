@@ -14,7 +14,7 @@ import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/op
 import { probeLane } from '@/lib/lane-probe';
 import { reconcileProjectPath } from '@/lib/project-context';
 import { composePlannerRag } from '@/lib/rag-inject';
-import { UI_REFERENCES_MARKER_BLOCK } from '@/lib/ui-references';
+import { uiReferencesMarkerBlock } from '@/lib/ui-references';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
 // the running server + session (no cold start, context retained).
@@ -391,7 +391,7 @@ export async function POST(req: NextRequest) {
     // marker (bounded — the gods draw from REAL patterns, never invent
     // generic layouts; the full catalog lives in the Craft Apps pane).
     const uiReferencesBlock = action === 'prompt' && classification.needsPlanning
-      ? `\n${UI_REFERENCES_MARKER_BLOCK}\n`
+      ? `\n${uiReferencesMarkerBlock()}\n`
       : '';
     // #DESIGN-INTELLIGENCE D1: the [OLYMPUS-DESIGN] marker — the visual
     // quality directives that make the output DESIGNED, not AI-slop.

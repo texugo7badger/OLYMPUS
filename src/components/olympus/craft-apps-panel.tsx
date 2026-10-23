@@ -98,6 +98,9 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const [uiRefs, setUiRefs] = useState<UiRef[]>([]);
   const [refSearch, setRefSearch] = useState('');
   const [refView, setRefView] = useState<UiRef | null>(null);
+  // #198 — the OriginKit free-tier budget (10 fetches/day), surfaced in the
+  // References tab so exhaustion never looks like a broken lane.
+  const [originkitBudget, setOriginkitBudget] = useState<{ limit: number; remaining: number; exhausted: boolean; resetAt: string } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async (check = false) => {
@@ -132,6 +135,23 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
     const t = setTimeout(() => loadRefs(refSearch), 350);
     return () => clearTimeout(t);
   }, [refSearch, loadRefs]);
+
+  // #198 — poll the budget while the References tab is open (a god may fetch
+  // while the user watches; the count stays honest).
+  useEffect(() => {
+    if (tab !== 'references') return;
+    let alive = true;
+    const pull = async () => {
+      try {
+        const r = await fetch('/api/olympus/originkit-budget', { cache: 'no-store' });
+        const d = await r.json();
+        if (alive && d?.budget) setOriginkitBudget(d.budget);
+      } catch { /* the chip stays on its last honest value */ }
+    };
+    void pull();
+    const iv = setInterval(pull, 15_000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [tab]);
 
   // The install/update job poll — one interval while any job is live.
   useEffect(() => {
@@ -312,7 +332,25 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                     placeholder="search references — black hole, smoky text, carousel, tooltip…"
                     className="w-full bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50"
                   />
-                  <p className="text-[8px] font-mono text-[#5A5A5A] mt-1">OriginKit (free key MCP) + Skiper UI (shadcn registry) — curated inspiration; the [OLYMPUS-DESIGN] marker carries the marquee list to the gods.</p>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <p className="text-[8px] font-mono text-[#5A5A5A]">OriginKit (free key MCP) + Skiper UI (shadcn registry) — curated inspiration; the [OLYMPUS-DESIGN] marker carries the marquee list to the gods.</p>
+                    {originkitBudget && (
+                      <span
+                        title={originkitBudget.exhausted
+                          ? `OriginKit free key exhausted — resets ${new Date(originkitBudget.resetAt).toLocaleString('en-US', { hour12: false })}`
+                          : `Resets ${new Date(originkitBudget.resetAt).toLocaleString('en-US', { hour12: false })}`}
+                        className={cn(
+                          'text-[8px] font-mono px-1.5 py-0.5 rounded ring-1 shrink-0 whitespace-nowrap',
+                          originkitBudget.exhausted
+                            ? 'text-olympus-red bg-olympus-red/10 ring-olympus-red/25'
+                            : 'text-olympus-green bg-olympus-green/10 ring-olympus-green/25',
+                        )}
+                      >
+                        originkit: {originkitBudget.remaining}/{originkitBudget.limit} fetches left today
+                        {originkitBudget.exhausted && ` — resets ${new Date(originkitBudget.resetAt).toLocaleTimeString('en-US', { hour12: false })}`}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scroll p-3">
                   <div className="grid grid-cols-2 xl:grid-cols-3 gap-2">

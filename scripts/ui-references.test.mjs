@@ -45,7 +45,7 @@ async function main() {
   // ── J2: the marker injection ──────────────────────────────────────────────
   const routeSrc = read('src/app/api/olympus/action/route.ts');
   expect('J2: the [OLYMPUS-DESIGN] marker carries the UI-REFERENCES block',
-    routeSrc.includes('UI_REFERENCES_MARKER_BLOCK') && routeSrc.includes('uiReferencesBlock'),
+    routeSrc.includes('uiReferencesMarkerBlock') && routeSrc.includes('uiReferencesBlock'),
     'the design marker never mentions the references');
   expect('J2: the injection rides the same gate (architectural prompts only)',
     /uiReferencesBlock = action === 'prompt' && classification\.needsPlanning/.test(routeSrc),

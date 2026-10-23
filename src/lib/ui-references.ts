@@ -20,6 +20,8 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
+import { readOriginkitBudget, formatOriginkitReset } from '@/lib/originkit-budget';
+
 export type UiRefLibrary = 'originkit' | 'skiper';
 
 export interface UiReference {
@@ -102,3 +104,14 @@ export const UI_REFERENCES_MARKER_BLOCK = [
   'motion/reveal: image-reveal (skiper) · pixel-reveal · star-burst | text: smoky-text · text-morph · weight-hover | interactive: black-hole · fluid-trail · kinetic-grid | gallery: spiral-images · coverflow-carousel · swipe-stack | microcopy: vercel-tooltip (skiper) · link-preview | surfaces: dynamic-island (skiper).',
   'The full catalog: the Craft Apps pane > References tab. OriginKit source: the originkit MCP (ORIGINKIT_API_KEY, free); Skiper: npx shadcn add @skiper-ui/<id> (free ids; premium = paid upstream — link the demo, never copy paid source).',
 ].join(' ');
+
+/** #198 — the [OLYMPUS-DESIGN] references block with the LIVE OriginKit
+ *  budget. The free key allows 10 fetches/day; a god that knows the count
+ *  picks the Skiper lane instead of hanging on a silent exhaustion. */
+export function uiReferencesMarkerBlock(now?: Date): string {
+  const b = readOriginkitBudget({ now });
+  const line = b.exhausted
+    ? `OriginKit budget: 0/${b.limit} fetches left today — EXHAUSTED until ${formatOriginkitReset(b.resetAt)}. Use the Skiper shadcn lane or the demo URL instead; NEVER retry a refused fetch.`
+    : `OriginKit budget: ${b.remaining}/${b.limit} fetches left today (resets at local midnight, ${formatOriginkitReset(b.resetAt)}). A refused fetch means the free key is exhausted — switch to the Skiper shadcn lane or the demo URL, never hang or retry.`;
+  return `${UI_REFERENCES_MARKER_BLOCK} ${line}`;
+}
