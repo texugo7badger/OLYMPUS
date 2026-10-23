@@ -64,20 +64,21 @@ const ROOT = path.resolve(__dirname, '..');
 
 const GODS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus',
   'hermes', 'persephone', 'prometheus', 'callimachus'];
-// The 2026-10-19 rotation: nvidia-step RETIRED (its anchor died from the
-// catalogue — #129 closed). The REQUIRED families are the four live ones;
-// a stale nvidia-step entry in an old config is tolerated (never required).
-const FAMILIES = ['nvidia-glm', 'nvidia-google', 'nvidia-meta', 'nvidia-openai'];
+// The 2026-10-23 rotation (#191): nvidia-google RETIRED (gemma-4-31b-it
+// died — 20s timeouts) and the NEW volume lane is minimaxai/minimax-m3.1-
+// flash (200 @ 513-2630ms live). The REQUIRED families are the four live
+// ones; stale nvidia-google/nvidia-step entries are tolerated (never
+// required).
+const FAMILIES = ['nvidia-glm', 'nvidia-minimaxai', 'nvidia-meta', 'nvidia-openai'];
 // The honest windows (live model cards + the 2026-10-16 chat probes:
 // glm-5.3 200, gemma-4-31b-it 200, gpt-oss-20b 200 (the rotation), muse-glimmer-30b
 // 200, gpt-oss-20b 200; kimi-k3 410 end-of-life, glm-5.3-flash 30s
 // timeout, deepseek-v4.1-flash dead — none inflated, none assumed).
 const HONEST_CONTEXT = {
   'z-ai/glm-5.3': 1000000,
-  'google/gemma-4-31b-it': 262144,
+  'minimaxai/minimax-m3.1-flash': 131072, // designed default (the endpoint publishes no window)
   'openai/gpt-oss-20b': 131072,
   'meta/muse-glimmer-30b': 131072,
-  'openai/gpt-oss-20b': 131072,
 };
 const FLOOR_OUTPUT = 8192;
 // #MOUTH-REVISION (the 06:15/06:26 specimens): the 16384 mouth starved BOTH
@@ -91,10 +92,9 @@ const REASONING_OUTPUT = 32768;
 const VOLUME_OUTPUT = 16384;
 const OUTPUT_BY_LANE = {
   'z-ai/glm-5.3': REASONING_OUTPUT,
-  'openai/gpt-oss-20b': 16384,
-  'google/gemma-4-31b-it': VOLUME_OUTPUT,
-  'meta/muse-glimmer-30b': VOLUME_OUTPUT,
   'openai/gpt-oss-20b': VOLUME_OUTPUT,
+  'minimaxai/minimax-m3.1-flash': VOLUME_OUTPUT,
+  'meta/muse-glimmer-30b': VOLUME_OUTPUT,
 };
 const TARGET_OUTPUT = REASONING_OUTPUT;
 
@@ -113,7 +113,7 @@ function read(p) {
 // Values are 'provider/model' ids — the character class covers letters,
 // digits, '.', ':', '/', '-', '_'. Family prefixes (nvidia-glm etc.) are
 // matched BEFORE the plain `nvidia` (ordered alternation).
-const PROVIDER_ALT = 'opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia-google|nvidia-step|nvidia-openai|nvidia';
+const PROVIDER_ALT = 'opencode-go|opencode|groq|openrouter|nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia-minimaxai|nvidia-google|nvidia-step|nvidia-openai|nvidia';
 function extractGods(block) {
   const gods = {};
   const re = new RegExp(`([a-z]+):\\s*['"]((${PROVIDER_ALT})\\/[a-z0-9._:/-]+)['"]`, 'g');
@@ -152,7 +152,7 @@ const dlgGods = extractGods(dlgBlockMatch[1]);
 // The live-ids snapshot (chat-probe-verified 2026-10-16 — every id was sent
 // a real completion, not merely catalog-listed; the /models catalog carries
 // 404-dead entries, only the probe tells the truth).
-const liveIds = JSON.parse(read(path.join(ROOT, 'reports/gap-1/s3/nvidia-live-ids-2026-10-16.json')));
+const liveIds = JSON.parse(read(path.join(ROOT, 'scripts/fixtures/nvidia-live-ids-2026-10-23.json')));
 
 // The generator tables (import the apply module — same pattern as
 // budget-guard.test.mjs).
@@ -194,8 +194,8 @@ check('THE HEAVY THREE: athena/hephaestus NEVER on apollo\'s anchor + the heavy 
   `entry-lane sharing: ${heavyOffenders.join(', ') || 'none'}; pools=${[...heavyPools].join(', ')}`);
 
 // --- 4. THE VOLUME LANE: callimachus + vault + small on the fast lane --------
-const flash = 'nvidia-google/google/gemma-4-31b-it';
-check('THE VOLUME LANE: callimachus on the fast lane (google/gemma-4-31b-it)',
+const flash = 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash';
+check('THE VOLUME LANE: callimachus on the fast lane (minimax-m3.1-flash)',
   canonicalGods.callimachus === flash, `callimachus=${canonicalGods.callimachus}`);
 check('THE VOLUME LANE: vaultLlm on the fast lane',
   vaultLlm === flash, `vaultLlm=${vaultLlm}`);
@@ -304,8 +304,7 @@ check('#93: the prose class is LINTED (check-strategy-sync carries the GO-CARD-P
 // The family -> vendor-prefix map for the 2026-10-16 five-family lane set.
 const FAMILY_VENDOR_PREFIX = {
   'nvidia-glm': 'z-ai/',
-  'nvidia-google': 'google/',
-  'nvidia-step': 'stepfun-ai/',
+  'nvidia-minimaxai': 'minimaxai/',
   'nvidia-meta': 'meta/',
   'nvidia-openai': 'openai/',
 };
@@ -329,14 +328,13 @@ check('THE GENERATOR: every table lane sized >= the #76 floor (8192)',
   underFloor.length === 0, `under-floor: ${underFloor.map(([id, l]) => `${id}=${l.output}`).join(', ')}`);
 
 // --- 9. THE PROVIDER SPLIT: per-family entries, per-family subsets ----------
-check('THE PROVIDER SPLIT: all five family entries defined in the generator',
+check('THE PROVIDER SPLIT: all four family entries defined in the generator',
   !!familyProviders && FAMILIES.every(f => familyProviders[f]),
   `NVIDIA_FAMILY_PROVIDERS keys: ${familyProviders ? Object.keys(familyProviders).join(', ') : '(absent)'}`);
 if (familyProviders) {
   const EXPECTED_MODELS = {
     'nvidia-glm': ['z-ai/glm-5.3'],
-    'nvidia-google': ['google/gemma-4-31b-it'],
-    'nvidia-step': [],  // the 2026-10-19 rotation: step-5 died — the family may be absent
+    'nvidia-minimaxai': ['minimaxai/minimax-m3.1-flash'],
     'nvidia-meta': ['meta/muse-glimmer-30b'],
     'nvidia-openai': ['openai/gpt-oss-20b'],
   };

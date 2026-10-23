@@ -110,10 +110,10 @@ const DEFAULT_CLASSES: Record<string, string> = {
   atlas: 'opencode-go/hy3',
   artemis: 'opencode-go/glm-5.3-flash',
   athena: 'opencode-go/qwen3.7-plus',
-  dionysus: 'opencode-go/glm-5.3-flash',
+  dionysus: 'opencode-go/deepseek-v4.1-flash',
   hephaestus: 'opencode-go/kimi-k2.7-code',
   hermes: 'opencode-go/kimi-k2.7-code',
-  persephone: 'opencode-go/qwen3.7-plus',
+  persephone: 'opencode-go/deepseek-v4.1-flash',
   prometheus: 'opencode-go/minimax-m3',
   callimachus: 'opencode-go/glm-5.3-flash',
 };
@@ -224,10 +224,8 @@ const ALL_CLASSES = [
   'openrouter/cohere/north-mini-code:free',
   'openrouter/thinkingmachines/inkling:free',
   'openrouter/thinkingmachines/inkling-small:free',
-  'openrouter/google/gemma-4-31b-it:free',
-  'openrouter/google/gemma-4-26b-a4b-it:free',
-  'openrouter/poolside/laguna-s-2.1:free',
-  'openrouter/poolside/laguna-xs-2.1:free',
+  // #190/#192: the GO free beam flagship (no OpenRouter free beam exists).
+  'opencode-go/beam-free',
   // NVIDIA Build free endpoints — THE DISTRIBUTED PANTHEON's anchor lanes
   // (#106, the 2026-10-16 rotation): family-prefixed ids, one client pool
   // per family (nvidia-glm / nvidia-google / nvidia-step / nvidia-meta /
@@ -237,8 +235,7 @@ const ALL_CLASSES = [
   // / gpt-oss-20b all 200; glm-5.3-flash, kimi-k3, deepseek-v4.1-flash
   // dead — removed).
   'nvidia-glm/z-ai/glm-5.3',
-  'nvidia-google/google/gemma-4-31b-it',
-  'nvidia-step/stepfun-ai/step-5-preview',
+  'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
   'nvidia-meta/meta/muse-glimmer-30b',
   'nvidia-openai/openai/gpt-oss-20b',
 ];
@@ -273,23 +270,23 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     hephaestus: 'opencode-go/kimi-k2.7-code',
     athena: 'opencode-go/qwen3.7-plus',
     artemis: 'opencode-go/glm-5.3-flash',
-    dionysus: 'opencode-go/glm-5.3-flash',
+    dionysus: 'opencode-go/deepseek-v4.1-flash',
     hermes: 'opencode-go/kimi-k2.7-code',
-    persephone: 'opencode-go/qwen3.7-plus',
+    persephone: 'opencode-go/deepseek-v4.1-flash',
     prometheus: 'opencode-go/minimax-m3',
     callimachus: 'opencode-go/glm-5.3-flash',
   },
   'go-budget': {
     apollo: 'opencode-go/glm-5.3-flash',
     atlas: 'opencode-go/hy3',
-    artemis: 'opencode-go/glm-5.3-flash',
-    athena: 'opencode-go/glm-5.3-flash',
-    dionysus: 'opencode-go/glm-5.3-flash',
-    hephaestus: 'opencode-go/glm-5.3-flash',
-    hermes: 'opencode-go/glm-5.3-flash',
-    persephone: 'opencode-go/glm-5.3-flash',
-    prometheus: 'opencode-go/glm-5.3-flash',
-    callimachus: 'opencode-go/glm-5.3-flash',
+    artemis: 'opencode-go/deepseek-v4.1-flash',
+    athena: 'opencode-go/deepseek-v4.1-flash',
+    dionysus: 'opencode-go/deepseek-v4.1-flash',
+    hephaestus: 'opencode-go/deepseek-v4.1-flash',
+    hermes: 'opencode-go/deepseek-v4.1-flash',
+    persephone: 'opencode-go/deepseek-v4.1-flash',
+    prometheus: 'opencode-go/deepseek-v4.1-flash',
+    callimachus: 'opencode-go/deepseek-v4.1-flash',
   },
   // Zen — full 128-agent shape on OpenCode Zen (pay-as-you-go). Models
   // use the opencode/<id> prefix (distinct from GO's opencode-go/<id>).
@@ -332,16 +329,17 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     callimachus: 'opencode/claude-haiku-4-5',
   },
   'free-big-pickle': {
-    apollo: 'nvidia-glm/z-ai/glm-5.3',
-    atlas: 'nvidia-glm/z-ai/glm-5.3',
-    artemis: 'nvidia-glm/z-ai/glm-5.3',
-    athena: 'nvidia-glm/z-ai/glm-5.3',
-    dionysus: 'nvidia-glm/z-ai/glm-5.3',
-    hephaestus: 'nvidia-glm/z-ai/glm-5.3',
-    hermes: 'nvidia-glm/z-ai/glm-5.3',
-    persephone: 'nvidia-glm/z-ai/glm-5.3',
-    prometheus: 'nvidia-glm/z-ai/glm-5.3',
-    callimachus: 'nvidia-glm/z-ai/glm-5.3',
+    // #190: the Beam 1.0 flagship (GO free promotional model).
+    apollo: 'opencode-go/beam-free',
+    atlas: 'opencode-go/beam-free',
+    artemis: 'opencode-go/beam-free',
+    athena: 'opencode-go/beam-free',
+    dionysus: 'opencode-go/beam-free',
+    hephaestus: 'opencode-go/beam-free',
+    hermes: 'opencode-go/beam-free',
+    persephone: 'opencode-go/beam-free',
+    prometheus: 'opencode-go/beam-free',
+    callimachus: 'opencode-go/beam-free',
   },
   'free-openrouter': {
     // The free-tier planner clause: the planner stays sacred — SERVABLE. The nvidia-glm lane stalls first-byte on large prompts 4/4 (#129); the north-mini reasoner carries it.
@@ -358,7 +356,7 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
   },
   'free-nvidia-build': {
     apollo: 'nvidia-glm/z-ai/glm-5.3',
-    atlas: 'nvidia-google/google/gemma-4-31b-it',
+    atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
     artemis: 'nvidia-meta/meta/muse-glimmer-30b',
     athena: 'nvidia-openai/openai/gpt-oss-20b',
     dionysus: 'nvidia-glm/z-ai/glm-5.3',
@@ -366,7 +364,7 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     hermes: 'nvidia-meta/meta/muse-glimmer-30b',
     persephone: 'nvidia-glm/z-ai/glm-5.3',
     prometheus: 'nvidia-openai/openai/gpt-oss-20b',
-    callimachus: 'nvidia-google/google/gemma-4-31b-it',
+    callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
   },
 };
 

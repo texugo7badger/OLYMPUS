@@ -167,6 +167,7 @@ if (drift) {
 // id would NOT be caught. This matches the original checker's behavior.
 
 const HOOKS_PATH = path.join(ROOT, '.opencode', 'olympus', 'olympus-hooks.ts');
+const PRICING_PATH = path.join(ROOT, 'src', 'lib', 'model-pricing.ts');
 const OLYMPUS_TS_PATH = path.join(ROOT, 'src', 'lib', 'olympus.ts');
 const ROUTE_TS_PATH = path.join(ROOT, 'src', 'app', 'api', 'olympus', 'providers', 'gods', 'route.ts');
 const DIALOG_TSX_PATH = path.join(ROOT, 'src', 'components', 'olympus', 'settings-dialog.tsx');
@@ -239,20 +240,23 @@ function extractDefaultPairs(content, marker, field, label) {
 }
 
 // Pricing coverage: every PAID model used by the strategies (opencode-go/,
-// opencode/) must have a MODEL_PRICING_USD_PER_1M entry so the Cost
-// Dashboard never reports $0. Free-tier models (openrouter/, nvidia/) have
-// no per-token price and are excluded.
-function checkPricingCoverage(hooksContent) {
-  if (hooksContent === null) fail('pricing check: olympus-hooks.ts missing');
-  const start = hooksContent.indexOf('MODEL_PRICING_USD_PER_1M');
-  if (start === -1) fail('pricing check: MODEL_PRICING_USD_PER_1M not found in olympus-hooks.ts');
-  const end = hooksContent.indexOf('\n};', start);
-  const region = hooksContent.slice(start, end === -1 ? undefined : end);
+// opencode/) must have a FALLBACK_PRICING_USD_PER_1M entry so the Cost
+// Dashboard never reports $0 offline. The live catalog is the primary
+// source (#181); the pinned table in src/lib/model-pricing.ts is the
+// offline fallback. Free-tier models (openrouter/, nvidia/) have no
+// per-token price and are excluded.
+function checkPricingCoverage(pricingContent) {
+  if (pricingContent === null) fail('pricing check: model-pricing.ts missing');
+  const start = pricingContent.indexOf('FALLBACK_PRICING_USD_PER_1M');
+  if (start === -1) fail('pricing check: FALLBACK_PRICING_USD_PER_1M not found in model-pricing.ts');
+  const end = pricingContent.indexOf('\n};', start);
+  const region = pricingContent.slice(start, end === -1 ? undefined : end);
   const priced = new Set();
-  const priceRe = /"(opencode-go|opencode)\/[a-z0-9._:/-]+":\s*\{/g;
+  const priceRe = /['"](opencode-go|opencode)\/[a-z0-9._:/-]+['"]\s*:\s*\{/g;
   let m;
   while ((m = priceRe.exec(region)) !== null) {
-    priced.add(m[0].slice(1, m[0].indexOf('"', 1)));
+    const q = m[0][0];
+    priced.add(m[0].slice(1, m[0].indexOf(q, 1)));
   }
   const missing = new Set();
   for (const strat of Object.keys(msStrategiesPrefixed)) {
@@ -336,10 +340,10 @@ for (const god of allGods) {
 }
 
 // 6. Pricing coverage (Cost Dashboard never reports $0 for paid models)
-const missingPrices = checkPricingCoverage(hooks);
+const missingPrices = checkPricingCoverage(readOrNull(PRICING_PATH));
 if (missingPrices.size > 0) {
   for (const item of [...missingPrices].sort()) {
-    console.error(`  DRIFT  pricing: no MODEL_PRICING_USD_PER_1M entry for ${item}`);
+    console.error(`  DRIFT  pricing: no FALLBACK_PRICING_USD_PER_1M entry for ${item}`);
   }
   mirrorDrift = true;
 }

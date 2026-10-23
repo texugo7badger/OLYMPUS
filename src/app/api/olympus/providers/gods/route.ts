@@ -51,8 +51,8 @@ const GOD_META: Record<string, { icon: string; default_class: string }> = {
   athena:      { icon: 'athena',     default_class: 'opencode-go/qwen3.7-plus' },
   hermes:      { icon: 'hermes',     default_class: 'opencode-go/kimi-k2.7-code' },
   artemis:     { icon: 'artemis',    default_class: 'opencode-go/glm-5.3-flash' },
-  dionysus:    { icon: 'dionysus',   default_class: 'opencode-go/glm-5.3-flash' },
-  persephone:  { icon: 'persephone', default_class: 'opencode-go/qwen3.7-plus' },
+  dionysus:    { icon: 'dionysus',   default_class: 'opencode-go/deepseek-v4.1-flash' },
+  persephone:  { icon: 'persephone', default_class: 'opencode-go/deepseek-v4.1-flash' },
   prometheus:  { icon: 'prometheus', default_class: 'opencode-go/minimax-m3' },
   callimachus: { icon: 'callimachus', default_class: 'opencode-go/glm-5.3-flash' },
 };
