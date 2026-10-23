@@ -53,14 +53,14 @@ const OLYMPUS_TOOLS = [
 // #106: the family lanes (nvidia-glm/…) validate against the base `nvidia`
 // catalogue (the preflight's family remap) — the stub carries the bare ids.
 const STUB_CATALOGUE = {
-  // Mirrors the LIVE chat-probe-verified NVIDIA catalogue (2026-10-16 —
-  // the 2026-10-16 rotation: glm-5.3, gemma-4-31b-it, step-5-preview,
-  // muse-glimmer-30b, gpt-oss-20b all 200; glm-5.3-flash / kimi-k3 /
-  // deepseek-v4.1-flash dead; nemotron banned). The fixture must match
-  // reality or every apply fails its own L4 preflight.
+  // Mirrors the LIVE chat-probe-verified NVIDIA catalogue (2026-10-23 —
+  // the 2026-10-23 rotation: glm-5.3, minimax-m3.1-flash, muse-glimmer-30b,
+  // gpt-oss-20b all live; gemma-4-31b-it dead (20s timeouts); glm-5.3-flash /
+  // kimi-k3 / deepseek-v4.1-flash dead; nemotron banned). The fixture must
+  // match reality or every apply fails its own L4 preflight.
   nvidia: [
     'nvidia/z-ai/glm-5.3',
-    'nvidia/google/gemma-4-31b-it',
+    'nvidia/minimaxai/minimax-m3.1-flash',
     'nvidia/meta/muse-glimmer-30b',
     'nvidia/openai/gpt-oss-20b',
   ],
@@ -160,7 +160,7 @@ function makeHome() {
   // fixture: the old concentration logic parked apollo+atlas on exactly
   // this id (the #106 defect). The new doctrine must leave the pinned map
   // untouched, the fake #1 appearing NOWHERE in the generated config.
-  // `all` carries the five 2026-10-16 anchors (chat-probe-verified live)
+  // `all` carries the four 2026-10-23 anchors (chat-probe-verified live)
   // so the availability check verifies green (the retired-anchor
   // loud-failure fixture G3 plants its own stub CATALOGUE at the lane —
   // the refresh file here stays honest).
@@ -176,7 +176,7 @@ function makeHome() {
       // the apply-side availability check tests a fantasy.
       all: [
         { id: 'nvidia/z-ai/glm-5.3', rawId: 'z-ai/glm-5.3', context: 1000000, score: 99 },
-        { id: 'nvidia/google/gemma-4-31b-it', rawId: 'google/gemma-4-31b-it', context: 262144, score: 98 },
+        { id: 'nvidia/minimaxai/minimax-m3.1-flash', rawId: 'minimaxai/minimax-m3.1-flash', context: 131072, score: 98 },
         { id: 'nvidia/meta/muse-glimmer-30b', rawId: 'meta/muse-glimmer-30b', context: 131072, score: 96 },
         { id: 'nvidia/openai/gpt-oss-20b', rawId: 'openai/gpt-oss-20b', context: 131072, score: 95 },
       ],
@@ -230,12 +230,11 @@ mkdirSync(WORK, { recursive: true });
       if (p !== core) { promptsOk = false; promptsDetail = `${g} prompt != canonical core (len ${p.length} vs ${core.length})`; break; }
     }
     check('G1 L1: all 10 god prompts are the real canonical cores (inlined, ≤1000 chars)', promptsOk, promptsDetail);
-    // Free shape: demigods removed, plugin preset (free-nvidia-build strips
-    // the two cache plugins — documented provider-shape behavior), single
-    // instruction.
+    // Free shape: demigods removed, plugin preset (the cache plugins are
+    // gone — v2 caches natively; #188/#189), single instruction.
     check('G1 shape: only the 10 gods present (demigods removed)', Object.keys(cfg.agent).length === 10, `got ${Object.keys(cfg.agent).join(',')}`);
-    check('G1 shape: free plugin preset (nvidia build: cache plugins stripped, apollo-reasoning kept)',
-      JSON.stringify(cfg.plugin) === JSON.stringify(['./.opencode/olympus', './.opencode/plugins/apollo-reasoning.mjs', './.opencode/plugins/olympus-router']),
+    check('G1 shape: free plugin preset (overlay + apollo-reasoning + router — native v2 caching)',
+      JSON.stringify(cfg.plugin) === JSON.stringify(['./.opencode/olympus', './.opencode/plugin-dist/apollo-reasoning', './.opencode/plugin-dist/olympus-router']),
       JSON.stringify(cfg.plugin));
     // #106 THE ANCHOR-PIN: the pinned family-lane map lands VERBATIM — the
     // fake "stronger nemotron live #1" from the refresh appears NOWHERE
@@ -244,11 +243,11 @@ mkdirSync(WORK, { recursive: true });
     // athena+hephaestus deliberately sharing step-5, gemma as the volume
     // lane (the doctrine revision — see scripts/free-pantheon.test.mjs).
     const PINNED = {
-      apollo: 'nvidia-glm/z-ai/glm-5.3', atlas: 'nvidia-google/google/gemma-4-31b-it',
+      apollo: 'nvidia-glm/z-ai/glm-5.3', atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
       artemis: 'nvidia-meta/meta/muse-glimmer-30b', athena: 'nvidia-openai/openai/gpt-oss-20b',
       dionysus: 'nvidia-glm/z-ai/glm-5.3', hephaestus: 'nvidia-openai/openai/gpt-oss-20b',
       hermes: 'nvidia-meta/meta/muse-glimmer-30b', persephone: 'nvidia-glm/z-ai/glm-5.3',
-      prometheus: 'nvidia-openai/openai/gpt-oss-20b', callimachus: 'nvidia-google/google/gemma-4-31b-it',
+      prometheus: 'nvidia-openai/openai/gpt-oss-20b', callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
     };
     const pinDrift = GODS.filter(g => cfg.agent[g]?.model !== PINNED[g]);
     check('G1 #106: the pinned anchor map lands verbatim (no silent drift)',
@@ -260,22 +259,22 @@ mkdirSync(WORK, { recursive: true });
     // config, each carrying ONLY its family's models + the NVIDIA base URL.
     // #129 (2026-10-19): FOUR live families — nvidia-step retired with its
     // dead anchor. A stale nvidia-step block is tolerated (never required).
-    const famOk = ['nvidia-glm', 'nvidia-google', 'nvidia-meta', 'nvidia-openai'].every(f =>
+    const famOk = ['nvidia-glm', 'nvidia-minimaxai', 'nvidia-meta', 'nvidia-openai'].every(f =>
       cfg.provider?.[f]?.npm === '@ai-sdk/openai-compatible' &&
       cfg.provider?.[f]?.options?.baseURL === 'https://integrate.api.nvidia.com/v1' &&
       Object.keys(cfg.provider[f].models).length > 0);
-    check('G1 #106: all five family provider entries generated (npm + baseURL + models)', famOk,
+    check('G1 #106: all four family provider entries generated (npm + baseURL + models)', famOk,
       `families present: ${Object.keys(cfg.provider || {}).join(',')}`);
-    const volumeLimit = cfg.provider?.['nvidia-google']?.models?.['google/gemma-4-31b-it']?.limit;
-    check('G1 #106: the volume lane carries the honest limits (262144 / 16384)',
-      volumeLimit?.context === 262144 && volumeLimit?.output === 16384, JSON.stringify(volumeLimit));
+    const volumeLimit = cfg.provider?.['nvidia-minimaxai']?.models?.['minimaxai/minimax-m3.1-flash']?.limit;
+    check('G1 #106: the volume lane carries the honest limits (131072 / 16384)',
+      volumeLimit?.context === 131072 && volumeLimit?.output === 16384, JSON.stringify(volumeLimit));
     check('G1 #106: the old single-provider nvidia block is GONE from the generated config',
       cfg.provider?.nvidia === undefined, `provider.nvidia still present: ${JSON.stringify(cfg.provider?.nvidia)?.slice(0, 120)}`);
     // L4: every model id in the generated config is in the stub catalogue
     // for ITS probe provider (family lanes remap to the base `nvidia`
     // catalogue — the preflight's family handling).
     const genIds = new Set([cfg.model, cfg.small_model, ...Object.values(cfg.agent).map(a => a.model)]);
-    const probeId = (id) => id.replace(/^(nvidia-glm|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia-google|nvidia-step|nvidia-openai)\//, 'nvidia/');
+    const probeId = (id) => id.replace(/^(nvidia-glm|nvidia-minimaxai|nvidia-deepseek|nvidia-kimi|nvidia-meta|nvidia-google|nvidia-step|nvidia-openai)\//, 'nvidia/');
     const bad = [...genIds].filter(id => id && !(STUB_CATALOGUE[probeId(id).split('/')[0]] || []).includes(probeId(id)));
     check('G1 L4: every generated model id is in the live catalogue', bad.length === 0, `dead ids: ${bad.join(', ')}`);
     // #106: the availability check against the REAL refresh-file shape

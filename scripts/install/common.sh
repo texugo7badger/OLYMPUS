@@ -324,14 +324,26 @@ compile_plugins() {
   echo ""
   info "Compiling TypeScript layers — tsc output shows real-time progress."
 
-  log "ECC plugin..."
-  if (cd "$root" && run_with_timer "ECC plugin" npx --no-install tsc --project .opencode/tsconfig.json); then
-    ok "ECC plugin tsc passed"
+  log "OpenCode tools..."
+  if (cd "$root" && run_with_timer "OpenCode tools" npx --no-install tsc --project .opencode/tsconfig.json); then
+    ok "OpenCode tools tsc passed"
   else
-    if (cd "$root" && run_with_timer "ECC plugin (retry)" npx -y tsc --project .opencode/tsconfig.json); then
-      ok "ECC plugin tsc passed (retry)"
+    if (cd "$root" && run_with_timer "OpenCode tools (retry)" npx -y tsc --project .opencode/tsconfig.json); then
+      ok "OpenCode tools tsc passed (retry)"
     else
-      warn "ECC plugin compile failed — OLYMPUS will still launch but hooks may not fire."
+      warn "OpenCode tools compile failed — some overlay tools may not resolve."
+      had_failure=1
+    fi
+  fi
+
+  log "v2 plugins..."
+  if (cd "$root" && run_with_timer "v2 plugins" npx --no-install tsc --project .opencode/tsconfig.plugins.json); then
+    ok "v2 plugins tsc passed"
+  else
+    if (cd "$root" && run_with_timer "v2 plugins (retry)" npx -y tsc --project .opencode/tsconfig.plugins.json); then
+      ok "v2 plugins tsc passed (retry)"
+    else
+      warn "v2 plugin compile failed — OpenCode will load the committed plugin-dist JS."
       had_failure=1
     fi
   fi
@@ -355,7 +367,7 @@ compile_plugins() {
     fi
   fi
 
-  local router_src="$root/.opencode/plugins/olympus-router/index.ts"
+  local router_src="$root/.opencode/src/olympus-router/index.ts"
   if [ -f "$router_src" ]; then
     if grep -q 'from ".*\.ts"' "$router_src" 2>/dev/null; then
       warn "olympus-router source has .ts extension imports — will fail at runtime."

@@ -672,20 +672,15 @@ const GO_CONFIG_SHAPE = {
   god_prompts: 'file_refs',     // {file:.opencode/prompts/agents/gods/<god>.txt}
   demigods_loaded: true,
   plugins: [
-    './.opencode/plugins',
-    './.opencode/plugins/superpowers.js',
     './.opencode/olympus',
     // #PLANNER-1-GO (the battery catch, 2026-10-18): the reasoning_effort
-    // fix must survive a GO apply — the chat.params plugin is the ONLY wire
-    // path on every openai-compatible lane, GO included. The GO preset
-    // stripped it, so the planner's 20.6-min at-cap specimen could return
-    // on the paid lanes. NEVER strip the planner fix on any preset.
-    './.opencode/plugins/apollo-reasoning.mjs',
-    './.opencode/plugins/olympus-router',
-    './.opencode/plugins/olympus-go-cache',
-    './.opencode/plugins/olympus-skill-registry',
-    './.opencode/plugins/opencode-context-cache.mjs',
-    './.opencode/plugins/olympus-dynamic-context',
+    // fix must survive a GO apply — the session-context hook is the v2 wire
+    // path (the v1 chat.params path lives inside the router adapter). The
+    // GO preset stripped it, so the planner's 20.6-min at-cap specimen
+    // could return on the paid lanes. NEVER strip the planner fix.
+    './.opencode/plugin-dist/apollo-reasoning',
+    './.opencode/plugin-dist/olympus-router',
+    './.opencode/plugin-dist/olympus-dynamic-context',
   ],
   instructions: [],
   // small_model is GO Flash for background tasks (compaction, summarization).
@@ -734,13 +729,10 @@ const FREE_CONFIG_SHAPE = {
     // #PILEUP: the planner patience fix — apollo's planning turn on the
     // reasoning lanes rides reasoning_effort=low (the 2026-10-16 specimen:
     // 20.6 min at the reasoning cap with output=0; with low effort the
-    // same prompt plans in 171s). The chat.params hook is the only wire
-    // path opencode 1.18.10 offers — the agent config accepts the key but
-    // the openai-compatible runtime drops it.
-    './.opencode/plugins/apollo-reasoning.mjs',
-    './.opencode/plugins/olympus-router',
-    './.opencode/plugins/olympus-go-cache',
-    './.opencode/plugins/opencode-context-cache.mjs',
+    // same prompt plans in 171s). v2 wires it through the session context;
+    // the router adapter carries the v1 chat.params path for 1.18.10.
+    './.opencode/plugin-dist/apollo-reasoning',
+    './.opencode/plugin-dist/olympus-router',
   ],
   instructions: [
     'You are running OLYMPUS in free-tier mode (OpenRouter/NVIDIA Build). ' +
@@ -1854,15 +1846,9 @@ function applyFreeConfigShape(config, modelMap, strategy) {
 
   // --- 3b. NVIDIA Build: strip cache plugins (they inject unsupported params) ---
   if (strategy === 'free-nvidia-build') {
-    const nvidiaPlugins = config.plugin.filter(p =>
-      !p.includes('olympus-go-cache') && !p.includes('opencode-context-cache.mjs')
-    );
-    if (nvidiaPlugins.length !== config.plugin.length) {
-      log(`  plugin array: removed cache plugins for NVIDIA Build (${config.plugin.length} -> ${nvidiaPlugins.length})`);
-      config.plugin = nvidiaPlugins;
-      changes++;
-    }
-    // Also remove agent.skills entirely — NVIDIA rejects the 'skills' param
+    // (#189) The cache plugins are gone — v2 caches natively at the
+    // provider layer, so there is nothing to strip here anymore.
+    // Remove agent.skills entirely — NVIDIA rejects the 'skills' param
     // even when empty array. OpenCode core injects agent.skills into every
     // request; deleting the property prevents it from being sent.
     for (const godId of GOD_NAMES_LIST) {

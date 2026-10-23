@@ -1,30 +1,40 @@
 # olympus-router
 
-> Phase 4 complete. The consolidated Olympus router plugin.
+> The consolidated OLYMPUS router plugin — **v2 entry** (`index.ts`) over the
+> untouched v1 hook map (`v1.ts`).
 
-## Hooks used
+## How v2 loads it
 
-| Hook | Phase | Purpose |
-|---|---|---|
-| chat.params | 1+4 | Cache key + retention + cache_control + instinct-gate annotation |
-| chat.headers | 1 | Sticky-session headers |
-| permission.ask | 2+4 | Per-god MCP allowlist enforcement (strict in Phase 4) |
-| experimental.chat.system.transform | 2 | Prompt Defense Baseline injection |
-| tool.execute.before | 2+4 | Sub-agent instinct scope validation (strict in Phase 4) |
+OpenCode v2 loads the plugin **directory** by its `index.js` and requires the
+module to export `{ id, setup }`. The compiled entry assigns
+`module.exports = plugin` (probe-verified against 2.0.32 — a CJS
+`exports.default` fails the schema).
+
+Build: `npm run plugins:compile` (writes `.opencode/plugin-dist/olympus-router/`).
+
+## v2 domain wiring
+
+| v1 hook (v1.ts) | v2 domain |
+|---|---|
+| `experimental.chat.system.transform` | `session.hook("context")` |
+| `chat.params` | `session.hook("context")` (mutates `ctx.options`) |
+| `permission.ask` | `permission.hook("evaluate")` |
+| `tool.execute.before` | `tool.hook("execute.before")` |
+
+The cache hooks (`chat.params` cache key / `chat.headers`) are **not wired on
+v2** — opencode v2 caches natively at the provider layer (#189). The v1 lane
+(1.18.10) still gets them through `v1.ts` + `go-cache.ts`.
 
 ## Install
 
 ```jsonc
-{ "plugin": ["./plugins/olympus-router"] }
+{ "plugin": ["./.opencode/plugin-dist/olympus-router"] }
 ```
-
-You do NOT need to also list olympus-go-cache or opencode-context-cache —
-olympus-router imports and invokes them.
 
 ## Env vars
 
-- OLYMPUS_DEBUG=1 — enable verbose logging to stderr.
+- `OLYMPUS_DEBUG=1` — enable verbose logging to stderr.
 
 ## License
 
-MIT — see CREDITS.md.
+AGPL-3.0-or-later (original OLYMPUS code).

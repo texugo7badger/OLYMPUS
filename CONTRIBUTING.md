@@ -161,7 +161,7 @@ node scripts/olympus-doctor.js
    - `.opencode/olympus/lib/mcp-gate.ts` (runtime gate)
    - `src/app/api/olympus/mcp/list/route.ts` (UI status)
    - `src/components/olympus/api-config-dialog.tsx` (UI entry form)
-3. Register the MCP's tier (hot/warm/cold) in `.opencode/plugins/olympus-router/src/mcp-tiers.ts` — this is the single source of truth for per-god MCP tiers. The `selectMcpsForTask()` function uses this to decide which MCPs to equip for a given task.
+3. Register the MCP's tier (hot/warm/cold) in `.opencode/src/olympus-router/src/mcp-tiers.ts` — this is the single source of truth for per-god MCP tiers. The `selectMcpsForTask()` function uses this to decide which MCPs to equip for a given task.
 4. Add the MCP to the appropriate god's mcps array in `src/app/api/olympus/god/dispatch-graph/route.ts` (the `GOD_DISPATCH_CATALOG`).
 5. If the MCP replaces an existing one, update any god/demigod prompts that reference the old MCP. Search `.opencode/prompts/agents/` for the old MCP name.
 

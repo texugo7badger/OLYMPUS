@@ -98,7 +98,8 @@ console.log(JSON.stringify({ ok1, ok2, stats }));
   }
 
   // ── A5.3: the router pins — the real agent threads + the gate logs ────────
-  const routerSrc = fs.readFileSync(path.join(OLYMPUS, '.opencode/src/olympus-router/index.ts'), 'utf-8');
+  // The v1 hook map lives in v1.ts (the v2 entry is the adapter — no chat.params).
+  const routerSrc = fs.readFileSync(path.join(OLYMPUS, '.opencode/src/olympus-router/v1.ts'), 'utf-8');
   expect('A5: chat.params registers the REAL agent for the session (hookInput.agent)',
     /registerSessionAgent\(hookInput\.sessionID,\s*hookInput\.agent\)/.test(routerSrc),
     'the chat.params gate still resolves every session as apollo');

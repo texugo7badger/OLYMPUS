@@ -17,7 +17,6 @@ OLYMPUS is built on the shoulders of giants. This file lists the upstream projec
 | OpenDesign references | MIT | [OpenDesign](https://github.com/opendesign) |
 | OpenDesign MCP (opendesign-mcp) | MIT | [nexu-io/open-design](https://github.com/nexu-io/open-design) |
 | olympus-go-cache (recipe port) | MIT | [opencode-go-cache](https://github.com/sst/opencode) |
-| opencode-context-cache.mjs | MIT | [JackDrogon/opencode-context-cache](https://github.com/JackDrogon/opencode-context-cache) |
 | brain-atlas (renderer) | MIT | [brain-atlas](https://github.com/obra/brain-atlas) |
 | mcp-compressor | Apache-2.0 | [mcp-compressor](https://github.com/atlassian/mcp-compressor) |
 | tamp | MIT | [tamp](https://github.com/obra/tamp) |
@@ -40,7 +39,7 @@ The agent runtime that powers OLYMPUS. OpenCode provides the plugin system, tool
 - [opencode.ai](https://opencode.ai)
 
 ### ECC (Enhanced Claude Code)
-The hooks system (tool.execute.before/after, session.idle, permission.ask) is based on ECC's plugin architecture. The `.opencode/plugins/ecc-hooks.ts` file translates Claude Code hooks to OpenCode's plugin system.
+The hooks system (tool.execute.before/after, session.idle, permission.ask) is based on ECC's plugin architecture. The ECC hook translator (`ecc-hooks`) was retired in #189 — OpenCode v2's native permissions, skills, and caching cover it; the remaining OLYMPUS hooks live in `.opencode/src/` and compile to `.opencode/plugin-dist/`.
 - MIT licensed
 
 ### agency-agents (msitarzewski/agency-agents)

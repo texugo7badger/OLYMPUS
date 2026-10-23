@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022"
+    ],
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "noEmit": false,
+    "noEmitOnError": false,
+    "outDir": "plugin-dist",
+    "rootDir": "src",
+    "declaration": true,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@opencode-ai/plugin": [
+        "./node_modules/@opencode-ai/plugin/dist/index.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "src/olympus-router/**/*.ts",
+    "src/olympus-dynamic-context/**/*.ts",
+    "src/apollo-reasoning/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "plugins",
+    "olympus"
+  ]
+}

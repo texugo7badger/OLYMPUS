@@ -29,9 +29,9 @@
  *   - etc.
  *
  * This file is imported by:
- *   - .opencode/plugins/olympus-dynamic-context/index.ts (renders the tiers
+ *   - .opencode/src/olympus-dynamic-context/index.ts (renders the tiers
  *     into the god's system prompt at chat.messages.transform time)
- *   - .opencode/plugins/olympus-router/index.ts (tier-aware permission.ask
+ *   - .opencode/src/olympus-router/index.ts (tier-aware permission.ask
  *     hook — Hot always allowed, Warm allowed when domain matches, Cold
  *     requires explicit dispatch trace justification)
  *

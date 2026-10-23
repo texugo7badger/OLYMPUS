@@ -8,8 +8,8 @@
  *   3. Python 3 available (for vault seeding)
  *   4. OLYMPUS home config (~/.olympus/) exists + has llm-providers.json
  *   5. Vault exists + has seed instincts + knowledge files + design-systems
- *   6. opencode.json valid + agents (10 gods + 120 demigods = 130 .txt files on disk) + 10 plugins
- *   7. ECC plugin built (.opencode/dist/plugins/index.js exists)
+ *   6. opencode.json valid + agents (10 gods + 120 demigods = 130 .txt files on disk) + 4 v2 plugins
+ *   7. v2 plugin entries compiled (index.js in each plugin dir)
  *   8. OLYMPUS overlay plugin built (.opencode/olympus/dist/index.js exists)
  *   9. Vendored skills present (330 skills: caveman, impeccable, superpowers,
  *      14 superpowers sub-skills, ECC, OpenDesign, OLYMPUS gap-fillers,
@@ -20,13 +20,13 @@
  *  13. Active strategy + per-god model map
  *  14. Activity feed writable
  *  15. Electron binary (package + dist/electron)
- *  16. olympus-router plugin source valid (no .ts extension imports)
- *  17. olympus-go-cache plugin present
- *  18. opencode-context-cache.mjs plugin present
+ *  16. olympus-router plugin source valid (no .ts extension imports) + compiled
+ *  17. prompt cache — native opencode v2 provider caching
+ *  18. context cache — native opencode v2 provider caching
  *  19. vault-brain/design-systems/ has the 10 OpenDesign references
  *  20. vault-brain/mastered-skills/ has profiles for all 10 gods
  *  21. God instinct directories exist (seed + empirical per god)
- *  22. ECC plugin's lib/changed-files-store.ts present (shared utility)
+ *  22. apollo-reasoning v2 plugin compiled (the planner patience wire)
  *  23. file-lock-guard.cjs hook present
  *  24. Prompt format standardized: ALL agent prompts are .txt (no .md remain)
  *  25. Demigod fleet co-located with the gods (demigods/<god>/ + gods/)
@@ -402,10 +402,15 @@ if (fs.existsSync(opencodeJsonPath)) {
 // --- 5. Plugins built ---
 section("Plugins Built");
 
-const eccPluginBuilt = fs.existsSync(path.join(OLYMPUS_ROOT, ".opencode", "dist", "plugins", "index.js"));
-check("ECC plugin built", eccPluginBuilt ? "ok" : "warn",
-  eccPluginBuilt ? ".opencode/dist/plugins/index.js exists"
-  : "not built -- OpenCode will load from source (may be slower)");
+const v2PluginEntries = [
+  ".opencode/plugin-dist/olympus-router/index.js",
+  ".opencode/plugin-dist/olympus-dynamic-context/index.js",
+  ".opencode/plugin-dist/apollo-reasoning/index.js",
+];
+const missingV2 = v2PluginEntries.filter((rel) => !fs.existsSync(path.join(OLYMPUS_ROOT, rel)));
+check("v2 plugin entries compiled", missingV2.length === 0 ? "ok" : "warn",
+  missingV2.length === 0 ? v2PluginEntries.join(", ")
+  : `missing: ${missingV2.join(", ")} -- run: npm run plugins:compile`);
 
 const olympusPluginBuilt = fs.existsSync(path.join(OLYMPUS_ROOT, ".opencode", "olympus", "dist", "index.js"));
 check("OLYMPUS overlay plugin built", olympusPluginBuilt ? "ok" : "warn",
@@ -452,10 +457,10 @@ if (fs.existsSync(skillsDir)) {
   check("Skills directory", "fail", ".opencode/skills/ not found");
 }
 
-// superpowers plugin
-const superpowersPlugin = path.join(OLYMPUS_ROOT, ".opencode", "plugins", "superpowers.js");
-check("superpowers plugin", fs.existsSync(superpowersPlugin) ? "ok" : "warn",
-  fs.existsSync(superpowersPlugin) ? "vendored at .opencode/plugins/superpowers.js" : "missing");
+// superpowers skills (native v2 skill discovery — the plugin was retired in #188/#189)
+const superpowersSkills = path.join(skillsDir, "superpowers");
+check("superpowers skills", fs.existsSync(superpowersSkills) ? "ok" : "warn",
+  fs.existsSync(superpowersSkills) ? "vendored at .opencode/skills/superpowers/" : "missing");
 
 // Total skills
 let totalSkills = 0;
@@ -635,36 +640,34 @@ if (fs.existsSync(electronPkgPath)) {
 
 
 
-// 16. olympus-router plugin source is valid (no .ts extension imports)
-const routerSrc = path.join(OLYMPUS_ROOT, ".opencode", "plugins", "olympus-router", "index.ts");
+// 16. olympus-router: source is valid (no .ts extension imports) + the
+// compiled v2 entry exists (v2 loads the directory's index.js)
+const routerSrc = path.join(OLYMPUS_ROOT, ".opencode", "src", "olympus-router", "index.ts");
+const routerJs = path.join(OLYMPUS_ROOT, ".opencode", "plugin-dist", "olympus-router", "index.js");
 if (fs.existsSync(routerSrc)) {
   try {
     const routerContent = fs.readFileSync(routerSrc, "utf-8");
     const hasTsExt = /from\s+["'][^"']*\.ts["']/.test(routerContent);
     if (hasTsExt) {
       check("olympus-router source", "fail",
-        `has .ts extension imports - will fail at runtime. Fix: change '../olympus-go-cache/index.ts' -> '../olympus-go-cache/index.js' and './src/instinct-gate.ts' -> './src/instinct-gate.js'`);
+        `has .ts extension imports - will fail at runtime. Fix: change './v1.ts' -> './v1.js'`);
+    } else if (!fs.existsSync(routerJs)) {
+      check("olympus-router source", "warn", "source ok but compiled entry missing - run: npm run plugins:compile");
     } else {
-      check("olympus-router source", "ok", "clean imports (no .ts extensions)");
+      check("olympus-router source", "ok", "clean imports + compiled v2 entry present");
     }
   } catch {
     check("olympus-router source", "warn", "could not read source");
   }
 } else {
-  check("olympus-router source", "warn", ".opencode/plugins/olympus-router/index.ts not found");
+  check("olympus-router source", "warn", ".opencode/src/olympus-router/index.ts not found");
 }
 
-// 17. olympus-go-cache plugin present
-const goCachePlugin = path.join(OLYMPUS_ROOT, ".opencode", "plugins", "olympus-go-cache", "index.ts");
-check("olympus-go-cache plugin",
-  fs.existsSync(goCachePlugin) ? "ok" : "warn",
-  fs.existsSync(goCachePlugin) ? "vendored at .opencode/plugins/olympus-go-cache/index.ts" : "missing - cache instrumentation will not work");
+// 17. prompt cache — native v2 provider caching (#189)
+check("prompt cache", "ok", "native opencode v2 provider caching (the go-cache plugin was retired)");
 
-// 18. opencode-context-cache.mjs plugin present
-const ctxCachePlugin = path.join(OLYMPUS_ROOT, ".opencode", "plugins", "opencode-context-cache.mjs");
-check("opencode-context-cache.mjs plugin",
-  fs.existsSync(ctxCachePlugin) ? "ok" : "warn",
-  fs.existsSync(ctxCachePlugin) ? "vendored at .opencode/plugins/opencode-context-cache.mjs" : "missing - sticky context cache will not work");
+// 18. context cache — native v2 provider caching (#189)
+check("context cache", "ok", "native opencode v2 provider caching (the context-cache plugin was retired)");
 
 // Design-systems static cards: OLYMPUS relies solely on the live OpenDesign
 // MCP lookup instead of static fallback cards in vault-brain/design-systems/.
@@ -703,11 +706,11 @@ if (fs.existsSync(INSTINCTS_ROOT)) {
     `${INSTINCTS_ROOT} not found — run: python3 scripts/seed-vault.py`);
 }
 
-// 22. ECC plugin's lib/changed-files-store.ts present
-const eccLibStore = path.join(OLYMPUS_ROOT, ".opencode", "plugins", "lib", "changed-files-store.ts");
-check("ECC plugin lib/changed-files-store.ts",
-  fs.existsSync(eccLibStore) ? "ok" : "warn",
-  fs.existsSync(eccLibStore) ? "present" : "missing - ECC plugin may not compile");
+// 22. apollo-reasoning v2 plugin compiled (the planner patience wire)
+const apolloReasoningJs = path.join(OLYMPUS_ROOT, ".opencode", "plugin-dist", "apollo-reasoning", "index.js");
+check("apollo-reasoning v2 plugin",
+  fs.existsSync(apolloReasoningJs) ? "ok" : "warn",
+  fs.existsSync(apolloReasoningJs) ? "compiled at .opencode/plugin-dist/apollo-reasoning/index.js" : "missing - run: npm run plugins:compile");
 
 // 23. file-lock-guard.cjs hook present
 const fileLockGuard = path.join(OLYMPUS_ROOT, ".opencode", "hooks", "file-lock-guard.cjs");
@@ -887,8 +890,8 @@ if (fs.existsSync(olympusDistIndex)) {
 }
 
 // 31. olympus-router/src/ sources present
-const instinctGateSrc = path.join(OLYMPUS_ROOT, ".opencode", "plugins", "olympus-router", "src", "instinct-gate.ts");
-const skillIndexSrc = path.join(OLYMPUS_ROOT, ".opencode", "plugins", "olympus-router", "src", "skill-index.ts");
+const instinctGateSrc = path.join(OLYMPUS_ROOT, ".opencode", "plugin-dist", "olympus-router", "src", "instinct-gate.ts");
+const skillIndexSrc = path.join(OLYMPUS_ROOT, ".opencode", "plugin-dist", "olympus-router", "src", "skill-index.ts");
 const routerSrcsOk = fs.existsSync(instinctGateSrc) && fs.existsSync(skillIndexSrc);
 check("olympus-router/src/ sources",
   routerSrcsOk ? "ok" : "warn",
@@ -930,7 +933,7 @@ if (fs.existsSync(olympusCmdsDir)) {
 }
 
 // 34. olympus-dynamic-context plugin present
-const dynCtxPlugin = path.join(OLYMPUS_ROOT, ".opencode", "plugins", "olympus-dynamic-context", "index.ts");
+const dynCtxPlugin = path.join(OLYMPUS_ROOT, ".opencode", "plugin-dist", "olympus-dynamic-context", "index.ts");
 check("olympus-dynamic-context plugin",
   fs.existsSync(dynCtxPlugin) ? "ok" : "warn",
   fs.existsSync(dynCtxPlugin)

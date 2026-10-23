@@ -416,10 +416,9 @@
   },
   "plugin": [
     "./.opencode/olympus",
-    "./.opencode/plugins/apollo-reasoning.mjs",
-    "./.opencode/plugins/olympus-router",
-    "./.opencode/plugins/olympus-go-cache",
-    "./.opencode/plugins/opencode-context-cache.mjs"
+    "./.opencode/plugin-dist/olympus-router",
+    "./.opencode/plugin-dist/olympus-dynamic-context",
+    "./.opencode/plugin-dist/apollo-reasoning"
   ],
   "compaction": {},
   "experimental": {

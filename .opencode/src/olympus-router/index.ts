@@ -1,352 +1,148 @@
 /**
- * olympus-router — Phase 4 complete.
+ * olympus-router — V2 ENTRY (the v2 protocol, 2026-10-23).
  *
- * The consolidated Olympus router plugin with all Phase 1-4 hooks:
- *   Phase 1: chat.params + chat.headers (cache instrumentation)
- *   Phase 2: permission.ask (MCP allowlist) + system.transform (defense baseline)
- *   Phase 4: tool.execute.before (strict instinct scope enforcement)
- *           + chat.params (instinct-gated dispatch)
+ * OpenCode v2 loads a plugin DIRECTORY by its `index.js` and requires the
+ * module to export `{ id, setup }` (probe-verified against 2.0.32: the
+ * loader ignores package.json main and a CJS `exports.default` fails the
+ * schema — the module must assign `module.exports` directly).
  *
- * MIT License — see CREDITS.md
+ * The Phase 1-4 business logic lives untouched in ./v1.ts (the v1 hook
+ * map); this adapter wires it to the v2 domains:
+ *
+ *   v1 experimental.chat.system.transform -> session.hook("context")
+ *   v1 chat.params                        -> session.hook("context")
+ *   v1 permission.ask                     -> permission.hook("evaluate")
+ *   v1 tool.execute.before                -> tool.hook("execute.before")
+ *
+ * Dropped per #189 (native v2 coverage): the cache hooks (v2 caches at the
+ * provider layer) and the skill-registry scan (v2 config `skills` paths).
+ *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import type { Plugin, Hooks } from "@opencode-ai/plugin";
-import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
-import { homedir } from "node:os";
-import olympusGoCache from "../olympus-go-cache/index.js";
-import { isScopeAllowed, getActiveScopeAndAgent, registerSessionAgent, logShortCircuitEvaluation, queryInstincts, CONFIDENCE_THRESHOLD } from "./src/instinct-gate.js";
-import { getSkillIndex, type SkillHit } from "./src/skill-index.js";
-// Import the canonical tiered MCP map (single source of truth, shared
-// with olympus-dynamic-context and the dispatch tool).
-import { GOD_MCP_TIERS, flatAllowlistForGod } from "./src/mcp-tiers.js";
+import routerV1 from "./v1.js";
 
-let promptDefenseBaseline: string | null = null;
+type AnyCtx = any;
 
-function getPromptDefenseBaseline(pluginDir: string): string | null {
-  if (promptDefenseBaseline !== null) return promptDefenseBaseline;
-  const path = join(pluginDir, "..", "skills", "prompt-defense-baseline", "SKILL.md");
-  if (!existsSync(path)) return null;
-  try {
-    const content = readFileSync(path, "utf8");
-    const match = content.match(/## The 6-Bullet Preamble\s*\n\s*```\s*\n([\s\S]*?)\n```/);
-    promptDefenseBaseline = match ? match[1] : null;
-  } catch {
-    promptDefenseBaseline = null;
-  }
-  return promptDefenseBaseline;
-}
-
-// Defensive: permission.ask can fire with a non-string `tool` (observed as
-// `tool.replace is not a function` in the opencode log when `tool` was
-// undefined). Guard both helpers so the MCP gate never throws on bad input.
-function isMcpTool(tool: unknown): boolean {
-  return typeof tool === "string" && tool.startsWith("mcp_");
-}
-
-function getMcpServer(tool: unknown): string {
-  if (typeof tool !== "string") return "";
-  const withoutPrefix = tool.replace(/^mcp_/, "");
-  const lastUnderscore = withoutPrefix.lastIndexOf("_");
-  return lastUnderscore > 0 ? withoutPrefix.slice(0, lastUnderscore) : withoutPrefix;
-}
-
-function isMcpAllowed(god: string, server: string): boolean {
-  // The flat allowlist is the union of all three tiers (for legacy
-  // callers). Tier-aware enforcement happens in the permission.ask hook
-  // below (Hot always allowed, Warm allowed when domain matches, Cold
-  // requires explicit dispatch trace justification).
-  return flatAllowlistForGod(god).includes(server);
-}
-
-/**
- * Tier-aware MCP permission check.
- *
- * Returns one of:
- *   - 'allow'   — the MCP is in the god's HOT tier, OR in the WARM tier
- *                 and the task classification's domain/stack matches the
- *                 MCP's domain tags, OR the god has explicitly equipped
- *                 it via a recent olympus-dispatch call (recorded in the
- *                 COLD-tier equip log).
- *   - 'deny'    — the MCP is not in the god's allowlist at any tier.
- *   - 'cold'    — the MCP is in the god's COLD tier and the god has NOT
- *                 explicitly equipped it. The permission.ask hook treats
- *                 'cold' as a deny by default (Cold MCPs require explicit
- *                 reasoning to equip), but the god can override by
- *                 including the MCP in its dispatch trace.
- */
-function checkMcpTier(
-  god: string,
-  server: string,
-  classification: { domain: string; stack: string[]; complexity: string } | null,
-  explicitlyEquippedMcps: Set<string>,
-): 'allow' | 'deny' | 'cold' {
-  const tiers = GOD_MCP_TIERS[god];
-  if (!tiers) return 'deny';
-
-  // HOT — always allowed.
-  if (tiers.hot.some(e => e.server === server)) return 'allow';
-
-  // Explicit equip (olympus-dispatch's `mcp` arg) — always allowed,
-  // regardless of tier. This is how the god equips a Cold MCP after
-  // reasoning that it needs one.
-  if (explicitlyEquippedMcps.has(server)) return 'allow';
-
-  // WARM — allowed when complexity > trivial AND domain matches.
-  if (classification && classification.complexity !== 'trivial') {
-    const warmEntry = tiers.warm.find(e => e.server === server);
-    if (warmEntry) {
-      if (warmEntry.domains.length === 0) return 'allow'; // always-relevant
-      const taskSignals = [classification.domain, ...classification.stack];
-      if (warmEntry.domains.some(d => taskSignals.includes(d))) return 'allow';
-      // Domain mismatch — fall through to deny. The MCP is in the god's
-      // allowlist but not relevant to this task.
-    }
-  }
-
-  // COLD — never auto-allowed. Must be explicitly equipped.
-  if (tiers.cold.some(e => e.server === server)) return 'cold';
-
-  // Not in any tier for this god.
-  return 'deny';
-}
-
-const plugin: Plugin = async (input, options) => {
-  const cacheHooks = await olympusGoCache(input, options);
-  const pluginDir = input.directory || process.cwd();
-
-  const hooks: Hooks = {
-    ...cacheHooks,
-
-    "permission.ask": async (permission, output) => {
-      try {
-        const permStr = typeof permission === "string" ? permission : (permission as { key?: string }).key ?? "";
-        if (!isMcpTool(permStr)) return;
-        const server = getMcpServer(permStr);
-        const { scope, agent } = getActiveScopeAndAgent("");
-        const activeGod = scope === "god" ? agent : "apollo";
-
-        // Tier-aware MCP permission check.
-        //
-        // Parse the task classification from the env var (set by
-        // /api/olympus/action and /api/olympus/intake before the opencode
-        // spawn). When absent, fall back to the old flat-allowlist check.
-        //
-        // Read the set of MCPs the god has explicitly equipped via recent
-        // olympus-dispatch calls. The dispatch tracker writes these to
-        // ~/.olympus/equipped-mcps.json (one set per active dispatch).
-        let classification: { domain: string; stack: string[]; complexity: string } | null = null;
-        try {
-          const raw = process.env.OLYMPUS_TASK_CLASSIFICATION;
-          if (raw) {
-            const o = JSON.parse(raw);
-            classification = {
-              domain: o.domain ?? '',
-              stack: Array.isArray(o.stack) ? o.stack : [],
-              complexity: o.complexity ?? 'simple',
-            };
-          }
-        } catch {}
-
-        const explicitlyEquipped = new Set<string>();
-        try {
-          const equipPath = join(homedir(), '.olympus', 'equipped-mcps.json');
-          if (existsSync(equipPath)) {
-            const arr = JSON.parse(readFileSync(equipPath, 'utf-8'));
-            if (Array.isArray(arr)) for (const s of arr) explicitlyEquipped.add(String(s));
-          }
-        } catch {}
-
-        const tier = checkMcpTier(activeGod, server, classification, explicitlyEquipped);
-        if (tier === 'deny') {
-          output.status = "deny";
-          if (process.env.OLYMPUS_DEBUG === "1") {
-            console.error(`[olympus-router] denied MCP tool "${permStr}" (server "${server}" not in ${activeGod}'s allowlist)`);
-          }
-        } else if (tier === 'cold') {
-          // COLD-tier MCP not explicitly equipped — deny and tell the god
-          // how to equip it. The god should include `mcp: "<server>"` in
-          // its next olympus-dispatch call to record the explicit equip.
-          output.status = "deny";
-          if (process.env.OLYMPUS_DEBUG === "1") {
-            console.error(`[olympus-router] denied COLD MCP tool "${permStr}" (server "${server}" requires explicit equip via olympus-dispatch)`);
-          }
-        }
-        // tier === 'allow' → fall through, output.status stays default (allow)
-      } catch (err) {
-        console.error("[olympus-router] permission.ask error:", err);
-      }
-    },
-
-    "experimental.chat.system.transform": async (hookInput, output) => {
-      try {
-        // Groq-only skills strip. Groq's free tier has a razor-thin 12K TPM
-        // window and opencode 1.18 injects the full <available_skills> block
-        // (130K+ chars) regardless of agent.skills[]. Stripping it only for
-        // Groq keeps the free tier usable while leaving GO/OpenRouter prompts
-        // untouched. Conservative: if the block can't be matched exactly, we
-        // leave the prompt unchanged.
-        const model = hookInput.model;
-        const isGroq =
-          model?.providerID === "groq" ||
-          (typeof model?.id === "string" && model.id.startsWith("groq/"));
-        if (isGroq && output.system && output.system.length > 0) {
-          for (let i = 0; i < output.system.length; i++) {
-            const blockStart = output.system[i].indexOf("<available_skills>");
-            if (blockStart === -1) continue;
-            const blockEnd = output.system[i].indexOf("</available_skills>", blockStart);
-            if (blockEnd === -1) continue;
-            const replacement =
-              output.system[i].slice(0, blockStart) +
-              "<available_skills>Skills list omitted for Groq free tier (12K TPM window). Use the skill tool to look up skills on demand.</available_skills>" +
-              output.system[i].slice(blockEnd + "</available_skills>".length);
-            output.system[i] = replacement;
-            if (process.env.OLYMPUS_DEBUG === "1") {
-              console.error("[olympus-router] stripped <available_skills> block for Groq free tier");
-            }
-            break;
-          }
-        }
-
-        const baseline = getPromptDefenseBaseline(pluginDir);
-        if (baseline && output.system && output.system.length > 0) {
-          const last = output.system.length - 1;
-          output.system[last] = output.system[last] + "\n\n" + baseline;
-        }
-      } catch (err) {
-        console.error("[olympus-router] system.transform error:", err);
-      }
-    },
-
-    "tool.execute.before": async (toolInput, output) => {
-      try {
-        if (toolInput.tool === "olympus-instinct-query") {
-          const args = output.args as { scope?: string; agent_name?: string } | undefined;
-          if (args?.scope === "god") {
-            const { scope: callerScope, agent: callerAgent } = getActiveScopeAndAgent(toolInput.sessionID);
-            const requestedAgent = args.agent_name ?? "";
-            if (!isScopeAllowed(callerScope, callerAgent, "god", requestedAgent)) {
-              output.args = {
-                ...args,
-                scope: "sub-agent",
-                agent_name: callerAgent,
-                _olympus_enforcement: `Denied scope='god' for sub-agent ${callerAgent}. Forcing local scope.`,
-              };
-              if (process.env.OLYMPUS_DEBUG === "1") {
-                console.error(`[olympus-router] sub-agent ${callerAgent} denied scope='god' query for ${requestedAgent} — forced to local scope`);
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error("[olympus-router] tool.execute.before error:", err);
-      }
-    },
-
-    "chat.params": async (hookInput, output) => {
-      try {
-        // W-A RAG-CERT A5: register the REAL agent for this session — the
-        // only hook whose input carries it. The session-less hooks resolve
-        // through the same map; every god now consults ITS OWN instinct pool
-        // and skill arsenal (not apollo's, the old stub).
-        registerSessionAgent(hookInput.sessionID, hookInput.agent);
-        const { scope, agent } = getActiveScopeAndAgent(hookInput.sessionID);
-        if (scope !== "god") return;
-        const messageText =
-          typeof hookInput.message === "string"
-            ? hookInput.message
-            : (hookInput.message as { text?: string })?.text ?? "";
-        if (messageText.length === 0) return;
-        const result = queryInstincts("god", agent, messageText, 3);
-        // W-A RAG-CERT A5: the evaluation is LOGGED — the Short-Circuit
-        // Health panel's data file finally has a writer (AGENTS.md's claim
-        // made true). Non-fatal by contract.
-        logShortCircuitEvaluation({
-          god: agent,
-          session_id: hookInput.sessionID,
-          confidence: result.confidence,
-          short_circuited: result.short_circuit,
-          instinct_id: result.matching_instinct?.id ?? null,
-          instinct_tags: result.matching_instinct?.tags ?? null,
-          task_signature: messageText.slice(0, 120),
-          tokens_saved: 0, // the honest measured zero — the resonance loop backfills real dispatch deltas, never a fabricated estimate
-        });
-        output.options = output.options ?? {};
-        output.options.olympus_instinct_gate = {
-          confidence: result.confidence,
-          short_circuit: result.short_circuit,
-          matching_instinct: result.matching_instinct
-            ? {
-                id: result.matching_instinct.id,
-                tags: result.matching_instinct.tags,
-                confidence: result.matching_instinct.confidence,
-                body: result.matching_instinct.body,
-              }
-            : null,
-          alternatives: result.alternatives.map((i) => ({
-            id: i.id,
-            tags: i.tags,
-            confidence: i.confidence,
-          })),
-          threshold: CONFIDENCE_THRESHOLD,
-        };
-
-        // SEMANTIC SKILL SEARCH. When the instinct gate doesn't
-        // short-circuit, search the skill index for the top-k most relevant
-        // skills for this task. These are surfaced as a hint to the god
-        // (not a forced assignment). The god's prompt already tells it to
-        // evaluate task + instincts at dispatch time — this just gives it
-        // the best skill candidates without loading all 360 skill descriptions.
-        if (!result.short_circuit) {
-          try {
-            const skillIndex = getSkillIndex();
-            if (skillIndex) {
-              const skillHits: SkillHit[] = skillIndex.search(messageText, agent, 5);
-              if (skillHits.length > 0) {
-                output.options.olympus_skill_search = skillHits.map(h => ({
-                  skill_id: h.skill_id,
-                  title: h.title,
-                  description: h.description,
-                  similarity: Math.round(h.similarity * 100) / 100,
-                  source_path: h.source_path,
-                }));
-                if (process.env.OLYMPUS_DEBUG === "1") {
-                  console.error(
-                    `[olympus-router] skill-search for ${agent}: ${skillHits.length} hits (top: ${skillHits[0].skill_id} @ ${skillHits[0].similarity.toFixed(2)})`
-                  );
-                }
-              }
-            }
-          } catch (skillErr) {
-            // Graceful degradation — skill search is a hint, not critical
-            if (process.env.OLYMPUS_DEBUG === "1") {
-              console.error("[olympus-router] skill-search error:", skillErr);
-            }
-          }
-        }
-
-        if (process.env.OLYMPUS_DEBUG === "1") {
-          console.error(
-            `[olympus-router] instinct-gate for ${agent}: confidence=${result.confidence.toFixed(3)} short_circuit=${result.short_circuit}`
-          );
-        }
-      } catch (err) {
-        console.error("[olympus-router] chat.params instinct-gate error:", err);
-      }
-    },
-  };
-
-  if (process.env.OLYMPUS_DEBUG === "1") {
-    console.error("[olympus-router] loaded — Phase 4 complete");
-  }
-
-  return hooks;
+/** v2 renamed the built-ins; the v1 vocabulary keys on the old names. */
+const V2_TO_V1: Record<string, string> = {
+  shell: "bash",
+  file: "write",
 };
 
-export default plugin;
-// GOD_MCP_ALLOWLIST is intentionally NOT re-exported from this module.
-// The tier map lives in ./src/mcp-tiers.js (imported above as GOD_MCP_TIERS);
-// callers that need the flat allowlist should use flatAllowlistForGod()
-// from ./src/mcp-tiers.js.
-export { isMcpTool, getMcpServer, isMcpAllowed };
+/** Best-effort text of the last user message in a v2 SessionContext. */
+function lastUserText(messages: any): string {
+  if (!Array.isArray(messages)) return "";
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (!m || m.role !== "user") continue;
+    const parts = Array.isArray(m.parts) ? m.parts : Array.isArray(m.content) ? m.content : [];
+    const text = parts
+      .map((p: any) => (typeof p === "string" ? p : typeof p?.text === "string" ? p.text : ""))
+      .join("\n")
+      .trim();
+    if (text) return text;
+    if (typeof m.content === "string" && m.content.trim()) return m.content.trim();
+  }
+  return "";
+}
+
+const plugin = {
+  id: "olympus-router",
+  async setup(ctx: AnyCtx) {
+    const directory = ctx?.location?.directory ?? process.cwd();
+    const hooks: any = await (routerV1 as any)({ directory }, {});
+
+    /* ── system.transform + chat.params -> session context ─────────── */
+    await ctx.session.hook("context", async (sctx: AnyCtx) => {
+      try {
+        const before: string[] = (sctx.system ?? []).map((p: any) =>
+          typeof p === "string" ? p : String(p?.text ?? ""),
+        );
+
+        const transform = hooks["experimental.chat.system.transform"];
+        if (typeof transform === "function") {
+          const out: any = { system: before.slice() };
+          await transform({}, out);
+          const beforeLast = before.length ? before[before.length - 1] : "";
+          const afterLast = out.system.length ? out.system[out.system.length - 1] : "";
+          if (afterLast !== beforeLast) {
+            if (sctx.system.length > 0) {
+              const last = sctx.system[sctx.system.length - 1];
+              last.text = afterLast;
+            } else {
+              sctx.system.push({ type: "text", text: afterLast });
+            }
+          }
+        }
+
+        const chatParams = hooks["chat.params"];
+        if (typeof chatParams === "function") {
+          const pin: any = {
+            sessionID: sctx.sessionID,
+            agent: sctx.agent,
+            model: sctx.model,
+            message: lastUserText(sctx.messages),
+          };
+          const pout: any = { options: {} };
+          await chatParams(pin, pout);
+          if (pout.options && typeof pout.options === "object") {
+            Object.assign(sctx.options, pout.options);
+          }
+          if (typeof pout.reasoning_effort === "string") {
+            sctx.options.reasoning_effort = pout.reasoning_effort;
+          }
+        }
+      } catch (err: any) {
+        console.error(`[olympus-router:v2] context hook failed: ${err?.message || err}`);
+      }
+    });
+
+    /* ── permission.ask -> permission evaluate (tier-aware MCP gate) ── */
+    const permissionAsk = hooks["permission.ask"];
+    if (typeof permissionAsk === "function") {
+      await ctx.permission.hook("evaluate", async (ev: AnyCtx) => {
+        try {
+          const candidates = [ev.action, ...(Array.isArray(ev.resources) ? ev.resources : [])];
+          const tool = candidates.find(
+            (s: any) => typeof s === "string" && s.startsWith("mcp_"),
+          );
+          if (!tool) return;
+          const out: any = { status: "allow" };
+          await permissionAsk(tool, out);
+          if (out.status === "deny") {
+            ev.effect = "deny";
+            ev.message = ev.message ?? `MCP ${tool} denied by the OLYMPUS tier allowlist`;
+          }
+        } catch (err: any) {
+          console.error(`[olympus-router:v2] permission hook failed: ${err?.message || err}`);
+        }
+      });
+    }
+
+    /* ── tool.execute.before -> tool execute.before (instinct scope) ── */
+    const toolBefore = hooks["tool.execute.before"];
+    if (typeof toolBefore === "function") {
+      await ctx.tool.hook("execute.before", async (ev: AnyCtx) => {
+        try {
+          const out: any = { args: ev.input };
+          await toolBefore(
+            {
+              tool: V2_TO_V1[ev.tool] ?? ev.tool,
+              sessionID: ev.sessionID,
+              callID: ev.id,
+              agent: ev.agent,
+              args: ev.input,
+            },
+            out,
+          );
+          if (out.args !== ev.input) ev.input = out.args;
+        } catch (err: any) {
+          console.error(`[olympus-router:v2] execute.before failed: ${err?.message || err}`);
+        }
+      });
+    }
+  },
+};
+
+export = plugin;

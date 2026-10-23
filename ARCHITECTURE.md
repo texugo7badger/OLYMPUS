@@ -190,18 +190,16 @@ Build the index: `node scripts/build-skill-index.js`
 
 ## Plugin architecture
 
-8 plugins in `opencode.json`:
+4 v2 plugins in `opencode.json` (sources in `.opencode/src/`, compiled to
+`.opencode/plugin-dist/`; the old ECC/superpowers/cache/skill-registry
+plugins were retired in #188/#189 — v2 covers them natively):
 
 | Plugin | Role |
 |--------|------|
-| `.opencode/plugins` | OLYMPUS hooks plugin (hooks: tool.execute.before/after, session.idle) |
-| `.opencode/plugins/superpowers.js` | Superpowers skill bootstrap |
 | `.opencode/olympus` | Olympus overlay (dispatch tracker, instinct gate, MCP gate, cost feed) |
-| `.opencode/plugins/olympus-router` | MCP allowlist enforcement, instinct-gated dispatch, skill index search |
-| `.opencode/plugins/olympus-go-cache` | GO plan prompt cache instrumentation |
-| `.opencode/plugins/olympus-skill-registry` | Auto-discovers new skills on disk |
-| `.opencode/plugins/opencode-context-cache.mjs` | Sticky context cache (MIT, JackDrogon) |
-| `.opencode/plugins/olympus-dynamic-context` | Hot/warm/cold tier loading, task classification |
+| `.opencode/plugin-dist/olympus-router` | MCP allowlist enforcement, instinct-gated dispatch, skill index search, system transform |
+| `.opencode/plugin-dist/olympus-dynamic-context` | Hot/warm/cold tier loading, task classification |
+| `.opencode/plugin-dist/apollo-reasoning` | Planner patience — reasoning_effort=low on the free NVIDIA lanes (v2 session context) |
 
 ---
 

@@ -17,8 +17,9 @@ Implements dynamic input-token routing — the god's system prompt is built per-
    on the prompt — a pure heuristic pass that emits a `TaskClassification` JSON.
 3. The classification is passed as the `OLYMPUS_TASK_CLASSIFICATION` env var
    to the spawned `opencode run --agent olympus-apollo` process.
-4. This plugin hooks `experimental.chat.messages.transform` and reads the
-   env var. It appends a "Dynamic Context" preamble to the system prompt
+4. This plugin hooks `session.hook("context")` on v2 (the v1
+   `experimental.chat.messages.transform` map stays in `v1.ts`) and reads
+   the env var. It appends a "Dynamic Context" preamble to the system prompt
    that tells the god:
    - What classification was made (domain, complexity, stacks, files).
    - Which MCPs are available (god's `GOD_MCP_ALLOWLIST`).

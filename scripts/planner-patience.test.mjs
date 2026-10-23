@@ -63,29 +63,28 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
     'other agents were silenced — out of scope');
 }
 
-// ── 1b. THE WIRE: opencode 1.18.10 drops agent config reasoning_effort for
-// openai-compatible providers (intercept-proven: the request carries only
-// model/max_tokens/tool_choice/stream). The chat.params PLUGIN is the only
-// injection point that reaches the HTTP body.
+// ── 1b. THE WIRE: opencode v2 builds request options from the session
+// context (the 1.18.10 chat.params hook no longer exists). The plugin
+// mutates `ctx.options` in session.hook("context") — the v2 wire path.
 {
-  const pluginSrc = read('.opencode/plugins/apollo-reasoning.mjs');
-  check('plugin: apollo-reasoning.mjs exists and registers the chat.params hook',
-    /"chat\.params":\s*async/.test(pluginSrc),
-    'the chat.params hook is gone — the wire path is dead');
+  const pluginSrc = read('.opencode/src/apollo-reasoning/index.ts');
+  check('plugin: apollo-reasoning exists and registers the v2 session context hook',
+    /session\.hook\("context"/.test(pluginSrc),
+    'the session context hook is gone — the v2 wire path is dead');
   check('plugin: the hook covers EVERY free NVIDIA lane (the 05:08 specimen — step-5 hop gods starved the mouth on reasoning) and NEVER the GO/Zen lanes',
     /if \(!providerID\.startsWith\("nvidia-"\)\) return;/.test(pluginSrc)
-      && /output\.options\.reasoning_effort = "low";/.test(pluginSrc),
+      && /sctx\.options\.reasoning_effort = "low";/.test(pluginSrc),
     'the scope regressed — a reasoning lane without low effort starves the 16384 mouth (zero tool calls, zero files)');
-  check('plugin: the hook injects reasoning_effort "low" into the request params',
-    /output\.reasoning_effort = "low";/.test(pluginSrc),
+  check('plugin: the hook injects reasoning_effort "low" into the request options',
+    /sctx\.options\.reasoning_effort = "low";/.test(pluginSrc),
     'the injection line is gone');
   const cfg = JSON.parse(read('opencode.json'));
-  check('opencode.json: the plugin array CARRIES apollo-reasoning.mjs (unlisted plugins never load)',
-    (cfg.plugin || []).includes('./.opencode/plugins/apollo-reasoning.mjs'),
+  check('opencode.json: the plugin array CARRIES apollo-reasoning (unlisted plugins never load)',
+    (cfg.plugin || []).includes('./.opencode/plugin-dist/apollo-reasoning'),
     `plugin array: ${JSON.stringify(cfg.plugin)}`);
   const applySrc = read('scripts/apply-strategy.js');
-  check('apply-strategy.js: the FREE plugin preset carries apollo-reasoning.mjs (an apply must not strip the fix)',
-    /plugins: \[[\s\S]*?'\.\/\.opencode\/plugins\/apollo-reasoning\.mjs'[\s\S]*?olympus-router/.test(applySrc),
+  check('apply-strategy.js: the FREE plugin preset carries apollo-reasoning (an apply must not strip the fix)',
+    /plugins: \[[\s\S]*?'\.\/\.opencode\/plugin-dist\/apollo-reasoning'[\s\S]*?olympus-router/.test(applySrc),
     'the free preset dropped the plugin — the next apply kills the fix');
 }
 
