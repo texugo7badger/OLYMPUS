@@ -508,7 +508,6 @@ function finalizeDispatch(
     }
     publishOutcomeOnBus(d, outcome, contractViolation);
     return { ok: true, error: "" };
-    publishOutcomeOnBus(d, outcome, contractViolation);
   } catch (e: any) {
     // MADRUGA-3 p2 (E1): the finalize outcome write FAILED — reported to
     // the caller (the exit path turns this into a LOUD error); legacy
@@ -543,11 +542,29 @@ function publishOutcomeOnBus(d: OpenDispatch, outcome: string, contractViolation
   try {
     // Late import breaks the module cycle (bus -> tracker -> bus).
     const { busPublish } = require("./symphony-bus.js") as typeof import("./symphony-bus.js");
+    // #186: the bus payload carries the FULL DNA — consumers (Recent
+    // Activity, Parthenon, the atlas) no longer have to join three files
+    // to learn what the dispatch equipped or what it cost.
     busPublish({
       type: "dispatch-outcome",
       god: d.god,
       dedupKey: `dispatch-outcome:${d.dispatchId}`,
-      payload: { dispatchId: d.dispatchId, demigod: d.demigod, outcome, contractViolation },
+      payload: {
+        dispatchId: d.dispatchId,
+        demigod: d.demigod,
+        outcome,
+        contractViolation,
+        skill: d.skill,
+        mcp: d.mcp,
+        instinctId: d.instinctId,
+        shortCircuited: d.shortCircuited,
+        classificationId: d.classificationId,
+        taskSignature: d.taskSignature.slice(0, 200),
+        tokens: d.tokensUsed,
+        toolCallCount: d.toolCallCount,
+        durationMs: Date.now() - new Date(d.startTs).getTime(),
+        findings: typeof d.findingsSummary === "string" ? d.findingsSummary.slice(0, 400) : null,
+      },
       evidence: { dispatchId: d.dispatchId },
     });
   } catch { /* bus down never blocks the finalize */ }

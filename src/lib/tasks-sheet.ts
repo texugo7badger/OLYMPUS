@@ -70,12 +70,26 @@ export interface TaskRecord {
   estimatedCostUsd?: number | null;
 }
 
+/** #184: one live demigod card (the Parthenon's per-demigod record). */
+export interface DemigodLive {
+  id: string;
+  ts: string;
+  /** running = dispatched, no outcome yet; done/error = finalize verdict. */
+  status: 'running' | 'done' | 'error';
+  task: string;
+  skill: string | null;
+  mcp: string | null;
+  tokensOut: number;
+  durationMs: number | null;
+  dispatchId: string | null;
+}
+
 export interface TasksSheet {
   lane: string;
   project: string;
   updatedAt: string;
   tasks: TaskRecord[];
-  gods: Record<string, { total: number; completed: number; running: number; tokensIn: number; tokensOut: number; demigods: { id: string; ts: string }[] }>;
+  gods: Record<string, { total: number; completed: number; running: number; tokensIn: number; tokensOut: number; demigods: DemigodLive[] }>;
   stats: {
     total: number;
     completed: number;
@@ -156,13 +170,27 @@ function filesInWindow(feedPath: string, god: string, fromMs: number, toMs: numb
   return out;
 }
 
-/** Live demigod dispatches per god — the PARALLELISM-OF-PARALLELISM surface. */
-function demigodsByGod(feedPath: string, now: number): Record<string, { id: string; ts: string }[]> {
-  const demigods: Record<string, { id: string; ts: string }[]> = {};
+/**
+ * Live demigod dispatches per god — the PARALLELISM-OF-PARALLELISM surface.
+ * #184: each record joins the dispatch (task/skill/MCP) with its outcome
+ * (status/tokens/duration) by dispatch_id, so parallel demigods under one
+ * god render as distinct live cards instead of bare chips.
+ */
+function demigodsByGod(feedPath: string, now: number): Record<string, DemigodLive[]> {
+  const demigods: Record<string, DemigodLive[]> = {};
   try {
     const raw = fs.readFileSync(feedPath, 'utf-8');
     const cutoff = now - 30 * 60 * 1000;
-    for (const line of raw.trim().split('\n').filter(Boolean).slice(-4000)) {
+    const lines = raw.trim().split('\n').filter(Boolean).slice(-4000);
+    const outcomes = new Map<string, any>();
+    for (const line of lines) {
+      try {
+        const ev = JSON.parse(line);
+        if (ev?.action === 'dispatch_outcome' && ev?.dispatch_id) outcomes.set(String(ev.dispatch_id), ev);
+      } catch { /* skip */ }
+    }
+    const seen = new Set<string>();
+    for (const line of lines) {
       let ev: any;
       try { ev = JSON.parse(line); } catch { continue; }
       const act = String(ev?.action || '');
@@ -173,8 +201,24 @@ function demigodsByGod(feedPath: string, now: number): Record<string, { id: stri
       let t = 0;
       try { t = new Date(ev.ts).getTime(); } catch { continue; }
       if (!Number.isFinite(t) || t < cutoff) continue;
+      const dispatchId = ev?.dispatch_id ?? ev?.signature_id ?? null;
+      const key = `${god}:${dispatchId ?? dg}:${ev.ts}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const outcome = dispatchId ? outcomes.get(String(dispatchId)) : null;
+      const verdict = String(outcome?.outcome || '');
       const list = (demigods[god] ||= []);
-      if (!list.some(d => d.id === dg)) list.push({ id: dg, ts: String(ev.ts) });
+      list.push({
+        id: dg,
+        ts: String(ev.ts),
+        status: verdict === 'success' ? 'done' : verdict === 'failure' || verdict === 'failed' ? 'error' : 'running',
+        task: String(ev?.task_signature || ev?.msg || '').slice(0, 160),
+        skill: ev?.skill_equipped ?? ev?.meta?.skill ?? null,
+        mcp: ev?.mcp_enabled ?? ev?.meta?.mcp ?? null,
+        tokensOut: Number(outcome?.tokens_used?.output) || 0,
+        durationMs: typeof outcome?.duration_ms === 'number' ? outcome.duration_ms : null,
+        dispatchId: dispatchId ? String(dispatchId) : null,
+      });
     }
     for (const list of Object.values(demigods)) list.sort((a, b) => a.ts < b.ts ? 1 : -1);
   } catch { /* decorative */ }

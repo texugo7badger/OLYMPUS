@@ -18,7 +18,7 @@ const VAULT = getVaultRoot();
 const METRICS_DIR = path.join(os.homedir(), '.olympus', 'metrics');
 
 export type NodeType =
-  | 'god' | 'skill' | 'instinct' | 'project' | 'knowledge' | 'evolved' | 'subagent';
+  | 'god' | 'skill' | 'mcp' | 'instinct' | 'project' | 'knowledge' | 'evolved' | 'subagent';
 
 export interface GraphNode {
   id: string;
@@ -83,6 +83,8 @@ export const COLORS = {
   god:           '#D4A574',
   subagent:      '#C4956A',
   skill:         '#6B8FB5',
+  /** #205: MCP satellites — a teal distinct from knowledge cyan. */
+  mcp:           '#5FB0B8',
   instinctHigh:  '#7BAE8E',
   instinctLow:   '#C4A265',
   instinctBad:   '#C4756A',
@@ -562,6 +564,38 @@ export function buildGraph(activeProject?: ActiveProjectContext | null): GraphDa
       });
     }
   }
+
+  // ── #205: MCP satellites — the atlas can glow an equipped MCP ──────
+  // The dispatch DNA names `mcp_enabled`; without a node the glow had
+  // nothing to land on. Hermes is the MCP god; the link carries the
+  // ownership. Names come from .mcp.json (the install's MCP registry).
+  try {
+    const mcpCfg = readJSON(path.join(OLYMPUS_ROOT, '.mcp.json'));
+    const servers = mcpCfg?.mcpServers && typeof mcpCfg.mcpServers === 'object' ? Object.keys(mcpCfg.mcpServers) : [];
+    for (const name of servers.slice(0, 40)) {
+      const mid = `mcp:${name}`;
+      if (nodes.some(n => n.id === mid)) continue;
+      nodes.push({
+        id: mid,
+        name,
+        type: 'mcp',
+        god: 'hermes',
+        val: 7,
+        color: COLORS.mcp,
+        description: `MCP server ${name} — carried by Hermes. Source: .mcp.json.`,
+        activeProject: activeProject?.slug,
+        visibilityReason: 'MCP registry',
+      });
+      links.push({
+        source: 'god:hermes',
+        target: mid,
+        type: 'carries',
+        color: 'rgba(95, 176, 184, 0.28)',
+        width: 1,
+        curvature: 0.25,
+      });
+    }
+  } catch { /* the MCP registry is optional — never break the graph */ }
 
   // ── v2: Knowledge nodes (stack-filtered when project active) ───────
   const allKnowledge = loadAllKnowledge();

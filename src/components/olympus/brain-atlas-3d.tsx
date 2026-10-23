@@ -74,6 +74,7 @@ import {
 import { OLYMPUS_PALETTE, LOBE_TINTS, hexA } from '@/lib/brain-atlas-palette';
 import { useOlympus } from '@/lib/olympus-store';
 import { useWorkingGods } from '@/lib/use-working-gods';
+import { useDispatchDna } from '@/lib/use-dispatch-dna';
 import type { GraphNode, GraphLink } from '@/lib/olympus';
 import {
   Eye, EyeOff, X, Gauge,
@@ -642,19 +643,33 @@ export default function BrainAtlas3D() {
   // W3-A: each working god's signals carry ITS OWN HUE — two gods working
   // side by side read as two distinct light streams across the brain.
   const workingGods = useWorkingGods();
-  const workingGodsRef = useRef<string[]>([]);
+  // #205: the dispatch DNA — god + equipped skill/MCP + fired instinct node
+  // ids. The renderer's working-god glow grows + pulses ANY node in the set,
+  // so the atlas visibly carries the dispatch's arsenal through the network.
+  const dispatchDna = useDispatchDna();
+  const workingGodsRef = useRef<string>('');
   useEffect(() => {
-    const prev = workingGodsRef.current;
-    const same = prev.length === workingGods.length && prev.every((g, i) => g === workingGods[i]);
-    if (same) return;
-    workingGodsRef.current = workingGods;
+    const ids = new Set<string>();
+    const colors: Record<string, string> = {};
+    for (const g of workingGods) {
+      ids.add(`god:${g}`);
+      colors[g] = GOD_SIGNAL_COLORS[g] ?? '#D4A574';
+    }
+    // Only ids the CURRENT graph renders can glow (the filters may hide a
+    // lobe); an unknown id would silently do nothing but still rebuild.
+    for (const id of dispatchDna.ids) {
+      if (brainGraph.idx[id]) ids.add(id);
+    }
+    for (const [god, color] of Object.entries(dispatchDna.colors)) colors[god] = color;
+    const arr = [...ids].sort();
+    const sig = arr.join(',');
+    if (sig === workingGodsRef.current) return;
+    workingGodsRef.current = sig;
     const rr = rendererRef.current;
     if (rr && startedRef.current) {
-      const colors: Record<string, string> = {};
-      for (const g of workingGods) colors[g] = GOD_SIGNAL_COLORS[g] ?? '#D4A574';
-      rr.setWorkingGods(workingGods.length ? workingGods.map(g => `god:${g}`) : null, colors);
+      rr.setWorkingGods(arr.length ? arr : null, colors);
     }
-  }, [workingGods]);
+  }, [workingGods, dispatchDna, brainGraph]);
 
   /* ---------------------------------------------------------------- */
   /* Toggle handlers.                                                  */

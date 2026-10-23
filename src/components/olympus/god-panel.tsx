@@ -20,6 +20,7 @@ import { GOD_ICONS } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
+import type { DemigodLive } from '@/lib/tasks-sheet';
 
 /** Coarse status bucket. Finer wire phases collapse into these. */
 export type ParthenonStatus = 'idle' | 'working' | 'blocked' | 'done';
@@ -105,7 +106,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   const [campaignStats, setCampaignStats] = useState<null | { total: number; completed: number; parked: number; projectedRemainingMs: number }>(null);
   // The god's LIVE demigod dispatches (the arsenal in action — the
   // parallelism-of-parallelism surface: god → demigod chips).
-  const [demigods, setDemigods] = useState<Record<string, { id: string; ts: string }[]>>({});
+  const [demigods, setDemigods] = useState<Record<string, DemigodLive[]>>({});
   const [sheetHop, setSheetHop] = useState<string | null>(null);
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -123,7 +124,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
         setTasks(byGod);
         if (d?.stats) setCampaignStats(d.stats);
         setDemigods(d?.gods
-          ? Object.fromEntries(Object.entries(d.gods as Record<string, { demigods?: { id: string; ts: string }[] }>)
+          ? Object.fromEntries(Object.entries(d.gods as Record<string, { demigods?: DemigodLive[] }>)
               .map(([g, v]) => [g, v.demigods || []]))
           : {});
       } catch { /* decorative — the panel works without tasks */ }
@@ -291,18 +292,40 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                     <div className="text-[8px] font-mono text-[#5A5A5A] px-1">+{tasks[s.god].length - 5} more</div>
                   )}
                   {(demigods[s.god] || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {(demigods[s.god] || []).slice(0, 4).map(d => (
-                        <span
-                          key={d.id}
-                          title={`${d.id} — dispatched by ${s.god} (${new Date(d.ts).toLocaleTimeString('en-US', { hour12: false })})`}
-                          className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 animate-pulse truncate max-w-28"
-                        >
-                          ↳ {d.id}
-                        </span>
-                      ))}
+                    <div className="grid grid-cols-2 gap-1 mt-1">
+                      {(demigods[s.god] || []).slice(0, 4).map((d, di) => {
+                        const tone = d.status === 'done'
+                          ? { dot: '#7BAE8E', text: 'text-olympus-green', ring: 'ring-olympus-green/25', bg: 'bg-olympus-green/10' }
+                          : d.status === 'error'
+                            ? { dot: '#C4756A', text: 'text-olympus-red', ring: 'ring-olympus-red/25', bg: 'bg-olympus-red/10' }
+                            : { dot: '#D4A574', text: 'text-olympus-gold', ring: 'ring-olympus-gold/25', bg: 'bg-olympus-gold/10' };
+                        const elapsed = d.durationMs != null
+                          ? (d.durationMs >= 1000 ? `${(d.durationMs / 1000).toFixed(1)}s` : `${d.durationMs}ms`)
+                          : null;
+                        return (
+                          <div
+                            key={`${d.id}-${d.dispatchId || di}`}
+                            title={`${d.id} — ${d.status}${d.task ? ` — ${d.task}` : ''}${d.skill ? ` — skill ${d.skill}` : ''}${d.mcp ? ` — mcp ${d.mcp}` : ''}`}
+                            className={cn('rounded px-1.5 py-1 ring-1 min-w-0', tone.bg, tone.ring)}
+                          >
+                            <div className="flex items-center gap-1 min-w-0">
+                              <span className={cn('w-1 h-1 rounded-full shrink-0', d.status === 'running' && 'animate-pulse')} style={{ background: tone.dot }} />
+                              <span className={cn('text-[8px] font-mono truncate flex-1', tone.text)}>{d.id}</span>
+                              {elapsed && <span className="text-[7px] font-mono text-olympus-text-dim shrink-0">{elapsed}</span>}
+                            </div>
+                            {d.task && (
+                              <div className="text-[7px] font-mono text-olympus-text-dim truncate mt-0.5">{d.task}</div>
+                            )}
+                            <div className="flex items-center gap-1 mt-0.5 min-w-0">
+                              {d.skill && <span className="text-[7px] font-mono text-olympus-blue truncate">skill:{d.skill}</span>}
+                              {d.mcp && <span className="text-[7px] font-mono text-olympus-cyan truncate">mcp:{d.mcp}</span>}
+                              {d.tokensOut > 0 && <span className="text-[7px] font-mono text-olympus-text-dim ml-auto shrink-0">{d.tokensOut} out</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
                       {(demigods[s.god] || []).length > 4 && (
-                        <span className="text-[8px] font-mono text-olympus-purple/60">+{(demigods[s.god] || []).length - 4}</span>
+                        <span className="text-[8px] font-mono text-olympus-purple/60 col-span-2">+{(demigods[s.god] || []).length - 4} more</span>
                       )}
                     </div>
                   )}

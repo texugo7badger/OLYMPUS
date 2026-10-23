@@ -68,6 +68,7 @@ export const GOD_TO_LOBE: Record<string, LobeName> = {
 export const KIND_TO_LOBE: Record<string, LobeName> = {
   god:       'frontal',
   skill:     'parietal',
+  mcp:       'parietal',
   instinct:  'cerebellum',
   project:   'frontal',
   knowledge: 'occipital',
@@ -81,6 +82,7 @@ export const KIND_TO_LOBE: Record<string, LobeName> = {
 const OLYMPUS_KIND_TO_BRAIN_KIND: Record<string, NodeKind> = {
   god:       'person',
   skill:     'tool',
+  mcp:       'tool',
   instinct:  'dailyNote',
   project:   'project',
   knowledge: 'source',
@@ -91,6 +93,7 @@ const OLYMPUS_KIND_TO_BRAIN_KIND: Record<string, NodeKind> = {
 const KIND_LABEL: Record<string, string> = {
   god:       'GOD',
   skill:     'SKILL',
+  mcp:       'MCP',
   instinct:  'INSTINCT',
   project:   'PROJECT',
   knowledge: 'KNOWLEDGE',

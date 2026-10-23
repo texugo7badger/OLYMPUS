@@ -4,6 +4,7 @@
 
 import { NextResponse } from 'next/server';
 import fs from 'fs';
+import os from 'node:os';
 import path from 'path';
 // Shared no-cache headers for live API routes.
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
@@ -30,6 +31,16 @@ interface Episode {
   demigod?: string | null;
   /** 'delegation' on dispatch-shaped events (the panel's counter key). */
   type?: string;
+  /** #183: the full dispatch DNA — the row's labeled chips. */
+  dispatchId?: string | null;
+  skill?: string | null;
+  mcp?: string | null;
+  instinct?: string | null;
+  shortCircuited?: boolean;
+  tokens?: { input: number; output: number } | null;
+  durationMs?: number | null;
+  toolCalls?: number | null;
+  findings?: string | null;
 }
 
 const VAULT = getVaultRoot();
@@ -162,6 +173,22 @@ function readLiveEpisodes(): Episode[] {
     const meta = (ev.meta && typeof ev.meta === 'object') ? ev.meta : {};
     const demigod = ev.demigod ?? meta.demigod ?? meta.agent ?? null;
     const msg = String(ev.msg || ev.task_signature || action);
+    // #183: carry the DNA the old mapping dropped. The dispatch event has
+    // the equipment; the outcome event has the cost + verdict.
+    const tokensUsed = ev.tokens_used ?? (ev.tokens && typeof ev.tokens === 'object' ? ev.tokens : null);
+    const dna = {
+      dispatchId: ev.dispatch_id ?? ev.signature_id ?? meta.signatureId ?? null,
+      skill: ev.skill_equipped ?? meta.skill ?? null,
+      mcp: ev.mcp_enabled ?? meta.mcp ?? null,
+      instinct: ev.instinct_id ?? meta.instinct_id ?? null,
+      shortCircuited: Boolean(ev.short_circuited ?? meta.short_circuit),
+      tokens: tokensUsed
+        ? { input: Number(tokensUsed.input) || 0, output: Number(tokensUsed.output) || 0 }
+        : null,
+      durationMs: typeof ev.duration_ms === 'number' ? ev.duration_ms : null,
+      toolCalls: typeof ev.tool_call_count === 'number' ? ev.tool_call_count : null,
+      findings: typeof ev.findings_summary === 'string' ? ev.findings_summary.slice(0, 240) : null,
+    };
     // W0-D: the hop runtime replaced dispatch-as-tool — each hop IS a
     // delegated task. The panel's TASKS counter and the drill-down agree
     // on these semantics.
@@ -181,6 +208,7 @@ function readLiveEpisodes(): Episode[] {
       action,
       demigod: demigod ? String(demigod) : null,
       type: isDispatch ? 'delegation' : undefined,
+      ...dna,
     });
   }
   // Newest first, capped for payload sanity.
@@ -197,8 +225,9 @@ function readLiveEpisodes(): Episode[] {
 const busTail = { started: false, size: 0, partial: '', lines: [] as string[] };
 
 function readBusEpisodes(): Episode[] {
-  const os = require('node:os') as typeof import('node:os');
-  const busPath = path.join(os.homedir(), '.olympus', 'symphony-bus.jsonl');
+  // OLYMPUS_HOME is the canonical home (fixtures + lanes); ~/.olympus default.
+  const home = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
+  const busPath = path.join(home, 'symphony-bus.jsonl');
   ingestTail(busTail, busPath, BUS_TAIL_BYTES, BUS_MAX_LINES);
   const cutoff = Date.now() - LIVE_WINDOW_MS;
   const out: Episode[] = [];
@@ -224,6 +253,17 @@ function readBusEpisodes(): Episode[] {
         source: 'live',
         action: 'dispatch_outcome',
         demigod: ev.demigod ? String(ev.demigod) : null,
+        dispatchId: ev.payload?.dispatchId ?? ev.dispatchId ?? null,
+        skill: ev.payload?.skill ?? null,
+        mcp: ev.payload?.mcp ?? null,
+        instinct: ev.payload?.instinctId ?? null,
+        shortCircuited: Boolean(ev.payload?.shortCircuited),
+        tokens: ev.payload?.tokens
+          ? { input: Number(ev.payload.tokens.input) || 0, output: Number(ev.payload.tokens.output) || 0 }
+          : null,
+        durationMs: typeof ev.payload?.durationMs === 'number' ? ev.payload.durationMs : null,
+        toolCalls: typeof ev.payload?.toolCallCount === 'number' ? ev.payload.toolCallCount : null,
+        findings: typeof ev.payload?.findings === 'string' ? ev.payload.findings.slice(0, 240) : null,
       });
     } else if (type === 'heartbeat') {
       const god = String(ev.god || 'global').toLowerCase();

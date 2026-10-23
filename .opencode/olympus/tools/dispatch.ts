@@ -564,9 +564,25 @@ const dispatchTool: ToolDefinition = tool({
     // still evaluates the task + instincts at dispatch time and may override
     // (AGENTS.md doctrine). Lean on no-match — never padded.
     let arsenalReconBlock: string | null = null;
+    // #187: the structured recon rides the dispatch event (not only the
+    // composed task text) — the DNA panels read it back from the feed.
+    let arsenalReconData: {
+      suggestedSkills: Array<{ skill: string; confidence: number; samples: number }>;
+      suggestedMcps: Array<{ mcp: string; confidence: number; samples: number }>;
+      suggestedDemigods: Array<{ demigod: string; confidence: number; samples: number }>;
+      quickCircuit: boolean;
+      coherence: number;
+    } | null = null;
     try {
       const { arsenalRecon } = await import("../../../src/lib/symphony/arsenal-resolver.js");
       const recon = arsenalRecon(String(args.task || ""), String(args.godId || "apollo"));
+      arsenalReconData = {
+        suggestedSkills: recon.suggestedSkills,
+        suggestedMcps: recon.suggestedMcps,
+        suggestedDemigods: recon.suggestedDemigods,
+        quickCircuit: recon.quickCircuit,
+        coherence: recon.coherence,
+      };
       const reconLines: string[] = [];
       for (const s of recon.suggestedSkills) reconLines.push(`- skill: ${s.skill} (confidence ${s.confidence.toFixed(2)}, ${s.samples} samples)`);
       for (const m of recon.suggestedMcps) reconLines.push(`- mcp: ${m.mcp} (confidence ${m.confidence.toFixed(2)}, ${m.samples} samples)`);
@@ -597,7 +613,7 @@ const dispatchTool: ToolDefinition = tool({
     }
     let inner: { output: string };
     try {
-      inner = await dispatchExecuteInner({ ...args, task: effectiveTask84 }, context);
+      inner = await dispatchExecuteInner({ ...args, task: effectiveTask84, arsenalRecon: arsenalReconData }, context);
     } catch (e: any) {
       try {
         atlasMarkDispatchFailed(syncEntry.id, `tool threw: ${e?.message || e}`);
@@ -638,6 +654,14 @@ async function dispatchExecuteInner(args: {
   outputShape?: string;
     artifacts?: string[];
     doneCondition?: string;
+    /** #187: the structured Arsenal Recon from the tool entry. */
+    arsenalRecon?: {
+      suggestedSkills: Array<{ skill: string; confidence: number; samples: number }>;
+      suggestedMcps: Array<{ mcp: string; confidence: number; samples: number }>;
+      suggestedDemigods: Array<{ demigod: string; confidence: number; samples: number }>;
+      quickCircuit: boolean;
+      coherence: number;
+    } | null;
 }, context: { sessionID?: string }): Promise<{ output: string }> {
     const {
       godId,
@@ -653,6 +677,7 @@ async function dispatchExecuteInner(args: {
       outputShape,
       artifacts,
       doneCondition,
+      arsenalRecon,
     } = args;
 
     // Validate the demigod name — must NOT be prefixed (no ecc-, olympus-, volt-)
@@ -872,6 +897,10 @@ async function dispatchExecuteInner(args: {
         parent_god: parentGod,
         directive_hash: directiveHash,
         status: "dispatched",
+        // #187: the Arsenal Recon (suggested + confidence + samples) as
+        // structured data — the row shows 'arsenal recon: skill X (0.87,
+        // 12 samples)' without re-running the resolver.
+        arsenal_recon: arsenalRecon ?? null,
         msg: `Symphony dispatch to ${demigod} for "${task.slice(0, 100)}"`,
         meta: {
           skill,
@@ -884,6 +913,7 @@ async function dispatchExecuteInner(args: {
           protocol: signature.protocol,
           inject_status: injectResult.status,
           inject_parent_god: injectResult.parent_god || null,
+          arsenal_recon: arsenalRecon ?? null,
         },
       };
       fs.appendFileSync(feedPath, JSON.stringify(event) + "\n", "utf-8");

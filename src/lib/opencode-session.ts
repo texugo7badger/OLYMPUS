@@ -1353,11 +1353,42 @@ function mapEvent(
     /** Issue #40: reasoning that arrived BEFORE the first step-start is held
      *  here instead of being dropped, then flushed with a prelude marker. */
     reasoningPre?: string;
+    /** #185: the dispatching god (the run's agent) — child-session frames
+     *  carry the demigod, never the god; the pair needs both. */
+    god?: string;
+    /** #185: child sessionID → demigod name (discovered from
+     *  session.created/updated parentID + the subtask part). */
+    childSessions?: Map<string, string>;
+    /** #185: per-child-part emitted text length (delta streaming). */
+    childTextLen?: Map<string, number>;
+    childReasoningLen?: Map<string, number>;
+    /** #185: child tool parts already emitted (one frame each). */
+    childToolEmitted?: Set<string>;
   },
   onEvent: (ev: any) => void,
 ) {
   const props = ev?.properties;
   const part = props?.part;
+
+  // ── #185: child-session discovery ───────────────────────────────────
+  // A subtask spawns a CHILD session; its parts carry the child sessionID,
+  // so the main-session filter dropped the demigod's whole stream. The
+  // session frame names the parent + the agent; remember the pair.
+  if ((ev?.type === 'session.created' || ev?.type === 'session.updated') && props?.info) {
+    const info = props.info;
+    if (info.id !== sessionId && info.parentID === sessionId && typeof info.agent === 'string' && info.agent) {
+      state.childSessions?.set(info.id, info.agent);
+    }
+    return;
+  }
+  if (ev?.type === 'session.idle' && props?.sessionID && props.sessionID !== sessionId) {
+    const demigod = state.childSessions?.get(props.sessionID);
+    if (demigod) {
+      onEvent({ type: 'demigod_done', timestamp: Date.now(), sessionID: sessionId, god: state.god || '', demigod });
+      state.childSessions?.delete(props.sessionID);
+      return;
+    }
+  }
 
   switch (ev?.type) {
     case 'message.updated': {
@@ -1372,17 +1403,39 @@ function mapEvent(
       if (props?.sessionID === sessionId && props?.info?.role === 'assistant') {
         noteMessageModel(sessionId, props.info);
       }
-      return;
-    }
-    case 'message.part.delta': {
-      if (props?.field === 'text' && typeof props?.partID === 'string') {
-        const cur = state.textBuf.get(props.partID) || '';
-        state.textBuf.set(props.partID, cur + (typeof props.delta === 'string' ? props.delta : ''));
+      // #185: a child assistant message names its agent — the most reliable
+      // demigod source when the session frame lacked it.
+      if (props?.sessionID !== sessionId && props?.info?.role === 'assistant' && typeof props?.info?.agent === 'string' && props.info.agent) {
+        state.childSessions?.set(props.sessionID, props.info.agent);
       }
       return;
     }
+    case 'message.part.delta': {
+      if (props?.field !== 'text' || typeof props?.partID !== 'string') return;
+      // #185: a child's text delta streams as demigod_text (suffix-only).
+      if (props?.sessionID && props.sessionID !== sessionId) {
+        const demigod = state.childSessions?.get(props.sessionID);
+        if (!demigod) return;
+        const cur = (state.childTextLen?.get(props.partID) ?? 0) + (typeof props.delta === 'string' ? props.delta.length : 0);
+        state.childTextLen?.set(props.partID, cur);
+        if (typeof props.delta === 'string' && props.delta) {
+          onEvent({ type: 'demigod_text', timestamp: Date.now(), sessionID: sessionId, god: state.god || '', demigod, text: props.delta, partId: props.partID });
+        }
+        return;
+      }
+      const cur = state.textBuf.get(props.partID) || '';
+      state.textBuf.set(props.partID, cur + (typeof props.delta === 'string' ? props.delta : ''));
+      return;
+    }
     case 'message.part.updated': {
-      if (!part || part.sessionID !== sessionId) return;
+      if (!part) return;
+      if (part.sessionID !== sessionId) {
+        // #185: forward the child's parts as demigod_* frames.
+        const demigod = state.childSessions?.get(part.sessionID);
+        if (!demigod) return;
+        mapChildPart(part, state.god || '', demigod, state, onEvent);
+        return;
+      }
       mapPart(part, state, onEvent);
       return;
     }
@@ -1455,6 +1508,57 @@ export function isEmittableText(text: string): boolean {
   return typeof text === 'string' && text.trim().length > 0;
 }
 
+/**
+ * #185: map a CHILD-session part (a demigod's own stream) into a demigod_*
+ * frame. Text/reasoning are emitted as SUFFIXES (delta-safe: the delta and
+ * the full-part paths share the same length map), tool parts emit once.
+ */
+function mapChildPart(
+  part: any,
+  god: string,
+  demigod: string,
+  state: {
+    childTextLen?: Map<string, number>;
+    childReasoningLen?: Map<string, number>;
+    childToolEmitted?: Set<string>;
+  },
+  onEvent: (ev: any) => void,
+): void {
+  if (part.type === 'text' && typeof part.text === 'string') {
+    const seen = state.childTextLen?.get(part.id) ?? 0;
+    if (part.text.length <= seen) return;
+    const suffix = part.text.slice(seen);
+    state.childTextLen?.set(part.id, part.text.length);
+    if (suffix.trim()) {
+      onEvent({ type: 'demigod_text', timestamp: Date.now(), sessionID: part.sessionID, god, demigod, text: suffix, partId: part.id });
+    }
+    return;
+  }
+  if (part.type === 'reasoning' && typeof part.text === 'string') {
+    const seen = state.childReasoningLen?.get(part.id) ?? 0;
+    if (part.text.length <= seen) return;
+    const suffix = part.text.slice(seen);
+    state.childReasoningLen?.set(part.id, part.text.length);
+    if (suffix.trim()) {
+      onEvent({ type: 'demigod_reasoning', timestamp: Date.now(), sessionID: part.sessionID, god, demigod, text: suffix, partId: part.id });
+    }
+    return;
+  }
+  if (part.type === 'tool' && typeof part.id === 'string' && !state.childToolEmitted?.has(part.id)) {
+    state.childToolEmitted?.add(part.id);
+    onEvent({
+      type: 'demigod_tool',
+      timestamp: Date.now(),
+      sessionID: part.sessionID,
+      god,
+      demigod,
+      tool: part.tool ?? part.state?.title ?? 'tool',
+      status: part.state?.status ?? part.status ?? 'running',
+      partId: part.id,
+    });
+  }
+}
+
 function mapPart(
   part: any,
   state: {
@@ -1472,6 +1576,8 @@ function mapPart(
     /** #98: the last in-run error text — captured here so classifyRetry and
      *  the exhaustion guidance see the provider's own words. */
     lastErrorText?: string;
+    /** #186: the dispatching god (delegation frames carry god + demigod). */
+    god?: string;
   },
   onEvent: (ev: any) => void,
 ) {
@@ -1618,7 +1724,10 @@ function mapPart(
         type: 'delegation',
         timestamp: Date.now(),
         sessionID: sessionId,
-        god: part.agent ?? '',
+        // #186: god and demigod are SEPARATE slots — the demigod used to be
+        // written into the god slot, so god cards showed demigod-named gods.
+        god: state.god || '',
+        demigod: part.agent ?? '',
         description: part.description || part.prompt || '',
       });
       return;
@@ -2131,6 +2240,12 @@ async function runWarmMessageAttempt(
   // prevents the crash-loop that caused the original "fetch failed".
 
   const state = {
+    // #185/#186: the run's god + the child-session → demigod map.
+    god: opts.agent || '',
+    childSessions: new Map<string, string>(),
+    childTextLen: new Map<string, number>(),
+    childReasoningLen: new Map<string, number>(),
+    childToolEmitted: new Set<string>(),
     textBuf: new Map<string, string>(),
     textEmitted: new Set<string>(),
     toolEmitted: new Set<string>(),

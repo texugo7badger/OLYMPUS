@@ -31,6 +31,16 @@ interface Episode {
   demigod?: string | null;
   /** 'delegation' on dispatch-shaped events. */
   type?: string;
+  /** #183: the dispatch DNA chips. */
+  dispatchId?: string | null;
+  skill?: string | null;
+  mcp?: string | null;
+  instinct?: string | null;
+  shortCircuited?: boolean;
+  tokens?: { input: number; output: number } | null;
+  durationMs?: number | null;
+  toolCalls?: number | null;
+  findings?: string | null;
 }
 
 const IMPACT_COLORS: Record<string, string> = {
@@ -326,6 +336,41 @@ function TimelineItem({ ep, isLast, onClick, hopId, hopTask }: { ep: Episode; is
                   <Wrench size={7} /> {t}
                 </span>
               ))}
+            </div>
+          )}
+          {/* #183: the dispatch DNA — demigod, skill, MCP, instinct, cost. */}
+          {(ep.demigod || ep.skill || ep.mcp || ep.instinct || ep.tokens || ep.durationMs != null) && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {ep.demigod && (
+                <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/25">
+                  demigod: {ep.demigod}
+                </span>
+              )}
+              {ep.skill && (
+                <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-blue/15 text-olympus-blue ring-1 ring-olympus-blue/25">
+                  skill: {ep.skill}
+                </span>
+              )}
+              {ep.mcp && (
+                <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-cyan/15 text-olympus-cyan ring-1 ring-olympus-cyan/25">
+                  mcp: {ep.mcp}
+                </span>
+              )}
+              {ep.instinct && (
+                <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-green/15 text-olympus-green ring-1 ring-olympus-green/25">
+                  instinct{ep.shortCircuited ? ' ⚡' : ''}: {ep.instinct}
+                </span>
+              )}
+              {ep.tokens && (ep.tokens.input + ep.tokens.output) > 0 && (
+                <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-card/60 text-olympus-text-dim">
+                  {ep.tokens.input + ep.tokens.output} tok
+                </span>
+              )}
+              {ep.durationMs != null && (
+                <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-card/60 text-olympus-text-dim">
+                  {ep.durationMs >= 1000 ? `${(ep.durationMs / 1000).toFixed(1)}s` : `${ep.durationMs}ms`}
+                </span>
+              )}
             </div>
           )}
         </div>

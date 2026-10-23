@@ -122,7 +122,7 @@ function makeConversationId(): string {
   }
 }
 
-type MessageType = 'system' | 'user' | 'response' | 'god' | 'question' | 'todo' | 'error' | 'delegation' | 'tool' | 'context_request' | 'permission' | 'permission_pending' | 'thinking';
+type MessageType = 'system' | 'user' | 'response' | 'god' | 'question' | 'todo' | 'error' | 'delegation' | 'demigod' | 'tool' | 'context_request' | 'permission' | 'permission_pending' | 'thinking';
 
 /**
  * Issue #32 (complaint 2: "tool lines render the call but NEVER the result").
@@ -178,6 +178,9 @@ interface ChatMessage {
    *  message by the `reasoning` SSE event; rendered by ThinkingMessage's
    *  expandable block. Ephemeral: gone when the turn ends. */
   reasoning?: string;
+  /** #185: a demigod's own stream block (child-session text/tools). */
+  demigod?: string;
+  streaming?: boolean;
   /** Inline image attached to a user message (Task 2 — image upload).
    *  `imagePath` is a local object URL (URL.createObjectURL) used as the
    *  <img src>. `imageSavedPath` is the absolute path on disk returned by
@@ -472,9 +475,76 @@ export default function InteractiveTerminal() {
     // Issue #36: subtask parts (god -> demigod). Same wire type as the god->god
     // frame above, but no from/to — that branch's guard lets this one through.
     if (ev.type === 'delegation') {
-      const god = ev.god || 'unknown god';
-      addMessage({ type: 'delegation', text: `>> delegation: ${god} — ${ev.description || ''}`.trimEnd(), god: ev.god || undefined });
-      updateGodActivity(ev.god || 'apollo', 'working', 'Delegated task running...');
+      // #186: god and demigod are separate slots now (the demigod used to
+      // land in the god slot, painting demigod-named god cards).
+      const god = ev.god || 'apollo';
+      const demigod = ev.demigod || 'demigod';
+      addMessage({
+        type: 'delegation',
+        text: `>> ${GOD_NAMES[god] || god} → ${demigod}${ev.description ? ` — ${ev.description}` : ''}`,
+        god,
+        demigod,
+      });
+      updateGodActivity(god, 'working', `Delegated to ${demigod}`);
+      return;
+    }
+    // #185: the demigod's own stream — one collapsible block per demigod.
+    if (ev.type === 'demigod_text' || ev.type === 'demigod_reasoning') {
+      const demigod = String(ev.demigod || 'demigod');
+      const text = String(ev.text || '');
+      if (!text) return;
+      setMessages(prev => {
+        let idx = -1;
+        for (let i = prev.length - 1; i >= 0; i--) {
+          if (prev[i].type === 'demigod' && prev[i].demigod === demigod && prev[i].streaming) { idx = i; break; }
+        }
+        if (idx === -1) {
+          return [...prev, {
+            id: `dg-${Date.now()}-${Math.random()}`,
+            type: 'demigod',
+            text,
+            ts: new Date().toISOString(),
+            god: ev.god || undefined,
+            demigod,
+            streaming: true,
+          }];
+        }
+        const next = [...prev];
+        next[idx] = { ...next[idx], text: next[idx].text + text };
+        return next;
+      });
+      return;
+    }
+    if (ev.type === 'demigod_tool') {
+      const demigod = String(ev.demigod || 'demigod');
+      const line = `\n⚙ ${ev.tool || 'tool'}${ev.status && ev.status !== 'running' ? ` (${ev.status})` : ''}`;
+      setMessages(prev => {
+        let idx = -1;
+        for (let i = prev.length - 1; i >= 0; i--) {
+          if (prev[i].type === 'demigod' && prev[i].demigod === demigod && prev[i].streaming) { idx = i; break; }
+        }
+        if (idx === -1) {
+          return [...prev, {
+            id: `dg-${Date.now()}-${Math.random()}`,
+            type: 'demigod',
+            text: line.trim(),
+            ts: new Date().toISOString(),
+            god: ev.god || undefined,
+            demigod,
+            streaming: true,
+          }];
+        }
+        const next = [...prev];
+        next[idx] = { ...next[idx], text: next[idx].text + line };
+        return next;
+      });
+      return;
+    }
+    if (ev.type === 'demigod_done') {
+      const demigod = String(ev.demigod || 'demigod');
+      setMessages(prev => prev.map(m =>
+        m.type === 'demigod' && m.demigod === demigod && m.streaming ? { ...m, streaming: false } : m,
+      ));
       return;
     }
     if (ev.type === 'god_thinking') { updateGodActivity(ev.god, 'thinking', ev.msg || 'Thinking...'); return; }
@@ -2023,6 +2093,32 @@ const MessageRenderer = memo(function MessageRenderer({
           <AlertCircle size={11} className="text-olympus-red shrink-0 mt-0.5" />
           <span className="text-olympus-red wrap-break-word flex-1 min-w-0">{message.text}</span>
         </div>
+      </div>
+    );
+  }
+
+  if (message.type === 'demigod') {
+    // #185: the demigod's live stream — collapsible, author-chipped, and
+    // auto-open while it streams (closes to a one-line summary when done).
+    return (
+      <div className="flex items-start gap-2">
+        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <details open={message.streaming} className="flex-1 min-w-0 group">
+          <summary className="flex items-center gap-1.5 cursor-pointer list-none select-none">
+            <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/25">
+              {message.demigod}
+            </span>
+            <span className="text-[8px] font-mono text-olympus-text-dim">
+              {message.streaming ? 'streaming…' : 'stream'}
+            </span>
+            {message.god && (
+              <span className="text-[8px] font-mono text-olympus-gold/70">via {GOD_NAMES[message.god] || message.god}</span>
+            )}
+          </summary>
+          <div className="mt-1 pl-2 border-l border-olympus-purple/25 text-[10px] text-olympus-text-dim whitespace-pre-wrap wrap-break-word max-h-64 overflow-y-auto">
+            {message.text}
+          </div>
+        </details>
       </div>
     );
   }

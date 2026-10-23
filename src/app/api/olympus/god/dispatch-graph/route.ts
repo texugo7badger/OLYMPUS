@@ -287,17 +287,23 @@ function getLiveAgentUsage(godId: string | null): Record<string, { count: number
     for (const line of lines) {
       try {
         const ev = JSON.parse(line);
-        if ((ev.type === 'dispatch' || ev.action === 'dispatch') && ev.subagent) {
-          if (!godId || ev.god === godId) {
-            const agent = ev.subagent;
-            if (!usage[agent]) usage[agent] = { count: 0, tokens: { input: 0, output: 0 }, lastOutcome: null };
-            usage[agent].count++;
-            if (ev.tokens) {
-              usage[agent].tokens.input += ev.tokens.input || 0;
-              usage[agent].tokens.output += ev.tokens.output || 0;
-            }
-            if (ev.outcome) usage[agent].lastOutcome = ev.outcome;
+        // #186: the feed writes `demigod` (the old `subagent` read always
+        // missed), and the outcome event is where tokens/outcome live.
+        const agent = ev.demigod ?? ev.subagent;
+        if (!agent) continue;
+        if (godId && ev.god !== godId) continue;
+        if (ev.action === 'dispatch' || ev.action === 'symphony-dispatch' || ev.type === 'dispatch') {
+          if (!usage[agent]) usage[agent] = { count: 0, tokens: { input: 0, output: 0 }, lastOutcome: null };
+          usage[agent].count++;
+        } else if (ev.action === 'dispatch_outcome' || ev.type === 'dispatch-outcome') {
+          if (!usage[agent]) usage[agent] = { count: 0, tokens: { input: 0, output: 0 }, lastOutcome: null };
+          const tk = ev.tokens_used ?? ev.tokens ?? ev.payload?.tokens;
+          if (tk) {
+            usage[agent].tokens.input += tk.input || 0;
+            usage[agent].tokens.output += tk.output || 0;
           }
+          const outcome = ev.outcome ?? ev.payload?.outcome;
+          if (outcome) usage[agent].lastOutcome = String(outcome);
         }
       } catch {}
     }
