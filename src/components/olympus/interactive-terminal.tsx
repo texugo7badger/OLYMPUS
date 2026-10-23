@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, memo } from 'react';
 import {
   Send, Loader2, CornerDownLeft, ChevronRight,
   Zap, CheckCircle2, AlertCircle, Users, Sun, Hammer, Bird,
@@ -40,6 +40,15 @@ import { ToolFrame } from './tool-frame';
 // The opencode one-shot run IPC channel is still registered.
 
 const GOD_COLOR = '#D4A574';
+
+// #195: reasoning deltas are buffered in a ref and flushed to the open
+// thinking line at most every REASONING_FLUSH_MS — a reasoning-heavy
+// stream never re-renders the messages array per token anymore.
+const REASONING_FLUSH_MS = 150;
+// #195: auto-scroll is throttled to ~250ms and only fires while the
+// user is near the bottom (within NEAR_BOTTOM_PX of the end).
+const AUTO_SCROLL_MS = 250;
+const NEAR_BOTTOM_PX = 80;
 
 /**
  * Issue #46 — an unanswered permission ask is a permanently parked run.
@@ -313,6 +322,11 @@ export default function InteractiveTerminal() {
   }>>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  // #195: auto-scroll state — near-bottom latch + throttle bookkeeping, all
+  // in refs so scrolling never re-renders the transcript.
+  const atBottomRef = useRef(true);
+  const lastAutoScrollRef = useRef(0);
+  const autoScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const contextRef = useRef<HTMLTextAreaElement>(null);
 
@@ -358,8 +372,39 @@ export default function InteractiveTerminal() {
   // semantic we want — it means "the run has not finished yet".
   const thinkingOpenRef = useRef(false);
 
+  // #195: the live reasoning accumulator — deltas land here (zero render),
+  // and flushReasoning folds them into the open thinking line on a timer.
+  const reasoningBufRef = useRef('');
+  const reasoningFlushTRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // #195: flush the buffered reasoning into the open thinking line. Only the
+  // LAST row is touched (slice + replace), so old rows keep referential
+  // identity and their memoized renderers skip.
+  const flushReasoning = useCallback(() => {
+    reasoningFlushTRef.current = null;
+    const text = reasoningBufRef.current;
+    if (!text) return;
+    reasoningBufRef.current = '';
+    setMessages(prev => {
+      const last = prev[prev.length - 1];
+      if (last && last.type === 'thinking') {
+        const next = prev.slice();
+        next[next.length - 1] = { ...last, reasoning: (last.reasoning || '') + text };
+        return next;
+      }
+      return [...prev, { id: `th-${Date.now()}-${Math.random()}`, type: 'thinking' as MessageType, text: 'thinking', ts: new Date().toISOString(), reasoning: text }];
+    });
+  }, []);
+
   const removeThinking = useCallback(() => {
     thinkingOpenRef.current = false;
+    // #195: the thinking line is going away — its unflushed reasoning goes
+    // with it, and no pending flush may resurrect a line after removal.
+    if (reasoningFlushTRef.current) {
+      clearTimeout(reasoningFlushTRef.current);
+      reasoningFlushTRef.current = null;
+    }
+    reasoningBufRef.current = '';
     setMessages(prev => (prev.some(m => m.type === 'thinking') ? prev.filter(m => m.type !== 'thinking') : prev));
   }, []);
 
@@ -374,15 +419,13 @@ export default function InteractiveTerminal() {
 
   // Append reasoning tokens to the OPEN thinking message (4.1.2). Opens one
   // if none is open (reasoning can arrive before step_start on some models).
+  // #195: buffered — the delta only writes to a ref; a single trailing
+  // timer flushes at most every REASONING_FLUSH_MS.
   const appendReasoning = useCallback((text: string) => {
-    setMessages(prev => {
-      const last = prev[prev.length - 1];
-      if (last && last.type === 'thinking') {
-        return prev.map((m, i) => i === prev.length - 1 ? { ...m, reasoning: (m.reasoning || '') + text } : m);
-      }
-      return [...prev, { id: `th-${Date.now()}-${Math.random()}`, type: 'thinking' as MessageType, text: 'thinking', ts: new Date().toISOString(), reasoning: text }];
-    });
-  }, []);
+    reasoningBufRef.current += text;
+    if (reasoningFlushTRef.current) return;
+    reasoningFlushTRef.current = setTimeout(flushReasoning, REASONING_FLUSH_MS);
+  }, [flushReasoning]);
 
   const updateGodActivity = useCallback((
     god: string,
@@ -903,7 +946,29 @@ export default function InteractiveTerminal() {
     return () => clearInterval(iv);
   }, []);
 
-  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, godStates]);
+  // #195: throttled auto-scroll — fires at most every AUTO_SCROLL_MS and
+  // only while the user is near the bottom (atBottomRef, kept honest by
+  // handleScroll on the container). Leading scroll outside the window,
+  // one trailing scroll inside it — a burst of messages can never
+  // starve the scroll or fire it per delta.
+  const performAutoScroll = useCallback(() => {
+    autoScrollTimerRef.current = null;
+    lastAutoScrollRef.current = Date.now();
+    const el = scrollRef.current;
+    if (el && atBottomRef.current) el.scrollTop = el.scrollHeight;
+  }, []);
+
+  useEffect(() => {
+    if (autoScrollTimerRef.current) return; // trailing scroll already scheduled
+    const since = Date.now() - lastAutoScrollRef.current;
+    if (since >= AUTO_SCROLL_MS) performAutoScroll();
+    else autoScrollTimerRef.current = setTimeout(performAutoScroll, AUTO_SCROLL_MS - since);
+  }, [messages, performAutoScroll]);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
+  }, []);
   // #120 (PLANO-MASTER-1 B6a): the BUILD BANNER — "which build is serving"
   // never again costs a mission. The B1 verdict (c): the user's 13:40 app
   // was a MIXED build (an Oct-3 Electron main + a live-source renderer) and
@@ -930,6 +995,10 @@ export default function InteractiveTerminal() {
   useEffect(() => () => {
     for (const t of Object.values(permissionTimersRef.current)) clearTimeout(t);
     permissionTimersRef.current = {};
+    // #195: the buffered-reasoning flush and the trailing auto-scroll must
+    // not fire after unmount either.
+    if (reasoningFlushTRef.current) { clearTimeout(reasoningFlushTRef.current); reasoningFlushTRef.current = null; }
+    if (autoScrollTimerRef.current) { clearTimeout(autoScrollTimerRef.current); autoScrollTimerRef.current = null; }
   }, []);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -1035,6 +1104,8 @@ export default function InteractiveTerminal() {
     // token is 2-10s and nothing else renders until the first SSE event
     // arrives, so without this the terminal looks hung right after send.
     // Placed after the local echoes so it stays the LAST transcript line.
+    // #195: the user just submitted — re-pin auto-scroll for the new turn.
+    atBottomRef.current = true;
     ensureThinking();
     pushPulse('apollo', 'apollo'); setActiveGod('apollo');
 
@@ -1206,6 +1277,12 @@ export default function InteractiveTerminal() {
     // thinking line — keep the mirror honest or the next step_finish would
     // see a stale "still working" and never report done again.
     thinkingOpenRef.current = false;
+    // #195: a reset drops the open thinking line — its buffered reasoning
+    // and any pending flush go with it; the fresh transcript re-pins to
+    // the bottom.
+    if (reasoningFlushTRef.current) { clearTimeout(reasoningFlushTRef.current); reasoningFlushTRef.current = null; }
+    reasoningBufRef.current = '';
+    atBottomRef.current = true;
     setMessages([
       { id: 'sys-1', type: 'system' as const, text: 'Olympus Interactive Terminal - speak directly to Apollo.', ts: new Date().toISOString() },
       { id: 'sys-2', type: 'system' as const, text: 'Apollo will interview you, classify your task, and delegate to the right gods.', ts: new Date().toISOString() },
@@ -1612,7 +1689,7 @@ export default function InteractiveTerminal() {
             The OpenCode Mode toggle and the TerminalTabs rendering are gone.
             The Apollo chat uses /api/olympus/action (god delegation, todos, etc.). */}
         <div className="flex-1 min-w-0 flex flex-col">
-          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scroll px-3 py-2 font-mono text-[11px] leading-relaxed space-y-2">
+          <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scroll px-3 py-2 font-mono text-[11px] leading-relaxed space-y-2">
             {messages.map(m => (
               <VisibleMessage
                 key={m.id}
@@ -1834,7 +1911,10 @@ export default function InteractiveTerminal() {
  * (the user's own words, system notices, errors), and hiding them would strand
  * a parked run with nothing to answer — so they always stay visible.
  */
-function VisibleMessage({
+// #195: React.memo — appending a message re-renders the parent, but old
+// rows keep identical props (stable message ids + useCallback'd handlers)
+// and skip re-rendering entirely; only the live row updates.
+const VisibleMessage = memo(function VisibleMessage({
   message,
   focusedGod,
   ...rest
@@ -1846,9 +1926,9 @@ function VisibleMessage({
 }) {
   if (focusedGod && message.god && message.god !== focusedGod) return null;
   return <MessageRenderer message={message} {...rest} />;
-}
+});
 
-function MessageRenderer({
+const MessageRenderer = memo(function MessageRenderer({
   message,
   onChoice,
   onPermissionReply,
@@ -2121,7 +2201,7 @@ function MessageRenderer({
       </div>
     </div>
   );
-}
+});
 
 /* ------------------------------------------------------------------ */
 /* QuestionMessage — interview prompt with dynamic choices.            */
@@ -2152,6 +2232,8 @@ function ThinkingMessage({
   const hasReasoning = (message.reasoning || '').length > 0;
   useEffect(() => {
     const t = setInterval(() => {
+      // #195: no per-second state churn while the document is hidden.
+      if (document.visibilityState === 'hidden') return;
       setSecs(Math.max(0, Math.round((Date.now() - new Date(message.ts).getTime()) / 1000)));
     }, 1000);
     return () => clearInterval(t);

@@ -68,7 +68,7 @@ interface StatusResponse {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function EditorBridgePanel() {
+export default function EditorBridgePanel({ active = true }: { active?: boolean }) {
   const activeProject = useOlympus(s => s.activeProject);
 
   const [status, setStatus] = useState<StatusResponse | null>(null);
@@ -87,10 +87,13 @@ export default function EditorBridgePanel() {
   }, []);
 
   useEffect(() => {
+    // #197: hidden panes must not poll — the 30s status poll only runs
+    // while the Editor tab is showing and the window is visible.
+    if (!active) return;
     fetchStatus().then(() => setLoading(false));
     const iv = setInterval(fetchStatus, 30000);
     return () => clearInterval(iv);
-  }, [fetchStatus]);
+  }, [active, fetchStatus]);
 
   const launchEditor = async (projectPath?: string) => {
     const path = projectPath ?? activeProject?.path;

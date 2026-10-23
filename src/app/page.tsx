@@ -119,12 +119,31 @@ const NewProjectDialog = dynamic(() => import('@/components/olympus/new-project-
 // (see src/lib/symphony/), but the canvas ring overlay is no longer rendered.
 
 /* ------------------------------------------------------------------ */
+/* useDocVisible — #197: a shared visibility gate. Polls must not fire */
+/* while the OLYMPUS window itself is hidden.                          */
+/* ------------------------------------------------------------------ */
+function useDocVisible(): boolean {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const onVis = () => setVisible(document.visibilityState !== 'hidden');
+    onVis();
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+  return visible;
+}
+
+/* ------------------------------------------------------------------ */
 /* RightPane — extracted outside the component to prevent remounting.  */
 /* When defined inside OlympusWorkspace, each render creates a new      */
 /* component type, causing React to unmount/remount the entire right    */
 /* pane tree (killing terminal PTYs, losing Monaco state, etc.).       */
 /* ------------------------------------------------------------------ */
 function RightPane({ rightTab, setRightTab }: { rightTab: string; setRightTab: (t: any) => void }) {
+  // #197: hidden panes keep xterm dimensions but must not poll — each
+  // pane gets `active` (its tab is showing AND the window is visible)
+  // and skips/clears its fetch intervals while inactive.
+  const docVisible = useDocVisible();
   return (
     <div className="h-full flex flex-col bg-olympus-bg">
       <div className="h-9 shrink-0 flex items-center border-b border-olympus-gold/10 bg-olympus-panel px-1">
@@ -135,7 +154,7 @@ function RightPane({ rightTab, setRightTab }: { rightTab: string; setRightTab: (
         <div className="flex-1" />
       </div>
       <div className="flex-1 min-h-0 relative overflow-hidden">
-        	{/* visibility:hidden instead of display:none for inactive tabs —
+         {/* visibility:hidden instead of display:none for inactive tabs —
 	    display:none gives the container 0 dimensions, preventing xterm.js
 	    from opening (term.open() needs non-zero container dimensions).
 	    ConPTY hangs if xterm.js can't respond to cursor-position queries.
@@ -144,12 +163,14 @@ function RightPane({ rightTab, setRightTab }: { rightTab: string; setRightTab: (
           <ChunkErrorBoundary><InteractiveTerminal /></ChunkErrorBoundary>
         </div>
         <div className="absolute inset-0" style={{ visibility: rightTab === 'ide' ? 'visible' : 'hidden', zIndex: rightTab === 'ide' ? 1 : 0 }}>
-          <ChunkErrorBoundary><EditorBridgePanel /></ChunkErrorBoundary>
+          <ChunkErrorBoundary><EditorBridgePanel active={docVisible && rightTab === 'ide'} /></ChunkErrorBoundary>
         </div>
         <div className="absolute inset-0" style={{ visibility: rightTab === 'editor' ? 'visible' : 'hidden', zIndex: rightTab === 'editor' ? 1 : 0 }}>
-          <ChunkErrorBoundary><VaultSummary /></ChunkErrorBoundary>
+          <ChunkErrorBoundary><VaultSummary active={docVisible && rightTab === 'editor'} /></ChunkErrorBoundary>
         </div>
         <div className="absolute inset-0" style={{ visibility: rightTab === 'frames' ? 'visible' : 'hidden', zIndex: rightTab === 'frames' ? 1 : 0 }}>
+          {/* #197 note: CustomFrames does a single mount-time fetch and has
+              no poll interval — nothing to gate here. */}
           <ChunkErrorBoundary><CustomFrames /></ChunkErrorBoundary>
         </div>
       </div>
@@ -180,6 +201,8 @@ function Tab({ id, icon: Icon, label, active, onClick }: { id: string; icon: any
 export default function OlympusWorkspace() {
   const setGraphData = useOlympus(s => s.setGraphData);
   const leftPane = useOlympus(s => s.leftPane);
+  // #197: the window-visibility gate for pane polling surfaces.
+  const docVisible = useDocVisible();
   // W-G: the craft-app focus — set by the Atelier's artcraft button (the
   // studio opens EMBEDDED in the Craft Apps pane, never a browser escape).
   const [craftAppFocus, setCraftAppFocus] = useState<string | null>(null);
@@ -261,17 +284,37 @@ export default function OlympusWorkspace() {
         setHealth(d.health);
       })
       .catch(() => {});
+    // #197: root polls are gated on document.visibilityState — a hidden
+    // OLYMPUS window keeps its SSE/chat alive but stops the /graph + /health
+    // background fetches. Checked at fire time (no interval teardown).
     const brainIv = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
       fetch('/api/olympus/graph', { cache: 'no-store' })
         .then(r => r.json())
         .then(d => { setBrainHealth(d.health); })
         .catch(() => {});
     }, 30000);
     const iv = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
       fetch('/api/olympus/health', { cache: 'no-store' }).then(r => r.json()).then(setHealth).catch(() => {});
     }, 15000);
     return () => { clearInterval(brainIv); clearInterval(iv); };
   }, [setGraphData]);
+
+  // #197: returning to a visible window refreshes immediately instead of
+  // waiting out the (now visibility-gated) poll intervals.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      fetch('/api/olympus/graph', { cache: 'no-store' })
+        .then(r => r.json())
+        .then(d => { if (d.health) { setBrainHealth(d.health); setHealth(d.health); } })
+        .catch(() => {});
+      fetch('/api/olympus/health', { cache: 'no-store' }).then(r => r.json()).then(setHealth).catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   // Refresh health + graph when the user switches panes (instead of waiting
   // up to 30s for the next poll). Also refreshes on window focus so counts
@@ -466,7 +509,11 @@ export default function OlympusWorkspace() {
                 {leftPane === 'brain' && <ChunkErrorBoundary><BrainGraph3D /></ChunkErrorBoundary>}
                 {leftPane === 'live-preview' && <ChunkErrorBoundary><LivePreview /></ChunkErrorBoundary>}
                 {leftPane === 'god-intelligence' && <ChunkErrorBoundary><GodIntelligenceDashboard health={brainHealth ?? health} /></ChunkErrorBoundary>}
-                {leftPane === 'cost' && <ChunkErrorBoundary><CostDashboard /></ChunkErrorBoundary>}
+                {/* #197: CostDashboard is mounted whenever the cost pane is
+                    selected — but focus mode hides the left dashboard via
+                    CSS, so `active` also accounts for that + window
+                    visibility. Inactive = no cost/dispatch/hop polling. */}
+                {leftPane === 'cost' && <ChunkErrorBoundary><CostDashboard active={!focusMode && docVisible} /></ChunkErrorBoundary>}
                 {leftPane === 'atelier' && <ChunkErrorBoundary><AtelierPanel /></ChunkErrorBoundary>}
                 {leftPane === 'sync-map' && <ChunkErrorBoundary><SyncMapPanel /></ChunkErrorBoundary>}
                 {leftPane === 'craft-apps' && <ChunkErrorBoundary><CraftAppsPanel initialApp={craftAppFocus} /></ChunkErrorBoundary>}

@@ -131,7 +131,9 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
     load();
     const iv = setInterval(load, 15_000);
     // W1-1: the live second tick — running durations count up in real time.
-    const tk = setInterval(() => setTick(n => n + 1), 1_000);
+    // #195: slowed 1s -> 5s (the tick re-rendered every god card each
+    // second; running durations tolerate a 5s grain).
+    const tk = setInterval(() => setTick(n => n + 1), 5_000);
     return () => { cancelled = true; clearInterval(iv); clearInterval(tk); };
   }, []);
 

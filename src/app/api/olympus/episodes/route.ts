@@ -41,6 +41,11 @@ const LIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const LIVE_MAX_EVENTS = 400;
 /** Safety cap for pathological feeds: parse at most the last 25k lines. */
 const LIVE_MAX_LINES = 25_000;
+/** #196 — incremental tail windows: the seed/catch-up cap for the live
+ *  feed (unchanged from the old tail bound) and the trimmed bus window. */
+const FEED_TAIL_BYTES = 4 * 1024 * 1024;
+const BUS_TAIL_BYTES = 200 * 1024;
+const BUS_MAX_LINES = 4000;
 
 const GOD_ICONS: Record<string, string> = {
   apollo: 'apollo', atlas: 'atlas', hephaestus: 'hephaestus', athena: 'athena',
@@ -72,33 +77,79 @@ function parseFrontmatter(raw: string): Record<string, any> {
   return fm;
 }
 
+/**
+ * #196 — byte-offset incremental tail for the live feed: module state
+ * tracks the last seen size and only NEW bytes are read per call (the old
+ * path re-read a 4MB tail on every poll, 3 surfaces x 10-15s). The ring
+ * keeps the last LIVE_MAX_LINES raw lines in memory; the mapping + 24h
+ * filter below run over the ring with a fresh cutoff, so repeated IO is
+ * gone and event aging stays exact. Reseed on first read and on shrink
+ * (rotation/truncation).
+ */
+const feedTail = { started: false, size: 0, partial: '', lines: [] as string[] };
+
+interface TailState {
+  started: boolean;
+  size: number;
+  partial: string;
+  lines: string[];
+}
+
+function ingestTail(t: TailState, filePath: string, capBytes: number, maxLines: number): void {
+  let st: fs.Stats;
+  try { st = fs.statSync(filePath); } catch {
+    t.started = false; t.size = 0; t.partial = ''; t.lines = [];
+    return;
+  }
+  // Reseed on first read or shrink (rotation/truncation): restart from a
+  // capped tail window. Otherwise continue from the last seen size.
+  const reseed = !t.started || st.size < t.size;
+  const from = reseed ? Math.max(0, st.size - capBytes) : t.size;
+  if (reseed) {
+    t.started = true;
+    t.partial = '';
+    t.lines = [];
+  }
+  if (st.size <= from) return;
+  // Read only the NEW bytes; if growth exceeds the cap, jump the window.
+  const jumped = st.size - from > capBytes;
+  const readFrom = jumped ? st.size - capBytes : from;
+  try {
+    const fh = fs.openSync(filePath, 'r');
+    try {
+      const buf = Buffer.alloc(st.size - readFrom);
+      fs.readSync(fh, buf, 0, buf.length, readFrom);
+      t.size = st.size;
+      let chunk = t.partial + buf.toString('utf-8');
+      // A reseeded/jumped window starts at an arbitrary byte — its first
+      // line is partial and must be dropped. A boundary-continuing read
+      // (partial === '', from === last size) keeps every new line.
+      const midLine = (reseed || jumped) && readFrom > 0;
+      if (midLine && t.partial === '' && chunk.indexOf('\n') !== -1) {
+        chunk = chunk.slice(chunk.indexOf('\n') + 1);
+      }
+      const parts = chunk.split('\n');
+      t.partial = parts.pop() || '';
+      for (const l of parts) {
+        if (!l.trim()) continue;
+        t.lines.push(l);
+        if (t.lines.length > maxLines) t.lines.shift();
+      }
+    } finally {
+      fs.closeSync(fh);
+    }
+  } catch { /* keep whatever we already have */ }
+}
+
 /** Read the live activity feed tail and map real events to episodes.
  *  The 17:44 lesson: 2,026 real events in live.jsonl and the panel said
  *  "No activity yet" — the feed IS the Recent Activity; the old route
  *  only read episode .md files that the learning loop rarely writes. */
 function readLiveEpisodes(): Episode[] {
-  let raw = '';
-  try {
-    const st = fs.statSync(FEED_PATH);
-    const size = st.size;
-    if (size > 4 * 1024 * 1024) {
-      // Large feed: read only the tail (a 25k-line window ≈ 2.5MB).
-      const fh = fs.openSync(FEED_PATH, 'r');
-      const buf = Buffer.alloc(Math.min(size, 4 * 1024 * 1024));
-      fs.readSync(fh, buf, 0, buf.length, Math.max(0, size - buf.length));
-      fs.closeSync(fh);
-      raw = buf.toString('utf-8');
-      raw = raw.slice(raw.indexOf('\n') + 1); // drop the partial first line
-    } else {
-      raw = fs.readFileSync(FEED_PATH, 'utf-8');
-    }
-  } catch {
-    return [];
-  }
-  const lines = raw.trim().split('\n').filter(Boolean).slice(-LIVE_MAX_LINES);
+  ingestTail(feedTail, FEED_PATH, FEED_TAIL_BYTES, LIVE_MAX_LINES);
   const cutoff = Date.now() - LIVE_WINDOW_MS;
   const out: Episode[] = [];
-  for (const line of lines) {
+  for (const line of feedTail.lines) {
     let ev: any;
     try { ev = JSON.parse(line); } catch { continue; }
     const ts = typeof ev?.ts === 'string' ? ev.ts : '';
@@ -140,15 +191,18 @@ function readLiveEpisodes(): Episode[] {
 /** The Symphony BUS tail (W2, v0.0.4): dispatch outcomes + god heartbeat
  *  transitions ride ~/.olympus/symphony-bus.jsonl — invisible to the
  *  panels until now (the "Atlas/Callimachus look dead" half: their work
- *  rides the bus, the feed only carried tool/dispatch/hop rows). */
+ *  rides the bus, the feed only carried tool/dispatch/hop rows).
+ *  #196 — same incremental byte-offset tail as the feed, trimmed to the
+ *  last 200KB (was: a full-file readFileSync per call). */
+const busTail = { started: false, size: 0, partial: '', lines: [] as string[] };
+
 function readBusEpisodes(): Episode[] {
   const os = require('node:os') as typeof import('node:os');
   const busPath = path.join(os.homedir(), '.olympus', 'symphony-bus.jsonl');
-  let raw = '';
-  try { raw = fs.readFileSync(busPath, 'utf-8'); } catch { return []; }
+  ingestTail(busTail, busPath, BUS_TAIL_BYTES, BUS_MAX_LINES);
   const cutoff = Date.now() - LIVE_WINDOW_MS;
   const out: Episode[] = [];
-  for (const line of raw.trim().split('\n').filter(Boolean).slice(-4000)) {
+  for (const line of busTail.lines) {
     let ev: any;
     try { ev = JSON.parse(line); } catch { continue; }
     const ts = typeof ev?.ts === 'string' ? ev.ts : '';
@@ -191,8 +245,15 @@ function readBusEpisodes(): Episode[] {
 }
 
 /** Vault episodes — RECURSIVE (the 17:44 bug: the route read only the
- *  flat dir while the vault nests episodes under <god>/ subdirs). */
+ *  flat dir while the vault nests episodes under <god>/ subdirs).
+ *  #196 — the recursive walk + frontmatter parse is cached for 60s: the
+ *  learning loop writes episodes rarely and three surfaces poll this
+ *  route every 10-15s. */
+const VAULT_CACHE_MS = 60_000;
+let vaultWalkCache: { at: number; eps: Episode[]; count: number } | null = null;
+
 function readVaultEpisodes(): { eps: Episode[]; count: number } {
+  if (vaultWalkCache && Date.now() - vaultWalkCache.at < VAULT_CACHE_MS) return vaultWalkCache;
   const out: Episode[] = [];
   let count = 0;
   const walk = (dir: string) => {
@@ -224,7 +285,8 @@ function readVaultEpisodes(): { eps: Episode[]; count: number } {
     }
   };
   walk(EPISODES_DIR);
-  return { eps: out, count };
+  vaultWalkCache = { at: Date.now(), eps: out, count };
+  return vaultWalkCache;
 }
 
 export async function GET() {

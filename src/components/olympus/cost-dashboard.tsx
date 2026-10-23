@@ -149,7 +149,7 @@ async function fetchAllDispatchCatalogs(): Promise<Record<string, GodDispatchInf
 /* (spend per hour over the 5h window). */
 /* - Tightened copy throughout. Provider banner is one line. */
 /* ------------------------------------------------------------------ */
-export default function CostDashboard() {
+export default function CostDashboard({ active = true }: { active?: boolean }) {
  const [data, setData] = useState<CostSummary | null>(null);
  const [dispatch, setDispatch] = useState<Record<string, GodDispatchInfo>>({});
  // W2-C (v0.0.4): live hop counts per god — component-scope state (the
@@ -163,7 +163,11 @@ export default function CostDashboard() {
  const prevReqRef = useRef<Record<string, number>>({});
 
  useEffect(() => {
- let cancelled = false;
+  // #197: hidden panes must not poll — when inactive (focus mode hides
+  // the left dashboard, or the window is hidden) nothing runs here, and
+  // re-activating restarts every loader + interval.
+  if (!active) return;
+  let cancelled = false;
  const load = async () => {
  try {
  const ctrl = new AbortController();
@@ -214,13 +218,13 @@ export default function CostDashboard() {
  const onStrategyChange = () => loadStrategy();
  window.addEventListener('olympus:strategy-changed', onStrategyChange);
 
- // Refresh the dispatch catalog too. The catalog now
- // carries LIVE usage counts (per-ECC-agent) that change as gods dispatch.
- // Refresh on the same 10s cadence as costs so the "X active / Y total"
- // badge in the Sub-agents column stays current.
- const loadDispatch = () => fetchAllDispatchCatalogs().then(d => { if (!cancelled) setDispatch(d); });
- loadDispatch();
- const ivDispatch = setInterval(loadDispatch, 10000);
+  // Refresh the dispatch catalog too. The catalog now
+  // carries LIVE usage counts (per-ECC-agent) that change as gods dispatch.
+  // #197: the 10-parallel dispatch-graph fan-out is expensive — it now
+  // runs only while the dashboard is active, at 30s instead of 10s.
+  const loadDispatch = () => fetchAllDispatchCatalogs().then(d => { if (!cancelled) setDispatch(d); });
+  loadDispatch();
+  const ivDispatch = setInterval(loadDispatch, 30000);
  // W2-C (v0.0.4): the live hop count per god — the hop runtime's
  // children ARE sub-agent work; counting only tool-dispatched demigods
  // showed "0/N" while entire campaigns ran on god lanes.
@@ -245,15 +249,15 @@ export default function CostDashboard() {
  const onDemigodsChanged = () => loadDispatch();
  window.addEventListener('olympus:demigods-changed', onDemigodsChanged);
 
- return () => {
- cancelled = true;
- clearInterval(iv);
- clearInterval(ivDispatch);
- clearInterval(ivHops);
- window.removeEventListener('olympus:strategy-changed', onStrategyChange);
- window.removeEventListener('olympus:demigods-changed', onDemigodsChanged);
- };
- }, []);
+  return () => {
+    cancelled = true;
+    clearInterval(iv);
+    clearInterval(ivDispatch);
+    clearInterval(ivHops);
+    window.removeEventListener('olympus:strategy-changed', onStrategyChange);
+    window.removeEventListener('olympus:demigods-changed', onDemigodsChanged);
+  };
+ }, [active]);
 
  if (!data) {
  return (

@@ -24,17 +24,68 @@ const VAULT_ROOT = getVaultRoot();
 const FEED_PATH = path.join(VAULT_ROOT, '06_Activity_Feed', 'live.jsonl');
 
 /**
- * Read the last N lines of live.jsonl (tail-style).
+ * #196 — byte-offset tail of live.jsonl. The 2s poll never full-reads the
+ * feed: module state tracks the last seen size and only NEW bytes are read
+ * (capped per catch-up at TAIL_CAP_BYTES). A rolling window of the last
+ * TAIL_KEEP_LINES parsed lines replaces the old full-file `tailLines`.
+ * Reset on shrink (rotation/truncation) and on first read (seeded with a
+ * capped tail so a pending review from before the process started is
+ * still found).
  */
-function tailLines(filePath: string, maxLines = 50): string[] {
-  if (!fs.existsSync(filePath)) return [];
-  try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const lines = content.split('\n').filter(l => l.trim());
-    return lines.slice(-maxLines);
-  } catch {
-    return [];
+const TAIL_CAP_BYTES = 256 * 1024;
+const TAIL_KEEP_LINES = 100;
+const tail = {
+  started: false,
+  size: 0,
+  partial: '',
+  lines: [] as string[],
+};
+
+function tailLines(): string[] {
+  let st: fs.Stats;
+  try { st = fs.statSync(FEED_PATH); } catch {
+    tail.started = false; tail.size = 0; tail.partial = ''; tail.lines = [];
+    return tail.lines;
   }
+  // Reseed on first read or shrink (rotation/truncation): restart from a
+  // capped tail window. Otherwise continue from the last seen size.
+  const reseed = !tail.started || st.size < tail.size;
+  const from = reseed ? Math.max(0, st.size - TAIL_CAP_BYTES) : tail.size;
+  if (reseed) {
+    tail.started = true;
+    tail.partial = '';
+    tail.lines = [];
+  }
+  if (st.size <= from) return tail.lines;
+  // Read only the NEW bytes; if growth exceeds the cap, jump the window.
+  const jumped = st.size - from > TAIL_CAP_BYTES;
+  const readFrom = jumped ? st.size - TAIL_CAP_BYTES : from;
+  try {
+    const fh = fs.openSync(FEED_PATH, 'r');
+    try {
+      const buf = Buffer.alloc(st.size - readFrom);
+      fs.readSync(fh, buf, 0, buf.length, readFrom);
+      tail.size = st.size;
+      let chunk = tail.partial + buf.toString('utf-8');
+      // A reseeded/jumped window starts at an arbitrary byte — its first
+      // line is partial and must be dropped. A boundary-continuing read
+      // (partial === '', from === last size) keeps every new line.
+      const midLine = (reseed || jumped) && readFrom > 0;
+      if (midLine && tail.partial === '' && chunk.indexOf('\n') !== -1) {
+        chunk = chunk.slice(chunk.indexOf('\n') + 1);
+      }
+      const parts = chunk.split('\n');
+      tail.partial = parts.pop() || '';
+      for (const l of parts) {
+        if (!l.trim()) continue;
+        tail.lines.push(l);
+        if (tail.lines.length > TAIL_KEEP_LINES) tail.lines.shift();
+      }
+    } finally {
+      fs.closeSync(fh);
+    }
+  } catch { /* keep whatever we already have */ }
+  return tail.lines;
 }
 
 /**
@@ -44,7 +95,7 @@ function tailLines(filePath: string, maxLines = 50): string[] {
  */
 export async function GET(_req: NextRequest) {
   try {
-    const lines = tailLines(FEED_PATH, 100);
+    const lines = tailLines();
     // Walk backwards to find the latest "design-review-requested" event
     // that hasn't been followed by a "design-review-selected" for the same reviewId.
     const selectedIds = new Set<string>();

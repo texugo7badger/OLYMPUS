@@ -130,7 +130,7 @@ function timeAgo(ts: string): string {
  return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export default function VaultSummary() {
+export default function VaultSummary({ active = true }: { active?: boolean }) {
  const [summary, setSummary] = useState<VaultSummary | null>(null);
  const [loading, setLoading] = useState(true);
  const [error, setError] = useState<string | null>(null);
@@ -252,14 +252,17 @@ export default function VaultSummary() {
  };
 
  useEffect(() => {
- load();
+  // #197: hidden panes must not poll — the 4-fetch fan-out only runs
+  // while the Vault tab is showing and the window is visible.
+  if (!active) return;
+  load();
 	 // Poll every 10s (was 30s) so the mastered skills count
  // updates dynamically when gods master new skills. The brainHealth()
  // function reads the mastered-skills profiles from disk on every call,
  // so this gives near-real-time updates.
  const iv = setInterval(load, 10000);
  return () => clearInterval(iv);
- }, []);
+ }, [active]);
 
  if (loading && !summary) {
  return (

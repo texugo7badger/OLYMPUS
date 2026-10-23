@@ -61,10 +61,15 @@ export default function CompactBrainButton() {
  setWarnDismissed(localStorage.getItem(WARN_PREF_KEY) === '1');
  }, []);
 
+ // #195: the 250ms clock only runs while a countdown is actually on screen
+ // (cooldown or undo window) — idle no longer re-renders this button 4x/s.
+ const countdownActive = compactState === 'cooldown' || compactState === 'undo-window';
  useEffect(() => {
- const t = setInterval(() => setNow(Date.now()), 250);
- return () => clearInterval(t);
- }, []);
+  if (!countdownActive) return;
+  setNow(Date.now());
+  const t = setInterval(() => setNow(Date.now()), 250);
+  return () => clearInterval(t);
+ }, [countdownActive]);
 
  // Auto-transition: cooldown -> idle when cooldown expires.
  useEffect(() => {

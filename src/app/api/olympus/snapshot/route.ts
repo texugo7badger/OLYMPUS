@@ -3,13 +3,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { getVaultRoot } from '@/lib/vault-root';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const execAsync = promisify(exec);
 
 const VAULT = getVaultRoot();
 
@@ -61,8 +64,10 @@ export async function GET(req: NextRequest) {
 
   let commitCount = 1;
   try {
-    const log = execSync('git log --oneline', { cwd: VAULT, encoding: 'utf-8', timeout: 5000 }).trim();
-    commitCount = log.split('\n').filter(Boolean).length;
+    // #196: async exec — the sync execSync blocked the request path's
+    // thread for up to its 5s timeout.
+    const { stdout } = await execAsync('git log --oneline', { cwd: VAULT, encoding: 'utf-8', timeout: 5000 });
+    commitCount = stdout.trim().split('\n').filter(Boolean).length;
   } catch {}
 
   const growthFactor = commitCount > 1 ? commitIdx / (commitCount - 1) : 1;
