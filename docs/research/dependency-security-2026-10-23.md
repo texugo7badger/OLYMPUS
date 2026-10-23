@@ -149,6 +149,26 @@ The gate is now durable: every lockfile change re-runs `npm audit --audit-level=
 
 ---
 
+## The gate's second catch (the same night — the 21st and the 8 the rescan found)
+
+The workflow added in this release failed on the release commit itself: **electron GHSA-jr5w-w6x2-84p9** (high, vulnerable `>=44.0.0-alpha.1 <44.9.1`) had entered the registry after the local audit and flagged the shipped `44.9.0`. That is the gate doing its job — a red workflow, not a silent release. Cure: `electron ^44.8.0 → ^44.9.1` (same major; 45.0.0 is a major bump and was not taken).
+
+The Dependabot rescan that followed the fix listed **8 more alerts on the dev/build paths** — packages `npm audit` did not flag from the root (its advisory window differed):
+
+| Package | Advisory | Vulnerable → patched | Cure |
+|---|---|---|---|
+| `undici` (6.x, via `@electron/rebuild → node-gyp`) | GHSA-xjj6-f33q-929c / GHSA-4qv8-2p9j-2685 | 6.29.0 → 6.29.1 | nested override `node-gyp → undici 6.29.1` |
+| `undici` (7.x, via `electron → @electron/get`) | same | 7.30.0 → 7.30.1 | nested override `@electron/get → undici 7.30.1` |
+| `undici` (8.x, via `@opencode/util`) | same | 8.12.3 | already patched — no action |
+| `fast-uri` (via `electron-builder → ajv`) | GHSA-w74x-v6f9-j3xg, GHSA-xhq7-xmqj-769h, GHSA-wjr9-j795-jxcr, GHSA-333x-w4r6-6crp | 3.1.8 → 3.1.9 | override `fast-uri 3.1.9` |
+| `@azure/msal-node` (extension build tool, `@vscode/vsce → @azure/identity`) | GHSA-xcx6-jx8p-x3h5 | 6.0.1 → 7.1.0 | extension override `@azure/identity → @azure/msal-node 7.1.0` |
+
+Two versions of `undici` had to be pinned separately because the consumers live on different majors — a single global override would break one of them. `@azure/msal-node` is a **devDependency of the vsce build tool** (not shipped in the app or the extension runtime); the 7.1.0 bump was verified by re-packaging the vsix (`vsce package --no-dependencies` → green, 25.97 KB).
+
+After the overrides: `npm audit` → **0** in the root **and** in `extensions/vscode-olympus`; tsc 0, eslint 0, `electron:compile` 0, battery 57 PASS / 0 FAIL / 1 declared SKIP.
+
+---
+
 ## Residual risk
 
 - The three “latest” pins (`electron`, `next`, etc.) can introduce new advisories between releases; the weekly job is the detector.
