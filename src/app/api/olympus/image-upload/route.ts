@@ -51,6 +51,16 @@ const EXT_BY_TYPE: Record<string, string> = {
   'image/svg+xml': 'svg',
 };
 
+const TYPE_BY_EXT: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  bmp: 'image/bmp',
+  svg: 'image/svg+xml',
+};
+
 /**
  * Reject any path that escapes the project root after resolution.
  * The interactive-terminal passes the active project's absolute path
@@ -164,7 +174,39 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // #203: serve a previously saved reference image back to the transcript.
+  // The browser object URL created at attach time dies on reload; the file
+  // on disk does not, so the persisted transcript points here instead.
+  const raw = new URL(req.url).searchParams.get('path');
+  if (raw) {
+    try {
+      const resolved = path.resolve(raw);
+      // Only files under a `reference-images/` directory are served — the
+      // route must never become a generic local-file reader.
+      if (!resolved.includes(`${path.sep}reference-images${path.sep}`)) {
+        return NextResponse.json({ ok: false, error: 'Not a reference image.' }, { status: 404 });
+      }
+      if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+        return NextResponse.json({ ok: false, error: 'Image not found.' }, { status: 404 });
+      }
+      const ext = path.extname(resolved).slice(1).toLowerCase();
+      const mime = TYPE_BY_EXT[ext];
+      if (!mime) {
+        return NextResponse.json({ ok: false, error: 'Unsupported image type.' }, { status: 404 });
+      }
+      const buf = fs.readFileSync(resolved);
+      return new NextResponse(buf, {
+        headers: {
+          'Content-Type': mime,
+          'Content-Length': String(buf.length),
+          'Cache-Control': 'private, max-age=300',
+        },
+      });
+    } catch (e: any) {
+      return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
+    }
+  }
   return NextResponse.json({
     ok: true,
     endpoint: 'POST /api/olympus/image-upload',

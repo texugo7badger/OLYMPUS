@@ -181,10 +181,42 @@ function toolCallTarget(toolInput: any): string {
 /** #210: a message submitted while a turn streams — visible, editable,
  *  cancellable, and auto-posted FIFO when the run idles. Persisted per
  *  conversation (localStorage) so an app restart keeps the queue. */
+interface PendingImage {
+  /** Browser object URL for the local chip/thumbnail. */
+  thumbnailUrl: string;
+  /** Absolute on-disk path returned by /api/olympus/image-upload. */
+  savedPath: string;
+  filename: string;
+}
+
 interface QueuedMessage {
   id: string;
   text: string;
   context?: string;
+  /** #203: an attached reference image rides the queued prompt too. */
+  image?: PendingImage;
+}
+
+/** #203: durable URL for a saved reference image — the object URL dies on
+ *  reload, the file on disk does not. The GET handler serves it back. */
+const imageUrlFor = (savedPath: string) =>
+  `/api/olympus/image-upload?path=${encodeURIComponent(savedPath)}`;
+
+/** #203: transcript persistence key — one per conversation, so a reset
+ *  starts clean and a reload restores the conversation you were reading. */
+const messagesKeyFor = (conversationId: string) => `olympus-chat-messages:${conversationId}`;
+
+/** Strip the transient bits before a message goes to localStorage. Streaming
+ *  rows are re-rendered live by the next run; a parked permission card can no
+ *  longer be answered after a reload, so it is dropped rather than persisted
+ *  as a dead button. */
+function durableMessage(m: ChatMessage): ChatMessage {
+  return {
+    ...m,
+    streaming: false,
+    awaitingAnswer: false,
+    imagePath: m.imageSavedPath ? imageUrlFor(m.imageSavedPath) : m.imagePath,
+  };
 }
 
 interface ChatMessage {
@@ -252,6 +284,16 @@ export default function InteractiveTerminal() {
   const [submitting, setSubmitting] = useState(false);
   // #210: the chat queue (long-run companion).
   const [queued, setQueued] = useState<QueuedMessage[]>([]);
+  // #203: a reference image is staged, not auto-sent — it rides the next
+  // prompt the user actually writes (or the next queued message). Declared
+  // above `submit` (which reads it) to avoid the block-scoped TDZ.
+  const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
+  const removePendingImage = useCallback(() => {
+    setPendingImage(prev => {
+      if (prev) URL.revokeObjectURL(prev.thumbnailUrl);
+      return null;
+    });
+  }, []);
   // A stop() must NOT auto-post the queue (the user asked for quiet).
   const queuePausedRef = useRef(false);
   const [awaitingAnswer, setAwaitingAnswer] = useState(false);
@@ -368,7 +410,7 @@ export default function InteractiveTerminal() {
   const atBottomRef = useRef(true);
   const lastAutoScrollRef = useRef(0);
   const autoScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const contextRef = useRef<HTMLTextAreaElement>(null);
 
   // AbortController for the in-flight POST to /api/olympus/action. stop(),
@@ -1129,6 +1171,9 @@ export default function InteractiveTerminal() {
       return;
     }
     if (!text.trim()) return;
+    // #203: an explicitly passed image wins; otherwise a staged image rides
+    // this prompt. Either way the composer chip clears once the message lands.
+    const attachedImage = image ?? pendingImage ?? undefined;
     // #210: a message typed while the run streams lands in the visible queue
     // instead of being dropped; it auto-posts FIFO when the run idles.
     if (submitting) {
@@ -1136,7 +1181,9 @@ export default function InteractiveTerminal() {
         id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         text: text.trim(),
         context: contextText?.trim() || undefined,
+        image: attachedImage,
       }]);
+      if (attachedImage) setPendingImage(null);
       setInput('');
       queuePausedRef.current = false;
       return;
@@ -1154,7 +1201,7 @@ export default function InteractiveTerminal() {
     // upload time. The prefix tells Apollo to use the compress_7z MCP to
     // extract them. This is more robust than JS archive libraries.
     const buildUploadPrefix = (): string => {
-      if (uploadedFileDetails.length === 0 && !image) return '';
+      if (uploadedFileDetails.length === 0 && !attachedImage) return '';
       const lines: string[] = ['[Uploaded files:'];
       for (const f of uploadedFileDetails) {
         const lower = f.name.toLowerCase();
@@ -1186,12 +1233,12 @@ export default function InteractiveTerminal() {
       }
       // Task 2 — reference image. Tell Apollo the on-disk path so Athena
       // can pick it up via the built-in VLM skill.
-      if (image) {
-        lines.push(`  - ${image.filename} → reference image saved at ${image.savedPath}`);
+      if (attachedImage) {
+        lines.push(`  - ${attachedImage.filename} → reference image saved at ${attachedImage.savedPath}`);
         lines.push(`    **ACTION**: Use the VLM skill (Athena) to analyze this image at the path above.`);
       }
       lines.push(']');
-      if (!image) {
+      if (!attachedImage) {
         lines.push('Use the vault.read tool to inspect any of these paths under ~/OLYMPUS-VAULT/.');
         lines.push('For archives, extract with bash (7z x) first, then read the extracted files.');
       } else {
@@ -1216,10 +1263,11 @@ export default function InteractiveTerminal() {
     addMessage({
       type: 'user',
       text: text.trim(),
-      imagePath: image?.thumbnailUrl,
-      imageFilename: image?.filename,
-      imageSavedPath: image?.savedPath,
+      imagePath: attachedImage?.thumbnailUrl,
+      imageFilename: attachedImage?.filename,
+      imageSavedPath: attachedImage?.savedPath,
     });
+    if (attachedImage) setPendingImage(null);
     addMessage({ type: 'system', text: 'Routing to Apollo...' });
     updateGodActivity('apollo', 'thinking', 'Analyzing prompt...');
     // Open the counter NOW, before the POST. The provider's time-to-first-
@@ -1267,7 +1315,7 @@ export default function InteractiveTerminal() {
       if (actionAbortRef.current?.signal.aborted === false) actionAbortRef.current = null;
       setSubmitting(false); updateGodActivity('apollo', 'idle'); inputRef.current?.focus(); setUploadedFiles([]); setUploadedFileDetails([]);
     }
-  }, [submitting, addMessage, updateGodActivity, pushEvent, pushPulse, setActiveGod, handleServerEvent, uploadedFileDetails]);
+  }, [submitting, addMessage, updateGodActivity, pushEvent, pushPulse, setActiveGod, handleServerEvent, uploadedFileDetails, pendingImage]);
 
   // #210: queue persistence (per conversation) — hydrate on mount and write
   // on every change. A restart resumes exactly what was pending.
@@ -1280,13 +1328,71 @@ export default function InteractiveTerminal() {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         setQueued(parsed.filter((q: any) => q && typeof q.text === 'string' && q.text.trim())
-          .map((q: any) => ({ id: String(q.id || `q-${Math.random().toString(36).slice(2, 7)}`), text: String(q.text), context: typeof q.context === 'string' ? q.context : undefined })));
+          .map((q: any) => ({
+            id: String(q.id || `q-${Math.random().toString(36).slice(2, 7)}`),
+            text: String(q.text),
+            context: typeof q.context === 'string' ? q.context : undefined,
+            // #203: the persisted object URL is dead after a reload — rebuild
+            // it from the on-disk path the upload route can serve.
+            image: q.image && typeof q.image.savedPath === 'string'
+              ? {
+                thumbnailUrl: imageUrlFor(q.image.savedPath),
+                savedPath: q.image.savedPath,
+                filename: typeof q.image.filename === 'string' ? q.image.filename : 'reference image',
+              }
+              : undefined,
+          })));
       }
     } catch { /* a corrupt queue is dropped, never fatal */ }
   }, [queueKeyFor]);
   useEffect(() => {
     try { localStorage.setItem(queueKeyFor(conversationIdRef.current), JSON.stringify(queued)); } catch {}
   }, [queued, queueKeyFor]);
+
+  // #203: the transcript survives an app restart. Hydrate once on mount (the
+  // restored conversation id picks the matching transcript) and persist on a
+  // short debounce so streaming chunks don't hammer localStorage. Thinking
+  // lines and parked permission cards are transient by nature — dropped.
+  const persistMessagesT = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(messagesKeyFor(conversationIdRef.current));
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      const restored = parsed
+        .filter((m: any) => m && typeof m.text === 'string' && m.type !== 'thinking' && m.permissionState !== 'pending')
+        .map((m: any) => durableMessage({
+          ...m,
+          id: String(m.id || `r-${Math.random().toString(36).slice(2, 9)}`),
+          ts: typeof m.ts === 'string' ? m.ts : new Date().toISOString(),
+        }));
+      if (restored.length > 0) setMessages(restored);
+    } catch { /* a corrupt transcript is dropped, never fatal */ }
+  }, []);
+  useEffect(() => {
+    if (persistMessagesT.current) clearTimeout(persistMessagesT.current);
+    persistMessagesT.current = setTimeout(() => {
+      try {
+        const rows = messages
+          .filter(m => m.type !== 'thinking' && m.permissionState !== 'pending')
+          .slice(-200)
+          .map(durableMessage);
+        localStorage.setItem(messagesKeyFor(conversationIdRef.current), JSON.stringify(rows));
+      } catch { /* quota/corrupt — never fatal */ }
+    }, 400);
+    return () => { if (persistMessagesT.current) clearTimeout(persistMessagesT.current); };
+  }, [messages]);
+
+  // #203: the composer grows with its content (paragraphs, shift+enter
+  // newlines) up to max-h-48, then scrolls. Reset to auto first so the box
+  // also shrinks when text is deleted.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 192)}px`;
+  }, [input]);
 
   // #210: FIFO auto-post — when the run idles (and nobody is waiting on an
   // answer/context), the head of the queue posts to the same warm session.
@@ -1297,7 +1403,7 @@ export default function InteractiveTerminal() {
     if (queued.length === 0) return;
     const next = queued[0];
     setQueued(prev => prev.slice(1));
-    void submit(next.text, next.context);
+    void submit(next.text, next.context, next.image);
   }, [submitting, awaitingAnswer, awaitingContext, queued, submit]);
 
   // DesignReviewCard onSelect handler.
@@ -1430,7 +1536,10 @@ export default function InteractiveTerminal() {
     // #210: the queue belonged to the old conversation — drop it (and its
     // persisted copy) instead of leaking pending prompts into a fresh run.
     try { localStorage.removeItem(`olympus-chat-queue:${conversationIdRef.current}`); } catch {}
+    // #203: a reset is a fresh conversation — drop the old transcript too.
+    try { localStorage.removeItem(messagesKeyFor(conversationIdRef.current)); } catch {}
     setQueued([]);
+    setPendingImage(null);
     queuePausedRef.current = false;
     conversationIdRef.current = makeConversationId();
     persistConversationId(conversationIdRef.current);
@@ -1590,26 +1699,23 @@ export default function InteractiveTerminal() {
           continue;
         }
 
-        // Submit the prompt to Apollo with the inline image attached.
-        // Only the first image kicks off a new submit; subsequent images
-        // would be queued behind `submitting` and could collide, so we
-        // break after the first to keep the UX predictable. (If the user
-        // wants to upload multiple, they can do so one at a time.)
+        // #203: stage the image as a chip instead of auto-sending a prompt.
+        // It rides the next message the user actually writes (or the next
+        // queued message), so the text and the image travel together.
         //
         // `savedPath` is non-null here because both failure paths above
         // `continue`d out of the loop. TS can't see through the
         // try/catch/continue control flow, so we assert non-null.
-        await submit(
-          `I uploaded a reference image at ${savedPath!} — use it for the design`,
-          undefined,
-          { thumbnailUrl, savedPath: savedPath!, filename: savedFilename },
-        );
+        setPendingImage(prev => {
+          if (prev) URL.revokeObjectURL(prev.thumbnailUrl);
+          return { thumbnailUrl, savedPath: savedPath!, filename: savedFilename };
+        });
         break;
       }
     } finally {
       setUploadingImage(false);
     }
-  }, [activeProject, addMessage, submit]);
+  }, [activeProject, addMessage]);
 
   const toggleTodo = (id: string) => setTodos(prev => prev.map(t =>
     t.id === id ? { ...t, status: t.status === 'done' ? 'pending' : 'done' } : t,
@@ -1973,18 +2079,43 @@ export default function InteractiveTerminal() {
             </div>
           )}
 
-          <div className="shrink-0 border-t border-olympus-gold/10 bg-olympus-panel px-3 py-2 flex items-center gap-2">
-            <span style={{ color: GOD_COLOR }} className="font-mono text-[12px] shrink-0">$</span>
-            <input
+          <div className="shrink-0 border-t border-olympus-gold/10 bg-olympus-panel px-3 py-2">
+            {/* #203: staged reference image — rides the next prompt. */}
+            {pendingImage && (
+              <div className="flex items-center gap-2 mb-2 pl-5">
+                <img
+                  src={pendingImage.thumbnailUrl}
+                  alt={pendingImage.filename}
+                  className="h-10 w-10 rounded object-cover ring-1 ring-olympus-cyan/30"
+                />
+                <span className="text-[9px] font-mono text-olympus-text-dim truncate max-w-56">{pendingImage.filename}</span>
+                <button
+                  title="Remove attached image"
+                  onClick={removePendingImage}
+                  className="text-olympus-text-dim hover:text-olympus-red shrink-0"
+                >
+                  <X size={10} />
+                </button>
+                <span className="text-[9px] font-mono text-[#5A5A5A]">attached — sends with your next message</span>
+              </div>
+            )}
+            <div className="flex items-end gap-2">
+            <span style={{ color: GOD_COLOR }} className="font-mono text-[12px] shrink-0 pb-1">$</span>
+            <textarea
               ref={inputRef}
+              rows={1}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter' && !awaitingAnswer && !awaitingContext) submit(input, context);
+                // Enter sends; Shift+Enter inserts a paragraph break.
+                if (e.key === 'Enter' && !e.shiftKey && !awaitingAnswer && !awaitingContext) {
+                  e.preventDefault();
+                  submit(input, context, pendingImage ?? undefined);
+                }
               }}
               disabled={awaitingAnswer || awaitingContext}
               placeholder={awaitingAnswer ? 'click a choice above (or type optional context in the box under the question)...' : awaitingContext ? 'type context below (Cmd+Enter)...' : submitting ? 'Type to queue the next message (posts when this run idles)…' : 'Ask Apollo anything...'}
-              className="flex-1 bg-transparent border-0 outline-none text-[12px] font-mono text-olympus-text placeholder:text-[#5A5A5A] disabled:opacity-50"
+              className="flex-1 bg-transparent border-0 outline-none resize-none text-[12px] font-mono leading-relaxed text-olympus-text placeholder:text-[#5A5A5A] disabled:opacity-50 max-h-48 overflow-y-auto py-1"
             />
             {/* Task 3 — the always-visible "ctx" toggle button is gone.
                 Additional context is now collected inline under each
@@ -2031,7 +2162,7 @@ export default function InteractiveTerminal() {
             <OlympusTooltip
               content={
                 activeProject?.path
-                  ? `Send a reference image — saved to <project>/reference-images/ (Athena analyzes it via VLM skill)`
+                  ? `Attach a reference image — saved to <project>/reference-images/ and sent with your next message (Athena analyzes it via VLM skill)`
                   : 'Select an active project first — reference images are saved to <project>/reference-images/'
               }
               side="top"
@@ -2063,7 +2194,7 @@ export default function InteractiveTerminal() {
               <div className="flex items-center gap-1.5 shrink-0">
                 <OlympusTooltip content="Queue this message (posts when the run idles)" side="top">
                   <button
-                    onClick={() => submit(input, context)}
+                    onClick={() => submit(input, context, pendingImage ?? undefined)}
                     disabled={!input.trim()}
                     className={cn(
                       'flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono transition-all shrink-0',
@@ -2087,7 +2218,7 @@ export default function InteractiveTerminal() {
               <OlympusTooltip content={input.trim() ? 'Send to Apollo (Enter)' : 'Type something to send'} side="top">
                 {/* empty-input: keep Send icon */}
                 <button
-                  onClick={() => submit(input, context)}
+                  onClick={() => submit(input, context, pendingImage ?? undefined)}
                   disabled={!input.trim()}
                   className={cn(
                     'flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono transition-all shrink-0',
@@ -2101,9 +2232,10 @@ export default function InteractiveTerminal() {
                 </button>
               </OlympusTooltip>
             )}
-            <span className="hidden sm:flex items-center gap-1 text-[9px] font-mono text-[#5A5A5A]">
-              <CornerDownLeft size={9} /> enter
+            <span className="hidden sm:flex items-center gap-1 text-[9px] font-mono text-[#5A5A5A] pb-1">
+              <CornerDownLeft size={9} /> enter · shift+enter
             </span>
+            </div>
           </div>
         </div>
 
@@ -2222,7 +2354,7 @@ const MessageRenderer = memo(function MessageRenderer({
           )}
           <div className="flex items-start gap-1.5">
             <span style={{ color: GOD_COLOR }} className="shrink-0">$</span>
-            <span className="text-olympus-text wrap-break-word flex-1 min-w-0">{message.text}</span>
+            <span className="text-olympus-text wrap-break-word whitespace-pre-wrap flex-1 min-w-0">{message.text}</span>
           </div>
         </div>
       </div>
@@ -2437,7 +2569,7 @@ const MessageRenderer = memo(function MessageRenderer({
               dangerouslySetInnerHTML={{ __html: markdownHtml }}
             />
           ) : (
-            <span className="text-olympus-text wrap-break-word flex-1 min-w-0">{message.text}</span>
+            <span className="text-olympus-text wrap-break-word whitespace-pre-wrap flex-1 min-w-0">{message.text}</span>
           )}
         </div>
       </div>
