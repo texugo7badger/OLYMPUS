@@ -266,6 +266,122 @@ async function apiFetch(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Session message readback (v1 bare array / v2 {data:[...]})
+// ---------------------------------------------------------------------------
+// #173: the v2 message list endpoint returns {data:[...], cursor} and is
+// newest-FIRST; v1 returned a bare array, oldest-first. Every poll/read in
+// this module goes through these helpers so the two shapes (and the two
+// orderings) can never drift apart again.
+
+interface SessionMessagesRead {
+  ok: boolean;
+  status: number;
+  messages: any[];
+}
+
+function normalizeSessionMessages(raw: any): any[] {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.data)) return raw.data;
+  return [];
+}
+
+function messageInfo(m: any): any {
+  return m?.info ?? m;
+}
+
+function messageRole(m: any): string {
+  const info = messageInfo(m);
+  return String(info?.role ?? info?.type ?? '');
+}
+
+function messageTime(m: any, key: 'created' | 'completed'): number | null {
+  const info = messageInfo(m);
+  const value = info?.time?.[key] ?? info?.time?.[`${key}_at`] ?? m?.time?.[key];
+  if (value == null) return null;
+  const n = typeof value === 'number' ? value : Date.parse(String(value));
+  return Number.isFinite(n) ? n : null;
+}
+
+function messageError(m: any): any {
+  return messageInfo(m)?.error ?? m?.error ?? null;
+}
+
+function messageParts(m: any): any[] {
+  if (Array.isArray(m?.parts)) return m.parts;
+  const content = messageInfo(m)?.content;
+  return Array.isArray(content) ? content : [];
+}
+
+/** Newest assistant message in a list. v2 is newest-first; v1 oldest-first. */
+function pickNewestAssistant(list: any[], newestFirst: boolean): any | null {
+  const assistants = list.filter((m) => messageRole(m) === 'assistant');
+  if (assistants.length === 0) return null;
+  return newestFirst ? assistants[0] : assistants[assistants.length - 1];
+}
+
+function messageHasText(m: any): boolean {
+  return messageParts(m).some(
+    (p) => p?.type === 'text' && typeof p?.text === 'string' && p.text.trim().length > 0,
+  );
+}
+
+function messageHasLiveTool(m: any): boolean {
+  return messageParts(m).some((p) => {
+    if (p?.type !== 'tool') return false;
+    const status = p?.state?.status ?? p?.status;
+    return status === 'running' || status === 'pending';
+  });
+}
+
+async function readSessionMessages(server: ServerInfo, sessionId: string): Promise<SessionMessagesRead> {
+  const auth = server.authed ? server.password : null;
+  try {
+    const res = await apiFetch(server.port, auth, v2Path(server, `/session/${sessionId}/message`), {}, 10_000);
+    if (!res.ok) return { ok: false, status: res.status, messages: [] };
+    const raw: any = await res.json().catch(() => null);
+    return { ok: true, status: res.status, messages: normalizeSessionMessages(raw) };
+  } catch {
+    return { ok: false, status: 0, messages: [] };
+  }
+}
+
+/** #175: drop the cached handle and re-resolve the serve (fresh password). */
+async function resolveFreshServer(reason: string): Promise<ServerInfo | null> {
+  try {
+    console.log(`[opencode-session] re-resolving the serve handle (${reason}) — the old handle may carry a stale password`);
+    invalidateServer();
+    return await ensureServer();
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// #175: the active-run registry. A killed/reset warm server must abort the
+// runs watching it WITH A NAMED REASON — the terminal shows the truth instead
+// of polling a dead handle until the 10-minute bound.
+// ---------------------------------------------------------------------------
+interface ActiveRunHandle {
+  reason: string | null;
+  abort: (reason: string) => void;
+}
+
+const activeRuns = new Set<ActiveRunHandle>();
+let pendingStrategyKill = false;
+
+function abortActiveRuns(reason: string): number {
+  let count = 0;
+  for (const run of activeRuns) {
+    try {
+      run.abort(reason);
+      count++;
+    } catch { /* already unwinding */ }
+  }
+  if (count > 0) console.log(`[opencode-session] aborting ${count} active run(s): ${reason}`);
+  return count;
+}
+
 /** Probe a port: does an opencode server answer? Try unauthenticated first. */
 async function probeServer(
   port: number,
@@ -391,7 +507,9 @@ function v2Path(server: { protocol?: 'v1' | 'v2' }, v1: string): string {
   if (v1 === '/config') return '/api/config';
   if (v1 === '/event') return '/api/event';
   if (v1 === '/session') return '/api/session';
-  if (/\/session\/[^/]+\/message$/.test(v1)) return v1; // GET kept verbatim
+  // NOTE: v2's `/api/session/{id}/message` GET is the JSON readback (probe:
+  // 200 {data:[],cursor}); the bare `/session/{id}/message` falls through to
+  // the SPA (200 text/html), which silently parsed to zero messages.
   return v1
     .replace(/^\/session\/([^/]+)\/message$/, '/api/session/$1/message')
     .replace(/^\/session\/([^/]+)\/abort$/, '/api/session/$1/interrupt')
@@ -471,20 +589,44 @@ export function invalidateServer() {
  * this hand). The pidfile dies with it — the next prompt cold-starts
  * (~5s) against the fresh opencode.json. THE STRATEGY RESPECTS THE CONFIG.
  */
-export function killWarmServerForStrategy(): void {
+function performWarmServerKill(reason: string): void {
   if (serverChild && serverChild.exitCode === null && serverChild.signalCode === null) {
     try { serverChild.kill('SIGTERM'); } catch { /* already dying */ }
-    console.log('[opencode-session] strategy switch — warm serve SIGTERM (the next prompt cold-starts on the fresh config)');
+    console.log(`[opencode-session] ${reason} — warm serve SIGTERM (the next prompt cold-starts on the fresh config)`);
   } else {
     const pidFile = readPidFile();
     if (pidFile && pidFile.pid !== process.pid && isProcessAlive(pidFile.pid) && isOpencodeProcess(pidFile.pid)) {
       try { process.kill(pidFile.pid, 'SIGTERM'); } catch { /* already dying */ }
-      console.log(`[opencode-session] strategy switch — adopted serve ${pidFile.pid} SIGTERM`);
+      console.log(`[opencode-session] ${reason} — adopted serve ${pidFile.pid} SIGTERM`);
     }
   }
   removePidFile();
   serverChild = null;
   serverPromise = null;
+}
+
+/**
+ * #176: a strategy switch while a turn STREAMS must not cut the live turn.
+ * The kill is deferred until the active run count hits zero; the next prompt
+ * then cold-starts on the fresh config. Switching while idle kills now.
+ */
+export function killWarmServerForStrategy(): { deferred: boolean } {
+  if (activeRuns.size > 0) {
+    pendingStrategyKill = true;
+    console.log(`[opencode-session] strategy switch — warm-server kill DEFERRED until ${activeRuns.size} active run(s) finish (the live turn is not cut)`);
+    return { deferred: true };
+  }
+  pendingStrategyKill = false;
+  performWarmServerKill('strategy switch');
+  return { deferred: false };
+}
+
+/** Apply a deferred strategy kill once no run is active. Returns true if it fired. */
+export function applyPendingStrategyKill(): boolean {
+  if (!pendingStrategyKill || activeRuns.size > 0) return false;
+  pendingStrategyKill = false;
+  performWarmServerKill('strategy switch (deferred)');
+  return true;
 }
 
 function nextPort(start: number): number {
@@ -561,6 +703,8 @@ async function killStaleServe(pid: number, reason: string): Promise<boolean> {
  *   3. Otherwise spawn a fresh server (cold start).
  */
 export async function ensureServer(): Promise<ServerInfo> {
+  // #176: a deferred strategy kill applies before the next cold start.
+  if (pendingStrategyKill && activeRuns.size === 0) applyPendingStrategyKill();
   if (serverPromise) {
     // Cache hit — the server was already established by an earlier call.
     // Report it as warm (if it died since, the warm run fails fast and the
@@ -767,7 +911,11 @@ export async function respondToPermission(
   return res.ok;
 }
 
-export function cleanupServer() {  if (serverChild && serverChild.exitCode === null && serverChild.signalCode === null) {
+export function cleanupServer() {
+  // #175: a reset kills the serve under live runs — abort them with a name.
+  pendingStrategyKill = false;
+  abortActiveRuns('warm server reset');
+  if (serverChild && serverChild.exitCode === null && serverChild.signalCode === null) {
     try { serverChild.kill('SIGTERM'); } catch {}
   }
   removePidFile();
@@ -2036,6 +2184,18 @@ async function runWarmMessageAttempt(
     const postCtrl = new AbortController();
     const outerSignal = opts.signal;
 
+    // #175: register this attempt so a warm-server kill/reset can abort it
+    // WITH A NAME (the catch surfaces 'aborted: <reason>' instead of hanging).
+    const runHandle: ActiveRunHandle = {
+      reason: null,
+      abort: (reason: string) => {
+        runHandle.reason = reason;
+        try { eventCtrl.abort(); } catch { /* already unwinding */ }
+        try { postCtrl.abort(); } catch { /* already unwinding */ }
+      },
+    };
+    activeRuns.add(runHandle);
+
     // #60 (BATCH 13): bound the server-side run after the SSE client is
     // gone. Client abort no longer only stops WATCHING — after a grace
     // window it POSTs /session/<id>/abort so the opencode serve cancels the
@@ -2406,7 +2566,7 @@ async function runWarmMessageAttempt(
         // the in-flight turn's completion server-side. The maxTimer/idle
         // nudge aborts surface through the throw below and keep their
         // existing catch classification.
-        const watched = await pollInFlightTurn(server, opts.sessionId, postCtrl.signal);
+        const watched = await pollInFlightTurn(server, opts.sessionId, postCtrl.signal, opts.onEvent);
         res = {
           ok: true,
           json: async () => ({ info: watched.info, parts: watched.parts }),
@@ -2449,81 +2609,142 @@ async function runWarmMessageAttempt(
         // (its response WAS the completed turn). The entire downstream
         // machinery reads this block as "the turn completed with these
         // parts" — on v2 that was ALWAYS empty. THE CURE: poll the session
-        // until it goes IDLE (the turn completes server-side), then read
-        // the LAST assistant message's content blocks and feed them through
-        // the mapper — the live pump already streams the reasoning/text
-        // deltas; this post-idle read is the AUTHORITATIVE catch that
-        // guarantees the text lands even if the pump's event window misses
-        // the fast tail.
-        // The v2 turn lifecycle: POST → inbox → execution starts → model runs →
-        // assistant message → idle. The session is IDLE before AND after the
-        // turn. The correct wait: poll for the ASSISTANT MESSAGE to appear and
-        // its time.completed to be set — that's the deterministic turn-complete
-        // signal on v2 (isTurnAliveServerSide returns false both before and
-        // after, so a bare alive-check races).
+        // until it goes truly IDLE (the turn completes server-side), then
+        // read the newest TEXT-BEARING wave and feed it through the mapper.
+        //
+        // #172 (the multi-wave specimen): the first assistant wave gaining
+        // time.completed is NOT the turn's end — a tool wave (glob/read)
+        // completes seconds before the final answer, and the old poll
+        // returned right there, mapping wave 1 (reasoning+tool, no text) as
+        // a successful empty turn. The turn is idle only when the newest
+        // assistant wave is complete AND carries no running/pending tool,
+        // confirmed by TWO consecutive readings >=1s apart (the ~70ms
+        // inter-wave gap must not be mistaken for the end).
         const turnDeadline = Date.now() + (opts.maxRuntimeMs ?? 10 * 60_000);
-        let assistantDone = false;
-        while (Date.now() < turnDeadline && !eventCtrl.signal.aborted && !assistantDone) {
-          await new Promise(r => setTimeout(r, 2000));
-          try {
-            const pollUrl = `http://127.0.0.1:${server.port}/api/session/${opts.sessionId}/message`;
-            const pollRes = await fetch(pollUrl, {
-              headers: server.authed && server.password ? { Authorization: basicAuth(server.password) } : {},
-              signal: AbortSignal.timeout(10_000),
-            }).catch(() => null);
-            if (!pollRes || !pollRes.ok) continue;
-            const pollData: any = await pollRes.json().catch(() => null);
-            if (!pollData) continue;
-            const pollArr = Array.isArray(pollData) ? pollData : (pollData?.data ?? []);
-            const asst = pollArr.find((m: any) => String(m?.type) === 'assistant' || m?.info?.role === 'assistant');
-            if (asst) {
-              const completed = asst?.time?.completed ?? asst?.time?.completed_at ?? asst?.info?.time?.completed;
-              if (completed) assistantDone = true;
+        const postAt = postStartedAt || Date.now();
+        let pollServer = server;
+        let authStreak = 0;
+        let authWarned = false;
+        let messages: any[] = [];
+        let turnStarted = false;
+        let lastIdleAt = 0;
+        let idleConfirmed = false;
+        while (Date.now() < turnDeadline && !eventCtrl.signal.aborted) {
+          await sleep(1000);
+          if (eventCtrl.signal.aborted) break;
+          const read = await readSessionMessages(pollServer, opts.sessionId);
+          if (!read.ok && (read.status === 401 || read.status === 403)) {
+            // #175: the serve restarted with a NEW password — the stale
+            // handle polls blind forever. Re-resolve once per streak; warn
+            // loudly if the rejection persists (the #105 honesty pattern).
+            authStreak++;
+            if (authStreak >= 3 && !authWarned) {
+              authWarned = true;
+              opts.onEvent({
+                type: 'log',
+                msg: `⚠ the server keeps rejecting the session read (HTTP ${read.status}) after re-resolving — the run is NOT polling blind; it will fail with the real reason instead of hanging`,
+                ts: new Date().toISOString(),
+              });
             }
-          } catch { /* keep polling */ }
+            const fresh = await resolveFreshServer(`session read HTTP ${read.status}`);
+            if (fresh) {
+              pollServer = fresh;
+              authStreak = 0;
+            }
+            continue;
+          }
+          if (!read.ok) continue;
+          authStreak = 0;
+          messages = read.messages;
+          if (messages.length === 0) continue;
+          const newest = pickNewestAssistant(messages, true);
+          if (!newest) continue;
+          // The wave must belong to THIS turn — a prior turn's completed
+          // assistant must never satisfy the idle check (clock-skew grace).
+          const created = messageTime(newest, 'created');
+          if (created !== null && created < postAt - 5_000) continue;
+          turnStarted = true;
+          const newestMessage = messages[0];
+          const newestInFlight = messageRole(newestMessage) === 'assistant'
+            && messageTime(newestMessage, 'completed') === null
+            && !messageError(newestMessage);
+          const idle = messageTime(newest, 'completed') !== null
+            && !messageError(newest)
+            && !messageHasLiveTool(newest)
+            && !newestInFlight;
+          if (idle) {
+            const now = Date.now();
+            if (lastIdleAt > 0 && now - lastIdleAt >= 1000) {
+              idleConfirmed = true;
+              break;
+            }
+            lastIdleAt = now;
+          } else {
+            lastIdleAt = 0;
+          }
         }
-        // Read the LAST assistant message (the turn's output).
-        try {
-          const auth2 = server.authed ? server.password : null;
-          // The v2 path is EXPLICIT here (this block only runs on protocol v2):
-          const msgUrl = `http://127.0.0.1:${server.port}/api/session/${opts.sessionId}/message`;
-          const msgFetch = await fetch(msgUrl, {
-            headers: auth2 ? { Authorization: basicAuth(auth2 as string) } : {},
-            signal: AbortSignal.timeout(15_000),
-          }).catch(() => null);
-          if (msgFetch && msgFetch.ok) {
-            const msgData: any = await msgFetch.json().catch(() => null);
-            const arr = Array.isArray(msgData) ? msgData : (msgData?.data ?? []);
-            // The v2 message list: newest FIRST (the readback shape). Find the
-            // last ASSISTANT message (with content blocks).
-            const assistant = arr.find((m: any) => String(m?.type) === 'assistant' || m?.info?.role === 'assistant');
-            if (assistant) {
-              const content = Array.isArray(assistant.content) ? assistant.content : [];
-              info = { finish: assistant.finish, error: assistant.finish === 'error' ? assistant.content : null };
-              // Mark the step so text isn't suppressed; the pump already
-              // streamed what it caught.
-              state.stepStarted = true;
-              state.stepFinished = true;
-              for (const blk of content) {
-                if (blk?.type === 'text' && typeof blk.text === 'string') {
-                  mapPart({ type: 'text', id: `v2final-${assistant.id}`, sessionID: opts.sessionId, messageID: assistant.id, text: blk.text }, state, deliver);
-                } else if (blk?.type === 'reasoning' && typeof blk.text === 'string') {
-                  // The final reasoning (if the pump missed the deltas).
-                  mapPart({ type: 'reasoning', id: `v2r-${assistant.id}`, sessionID: opts.sessionId, messageID: assistant.id, text: blk.text }, state, deliver);
-                }
-              }
-              // The step-finish (the cost capture): the v2 assistant message
-              // carries cost + tokens directly.
-              if (typeof assistant.cost === 'number' || assistant.tokens) {
-                mapPart({ type: 'step-finish', id: `v2sf-${assistant.id}`, sessionID: opts.sessionId, tokens: assistant.tokens, cost: assistant.cost }, state, deliver);
-              }
-              // The turn completed.
-              return { code: 0, sessionId: opts.sessionId, receivedEvents: true, postStarted };
+        if (eventCtrl.signal.aborted) {
+          // Let the existing catch classify (maxTimer / idle nudge / client).
+          throw new Error('turn aborted before the session reached idle');
+        }
+        if (!idleConfirmed) {
+          return {
+            code: 1,
+            sessionId: opts.sessionId,
+            receivedEvents: true,
+            postStarted,
+            error: turnStarted
+              ? `the v2 turn did not reach idle within ${Math.round((opts.maxRuntimeMs ?? 10 * 60_000) / 1000)}s — the last wave never completed`
+              : `the v2 turn never started within ${Math.round((opts.maxRuntimeMs ?? 10 * 60_000) / 1000)}s (no assistant message appeared after the prompt)`,
+          };
+        }
+        // The final readback: the newest wave WITH TEXT is the turn's answer.
+        // #174: a reasoning-only (cut) wave is a FAILURE with a named cause —
+        // never a silent code 0.
+        if (messages.length === 0) {
+          const finalRead = await readSessionMessages(pollServer, opts.sessionId);
+          if (finalRead.ok) messages = finalRead.messages;
+        }
+        const thisTurn = (m: any) => {
+          const created = messageTime(m, 'created');
+          return created === null || created >= postAt - 5_000;
+        };
+        const textWave = messages.find((m) => messageRole(m) === 'assistant' && thisTurn(m) && messageHasText(m));
+        if (textWave) {
+          const assistantInfo = messageInfo(textWave);
+          info = { finish: assistantInfo?.finish, error: assistantInfo?.finish === 'error' ? messageError(textWave) : null };
+          // Mark the step so text isn't suppressed; the pump already
+          // streamed what it caught.
+          state.stepStarted = true;
+          state.stepFinished = true;
+          const assistantId = String(assistantInfo?.id ?? 'unknown');
+          for (const blk of messageParts(textWave)) {
+            if (blk?.type === 'text' && typeof blk.text === 'string') {
+              mapPart({ type: 'text', id: `v2final-${assistantId}`, sessionID: opts.sessionId, messageID: assistantId, text: blk.text }, state, deliver);
+            } else if (blk?.type === 'reasoning' && typeof blk.text === 'string') {
+              // The final reasoning (if the pump missed the deltas).
+              mapPart({ type: 'reasoning', id: `v2r-${assistantId}`, sessionID: opts.sessionId, messageID: assistantId, text: blk.text }, state, deliver);
             }
           }
-        } catch (e: any) { console.log('[v2-post-idle] read failed:', e?.message || e); /* best-effort */ }
-        // No assistant message found — the turn may have failed.
-        return { code: 1, sessionId: opts.sessionId, receivedEvents: true, postStarted: true, error: state.lastErrorText || 'the v2 turn completed but no assistant message was found' };
+          // The step-finish (the cost capture): the v2 assistant message
+          // carries cost + tokens directly.
+          if (typeof assistantInfo?.cost === 'number' || assistantInfo?.tokens) {
+            mapPart({ type: 'step-finish', id: `v2sf-${assistantId}`, sessionID: opts.sessionId, tokens: assistantInfo.tokens, cost: assistantInfo.cost }, state, deliver);
+          }
+          return { code: 0, sessionId: opts.sessionId, receivedEvents: true, postStarted };
+        }
+        // No wave carries text — classify the finish and fail honestly.
+        const newestAssistant = pickNewestAssistant(messages.filter(thisTurn), true);
+        const newestInfo = newestAssistant ? messageInfo(newestAssistant) : null;
+        const finish = String(newestInfo?.finish ?? '').toLowerCase();
+        const errorText = messageError(newestAssistant);
+        const errorMessage = errorText?.data?.message || errorText?.message || (typeof errorText === 'string' ? errorText : '');
+        const cause = finish === 'error'
+          ? (errorMessage || 'the turn ended with finish=error')
+          : finish === 'aborted' || finish === 'length' || finish === 'content_filter'
+            ? `turn cut server-side mid-reasoning (finish=${finish})`
+            : `the turn ended without assistant text${finish ? ` (finish=${finish})` : ''} — the model produced no answer`;
+        return { code: 1, sessionId: opts.sessionId, receivedEvents: true, postStarted: true, error: errorMessage || cause };
       }
       if (res.ok) {
         const data: any = await res.json().catch(() => null);
@@ -2626,6 +2847,10 @@ async function runWarmMessageAttempt(
       // may have crashed. Drop the cached state so the next request
       // re-probes and respawns if needed.
       if (!postStarted) invalidateServer();
+      if (runHandle.reason) {
+        // #175: a named kill/reset aborted this run — surface the reason.
+        return { code: -1, sessionId: opts.sessionId, receivedEvents, postStarted, error: `aborted: ${runHandle.reason}` };
+      }
       if (outerSignal?.aborted) {
         // #60: client-gone — the server-side prompt was (or is being) killed
         // after the grace window; carry the run_abandoned telemetry payload.
@@ -2680,6 +2905,16 @@ async function runWarmMessageAttempt(
       clearInterval(silenceTimer);
       if (graceTimer) clearTimeout(graceTimer);
       if (outerSignal) outerSignal.removeEventListener('abort', onAbort);
+      activeRuns.delete(runHandle);
+      // #176: the deferred strategy kill applies the moment the last live
+      // run ends; the terminal names it before the stream closes.
+      if (applyPendingStrategyKill()) {
+        opts.onEvent({
+          type: 'log',
+          msg: 'Warm server killed after the turn ended (strategy switch deferred until idle) — the next prompt cold-starts on the fresh config',
+          ts: new Date().toISOString(),
+        });
+      }
     }
 }
 
@@ -2990,21 +3225,18 @@ export async function isTurnAliveServerSide(server: ServerInfo, sessionId: strin
     const res = await apiFetch(server.port, auth, v2Path(server, `/session/${sessionId}/message`), {}, 10_000);
     if (!res.ok) return { alive: false };
     const raw: any = await res.json().catch(() => []);
-    // The v2 shape: {data: [messages], cursor: ...} — the v1 was a bare array.
-    // Also: v2's list is newest-FIRST; v1 was oldest-first.
-    const messages: any[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+    const messages = normalizeSessionMessages(raw);
     if (messages.length === 0) return { alive: false };
-    const last = messages[0]; // v2: newest first
-    const info = last?.info ?? last;
-    const role = info?.role ?? info?.type;
-    const alive = role === 'assistant'
-      && !(info?.time?.completed ?? info?.time?.completed_at ?? last?.time?.completed)
-      && !info?.error;
+    const last = pickNewestAssistant(messages, server.protocol === 'v2');
+    if (!last) return { alive: false };
+    const alive = messageRole(last) === 'assistant'
+      && messageTime(last, 'completed') === null
+      && !messageError(last);
     if (!alive) return { alive: false };
     // The seed: the newest tool part's state decides the liveness class.
     let childRunning = false;
     let permissionPending = false;
-    const parts = Array.isArray(last?.parts) ? last.parts : [];
+    const parts = messageParts(last);
     for (let i = parts.length - 1; i >= 0; i--) {
       const p = parts[i];
       if (p?.type !== 'tool') continue;
@@ -3032,25 +3264,42 @@ async function pollInFlightTurn(
   server: ServerInfo,
   sessionId: string,
   signal: AbortSignal,
+  onEvent?: (ev: any) => void,
 ): Promise<{ info: any; parts: any[] }> {
-  const auth = server.authed ? server.password : null;
+  // #173: normalize the v2 {data:[...]} envelope AND the newest-first
+  // ordering; #175: a 401/403 means the serve restarted with a new password —
+  // re-resolve the handle instead of polling blind.
+  let srv = server;
+  let authStreak = 0;
+  let authWarned = false;
   while (!signal.aborted) {
     await sleep(5_000);
     if (signal.aborted) break;
-    try {
-      const res = await apiFetch(server.port, auth, v2Path(server, `/session/${sessionId}/message`), {}, 10_000);
-      if (res.ok) {
-        const messages: any[] = await res.json().catch(() => []);
-        if (Array.isArray(messages) && messages.length > 0) {
-          const last = messages[messages.length - 1];
-          const info = last?.info;
-          if (info?.role === 'assistant' && (info?.time?.completed || info?.error)) {
-            return { info, parts: Array.isArray(last?.parts) ? last.parts : [] };
-          }
-        }
+    const read = await readSessionMessages(srv, sessionId);
+    if (!read.ok && (read.status === 401 || read.status === 403)) {
+      authStreak++;
+      if (authStreak >= 3 && !authWarned) {
+        authWarned = true;
+        onEvent?.({
+          type: 'log',
+          msg: `⚠ watch-resume: the server keeps rejecting the session read (HTTP ${read.status}) — re-resolving the serve handle; the watch is NOT polling blind`,
+          ts: new Date().toISOString(),
+        });
       }
-    } catch {
-      // transient — the pool stalls mid-turn for minutes at peak; keep polling
+      const fresh = await resolveFreshServer(`watch-resume HTTP ${read.status}`);
+      if (fresh) {
+        srv = fresh;
+        authStreak = 0;
+      }
+      continue;
+    }
+    if (!read.ok) continue;
+    authStreak = 0;
+    if (read.messages.length === 0) continue;
+    const newest = pickNewestAssistant(read.messages, srv.protocol === 'v2');
+    if (!newest) continue;
+    if (messageTime(newest, 'completed') !== null || messageError(newest)) {
+      return { info: messageInfo(newest), parts: messageParts(newest) };
     }
   }
   // Aborted (maxTimer / idle nudge / client-gone) without completion —

@@ -7,7 +7,7 @@ import { basename, dirname } from 'node:path';
 import { requireAuth } from '@/lib/auth';
 // Uses spawnOpencode() for Windows shell:true + stdin:'ignore' + local binary resolution.
 import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
-import { resolveAndRegisterIntent } from '@/lib/project-intent';
+import { resolveAndRegisterIntent, stripUploadBlock } from '@/lib/project-intent';
 import { maybeStartDevServer } from '@/lib/dev-server-trigger';
 import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
@@ -356,7 +356,9 @@ export async function POST(req: NextRequest) {
         rememberConversationProject(conversationId, convoProject);
       } else {
         try {
-          const intent = await resolveAndRegisterIntent(promptText, classification.stack ?? []);
+          // #178: the upload manifest is transport metadata — never let it
+          // name the project ('AIME Uploaded Files AIME').
+          const intent = await resolveAndRegisterIntent(stripUploadBlock(promptText), classification.stack ?? []);
           intentStage = { slug: intent.slug, kind: intent.kind, message: intent.message };
           if (intent.slug) rememberConversationProject(conversationId, intent.slug);
         } catch (e) {

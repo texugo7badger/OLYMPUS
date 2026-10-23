@@ -32,6 +32,11 @@ const STOPWORDS = new Set([
   'make', 'build', 'create', 'write', 'design', 'give', 'want', 'need',
   'please', 'using', 'use', 'add', 'app', 'application', 'project', 'site',
   'website', 'page', 'pages', 'new', 'some', 'like', 'about',
+  // #178 (the 'AIME Uploaded Files AIME' specimen): the terminal appends an
+  // upload manifest to the prompt — its words are transport metadata, never
+  // project identity.
+  'uploaded', 'upload', 'file', 'files', 'saved', 'extracted', 'archive',
+  'vault', 'projeto', 'arquivo', 'arquivos', 'anexado', 'anexados',
   // W-U: the PT verb openers (the 'Crie AURORA PULSE Painel' specimen —
   // the imperative verb leaked into the derived project name).
   'crie', 'criar', 'cria', 'construa', 'construir', 'faça', 'fazer',
@@ -49,6 +54,16 @@ export function extractProjectPathCandidate(prompt: string): string | null {
   if (!quoted) return null;
   const raw = quoted[1].trim().replace(/^["'“‘”’]+|["'“‘”’]+$/g, '');
   return raw.includes('/') ? raw : null;
+}
+
+/**
+ * #178: strip the terminal's upload manifest (`[Uploaded files: ...]`) before
+ * ANY name/word extraction. The block is transport metadata appended by the
+ * UI; leaving it in made 'AIME' + AIME.md derive 'AIME Uploaded Files AIME'.
+ */
+export function stripUploadBlock(prompt: string): string {
+  const marker = prompt.search(/\[Uploaded files:/i);
+  return (marker >= 0 ? prompt.slice(0, marker) : prompt).trim();
 }
 
 function words(s: string): Set<string> {
@@ -125,12 +140,13 @@ export function extractProjectName(prompt: string): string | null {
 
 /** Derive a name from the prompt's significant words (no interrogation). */
 export function deriveProjectName(prompt: string): string {
-  const sig = prompt.replace(/[^a-zA-Z0-9\s-]/g, ' ').split(/\s+/)
+  const clean = stripUploadBlock(prompt);
+  const sig = clean.replace(/[^a-zA-Z0-9\s-]/g, ' ').split(/\s+/)
     .filter((w) => w.length >= 3 && !STOPWORDS.has(w.toLowerCase()))
     .slice(0, 4);
   const name = sig.map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
   if (name) return name;
-  const raw = prompt.trim().split(/\s+/).slice(0, 3).join(' ');
+  const raw = clean.split(/\s+/).slice(0, 3).join(' ');
   return raw || 'Untitled Project';
 }
 
@@ -141,12 +157,13 @@ export function deriveProjectName(prompt: string): string {
  */
 export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): FirstPromptIntent {
   const known = projects ?? listProjects();
-  const promptWords = words(prompt);
+  const cleanPrompt = stripUploadBlock(prompt);
+  const promptWords = words(cleanPrompt);
 
   // #PATH-SPECIMEN: a quoted path names a project LOCATION — route, never
   // create. The slug is the basename under 02_Projects (the pinned
   // directive: every project lives at 02_Projects/<slug>).
-  const pathCand = extractProjectPathCandidate(prompt);
+  const pathCand = extractProjectPathCandidate(cleanPrompt);
   if (pathCand) {
     const base = pathCand.replace(/\/+$/, '').split('/').pop()?.toLowerCase() ?? '';
     const hit = known.find((p) => p.slug.toLowerCase() === base);
@@ -160,7 +177,7 @@ export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): F
     }
   }
 
-  const candidateName = extractProjectName(prompt);
+  const candidateName = extractProjectName(cleanPrompt);
 
   // #144 THE DISTINCT-NAME LAW (the AURORA specimen, 2026-10-18): a prompt
   // that NAMES its project (quoted — "AURORA FOCUS" — or called/named X)
@@ -223,7 +240,7 @@ export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): F
       // short continuation instructions (1/11 = 0.09). A distinctive prompt
       // token equal to a slug token is a strong routing signal.
       const slugTokens = new Set(p.slug.toLowerCase().split('-'));
-      const lowerPrompt = prompt.toLowerCase();
+      const lowerPrompt = cleanPrompt.toLowerCase();
       for (const t of slugTokens) {
         if (t.length >= 4 && new RegExp(`\\b${t}\\b`).test(lowerPrompt)) {
           score = Math.max(score, 0.55);
@@ -255,14 +272,14 @@ export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): F
   // branch. A continuation is the user's explicit resume action; the
   // feature-description vocabulary ("next pass", "telemetry") matching other
   // projects' descriptions is noise, not intent. One slug hit = the project.
-  const isContinuation = /^.{0,12}?(?:[Cc]ontinue|[Rr]esume|[Cc]ontinuar|[Rr]etomar|[Cc]ontinue o)\b/m.test(prompt);
+  const isContinuation = /^.{0,12}?(?:[Cc]ontinue|[Rr]esume|[Cc]ontinuar|[Rr]etomar|[Cc]ontinue o)\b/m.test(cleanPrompt);
   if (isContinuation && scored.length >= 2) {
     // Only tokens in the CONTINUATION HEADER ZONE (the first ~80 chars —
     // where "Continue ORBITAL project" lives) count. A slug token that
     // only appears deeper in the brief ("next pass" as a feature
     // description 300 chars in) is vocabulary noise, never the resume
     // intent.
-    const headerZone = prompt.slice(0, 80).toLowerCase();
+    const headerZone = cleanPrompt.slice(0, 80).toLowerCase();
     const slugHits = scored.filter((s) => {
       const st = new Set(s.slug.toLowerCase().split('-'));
       for (const t of st) {
@@ -286,7 +303,7 @@ export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): F
       reason: `${scored.length} projects match the prompt (>= ${INTENT_MATCH_THRESHOLD}) — ambiguous, asking instead of guessing`,
     };
   }
-  const projectName = candidateName ?? deriveProjectName(prompt);
+  const projectName = candidateName ?? deriveProjectName(cleanPrompt);
   return {
     kind: 'new',
     projectName,

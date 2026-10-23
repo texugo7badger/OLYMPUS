@@ -362,7 +362,7 @@ async function main() {
   // ── 5. Content pins: the action-route wiring ────────────────────────────
   const routeSrc = readFileSync(ROOT + '/src/app/api/olympus/action/route.ts', 'utf-8');
   check('W: the route runs the intent stage on prompt (non-blocking, trivial-gated)',
-    /resolveAndRegisterIntent\(promptText/.test(routeSrc) && /classification\.complexity !== 'trivial'/.test(routeSrc),
+    /resolveAndRegisterIntent\(\s*stripUploadBlock\(promptText\)/.test(routeSrc) && /classification\.complexity !== 'trivial'/.test(routeSrc),
     'the route never asks the first-prompt question');
   check('W: the intent result rides the stream (streamWarm opts + log event)',
     /intent: intentStage/.test(routeSrc) && /opts\.intent\b/.test(routeSrc), 'the intent result is invisible');

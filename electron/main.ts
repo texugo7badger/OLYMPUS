@@ -71,6 +71,22 @@ ensureLinuxSandboxReady(appRoot, app.isPackaged);
 let nextProcess: ChildProcess | null = null;
 let nextWasSpawnedExternally = false;
 
+// #177: the launching terminal can die (EIO on stdout/stderr). A console
+// write must NEVER take the app down — safeConsole swallows the failure and
+// the crash log (a FILE write) carries the evidence.
+function safeConsole(kind: 'log' | 'error', ...args: any[]): void {
+  try {
+    (console[kind] as (...a: any[]) => void)(...args);
+  } catch { /* the parent terminal is gone — the app stays alive */ }
+}
+
+// #177: after two GPU process crashes, persist a marker and relaunch with
+// hardware acceleration disabled (Electron's documented recovery path —
+// disableHardwareAcceleration() only takes effect before app ready).
+const GPU_FALLBACK_ARG = '--olympus-disable-gpu';
+const GPU_FALLBACK_MARKER = join(nodeOs.homedir(), '.olympus', 'gpu-fallback');
+let gpuCrashCount = 0;
+
 /**
  * Check whether a Next.js server is ALREADY listening on localhost:3737.
  */
@@ -199,15 +215,38 @@ function spawnNext(): ChildProcess {
       .toString()
       .split('\n')
       .filter(Boolean)
-      .forEach((line: string) => console.log(`${prefix} ${line}`));
+      .forEach((line: string) => safeConsole('log', `${prefix} ${line}`));
   });
   child.stderr?.on('data', (chunk: Buffer) => {
     chunk
       .toString()
       .split('\n')
       .filter(Boolean)
-      .forEach((line: string) => console.error(`${prefix}! ${line}`));
+      .forEach((line: string) => safeConsole('error', `${prefix}! ${line}`));
   });
+  // #177: a dead parent terminal makes the child pipes emit EIO. Without a
+  // handler that is an uncaughtException (the app died three times at the
+  // compiled main.js:234 pipe write). Detach and log to the crash file.
+  const guardPipe = (stream: NodeJS.ReadableStream | null | undefined, label: string) => {
+    if (!stream) return;
+    stream.on('error', (err: any) => {
+      const code = String(err?.code || '');
+      if (code === 'EIO' || code === 'EPIPE') {
+        try {
+          stream.removeAllListeners('data');
+          (stream as any).destroy?.();
+        } catch { /* already detached */ }
+        logError('next-pipe-detached', err, {
+          stream: label,
+          note: 'parent terminal gone — pipe detached, the app stays alive',
+        });
+        return;
+      }
+      logError('next-pipe-error', err, { stream: label });
+    });
+  };
+  guardPipe(child.stdout, 'stdout');
+  guardPipe(child.stderr, 'stderr');
 
   child.on('exit', (code, signal) => {
     console.log(`[olympus:electron] Next.js exited (code=${code} signal=${signal})`);
@@ -735,13 +774,26 @@ function logError(source: string, error: any, context?: Record<string, any>): vo
 
 // Install global error handlers.
 process.on('uncaughtException', (err) => {
+  // #177: the crash logger must not depend on console.log — the same dead
+  // stdout pipe that caused the EIO would recurse here. logError writes the
+  // crash FILE first; the console echo is best-effort.
   logError('uncaughtException', err);
-  console.error('[olympus:crash] uncaughtException:', err);
+  safeConsole('error', '[olympus:crash] uncaughtException:', err);
 });
 process.on('unhandledRejection', (reason) => {
   logError('unhandledRejection', reason);
-  console.error('[olympus:crash] unhandledRejection:', reason);
+  safeConsole('error', '[olympus:crash] unhandledRejection:', reason);
 });
+// #177: a terminal that launched the app can close mid-run; writes to
+// process.stdout/stderr then emit EIO. Swallow it — the app (and any
+// server-side turn) must survive the launcher.
+for (const stream of [process.stdout, process.stderr]) {
+  stream.on('error', (err: any) => {
+    const code = String(err?.code || '');
+    if (code === 'EIO' || code === 'EPIPE') return;
+    try { logError('process-stream-error', err); } catch { /* never recurse */ }
+  });
+}
 
 // IPC: read the error log (for the "Report Issue" button in the renderer).
 ipcMain.handle('olympus:read-error-log', (_e, maxLines: number = 50) => {
@@ -958,6 +1010,18 @@ ipcMain.handle('olympus:get-version-info', () => {
 // .desktop entry). Must be called before app.whenReady().
 app.setName('OLYMPUS');
 
+// #177: a persisted GPU fallback (or the relaunch arg) disables hardware
+// acceleration BEFORE the app becomes ready — the only window where the
+// switch takes effect.
+if (process.argv.includes(GPU_FALLBACK_ARG) || existsSync(GPU_FALLBACK_MARKER)) {
+  try {
+    app.disableHardwareAcceleration();
+    console.log('[olympus:electron] hardware acceleration DISABLED (GPU crash fallback)');
+  } catch (err) {
+    logError('gpu-fallback-apply', err);
+  }
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -1064,11 +1128,29 @@ if (!gotLock) {
     });
     app.on('child-process-gone', (_event, details) => {
       if (details.type === 'GPU') {
+        gpuCrashCount++;
         logError('gpu-process-crashed', new Error('GPU process gone'), {
           type: details.type,
           reason: details.reason,
           exitCode: details.exitCode,
+          crashCount: gpuCrashCount,
         });
+        // #177: two GPU crashes in a session → persist the fallback marker
+        // and relaunch once with acceleration disabled. The marker makes the
+        // recovery stick across launches (disableHardwareAcceleration is a
+        // pre-ready switch).
+        if (gpuCrashCount >= 2 && !process.argv.includes(GPU_FALLBACK_ARG)) {
+          try {
+            mkdirSync(dirname(GPU_FALLBACK_MARKER), { recursive: true });
+            writeFileSync(GPU_FALLBACK_MARKER, new Date().toISOString(), 'utf-8');
+            app.disableHardwareAcceleration();
+            safeConsole('error', '[olympus:electron] GPU crashed twice — relaunching with hardware acceleration disabled');
+            app.relaunch({ args: process.argv.slice(1).concat(GPU_FALLBACK_ARG) });
+            app.exit(0);
+          } catch (err) {
+            logError('gpu-fallback-relaunch', err);
+          }
+        }
       }
     });
 

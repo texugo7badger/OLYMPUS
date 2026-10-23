@@ -107,6 +107,7 @@ export async function POST(req: NextRequest) {
     }
     // strategy is validated above (regex), so shell injection is not possible.
     let stdout: string;
+    let deferred = false;
     try {
       stdout = execSync(`node "${applyScript}" --strategy ${strategy}`, {
         cwd: root,
@@ -117,8 +118,10 @@ export async function POST(req: NextRequest) {
       // #STRATEGY-RESPECT: the warm serve KEEPS its boot config until it
       // dies — a switch must KILL it (our child or the guarded adopted
       // pid), or every session keeps riding the previous strategy's lanes
-      // (the 'marked free but kept riding GO' specimen).
-      killWarmServerForStrategy();
+      // (the 'marked free but kept riding GO' specimen). #176: when a turn
+      // is streaming the kill is DEFERRED until idle — the live turn is
+      // never cut; the next prompt cold-starts on the fresh config.
+      deferred = killWarmServerForStrategy().deferred;
     } catch (err: any) {
       return NextResponse.json(
         {
@@ -134,6 +137,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       strategy,
       stdout,
+      deferred,
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });

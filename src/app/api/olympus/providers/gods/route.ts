@@ -30,7 +30,7 @@ import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 // kills `opencode serve` (it keeps its startup config in memory), so the
 // Next.js-side serverPromise must be dropped or the next message posts to a
 // dead server.
-import { invalidateServer } from '@/lib/opencode-session';
+import { killWarmServerForStrategy } from '@/lib/opencode-session';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -423,6 +423,7 @@ export async function POST(req: NextRequest) {
     // override now takes effect immediately instead of only feeding telemetry.
     let strategyApplied = false;
     let strategyError: string | null = null;
+    let deferred = false;
     const applyScript = path.join(process.cwd(), 'scripts', 'apply-strategy.js');
     if (fs.existsSync(applyScript)) {
       try {
@@ -443,10 +444,10 @@ export async function POST(req: NextRequest) {
           env: { ...process.env, FORCE_COLOR: '0' },
         });
         strategyApplied = true;
-        // apply-strategy.js killed the warm server (its config is loaded at
-        // startup) — drop the cached handle so the next message cold-starts
-        // against the fresh opencode.json.
-        invalidateServer();
+        // The warm serve loads its config at startup — kill it so the next
+        // message cold-starts against the fresh opencode.json. #176: a live
+        // turn defers the kill until idle (never cut a streaming run).
+        deferred = killWarmServerForStrategy().deferred;
       } catch (e: any) {
         strategyError = e.message || String(e);
       }
@@ -462,6 +463,7 @@ export async function POST(req: NextRequest) {
       strategy: cfg.strategy,
       strategyApplied,
       strategyError,
+      deferred,
       defaultProvider: cfg.default,
     });
   } catch (e: any) {
