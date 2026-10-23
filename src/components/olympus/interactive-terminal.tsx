@@ -34,6 +34,9 @@ import PermissionsPanel from './permissions-panel';
 // concepts proposed at design decision moments; a chosen proposal is saved
 // to <project>/design-decisions.jsonl.
 import DesignStudio from './design-studio';
+// #212 — the honest OpenCode v2 update indicator (renders only when a
+// newer npm `latest` exists; OLYMPUS controls the update lane).
+import OpencodeUpdateBadge from './opencode-update-badge';
 // Issue #44: file-touching tool frames show the shape of the change (M/A
 // badge, +/- counts, a truncated preview) instead of just naming a path.
 import { ToolFrame } from './tool-frame';
@@ -1769,6 +1772,7 @@ export default function InteractiveTerminal() {
             <span style={{ color: GOD_COLOR }}>CLI:</span>
             <span style={{ color: GOD_COLOR }} className="font-semibold">{activeCli}</span>
           </span>
+          <OpencodeUpdateBadge />
           {/* Removed the 2-way mode toggle (Apollo | OpenCode).
               Only the Interactive (Apollo) chat remains. The OpenCode Chat pane
               and the TUI are gone from this surface. */}

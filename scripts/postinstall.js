@@ -47,7 +47,8 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, statSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -86,8 +87,34 @@ const opencodeBin = isWindows
 const opencodeAlt = join(ROOT, 'node_modules', '.bin', 'opencode');
 const opencodePkg = join(ROOT, 'node_modules', 'opencode-ai', 'package.json');
 
+// #212: the v2 CLI (@opencode/cli) ships a JS STUB when its own postinstall
+// was skipped (npm with dependency scripts disabled). The stub is a ~229-byte
+// shim that exits 1 with "postinstall script was not run" — a "found" check
+// that only tests existence would call that a healthy install. Detect the
+// stub and repair it here so a fresh clone boots the latest v2.
+const v2CliPkg = join(ROOT, 'node_modules', '@opencode', 'cli', 'package.json');
+let v2CliVersion = null;
+if (existsSync(v2CliPkg)) {
+  try {
+    const cli = JSON.parse(readFileSync(v2CliPkg, 'utf-8'));
+    v2CliVersion = cli.version || null;
+    const rel = Object.values(cli.bin || {})[0];
+    const binPath = rel ? join(ROOT, 'node_modules', '@opencode', 'cli', rel) : null;
+    const isStub = binPath && existsSync(binPath) && statSync(binPath).size < 1024;
+    if (isStub) {
+      log('@opencode/cli postinstall did not run (the bin is the stub) -- repairing...');
+      execFileSync(process.execPath, [join(ROOT, 'node_modules', '@opencode', 'cli', 'postinstall.mjs')], { stdio: 'inherit' });
+      ok(`OpenCode v2 CLI repaired (v${v2CliVersion})`);
+    }
+  } catch (e) {
+    warn(`@opencode/cli repair failed: ${e.message}`);
+    console.warn('    Fix: node node_modules/@opencode/cli/postinstall.mjs');
+    allPresent = false;
+  }
+}
+
 if (existsSync(opencodeBin) || existsSync(opencodeAlt)) {
-  ok('OpenCode CLI found in node_modules/.bin/');
+  ok(`OpenCode CLI found in node_modules/.bin/${v2CliVersion ? ` (v2 v${v2CliVersion})` : ''}`);
 } else if (existsSync(opencodePkg)) {
   ok('opencode-ai package installed (binary symlink may be missing -- run: npm rebuild opencode-ai)');
 } else {

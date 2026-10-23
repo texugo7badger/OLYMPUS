@@ -376,6 +376,14 @@ export function buildOpencodeEnv(
   // not spawn stays silent.
   env.OLYMPUS_MANAGED = '1';
 
+  // #212: OLYMPUS owns the CLI update lane. The v2 CLI auto-updates by
+  // default and restarts itself mid-flight (the #147 tap3 specimen); the
+  // warm serve lane already pinned this, but one-shot spawns did not — a
+  // background /update prompt could still replace the binary under a run.
+  // Pin every OLYMPUS-spawned CLI; updates happen through the OLYMPUS-side
+  // check (/api/olympus/opencode-update), never silently.
+  env.OPENCODE_DISABLE_AUTOUPDATE = '1';
+
   // The opencode CLI respects NO_COLOR / FORCE_COLOR. Default to no color
   // for clean log parsing (the SSE stream parses opencode output as
   // JSONL — ANSI escapes would break it).

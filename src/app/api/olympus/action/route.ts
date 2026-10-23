@@ -430,6 +430,7 @@ ${uiReferencesBlock}`
       meta: { action, node: undefined, cli: `opencode run --format json --agent ${agent} <text>` },
       classification,
       intent: intentStage,
+      unattended,
     });
   }
 
@@ -777,6 +778,9 @@ interface WarmStreamOptions {
   /** #110: the autonomous intake stage result — emitted as a log event and
    *  used to fire the dev-server trigger after a successful frontend run. */
   intent?: { slug?: string; kind?: string; message: string };
+  /** #211: the run is unattended (#51) — the plan-walk gate auto-approves,
+   *  parks auto-resume, and the morning digest lands when it settles. */
+  unattended?: boolean;
 }
 
 /**
@@ -1234,6 +1238,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
             try {
               const walk = await maybeWalkThePlan({
                 slug: opts.intent.slug, laneRoot, send, sessionId: opts.conversationId, publishActivity: true,
+                unattended: opts.unattended === true,
                 expectPlan: opts.classification?.needsPlanning === true,
                 // W-T PLAN-FRESHNESS: the planning turn's start — a plan on
                 // disk older than this is the STALE one (the model echoed a

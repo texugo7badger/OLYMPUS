@@ -151,7 +151,8 @@ export function harvestPlanFromTurnText(turnText: string): { strict: string; not
   return null;
 }
 import { join } from 'node:path';
-import { walkPlan, resolveGodModelLane, type HopDispatcher, type HopWalkEvent } from './walker';
+import { walkPlan, resolveGodModelLane, readHopTelemetry, type HopDispatcher, type HopWalkEvent } from './walker';
+import { buildOvernightDigest, buildWaveReports, writeOvernightDigest } from './overnight';
 import { hopStatePath, saveHopState } from './hop-state';
 import { createGate, getPendingGates, listGates, resolveGate } from '@/lib/hitl-gates';
 import { appendActivity } from '@/lib/activity-feed';
@@ -292,6 +293,13 @@ export async function maybeWalkThePlan(opts: {
    *  stale plan from a prior session while the new one existed only in the
    *  model's chat text). The stale file never answers a planning turn. */
   turnStartedAt?: number;
+  /** #211 OVERNIGHT: the run is unattended (the #51 flag). The plan-walk
+   *  gate auto-approves (logged honestly), parks auto-resume within the
+   *  bounded budget, and the morning digest + live.jsonl wave rows land
+   *  when the campaign settles. */
+  unattended?: boolean;
+  /** #211: internal resume counter — bounds the auto-resume chain. */
+  overnightAttempt?: number;
 }): Promise<PostRunWalkOutcome> {
   // W-P/W-S TURN-SETTLE (the 23:31 specimen — the walk raced the planner):
   // the v2 prompt resolves after the FIRST step while Apollo's turn KEEPS
@@ -466,14 +474,28 @@ export async function maybeWalkThePlan(opts: {
         god: 'apollo',
         targetFile: planPath,
       });
-      return {
-        walked: false, reason: 'awaiting-approval',
-        completed: 0, total, parked: null,
-        summaryLine: gate.approvalPrompt,
-        awaitingApproval: { gate: { id: gate.id, approvalPrompt: gate.approvalPrompt } },
-      };
+      // #211 OVERNIGHT AUTO-QUEUE: no human is at the keyboard tonight —
+      // the gate approves itself, LOUDLY (the record carries who approved
+      // and why; the night log gets a row). An attended run still waits.
+      if (!opts.unattended) {
+        return {
+          walked: false, reason: 'awaiting-approval',
+          completed: 0, total, parked: null,
+          summaryLine: gate.approvalPrompt,
+          awaitingApproval: { gate: { id: gate.id, approvalPrompt: gate.approvalPrompt } },
+        };
+      }
+      resolveGate(gate.id, 'approve', 'auto-approved — unattended overnight run (no human at the keyboard)');
+      opts.send?.({ type: 'log', msg: `[OVERNIGHT] plan-walk gate auto-approved — unattended mode is on (gate ${gate.id}); walking ${total} hops without user input.`, ts: new Date().toISOString() });
+      try {
+        appendActivity({
+          god: 'atlas', action: 'milestone', project: opts.slug,
+          msg: `[OVERNIGHT] auto-approved the plan walk (${total} hops, gods: ${planGods(plan)}) — unattended run, no human input.`,
+          meta: { kind: 'overnight-auto-approve', gate: gate.id, lane: opts.laneRoot, hops: total },
+        });
+      } catch { /* the night log never breaks the walk */ }
     }
-    if (existing.decision === 'abort') {
+    if (existing?.decision === 'abort') {
       const msg = `Plan walk ABORTED by your earlier decision — the plan stays on disk at ${planPath}; delete it or ask for a replan to start over.`;
       opts.send?.({ type: 'walk_summary', completed: 0, total, parked: null, msg, ts: new Date().toISOString() });
       return { walked: false, reason: 'plan-aborted', completed: 0, total, parked: null, summaryLine: msg };
@@ -612,6 +634,57 @@ export async function maybeWalkThePlan(opts: {
         return fixResult;
       }
     } catch { /* the self-correction never breaks the summary */ }
+  }
+
+  // #211 OVERNIGHT AUTO-QUEUE: the unattended campaign never waits for a
+  // morning click. A park auto-resumes within the bounded budget (each
+  // resume is a fresh walk call — the walker isolates every hop in its own
+  // session, so the next wave starts with a clean window); when the
+  // campaign finally settles, the morning digest lands in the lane and one
+  // live.jsonl row per wave records the night durably.
+  if (opts.unattended) {
+    const attempt = opts.overnightAttempt ?? 0;
+    const maxAttempts = Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_ATTEMPTS ?? 3));
+    if (parked && attempt < maxAttempts) {
+      const delayMs = Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_DELAY_MS ?? 60_000));
+      opts.send?.({ type: 'log', msg: `[OVERNIGHT] wave parked at '${parked.hopId}' (${parked.reason}) — auto-resume ${attempt + 1}/${maxAttempts} in ${Math.round(delayMs / 1000)}s (no human input needed).`, ts: new Date().toISOString() });
+      try {
+        appendActivity({
+          god: 'atlas', action: 'milestone', project: opts.slug,
+          msg: `[OVERNIGHT] auto-resume ${attempt + 1}/${maxAttempts} — the walk parked at '${parked.hopId}' (${parked.reason}).`,
+          meta: { kind: 'overnight-resume', hop: parked.hopId, reason: parked.reason, attempt: attempt + 1, lane: opts.laneRoot },
+        });
+      } catch { /* the night log never breaks the walk */ }
+      if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+      return maybeWalkThePlan({ ...opts, unattended: true, overnightAttempt: attempt + 1 });
+    }
+    try {
+      const planOnDisk = JSON.parse(sanitizePlanJson(readFileSync(planPath, 'utf-8')));
+      const rows = readHopTelemetry(opts.laneRoot);
+      const gate = listGates().filter((g) => g.targetFile === planPath).pop() ?? null;
+      const digest = buildOvernightDigest({
+        slug: opts.slug,
+        laneRoot: opts.laneRoot,
+        plan: planOnDisk,
+        rows,
+        parked,
+        autoApproved: (gate?.userNote ?? '').includes('auto-approved'),
+        resumeAttempts: attempt,
+        startedAt: opts.turnStartedAt ? new Date(opts.turnStartedAt).toISOString() : rows[0]?.ts ?? new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+      });
+      const digestPath = writeOvernightDigest(opts.laneRoot, digest);
+      for (const wave of buildWaveReports(planOnDisk, rows)) {
+        try {
+          appendActivity({
+            god: 'atlas', action: 'milestone', project: opts.slug,
+            msg: `[OVERNIGHT] wave ${wave.wave} ${wave.outcome} — ${wave.hops.filter((h) => h.status === 'completed').length}/${wave.hops.length} hops (${wave.gods}).`,
+            meta: { kind: 'overnight-wave', wave: wave.wave, outcome: wave.outcome, gods: wave.gods, hops: wave.hops.map((h) => ({ id: h.id, god: h.god, status: h.status })), lane: opts.laneRoot },
+          });
+        } catch { /* one wave row never breaks the digest */ }
+      }
+      opts.send?.({ type: 'log', msg: `[OVERNIGHT] morning digest written: ${digestPath} — ${parked ? `campaign parked at '${parked.hopId}' after ${attempt} auto-resume(s)` : 'campaign complete, every wave GREEN'}.`, ts: new Date().toISOString() });
+    } catch { /* the digest never breaks the walk */ }
   }
 
   // #DESIGN-INTELLIGENCE: THE RESIDUE CLEANUP — after a FULLY COMPLETED
