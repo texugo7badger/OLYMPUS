@@ -16,6 +16,7 @@ import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2 } from 'lucide
 import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
+import { normalizePreviewUrl } from '@/lib/live-preview-url';
 
 const DEFAULT_PORT = 3000;
 const PROBE_INTERVAL_MS = 3000;
@@ -33,12 +34,20 @@ export default function LivePreview() {
   const [instruction, setInstruction] = useState('');
   const [sending, setSending] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // #202: the editable URL bar. `customUrl` is a user-pinned origin/path for
+  // debugging another port; null means "follow the probed dev server". The
+  // choice persists per project lane.
+  const [customUrl, setCustomUrl] = useState<string | null>(null);
+  const [urlDraft, setUrlDraft] = useState('');
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const urlFocusedRef = useRef(false);
 
   const port = activeProject?.livePreviewPort || DEFAULT_PORT;
   // #102: the pre-first-probe guess ONLY — once a probe settles, effectiveUrl
   // below is the server-verified REACHABLE url (dual-stack, bracketed for IPv6).
   const previewUrl = `http://127.0.0.1:${port}`;
   const projectSlug = activeProject?.slug || null;
+  const urlStorageKey = `olympus-live-preview-url:${projectSlug || 'default'}`;
 
   const probe = useCallback(async () => {
     try {
@@ -106,10 +115,55 @@ export default function LivePreview() {
   // #102: the server-verified REACHABLE url once probing settles; the local
   // guess is only the pre-first-probe fallback.
   const effectiveUrl = status?.url ?? previewUrl;
+  // #202: a user-pinned URL wins over the probe; the frame follows it even
+  // when the default port is down (that is the whole point of the bar).
+  const frameUrl = customUrl ?? effectiveUrl;
   // #103: the RESOLVED project path (note/lane reconciliation) for the tip —
   // the raw note path only as the pre-first-probe fallback.
   const resolvedPath = status?.path ?? activeProject?.path;
-  const showOverlay = !isRunning || probing || !iframeLoaded;
+  const showOverlay = customUrl ? !iframeLoaded : (!isRunning || probing || !iframeLoaded);
+
+  // #202: hydrate the pinned URL for this project lane, and keep the draft
+  // synced with the probe while the user is not editing it.
+  useEffect(() => {
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(urlStorageKey); } catch { /* storage unavailable */ }
+    const pinned = stored && /^https?:\/\//i.test(stored) ? stored : null;
+    setCustomUrl(pinned);
+    setUrlError(null);
+    setUrlDraft(pinned ?? previewUrl);
+    setIframeLoaded(false);
+  }, [urlStorageKey, previewUrl]);
+  useEffect(() => {
+    if (!urlFocusedRef.current) setUrlDraft(customUrl ?? effectiveUrl);
+  }, [effectiveUrl, customUrl]);
+
+  const commitUrl = useCallback(() => {
+    const result = normalizePreviewUrl(urlDraft);
+    if (!result.ok) {
+      setUrlError(result.error);
+      return;
+    }
+    let probed: string | null = null;
+    try { probed = new URL(effectiveUrl).toString(); } catch { /* probe url malformed */ }
+    setUrlError(null);
+    setIframeLoaded(false);
+    if (result.url === probed) {
+      setCustomUrl(null);
+      try { localStorage.removeItem(urlStorageKey); } catch { /* storage unavailable */ }
+    } else {
+      setCustomUrl(result.url);
+      try { localStorage.setItem(urlStorageKey, result.url); } catch { /* storage unavailable */ }
+    }
+  }, [urlDraft, effectiveUrl, urlStorageKey]);
+
+  const resetUrl = useCallback(() => {
+    setCustomUrl(null);
+    setUrlError(null);
+    setUrlDraft(effectiveUrl);
+    setIframeLoaded(false);
+    try { localStorage.removeItem(urlStorageKey); } catch { /* storage unavailable */ }
+  }, [effectiveUrl, urlStorageKey]);
 
   return (
     <div className="w-full h-full flex flex-col bg-olympus-bg">
@@ -136,8 +190,39 @@ export default function LivePreview() {
           <OlympusTooltip content="Refresh probe" side="bottom">
             <button onClick={() => { setIframeLoaded(false); probe(); }} className="text-olympus-text-dim hover:text-olympus-gold transition-colors p-1"><RefreshCw size={11} /></button>
           </OlympusTooltip>
-          <a href={effectiveUrl} target="_blank" rel="noopener noreferrer" className="text-olympus-gold hover:text-olympus-gold/80 text-[10px] font-mono px-1.5">open ↗</a>
+          <a href={frameUrl} target="_blank" rel="noopener noreferrer" className="text-olympus-gold hover:text-olympus-gold/80 text-[10px] font-mono px-1.5">open ↗</a>
         </div>
+      </div>
+
+      {/* #202: editable URL bar — Enter navigates the frame, invalid URLs are
+          refused inline (never a silent fallback), the pin persists per
+          project lane, and "reset" returns to the probed origin. */}
+      <div className="shrink-0 border-b border-olympus-gold/10 bg-olympus-bg/60 px-3 py-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-mono text-olympus-text-dim shrink-0">url</span>
+          <input
+            type="text"
+            value={urlDraft}
+            onChange={(e) => { setUrlDraft(e.target.value); if (urlError) setUrlError(null); }}
+            onFocus={() => { urlFocusedRef.current = true; }}
+            onBlur={() => { urlFocusedRef.current = false; }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); commitUrl(); }
+              if (e.key === 'Escape') { e.preventDefault(); resetUrl(); }
+            }}
+            spellCheck={false}
+            placeholder={effectiveUrl}
+            aria-label="Preview URL"
+            className={cn(
+              'flex-1 min-w-0 bg-olympus-panel/60 text-olympus-text px-2 py-0.5 rounded border font-mono text-[10px] focus:outline-none focus:ring-1',
+              urlError ? 'border-olympus-red/50 focus:ring-olympus-red/40' : 'border-olympus-gold/15 focus:ring-olympus-gold/40',
+            )}
+          />
+          {customUrl && (
+            <button onClick={resetUrl} title="Return to the probed dev server" className="text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold shrink-0">reset</button>
+          )}
+        </div>
+        {urlError && <div className="mt-0.5 pl-7 text-[9px] font-mono text-olympus-red">{urlError}</div>}
       </div>
 
       {isRunning && status?.demoLogin && (
@@ -177,8 +262,8 @@ export default function LivePreview() {
       )}
 
       <div ref={containerRef} className={cn('flex-1 min-h-0 relative', markMode && 'cursor-crosshair')} onClick={handleContainerClick}>
-        {isRunning && (
-          <iframe src={effectiveUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
+        {(isRunning || customUrl) && (
+          <iframe src={frameUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
         )}
         {showOverlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-olympus-bg">
@@ -188,19 +273,21 @@ export default function LivePreview() {
               <div className="absolute inset-4 rounded-full border-2 border-olympus-gold/40 animate-ping" style={{ animationDuration: '3s', animationDelay: '0.6s' }} />
               <div className="absolute inset-0 flex items-center justify-center">{probing ? <Loader2 size={28} className="text-olympus-gold animate-spin" /> : <EyeOff size={28} className="text-olympus-gold/60" />}</div>
             </div>
-            <h3 className="text-sm font-mono font-semibold text-olympus-gold mb-2">{probing ? 'Probing dev server…' : 'Code in progress…'}</h3>
+            <h3 className="text-sm font-mono font-semibold text-olympus-gold mb-2">{customUrl ? 'Loading pinned URL…' : probing ? 'Probing dev server…' : 'Code in progress…'}</h3>
             <p className="text-[11px] font-mono text-olympus-text-dim text-center max-w-xs leading-relaxed mb-4">
-              {activeProject ? `Waiting for ${activeProject.name}'s dev server at :${port}. Start it with \`npm run dev\` in the project folder.` : `No active project. Select one from the Project Switcher, or the preview defaults to :${port}.`}
+              {customUrl
+                ? `Pinned to ${frameUrl} — the dev-server probe is bypassed.`
+                : activeProject ? `Waiting for ${activeProject.name}'s dev server at :${port}. Start it with \`npm run dev\` in the project folder.` : `No active project. Select one from the Project Switcher, or the preview defaults to :${port}.`}
             </p>
-            {!probing && !isRunning && (
+            {!customUrl && !probing && !isRunning && (
               <div className="text-[10px] font-mono text-[#5A5A5A] bg-olympus-card px-3 py-1.5 rounded-md border border-olympus-gold/10">
                 <span className="text-olympus-gold">tip:</span> run <code className="text-olympus-green">cd "{resolvedPath ?? '<project>'}" && npm run dev</code>
               </div>
             )}
-            {!probing && !isRunning && status?.pathSource === 'note-stale' && (
+            {!customUrl && !probing && !isRunning && status?.pathSource === 'note-stale' && (
               <p className="text-[10px] font-mono text-[#5A5A5A]">note path is stale — the project lives at {status?.path}</p>
             )}
-            {isRunning && !iframeLoaded && !probing && <p className="text-[10px] font-mono text-olympus-text-dim">Dev server is up — loading preview…</p>}
+            {!iframeLoaded && !probing && (customUrl || isRunning) && <p className="text-[10px] font-mono text-olympus-text-dim">{customUrl ? 'Pinned URL' : 'Dev server is up'} — loading preview…</p>}
           </div>
         )}
         {markMode && <div className="absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-olympus-gold/20 text-olympus-gold text-[10px] font-mono ring-1 ring-olympus-gold/30 pointer-events-none">Click anywhere on the preview to mark for editing</div>}
@@ -208,7 +295,9 @@ export default function LivePreview() {
 
       <div className="h-6 shrink-0 flex items-center justify-between px-3 border-t border-olympus-gold/10 bg-olympus-panel text-[9px] font-mono text-olympus-text-dim">
         <span>
-          {isRunning ? `:${port} · ${status?.responseTimeMs ?? 0}ms` : `:${port} · offline`}
+          {customUrl
+            ? `custom · ${frameUrl}`
+            : isRunning ? `:${port} · ${status?.responseTimeMs ?? 0}ms` : `:${port} · offline`}
           {status?.manager?.running ? ' · durable host' : ''}
         </span>
         <span className="text-[#5A5A5A]">live · no auto-refresh · interactive</span>
