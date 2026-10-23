@@ -24,6 +24,26 @@ const nextConfig = {
   // debugging, comment out this line temporarily.
   // Docs: https://nextjs.org/docs/app/api-reference/config/next-config-js/output
   output: 'standalone',
+  // #BUILD-BLOAT (the v0.0.9 release-cut specimen, 2026-10-23): Turbopack's
+  // dynamic-FS tracing (the lane/config reads use path.resolve(process.cwd(),
+  // …)) decided the WHOLE project was a runtime input and copied every
+  // non-excluded tree into .next/standalone — including dist-electron/ (the
+  // PREVIOUS packaged build, 7.8 GB at the cut). The result: a standalone
+  // output that grows by the size of the last release, an AppImage that
+  // balloons, and a build that sits for minutes copying files it will never
+  // serve. Nothing below is read by the Next server at runtime; the Electron
+  // builder reads dist-electron-tsc/ and extensions/ directly from the repo.
+  // Verified at the cut: standalone 7.8 GB → ~600 MB with these excludes.
+  outputFileTracingExcludes: {
+    '/*': [
+      'dist-electron/**',
+      'dist-electron-tsc/**',
+      '.git/**',
+      'docs/**',
+      'extensions/**',
+      'Todas as estratégias*.md',
+    ],
+  },
   // No rewrites needed (Monaco editor removed — users edit in their preferred IDE).
   async rewrites() {
     return [];
