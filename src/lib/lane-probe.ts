@@ -32,12 +32,26 @@ export interface LaneProbeResult {
   latencyMs: number;
   httpStatus?: number;
   error?: string;
+  /** #193: the refusal is a harness-only class (alive through opencode) —
+   *  the caller must stay quiet, never warn about a stall. */
+  aliveForUs?: boolean;
+  /** #193: how the verdict was reached (disabled lanes show it in logs). */
+  note?: string;
 }
 
 /** The builtin provider base URLs (native providers carry no options.baseURL). */
 const BUILTIN_BASE_URLS: Record<string, string> = {
   openrouter: 'https://openrouter.ai/api/v1',
+  // #193: the OpenCode harness-only lanes — the same endpoints the CLI
+  // reads from its live catalogue (~/.cache/opencode/models.json).
+  opencode: 'https://opencode.ai/inference/openai/v1',
+  'opencode-go': 'https://opencode.ai/inference/go/openai/v1',
 };
+
+/** #193: providers that only serve the OpenCode harness (raw probes get a
+ *  class refusal — MissingSessionID / FreeTierError / an expired mirror key
+ *  — while the CLI serves the same lane fine). */
+const HARNESS_ONLY_PROVIDERS = new Set(['opencode-go', 'opencode']);
 
 export function workspaceConfigPath(override?: string): string {
   return override ?? path.join(os.homedir(), '.local', 'share', 'olympus', 'workspace', 'opencode.json');
@@ -103,9 +117,19 @@ export async function probeLane(
     const auth = JSON.parse(fs.readFileSync(authStorePath(opts.authPath), 'utf-8'));
     key = String(auth?.[model.providerId]?.key || '');
   } catch { /* no key — the probe reports the refusal */ }
-  if (!key) return null;
+  // #193: GO/Zen lanes can be probed WITHOUT the auth-store key — their
+  // refusals are class signals, not verdicts (the CLI owns the real auth).
+  const harnessOnly = HARNESS_ONLY_PROVIDERS.has(model.providerId);
+  if (!key && !harnessOnly) return null;
 
   const t0 = Date.now();
+  const harnessHeaders: Record<string, string> = harnessOnly
+    ? {
+        // The GO endpoint refuses a bare request with 400 MissingSessionID;
+        // the session id makes the probe a harness-class caller.
+        'x-opencode-session': `olympus-probe-${Math.random().toString(36).slice(2)}`,
+      }
+    : {};
   try {
     const r = await fetch(`${base.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
@@ -119,6 +143,7 @@ export async function probeLane(
         'User-Agent': 'OLYMPUS',
         'HTTP-Referer': 'https://olympus.local',
         'X-Title': 'OLYMPUS lane probe',
+        ...harnessHeaders,
       },
       body: JSON.stringify({
         model: model.modelId,
@@ -144,7 +169,38 @@ export async function probeLane(
         latencyMs,
         httpStatus: r.status,
         error: undefined,
+        aliveForUs: true,
+        note: 'harness-only lane (agentic clients) — alive through opencode',
       };
+    }
+    // #193 — the GO/Zen harness-only classes. A raw probe can never own
+    // their auth: the CLI injects the session + its own account credential.
+    // These refusals mean ALIVE-FOR-US, never a stall warning.
+    if (harnessOnly) {
+      if (r.status === 400 && /MissingSessionID/i.test(bodyText)) {
+        return {
+          ok: true, model: model.full, provider: model.providerId,
+          apiModel: model.modelId, latencyMs, httpStatus: r.status,
+          aliveForUs: true,
+          note: 'harness-only lane (MissingSessionID) — opencode injects the session',
+        };
+      }
+      if (r.status === 403 && /FreeTierError|within OpenCode|only be used from within/i.test(bodyText)) {
+        return {
+          ok: true, model: model.full, provider: model.providerId,
+          apiModel: model.modelId, latencyMs, httpStatus: r.status,
+          aliveForUs: true,
+          note: 'harness-only lane (FreeTierError) — opencode is the real verifier',
+        };
+      }
+      if (r.status === 401 && /api_key_expired|expired/i.test(bodyText)) {
+        return {
+          ok: true, model: model.full, provider: model.providerId,
+          apiModel: model.modelId, latencyMs, httpStatus: r.status,
+          aliveForUs: true,
+          note: 'unverifiable raw — opencode owns auth (the auth-store key is stale)',
+        };
+      }
     }
     return {
       ok: r.ok,
