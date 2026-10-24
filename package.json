@@ -68,7 +68,10 @@
     "plugins:compile": "tsc -p .opencode/tsconfig.plugins.json",
     "electron:dev": "concurrently -k -n next,electron -c cyan,magenta \"next dev -p 3737 -H 127.0.0.1\" \"wait-on http://localhost:3737/api/olympus/health && npm run rebuild:native && tsc -p electron/tsconfig.json && node scripts/electron-postcompile.js && electron .\"",
     "olympus": "node bin/olympus.js",
-    "postinstall": "node scripts/postinstall.js"
+    "postinstall": "node scripts/postinstall.js",
+    "prebuild": "node scripts/invalidate-build-stamp.js",
+    "prebuild:app": "node scripts/invalidate-build-stamp.js",
+    "prebuild:linux": "node scripts/invalidate-build-stamp.js"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",

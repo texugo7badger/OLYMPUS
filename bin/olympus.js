@@ -79,6 +79,17 @@ function findOlympusRoot() {
 
 const ROOT = findOlympusRoot();
 
+/**
+ * The `--` flags Electron's main process actually understands. `olympus dev`
+ * used to drop EVERY `--` flag, which silently swallowed `--dev` and made a
+ * production launch out of a dev command (the 2026-10-24 "tela toda errada"
+ * specimen). Only these pass through; anything else stays out of argv so it
+ * can never be mistaken for an Electron/Chromium switch.
+ */
+const FLAGS_ELECTRON_UNDERSTANDS = new Set([
+  '--dev', '--prod', '--reset-gpu', '--no-sandbox',
+]);
+
 const PKG_VERSION = (() => {
   try {
     if (ROOT) {
@@ -493,15 +504,30 @@ function main() {
       runScript(join(ROOT, 'scripts', 'olympus-doctor.js'), args);
       return;
     }
-    case 'dev':
+    case 'dev': {
+      // `olympus dev` means DEVELOPMENT — always. It used to strip every
+      // `--` flag, so Electron never received `--dev` and (once production
+      // became the default for a source run) launched `next dev`'s opposite:
+      // a standalone build that could be PARTIAL mid-build. That is the
+      // 2026-10-24 "tela toda errada" specimen. The flag is now explicit and
+      // the pass-through preserves the flags Electron understands.
+      const passthrough = args.filter(a => !a.startsWith('--') || FLAGS_ELECTRON_UNDERSTANDS.has(a.split('=')[0]));
+      printBanner();
+      console.log(`${c.gold}olympus:${c.reset} starting in Electron desktop mode (DEVELOPMENT)...`);
+      console.log('');
+      startElectron([...passthrough, '--dev']);
+      return;
+    }
     case 'start':
     case 'electron': {
-      // All three are aliases — OLYMPUS is always Electron.
-      const filtered = args.filter(a => !a.startsWith('--'));
+      // `olympus start` = launch the app the way a user runs it: PRODUCTION
+      // when a complete build exists, development otherwise. Electron decides
+      // and says which — we do not guess here.
+      const passthrough = args.filter(a => !a.startsWith('--') || FLAGS_ELECTRON_UNDERSTANDS.has(a.split('=')[0]));
       printBanner();
       console.log(`${c.gold}olympus:${c.reset} starting in Electron desktop mode...`);
       console.log('');
-      startElectron(filtered);
+      startElectron(passthrough);
       return;
     }
     case 'build':

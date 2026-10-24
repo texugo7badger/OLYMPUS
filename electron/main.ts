@@ -72,13 +72,54 @@ const OLYMPUS_GOLD = '#D4A574';
  * app on a missing artifact — degrade to dev, loudly).
  */
 const devFlag = process.argv.includes('--dev') || process.env.OLYMPUS_DEV === '1';
+const prodFlag = process.argv.includes('--prod');
 const sourceRoot = dirname(__dirname); // <project>/electron -> <project>
 const packaged = app.isPackaged;
 const standalonePath = packaged
   ? join(process.resourcesPath || '', 'next-standalone', 'server.js')
   : join(sourceRoot, '.next', 'standalone', 'server.js');
 const hasStandalone = existsSync(standalonePath);
-const isDev = packaged ? false : (devFlag || !hasStandalone);
+
+/**
+ * A COMPLETE build, proven — never inferred from file existence.
+ *
+ * `scripts/electron-postcompile.js` (the LAST step of build:app) stamps
+ * `.next/.olympus-build-complete`. If that stamp is missing, the chain never
+ * finished — or a build is running RIGHT NOW — and `.next/standalone` may be
+ * a partial copy. Serving it produced the 2026-10-24 "tela toda errada"
+ * specimen (`olympus dev` while `olympus build` was mid-flight). A partial
+ * build is worse than a slow one: it LOOKS like a different app.
+ */
+function buildIsComplete(): boolean {
+  if (packaged) return hasStandalone;
+  try {
+    const stamp = JSON.parse(readFileSync(join(sourceRoot, '.next', '.olympus-build-complete'), 'utf-8'));
+    if (!stamp?.completedAt) return false;
+    // The stamp must describe the artifact we are about to serve.
+    return hasStandalone && stamp.standalone === true;
+  } catch {
+    return false;
+  }
+}
+
+const buildReady = buildIsComplete();
+// Precedence: `--dev` always wins; a PACKAGED app is always production; a
+// source run is production only when the build is COMPLETE (stamped). `--prod`
+// cannot force an incomplete build — that is the specimen this guard exists
+// for. A source run with no complete build degrades to dev, loudly.
+const isDev = packaged ? false : (devFlag || !buildReady);
+if (!packaged) {
+  const why = devFlag
+    ? 'requested (--dev / OLYMPUS_DEV=1)'
+    : !buildReady
+      ? 'no complete build (run `npm run build:app`) — using the dev server'
+      : prodFlag
+        ? 'requested (--prod) and the build is complete'
+        : 'the build is complete (production)';
+  // safeConsole is defined below; a plain console.log here is safe because the
+  // stdout pipe is guarded by the process-level handler.
+  console.log(`[olympus:electron] mode: ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'} — ${why}`);
+}
 const appRoot = packaged
   ? dirname(process.execPath) // packaged: next to the executable
   : sourceRoot;

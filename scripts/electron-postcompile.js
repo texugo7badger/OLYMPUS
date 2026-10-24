@@ -21,7 +21,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -51,6 +51,30 @@ try {
     ) + '\n',
   );
   console.log('[electron-postcompile] wrote', markerPath);
+
+  // ── THE BUILD-COMPLETE STAMP (2026-10-24) ────────────────────────────────
+  // `npm run build:app` / `build:linux` = next build && tsc && THIS script.
+  // Writing the stamp HERE means it exists ONLY when the whole chain finished
+  // — so the Electron main process can trust `.next/standalone` instead of
+  // guessing from file existence. Without it a mid-build launch served a
+  // PARTIAL standalone (the "tela toda errada" specimen) or a stale one.
+  const root = join(__dirname, '..');
+  const stampPath = join(root, '.next', '.olympus-build-complete');
+  try {
+    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
+    writeFileSync(
+      stampPath,
+      JSON.stringify({
+        version: pkg.version ?? 'unknown',
+        completedAt: new Date().toISOString(),
+        standalone: existsSync(join(root, '.next', 'standalone', 'server.js')),
+      }, null, 2) + '\n',
+    );
+    console.log('[electron-postcompile] build-complete stamp:', stampPath);
+  } catch (err) {
+    // A missing stamp is not fatal — the app degrades to dev mode loudly.
+    console.warn('[electron-postcompile] could not write the build-complete stamp:', err?.message ?? err);
+  }
 } catch (err) {
   console.error('[electron-postcompile] FAILED:', err);
   process.exit(1);
