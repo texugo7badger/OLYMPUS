@@ -10,6 +10,7 @@ import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 import { resolveAndRegisterIntent, stripUploadBlock } from '@/lib/project-intent';
 import { maybeStartDevServer } from '@/lib/dev-server-trigger';
 import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
+import { pickPlanRoot, walkRootNote } from '@/lib/hop-runtime/walk-root';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
 import { probeLane } from '@/lib/lane-probe';
 import { reconcileProjectPath } from '@/lib/project-context';
@@ -373,9 +374,17 @@ export async function POST(req: NextRequest) {
     // Apollo wrote the scaffold + dispatch-plan.json to the WORKSPACE
     // because the marker said "the project lane root" and his cwd WAS
     // the workspace).
-    const intentLaneRoot = intentStage?.slug
-      ? reconcileProjectPath(intentStage.slug)?.path ?? null
-      : null;
+    // THE WALK-ROOT RESOLVER (the AIME 00:00 specimen): the planner writes to
+    // its cwd (the workspace lane) while the note home lives in the vault —
+    // pinning the marker to the note home produced a plan the walk never
+    // read. The marker and the walk now use the SAME resolved root: the lane
+    // carrying the plan/plan.md, else the dispatch cwd, else the note home.
+    const walkRootFor = (slug: string): string => {
+      const rec = reconcileProjectPath(slug);
+      const res = pickPlanRoot([resolveDispatchCwd(slug), rec?.lanePath, rec?.path]);
+      return res.root;
+    };
+    const intentLaneRoot = intentStage?.slug ? walkRootFor(intentStage.slug) : null;
     // W-A RAG-CERT A3: the planner RAG — the campaign prompt's style words
     // retrieve the vault's prior assets BEFORE the plan ("style of my
     // previous assets" as a planning input). composePlannerRag previously
@@ -1197,7 +1206,13 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           // A parked plan resumes on the next successful prompt in the
           // project (the state carries the campaign). Non-fatal both.
           if (opts.intent?.slug) {
-            const laneRoot = reconcileProjectPath(opts.intent.slug)?.path ?? resolveDispatchCwd(opts.intent.slug);
+            // The SAME resolver as the planner marker — the plan is read
+            // where it was written (the AIME 00:00 root split, cured).
+            const rec = reconcileProjectPath(opts.intent.slug);
+            const wr = pickPlanRoot([resolveDispatchCwd(opts.intent.slug), rec?.lanePath, rec?.path]);
+            const laneRoot = wr.root;
+            const rootNote = walkRootNote(wr);
+            if (rootNote) send({ type: 'log', msg: rootNote, ts: new Date().toISOString() });
             try {
               const t = await maybeStartDevServer(opts.intent.slug, laneRoot);
               send({
