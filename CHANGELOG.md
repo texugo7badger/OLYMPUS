@@ -2,6 +2,16 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.13] — 2026-10-24
+
+**"THE IGNITION"** — the AIME campaign never walked, and the reason was not the "seam" Apollo kept reporting: the plan was in the workspace LANE while the post-run read the project NOTE HOME in the vault. The walk now reads the plan where it was written — the real 23-hop AIME plan walks 23/23.
+
+- **THE ROOT SPLIT (the AIME 00:00–00:11 specimen)**: the intake creates the project note at `~/OLYMPUS-VAULT/02_Projects/aime`; the warm session's cwd (and the planner's write) is `~/.local/share/olympus/workspace/aime`. The post-run resolved `reconcileProjectPath(slug).path` → the NOTE HOME, found no `dispatch-plan.json` there, and returned **silently** (a follow-up turn is `expectPlan=false`). Six "continue"s, zero hops, zero telemetry — and Apollo could only see "no hop-state anywhere", which was true because the walk never read the plan. The planner marker had the same split, so the plan kept landing in a root the walk did not read.
+- **`pickPlanRoot()` (`src/lib/hop-runtime/walk-root.ts`)**: the deterministic resolver used by BOTH the planner marker and the post-run — 1) the first candidate holding `dispatch-plan.json` wins; 2) else the first holding `plan.md` (the planner's working lane); 3) else the first existing directory; 4) else the caller's first choice (a fresh planning turn polls there). Candidates are ordered lane-first (the dispatch cwd), then the note home. When the root moves, the turn says so: "Plan root resolved to <lane> — the project note home <vault> had no plan."
+- **THE PROOF, ON THE REAL PLAN**: a fixture dispatcher ran the actual AIME `dispatch-plan.json` (23 hops, 30 declared artifacts) through `maybeWalkThePlan` on a copy of the lane → **walked: true, completed: 23/23**, 241 ms, the DAG's file-exists checks green. New suite `walk-root.test.mjs` (S1–S6) pins the resolver, including the real AIME path.
+- **THE REFUSAL WAS RIGHT**: Apollo's four "I cannot dispatch by hand" answers are the EXECUTION LAW working as designed (a hand-dispatched hop fights the watchdog — the 00:49 specimen). The law stays; the ROOT was the defect. With the plan read where it exists, the post-run ignites the walk on the next prompt — no manual dispatch, no re-planning, no state loss.
+- **Gates**: battery **60 PASS / 0 FAIL / 1 declared SKIP** (61 suites, incl. walk-root), `tsc --noEmit` 0, eslint 0, `npm audit` 0, `check-strategy-sync` 10/10.
+
 ## [v0.0.12] — 2026-10-24
 
 **"THE RELIABLE FREE"** — the 23:08 AIME run exposed that the free roster was riding a **quota-dead lane**: the Zen free models answer "Free usage limit reached" while the GO-plan lanes, NVIDIA and OpenRouter work. The roster is rebuilt on the lanes that actually serve, and the session setup no longer aborts to the one-shot lane.
