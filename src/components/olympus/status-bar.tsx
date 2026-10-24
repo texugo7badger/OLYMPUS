@@ -183,6 +183,12 @@ export default function StatusBar({ health }: { health: any }) {
  {/* W0-A: the WORKING-GODS strip — every god working RIGHT NOW, icons
      side by side, blinking (animate-pulse), NO names. Falls back to the
      selected god (dimmed, steady) when the machine is idle. */}
+ {/* RUN-STATE — the honest "is it working?" pill (2026-10-24). The god
+     icons above answer from the 3-minute activity feed, which made a
+     HEALTHY 8-minute hop look idle. This pill answers from PROCESS
+     evidence: the walk lock's pid + heartbeat (/api/olympus/run-state),
+     per the #105 law — no probe, no claim. */}
+ <RunStatePill />
  <div className="flex items-center gap-1 shrink-0" title={workingGods.length > 0 ? workingGods.join(' · ') : (fallbackGod || 'idle')}>
  {workingGods.length > 0 ? (
  workingGods.map((g) => {
@@ -303,5 +309,74 @@ export default function StatusBar({ health }: { health: any }) {
  )}
  </div>
  </div>
+ );
+}
+
+/* ------------------------------------------------------------------ */
+/* RunStatePill — "RUNNING / PARKED / IDLE / UNVERIFIED" with evidence. */
+/* ------------------------------------------------------------------ */
+/* The 2026-10-24 specimen: the user could never tell whether the machine
+   was working. The god-icon strip answers from the activity feed (a
+   3-minute window), so a healthy 8-minute hop read as idle and five
+   concurrent walkers read as one confused god.
+
+   This pill answers from /api/olympus/run-state, which is built on PROCESS
+   evidence (the walk lock's pid + heartbeat, the hop state on disk) — the
+   #105 law applied to liveness: no probe, no claim. A `disk-only` answer
+   renders the literal refusal, never a green dot. */
+function RunStatePill() {
+ const [state, setState] = useState<{
+  verdict: 'RUNNING' | 'PARKED' | 'IDLE' | 'UNVERIFIED';
+  line: string;
+  evidence: string;
+  blockedCount: number;
+ } | null>(null);
+
+ useEffect(() => {
+  let cancelled = false;
+  const tick = async () => {
+   try {
+    const res = await fetch('/api/olympus/run-state', { cache: 'no-store' });
+    if (!res.ok) return;
+    const d = await res.json();
+    if (cancelled) return;
+    setState({
+     verdict: d.verdict,
+     line: d.line,
+     evidence: d.evidence,
+     blockedCount: d?.laneHealth?.blockedCount ?? 0,
+    });
+   } catch { /* a dead API never breaks the status bar */ }
+  };
+  tick();
+  // 10s: fast enough that a park/start is felt, slow enough to stay free.
+  const iv = setInterval(tick, 10_000);
+  return () => { cancelled = true; clearInterval(iv); };
+ }, []);
+
+ if (!state) return null;
+
+ const tone =
+  state.verdict === 'RUNNING' ? 'text-olympus-green'
+  : state.verdict === 'PARKED' ? 'text-olympus-red'
+  : state.verdict === 'UNVERIFIED' ? 'text-olympus-gold'
+  : 'text-olympus-text-dim';
+ const dot =
+  state.verdict === 'RUNNING' ? 'bg-olympus-green animate-pulse'
+  : state.verdict === 'PARKED' ? 'bg-olympus-red'
+  : state.verdict === 'UNVERIFIED' ? 'bg-olympus-gold'
+  : 'bg-olympus-text-dim/50';
+
+ return (
+  <span
+   className={cn('flex items-center gap-1 shrink-0 text-[10px] font-mono', tone)}
+   title={`${state.line}\n\nevidence: ${state.evidence}${state.blockedCount ? `\n\n${state.blockedCount} lane(s) de modelo mortas — veja Settings → LLM Strategy` : ''}`}
+  >
+   <span className={cn('w-1.5 h-1.5 rounded-full', dot)} />
+   <span className="hidden xl:inline">{state.verdict}</span>
+   {state.blockedCount > 0 && (
+    <span className="text-olympus-red/80" title={`${state.blockedCount} lane(s) sem cota/rota`}>⚠</span>
+   )}
+  </span>
  );
 }

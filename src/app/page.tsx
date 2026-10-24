@@ -75,45 +75,74 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, ChunkErrorBo
 
 // Code-split all Olympus components via next/dynamic.
 //
-// Loading fallbacks are all `null` so only the route-level
-// loading.tsx spinner appears (centered, "OLYMPUS is waking the gods…").
-// Per-panel spinners would create a "two gears" effect as each dynamic
-// chunk loads independently — instead, panels appear silently as they
-// finish compiling.
-const ActivityBar = dynamic(() => import('@/components/olympus/activity-bar'), { ssr: false, loading: () => null });
-const StatusBar = dynamic(() => import('@/components/olympus/status-bar'), { ssr: false, loading: () => null });
-const FilterSidebar = dynamic(() => import('@/components/olympus/filter-sidebar'), { ssr: false, loading: () => null });
-const BrainGraph3D = dynamic(() => import('@/components/olympus/brain-atlas-3d'), { ssr: false, loading: () => null });
+// PANEL LOADING FALLBACKS — a visible spinner, never a blank pane.
+//
+// The old contract was `loading: () => null` ("panels appear silently as they
+// finish compiling"). In a DEV run that was indistinguishable from a broken
+// panel: the 2026-10-24 specimen — the user clicked LLM Strategy and other
+// dashboards and saw NOTHING, because Turbopack was still compiling the chunk
+// and the fallback rendered an empty box. A blank pane is a lie by omission.
+//
+// `PanelLoading` renders immediately (gold spinner + the panel label), so a
+// slow chunk reads as LOADING, and a failed chunk falls through to
+// ChunkErrorBoundary's explicit error card instead of an empty rectangle.
+// Production runs prebuilt chunks, so this is invisible there — it is the
+// dev / cold-chunk safety net.
+/* PanelLoading — the visible fallback for every dynamic panel.
+   A blank rectangle is indistinguishable from a broken dashboard; the user's
+   2026-10-24 report ("LLM Strategy and others don't open") was exactly that
+   misreading: the pane WAS loading, silently. This renders the truth. */
+function PanelLoading({ label }: { label: string }) {
+  return (
+    <div
+      className="h-full w-full flex flex-col items-center justify-center gap-2 bg-olympus-bg text-olympus-text-dim"
+      role="status"
+      aria-live="polite"
+      aria-label={`Carregando ${label}`}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="animate-spin text-olympus-gold/80" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2.5" />
+        <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      </svg>
+      <span className="text-[10px] font-mono tracking-wide">{label}</span>
+    </div>
+  );
+}
+
+const ActivityBar = dynamic(() => import('@/components/olympus/activity-bar'), { ssr: false, loading: () => <PanelLoading label="ActivityBar" /> });
+const StatusBar = dynamic(() => import('@/components/olympus/status-bar'), { ssr: false, loading: () => <PanelLoading label="StatusBar" /> });
+const FilterSidebar = dynamic(() => import('@/components/olympus/filter-sidebar'), { ssr: false, loading: () => <PanelLoading label="FilterSidebar" /> });
+const BrainGraph3D = dynamic(() => import('@/components/olympus/brain-atlas-3d'), { ssr: false, loading: () => <PanelLoading label="BrainGraph3D" /> });
 // GodIntelligenceDashboard is the unified view (absorbs BrainHealthDashboard).
-const GodIntelligenceDashboard = dynamic(() => import('@/components/olympus/god-intelligence-dashboard'), { ssr: false, loading: () => null });
-const CostDashboard = dynamic(() => import('@/components/olympus/cost-dashboard'), { ssr: false, loading: () => null });
+const GodIntelligenceDashboard = dynamic(() => import('@/components/olympus/god-intelligence-dashboard'), { ssr: false, loading: () => <PanelLoading label="GodIntelligenceDashboard" /> });
+const CostDashboard = dynamic(() => import('@/components/olympus/cost-dashboard'), { ssr: false, loading: () => <PanelLoading label="CostDashboard" /> });
 // Read-only panel showing real-world benchmark totals. Recording is opt-in
 // via Settings → Benchmark Recording.
-const BenchmarksPanel = dynamic(() => import('@/components/olympus/benchmarks-panel'), { ssr: false, loading: () => null });
-const ActivityTimeline = dynamic(() => import('@/components/olympus/activity-timeline'), { ssr: false, loading: () => null });
-const GodDetail = dynamic(() => import('@/components/olympus/god-detail'), { ssr: false, loading: () => null });
+const BenchmarksPanel = dynamic(() => import('@/components/olympus/benchmarks-panel'), { ssr: false, loading: () => <PanelLoading label="BenchmarksPanel" /> });
+const ActivityTimeline = dynamic(() => import('@/components/olympus/activity-timeline'), { ssr: false, loading: () => <PanelLoading label="ActivityTimeline" /> });
+const GodDetail = dynamic(() => import('@/components/olympus/god-detail'), { ssr: false, loading: () => <PanelLoading label="GodDetail" /> });
 // Vault Summary replaces Vault Editor (read-only).
-const VaultSummary = dynamic(() => import('@/components/olympus/vault-summary'), { ssr: false, loading: () => null });
+const VaultSummary = dynamic(() => import('@/components/olympus/vault-summary'), { ssr: false, loading: () => <PanelLoading label="VaultSummary" /> });
 // Editor Bridge panel — replaces the old IdePanel (Monaco editor +
 // file explorer + terminal tabs). Shows the Terminal Bridge status +
 // IDE extension install commands for the user's preferred editor.
-const EditorBridgePanel = dynamic(() => import('@/components/olympus/editor-bridge-panel'), { ssr: false, loading: () => null });
+const EditorBridgePanel = dynamic(() => import('@/components/olympus/editor-bridge-panel'), { ssr: false, loading: () => <PanelLoading label="EditorBridgePanel" /> });
 // Onboarding wizard (first-run experience).
-const OnboardingWizard = dynamic(() => import('@/components/olympus/onboarding-wizard'), { ssr: false, loading: () => null });
+const OnboardingWizard = dynamic(() => import('@/components/olympus/onboarding-wizard'), { ssr: false, loading: () => <PanelLoading label="OnboardingWizard" /> });
 // HITL DAG gate toast (approval prompts).
-const HitlGateToast = dynamic(() => import('@/components/olympus/hitl-gate-toast'), { ssr: false, loading: () => null });
+const HitlGateToast = dynamic(() => import('@/components/olympus/hitl-gate-toast'), { ssr: false, loading: () => <PanelLoading label="HitlGateToast" /> });
 // Quick Open fuzzy file finder (Cmd/Ctrl+P).
-const QuickOpen = dynamic(() => import('@/components/olympus/quick-open'), { ssr: false, loading: () => null });
-const InteractiveTerminal = dynamic(() => import('@/components/olympus/interactive-terminal'), { ssr: false, loading: () => null });
-const LivePreview = dynamic(() => import('@/components/olympus/live-preview'), { ssr: false, loading: () => null });
-const CustomFrames = dynamic(() => import('@/components/olympus/custom-frames'), { ssr: false, loading: () => null });
-const SSEStreamPanel = dynamic(() => import('@/components/olympus/sse-stream-panel'), { ssr: false, loading: () => null });
-const ShortcutsOverlay = dynamic(() => import('@/components/olympus/shortcuts-overlay'), { ssr: false, loading: () => null });
-const TimeSlider = dynamic(() => import('@/components/olympus/time-slider'), { ssr: false, loading: () => null });
-const ProviderSettings = dynamic(() => import('@/components/olympus/provider-settings'), { ssr: false, loading: () => null });
-const MCPConfigPanel = dynamic(() => import('@/components/olympus/mcp-config-panel'), { ssr: false, loading: () => null });
-const SettingsDialog = dynamic(() => import('@/components/olympus/settings-dialog'), { ssr: false, loading: () => null });
-const NewProjectDialog = dynamic(() => import('@/components/olympus/new-project-dialog'), { ssr: false, loading: () => null });
+const QuickOpen = dynamic(() => import('@/components/olympus/quick-open'), { ssr: false, loading: () => <PanelLoading label="QuickOpen" /> });
+const InteractiveTerminal = dynamic(() => import('@/components/olympus/interactive-terminal'), { ssr: false, loading: () => <PanelLoading label="InteractiveTerminal" /> });
+const LivePreview = dynamic(() => import('@/components/olympus/live-preview'), { ssr: false, loading: () => <PanelLoading label="LivePreview" /> });
+const CustomFrames = dynamic(() => import('@/components/olympus/custom-frames'), { ssr: false, loading: () => <PanelLoading label="CustomFrames" /> });
+const SSEStreamPanel = dynamic(() => import('@/components/olympus/sse-stream-panel'), { ssr: false, loading: () => <PanelLoading label="SSEStreamPanel" /> });
+const ShortcutsOverlay = dynamic(() => import('@/components/olympus/shortcuts-overlay'), { ssr: false, loading: () => <PanelLoading label="ShortcutsOverlay" /> });
+const TimeSlider = dynamic(() => import('@/components/olympus/time-slider'), { ssr: false, loading: () => <PanelLoading label="TimeSlider" /> });
+const ProviderSettings = dynamic(() => import('@/components/olympus/provider-settings'), { ssr: false, loading: () => <PanelLoading label="ProviderSettings" /> });
+const MCPConfigPanel = dynamic(() => import('@/components/olympus/mcp-config-panel'), { ssr: false, loading: () => <PanelLoading label="MCPConfigPanel" /> });
+const SettingsDialog = dynamic(() => import('@/components/olympus/settings-dialog'), { ssr: false, loading: () => <PanelLoading label="SettingsDialog" /> });
+const NewProjectDialog = dynamic(() => import('@/components/olympus/new-project-dialog'), { ssr: false, loading: () => <PanelLoading label="NewProjectDialog" /> });
 // Symphony visual overlay container REMOVED — the brain stays minimalist.
 // Symphony remains as the always-on background communication protocol
 // (see src/lib/symphony/), but the canvas ring overlay is no longer rendered.
@@ -600,6 +629,6 @@ export default function OlympusWorkspace() {
     </ChunkErrorBoundary>
   );
 }
-const AtelierPanel = dynamic(() => import('@/components/olympus/atelier-panel'), { ssr: false, loading: () => null });
-const SyncMapPanel = dynamic(() => import('@/components/olympus/sync-map-panel'), { ssr: false, loading: () => null });
-const CraftAppsPanel = dynamic(() => import('@/components/olympus/craft-apps-panel'), { ssr: false, loading: () => null });
+const AtelierPanel = dynamic(() => import('@/components/olympus/atelier-panel'), { ssr: false, loading: () => <PanelLoading label="AtelierPanel" /> });
+const SyncMapPanel = dynamic(() => import('@/components/olympus/sync-map-panel'), { ssr: false, loading: () => <PanelLoading label="SyncMapPanel" /> });
+const CraftAppsPanel = dynamic(() => import('@/components/olympus/craft-apps-panel'), { ssr: false, loading: () => <PanelLoading label="CraftAppsPanel" /> });

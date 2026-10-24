@@ -33,7 +33,7 @@
 
 import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
+import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import * as nodeOs from 'node:os';
 import http from 'node:http';
@@ -56,10 +56,64 @@ const POLL_TIMEOUT_MS = 60_000; // 1 minute to start (Next.js dev cold start)
 const OLYMPUS_BG = '#0A0E16';
 const OLYMPUS_GOLD = '#D4A574';
 
-const isDev = !app.isPackaged;
-const appRoot = isDev
-  ? dirname(__dirname) // <project>/electron -> <project>
-  : dirname(process.execPath); // packaged: next to the executable
+/**
+ * DEV vs PRODUCTION — production is the DEFAULT (2026-10-24).
+ *
+ * THE SPECIMEN: the app ran `next dev` (Turbopack) for the whole UAT because
+ * `isDev = !app.isPackaged`. With ~50 `dynamic(() => import(...))` panes and
+ * `loading: () => null`, every first click on a dashboard triggered an
+ * on-demand compile; under load the pane simply stayed BLANK with no spinner
+ * ("vários dashboards não estão sendo abertos"). Production serves prebuilt
+ * chunks — the same panels open in milliseconds.
+ *
+ * The rule now: a packaged app is always production; a SOURCE run is
+ * production too WHEN a standalone build exists, and development only when
+ * asked (`--dev` or OLYMPUS_DEV=1) or when no build exists (never brick the
+ * app on a missing artifact — degrade to dev, loudly).
+ */
+const devFlag = process.argv.includes('--dev') || process.env.OLYMPUS_DEV === '1';
+const sourceRoot = dirname(__dirname); // <project>/electron -> <project>
+const packaged = app.isPackaged;
+const standalonePath = packaged
+  ? join(process.resourcesPath || '', 'next-standalone', 'server.js')
+  : join(sourceRoot, '.next', 'standalone', 'server.js');
+const hasStandalone = existsSync(standalonePath);
+const isDev = packaged ? false : (devFlag || !hasStandalone);
+const appRoot = packaged
+  ? dirname(process.execPath) // packaged: next to the executable
+  : sourceRoot;
+
+/**
+ * A SOURCE run in production mode serves `.next/standalone` — which can be
+ * STALER than the working tree (the classic "I changed the UI and nothing
+ * moved"). We cannot afford a full source scan at boot, so we compare the
+ * build id's mtime against a handful of load-bearing files and WARN LOUDLY
+ * instead of silently serving old code.
+ */
+function standaloneStalenessWarn(): void {
+  if (isDev || !hasStandalone) return;
+  try {
+    const buildId = join(sourceRoot, '.next', 'BUILD_ID');
+    const buildAt = statSync(buildId).mtimeMs;
+    const watch = [
+      'src/app/page.tsx',
+      'src/lib/olympus-store.ts',
+      'src/components/olympus/interactive-terminal.tsx',
+      'src/lib/hop-runtime/walker.ts',
+    ];
+    const newest = watch
+      .map((f) => { try { return statSync(join(sourceRoot, f)).mtimeMs; } catch { return 0; } })
+      .reduce((a, b) => Math.max(a, b), 0);
+    if (newest > buildAt + 1_000) {
+      safeConsole('error', '[olympus:electron] ⚠ the standalone build is OLDER than the source tree — this run serves STALE code.');
+      safeConsole('error', `[olympus:electron]    build:  ${new Date(buildAt).toISOString()}`);
+      safeConsole('error', `[olympus:electron]    source: ${new Date(newest).toISOString()}`);
+      safeConsole('error', '[olympus:electron]    run `npm run build:app` (or `npm run dev` for hot reload).');
+    } else {
+      safeConsole('log', `[olympus:electron] serving the standalone build from ${new Date(buildAt).toISOString()} (production mode)`);
+    }
+  } catch { /* the warning is best-effort, never a boot gate */ }
+}
 
 // Linux setuid sandbox auto-fallback (see electron/linux-sandbox.ts).
 // MUST run before app.requestSingleInstanceLock() below so the --no-sandbox switch
@@ -174,16 +228,18 @@ function spawnNext(): ChildProcess {
     args = [nextCli, 'dev', '-p', String(PORT), '-H', bind];
     cwd = appRoot;
   } else {
-    const resourcesPath = process.resourcesPath || join(appRoot, 'resources');
-    const standaloneServer = join(resourcesPath, 'next-standalone', 'server.js');
-    if (!existsSync(standaloneServer)) {
-      console.error(`[olympus:electron] Standalone server not found at: ${standaloneServer}`);
-      console.error(`[olympus:electron] The packaged app appears to be corrupted. Reinstall Olympus.`);
+    // The standalone path was resolved at boot (standalonePath): packaged →
+    // process.resourcesPath; source run → <project>/.next/standalone. isDev is
+    // false only when that file exists, so this branch never hits a missing
+    // server unless the artifact vanished between boot and spawn.
+    if (!existsSync(standalonePath)) {
+      console.error(`[olympus:electron] Standalone server not found at: ${standalonePath}`);
+      console.error(`[olympus:electron] Run "npm run build:app" (or reinstall the packaged app).`);
       app.quit();
       process.exit(1);
     }
-    args = [standaloneServer];
-    cwd = join(resourcesPath, 'next-standalone');
+    args = [standalonePath];
+    cwd = dirname(standalonePath);
   }
 
   console.log(`[olympus:electron] spawning Next.js: node ${args.join(' ')}`);
@@ -1013,10 +1069,37 @@ app.setName('OLYMPUS');
 // #177: a persisted GPU fallback (or the relaunch arg) disables hardware
 // acceleration BEFORE the app becomes ready — the only window where the
 // switch takes effect.
-if (process.argv.includes(GPU_FALLBACK_ARG) || existsSync(GPU_FALLBACK_MARKER)) {
+//
+// #GPU-TTL (2026-10-24): the marker used to be FOREVER — one bad driver week
+// and the app rendered the Three.js brain on the CPU for the rest of its
+// life ("OLYMPUS está bem travado"). A driver update usually fixes the crash,
+// so the marker now expires: after GPU_FALLBACK_TTL_MS we try the GPU again
+// (and if it crashes twice, the marker is rewritten). `--reset-gpu` forces
+// that retry immediately.
+const GPU_FALLBACK_TTL_MS = 7 * 24 * 60 * 60_000;
+function gpuFallbackActive(): boolean {
+  if (process.argv.includes(GPU_FALLBACK_ARG)) return true;
+  if (process.argv.includes('--reset-gpu')) {
+    try { unlinkSync(GPU_FALLBACK_MARKER); } catch { /* already gone */ }
+    console.log('[olympus:electron] --reset-gpu: GPU fallback marker cleared — trying hardware acceleration again.');
+    return false;
+  }
+  if (!existsSync(GPU_FALLBACK_MARKER)) return false;
+  try {
+    const age = Date.now() - statSync(GPU_FALLBACK_MARKER).mtimeMs;
+    if (age > GPU_FALLBACK_TTL_MS) {
+      console.log(`[olympus:electron] GPU fallback marker is ${Math.round(age / 86_400_000)}d old — retrying hardware acceleration (a driver update usually heals it).`);
+      try { unlinkSync(GPU_FALLBACK_MARKER); } catch { /* keep going */ }
+      return false;
+    }
+  } catch { /* unreadable marker: honor it */ }
+  return true;
+}
+
+if (gpuFallbackActive()) {
   try {
     app.disableHardwareAcceleration();
-    console.log('[olympus:electron] hardware acceleration DISABLED (GPU crash fallback)');
+    console.log('[olympus:electron] hardware acceleration DISABLED (GPU crash fallback) — run with --reset-gpu to retry');
   } catch (err) {
     logError('gpu-fallback-apply', err);
   }
@@ -1073,6 +1156,9 @@ if (!gotLock) {
       console.log('[olympus:electron] Next.js already running externally — skipping spawn.');
       nextWasSpawnedExternally = true;
     } else {
+      // Production is the default: say WHICH build is being served, and warn
+      // loudly when the standalone artifact predates the source tree.
+      standaloneStalenessWarn();
       console.log('[olympus:electron] no external Next.js detected — spawning our own...');
       nextProcess = spawnNext();
     }
@@ -1143,8 +1229,14 @@ if (!gotLock) {
           try {
             mkdirSync(dirname(GPU_FALLBACK_MARKER), { recursive: true });
             writeFileSync(GPU_FALLBACK_MARKER, new Date().toISOString(), 'utf-8');
-            app.disableHardwareAcceleration();
-            safeConsole('error', '[olympus:electron] GPU crashed twice — relaunching with hardware acceleration disabled');
+            // `app.disableHardwareAcceleration()` is a PRE-READY switch — the
+            // old call here (after ready) threw "can only be called before app
+            // is ready" and left the crash loop running with acceleration
+            // still on (the errors.log specimen). The marker is the real
+            // mechanism: the next boot reads it BEFORE app.whenReady() and
+            // disables acceleration in the only window where it takes effect.
+            safeConsole('error', '[olympus:electron] GPU crashed twice — persisting the fallback marker and relaunching '
+              + '(acceleration is disabled at the next boot, before ready).');
             app.relaunch({ args: process.argv.slice(1).concat(GPU_FALLBACK_ARG) });
             app.exit(0);
           } catch (err) {
