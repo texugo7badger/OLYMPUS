@@ -91,11 +91,30 @@ async function main() {
     const ocAfter2 = JSON.parse(fs.readFileSync(ocJson, 'utf-8'));
     expect('E3: toggling OFF flips back (idempotent, both stores)',
       r2.ok === true && ocAfter2.mcp.rea.enabled === false, `opencode.rea=${ocAfter2.mcp.rea.enabled}`);
+    // #MCP-SYNC (2026-10-24): the contract CHANGED. A .mcp.json MCP that is
+    // enabled in the UI must be mirrored into opencode.json (added if absent,
+    // flipped if present) — otherwise the toggle lies and the god can never
+    // call the tool (the opencode CLI reads opencode.json, not .mcp.json).
+    // The sync is ADDITIVE + SURGICAL: it only touches the one entry, and it
+    // preserves everything else verbatim. The safety invariant is no longer
+    // "never touch" but "touch only the targeted entry, and only to mirror".
     const beforeStd = fs.readFileSync(ocJson, 'utf-8');
+    const r3 = lib.setMcpEnabled('fixture-std', true, { mcpJsonPath: mcpJson, opencodeJsonPath: ocJson, stateFile });
+    const afterStd = JSON.parse(fs.readFileSync(ocJson, 'utf-8'));
+    expect('E3: a .mcp.json toggle MIRRORS into opencode.json (the new contract)',
+      r3.ok === true && r3.opencodeFlagFlipped === true && afterStd.mcp['fixture-std']?.enabled === true,
+      `flipped=${r3.opencodeFlagFlipped} enabled=${afterStd.mcp['fixture-std']?.enabled}`);
+    // The mirror is SURGICAL: the opencode-native entries are untouched.
+    const beforeParsed = JSON.parse(beforeStd);
+    expect('E3: the mirror preserves unrelated opencode entries',
+      JSON.stringify(afterStd.mcp.rea) === JSON.stringify(beforeParsed.mcp.rea)
+      && JSON.stringify(afterStd.agent) === JSON.stringify(beforeParsed.agent),
+      'the sync corrupted unrelated config');
+    // Disabling sets enabled=false (never deletes the entry).
     lib.setMcpEnabled('fixture-std', false, { mcpJsonPath: mcpJson, opencodeJsonPath: ocJson, stateFile });
-    const afterStd = fs.readFileSync(ocJson, 'utf-8');
-    expect('E3: a .mcp.json toggle NEVER touches opencode.json (the surgical bound)',
-      beforeStd === afterStd, 'the std toggle leaked into the opencode registry');
+    const afterOff = JSON.parse(fs.readFileSync(ocJson, 'utf-8'));
+    expect('E3: disabling sets enabled=false (never deletes)',
+      afterOff.mcp['fixture-std']?.enabled === false, `enabled=${afterOff.mcp['fixture-std']?.enabled}`);
     const ocUntouched = JSON.parse(fs.readFileSync(ocJson, 'utf-8'));
     expect('E3: the surgical flip preserves the rest of opencode.json verbatim',
       JSON.stringify(ocUntouched.agent) === JSON.stringify({ apollo: { model: 'x/y' } }) && ocUntouched.mcp['fixture-oc'].command.join(' ') === 'npx -y fixture-oc',

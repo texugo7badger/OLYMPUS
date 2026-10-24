@@ -179,6 +179,45 @@ export function setMcpEnabled(name: string, enabled: boolean, opts: SetMcpEnable
   state[name] = enabled;
 
   let opencodeFlagFlipped = false;
+
+  // #MCP-SYNC (2026-10-24): .mcp.json entries are UI-only by design, but
+  // opencode reads opencode.json. A .mcp.json MCP that is enabled in the UI
+  // must therefore be MIRRORED into opencode.json (added if absent, flipped
+  // if present) — otherwise the toggle lies and the god can never call the
+  // tool. The reverse (disabled) sets enabled=false; we never delete the
+  // entry, so a re-enable is instant.
+  if (registry === 'mcpjson') {
+    try {
+      const mcpCfg = JSON.parse(fs.readFileSync(mcpJsonPath, 'utf-8'));
+      const entries = mcpCfg.mcpServers || mcpCfg.servers || {};
+      const src = entries[name];
+      if (src) {
+        const cfg = JSON.parse(fs.readFileSync(opencodeJsonPath, 'utf-8'));
+        if (!cfg.mcp || typeof cfg.mcp !== 'object') cfg.mcp = {};
+        // Translate the .mcp.json shape (command/args/env) to the opencode
+        // shape (command/args/env + enabled). Remote entries carry url.
+        const translated: Record<string, unknown> = { enabled };
+        if (Array.isArray(src.command)) translated.command = src.command;
+        else if (typeof src.command === 'string') translated.command = [src.command];
+        if (Array.isArray(src.args)) translated.args = src.args;
+        if (src.env && typeof src.env === 'object') translated.env = src.env;
+        if (typeof src.url === 'string') translated.url = src.url;
+        if (typeof src.type === 'string') translated.type = src.type;
+        if (cfg.mcp[name] && typeof cfg.mcp[name] === 'object') {
+          // Existing entry: flip enabled, keep the rest (the user may have
+          // edited command/args by hand).
+          cfg.mcp[name].enabled = enabled;
+        } else {
+          cfg.mcp[name] = translated;
+        }
+        fs.writeFileSync(opencodeJsonPath, JSON.stringify(cfg, null, 2), 'utf-8');
+        opencodeFlagFlipped = true;
+      }
+    } catch (e) {
+      return { ok: false, registry, opencodeFlagFlipped: false, state, error: `the .mcp.json → opencode.json sync failed: ${e instanceof Error ? e.message : String(e)}` };
+    }
+  }
+
   if (registry === 'opencode') {
     // The surgical flip: parse, set the ONE boolean, stringify. Everything
     // else rides through the parse/stringify round-trip untouched.
