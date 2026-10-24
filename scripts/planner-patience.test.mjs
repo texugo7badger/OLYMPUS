@@ -30,6 +30,7 @@
  *      plan (measured 7.3K chars ≈ 2K tokens) fits with room to spare.
  */
 import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -53,14 +54,34 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
   check('opencode.json: agent.apollo carries reasoning_effort: "low" (belt — a future opencode that honors agent config gets it pre-wired)',
     apollo.reasoning_effort === 'low',
     `reasoning_effort=${JSON.stringify(apollo.reasoning_effort)} — a planning turn on a reasoner without it starves the 16384 mouth (the 20-min/67K-chars/output=0 specimen)`);
-  check('opencode.json: apollo still rides a planner-class reasoner (the planner stays sacred — GLM-5.3 on the paid tiers; the free-tier clause rides the probe-verified SERVABLE free reasoner)',
+  // BYOK (2026-10-24): a `byok-*` strategy is the USER'S OWN paid lane, and
+  // the user explicitly asked for every god — Apollo included — on it. The
+  // pin's purpose is to block a SILENT downgrade, never a deliberate choice:
+  // for BYOK we require Apollo's lane to be the strategy's DECLARED
+  // reasoningModel (not a stray small model) and to be a real, routable id.
+  const appliedStrategy = (() => {
+    try { return JSON.parse(readFileSync(join(homedir(), '.olympus', 'active-strategy.json'), 'utf-8')).strategy; }
+    catch { return ''; }
+  })();
+  const isByok = String(appliedStrategy).startsWith('byok-');
+  const byokDeclared = (() => {
+    if (!isByok) return null;
+    const src = read('src/lib/model-strategies.ts');
+    const block = src.split(`'${appliedStrategy}': {`)[1] || '';
+    const m = block.match(/reasoningModel:\s*'([^']+)'/);
+    return m ? m[1] : null;
+  })();
+  check('opencode.json: apollo still rides a planner-class reasoner (the planner stays sacred — GLM-5.3 on the paid tiers; the free-tier clause rides the probe-verified SERVABLE free reasoner; a BYOK strategy must match its own declared reasoning model)',
     /glm-5\.3/.test(String(apollo.model || ''))
       || /north-mini-code:free/.test(String(apollo.model || ''))
       || /inkling(:|-small)?:free/.test(String(apollo.model || ''))
       // The v0.0.11 Free Hybrid planner class: DeepSeek V4.1 Flash free (the
       // benchmark tool-caller) and Beam 1.0 (the 1M free flagship).
       || /deepseek-v4\.1-flash-free/.test(String(apollo.model || ''))
-      || /beam-free/.test(String(apollo.model || '')),
+      || /beam-free/.test(String(apollo.model || ''))
+      // BYOK: the user's own lane, but ONLY when it is literally the model the
+      // strategy declares for Apollo (so a silent pin-drift still fails).
+      || (isByok && Boolean(byokDeclared) && String(apollo.model || '') === `openrouter/${byokDeclared}`),
     `apollo model=${apollo.model} — the planner must ride GLM-5.3 (GO/ZEN) or the probe-verified free reasoner class (north-mini / the inkling family — the 15:38 specimen: north-mini 429s at the daily cap, the apply probes and never ships a dead pool); a downgrade to a small/volume model still fails this pin`);
   check('opencode.json: ONLY apollo carries the low effort (the other gods keep full reasoning)',
     Object.entries(cfg.agent || {})

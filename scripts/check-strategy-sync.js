@@ -78,7 +78,10 @@ function godValue(raw, constantName) {
 //   }
 const msStrategies = {};
 const msStrategiesPrefixed = {};
-const msStrategyRegex = /'((?:go|free|zen)-[a-z-]+)':\s*\{[\s\S]*?gods:\s*\{([\s\S]*?)\}/g;
+// The prefix alternation must list every family: go- / zen- / free- / byok-
+// (byok-deepseek, the user's own OpenRouter lane, joined 2026-10-24 — a
+// family missing here is silently UNVERIFIED, which is worse than unsynced).
+const msStrategyRegex = /'((?:go|free|zen|byok)-[a-z-]+)':\s*\{[\s\S]*?gods:\s*\{([\s\S]*?)\}/g;
 let m;
 while ((m = msStrategyRegex.exec(msContent)) !== null) {
   const stratName = m[1];
@@ -110,7 +113,7 @@ while ((m = msStrategyRegex.exec(msContent)) !== null) {
 // block uses the FREE_BIG_PICKLE_MODEL constant for god values.
 const GOD_NAMES = new Set(['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus']);
 const asStrategies = {};
-const asStrategyRegex = /['"]((?:go|free|zen)-[a-z-]+)['"]:\s*\{([^}]*)\}/g;
+const asStrategyRegex = /['"]((?:go|free|zen|byok)-[a-z-]+)['"]:\s*\{([^}]*)\}/g;
 while ((m = asStrategyRegex.exec(asContent)) !== null) {
   const stratName = m[1];
   const godsBlock = m[2];
@@ -193,7 +196,7 @@ function extractStrategyMirror(content, marker, label) {
   const baseLine = lineOf(content, start);
   const result = {};
   const lines = {};
-  const stratRe = /['"]((?:go|free|zen)-[a-z-]+)['"]:\s*\{([^}]*)\}/g;
+  const stratRe = /['"]((?:go|free|zen|byok)-[a-z-]+)['"]:\s*\{([^}]*)\}/g;
   let m;
   while ((m = stratRe.exec(region)) !== null) {
     const stratName = m[1];

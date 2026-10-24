@@ -340,6 +340,21 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     prometheus: 'openrouter/recursive/flint-v1.0:free',
     callimachus: 'opencode-go/deepseek-v4.1-flash',
   },
+  // BYOK — the user's own OpenRouter key, every god on DeepSeek V4.1 Flash
+  // v1017 (1M ctx / 393k out). Mirrors byok-deepseek in
+  // src/lib/model-strategies.ts (check-strategy-sync).
+  'byok-deepseek': {
+    apollo: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    atlas: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    artemis: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    athena: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    dionysus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    hephaestus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    hermes: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    persephone: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    prometheus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    callimachus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+  },
   // Legacy free ids — deprecated aliases of free-hybrid (saved configs only).
   'free-big-pickle': {
     apollo: 'opencode-go/beam-free',
@@ -391,11 +406,14 @@ const FALLBACK_CLASS_FAMILIES: Record<'GO' | 'ZEN' | 'FREE', string[]> = {
 // only offer opencode-go/*; Zen only opencode/*; Free only openrouter/* +
 // nvidia/*. custom-* strategies are FREE-ONLY (money safety — a
 // paid model in a custom strategy could silently burn credits).
-type StrategyFamilyKey = 'GO' | 'ZEN' | 'FREE' | 'ALL';
+type StrategyFamilyKey = 'GO' | 'ZEN' | 'FREE' | 'BYOK' | 'ALL';
 function familyForStrategy(s: StrategyEntry | undefined): StrategyFamilyKey {
   if (!s) return 'GO';
   if (s.plan === 'GO') return 'GO';
   if (s.plan === 'ZEN') return 'ZEN';
+  // BYOK — the user's own paid key (byok-*). It is not free, so it must not
+  // borrow the FREE label ("best free lane per god") in the dropdown header.
+  if (typeof s.id === 'string' && s.id.startsWith('byok-')) return 'BYOK';
   return 'FREE'; // free-* + custom-* (custom is free-only)
 }
 
@@ -860,6 +878,7 @@ export default function SettingsDialog() {
   const familyLabel =
     selectedFamily === 'GO' ? 'GO models'
     : selectedFamily === 'ZEN' ? 'ZEN models'
+    : selectedFamily === 'BYOK' ? 'Sua chave (BYOK) — a lane que você paga'
     : strategy === 'free-hybrid' || strategy === 'free-openrouter' || strategy === 'free-nvidia-build' || strategy === 'free-big-pickle'
       ? 'Free Hybrid — best free lane per god'
     : 'Free models (all providers)';

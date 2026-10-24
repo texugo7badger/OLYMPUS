@@ -525,6 +525,26 @@ const BUILTIN_STRATEGIES = {
     prometheus:   'openrouter/recursive/flint-v1.0:free',
     callimachus:  'opencode-go/deepseek-v4.1-flash',
   },
+  // ── BYOK — the user's own paid key (2026-10-24) ──────────────────────────
+  // Every god on ONE lane: the user's OpenRouter key serving DeepSeek V4.1
+  // Flash (v1017 — 1M ctx / 393k out, $0.15/$0.60 per 1M). Mirrors
+  // byok-deepseek in src/lib/model-strategies.ts (check-strategy-sync).
+  // NOT a custom-* strategy: custom is free-only by a money-safety guard,
+  // and this lane is the user's deliberate choice — the runtime failover
+  // (src/lib/lane-health.ts) protects it by moving a hop to the free chain
+  // if this lane rate-limits or the credit runs out.
+  'byok-deepseek': {
+    apollo:       'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    atlas:        'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    artemis:      'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    athena:       'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    dionysus:     'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    hephaestus:   'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    hermes:       'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    persephone:   'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    prometheus:   'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    callimachus:  'openrouter/deepseek/deepseek-v4.1-flash-1017',
+  },
   // Legacy free ids (deprecated) — saved configs and older UIs still carry
   // them. They resolve to the SAME free-hybrid map (never a second, weaker
   // free path). The UI hides them from the picker.
@@ -1252,7 +1272,7 @@ async function getModelMap(strategy) {
     return cfg.gods;
   }
   throw new Error(
-    `Unknown strategy: ${strategy}. Valid: go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget (Zen), free-hybrid (the one free strategy), custom-*`
+    `Unknown strategy: ${strategy}. Valid: go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget (Zen), free-hybrid (the one free strategy), byok-deepseek (your own OpenRouter key), custom-*`
   );
 }
 
@@ -1386,6 +1406,11 @@ function isZenStrategy(strategy) {
  */
 function strategyFamily(strategy) {
   if (isFreeTierStrategy(strategy)) return 'FREE';
+  // BYOK — the user's own paid key (byok-*). Mirrors strategyFamily() in
+  // src/lib/model-strategies.ts. It is neither GO nor Zen: the provider
+  // prefix comes from the strategy map itself, so the shape must not
+  // rewrite demigods to opencode-go/*.
+  if (strategy.startsWith('byok-')) return 'BYOK';
   if (isZenStrategy(strategy)) return 'ZEN';
   return 'GO';
 }
@@ -1443,9 +1468,17 @@ function mergePerGodOverrides(modelMap, strategy) {
   const cfg = loadProviders();
   const overrides = (cfg && cfg.per_god_overrides) || {};
   const freeOnly = strategy.startsWith('free-') || strategy.startsWith('custom-');
+  const byok = strategy.startsWith('byok-');
   const known = freeOnly
     ? KNOWN_FREE_MODELS
-    : new Set([...KNOWN_FREE_MODELS, ...KNOWN_GO_MODELS, ...KNOWN_ZEN_MODELS]);
+    // BYOK: the user owns the lane, so any id on the provider they are paying
+    // for is legitimate (plus the curated sets, for pins across providers).
+    : byok
+      ? new Set([
+        ...KNOWN_FREE_MODELS, ...KNOWN_GO_MODELS, ...KNOWN_ZEN_MODELS,
+        ...Object.values(BUILTIN_STRATEGIES['byok-deepseek'] || {}),
+      ])
+      : new Set([...KNOWN_FREE_MODELS, ...KNOWN_GO_MODELS, ...KNOWN_ZEN_MODELS]);
   let merged = 0;
   let dropped = 0;
   for (const god of GOD_NAMES_LIST) {
@@ -1769,13 +1802,24 @@ function demigodModel(demigodName, parentGod, parentModel, athenaOnK3, isFreeTie
 function applyGoConfigShape(config, modelMap, forceImpeccable, family = 'GO') {
   let changes = 0;
   const isZen = family === 'ZEN';
+  const isByok = family === 'BYOK';
   // Zen demigods inherit opencode/<id> models (the Zen provider); GO demigods
-  // use opencode-go/<id>.
+  // use opencode-go/<id>. BYOK demigods inherit their parent god's model
+  // (one lane for everything — the user's deliberate choice), so the prefix
+  // is never used for them.
   const prefix = isZen ? 'opencode/' : 'opencode-go/';
   // Kimi K3 upgrades are a GO-plan concept (the impeccable flag forces the GO
-  // K3 class). Zen has no K3 cap — the flag is ignored there.
-  const athenaOnK3 = !isZen && (forceImpeccable || modelMap.athena === 'opencode-go/kimi-k3');
-  const smallModel = isZen ? SMALL_MODEL_ZEN : GO_CONFIG_SHAPE.small_model;
+  // K3 class). Zen has no K3 cap, and BYOK has no GO/Zen models at all —
+  // the flag is ignored for both.
+  const athenaOnK3 = !isZen && !isByok && (forceImpeccable || modelMap.athena === 'opencode-go/kimi-k3');
+  // small_model runs title generation + compaction (volume work). On BYOK it
+  // must NOT fall back to a GO lane (the whole point of this strategy is that
+  // GO may be out of quota) — it rides the verified free north-mini lane.
+  const smallModel = isZen
+    ? SMALL_MODEL_ZEN
+    : isByok
+      ? SMALL_MODEL_FREE
+      : GO_CONFIG_SHAPE.small_model;
 
   // --- 1. Restore god prompts to {file:...} references ---
   // L1 (MADRUGA-3 p1): the {file:} contract is only real when the file
@@ -1826,7 +1870,11 @@ function applyGoConfigShape(config, modelMap, forceImpeccable, family = 'GO') {
         `partial registry. Fix the strategy map.`
       );
     }
-    const newModel = demigodModel(name, parentGod, parentModel, athenaOnK3, false, prefix);
+    // BYOK: every demigod inherits its parent god's single lane (isByok is
+    // passed where the GO/Zen shapes pass `false`, so the flash/K3 upgrade
+    // branches — which only make sense inside the GO/Zen catalogs — never
+    // fire on a provider that does not serve those ids).
+    const newModel = demigodModel(name, parentGod, parentModel, athenaOnK3, isByok, prefix);
 
     if (!config.agent[name]) {
       // Add the demigod
@@ -2307,6 +2355,26 @@ function writeStateFile(strategy, changes, backupPath, noOp = false) {
     ensureDir(OLYMPUS_HOME);
     fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
     log(`State written to ${STATE_FILE}`);
+    // #ONE-TRUTH (the AIME specimen, 2026-10-24): the strategy lived in four
+    // places and they disagreed — the store default (go-balanced), this state
+    // file (go-budget), llm-providers.json (free-hybrid) and the actual
+    // opencode.json. The LLM Strategy panel reads llm-providers.json, so it
+    // showed "free-hybrid" while every god ran on a dead GO lane. Applying a
+    // strategy now WRITES THE SAME ID into llm-providers.json — the panel and
+    // the config cannot disagree afterwards.
+    try {
+      const cfg = fs.existsSync(PROVIDERS_FILE)
+        ? JSON.parse(fs.readFileSync(PROVIDERS_FILE, 'utf-8'))
+        : {};
+      if (cfg.strategy !== strategy) {
+        cfg.strategy = strategy;
+        cfg.per_god_overrides = cfg.per_god_overrides || {};
+        fs.writeFileSync(PROVIDERS_FILE, JSON.stringify(cfg, null, 2), 'utf-8');
+        log(`Strategy recorded in ${PROVIDERS_FILE}: ${strategy}`);
+      }
+    } catch (e) {
+      log(`Warning: could not record the strategy in ${PROVIDERS_FILE}: ${e.message}`);
+    }
   } catch (e) {
     log(`Warning: could not write state file: ${e.message}`);
   }

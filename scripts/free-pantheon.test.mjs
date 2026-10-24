@@ -238,9 +238,14 @@ let syncOk = false, syncOut = '';
 try {
   syncOut = execFileSync('node', [path.join(ROOT, 'scripts/check-strategy-sync.js')],
     { encoding: 'utf-8', timeout: 60_000 });
-  syncOk = syncOut.includes('all 10 strategies in sync');
+  // Derive the count from the guard's OWN output — the hardcoded "10" broke
+  // the moment an 11th strategy (byok-deepseek) joined, which is a test bug,
+  // not a product bug.
+  const m = syncOut.match(/all (\d+) strategies in sync/);
+  syncOk = Boolean(m);
+  if (m) console.log(`      (check-strategy-sync: ${m[1]} strategies)`);
 } catch (e) { syncOut = String(e.stdout || e.message); }
-check('THE MIRRORS: check-strategy-sync 10/10 green', syncOk, syncOut.slice(0, 400));
+check('THE MIRRORS: check-strategy-sync green (all declared strategies in sync)', syncOk, syncOut.slice(0, 400));
 
 // ── HIGIENIA-1 H1b ────────────────────────────────────────────────────────────
 // #93 (GO-CARD-PROSE): every GO/Zen PROSE surface names the model the apply

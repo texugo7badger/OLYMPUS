@@ -441,6 +441,21 @@ function getGodModel(godId: string): string {
           prometheus:   "openrouter/recursive/flint-v1.0:free",
           callimachus:  "opencode-go/deepseek-v4.1-flash",
         },
+        // BYOK — the user's own OpenRouter key, every god on DeepSeek V4.1
+        // Flash v1017 (1M ctx / 393k out). Mirrors byok-deepseek in
+        // src/lib/model-strategies.ts (check-strategy-sync).
+        "byok-deepseek": {
+          apollo:       "openrouter/deepseek/deepseek-v4.1-flash-1017",
+          atlas:        "openrouter/deepseek/deepseek-v4.1-flash-1017",
+          artemis:      "openrouter/deepseek/deepseek-v4.1-flash-1017",
+          athena:       "openrouter/deepseek/deepseek-v4.1-flash-1017",
+          dionysus:     "openrouter/deepseek/deepseek-v4.1-flash-1017",
+          hephaestus:   "openrouter/deepseek/deepseek-v4.1-flash-1017",
+          hermes:       "openrouter/deepseek/deepseek-v4.1-flash-1017",
+          persephone:   "openrouter/deepseek/deepseek-v4.1-flash-1017",
+          prometheus:   "openrouter/deepseek/deepseek-v4.1-flash-1017",
+          callimachus:  "openrouter/deepseek/deepseek-v4.1-flash-1017",
+        },
         // Legacy free ids — deprecated aliases of free-hybrid.
         "free-big-pickle": {
           apollo:       "opencode-go/beam-free",

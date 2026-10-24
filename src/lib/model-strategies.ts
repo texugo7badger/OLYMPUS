@@ -93,6 +93,7 @@ export type LLMStrategy =
   | 'zen-balanced'           // "ZEN" — full 128-agent OLYMPUS on OpenCode Zen's proprietary models (opencode/<id>), no request caps
   | 'zen-budget'             // "ZEN Budget" — lowest cost on OpenCode Zen (MiniMax M2.7 everywhere but Apollo), still proprietary
   | 'free-hybrid'            // "Free Hybrid" — THE one free strategy: GO free + Zen free + OpenRouter free + NVIDIA Build free, per-god rosters, load-spread, user overrides
+  | 'byok-deepseek'          // "DeepSeek V4.1 Flash (OpenRouter)" — the user's OWN OpenRouter key, EVERY god on one strong lane (1M ctx / 393k out). BYOK family: paid, user-chosen, never blocked by the custom-strategy free-only guard.
   | 'free-openrouter'        // DEPRECATED alias of free-hybrid (saved configs only — hidden from the picker)
   | 'free-big-pickle'        // DEPRECATED alias of free-hybrid
   | 'free-nvidia-build'      // DEPRECATED alias of free-hybrid
@@ -393,6 +394,42 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
     },
     vaultLlm: 'opencode-go/beam-free',
     estCostPerDay: 'free',
+  },
+  // ── BYOK — the user's own paid key (2026-10-24) ──────────────────────────
+  // THE AIME SPECIMEN: the GO monthly quota was spent, every go-* strategy
+  // was dead, and the user's own OpenRouter key was already paying for
+  // DeepSeek V4.1 Flash on another surface. This strategy puts that ONE lane
+  // under all ten gods: 1,048,576 ctx / 393,216 out, $0.15 in / $0.60 out
+  // per 1M (cache read $0.003) — the cheapest lane in the catalogue that can
+  // hold a whole dispatch plan in context.
+  //
+  // It is deliberately ONE lane (the honest cost picture: every hop on one
+  // bill), which is exactly why the runtime FAILOVER matters — if this lane
+  // rate-limits or runs out of credits, the hop moves to the free chain
+  // instead of parking. See src/lib/lane-health.ts + FREE_HYBRID_ROSTER.
+  'byok-deepseek': {
+    label: 'DeepSeek V4.1 Flash (OpenRouter)',
+    description:
+      'Every god on one strong BYOK lane: DeepSeek V4.1 Flash on YOUR OpenRouter key — 1M context, 393k output, $0.15/$0.60 per 1M tokens (cache read $0.003). One lane means one bill and one behaviour across all ten gods; the runtime failover keeps the campaign alive if the lane rate-limits or the credit runs out. Requires an OpenRouter key in OpenCode.',
+    plan: 'CUSTOM',
+    tier: 'budget',
+    reasoningModel: 'deepseek/deepseek-v4.1-flash-1017',
+    codeModel: 'deepseek/deepseek-v4.1-flash-1017',
+    terminalModel: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    gods: {
+      apollo:      'openrouter/deepseek/deepseek-v4.1-flash-1017',
+      atlas:       'openrouter/deepseek/deepseek-v4.1-flash-1017',
+      artemis:     'openrouter/deepseek/deepseek-v4.1-flash-1017',
+      athena:      'openrouter/deepseek/deepseek-v4.1-flash-1017',
+      dionysus:    'openrouter/deepseek/deepseek-v4.1-flash-1017',
+      hephaestus:  'openrouter/deepseek/deepseek-v4.1-flash-1017',
+      hermes:      'openrouter/deepseek/deepseek-v4.1-flash-1017',
+      persephone:  'openrouter/deepseek/deepseek-v4.1-flash-1017',
+      prometheus:  'openrouter/deepseek/deepseek-v4.1-flash-1017',
+      callimachus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    },
+    vaultLlm: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    estCostPerDay: 'low',
   },
   // ── Legacy free ids (deprecated aliases, hidden from the picker) ──────────
   // Saved configs and older UIs still carry these ids. They resolve to the
@@ -827,10 +864,16 @@ export function getProviderById(id: string): LLMProvider | undefined {
  *   - FREE  → openrouter/<vendor>/<model>:free + nvidia/<vendor>/<model> (no plan needed)
  *   - CUSTOM → user-defined (~/.olympus/custom-strategies.json)
  */
-export type StrategyFamily = 'GO' | 'ZEN' | 'FREE' | 'CUSTOM';
+export type StrategyFamily = 'GO' | 'ZEN' | 'FREE' | 'BYOK' | 'CUSTOM';
 
 export function strategyFamily(id: string): StrategyFamily {
   if (id.startsWith('free-')) return 'FREE';
+  // BYOK = "bring your own key" — a PAID lane the user already owns outside
+  // the GO/Zen plans (OpenRouter, NVIDIA Build, …). Deliberately NOT
+  // `custom-`: custom strategies are hard-restricted to free models by a
+  // money-safety check in apply-strategy.js, and a user who wants their own
+  // paid OpenRouter lane is not doing anything unsafe — they are choosing it.
+  if (id.startsWith('byok-')) return 'BYOK';
   if (id.startsWith('custom-')) return 'CUSTOM';
   const cfg = LLM_STRATEGIES[id as Exclude<LLMStrategy, `custom-${string}`>];
   if (cfg && cfg.plan === 'ZEN') return 'ZEN';
@@ -866,6 +909,21 @@ export interface StrategyApiRequirement {
 
 export function strategyApiRequirement(strategy: string): StrategyApiRequirement | null {
   if (strategy.startsWith('custom-')) return null;
+  if (strategy.startsWith('byok-')) {
+    // BYOK = the user's own key. The family names the provider it rides.
+    if (strategy.includes('nvidia')) {
+      return {
+        kind: 'nvidia',
+        label: 'NVIDIA Build key',
+        hint: 'Requires an NVIDIA Build API key (https://build.nvidia.com) — add NVIDIA as a provider inside OpenCode.',
+      };
+    }
+    return {
+      kind: 'openrouter',
+      label: 'OpenRouter key',
+      hint: 'Requires an OpenRouter API key WITH CREDIT — add OpenRouter as a provider inside OpenCode (`olympus opencode` → Settings → Providers). Get a key at https://openrouter.ai/keys. This strategy bills every hop to that key.',
+    };
+  }
   if (strategy.startsWith('go-')) {
     return {
       kind: 'go',
@@ -1079,7 +1137,7 @@ export const FREE_MODEL_CLASSES = [
 ];
 
 /** All model classes, keyed by family. */
-export const MODEL_CLASSES_BY_FAMILY: Record<Exclude<StrategyFamily, 'CUSTOM'>, string[]> = {
+export const MODEL_CLASSES_BY_FAMILY: Record<Exclude<StrategyFamily, 'CUSTOM' | 'BYOK'>, string[]> = {
   GO: GO_MODEL_CLASSES,
   ZEN: ZEN_MODEL_CLASSES,
   FREE: FREE_MODEL_CLASSES,
@@ -1127,6 +1185,14 @@ export function modelClassesForStrategy(strategy: string): string[] {
 
 function modelClassesForStrategyRaw(strategy: string): string[] {
   const fam = strategyFamily(strategy);
+  if (fam === 'BYOK') {
+    // The user's own paid lane — the dropdown offers exactly that lane. A
+    // per-god pin to another provider stays possible through the free
+    // families; this strategy is deliberately ONE lane so the user can see
+    // the cost of every hop on the provider bill they already pay.
+    const own = LLM_STRATEGIES[strategy as Exclude<LLMStrategy, `custom-${string}`>]?.terminalModel;
+    return own ? [own] : [];
+  }
   if (fam === 'CUSTOM') {
     // Custom strategies are FREE-ONLY — a user-pinned paid model in a custom
     // strategy could silently burn credits. Only the free catalog is offered
@@ -1158,7 +1224,7 @@ export function isModelInFamily(model: string, family: StrategyFamily): boolean 
   // `-` for GO ids, so the prefix check is unambiguous).
   if (family === 'ZEN') return model.startsWith('opencode/');
   if (family === 'FREE') return model.startsWith('openrouter/') || model.startsWith('nvidia/');
-  return true; // custom — any model id
+  return true; // custom / byok — any model id (the user picks their own lane)
 }
 
 /**
