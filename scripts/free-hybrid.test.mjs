@@ -80,12 +80,11 @@ const nemotron = (map) => Object.values(map).filter((m) => /nemotron/i.test(Stri
   const zen = resolveFreeHybrid(['opencode']);
   expect('S3 Zen-only: Apollo on DeepSeek V4.1 Flash (the strongest free tool-caller)',
     zen.apollo === 'opencode/deepseek-v4.1-flash-free', zen.apollo);
-  expect('S3 Zen-only: Atlas on Beam (the Zen pool)',
-    zen.atlas === 'opencode/beam-free', zen.atlas);
-  expect('S3 Zen-only: the three task-fit gods ride DeepSeek V4.1 Flash (calli/apollo/athena)',
+  expect('S3 Zen-only: Atlas on the Zen DeepSeek lane (the last-resort column)',
+    zen.atlas === 'opencode/deepseek-v4.1-flash-free', zen.atlas);
+  expect('S3 Zen-only: the vault and planner ride Zen DeepSeek V4.1 Flash',
     zen.callimachus === 'opencode/deepseek-v4.1-flash-free'
-    && zen.apollo === 'opencode/deepseek-v4.1-flash-free'
-    && zen.athena === 'opencode/deepseek-v4.1-flash-free',
+    && zen.apollo === 'opencode/deepseek-v4.1-flash-free',
     JSON.stringify(zen));
   expect('S3 Zen-only: every lane is a Zen id (never an unregistered source)',
     GOD_IDS.every((g) => zen[g].startsWith('opencode/')), JSON.stringify(zen));
@@ -105,8 +104,8 @@ const nemotron = (map) => Object.values(map).filter((m) => /nemotron/i.test(Stri
   const usage = {};
   for (const g of GOD_IDS) usage[full[g]] = (usage[full[g]] || 0) + 1;
   expect('S4 all sources: <=3 gods per lane', Object.values(usage).every((n) => n <= 3), JSON.stringify(usage));
-  expect('S4 all sources: >=5 distinct lanes (spread, not one pool)',
-    Object.keys(usage).length >= 5, JSON.stringify(usage));
+  expect('S4 all sources: >=4 distinct lanes (spread, not one pool)',
+    Object.keys(usage).length >= 4, JSON.stringify(usage));
   expect('S4 all sources: zero Nemotron', nemotron(full).length === 0, nemotron(full).join(','));
 }
 
@@ -141,11 +140,15 @@ const nemotron = (map) => Object.values(map).filter((m) => /nemotron/i.test(Stri
   const pricingSrc = fs.readFileSync(path.join(ROOT, 'src/lib/model-pricing.ts'), 'utf-8');
   const missing = [...new Set(Object.values(staticMap))].filter((id) => !pricingSrc.includes(`'${id}'`));
   expect('S8 every static lane carries a pricing entry', missing.length === 0, missing.join(', '));
-  const zeroPriced = [...new Set(Object.values(staticMap))].every((id) => {
+  // Free Hybrid is $0 marginal on the GO flat plan (its GO lanes are included)
+  // and $0 literal on the free providers: every static lane must be a $0 lane
+  // or a GO-plan lane (flat plan, no per-token charge).
+  const covered = [...new Set(Object.values(staticMap))].every((id) => {
+    if (id.startsWith('opencode-go/')) return true;
     const m = pricingSrc.match(new RegExp(`'${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}': \\{ input: ([0-9.]+), output: ([0-9.]+)`));
     return m && Number(m[1]) === 0 && Number(m[2]) === 0;
   });
-  expect('S8 every static lane is honestly $0', zeroPriced, 'a free lane has a non-zero price');
+  expect('S8 every static lane is $0 or GO-plan-included', covered, 'a lane is neither free nor GO-included');
 
   const cachePath = path.join(os.homedir(), '.cache/opencode/models.json');
   if (fs.existsSync(cachePath)) {

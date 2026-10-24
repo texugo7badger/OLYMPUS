@@ -236,16 +236,18 @@ for each god's TASK, not one model for everything.
 
 | God | First lane | Why (the task fit) |
 |---|---|---|
-| **Apollo** | **Zen DeepSeek V4.1 Flash** → GO Beam → Zen Beam → OR inkling → NV GLM-5.3 | planning: the strongest free tool-caller (the planner is the quality bottleneck) |
-| **Atlas** | **GO Beam 1.0** → Zen Beam → Zen DeepSeek → OR inkling → NV MiniMax | orchestration: 1M ctx/131k out for dispatch plans |
-| **Artemis** | Zen Beam → Zen DeepSeek → OR inkling → NV Muse Glimmer → GO Beam | security: deep reasoning over a 1M ctx |
-| **Athena** | **OR inkling** (262k out) → Zen DeepSeek → Zen Flint 40B → NV GPT-OSS-20B | frontend: whole-page components |
-| **Dionysus** | **OR inkling** (262k out) → Zen DeepSeek → Zen Beam → NV GLM-5.3 | QA: long suites + evidence |
-| **Hephaestus** | **Zen DeepSeek V4.1 Flash** → OR north-mini-code → Zen Flint 40B → NV GPT-OSS-20B | backend code: DeepSeek's benchmark cost-benefit |
-| **Hermes** | **OR inkling** (1M/262k) → Zen DeepSeek → Zen Beam → NV Muse Glimmer | integrations/research: 1M ctx |
-| **Persephone** | **OR north-mini-code** (64k out) → Zen DeepSeek → Zen Flint 40B → NV GLM-5.3 | database: migrations + SQL |
-| **Prometheus** | **OR flint-v1.0** (235k out) → Zen DeepSeek → Zen Flint 40B → NV GPT-OSS-20B | DevOps: long IaC/runbooks |
-| **Callimachus** | **Zen DeepSeek V4.1 Flash** → OR north-mini-code → Zen GLM-5.3 Flash | vault curation: fast, cheap, strong (the user's pick, reserved first) |
+| **Apollo** | **GO Beam 1.0** → GO DeepSeek V4.1 Flash → OR inkling → NV GLM-5.3 → Zen free (last) | planning: the proven 501B free lane (GO plan), DeepSeek as the second |
+| **Atlas** | **GO Beam 1.0** → GO DeepSeek → OR inkling → NV MiniMax | orchestration: 1M ctx/131k out |
+| **Artemis** | **GO Beam 1.0** → GO DeepSeek → OR inkling → NV Muse Glimmer | security: deep reasoning over a 1M ctx |
+| **Athena** | **OR inkling** (262k out) → GO Beam → GO DeepSeek → NV GPT-OSS-20B | frontend: whole-page components |
+| **Dionysus** | **OR inkling** (262k out) → GO Beam → GO DeepSeek → NV GLM-5.3 | QA: long suites + evidence |
+| **Hephaestus** | **GO DeepSeek V4.1 Flash** (included in the flat plan) → GO Beam → OR north-mini-code → NV GPT-OSS-20B | backend code: the benchmark cost-benefit |
+| **Hermes** | **OR inkling** (1M/262k) → GO Beam → GO DeepSeek → NV Muse Glimmer | integrations/research: 1M ctx |
+| **Persephone** | **GO DeepSeek V4.1 Flash** → OR north-mini-code → GO Beam → NV GLM-5.3 | database: migrations + SQL |
+| **Prometheus** | **OR flint-v1.0** (235k out) → GO Beam → GO DeepSeek → NV GPT-OSS-20B | DevOps: long IaC/runbooks |
+| **Callimachus** | **GO DeepSeek V4.1 Flash** (reserved first) → GO Beam → OR north-mini-code → NV MiniMax | vault curation: fast, cheap, strong (the user's pick) |
+
+**Reliability note (2026-10-23 probes):** the Zen free lanes (`opencode/*-free`) answer **"Free usage limit reached"** once the daily quota is spent — they are the LAST column only. The lanes that serve today: GO Beam (free), GO DeepSeek 4.1 Flash (included in the GO flat plan), NVIDIA Build free (GLM-5.3 1M, MiniMax M3.1 Flash, Muse Glimmer, GPT-OSS-20B) and OpenRouter free (inkling 1M/262k, north-mini-code, flint 235k out).
 
 **The NVIDIA fallback column is the DISTRIBUTED PANTHEON (#106)** — every god on exactly one
 per-family lane (`nvidia-glm` / `nvidia-minimaxai` / `nvidia-meta` / `nvidia-openai`), ≤3 gods

@@ -202,8 +202,8 @@ check('THE HEAVY THREE: athena/hephaestus NEVER on apollo\'s anchor + the heavy 
 const flash = 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash';
 check('THE VOLUME LANE: callimachus on the fast lane (minimax-m3.1-flash)',
   canonicalGods.callimachus === flash, `callimachus=${canonicalGods.callimachus}`);
-check('THE VOLUME LANE: vaultLlm is a free Zen lane (volume, not depth)',
-  /^opencode\/[a-z0-9.\-]+-free$/.test(vaultLlm), `vaultLlm=${vaultLlm}`);
+check('THE VOLUME LANE: vaultLlm is a free/GO-included volume lane (volume, not depth)',
+  /^opencode\/[a-z0-9.\-]+-free$/.test(vaultLlm) || vaultLlm === 'opencode-go/beam-free', `vaultLlm=${vaultLlm}`);
 check('THE VOLUME LANE: the strategy small_model on the fast lane (volume, not depth)',
   smallModelNvidia === flash, `small_model(free-nvidia-build)=${smallModelNvidia}`);
 

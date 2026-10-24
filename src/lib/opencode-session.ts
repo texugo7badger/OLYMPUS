@@ -1147,6 +1147,10 @@ export async function getOrCreateSession(conversationId: string): Promise<string
     return existing.sessionId;
   }
 
+  // A cold serve can take >10s to accept the create (plugin load + config
+  // reconcile). The old default timeout aborted the setup and dropped the
+  // whole turn to the one-shot lane (the AIME 23:08 specimen: "Session setup
+  // failed (This operation was aborted)"). Give it 30s.
   const res = await apiFetch(
     server.port,
     server.authed ? server.password : null,
@@ -1156,6 +1160,7 @@ export async function getOrCreateSession(conversationId: string): Promise<string
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: `Olympus Terminal — ${new Date().toISOString()}` }),
     },
+    30_000,
   );
   if (!res.ok) {
     throw new Error(`create session failed (HTTP ${res.status}) [debug: port=${server.port} authed=${server.authed} proto=${server.protocol} path=${v2Path(server, '/session')}]`);

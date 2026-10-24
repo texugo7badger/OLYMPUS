@@ -189,84 +189,74 @@ let FREE_HYBRID_SMALL_MODEL = '';
 
 export const FREE_HYBRID_ROSTER = {
   apollo: [
-    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'planner: DeepSeek V4.1 Flash free — the strongest free tool-caller on the benchmarks (the planner is the quality bottleneck)' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'planner: Beam 1.0 (501B MoE) 1M ctx — the widest free planning window' },
-    { source: 'opencode', id: 'opencode/beam-free', why: 'planner: Beam on the Zen pool' },
-    { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'planner: inkling 1M/262k' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'planner: Beam 1.0 (501B MoE) 1M ctx — GO-plan free lane, proven tool-calling' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'planner: DeepSeek V4.1 Flash — included in the GO flat plan (no per-token charge)' },
+    { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'planner: inkling 1M/262k free' },
     { source: 'nvidia', id: 'nvidia-glm/z-ai/glm-5.3', why: 'planner: GLM-5.3 1M (753B) — NVIDIA Build free' },
-    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'fallback: GLM-5.3 Flash free 200k/32k (Zen)' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'planner: Zen free lane (quota-gated — last resort)' },
   ],
   atlas: [
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'orchestrator: Beam 1.0 1M/131k — huge dispatch plans, GO pool' },
-    { source: 'opencode', id: 'opencode/beam-free', why: 'orchestrator: Beam on the Zen pool' },
-    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'orchestrator: DeepSeek V4.1 Flash free' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'orchestrator: Beam 1.0 1M/131k — GO free, huge dispatch plans' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'orchestrator: GO DeepSeek V4.1 Flash' },
     { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'orchestrator: inkling 1M/262k' },
-    { source: 'nvidia', id: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash', why: 'orchestrator: MiniMax M3.1 Flash (the NVIDIA volume lane)' },
-    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'fallback: GLM-5.3 Flash free 200k/32k (Zen)' },
+    { source: 'nvidia', id: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash', why: 'orchestrator: MiniMax M3.1 Flash (NVIDIA volume lane)' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'orchestrator: Zen free lane (quota-gated — last resort)' },
   ],
   artemis: [
-    { source: 'opencode', id: 'opencode/beam-free', why: 'security: Beam 1.0 deep reasoning, 1M ctx for whole-repo audits' },
-    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'security: DeepSeek V4.1 Flash free' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'security: Beam 1.0 deep reasoning, 1M ctx — GO free' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'security: GO DeepSeek V4.1 Flash' },
     { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'security: inkling 1M' },
     { source: 'nvidia', id: 'nvidia-meta/meta/muse-glimmer-30b', why: 'security: Muse Glimmer 30B' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'security: Beam on the GO pool' },
-    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'fallback: GLM-5.3 Flash free 200k/32k (Zen)' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'security: Zen free lane (quota-gated — last resort)' },
   ],
   athena: [
     { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'frontend: inkling 1M/262k out — whole-page components' },
-    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'frontend: DeepSeek V4.1 Flash free' },
-    { source: 'opencode', id: 'opencode/flint-40b-free', why: 'frontend: Flint 40B 262k/64k' },
-    { source: 'nvidia', id: 'nvidia-openai/openai/gpt-oss-20b', why: 'frontend: GPT-OSS-20B' },
     { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'frontend: Beam 1M/131k' },
-    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'fallback: GLM-5.3 Flash free 200k/32k (Zen)' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'frontend: GO DeepSeek V4.1 Flash' },
+    { source: 'nvidia', id: 'nvidia-openai/openai/gpt-oss-20b', why: 'frontend: GPT-OSS-20B' },
+    { source: 'opencode', id: 'opencode/flint-40b-free', why: 'frontend: Zen free lane (quota-gated — last resort)' },
   ],
   dionysus: [
     { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'QA: inkling 1M/262k out — long suites + evidence' },
-    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'QA: DeepSeek V4.1 Flash free' },
-    { source: 'opencode', id: 'opencode/beam-free', why: 'QA: Beam 1M/131k' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'QA: Beam 1M/131k' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'QA: GO DeepSeek V4.1 Flash' },
     { source: 'nvidia', id: 'nvidia-glm/z-ai/glm-5.3', why: 'QA: GLM-5.3 1M' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'QA: Beam on the GO pool' },
-    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'fallback: GLM-5.3 Flash free 200k/32k (Zen)' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'QA: Zen free lane (quota-gated — last resort)' },
   ],
   hephaestus: [
-    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'backend code: DeepSeek V4.1 Flash — top cost-benefit on coding benchmarks' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'backend code: DeepSeek V4.1 Flash — included in the GO flat plan' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'backend code: Beam 1.0 1M/131k' },
     { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'backend code: north-mini-code 256k/64k' },
-    { source: 'opencode', id: 'opencode/flint-40b-free', why: 'backend code: Flint 40B 262k/64k' },
     { source: 'nvidia', id: 'nvidia-openai/openai/gpt-oss-20b', why: 'backend code: GPT-OSS-20B' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'backend code: Beam 1M/131k' },
-    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'fallback: GLM-5.3 Flash free 200k/32k (Zen)' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'backend code: Zen free lane (quota-gated — last resort)' },
   ],
   hermes: [
     { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'integrations/research: inkling 1M/262k' },
-    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'integrations: DeepSeek V4.1 Flash free' },
-    { source: 'opencode', id: 'opencode/beam-free', why: 'integrations: Beam 1M/131k' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'integrations: Beam 1M/131k' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'integrations: GO DeepSeek V4.1 Flash' },
     { source: 'nvidia', id: 'nvidia-meta/meta/muse-glimmer-30b', why: 'integrations: Muse Glimmer 30B' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'integrations: Beam on the GO pool' },
-    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'fallback: GLM-5.3 Flash free 200k/32k (Zen)' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'integrations: Zen free lane (quota-gated — last resort)' },
   ],
   persephone: [
-    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'database: DeepSeek V4.1 Flash free — migrations + SQL' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'database: DeepSeek V4.1 Flash — included in GO, 384k out' },
     { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'database: north-mini-code 256k/64k' },
-    { source: 'opencode', id: 'opencode/flint-40b-free', why: 'database: Flint 40B 262k/64k' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'database: Beam 1M/131k' },
     { source: 'nvidia', id: 'nvidia-glm/z-ai/glm-5.3', why: 'database: GLM-5.3 1M' },
-    { source: 'openrouter', id: 'openrouter/recursive/flint-v1.0:free', why: 'database: flint 262k/235k out' },
-    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'fallback: GLM-5.3 Flash free 200k/32k (Zen)' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'fallback: the GO free lane (Beam 1.0 1M/131k)' },
+    { source: 'opencode', id: 'opencode/flint-40b-free', why: 'database: Zen free lane (quota-gated — last resort)' },
   ],
   prometheus: [
     { source: 'openrouter', id: 'openrouter/recursive/flint-v1.0:free', why: 'devops: flint 262k ctx/235k out — long IaC/runbooks' },
-    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'devops: DeepSeek V4.1 Flash free' },
-    { source: 'opencode', id: 'opencode/flint-40b-free', why: 'devops: Flint 40B 262k/64k' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'devops: Beam 1M/131k' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'devops: GO DeepSeek V4.1 Flash' },
     { source: 'nvidia', id: 'nvidia-openai/openai/gpt-oss-20b', why: 'devops: GPT-OSS-20B' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'devops: Beam on the GO pool' },
-    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'fallback: GLM-5.3 Flash free 200k/32k (Zen)' },
+    { source: 'opencode', id: 'opencode/flint-40b-free', why: 'devops: Zen free lane (quota-gated — last resort)' },
   ],
   callimachus: [
-    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'vault curation: DeepSeek V4.1 Flash free — fast, cheap, strong (the user pick)' },
-    { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'vault curation: north-mini-code' },
-    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'vault curation: GLM-5.3 Flash free 200k/32k' },
-    { source: 'nvidia', id: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash', why: 'vault curation: MiniMax M3.1 Flash' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'vault curation: DeepSeek V4.1 Flash — included in the GO flat plan (the user pick)' },
     { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'vault curation: Beam 1M/131k' },
+    { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'vault curation: north-mini-code' },
+    { source: 'nvidia', id: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash', why: 'vault curation: MiniMax M3.1 Flash' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'vault curation: Zen free lane (quota-gated — last resort)' },
   ],
 };
 
@@ -358,14 +348,17 @@ export function resolveFreeHybridMap() {
     take(god, pick.id);
   }
 
-  const small = sources.has('opencode')
-    ? 'opencode/deepseek-v4.1-flash-free'
-    : sources.has('opencode-go')
-      ? 'opencode-go/step-5-preview-free'
-      : sources.has('openrouter')
-        ? SMALL_MODEL_FREE
-        : sources.has('nvidia')
-          ? SMALL_MODEL_FREE_NVIDIA
+  // Volume work (titles, compaction) rides the most reliable lane present.
+  // The GO flat plan's Beam is free and quota-safe; the Zen free lanes are
+  // quota-gated ("Free usage limit reached"), so they are never the small lane.
+  const small = sources.has('opencode-go')
+    ? 'opencode-go/beam-free'
+    : sources.has('openrouter')
+      ? SMALL_MODEL_FREE
+      : sources.has('nvidia')
+        ? SMALL_MODEL_FREE_NVIDIA
+        : sources.has('opencode')
+          ? 'opencode/glm-5.3-flash-free'
           : SMALL_MODEL_FREE; // no source (--force): the historic offline default
 
   const sourceLabel = [...FREE_HYBRID_SOURCES].filter((s) => sources.has(s)).join(' + ');
@@ -521,55 +514,55 @@ const BUILTIN_STRATEGIES = {
   // four sources) — the same one the UI shows. Mirrors free-hybrid in
   // src/lib/model-strategies.ts (check-strategy-sync).
   'free-hybrid': {
-    apollo:       'opencode/deepseek-v4.1-flash-free',
+    apollo:       'opencode-go/beam-free',
     atlas:        'opencode-go/beam-free',
-    artemis:      'opencode/beam-free',
+    artemis:      'opencode-go/beam-free',
     athena:       'openrouter/thinkingmachines/inkling:free',
     dionysus:     'openrouter/thinkingmachines/inkling:free',
-    hephaestus:   'opencode/deepseek-v4.1-flash-free',
+    hephaestus:   'opencode-go/deepseek-v4.1-flash',
     hermes:       'openrouter/thinkingmachines/inkling:free',
-    persephone:   'openrouter/cohere/north-mini-code:free',
+    persephone:   'opencode-go/deepseek-v4.1-flash',
     prometheus:   'openrouter/recursive/flint-v1.0:free',
-    callimachus:  'opencode/deepseek-v4.1-flash-free',
+    callimachus:  'opencode-go/deepseek-v4.1-flash',
   },
   // Legacy free ids (deprecated) — saved configs and older UIs still carry
   // them. They resolve to the SAME free-hybrid map (never a second, weaker
   // free path). The UI hides them from the picker.
   'free-openrouter': {
-    apollo:       'opencode/deepseek-v4.1-flash-free',
+    apollo:       'opencode-go/beam-free',
     atlas:        'opencode-go/beam-free',
-    artemis:      'opencode/beam-free',
+    artemis:      'opencode-go/beam-free',
     athena:       'openrouter/thinkingmachines/inkling:free',
     dionysus:     'openrouter/thinkingmachines/inkling:free',
-    hephaestus:   'opencode/deepseek-v4.1-flash-free',
+    hephaestus:   'opencode-go/deepseek-v4.1-flash',
     hermes:       'openrouter/thinkingmachines/inkling:free',
-    persephone:   'openrouter/cohere/north-mini-code:free',
+    persephone:   'opencode-go/deepseek-v4.1-flash',
     prometheus:   'openrouter/recursive/flint-v1.0:free',
-    callimachus:  'opencode/deepseek-v4.1-flash-free',
+    callimachus:  'opencode-go/deepseek-v4.1-flash',
   },
   'free-big-pickle': {
-    apollo:       'opencode/deepseek-v4.1-flash-free',
+    apollo:       'opencode-go/beam-free',
     atlas:        'opencode-go/beam-free',
-    artemis:      'opencode/beam-free',
+    artemis:      'opencode-go/beam-free',
     athena:       'openrouter/thinkingmachines/inkling:free',
     dionysus:     'openrouter/thinkingmachines/inkling:free',
-    hephaestus:   'opencode/deepseek-v4.1-flash-free',
+    hephaestus:   'opencode-go/deepseek-v4.1-flash',
     hermes:       'openrouter/thinkingmachines/inkling:free',
-    persephone:   'openrouter/cohere/north-mini-code:free',
+    persephone:   'opencode-go/deepseek-v4.1-flash',
     prometheus:   'openrouter/recursive/flint-v1.0:free',
-    callimachus:  'opencode/deepseek-v4.1-flash-free',
+    callimachus:  'opencode-go/deepseek-v4.1-flash',
   },
   'free-nvidia-build': {
-    apollo:       'opencode/deepseek-v4.1-flash-free',
+    apollo:       'opencode-go/beam-free',
     atlas:        'opencode-go/beam-free',
-    artemis:      'opencode/beam-free',
+    artemis:      'opencode-go/beam-free',
     athena:       'openrouter/thinkingmachines/inkling:free',
     dionysus:     'openrouter/thinkingmachines/inkling:free',
-    hephaestus:   'opencode/deepseek-v4.1-flash-free',
+    hephaestus:   'opencode-go/deepseek-v4.1-flash',
     hermes:       'openrouter/thinkingmachines/inkling:free',
-    persephone:   'openrouter/cohere/north-mini-code:free',
+    persephone:   'opencode-go/deepseek-v4.1-flash',
     prometheus:   'openrouter/recursive/flint-v1.0:free',
-    callimachus:  'opencode/deepseek-v4.1-flash-free',
+    callimachus:  'opencode-go/deepseek-v4.1-flash',
   },
 };
 
