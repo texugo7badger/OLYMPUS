@@ -2,7 +2,7 @@
 
 > Embed the live OLYMPUS interactive terminal inside Zed. The terminal is shared with the one running in the OLYMPUS Electron app — type in either, see it in both.
 
-**Version:** 0.0.9
+**Version:** 0.0.10
 **License:** AGPL-3.0-or-later
 
 ## What it does (today)
