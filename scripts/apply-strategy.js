@@ -173,6 +173,218 @@ function getBigPickleModel() {
   return 'opencode-go/beam-free';
 }
 
+// ── Free Hybrid — THE one free strategy (2026-10-23) ───────────────────────
+// One free strategy over every free source the user has registered:
+// OpenCode GO free, OpenCode Zen free, OpenRouter free, NVIDIA Build free.
+// The roster below is the probe-verified best-of-market snapshot; the
+// resolver picks the first AVAILABLE lane per god, spreads load (<=3 gods
+// per lane) and honours ~/.olympus/free-hybrid-overrides.json so the user
+// can pin any god to any model. More registered APIs = a stronger free.
+const FREE_HYBRID_OVERRIDES_FILE = path.join(OLYMPUS_HOME, 'free-hybrid-overrides.json');
+const FREE_HYBRID_LEGACY_IDS = ['free-openrouter', 'free-big-pickle', 'free-nvidia-build'];
+const FREE_HYBRID_MAX_PER_LANE = 3;
+const FREE_HYBRID_SOURCES = ['opencode-go', 'opencode', 'openrouter', 'nvidia'];
+/** Set by getModelMap at apply time (the resolved small_model lane). */
+let FREE_HYBRID_SMALL_MODEL = '';
+
+export const FREE_HYBRID_ROSTER = {
+  apollo: [
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'planner: Beam 1.0 (501B MoE) 1M ctx — the strongest free reasoner' },
+    { source: 'opencode', id: 'opencode/beam-free', why: 'planner: the same Beam flagship on the Zen pool (distinct client pool)' },
+    { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'planner: inkling 1M ctx/262k out — the proven free planner lane' },
+    { source: 'nvidia', id: 'nvidia-glm/z-ai/glm-5.3', why: 'planner: GLM-5.3 1M (753B) — NVIDIA Build free' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'planner fallback: DeepSeek V4.1 Flash free' },
+  ],
+  atlas: [
+    { source: 'opencode-go', id: 'opencode-go/minimax-m3.1-flash-free', why: 'orchestrator: MiniMax M3.1 Flash 1M ctx/512k out — huge dispatch plans' },
+    { source: 'opencode', id: 'opencode/minimax-m3.1-flash-free', why: 'orchestrator: MiniMax M3.1 Flash on the Zen pool' },
+    { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'orchestrator: inkling 1M/262k' },
+    { source: 'nvidia', id: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash', why: 'orchestrator: MiniMax M3.1 Flash (the NVIDIA volume lane)' },
+    { source: 'opencode', id: 'opencode/cat-jam-free', why: 'orchestrator fallback: Cat Jam 1M/131k' },
+  ],
+  artemis: [
+    { source: 'opencode', id: 'opencode/beam-free', why: 'security: Beam 1.0 deep reasoning, 1M ctx for whole-repo audits' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'security: Beam on the GO pool' },
+    { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'security: inkling 1M' },
+    { source: 'nvidia', id: 'nvidia-meta/meta/muse-glimmer-30b', why: 'security: Muse Glimmer 30B' },
+    { source: 'opencode', id: 'opencode/kimi-k2.5-free', why: 'security fallback: Kimi K2.5 262k out' },
+  ],
+  athena: [
+    { source: 'opencode', id: 'opencode/minimax-m3.1-flash-free', why: 'frontend: MiniMax M3.1 Flash 512k out — whole-page components' },
+    { source: 'opencode-go', id: 'opencode-go/minimax-m3.1-flash-free', why: 'frontend: MiniMax on the GO pool' },
+    { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'frontend: inkling 1M/262k' },
+    { source: 'nvidia', id: 'nvidia-openai/openai/gpt-oss-20b', why: 'frontend: GPT-OSS-20B' },
+    { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'frontend fallback: north-mini-code 256k/64k' },
+  ],
+  dionysus: [
+    { source: 'opencode', id: 'opencode/kimi-k2.5-free', why: 'QA: Kimi K2.5 262k out — long test suites + evidence' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'QA: Beam 1M/131k' },
+    { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'QA: inkling 1M/262k' },
+    { source: 'nvidia', id: 'nvidia-glm/z-ai/glm-5.3', why: 'QA: GLM-5.3 1M (the NV reasoner)' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'QA fallback: DeepSeek V4.1 Flash' },
+  ],
+  hephaestus: [
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'backend code: DeepSeek V4.1 Flash — top cost-benefit on coding benchmarks' },
+    { source: 'opencode-go', id: 'opencode-go/cat-jam-free', why: 'backend code: Cat Jam 1M/131k' },
+    { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'backend code: north-mini-code 256k/64k' },
+    { source: 'nvidia', id: 'nvidia-openai/openai/gpt-oss-20b', why: 'backend code: GPT-OSS-20B' },
+    { source: 'opencode', id: 'opencode/qwen3.6-plus-free', why: 'backend code fallback: Qwen3.6 Plus 262k/65k' },
+  ],
+  hermes: [
+    { source: 'opencode', id: 'opencode/cat-jam-free', why: 'integrations/research: Cat Jam 1M ctx' },
+    { source: 'opencode-go', id: 'opencode-go/longcat-2.5-preview-free', why: 'integrations: LongCat 2.5 1M/131k' },
+    { source: 'openrouter', id: 'openrouter/thinkingmachines/inkling:free', why: 'integrations: inkling 1M/262k' },
+    { source: 'nvidia', id: 'nvidia-meta/meta/muse-glimmer-30b', why: 'integrations: Muse Glimmer 30B' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'integrations fallback: DeepSeek V4.1 Flash' },
+  ],
+  persephone: [
+    { source: 'opencode', id: 'opencode/deepseek-v4-flash-free', why: 'database: DeepSeek V4 Flash free — 200k ctx/128k out for migrations + SQL' },
+    { source: 'opencode-go', id: 'opencode-go/minimax-m3.1-flash-free', why: 'database: MiniMax M3.1 Flash 512k out' },
+    { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'database: north-mini-code' },
+    { source: 'nvidia', id: 'nvidia-glm/z-ai/glm-5.3', why: 'database: GLM-5.3 1M' },
+    { source: 'opencode', id: 'opencode/glm-5-free', why: 'database fallback: GLM-5 free 204k/131k' },
+  ],
+  prometheus: [
+    { source: 'opencode-go', id: 'opencode-go/minimax-m3.1-flash-free', why: 'devops: MiniMax M3.1 Flash 512k out — long IaC/runbooks' },
+    { source: 'opencode', id: 'opencode/minimax-m3.1-flash-free', why: 'devops: MiniMax on the Zen pool' },
+    { source: 'openrouter', id: 'openrouter/dots-studio/dots-3-note-preview:free', why: 'devops: dots-3-note 512k ctx/460k out' },
+    { source: 'nvidia', id: 'nvidia-openai/openai/gpt-oss-20b', why: 'devops: GPT-OSS-20B' },
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'devops fallback: DeepSeek V4.1 Flash' },
+  ],
+  callimachus: [
+    { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'vault curation: DeepSeek V4.1 Flash free — fast, cheap, strong (the user pick)' },
+    { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'vault curation: north-mini-code' },
+    { source: 'opencode-go', id: 'opencode-go/step-5-preview-free', why: 'vault curation: Step 5 preview 1M/65k' },
+    { source: 'nvidia', id: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash', why: 'vault curation: MiniMax M3.1 Flash' },
+    { source: 'opencode', id: 'opencode/glm-5.3-flash-free', why: 'vault curation fallback: GLM-5.3 Flash free' },
+  ],
+};
+
+export function isLegacyFreeId(id) {
+  return FREE_HYBRID_LEGACY_IDS.includes(id);
+}
+
+export function normalizeStrategyId(id) {
+  return isLegacyFreeId(id) ? 'free-hybrid' : id;
+}
+
+/** Which free sources does this machine actually have keys for? */
+export function detectFreeHybridSources() {
+  const found = new Set();
+  for (const dir of OPENCODE_AUTH_DIRS) {
+    const authFile = path.join(dir, 'auth.json');
+    if (!fs.existsSync(authFile)) continue;
+    try {
+      const auth = JSON.parse(fs.readFileSync(authFile, 'utf-8'));
+      for (const key of Object.keys(auth || {})) {
+        if (key === 'opencode' || key === 'opencode-go' || key === 'openrouter') found.add(key);
+        if (key === 'nvidia' || key.startsWith('nvidia-')) found.add('nvidia');
+      }
+    } catch { /* unreadable auth — other sources still count */ }
+  }
+  // Env / legacy providers file (the /connect flow is the normal path).
+  if (process.env.OPENCODE_API_KEY) found.add('opencode');
+  if (process.env.OPENCODE_GO_API_KEY) found.add('opencode-go');
+  if (process.env.OPENROUTER_API_KEY || process.env.OLYMPUS_OPENROUTER_KEY) found.add('openrouter');
+  if (process.env.NVIDIA_API_KEY || process.env.OLYMPUS_NVIDIA_KEY) found.add('nvidia');
+  const cfg = loadProviders() || {};
+  if (cfg.openrouter_key) found.add('openrouter');
+  if (cfg.nvidia_key) found.add('nvidia');
+  return found;
+}
+
+/** User pins: { "athena": "opencode/minimax-m3.1-flash-free", ... } */
+export function loadFreeHybridOverrides() {
+  try {
+    if (!fs.existsSync(FREE_HYBRID_OVERRIDES_FILE)) return {};
+    const raw = JSON.parse(fs.readFileSync(FREE_HYBRID_OVERRIDES_FILE, 'utf-8'));
+    const out = {};
+    for (const god of GOD_IDS) {
+      const v = raw[god];
+      if (typeof v === 'string' && v.includes('/')) out[god] = v;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Resolve the Free Hybrid map for THIS machine.
+ * Returns { map, small, sources }. Logs what it chose and what a missing
+ * provider would unlock (the "register an API for a stronger free" nudge).
+ */
+export function resolveFreeHybridMap() {
+  const sources = detectFreeHybridSources();
+  const overrides = loadFreeHybridOverrides();
+  const usage = new Map();
+  const map = {};
+
+  for (const god of GOD_IDS) {
+    if (overrides[god]) {
+      map[god] = overrides[god];
+      usage.set(overrides[god], (usage.get(overrides[god]) || 0) + 1);
+      continue;
+    }
+    const roster = FREE_HYBRID_ROSTER[god] || [];
+    const available = roster.filter((lane) => sources.has(lane.source));
+    const pick = available.find((lane) => (usage.get(lane.id) || 0) < FREE_HYBRID_MAX_PER_LANE)
+      || available[0]
+      || roster[0];
+    map[god] = pick.id;
+    usage.set(pick.id, (usage.get(pick.id) || 0) + 1);
+  }
+
+  const small = sources.has('opencode')
+    ? 'opencode/deepseek-v4.1-flash-free'
+    : sources.has('opencode-go')
+      ? 'opencode-go/step-5-preview-free'
+      : sources.has('openrouter')
+        ? SMALL_MODEL_FREE
+        : sources.has('nvidia')
+          ? SMALL_MODEL_FREE_NVIDIA
+          : SMALL_MODEL_FREE; // no source (--force): the historic offline default
+
+  const sourceLabel = [...FREE_HYBRID_SOURCES].filter((s) => sources.has(s)).join(' + ');
+  log(`  Free Hybrid: sources detected — ${sourceLabel || 'NONE'}${Object.keys(overrides).length ? ` | user pins: ${Object.keys(overrides).length}` : ''}`);
+  for (const god of GOD_IDS) {
+    const lane = Object.values(FREE_HYBRID_ROSTER).flat().find((l) => l.id === map[god]);
+    log(`    ${god.padEnd(12)} ${map[god]}${lane ? ` — ${lane.why}` : ''}`);
+  }
+  const missing = FREE_HYBRID_SOURCES.filter((s) => !sources.has(s));
+  if (missing.length > 0) {
+    const unlock = {
+      'opencode-go': 'Beam 1.0 (1M) + MiniMax M3.1 Flash (512k out) on the GO pool',
+      opencode: 'DeepSeek V4.1 Flash, Kimi K2.5 (262k out), MiniMax M3.1 Flash (512k out) on Zen',
+      openrouter: 'inkling (1M/262k) + dots-3-note (512k/460k)',
+      nvidia: 'GLM-5.3 (1M), MiniMax M3.1 Flash, Muse Glimmer, GPT-OSS-20B',
+    };
+    for (const s of missing) log(`    (free) add ${s} → unlocks ${unlock[s] || 'more free lanes'}`);
+  }
+
+  // #106: when the resolution rides NVIDIA family lanes, verify them against
+  // the refresh list (the anchor-pin law: verify availability, never a silent
+  // swap; a false "not in the live list" warning is worse than none).
+  const nvLanes = [...new Set(Object.values(map).filter((m) => String(m).startsWith('nvidia-')))];
+  if (nvLanes.length > 0) {
+    const refresh = loadFreeModelsRefresh();
+    const nvAll = refresh?.nvidia?.all || refresh?.nvidia?.top || [];
+    if (nvAll.length > 0) {
+      const live = new Set(nvAll.map((m) => String((m && (m.rawId || m.id)) || '').replace(/^nvidia\//, '')).filter(Boolean));
+      const dead = nvLanes.filter((l) => !live.has(l.replace(/^nvidia-[a-z]+\//, '')));
+      if (dead.length > 0) {
+        log(`  Free Hybrid: ANCHOR-PIN WARNING — ${dead.length} NVIDIA lane(s) not in the live refresh list: ${dead.join(', ')}`);
+      } else {
+        log(`  Free Hybrid: all anchor lanes verified live (${live.size} models in the refresh list)`);
+      }
+    } else {
+      log(`  Free Hybrid: no fresh refresh list — the NVIDIA fallback lanes stand (probe-verified 2026-10-23)`);
+    }
+  }
+  return { map, small, sources };
+}
+
+
 const BUILTIN_STRATEGIES = {
   'go-max-quality': {
     apollo:       'opencode-go/glm-5.3',
@@ -277,93 +489,64 @@ const BUILTIN_STRATEGIES = {
     prometheus:   'opencode/glm-5.3-flash',
     callimachus:  'opencode/claude-haiku-4-5',
   },
-  // Free Beam (free-big-pickle) — every god on a single model: the GO plan's
-  // free flagship Beam 1.0 (#190, 2026-10-23). Callimachus gets the SAME
-  // model as every other god (the user explicitly asked for the best
-  // possible configuration for all 10 gods). OLYMPUS_BIG_PICKLE_MODEL is
-  // the legacy override env.
-  'free-big-pickle': {
-    apollo:       FREE_BIG_PICKLE_MODEL,
-    atlas:        FREE_BIG_PICKLE_MODEL,
-    artemis:      FREE_BIG_PICKLE_MODEL,
-    athena:       FREE_BIG_PICKLE_MODEL,
-    dionysus:     FREE_BIG_PICKLE_MODEL,
-    hephaestus:   FREE_BIG_PICKLE_MODEL,
-    hermes:       FREE_BIG_PICKLE_MODEL,
-    persephone:   FREE_BIG_PICKLE_MODEL,
-    prometheus:   FREE_BIG_PICKLE_MODEL,
-    callimachus:  FREE_BIG_PICKLE_MODEL,
-  },
-  // Free OpenRouter — the OpenRouter-only split: primary trio on the
-  // strongest OpenRouter free model live right now, specialists
-  // on the second-strongest, Callimachus on a fast background model (Nemotron
-  // nano). APOLLO carries the FREE-TIER PLANNER CLAUSE (2026-10-21): the
-  // planner rides the strongest SERVABLE free reasoner — the nvidia-glm
-  // lane stalls first-byte on large planning prompts 4/4 (#129), so the
-  // default is the proven north-mini reasoner (the 7/7 builder walk); a
-  // live GLM free on OpenRouter takes precedence the moment one exists.
-  // Mirrors free-openrouter in src/lib/model-strategies.ts (check-strategy-sync).
-  'free-openrouter': {
-    apollo:       'openrouter/thinkingmachines/inkling:free',
-    atlas:        'openrouter/cohere/north-mini-code:free',
-    artemis:      'openrouter/cohere/north-mini-code:free',
-    athena:       'openrouter/cohere/north-mini-code:free',
-    dionysus:     'openrouter/cohere/north-mini-code:free',
-    hephaestus:   'openrouter/cohere/north-mini-code:free',
-    hermes:       'openrouter/cohere/north-mini-code:free',
-    persephone:   'openrouter/cohere/north-mini-code:free',
-    prometheus:   'openrouter/cohere/north-mini-code:free',
-    callimachus:  'openrouter/cohere/north-mini-code:free',
-  },
-  // Free Nvidia Build — THE DISTRIBUTED PANTHEON (#106, MADRUGA-FREE-1).
-  // The user's directive: the maximum of the NVIDIA free catalog with
-  // DIFFERENT model lanes per god, sharing context through Symphony. NO
-  // Nemotron (the user's ban: low effective context + the observed
-  // contention pool behind "Service temporarily overloaded"). The old
-  // shape — apollo+atlas on nemotron-3-ultra, 7 gods on one glm-5.3 pool —
-  // was the single point of failure.
-  //
-  // THE 2026-10-23 ROTATION (#191): live 1-token probes against the full
-  // catalogue (key auth.json['nvidia-glm'], base
-  // https://integrate.api.nvidia.com/v1, 20s timeout, NO nemotron ever):
-  //   ALIVE — minimaxai/minimax-m3.1-flash 200@750/513/2630ms (a NEW
-  //     anchor — the fastest flash-class lane tonight),
-  //     meta/muse-glimmer-30b 200@723/655/751/974ms,
-  //     z-ai/glm-5.3 200@821/2661/4887/2564ms (healthy 4/4 — the 16.5s
-  //     #129 reading did not reproduce at re-probe),
-  //     openai/gpt-oss-20b 200@1178/1595/1367/988ms.
-  //   DEAD — google/gemma-4-31b-it 20s timeout x2 (the volume lane DIED),
-  //     z-ai/glm-5.3-flash + deepseek-ai/deepseek-v4.1-flash 20s timeouts,
-  //     36 more ids 404. stepfun-ai/step-5-preview alive but UNSTABLE
-  //     (1-of-3 timeout — NOT pinned); poolside/laguna-xs-2.1 flaky
-  //     (one 429-class refusal — NOT pinned).
-  // The rotation: atlas + callimachus + vaultLlm + small_model move from
-  // the dead gemma lane to nvidia-minimaxai/minimaxai/minimax-m3.1-flash;
-  // the nvidia-google family RETIRES with its dead anchor (the #129
-  // nvidia-step precedent). The distribution law (asserted by
-  // scripts/free-pantheon.test.mjs): every god on exactly ONE family-prefixed
-  // anchor; apollo's entry lane NEVER shared with athena or hephaestus (a
-  // dead pool can never kill the entry god together with a heavy code lane —
-  // the heavy three span >=2 pools); callimachus + vaultLlm + small_model on
-  // the FAST lane (volume, not depth); <=3 gods per anchor; every assigned
-  // id probe-verified live 2026-10-23.
-  //
-  // Model ids are family-prefixed (nvidia-glm/<vendor>/<model> etc.) — one
-  // client pool per family (NVIDIA_FAMILY_PROVIDERS below writes the
-  // provider entries; the auth mirror copies the user's nvapi-... key to
-  // each family id in auth.json). Mirrors free-nvidia-build in
+  // ── Free Hybrid — THE one free strategy (2026-10-23) ─────────────────────
+  // One free strategy over every free source the user has registered:
+  // OpenCode GO free + Zen free + OpenRouter free + NVIDIA Build free.
+  // The per-god roster lives in FREE_HYBRID_ROSTER below; resolveFreeHybridMap
+  // picks the best AVAILABLE lane per god at apply time (and spreads load,
+  // <=3 gods per lane). This static map is the FULL-POWER resolution (all
+  // four sources) — the same one the UI shows. Mirrors free-hybrid in
   // src/lib/model-strategies.ts (check-strategy-sync).
+  'free-hybrid': {
+    apollo:       'opencode-go/beam-free',
+    atlas:        'opencode-go/minimax-m3.1-flash-free',
+    artemis:      'opencode/beam-free',
+    athena:       'opencode/minimax-m3.1-flash-free',
+    dionysus:     'opencode/kimi-k2.5-free',
+    hephaestus:   'opencode/deepseek-v4.1-flash-free',
+    hermes:       'opencode/cat-jam-free',
+    persephone:   'opencode/deepseek-v4-flash-free',
+    prometheus:   'opencode-go/minimax-m3.1-flash-free',
+    callimachus:  'opencode/deepseek-v4.1-flash-free',
+  },
+  // Legacy free ids (deprecated) — saved configs and older UIs still carry
+  // them. They resolve to the SAME free-hybrid map (never a second, weaker
+  // free path). The UI hides them from the picker.
+  'free-openrouter': {
+    apollo:       'opencode-go/beam-free',
+    atlas:        'opencode-go/minimax-m3.1-flash-free',
+    artemis:      'opencode/beam-free',
+    athena:       'opencode/minimax-m3.1-flash-free',
+    dionysus:     'opencode/kimi-k2.5-free',
+    hephaestus:   'opencode/deepseek-v4.1-flash-free',
+    hermes:       'opencode/cat-jam-free',
+    persephone:   'opencode/deepseek-v4-flash-free',
+    prometheus:   'opencode-go/minimax-m3.1-flash-free',
+    callimachus:  'opencode/deepseek-v4.1-flash-free',
+  },
+  'free-big-pickle': {
+    apollo:       'opencode-go/beam-free',
+    atlas:        'opencode-go/minimax-m3.1-flash-free',
+    artemis:      'opencode/beam-free',
+    athena:       'opencode/minimax-m3.1-flash-free',
+    dionysus:     'opencode/kimi-k2.5-free',
+    hephaestus:   'opencode/deepseek-v4.1-flash-free',
+    hermes:       'opencode/cat-jam-free',
+    persephone:   'opencode/deepseek-v4-flash-free',
+    prometheus:   'opencode-go/minimax-m3.1-flash-free',
+    callimachus:  'opencode/deepseek-v4.1-flash-free',
+  },
   'free-nvidia-build': {
-    apollo:       'nvidia-glm/z-ai/glm-5.3',
-    atlas:        'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    artemis:      'nvidia-meta/meta/muse-glimmer-30b',
-    athena:       'nvidia-openai/openai/gpt-oss-20b',
-    dionysus:     'nvidia-glm/z-ai/glm-5.3',
-    hephaestus:   'nvidia-openai/openai/gpt-oss-20b',
-    hermes:       'nvidia-meta/meta/muse-glimmer-30b',
-    persephone:   'nvidia-glm/z-ai/glm-5.3',
-    prometheus:   'nvidia-openai/openai/gpt-oss-20b',
-    callimachus:  'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
+    apollo:       'opencode-go/beam-free',
+    atlas:        'opencode-go/minimax-m3.1-flash-free',
+    artemis:      'opencode/beam-free',
+    athena:       'opencode/minimax-m3.1-flash-free',
+    dionysus:     'opencode/kimi-k2.5-free',
+    hephaestus:   'opencode/deepseek-v4.1-flash-free',
+    hermes:       'opencode/cat-jam-free',
+    persephone:   'opencode/deepseek-v4-flash-free',
+    prometheus:   'opencode-go/minimax-m3.1-flash-free',
+    callimachus:  'opencode/deepseek-v4.1-flash-free',
   },
 };
 
@@ -811,7 +994,13 @@ function resolveStrategy(cliFlag) {
       strategy = 'go-balanced';
     }
   }
-  return strategy;
+  // Legacy free ids (free-openrouter / free-big-pickle / free-nvidia-build)
+  // resolve to the one free strategy — never a second, weaker free path.
+  const canonical = normalizeStrategyId(strategy);
+  if (canonical !== strategy) {
+    log(`  legacy free id "${strategy}" → "${canonical}" (the single Free Hybrid)`);
+  }
+  return canonical;
 }
 
 /**
@@ -997,49 +1186,27 @@ function getNvidiaBuildModelMap() {
 }
 
 async function getModelMap(strategy) {
-  if (strategy === 'free-big-pickle') {
-    // Re-resolve at apply time so `--refresh-models` in the same run picks
-    // up a newly released flagship (FREE_BIG_PICKLE_MODEL is module-load).
-    const bp = getBigPickleModel();
-    const map = { ...BUILTIN_STRATEGIES['free-big-pickle'] };
-    for (const g of GOD_IDS) map[g] = bp;
-    log(`  Free Big Pickle: every god on ${bp} (OLYMPUS_BIG_PICKLE_MODEL or live #1; refreshed each apply)`);
-    return map;
-  }
-  if (strategy === 'free-openrouter') {
-    // The OpenRouter-only split of the Free config. Requires an OpenRouter
-    // key — OpenRouter models cannot be requested without one.
-    // Issue #56 (BATCH 12d): --force (module flag set in main) is the
-    // explicit escape hatch — validateFreeFallbackKeys itself throws when
-    // NO free key exists at all, so the force path must wrap the call.
-    let keys;
-    try {
-      keys = validateFreeFallbackKeys('free-openrouter');
-    } catch (e) {
-      if (FORCE_FREE_APPLY) {
-        log(`  WARNING: free-openrouter key validation FAILED, but --force given — building the map anyway; model requests will fail with APIError until the key is added.`);
-        keys = { openrouter: false, nvidia: false };
-      } else {
-        throw e;
-      }
-    }
-    if (!keys.openrouter && !FORCE_FREE_APPLY) {
+  if (strategy === 'free-hybrid' || isLegacyFreeId(strategy)) {
+    // THE one free strategy (2026-10-23). Resolve the per-god roster for the
+    // sources this machine actually has. No key at all = the explicit
+    // free-tier error (never a config that cannot serve a single request).
+    const sources = detectFreeHybridSources();
+    if (sources.size === 0 && !FORCE_FREE_APPLY) {
       throw new Error(
-        `free-openrouter requires an OpenRouter API key — configure OpenRouter inside OpenCode (Settings → Providers) or use free-big-pickle instead.`
+        `Free Hybrid needs at least one free source registered.\n\n` +
+        `  Fastest path (no external key): open OpenCode → Settings → Providers\n` +
+        `  and connect OpenCode Zen (free lanes) or OpenCode GO (free lanes).\n\n` +
+        `  Or add any of: OpenRouter (https://openrouter.ai/keys),\n` +
+        `  NVIDIA Build (https://build.nvidia.com).\n\n` +
+        `  More sources = a stronger free pantheon.`
       );
     }
-    if (!keys.openrouter && FORCE_FREE_APPLY) {
-      log(`  WARNING: building free-openrouter WITHOUT an OpenRouter key (--force) — model requests will fail with APIError until the key is added.`);
+    if (sources.size === 0 && FORCE_FREE_APPLY) {
+      log('  WARNING: Free Hybrid with --force and ZERO free sources — the full-power map is written; requests will fail until a key is added.');
     }
-    return await buildOpenRouterMixed();
-  }
-  if (strategy === 'free-nvidia-build') {
-    // NVIDIA Build free endpoints. The model list is public (fetched by the
-    // refresh script unconditionally), but requests need an nvapi-... key —
-    // validateFreeFallbackKeys soft-warns when it is missing so the config
-    // still applies.
-    validateFreeFallbackKeys('free-nvidia-build');
-    return getNvidiaBuildModelMap();
+    const resolved = resolveFreeHybridMap();
+    FREE_HYBRID_SMALL_MODEL = resolved.small;
+    return resolved.map;
   }
   if (BUILTIN_STRATEGIES[strategy]) {
     return BUILTIN_STRATEGIES[strategy];
@@ -1069,7 +1236,7 @@ async function getModelMap(strategy) {
     return cfg.gods;
   }
   throw new Error(
-    `Unknown strategy: ${strategy}. Valid: go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget (Zen), free-openrouter, free-big-pickle (Free Big Pickle), free-nvidia-build (Free Nvidia Build), custom-*`
+    `Unknown strategy: ${strategy}. Valid: go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget (Zen), free-hybrid (the one free strategy), custom-*`
   );
 }
 
@@ -1870,12 +2037,12 @@ function applyFreeConfigShape(config, modelMap, strategy) {
   }
 
   // --- 5. small_model ---
-  // #106: the NVIDIA free strategies (free-nvidia-build + free-big-pickle)
-  // ride their own volume lane (gemma-4-31b-it — volume work on the volume
-  // lane, zero Nemotron, zero cross-provider key needs). The OpenRouter
-  // free strategies keep the OpenRouter cohere:free default.
-  const expectedSmallModel = (strategy === 'free-nvidia-build' || strategy === 'free-big-pickle')
-    ? SMALL_MODEL_FREE_NVIDIA
+  // Free Hybrid picks its small_model from the sources present (DeepSeek
+  // V4.1 Flash free on Zen, Step 5 on GO, north-mini on OpenRouter, MiniMax
+  // on NVIDIA) — volume work on a fast free lane. Legacy free ids resolve
+  // to the same hybrid resolution.
+  const expectedSmallModel = (strategy === 'free-hybrid' || isLegacyFreeId(strategy))
+    ? (FREE_HYBRID_SMALL_MODEL || FREE_CONFIG_SHAPE.small_model)
     : FREE_CONFIG_SHAPE.small_model;
   if (config.small_model !== expectedSmallModel) {
     log(`  small_model: ${config.small_model || '(none)'} -> ${expectedSmallModel}`);
@@ -2427,13 +2594,22 @@ async function main() {
   }
   // #106: the provider split's key plumbing — mirror the user's nvidia key
   // to the family ids BEFORE the config carries family lanes (the dispatch
-  // path reads auth.json per provider id). Skipped on --dry-run (no writes).
-  if (strategy === 'free-nvidia-build' && !dryRun) {
+  // path reads auth.json per provider id). Free Hybrid mirrors only when the
+  // resolved map actually rides an nvidia-* lane. Skipped on --dry-run.
+  const usesNvidiaLanes = Object.values(modelMap || {}).some((m) => String(m).startsWith('nvidia-'));
+  if ((strategy === 'free-nvidia-build' || usesNvidiaLanes) && !dryRun) {
     mirrorNvidiaFamilyAuthKeys();
   }
 
   // Validate free-tier API keys before applying any free strategy.
   if (isFreeTierStrategy(strategy)) {
+    if (strategy === 'free-hybrid') {
+      // The resolver already refused a zero-source apply; here we only
+      // report what the machine has (the incentive line lives in the
+      // resolver log).
+      const sources = [...detectFreeHybridSources()];
+      log(`Free Hybrid sources present: ${sources.length ? sources.join(', ') : 'NONE'}`);
+    } else {
     try {
       const keys = validateFreeFallbackKeys(strategy);
       log(`Free-tier keys present: openrouter=${keys.openrouter}, nvidia=${keys.nvidia}`);
@@ -2459,6 +2635,7 @@ async function main() {
     if (!loadFreeModelsRefresh()) {
       log(`WARNING: free-models.json is missing or older than 24h — gods will be routed to the curated offline list, which may reference dead endpoints.`);
       log(`  Refresh with: node scripts/apply-strategy.js --strategy ${strategy} --refresh-models`);
+    }
     }
   }
 
@@ -2502,7 +2679,7 @@ async function main() {
       // #106: the per-family provider entries (one client pool per family)
       // for the distributed pantheon — BEFORE the limit harmonizer, so the
       // family lanes exist when it runs.
-      if (strategy === 'free-nvidia-build') {
+      if (strategy === 'free-nvidia-build' || usesNvidiaLanes) {
         changes += applyNvidiaFamilyProviders(config);
       }
       // Output caps for the free providers (max_tokens override) + strip
@@ -2571,13 +2748,15 @@ async function main() {
       }
       console.log('    - Per-god overrides from Settings merged in (stale ones dropped)');
       console.log('');
-      console.log('  To configure free API keys: run `olympus opencode`, open Settings,');
-      console.log('  and add your OpenRouter and/or NVIDIA API keys as providers');
-      console.log('  (free-nvidia-build uses NVIDIA — key starts with nvapi-; the apply');
-      console.log('  mirrors it to the per-family provider ids automatically).');
+      console.log('  Free Hybrid reads every free source you have registered:');
+      console.log('    OpenCode GO free · OpenCode Zen free · OpenRouter free · NVIDIA Build free');
+      console.log('  The strongest available lane is assigned per god (planning, orchestration,');
+      console.log('  code, QA, research, vault). More APIs = a stronger free pantheon.');
+      console.log('  Pin any god: ~/.olympus/free-hybrid-overrides.json');
+      console.log('    { "athena": "opencode/minimax-m3.1-flash-free" }');
       console.log('');
-      console.log('  To refresh the free model list from the live providers:');
-      console.log('    node scripts/refresh-free-models.js');
+      console.log('  To register a free source: run `olympus opencode` → Settings → Providers');
+      console.log('  (OpenCode Zen/GO, OpenRouter, NVIDIA Build) or `npm run refresh-free-models`.');
       console.log('');
       console.log('  To switch back to GO plan:');
       console.log('    node scripts/apply-strategy.js --strategy go-balanced');

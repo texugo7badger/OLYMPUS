@@ -87,6 +87,12 @@ try {
   );
 
   const runApply = () => {
+    // Hermetic env: a developer's real provider keys must not leak into the
+    // fixture (the Free Hybrid resolver would see a multi-source machine and
+    // pick a different small_model).
+    const clean = { ...process.env };
+    for (const k of ['OPENCODE_API_KEY', 'OPENCODE_GO_API_KEY', 'OPENROUTER_API_KEY',
+      'OLYMPUS_OPENROUTER_KEY', 'NVIDIA_API_KEY', 'OLYMPUS_NVIDIA_KEY']) delete clean[k];
     const res = spawnSync(
       process.execPath,
       [APPLY_SCRIPT, '--strategy', 'free-openrouter', '--force'],
@@ -94,7 +100,7 @@ try {
         encoding: 'utf-8',
         cwd: REPO_ROOT,
         env: {
-          ...process.env,
+          ...clean,
           OLYMPUS_ROOT: TMP_ROOT,
           OLYMPUS_HOME: TMP_HOME,
           HOME: TMP_HOME,

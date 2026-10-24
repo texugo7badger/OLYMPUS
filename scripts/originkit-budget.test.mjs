@@ -94,7 +94,12 @@ async function main() {
     'the two ledgers diverged');
 
   const blockedDir = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-originkit-blocked-'));
-  fs.writeFileSync(path.join(blockedDir, 'originkit-budget.json'), JSON.stringify({ day: new Date().toISOString().slice(0, 10), used: 10 }));
+  // The gate keys the day on LOCAL midnight — a UTC slice flips a day early
+  // for negative-offset zones (the 00:xx UTC crossing flake). Build the local
+  // day exactly as the module does.
+  const now = new Date();
+  const localDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  fs.writeFileSync(path.join(blockedDir, 'originkit-budget.json'), JSON.stringify({ day: localDay, used: 10 }));
   const runtimeRefusal = runtime.consumeOriginkitFetch({ stateDir: blockedDir });
   expect('#198: the runtime gate refuses the exhausted day too',
     runtimeRefusal.ok === false && /Resets at/.test(runtimeRefusal.error),

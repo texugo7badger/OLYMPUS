@@ -142,6 +142,7 @@ export type LLMStrategy =
   | 'zen-max-quality'
   | 'zen-balanced'
   | 'zen-budget'
+  | 'free-hybrid'
   | 'free-openrouter'
   | 'free-big-pickle'
   | 'free-nvidia-build'

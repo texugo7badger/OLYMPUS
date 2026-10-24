@@ -328,43 +328,54 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     prometheus: 'opencode/glm-5.3-flash',
     callimachus: 'opencode/claude-haiku-4-5',
   },
-  'free-big-pickle': {
-    // #190: the Beam 1.0 flagship (GO free promotional model).
+  'free-hybrid': {
     apollo: 'opencode-go/beam-free',
-    atlas: 'opencode-go/beam-free',
-    artemis: 'opencode-go/beam-free',
-    athena: 'opencode-go/beam-free',
-    dionysus: 'opencode-go/beam-free',
-    hephaestus: 'opencode-go/beam-free',
-    hermes: 'opencode-go/beam-free',
-    persephone: 'opencode-go/beam-free',
-    prometheus: 'opencode-go/beam-free',
-    callimachus: 'opencode-go/beam-free',
+    atlas: 'opencode-go/minimax-m3.1-flash-free',
+    artemis: 'opencode/beam-free',
+    athena: 'opencode/minimax-m3.1-flash-free',
+    dionysus: 'opencode/kimi-k2.5-free',
+    hephaestus: 'opencode/deepseek-v4.1-flash-free',
+    hermes: 'opencode/cat-jam-free',
+    persephone: 'opencode/deepseek-v4-flash-free',
+    prometheus: 'opencode-go/minimax-m3.1-flash-free',
+    callimachus: 'opencode/deepseek-v4.1-flash-free',
+  },
+  // Legacy free ids — deprecated aliases of free-hybrid (saved configs only).
+  'free-big-pickle': {
+    apollo: 'opencode-go/beam-free',
+    atlas: 'opencode-go/minimax-m3.1-flash-free',
+    artemis: 'opencode/beam-free',
+    athena: 'opencode/minimax-m3.1-flash-free',
+    dionysus: 'opencode/kimi-k2.5-free',
+    hephaestus: 'opencode/deepseek-v4.1-flash-free',
+    hermes: 'opencode/cat-jam-free',
+    persephone: 'opencode/deepseek-v4-flash-free',
+    prometheus: 'opencode-go/minimax-m3.1-flash-free',
+    callimachus: 'opencode/deepseek-v4.1-flash-free',
   },
   'free-openrouter': {
-    // The free-tier planner clause: the planner stays sacred — SERVABLE. The nvidia-glm lane stalls first-byte on large prompts 4/4 (#129); the north-mini reasoner carries it.
-    apollo: 'openrouter/thinkingmachines/inkling:free',
-    atlas: 'openrouter/cohere/north-mini-code:free',
-    artemis: 'openrouter/cohere/north-mini-code:free',
-    athena: 'openrouter/cohere/north-mini-code:free',
-    dionysus: 'openrouter/cohere/north-mini-code:free',
-    hephaestus: 'openrouter/cohere/north-mini-code:free',
-    hermes: 'openrouter/cohere/north-mini-code:free',
-    persephone: 'openrouter/cohere/north-mini-code:free',
-    prometheus: 'openrouter/cohere/north-mini-code:free',
-    callimachus: 'openrouter/cohere/north-mini-code:free',
+    apollo: 'opencode-go/beam-free',
+    atlas: 'opencode-go/minimax-m3.1-flash-free',
+    artemis: 'opencode/beam-free',
+    athena: 'opencode/minimax-m3.1-flash-free',
+    dionysus: 'opencode/kimi-k2.5-free',
+    hephaestus: 'opencode/deepseek-v4.1-flash-free',
+    hermes: 'opencode/cat-jam-free',
+    persephone: 'opencode/deepseek-v4-flash-free',
+    prometheus: 'opencode-go/minimax-m3.1-flash-free',
+    callimachus: 'opencode/deepseek-v4.1-flash-free',
   },
   'free-nvidia-build': {
-    apollo: 'nvidia-glm/z-ai/glm-5.3',
-    atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    artemis: 'nvidia-meta/meta/muse-glimmer-30b',
-    athena: 'nvidia-openai/openai/gpt-oss-20b',
-    dionysus: 'nvidia-glm/z-ai/glm-5.3',
-    hephaestus: 'nvidia-openai/openai/gpt-oss-20b',
-    hermes: 'nvidia-meta/meta/muse-glimmer-30b',
-    persephone: 'nvidia-glm/z-ai/glm-5.3',
-    prometheus: 'nvidia-openai/openai/gpt-oss-20b',
-    callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
+    apollo: 'opencode-go/beam-free',
+    atlas: 'opencode-go/minimax-m3.1-flash-free',
+    artemis: 'opencode/beam-free',
+    athena: 'opencode/minimax-m3.1-flash-free',
+    dionysus: 'opencode/kimi-k2.5-free',
+    hephaestus: 'opencode/deepseek-v4.1-flash-free',
+    hermes: 'opencode/cat-jam-free',
+    persephone: 'opencode/deepseek-v4-flash-free',
+    prometheus: 'opencode-go/minimax-m3.1-flash-free',
+    callimachus: 'opencode/deepseek-v4.1-flash-free',
   },
 };
 
@@ -414,10 +425,9 @@ function fallbackData(): SettingsData {
       { id: 'zen-max-quality', label: 'ZEN Max Quality', description: 'Best quality on OpenCode Zen — proprietary APIs. Apollo: GLM-5.3. Athena+Hephaestus: Claude Sonnet 5. Others: GPT-5.4.', plan: 'ZEN', tier: 'quality', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'higher' },
       { id: 'zen-balanced',    label: 'ZEN Balanced', description: 'Full OLYMPUS on OpenCode Zen — pay-as-you-go, no request caps. Apollo: GLM-5.3. Athena+Hephaestus: Claude Sonnet 5. Specialists: Kimi K2.7 Code.', plan: 'ZEN', tier: 'balanced', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'moderate' },
       { id: 'zen-budget',      label: 'ZEN Budget',   description: 'Lowest cost on OpenCode Zen — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. All others: MiniMax M2.7.', plan: 'ZEN', tier: 'budget', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'low' },
-      // Free strategies — for users without a GO plan.
-      { id: 'free-openrouter', label: 'Free OpenRouter', description: 'All 10 gods on OpenRouter\'s strongest free model live right now (cohere/north-mini-code:free — probe-verified 2026-10-16, 256K ctx, 64K output). One pool, zero cost, one key.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/cohere/north-mini-code:free', estCostPerDay: 'free' },
-      { id: 'free-big-pickle', label: 'Free Big Pickle', description: 'All 10 gods (Callimachus included) on one free model — the strongest currently live. Refreshes automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
-      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchors (GLM-5.3 / Step 5 Preview / Gemma 4 31B / Muse Glimmer / GPT-OSS-20B — the 2026-10-16 rotation), per-family client pools, no single pool, NO Nemotron (the user\'s ban). The anchor set is pinned — the refresh verifies availability, never replaces.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
+      // Free — ONE strategy over every free source registered (GO/Zen free,
+      // OpenRouter free, NVIDIA Build free). More APIs = a stronger free.
+      { id: 'free-hybrid', label: 'Free Hybrid', description: 'The perfect free — one strategy over every free source you registered (GO/Zen free, OpenRouter free, NVIDIA Build free). Apollo plans on Beam 1.0 (501B, 1M ctx); Atlas orchestrates on MiniMax M3.1 Flash (512k out); Hephaestus codes on DeepSeek V4.1 Flash; Hermes researches on Cat Jam (1M); Callimachus curates the vault on DeepSeek V4.1 Flash. Load-spread across pools (≤3 gods per lane), per-god pins in ~/.olympus/free-hybrid-overrides.json. $0.', plan: 'CUSTOM', tier: 'free', terminalModel: 'opencode-go/beam-free', estCostPerDay: 'free' },
     ],
     go_plan_last_verified: '2026-07-29',
     go_plan_docs_url: 'https://opencode.ai/docs/go/',
@@ -850,9 +860,8 @@ export default function SettingsDialog() {
   const familyLabel =
     selectedFamily === 'GO' ? 'GO models'
     : selectedFamily === 'ZEN' ? 'ZEN models'
-    : strategy === 'free-openrouter' ? 'OpenRouter free models'
-    : strategy === 'free-nvidia-build' ? 'NVIDIA free models'
-    : strategy === 'free-big-pickle' ? 'Big Pickle flagship'
+    : strategy === 'free-hybrid' || strategy === 'free-openrouter' || strategy === 'free-nvidia-build' || strategy === 'free-big-pickle'
+      ? 'Free Hybrid — best free lane per god'
     : 'Free models (all providers)';
   // Activation gate — a strategy whose required API is not authorized cannot
   // be selected. Unknown auth (offline fallback) never blocks.

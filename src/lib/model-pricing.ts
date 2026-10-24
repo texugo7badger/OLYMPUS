@@ -115,14 +115,28 @@ const FALLBACK_PRICING_USD_PER_1M: Record<string, RatePair> = {
   'opencode-go/qwen3.7-plus': { input: 0.4, output: 1.6 },
   'opencode-go/hy3': { input: 0.14, output: 0.58 },
   'opencode-go/deepseek-v4-flash': { input: 0.3, output: 1.2 },
-  'opencode-go/deepseek-v4-pro': { input: 1.32, output: 3.96 },
-  'opencode-go/deepseek-v4.1-flash': { input: 0.3, output: 1.2 },
+  'opencode-go/deepseek-v4-pro': { input: 0.66, output: 1.98 }, // live catalog 2026-10-23
+  'opencode-go/deepseek-v4.1-flash': { input: 0.15, output: 0.6 }, // live catalog 2026-10-23 (was the Zen price)
   'opencode-go/grok-4.7': { input: 4.0, output: 12.0 },
   'opencode-go/grok-4.6': { input: 4.0, output: 12.0 },
   'opencode-go/grok-4.5': { input: 4.0, output: 12.0 },
   'opencode-go/mimo-v2.5': { input: 0.14, output: 0.28 },
   // #190: the GO free promotional flagship — honestly $0.
   'opencode-go/beam-free': { input: 0, output: 0 },
+  // Free Hybrid (2026-10-23): every free lane is honestly $0.
+  'opencode-go/minimax-m3.1-flash-free': { input: 0, output: 0 },
+  'opencode-go/cat-jam-free': { input: 0, output: 0 },
+  'opencode-go/longcat-2.5-preview-free': { input: 0, output: 0 },
+  'opencode-go/step-5-preview-free': { input: 0, output: 0 },
+  'opencode/beam-free': { input: 0, output: 0 },
+  'opencode/minimax-m3.1-flash-free': { input: 0, output: 0 },
+  'opencode/kimi-k2.5-free': { input: 0, output: 0 },
+  'opencode/deepseek-v4.1-flash-free': { input: 0, output: 0 },
+  'opencode/deepseek-v4-flash-free': { input: 0, output: 0 },
+  'opencode/cat-jam-free': { input: 0, output: 0 },
+  'opencode/glm-5-free': { input: 0, output: 0 },
+  'opencode/glm-5.3-flash-free': { input: 0, output: 0 },
+  'opencode/qwen3.6-plus-free': { input: 0, output: 0 },
   // OpenCode Zen (pay-as-you-go) — published per-1M rates
   // (https://opencode.ai/docs/zen/, verified 2026-09-28).
   'opencode/glm-5.3': { input: 1.4, output: 4.4 },

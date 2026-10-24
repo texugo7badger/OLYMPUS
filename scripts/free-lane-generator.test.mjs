@@ -68,12 +68,24 @@ const STUB_CATALOGUE = {
     'opencode-go/glm-5.3', 'opencode-go/glm-5.3-flash', 'opencode-go/hy3',
     'opencode-go/qwen3.7-plus', 'opencode-go/kimi-k2.7-code',
     'opencode-go/minimax-m3', 'opencode-go/kimi-k3', 'opencode-go/deepseek-v4-flash',
+    // Free Hybrid lanes (2026-10-23) — the live GO free roster.
+    'opencode-go/beam-free', 'opencode-go/minimax-m3.1-flash-free',
+    'opencode-go/cat-jam-free', 'opencode-go/longcat-2.5-preview-free',
+    'opencode-go/step-5-preview-free',
   ],
   openrouter: [
     'openrouter/cohere/north-mini-code:free',
+    'openrouter/thinkingmachines/inkling:free',
+    'openrouter/dots-studio/dots-3-note-preview:free',
     'openrouter/nvidia/nemotron-3-nano-30b-a3b:free',
   ],
-  opencode: ['opencode/glm-5.3', 'opencode/gpt-6-sol'],
+  opencode: [
+    'opencode/glm-5.3', 'opencode/gpt-6-sol',
+    // Free Hybrid lanes (2026-10-23) — the live Zen free roster.
+    'opencode/beam-free', 'opencode/minimax-m3.1-flash-free',
+    'opencode/kimi-k2.5-free', 'opencode/deepseek-v4.1-flash-free',
+    'opencode/deepseek-v4-flash-free', 'opencode/cat-jam-free',
+  ],
 };
 
 const STUB_OPENCODE = `#!/usr/bin/env node
@@ -106,9 +118,15 @@ function check(name, ok, detail = '') {
 }
 
 function applyStrategy(args, env) {
+  // Hermetic env: a developer's real provider keys (OPENCODE_API_KEY etc.)
+  // must not leak into the fixture — the Free Hybrid resolver would treat the
+  // host as a multi-source machine and skip the NVIDIA lane under test.
+  const clean = { ...process.env };
+  for (const k of ['OPENCODE_API_KEY', 'OPENCODE_GO_API_KEY', 'OPENROUTER_API_KEY',
+    'OLYMPUS_OPENROUTER_KEY', 'NVIDIA_API_KEY', 'OLYMPUS_NVIDIA_KEY']) delete clean[k];
   const r = spawnSync(process.execPath, [APPLY, ...args], {
     encoding: 'utf-8',
-    env: { ...process.env, ...env },
+    env: { ...clean, ...env },
     timeout: 120_000,
   });
   return { status: r.status, out: (r.stdout || '') + (r.stderr || '') };
@@ -183,7 +201,14 @@ function makeHome() {
     },
     openrouter: { top: [{ id: 'nvidia/nemotron-3-ultra-550b-a55b:free', context: 1000000, score: 90 }] },
   }));
-  writeFileSync(join(home, 'llm-providers.json'), JSON.stringify({ strategy: 'free-nvidia-build' }));
+  writeFileSync(join(home, 'llm-providers.json'), JSON.stringify({ strategy: 'free-hybrid' }));
+  // Free Hybrid resolves from the sources in OpenCode's auth store. This
+  // fixture models an NVIDIA-ONLY machine (the #106 distributed-pantheon
+  // lane): auth.json carries just the nvidia key, so every god resolves to
+  // its NVIDIA fallback lane.
+  mkdirSync(join(home, 'xdg', 'opencode'), { recursive: true });
+  writeFileSync(join(home, 'xdg', 'opencode', 'auth.json'),
+    JSON.stringify({ nvidia: { type: 'api', key: 'nvapi-fixture-key' } }));
   return home;
 }
 
@@ -204,7 +229,7 @@ mkdirSync(WORK, { recursive: true });
 {
   const lane = makeLane();
   const home = makeHome();
-  const r = applyStrategy(['--strategy', 'free-nvidia-build'],
+  const r = applyStrategy(['--strategy', 'free-hybrid'],
     { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
   check('G1 apply exits 0', r.status === 0, `status=${r.status} out=${r.out.slice(-500)}`);
   if (r.status === 0) {
@@ -298,7 +323,7 @@ mkdirSync(WORK, { recursive: true });
   };
   const lane = makeLane({ stubCatalogue: retiredAnchor });
   const home = makeHome();
-  const r = applyStrategy(['--strategy', 'free-nvidia-build'],
+  const r = applyStrategy(['--strategy', 'free-hybrid'],
     { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
   check('G3 L4: a retired anchor fails the apply (exit 1)', r.status === 1, `status=${r.status} out=${r.out.slice(-300)}`);
   // 2026-10-16: one model per family lane means a dead anchor has NO
@@ -319,7 +344,7 @@ mkdirSync(WORK, { recursive: true });
   };
   const lane = makeLane({ stubCatalogue: retiredAnchor });
   const home = makeHome();
-  const r = applyStrategy(['--strategy', 'free-nvidia-build', '--force'],
+  const r = applyStrategy(['--strategy', 'free-hybrid', '--force'],
     { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
   check('G4 L4: --force applies with a WARNING (exit 0)', r.status === 0, `status=${r.status}`);
   check('G4 L4: the warning names the dead anchor (loud, never silent)',
@@ -331,7 +356,7 @@ mkdirSync(WORK, { recursive: true });
   const lane = makeLane();
   rmSync(join(lane, '.opencode', 'prompts', 'agents', 'gods', 'apollo.txt'));
   const home = makeHome();
-  const r = applyStrategy(['--strategy', 'free-nvidia-build'],
+  const r = applyStrategy(['--strategy', 'free-hybrid'],
     { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
   check('G5 L1: unreadable prompt file fails the apply (exit 1)', r.status === 1, `status=${r.status} out=${r.out.slice(-300)}`);
   check('G5 L1: the error names the god + the file (never a silent keep-old)',
@@ -342,7 +367,7 @@ mkdirSync(WORK, { recursive: true });
 {
   const lane = makeLane({ withStubBinary: false });
   const home = makeHome();
-  const r = applyStrategy(['--strategy', 'free-nvidia-build'],
+  const r = applyStrategy(['--strategy', 'free-hybrid'],
     { OLYMPUS_ROOT: lane, OLYMPUS_HOME: home, XDG_DATA_HOME: join(home, 'xdg') });
   check('G6 L4: missing catalogue tooling fails the apply (exit 1)', r.status === 1, `status=${r.status} out=${r.out.slice(-300)}`);
   check('G6 L4: the error is explicit about the missing probe binary (never a silent skip)',

@@ -122,31 +122,36 @@ function extractGods(block) {
   return gods;
 }
 
-// model-strategies.ts: the 'free-nvidia-build' strategy block (nested `gods`).
+// THE SINGLE FREE STRATEGY (2026-10-23): Free Hybrid. This suite asserts the
+// DISTRIBUTED-PANTHEON doctrine on the NVIDIA-only resolution — the path a
+// machine with just an nvidia key rides (the old free-nvidia-build's map is
+// now the resolver's NVIDIA fallback column).
 const msSrc = read(path.join(ROOT, 'src/lib/model-strategies.ts'));
-const msBlockMatch = msSrc.match(/'free-nvidia-build':\s*\{[\s\S]*?\n  \},\n\};/);
-if (!msBlockMatch) throw new Error('free-nvidia-build block not found in model-strategies.ts');
+const msBlockMatch = msSrc.match(/'free-hybrid':\s*\{[\s\S]*?\n  \},\n\};/);
+if (!msBlockMatch) throw new Error('free-hybrid block not found in model-strategies.ts');
 const msBlock = msBlockMatch[0];
-const canonicalGods = extractGods(msBlock);
+const staticGods = extractGods(msBlock);
 const vaultLlm = (msBlock.match(/vaultLlm:\s*['"]([^'"]+)['"]/) || [])[1] || '';
 const terminalModel = (msBlock.match(/terminalModel:\s*['"]([^'"]+)['"]/) || [])[1] || '';
+const freeHybrid = await import('../src/lib/model-strategies.ts');
+const canonicalGods = freeHybrid.resolveFreeHybrid(['nvidia']);
 
-// apply-strategy.js: BUILTIN_STRATEGIES['free-nvidia-build'] (FLAT block).
+// apply-strategy.js: BUILTIN_STRATEGIES['free-hybrid'] (FLAT block).
 const asSrc = read(path.join(ROOT, 'scripts/apply-strategy.js'));
-const asBlockMatch = asSrc.match(/'free-nvidia-build':\s*\{([\s\S]*?)\n  \},\n\};/);
-if (!asBlockMatch) throw new Error('free-nvidia-build block not found in apply-strategy.js');
+const asBlockMatch = asSrc.match(/'free-hybrid':\s*\{([\s\S]*?)\n  \},\n\};/);
+if (!asBlockMatch) throw new Error('free-hybrid block not found in apply-strategy.js');
 const applyGods = extractGods(asBlockMatch[1]);
 
-// olympus-hooks.ts: STRATEGY_GODS["free-nvidia-build"] (double-quoted keys).
+// olympus-hooks.ts: STRATEGY_GODS["free-hybrid"] (double-quoted keys).
 const hooksSrc = read(path.join(ROOT, '.opencode/olympus/olympus-hooks.ts'));
-const hooksBlockMatch = hooksSrc.match(/"free-nvidia-build":\s*\{([\s\S]*?)\n\s*\},/);
-if (!hooksBlockMatch) throw new Error('free-nvidia-build block not found in olympus-hooks.ts');
+const hooksBlockMatch = hooksSrc.match(/"free-hybrid":\s*\{([\s\S]*?)\n\s*\},/);
+if (!hooksBlockMatch) throw new Error('free-hybrid block not found in olympus-hooks.ts');
 const hooksGods = extractGods(hooksBlockMatch[1]);
 
 // settings-dialog.tsx: the strategy god-map mirror.
 const dlgSrc = read(path.join(ROOT, 'src/components/olympus/settings-dialog.tsx'));
-const dlgBlockMatch = dlgSrc.match(/'free-nvidia-build':\s*\{([\s\S]*?)\n  \},/);
-if (!dlgBlockMatch) throw new Error('free-nvidia-build mirror not found in settings-dialog.tsx');
+const dlgBlockMatch = dlgSrc.match(/'free-hybrid':\s*\{([\s\S]*?)\n  \},/);
+if (!dlgBlockMatch) throw new Error('free-hybrid mirror not found in settings-dialog.tsx');
 const dlgGods = extractGods(dlgBlockMatch[1]);
 
 // The live-ids snapshot (chat-probe-verified 2026-10-16 — every id was sent
@@ -169,7 +174,7 @@ allLanes.small_model = smallModelNvidia || '(missing)';
 const nemotronOffenders = Object.entries(allLanes)
   .filter(([k, id]) => /nemotron/i.test(id))
   .map(([k, id]) => `${k}=${id}`);
-check('THE BAN: zero nemotron-* ids in the free-nvidia-build assignment (gods + vault + small)',
+check('THE BAN: zero nemotron-* ids in the free-hybrid NVIDIA assignment (gods + vault + small)',
   nemotronOffenders.length === 0,
   `the user's ban is LIVE in the assignment — offenders: ${nemotronOffenders.join(', ')}`);
 
@@ -197,8 +202,8 @@ check('THE HEAVY THREE: athena/hephaestus NEVER on apollo\'s anchor + the heavy 
 const flash = 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash';
 check('THE VOLUME LANE: callimachus on the fast lane (minimax-m3.1-flash)',
   canonicalGods.callimachus === flash, `callimachus=${canonicalGods.callimachus}`);
-check('THE VOLUME LANE: vaultLlm on the fast lane',
-  vaultLlm === flash, `vaultLlm=${vaultLlm}`);
+check('THE VOLUME LANE: vaultLlm is a free Zen lane (volume, not depth)',
+  /^opencode\/[a-z0-9.\-]+-free$/.test(vaultLlm), `vaultLlm=${vaultLlm}`);
 check('THE VOLUME LANE: the strategy small_model on the fast lane (volume, not depth)',
   smallModelNvidia === flash, `small_model(free-nvidia-build)=${smallModelNvidia}`);
 
@@ -212,8 +217,11 @@ check('THE CAP: no more than 3 gods on any single anchor',
 
 // --- 6. THE LIVE SET: every assigned id exists in the live-ids snapshot ------
 const bare = id => id.replace(/^nvidia-[a-z]+\//, '').replace(/^nvidia\//, '');
-const deadIds = [...GODS.map(g => canonicalGods[g]), vaultLlm, smallModelNvidia]
-  .filter(id => id && !liveIds.includes(bare(id)));
+// The live-ids snapshot covers the NVIDIA lanes (probe-verified). vaultLlm
+// is a Zen free lane (covered by its own $0 pricing entry), so it is not
+// part of this NVIDIA-availability claim.
+const deadIds = [...GODS.map(g => canonicalGods[g]), smallModelNvidia]
+  .filter(id => id && id.startsWith('nvidia-') && !liveIds.includes(bare(id)));
 check('THE LIVE SET: every assigned model id exists in the probe-verified live-ids snapshot',
   deadIds.length === 0,
   `ids not in the live list (a claim about availability carries probe evidence): ${deadIds.join(', ')} (bare: ${deadIds.map(bare).join(', ')})`);
@@ -221,18 +229,18 @@ check('THE LIVE SET: every assigned model id exists in the probe-verified live-i
 // --- 7. THE MIRRORS: all four surfaces agree + the sync checker green -------
 const mirrors = { 'apply-strategy.js': applyGods, 'olympus-hooks.ts': hooksGods, 'settings-dialog.tsx': dlgGods };
 for (const [label, map] of Object.entries(mirrors)) {
-  const drift = GODS.filter(g => map[g] !== canonicalGods[g]);
-  check(`THE MIRRORS: ${label} free-nvidia-build map == canonical`,
+  const drift = GODS.filter(g => map[g] !== staticGods[g]);
+  check(`THE MIRRORS: ${label} free-hybrid map == canonical`,
     drift.length === 0,
-    `drift: ${drift.map(g => `${g}: ${map[g]} != ${canonicalGods[g]}`).join(', ')}`);
+    `drift: ${drift.map(g => `${g}: ${map[g]} != ${staticGods[g]}`).join(', ')}`);
 }
 let syncOk = false, syncOut = '';
 try {
   syncOut = execFileSync('node', [path.join(ROOT, 'scripts/check-strategy-sync.js')],
     { encoding: 'utf-8', timeout: 60_000 });
-  syncOk = syncOut.includes('all 9 strategies in sync');
+  syncOk = syncOut.includes('all 10 strategies in sync');
 } catch (e) { syncOut = String(e.stdout || e.message); }
-check('THE MIRRORS: check-strategy-sync 9/9 green', syncOk, syncOut.slice(0, 400));
+check('THE MIRRORS: check-strategy-sync 10/10 green', syncOk, syncOut.slice(0, 400));
 
 // ── HIGIENIA-1 H1b ────────────────────────────────────────────────────────────
 // #93 (GO-CARD-PROSE): every GO/Zen PROSE surface names the model the apply
@@ -363,7 +371,7 @@ if (familyProviders) {
 
 // --- 10. THE TERMINAL: the top-level model == apollo's lane ----------------
 check('THE TERMINAL: terminalModel == apollo\'s lane (the entry god)',
-  terminalModel === canonicalGods.apollo, `terminalModel=${terminalModel}, apollo=${canonicalGods.apollo}`);
+  terminalModel === staticGods.apollo, `terminalModel=${terminalModel}, apollo=${canonicalGods.apollo}`);
 
 // --- 11. THE DESCRIPTION: the doctrine is expressed --------------------------
 const doctrineWords = ['distributed', 'Nemotron', 'pool'];
