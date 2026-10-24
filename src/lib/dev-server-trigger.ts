@@ -141,7 +141,7 @@ export async function maybeStartDevServer(projectSlug: string, laneRoot: string)
     // W-S STATIC-PREVIEW: the HTML lane serves via the tiny static server —
     // no deps step, a ~1s bind, the same durable state + the panel's port.
     if (gate.kind === 'static') {
-      const started = await devServerManager.startStatic(projectSlug);
+      const started = await devServerManager.startStatic(projectSlug, undefined, laneRoot);
       if (!started.ok) {
         const portMatch = String(started.error || '').match(/port (\d+) is busy/);
         if (portMatch) {
@@ -169,7 +169,7 @@ export async function maybeStartDevServer(projectSlug: string, laneRoot: string)
       };
     }
 
-    const started = await devServerManager.start(projectSlug);
+    const started = await devServerManager.start(projectSlug, undefined, laneRoot);
     if (!started.ok) {
       // #ADOPT-ON-PROBE (the 23:53:31 specimen): the turn had already raised
       // the dev server via bash; the manager — rightly — refused to

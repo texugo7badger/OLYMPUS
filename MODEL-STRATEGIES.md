@@ -150,7 +150,7 @@ OLYMPUS now has **10 gods** (9 original + Atlas):
 | Prometheus | DevOps | MiniMax M3 |
 | Callimachus | Vault curation | GLM-5.3-Flash |
 
-## The nine built-in strategies
+## The ten built-in strategies
 
 ### `go-max-quality` — best models, highest cost
 
@@ -275,6 +275,35 @@ key), OpenRouter, NVIDIA Build. More sources = a stronger free. Configure via
 
 **When to use:** always, when you want zero cost. It is the strongest free shape OLYMPUS can
 build from the APIs you have.
+
+### `byok-deepseek` — your own OpenRouter key, every god on one strong lane
+
+Added 2026-10-24 after the **GO monthly quota was spent** and every `go-*` strategy died with
+`GoUsageLimitError` (retry in ~4.5 days). If you already pay for a provider outside the GO/Zen
+plans, this strategy points all ten gods at that lane.
+
+| | |
+|---|---|
+| Lane | `openrouter/deepseek/deepseek-v4.1-flash-1017` |
+| Window | **1,048,576** context / **393,216** output |
+| Price | **$0.15** in / **$0.60** out per 1M (cache read $0.003) |
+| Volume lane | `openrouter/cohere/north-mini-code:free` (titles + compaction — never bills your key) |
+| Demigods | inherit their parent god's model (one lane, one bill) |
+
+Why a dedicated family instead of `custom-*`: custom strategies are **free-only by a
+money-safety guard**, and pointing OLYMPUS at a key you already pay for is a deliberate
+choice, not an accident. `byok-*` is that deliberate lane; the guard still blocks silent
+downgrades everywhere else.
+
+**One lane means one point of failure — which is why the runtime failover exists.** If this
+lane rate-limits or the credit runs out, `src/lib/lane-health.ts` records the provider's class
+and `retryAfterMs`, and the hop re-posts on the next healthy lane of that god's
+`FREE_HYBRID_ROSTER` chain instead of parking. Check the bill: `/api/olympus/run-state` and the
+StatusBar pill show dead lanes.
+
+```bash
+node scripts/apply-strategy.js --strategy byok-deepseek
+```
 
 ## Custom strategies
 

@@ -272,7 +272,7 @@ function baseStatus(slug: string): DevServerStatus {
  * with the SAME state (never a second spawn on the same port); a busy port
  * this manager does not own is an honest refusal, never a double-spawn.
  */
-export async function start(projectSlug: string, port?: number): Promise<DevServerStartResult> {
+export async function start(projectSlug: string, port?: number, rootOverride?: string | null): Promise<DevServerStartResult> {
   const laneDirRoot = workspaceLaneDir();
   // #112 (PREVIEW-2): the lane-aware truth. The #110 autonomous intake
   // registers projects at 02_Projects/<slug> (the user's pinned directive);
@@ -286,7 +286,14 @@ export async function start(projectSlug: string, port?: number): Promise<DevServ
   // workspace root — that shape degrades to the legacy refusal below.
   const reconciled = reconcileProjectPath(projectSlug);
   const legacyPath = join(laneDirRoot, projectSlug);
-  const projectPath = reconciled && reconciled.path !== laneDirRoot ? reconciled.path : legacyPath;
+  // #ONE-HOME (the AIME specimen, 2026-10-24): the GATE validated a lane root
+  // (it read package.json / index.html there), but the slug-derived path could
+  // be a DIFFERENT directory — the stale 'aime-uploaded-files-aime' note home
+  // with nothing in it. The caller now passes the root it gated on, and that
+  // root wins: the manager must spawn where the evidence came from.
+  const projectPath = (rootOverride && existsSync(rootOverride))
+    ? rootOverride
+    : (reconciled && reconciled.path !== laneDirRoot ? reconciled.path : legacyPath);
   if (!existsSync(projectPath)) {
     return {
       ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: null,
@@ -429,10 +436,12 @@ function findPortOwnerPid(port: number): number | null {
  * deliverables exactly like it does for npm-run-dev projects. Idempotent:
  * an already-running server returns alreadyRunning:true.
  */
-export async function startStatic(projectSlug: string, port?: number): Promise<DevServerStartResult> {
+export async function startStatic(projectSlug: string, port?: number, rootOverride?: string | null): Promise<DevServerStartResult> {
   const reconciled = reconcileProjectPath(projectSlug);
   const legacyPath = join(workspaceLaneDir(), projectSlug);
-  const projectPath = reconciled && reconciled.path !== workspaceLaneDir() ? reconciled.path : legacyPath;
+  const projectPath = (rootOverride && existsSync(rootOverride))
+    ? rootOverride
+    : (reconciled && reconciled.path !== workspaceLaneDir() ? reconciled.path : legacyPath);
   if (!existsSync(projectPath)) {
     return { ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: null, projectPath: null, state: null, error: `no lane project directory at ${projectPath}` };
   }

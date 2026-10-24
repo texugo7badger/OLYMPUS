@@ -115,3 +115,6 @@ vault-sim/
 vault-sim*/
 .tmp-*.mts
 .superpowers
+
+# Private debug transcript (user session log) — never publish
+Todas as estrat*deram erro* Ajuda..md
