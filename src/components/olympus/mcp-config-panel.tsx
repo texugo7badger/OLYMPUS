@@ -42,6 +42,8 @@ interface McpServerInfo {
   /** The opencode.json `enabled` flag — the honest DEFAULT for
    *  opencode-native entries (they ship disabled). */
   opencodeEnabled?: boolean;
+  /** MCP health probe result (alive/dead/disabled). */
+  health?: { status: 'alive' | 'dead' | 'disabled' | 'unprobed'; error?: string; latencyMs?: number };
 }
 
 interface McpListResponse {
@@ -59,13 +61,17 @@ export default function MCPConfigPanel() {
     setLoading(true);
     setError(null);
     try {
-      const [mcpRes, apiRes] = await Promise.all([
+      const [mcpRes, apiRes, healthRes] = await Promise.all([
         fetch('/api/olympus/mcp/list', { cache: 'no-store' }),
         fetch('/api/olympus/api-configs', { cache: 'no-store' }),
+        fetch('/api/olympus/mcp/health', { cache: 'no-store' }).catch(() => null),
       ]);
       if (!mcpRes.ok) throw new Error(`MCP list API returned ${mcpRes.status}`);
       const mcpData: McpListResponse = await mcpRes.json();
       const apiConfigs = apiRes.ok ? await apiRes.json() : { configs: {} };
+      const healthData = healthRes?.ok ? await healthRes.json() : { results: [] };
+      const healthMap: Record<string, { status: string; error?: string; latencyMs?: number }> = {};
+      for (const h of (healthData.results || [])) healthMap[h.name] = h;
 
       // Determine which API keys are configured
       const configuredKeys = new Set<string>();
@@ -82,12 +88,9 @@ export default function MCPConfigPanel() {
 
       const enriched: McpServerInfo[] = mcpData.servers.map(s => {
         const apiKeysConfigured = s.apiKeyEnvVars.every(v => configuredKeys.has(v));
-        // Default: enabled if not in the state map (first load) — EXCEPT
-        // opencode-native entries, whose honest default is the opencode.json
-        // `enabled` flag (the four tool MCPs ship disabled).
         const fallback = s.registry === 'opencode' ? (s.opencodeEnabled ?? true) : true;
         const enabled = enabledMap[s.name] ?? fallback;
-        return { ...s, apiKeysConfigured, enabled };
+        return { ...s, apiKeysConfigured, enabled, health: healthMap[s.name] as McpServerInfo['health'] };
       });
 
       setServers(enriched);
@@ -253,7 +256,19 @@ export default function MCPConfigPanel() {
                       {isLocked ? (
                         <Lock size={10} className="text-olympus-amber-soft shrink-0" />
                       ) : s.enabled ? (
-                        <CheckCircle2 size={10} className="text-olympus-green shrink-0" />
+                        s.health?.status === 'dead' ? (
+                          <span
+                            data-tip={s.health.error || 'MCP did not respond to initialize within 10s'}
+                            className="w-2 h-2 rounded-full bg-olympus-red shrink-0"
+                          />
+                        ) : s.health?.status === 'alive' ? (
+                          <span
+                            data-tip={`alive — ${s.health.latencyMs ?? '?'}ms`}
+                            className="w-2 h-2 rounded-full bg-olympus-green shrink-0"
+                          />
+                        ) : (
+                          <CheckCircle2 size={10} className="text-olympus-green shrink-0" />
+                        )
                       ) : (
                         <XCircle size={10} className="text-olympus-text-dim shrink-0" />
                       )}
