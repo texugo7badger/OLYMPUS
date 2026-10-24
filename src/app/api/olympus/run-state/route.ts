@@ -111,11 +111,11 @@ export async function GET() {
   // The single human line — the StatusBar renders exactly this.
   const line =
     verdict === 'RUNNING'
-      ? `RUNNING · ${campaign.state === 'running' ? campaign.campaignId : 'campanha'} · pid ${campaign.state === 'running' ? campaign.pid : '?'} · ${completed} hop(s) ok`
+      ? `RUNNING · ${campaign.state === 'running' ? campaign.campaignId : 'campaign'} · pid ${campaign.state === 'running' ? campaign.pid : '?'} · ${completed} hop(s) ok`
       : verdict === 'PARKED'
         ? `PARKED · ${parked?.hopId ?? '?'} · ${parked?.reason ?? 'sem causa registrada'}`
         : verdict === 'UNVERIFIED'
-          ? 'UNVERIFIED — há estado em disco, mas nenhum processo foi confirmado'
+          ? 'UNVERIFIED — state on disk, but no process could be confirmed'
           : 'IDLE';
 
   return NextResponse.json({

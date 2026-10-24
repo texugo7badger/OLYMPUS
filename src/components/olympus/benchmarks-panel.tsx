@@ -253,7 +253,7 @@ export default function BenchmarksPanel() {
                   <div
                     key={i}
                     className="flex-1 group relative"
-                    title={`${s.date}: ${s.dispatches} dispatches, ${s.tokens} tokens, ${s.short_circuits} short-circuits`}
+                    data-tip={`${s.date}: ${s.dispatches} dispatches, ${s.tokens} tokens, ${s.short_circuits} short-circuits`}
                   >
                     <div
                       className={cn(

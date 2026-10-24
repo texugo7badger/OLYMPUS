@@ -147,7 +147,7 @@ export default function DesignStudio({ open, project, conversationId, query, onC
               {projectSlug ? `saving to ${projectSlug}/design-decisions.jsonl` : 'no active project — selections cannot be saved'}
             </div>
           </div>
-          <button onClick={onClose} className="text-olympus-text-dim hover:text-olympus-text p-1" title="Close">
+          <button onClick={onClose} className="text-olympus-text-dim hover:text-olympus-text p-1" data-tip="Close">
             <X size={13} />
           </button>
         </div>
@@ -239,7 +239,7 @@ export default function DesignStudio({ open, project, conversationId, query, onC
                   </div>
                   <div className="flex rounded-md overflow-hidden h-10 border border-black/20">
                     {p.colors.map((c) => (
-                      <div key={c.role} className="flex-1 relative group/sw" style={{ background: c.hex }} title={`${c.role} · ${c.hex}`}>
+                      <div key={c.role} className="flex-1 relative group/sw" style={{ background: c.hex }} data-tip={`${c.role} · ${c.hex}`}>
                         <span className="absolute inset-x-0 bottom-0 text-[6px] font-mono text-center opacity-0 group-hover/sw:opacity-100 bg-black/50 text-white">{c.hex}</span>
                       </div>
                     ))}

@@ -153,6 +153,7 @@ export function harvestPlanFromTurnText(turnText: string): { strict: string; not
 import { join } from 'node:path';
 import { walkPlan, resolveGodModelLane, readHopTelemetry, type HopDispatcher, type HopWalkEvent } from './walker';
 import { acquireWalkLock } from './walk-lock';
+import { loadArsenal } from './arsenal';
 import { buildOvernightDigest, buildWaveReports, writeOvernightDigest } from './overnight';
 import { hopStatePath, saveHopState } from './hop-state';
 import { createGate, getPendingGates, listGates, resolveGate } from '@/lib/hitl-gates';
@@ -194,7 +195,7 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
   let msg = '';
   if (ev.type === 'hop_start') {
     msg = `Hop '${ev.hop}' started — god ${ev.god}${poolNote}, lane ${laneRoot}`;
-    if (send) send({ type: 'hop_start', hop: ev.hop, god: ev.god, pool, lane: laneRoot, artifacts: ev.artifacts, msg, ts });
+    if (send) send({ type: 'hop_start', hop: ev.hop, god: ev.god, pool, lane: laneRoot, artifacts: ev.artifacts, arsenal: (ev as { arsenal?: string[] }).arsenal, msg, ts });
   } else if (ev.type === 'hop_heartbeat') {
     msg = `Hop '${ev.hop}' running — god ${ev.god}${poolNote}, ${Math.round(ev.elapsedMs / 1000)}s (the spawn works; the next event lands on completion)`;
     if (send) send({ type: 'log', msg, ts });
@@ -211,7 +212,28 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
   // see who is walking what, across sessions — #85's foundation). Fixtures
   // omit it; the real vault is never polluted by test hops.
   if (publishActivity) {
-    try { appendActivity({ god: ev.god, action: 'hop', msg }); } catch { /* the feed write never breaks the walk */ }
+    try {
+      // #MINITASK (2026-10-24): carry the arsenal the god commands (its
+      // demigod roster) so the Recent Activity / God Intelligence panels
+      // can answer "which skill/MCP/subagent is this minitask using" instead
+      // of showing skill: null. The real per-dispatch skill/mcp arrive later
+      // via the symphony-dispatch episodes; this is the AVAILABLE arsenal.
+      const arsenal = ev.type === 'hop_start'
+        ? loadArsenal(ev.god).map((d) => d.id)
+        : undefined;
+      appendActivity({
+        god: ev.god,
+        action: 'hop',
+        msg,
+        meta: {
+          hop: ev.hop,
+          lane: laneRoot,
+          pool,
+          artifacts: (ev as { artifacts?: string[] }).artifacts,
+          arsenal: arsenal ?? null,
+        },
+      });
+    } catch { /* the feed write never breaks the walk */ }
   }
 }
 
@@ -511,9 +533,9 @@ export async function maybeWalkThePlan(opts: {
   if (!lock.ok && lock.reason === 'held') {
     const who = lock.holder;
     const msg =
-      `Já existe uma campanha caminhando nesta lane${who ? ` (pid ${who.pid}, god plan '${who.slug}', desde ${who.startedAt})` : ''} — `
-      + `este envio NÃO abriu uma segunda caminhada. Acompanhe os hops no painel God Intelligence, `
-      + `ou espere a campanha atual terminar antes de reenviar. Se ela parecer travada, o lock expira sozinho em 5 min sem heartbeat.`;
+      `A campaign is already walking this lane${who ? ` (pid ${who.pid}, plan '${who.slug}', started ${who.startedAt})` : ''} — `
+      + `this send did NOT open a second walk. Follow the hops in the God Intelligence panel, `
+      + `or wait for the current campaign to finish before resending. If it looks stuck, the lock expires on its own after 5 min without a heartbeat.`;
     const lockTotal = planHopCount(plan);
     opts.send?.({ type: 'walk_summary', completed: 0, total: lockTotal, parked: null, msg, ts: new Date().toISOString() });
     return { walked: false, reason: 'already-walking', completed: 0, total: lockTotal, parked: null, summaryLine: msg };

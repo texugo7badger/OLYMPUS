@@ -127,7 +127,7 @@ export default function PlanPanel({ items, onToggle }: PlanPanelProps) {
               key={item.id}
               type="button"
               onClick={() => onToggle(item.id)}
-              title={isDone ? 'Mark pending' : 'Mark done'}
+              data-tip={isDone ? 'Mark pending' : 'Mark done'}
               className={cn(
                 'w-full text-left px-2 py-1 flex items-start gap-1.5 transition-colors hover:bg-olympus-gold/5',
                 nested && 'pl-4',

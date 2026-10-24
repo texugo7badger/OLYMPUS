@@ -79,7 +79,7 @@ export default function ActivityBar() {
               key={id}
               aria-label={id}
               aria-pressed={isSelected}
-              title={`${id.charAt(0).toUpperCase() + id.slice(1)} — ${isSelected ? 'selected (click to clear)' : 'select + open god detail'}`}
+              data-tip={`${id.charAt(0).toUpperCase() + id.slice(1)} — ${isSelected ? 'selected (click to clear)' : 'select + open god detail'}`}
               onClick={() => {
                 // W-D1: the click WRITES the selection (toggle — the
                 // Parthenon's own god-panel precedent), then drills down.

@@ -512,7 +512,7 @@ export default function ProviderSettings() {
                     onClick={() => deleteCustomStrategy(s.id)}
                     className="p-1 rounded hover:bg-olympus-red/10 text-olympus-text-dim hover:text-olympus-red transition-colors"
                     aria-label={"Delete " + s.label}
-                    title="Delete custom strategy"
+                    data-tip="Delete custom strategy"
                   >
                     <Trash2 size={10} />
                   </button>

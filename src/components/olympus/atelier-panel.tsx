@@ -269,7 +269,7 @@ export default function AtelierPanel() {
             finally { setBusy(null); }
           }}
           disabled={busy === 'reindex'}
-          title="Re-index the vault for semantic search (needs the Pollinations key — API Keys dialog)"
+          data-tip="Re-index the vault for semantic search (needs the Pollinations key — API Keys dialog)"
           className="px-2 py-1 rounded text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold ring-1 ring-olympus-gold/15 hover:ring-olympus-gold/40 disabled:opacity-40 shrink-0"
         >
           {busy === 'reindex' ? <Loader2 size={11} className="animate-spin" /> : 're-index'}
@@ -387,7 +387,7 @@ export default function AtelierPanel() {
                     <div className="text-[9px] font-mono text-olympus-text-dim uppercase mb-1.5">dominant colors</div>
                     <div className="flex gap-1.5">
                       {selected.dominantColors.map((c, i) => (
-                        <div key={i} className="w-8 h-8 rounded ring-1 ring-white/15" style={{ background: c }} title={c} />
+                        <div key={i} className="w-8 h-8 rounded ring-1 ring-white/15" style={{ background: c }} data-tip={c} />
                       ))}
                     </div>
                   </div>

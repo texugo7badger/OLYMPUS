@@ -290,7 +290,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  dispatches have happened yet. */}
  <span className={cn('w-1.5 h-1.5 rounded-full',
  hasRealCosts ? 'bg-olympus-green animate-pulse' : 'bg-olympus-text-dim/30')}
- title={hasRealCosts ? 'Live — cost.jsonl receiving events' : 'No cost events yet — dispatch a task to Apollo'}
+ data-tip={hasRealCosts ? 'Live — cost.jsonl receiving events' : 'No cost events yet — dispatch a task to Apollo'}
  />
  {/* Active strategy chip. Reads from the new
  /api/olympus/strategy endpoint which returns the active strategy
@@ -554,7 +554,7 @@ function GodRow({
  key={`${a.agent}-${i}`}
  onClick={() => setViewingDemigod({ god: c.god, agent: a.agent, shortDesc })}
  className="w-full flex items-center gap-2 text-[10px] font-mono py-0.5 px-1 -mx-1 rounded hover:bg-olympus-gold/5 transition-colors text-left group"
- title={`Open ${a.agent} prompt`}
+ data-tip={`Open ${a.agent} prompt`}
  >
  <Cpu size={9} className={usedRecently ? 'text-olympus-green' : 'text-olympus-text-dim'} />
  <span className="text-olympus-text-dim group-hover:text-olympus-gold transition-colors shrink-0">

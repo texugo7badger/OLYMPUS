@@ -220,7 +220,7 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
                             ? 'bg-olympus-green/15 text-olympus-green ring-olympus-green/30'
                             : 'bg-olympus-card text-olympus-text ring-olympus-gold/20 hover:bg-olympus-gold/10 hover:text-olympus-gold',
                         )}
-                        title={f.file}
+                        data-tip={f.file}
                       >
                         {f.tool}: {f.file.split('/').pop()}
                       </button>
@@ -270,7 +270,7 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
                         key={a}
                         onClick={() => openInEditor(a.includes('/') ? a : `${a}`)}
                         className="block text-[10px] font-mono text-olympus-green/90 hover:text-olympus-gold transition-colors truncate max-w-full text-left"
-                        title={a}
+                        data-tip={a}
                       >
                         ↳ {a}
                       </button>

@@ -41,6 +41,9 @@ interface Episode {
   durationMs?: number | null;
   toolCalls?: number | null;
   findings?: string | null;
+  /** #MINITASK (2026-10-24): the demigod roster the god commands for this
+   *  hop (available arsenal). Populated on `hop` events only. */
+  arsenal?: string[] | null;
 }
 
 const VAULT = getVaultRoot();
@@ -188,6 +191,7 @@ function readLiveEpisodes(): Episode[] {
       durationMs: typeof ev.duration_ms === 'number' ? ev.duration_ms : null,
       toolCalls: typeof ev.tool_call_count === 'number' ? ev.tool_call_count : null,
       findings: typeof ev.findings_summary === 'string' ? ev.findings_summary.slice(0, 240) : null,
+      arsenal: Array.isArray(ev.arsenal ?? meta.arsenal) ? (ev.arsenal ?? meta.arsenal) : null,
     };
     // W0-D: the hop runtime replaced dispatch-as-tool — each hop IS a
     // delegated task. The panel's TASKS counter and the drill-down agree

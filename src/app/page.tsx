@@ -98,7 +98,7 @@ function PanelLoading({ label }: { label: string }) {
       className="h-full w-full flex flex-col items-center justify-center gap-2 bg-olympus-bg text-olympus-text-dim"
       role="status"
       aria-live="polite"
-      aria-label={`Carregando ${label}`}
+      aria-label={`Loading ${label}`}
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="animate-spin text-olympus-gold/80" aria-hidden="true">
         <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2.5" />

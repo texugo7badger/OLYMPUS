@@ -775,7 +775,7 @@ function CompactInstinctTable({
  hasNames ? 'hover:bg-olympus-gold/5 ' : '',
  isExpanded && 'bg-olympus-gold/5',
  )}
- title={hasNames ? `Click to ${isExpanded ? 'collapse' : 'expand'} ${godName}'s instincts` : undefined}
+ data-tip={hasNames ? `Click to ${isExpanded ? 'collapse' : 'expand'} ${godName}'s instincts` : undefined}
  >
  <span className="flex items-center gap-1.5 text-olympus-text-dim truncate">
  {hasNames && (
@@ -904,7 +904,7 @@ function ExpandedTier({
  onClick={() => onSelect(entry)}
  disabled={!entry.relPath}
  className="w-full text-left flex items-center gap-1.5 px-1.5 py-1 rounded hover:bg-olympus-gold/5 transition-colors text-[10px] font-mono disabled:opacity-60 disabled:hover:bg-transparent"
- title={entry.relPath ? `Open ${entry.name}` : 'no vault path available'}
+ data-tip={entry.relPath ? `Open ${entry.name}` : 'no vault path available'}
  >
  <span className="text-olympus-text-dim truncate flex-1">{entry.name}</span>
  {typeof entry.confidence === 'number' && (

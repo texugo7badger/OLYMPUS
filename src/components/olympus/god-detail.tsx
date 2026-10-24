@@ -253,7 +253,7 @@ export default function GodDetail() {
  key={key}
  onClick={() => setViewingDemigod({ agent: a.agent, shortDesc })}
  className="w-full text-left group flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-olympus-gold/5 transition-colors"
- title={`Open ${a.agent} prompt`}
+ data-tip={`Open ${a.agent} prompt`}
  role="button"
  tabIndex={0}
  onKeyDown={(e) => {
@@ -350,7 +350,7 @@ export default function GodDetail() {
  ].map(item => (
  <span
  key={`${item.kind}:${item.name}`}
- title={`${item.kind} — ${item.samples} dispatches, ${(item.confidence * 100).toFixed(0)}% success (the arsenal-resonance feedback loop)`}
+ data-tip={`${item.kind} — ${item.samples} dispatches, ${(item.confidence * 100).toFixed(0)}% success (the arsenal-resonance feedback loop)`}
  className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-card ring-1 ring-olympus-cyan/20 text-olympus-text"
  >
  {item.name} <span className="text-olympus-cyan">×{item.samples}</span>
@@ -381,7 +381,7 @@ export default function GodDetail() {
  key={`ref-${i}`}
  onClick={() => ref.relPath && setViewingKnowledge({ relPath: ref.relPath, name: ref.name })}
  className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-olympus-gold/5 transition-colors"
- title={`Open ${ref.name}`}
+ data-tip={`Open ${ref.name}`}
  disabled={!ref.relPath}
  >
  <BookOpenText size={10} className="text-olympus-cyan shrink-0" />

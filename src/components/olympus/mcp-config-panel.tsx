@@ -244,7 +244,7 @@ export default function MCPConfigPanel() {
                           route's dual store). */}
                       {s.registry === 'opencode' && (
                         <span
-                          title="OpenCode-native MCP (the opencode.json mcp block) — toggling here flips its enabled flag in opencode.json + the runtime gate"
+                          data-tip="OpenCode-native MCP (the opencode.json mcp block) — toggling here flips its enabled flag in opencode.json + the runtime gate"
                           className="text-[8px] font-mono px-1 py-px rounded ring-1 ring-olympus-cyan/30 text-olympus-cyan shrink-0"
                         >
                           oc

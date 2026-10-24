@@ -309,13 +309,13 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   <span className="text-[8px] font-mono text-olympus-text-dim truncate hidden md:block">{refView.what}</span>
                   <button
                     onClick={() => { try { navigator.clipboard.writeText(refView.fetchLane); } catch { /* best-effort */ } }}
-                    title="Copy the fetch/install lane"
+                    data-tip="Copy the fetch/install lane"
                     className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20 shrink-0"
                   >copy lane</button>
                   <a href={refView.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold px-1 shrink-0"><ExternalLink size={10} /></a>
                 </div>
                 {refView.probe.frameable ? (
-                  <iframe src={refView.demoUrl} className="flex-1 w-full bg-white" title={refView.name} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals" />
+                  <iframe src={refView.demoUrl} className="flex-1 w-full bg-white" title={refView.name} data-tip={refView.name} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals" />
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center p-8">
                     <p className="text-olympus-text text-xs font-mono">{refView.name}: {refView.probe.ok ? 'the demo blocks embedding (upstream frame policy)' : 'demo unreachable right now'}</p>
@@ -336,7 +336,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                     <p className="text-[8px] font-mono text-[#5A5A5A]">OriginKit (free key MCP) + Skiper UI (shadcn registry) — curated inspiration; the [OLYMPUS-DESIGN] marker carries the marquee list to the gods.</p>
                     {originkitBudget && (
                       <span
-                        title={originkitBudget.exhausted
+                        data-tip={originkitBudget.exhausted
                           ? `OriginKit free key exhausted — resets ${new Date(originkitBudget.resetAt).toLocaleString('en-US', { hour12: false })}`
                           : `Resets ${new Date(originkitBudget.resetAt).toLocaleString('en-US', { hour12: false })}`}
                         className={cn(
@@ -546,7 +546,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
               <iframe
                 src={view.src}
                 className="flex-1 w-full bg-white"
-                title={view.app.name}
+                title={view.app.name} data-tip={view.app.name}
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"
               />
             ) : view.probe === null ? (
@@ -557,7 +557,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
               <iframe
                 src={view.src}
                 className="flex-1 w-full bg-white"
-                title={view.app.name}
+                title={view.app.name} data-tip={view.app.name}
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"
               />
             ) : (

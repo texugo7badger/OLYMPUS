@@ -248,7 +248,7 @@ export default function DocumentViewerModal({
  <button
  key={s.name}
  onClick={() => selectSubSkill(s.name)}
- title={s.title || s.name}
+ data-tip={s.title || s.name}
  className={cn(
  'flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono transition-all',
  isActive

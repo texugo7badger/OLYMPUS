@@ -878,7 +878,7 @@ export default function SettingsDialog() {
   const familyLabel =
     selectedFamily === 'GO' ? 'GO models'
     : selectedFamily === 'ZEN' ? 'ZEN models'
-    : selectedFamily === 'BYOK' ? 'Sua chave (BYOK) — a lane que você paga'
+    : selectedFamily === 'BYOK' ? 'Your key (BYOK) — the lane you pay for'
     : strategy === 'free-hybrid' || strategy === 'free-openrouter' || strategy === 'free-nvidia-build' || strategy === 'free-big-pickle'
       ? 'Free Hybrid — best free lane per god'
     : 'Free models (all providers)';
@@ -1024,7 +1024,7 @@ export default function SettingsDialog() {
                           onClick={() => deleteCustomStrategy(s.id)}
                           className="p-1 rounded hover:bg-olympus-red/10 text-olympus-text-dim hover:text-olympus-red transition-colors"
                           aria-label={`Delete ${s.label}`}
-                          title="Delete custom strategy"
+                          data-tip="Delete custom strategy"
                         >
                           <Trash2 size={10} />
                         </button>

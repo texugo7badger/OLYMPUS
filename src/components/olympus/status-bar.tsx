@@ -156,7 +156,7 @@ export default function StatusBar({ health }: { health: any }) {
  <img src="/logo.svg" alt="OLYMPUS" className="size-5" />
  <span>OLYMPUS</span>
               {!hideVersion && (
-   <span className="text-olympus-text-dim font-normal" title="OLYMPUS version">
+   <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
      v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.14'}
    </span>
 )}
@@ -189,7 +189,7 @@ export default function StatusBar({ health }: { health: any }) {
      evidence: the walk lock's pid + heartbeat (/api/olympus/run-state),
      per the #105 law — no probe, no claim. */}
  <RunStatePill />
- <div className="flex items-center gap-1 shrink-0" title={workingGods.length > 0 ? workingGods.join(' · ') : (fallbackGod || 'idle')}>
+ <div className="flex items-center gap-1 shrink-0" data-tip={workingGods.length > 0 ? workingGods.join(' · ') : (fallbackGod || 'idle')}>
  {workingGods.length > 0 ? (
  workingGods.map((g) => {
  const Icon = GOD_ICONS[g];
@@ -216,25 +216,25 @@ export default function StatusBar({ health }: { health: any }) {
 	 compact mode (<1200px) but icons remain for identification. */}
  <div className="flex items-center gap-1.5 shrink-0" aria-label="Brain metrics">
  <span className="text-olympus-text-dim">{compact ? '' : 'brain:'}</span>
- <span className="flex items-center gap-1 text-olympus-green" title="Total instinct files in the brain">
+ <span className="flex items-center gap-1 text-olympus-green" data-tip="Total instinct files in the brain">
  <Lightbulb size={11} />
  <span>{health?.total_instincts ?? 0}</span>
  {!compact && <span className="text-olympus-text-dim text-[10px]">instincts</span>}
  </span>
  <span className="text-[#5A5A5A]">·</span>
- <span className="flex items-center gap-1 text-olympus-green" title="Average instinct confidence (0.00 – 1.00)">
+ <span className="flex items-center gap-1 text-olympus-green" data-tip="Average instinct confidence (0.00 – 1.00)">
  <Gauge size={11} />
  <span>{(health?.avg_confidence ?? 0).toFixed(2)}</span>
  {!compact && <span className="text-olympus-text-dim text-[10px]">conf</span>}
  </span>
  <span className="text-[#5A5A5A]">·</span>
- <span className="flex items-center gap-1 text-olympus-cyan" title="Total installed skills">
+ <span className="flex items-center gap-1 text-olympus-cyan" data-tip="Total installed skills">
  <Layers size={11} />
  <span>{health?.total_skills ?? 0}</span>
  {!compact && <span className="text-olympus-text-dim text-[10px]">skills</span>}
  </span>
  <span className="text-[#5A5A5A]">·</span>
- <span className="flex items-center gap-1 text-olympus-purple" title="Total gods + demigods">
+ <span className="flex items-center gap-1 text-olympus-purple" data-tip="Total gods + demigods">
  <Users size={11} />
  <span>{health?.total_agents ?? 0}</span>
  {!compact && <span className="text-olympus-text-dim text-[10px]">agents</span>}
@@ -252,7 +252,7 @@ export default function StatusBar({ health }: { health: any }) {
 	 <span className={cn('font-semibold', isFree ? 'text-olympus-green' : 'text-olympus-gold')}>
 	 {isFree ? `${(totalTokens >= 1000 ? (totalTokens / 1000).toFixed(1) + 'k' : String(totalTokens))} tok` : `$${realUsd.toFixed(2)}`}
 	 </span>
-	 <span className="text-olympus-text-dim text-[10px] hidden sm:inline" title={estimatedUsd > 0 ? `Est. $${estimatedUsd.toFixed(2)} (heuristic) + real provider spend` : undefined}>
+	 <span className="text-olympus-text-dim text-[10px] hidden sm:inline" data-tip={estimatedUsd > 0 ? `Est. $${estimatedUsd.toFixed(2)} (heuristic) + real provider spend` : undefined}>
 	 {isFree && realUsd === 0 ? '(free)' : `· ${prov?.name ?? '-'}${estimatedUsd > 0 ? ` +~$${estimatedUsd.toFixed(2)} est` : ''}`}
 	 </span>
  </button>
@@ -370,12 +370,27 @@ function RunStatePill() {
  return (
   <span
    className={cn('flex items-center gap-1 shrink-0 text-[10px] font-mono', tone)}
-   title={`${state.line}\n\nevidence: ${state.evidence}${state.blockedCount ? `\n\n${state.blockedCount} lane(s) de modelo mortas — veja Settings → LLM Strategy` : ''}`}
+   data-tip={`${state.line}\n\nevidence: ${state.evidence}${state.blockedCount ? `\n\n${state.blockedCount} dead model lane(s) — open Settings → LLM Strategy` : ''}`}
   >
    <span className={cn('w-1.5 h-1.5 rounded-full', dot)} />
    <span className="hidden xl:inline">{state.verdict}</span>
    {state.blockedCount > 0 && (
-    <span className="text-olympus-red/80" title={`${state.blockedCount} lane(s) sem cota/rota`}>⚠</span>
+    <OlympusTooltip
+      content={`${state.blockedCount} dead model lane(s) (quota/route/key) — click to inspect and retry`}
+      side="bottom"
+      delay={150}
+    >
+      <button
+        type="button"
+        onClick={() => {
+          useOlympus.getState().setLeftPane('provider-settings');
+        }}
+        className="text-olympus-red/90 hover:text-olympus-red font-bold cursor-pointer transition-colors"
+        aria-label={`${state.blockedCount} dead model lanes — open LLM Strategy`}
+      >
+        ⚠
+      </button>
+    </OlympusTooltip>
    )}
   </span>
  );

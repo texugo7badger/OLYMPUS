@@ -137,7 +137,7 @@ export function ToolFrame({ toolName, input, text }: ToolFrameProps) {
           {text}{' '}
           <button
             onClick={() => openInEditor(path)}
-            title={`Open ${path} in your editor`}
+            data-tip={`Open ${path} in your editor`}
             className="text-[10px] font-mono px-1 py-0.5 rounded bg-olympus-card text-olympus-cyan ring-1 ring-olympus-cyan/20 hover:bg-olympus-gold/10 hover:text-olympus-gold transition-colors"
           >
             {path.split('/').pop()}
@@ -161,7 +161,7 @@ export function ToolFrame({ toolName, input, text }: ToolFrameProps) {
             user's editor via the Editor Bridge. */}
         <button
           onClick={() => openInEditor(path)}
-          title={`Open ${path} in your editor`}
+          data-tip={`Open ${path} in your editor`}
           className="text-[11px] text-[#8A8A8A] hover:text-olympus-gold font-mono truncate transition-colors"
         >
           {path}

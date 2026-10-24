@@ -9,6 +9,7 @@ import { BrainCog, Zap, Activity, ArrowUp, ArrowDown, Minus, BrainCircuit, Spark
 import { cn } from '@/lib/utils';
 import AnimatedNumber from './animated-number';
 import { GOD_ICONS } from '@/lib/olympus-store';
+import { useDocVisible } from '@/lib/use-doc-visible';
 
 // Short-circuit telemetry — live stats from the instinct gate.
 interface ShortCircuitStats {
@@ -99,6 +100,7 @@ const GOD_ORDER = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaest
  * out that "AVG conf" was overused.
  */
 export default function GodIntelligenceDashboard({ health }: { health?: any }) {
+ const docVisible = useDocVisible();
  const [stats, setStats] = useState<BrainStats | null>(null);
  const [scStats, setScStats] = useState<ShortCircuitStats | null>(null);
  const [loading, setLoading] = useState(true);
@@ -137,12 +139,13 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  .catch(() => {});
  };
  load();
+ if (!docVisible) { mounted = false; return; }
  const iv = setInterval(load, 30000); // refresh every 30s
  return () => {
  mounted = false;
  clearInterval(iv);
  };
- }, []);
+ }, [docVisible]);
 
  if (loading) {
  return (
@@ -247,7 +250,7 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  <div
  key={i}
  className="flex-1 group relative"
- title={`${s.date}: ${(s.hitRate * 100).toFixed(1)}% (${s.dispatches} dispatches)`}
+ data-tip={`${s.date}: ${(s.hitRate * 100).toFixed(1)}% (${s.dispatches} dispatches)`}
  >
  <div
  className={cn(
@@ -525,7 +528,7 @@ function GodRow({
  <div className="text-[9px] text-olympus-text-dim font-mono uppercase tracking-wider mt-2 mb-1">Top by samples</div>
  {stats.topBySamples.map((i, idx) => (
  <div key={idx} className="text-[10px] font-mono text-olympus-text-dim flex justify-between gap-2">
- <span className="truncate" title={i.trigger}>{i.id}</span>
+ <span className="truncate" data-tip={i.trigger}>{i.id}</span>
  <span className="text-olympus-cyan shrink-0">
  {i.samples}sx{i.successes}
  </span>
@@ -538,7 +541,7 @@ function GodRow({
  <div className="text-[9px] text-olympus-text-dim font-mono uppercase tracking-wider mt-2 mb-1">Top by confidence</div>
  {stats.topByConfidence.map((i, idx) => (
  <div key={idx} className="text-[10px] font-mono text-olympus-text-dim flex justify-between gap-2">
- <span className="truncate" title={i.trigger}>{i.id}</span>
+ <span className="truncate" data-tip={i.trigger}>{i.id}</span>
  <span className="text-olympus-green shrink-0">{i.confidence.toFixed(2)}</span>
  </div>
  ))}

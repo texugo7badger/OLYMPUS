@@ -473,7 +473,7 @@ function ApiKeyInput({
           type="button"
           onClick={() => setRevealed(r => !r)}
           aria-label={revealed ? 'Hide key' : 'Show key'}
-          title={revealed ? 'Hide key' : 'Show key'}
+          data-tip={revealed ? 'Hide key' : 'Show key'}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-olympus-text-dim hover:text-olympus-text transition-colors p-1"
           tabIndex={-1}
         >

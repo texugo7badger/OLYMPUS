@@ -60,7 +60,7 @@ export default function OpencodeUpdateBadge() {
   if (result) {
     return (
       <span
-        title={result.msg}
+        data-tip={result.msg}
         className={`flex items-center gap-1 px-1.5 py-0.5 rounded ring-1 ${result.ok ? 'bg-olympus-green/10 ring-olympus-green/25 text-olympus-green' : 'bg-olympus-red/10 ring-olympus-red/25 text-olympus-red'}`}
       >
         {result.ok ? <CheckCircle2 size={9} /> : <AlertCircle size={9} />}

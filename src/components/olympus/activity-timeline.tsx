@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useOlympus, GOD_ICONS } from '@/lib/olympus-store';
+import { useDocVisible } from '@/lib/use-doc-visible';
 import {
   History, Activity, Clock, AlertCircle, CheckCircle2, GitBranch, Wrench, ArrowRight, Timer,
 } from 'lucide-react';
@@ -72,6 +73,7 @@ function formatTime(ts: string): string {
 /*  - Pastel palette throughout.                                       */
 /* ------------------------------------------------------------------ */
 export default function ActivityTimeline() {
+  const docVisible = useDocVisible();
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterGod, setFilterGod] = useState<string | null>(null);
@@ -98,9 +100,10 @@ export default function ActivityTimeline() {
       } catch { /* decorative */ }
     };
     load();
+    if (!docVisible) { cancelled = true; return; }
     const iv = setInterval(load, 15_000);
     return () => { cancelled = true; clearInterval(iv); };
-  }, []);
+  }, [docVisible]);
   const setActiveGod = useOlympus(s => s.setActiveGod);
   const pushEvent = useOlympus(s => s.pushEvent);
 
@@ -125,9 +128,10 @@ export default function ActivityTimeline() {
       }
     };
     load();
+    if (!docVisible) { cancelled = true; return; }
     const iv = setInterval(load, 15000);
     return () => { cancelled = true; clearInterval(iv); };
-  }, []);
+  }, [docVisible]);
 
   const filtered = filterGod ? episodes.filter(e => e.god === filterGod) : episodes;
   const highImpact = filtered.filter(e => e.impact === 'high').length;
@@ -273,7 +277,7 @@ function TimelineItem({ ep, isLast, onClick, hopId, hopTask }: { ep: Episode; is
   return (
     <button
       onClick={onClick}
-      title={hopId ? `Open the ${hopId} task sheet — thinking, files, tokens` : undefined}
+      data-tip={hopId ? `Open the ${hopId} task sheet — thinking, files, tokens` : undefined}
       className={cn(
         'relative w-full text-left pl-8 pr-2 py-2.5 hover:bg-olympus-gold/5 rounded-lg transition-colors group',
         hopId && 'cursor-pointer',

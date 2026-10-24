@@ -755,7 +755,7 @@ export interface WalkResult {
  * bridges these to the terminal stream (WHO the god is, WHERE the lane is,
  * what happened) so the walk is visible while it runs. */
 export type HopWalkEvent =
-  | { type: 'hop_start'; hop: string; god: string; artifacts?: string[] }
+  | { type: 'hop_start'; hop: string; god: string; artifacts?: string[]; arsenal?: string[] }
   /** W-T HOP-HEARTBEAT: the long-hop visibility — every 45s the in-flight
    *  hops narrate their elapsed time (the 'demora mt' cure: a silent
    *  2-minute spawn reads as a hang; a heartbeat reads as work). */

@@ -219,7 +219,7 @@ export default function LivePreview() {
             )}
           />
           {customUrl && (
-            <button onClick={resetUrl} title="Return to the probed dev server" className="text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold shrink-0">reset</button>
+            <button onClick={resetUrl} data-tip="Return to the probed dev server" className="text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold shrink-0">reset</button>
           )}
         </div>
         {urlError && <div className="mt-0.5 pl-7 text-[9px] font-mono text-olympus-red">{urlError}</div>}
@@ -228,7 +228,7 @@ export default function LivePreview() {
       {isRunning && status?.demoLogin && (
         <div className="shrink-0 flex items-center gap-1.5 px-3 py-1 bg-olympus-gold/5 border-b border-olympus-gold/10 text-[10px] font-mono overflow-hidden">
           <span className="text-olympus-gold shrink-0">demo login:</span>
-          <code className="text-olympus-text/80 truncate" title={status.demoLogin}>{status.demoLogin}</code>
+          <code className="text-olympus-text/80 truncate" data-tip={status.demoLogin}>{status.demoLogin}</code>
         </div>
       )}
 
@@ -263,7 +263,7 @@ export default function LivePreview() {
 
       <div ref={containerRef} className={cn('flex-1 min-h-0 relative', markMode && 'cursor-crosshair')} onClick={handleContainerClick}>
         {(isRunning || customUrl) && (
-          <iframe src={frameUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
+          <iframe src={frameUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" data-tip="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
         )}
         {showOverlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-olympus-bg">
@@ -345,7 +345,7 @@ function DevServerControls({ status, onDone }: { status: ProbeStatus | null; onD
   }
   if (error) {
     return (
-      <button onClick={() => setError(null)} className="text-[9px] font-mono text-olympus-red hover:underline" title={error}>
+      <button onClick={() => setError(null)} className="text-[9px] font-mono text-olympus-red hover:underline" data-tip={error}>
         {error.slice(0, 40)}… ✕
       </button>
     );
@@ -354,7 +354,7 @@ function DevServerControls({ status, onDone }: { status: ProbeStatus | null; onD
     return (
       <button
         onClick={() => call('stop')}
-        title={`Stop the durable dev server (${status?.manager?.note ?? 'the #86 manager'})`}
+        data-tip={`Stop the durable dev server (${status?.manager?.note ?? 'the #86 manager'})`}
         className="text-[10px] font-mono text-olympus-text-dim hover:text-olympus-red transition-colors px-1.5"
       >
         stop
@@ -365,7 +365,7 @@ function DevServerControls({ status, onDone }: { status: ProbeStatus | null; onD
     return (
       <button
         onClick={() => call('start')}
-        title="Start the durable dev server via the #86 manager (deps-first, probe-verified)"
+        data-tip="Start the durable dev server via the #86 manager (deps-first, probe-verified)"
         className="text-[10px] font-mono text-olympus-text-dim hover:text-olympus-green transition-colors px-1.5"
       >
         start

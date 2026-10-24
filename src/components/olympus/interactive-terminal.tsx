@@ -817,7 +817,10 @@ export default function InteractiveTerminal() {
       // Issue #32: the call was already surfaced as a raw `k: v` system line;
       // replace it with the compact one-line form. The RESULT now gets its own
       // line below (previously nothing was rendered at all).
-      addMessage({ type: 'tool', text: `⚙ ${toolName} — ${toolCallTarget(toolInput)}`, god: ev.god || undefined, toolName, toolInput });
+      // #MINITASK (2026-10-24): name the god behind the tool, not just the
+      // tool — the user wants to see WHO is editing WHAT, like a live log.
+      const godForTool = (ev.god || 'apollo').toLowerCase();
+      addMessage({ type: 'tool', text: `⚙ ${godForTool} · ${toolName} — ${toolCallTarget(toolInput)}`, god: godForTool, toolName, toolInput });
       updateGodActivity(ev.god || 'apollo', 'working', `Using ${toolName}...`, { currentTool: toolName });
       ensureThinking();
       return;
@@ -875,6 +878,15 @@ export default function InteractiveTerminal() {
       // #DESIGN-INTELLIGENCE D4: the PROGRESS CARD — a structured walk
       // summary line (the user sees a dashboard, not a linear log).
       if (ev.msg) { removeThinking(); addMessage({ type: 'system', text: ev.msg }); }
+      // #MINITASK (2026-10-24): surface the god's arsenal (the demigods it
+      // commands) on hop_start, so the user can see WHO the god can dispatch
+      // for this minitask. Collapsed into a single line to keep the log
+      // readable; the full roster lives in the God Intelligence panel.
+      if (ev.type === 'hop_start' && Array.isArray(ev.arsenal) && ev.arsenal.length > 0) {
+        const roster = (ev.arsenal as string[]).slice(0, 6).join(', ');
+        const more = (ev.arsenal as string[]).length > 6 ? ` +${(ev.arsenal as string[]).length - 6} more` : '';
+        addMessage({ type: 'system', text: `  ↳ ${ev.god} commands ${ev.arsenal.length} demigod(s): ${roster}${more}` });
+      }
       updateGodActivity(ev.god || 'hephaestus', ev.type === 'hop_done' ? 'done' : ev.type === 'hop_parked' ? 'idle' : 'working', ev.msg || '', {
         // #PANTHEON-RAIL: the hop's deliverable files ride the start event —
         // the god card (and the collapsed rail's tooltip) shows WHAT is
@@ -2056,7 +2068,7 @@ export default function InteractiveTerminal() {
                   <span className="text-olympus-gold/70">{i + 1}.</span>
                   <span className="truncate">{q.text}</span>
                   <button
-                    title="Edit (loads back into the input)"
+                    data-tip="Edit (loads back into the input)"
                     onClick={() => {
                       setInput(q.text);
                       if (q.context) { setContext(q.context); setShowContext(true); }
@@ -2068,7 +2080,7 @@ export default function InteractiveTerminal() {
                     <Pencil size={9} />
                   </button>
                   <button
-                    title="Cancel this queued message"
+                    data-tip="Cancel this queued message"
                     onClick={() => setQueued(prev => prev.filter(x => x.id !== q.id))}
                     className="text-olympus-text-dim hover:text-olympus-red shrink-0"
                   >
@@ -2090,7 +2102,7 @@ export default function InteractiveTerminal() {
                 />
                 <span className="text-[9px] font-mono text-olympus-text-dim truncate max-w-56">{pendingImage.filename}</span>
                 <button
-                  title="Remove attached image"
+                  data-tip="Remove attached image"
                   onClick={removePendingImage}
                   className="text-olympus-text-dim hover:text-olympus-red shrink-0"
                 >
@@ -2625,6 +2637,19 @@ function ThinkingMessage({
   const [expanded, setExpanded] = useState(false);
   const reasoningRef = useRef<HTMLDivElement>(null);
   const hasReasoning = (message.reasoning || '').length > 0;
+  // AUTO-EXPAND (2026-10-24): the user asked for the chat to behave like
+  // this conversation — reasoning visible while it streams, not hidden behind
+  // a click. We auto-expand on the FIRST reasoning delta and keep it open
+  // through the turn. A manual collapse (the onClick below) is remembered so
+  // the next delta does not fight the user.
+  const userCollapsedRef = useRef(false);
+  const autoExpandedRef = useRef(false);
+  useEffect(() => {
+    if (hasReasoning && !autoExpandedRef.current && !userCollapsedRef.current) {
+      setExpanded(true);
+      autoExpandedRef.current = true;
+    }
+  }, [hasReasoning]);
   useEffect(() => {
     const t = setInterval(() => {
       // #195: no per-second state churn while the document is hidden.
@@ -2644,8 +2669,15 @@ function ThinkingMessage({
       <div className="flex-1 min-w-0">
         <div
           className="flex items-center gap-1.5 min-w-0 cursor-pointer select-none"
-          onClick={() => setExpanded(x => !x)}
-          title={expanded ? 'Collapse reasoning' : 'Expand reasoning'}
+          onClick={() => {
+            setExpanded((x) => {
+              const next = !x;
+              if (!next) userCollapsedRef.current = true;
+              else userCollapsedRef.current = false;
+              return next;
+            });
+          }}
+          data-tip={expanded ? 'Collapse reasoning' : 'Expand reasoning'}
         >
           <span className="text-[10px] font-mono text-[#5A5A5A] animate-pulse">thinking…</span>
           <span className="text-[9px] font-mono text-[#5A5A5A] tabular-nums">({secs}s)</span>

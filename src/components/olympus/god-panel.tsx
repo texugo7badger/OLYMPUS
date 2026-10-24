@@ -170,7 +170,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           <button
             type="button"
             onClick={onCollapse}
-            title="Minimize the Parthenon to god icons (more room for the chat)"
+            data-tip="Minimize the Parthenon to god icons (more room for the chat)"
             aria-label="Minimize the Parthenon"
             className="ml-1 text-olympus-text-dim hover:text-olympus-gold transition-colors"
           >
@@ -192,7 +192,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
               type="button"
               onClick={() => onFocus(selected ? null : s.god)}
               aria-pressed={selected}
-              title={selected ? 'Show every god' : `Focus the stream on ${DISPLAY_NAMES[s.god] || s.god}`}
+              data-tip={selected ? 'Show every god' : `Focus the stream on ${DISPLAY_NAMES[s.god] || s.god}`}
               className={cn(
                 'w-full text-left px-2 py-1.5 border-b border-olympus-gold/5 transition-colors',
                 selected ? 'bg-olympus-gold/10' : 'hover:bg-olympus-gold/5',
@@ -270,7 +270,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                         tabIndex={0}
                         onClick={(e2) => { e2.stopPropagation(); setSheetHop(t.id); }}
                         onKeyDown={(e2) => { if (e2.key === 'Enter' || e2.key === ' ') { e2.stopPropagation(); e2.preventDefault(); setSheetHop(t.id); } }}
-                        title={`${t.id} — ${t.status}${t.files.length ? ` · ${t.files.length} file(s)` : ''} — click for the task sheet`}
+                        data-tip={`${t.id} — ${t.status}${t.files.length ? ` · ${t.files.length} file(s)` : ''} — click for the task sheet`}
                         className="flex flex-wrap items-center gap-1.5 w-full text-left hover:bg-olympus-gold/10 rounded px-1 cursor-pointer"
                       >
                         <span className="w-1 h-1 rounded-full shrink-0" style={{ background: dot }} />
@@ -305,7 +305,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                         return (
                           <div
                             key={`${d.id}-${d.dispatchId || di}`}
-                            title={`${d.id} — ${d.status}${d.task ? ` — ${d.task}` : ''}${d.skill ? ` — skill ${d.skill}` : ''}${d.mcp ? ` — mcp ${d.mcp}` : ''}`}
+                            data-tip={`${d.id} — ${d.status}${d.task ? ` — ${d.task}` : ''}${d.skill ? ` — skill ${d.skill}` : ''}${d.mcp ? ` — mcp ${d.mcp}` : ''}`}
                             className={cn('rounded px-1.5 py-1 ring-1 min-w-0', tone.bg, tone.ring)}
                           >
                             <div className="flex items-center gap-1 min-w-0">
@@ -361,7 +361,7 @@ export function ParthenonRailCollapsed({ states, focusedGod, onFocus, onExpand }
       <button
         type="button"
         onClick={onExpand}
-        title="Expand the Parthenon (god cards + the plan)"
+        data-tip="Expand the Parthenon (god cards + the plan)"
         aria-label="Expand the Parthenon"
         className="shrink-0 px-2 py-1.5 border-b border-olympus-gold/10 flex items-center justify-center text-olympus-text-dim hover:text-olympus-gold transition-colors"
       >
@@ -380,7 +380,7 @@ export function ParthenonRailCollapsed({ states, focusedGod, onFocus, onExpand }
               type="button"
               onClick={() => onFocus(selected ? null : s.god)}
               aria-pressed={selected}
-              title={title}
+              data-tip={title}
               className={cn(
                 'relative w-7 h-7 rounded flex items-center justify-center transition-colors',
                 selected ? 'bg-olympus-gold/15 ring-1 ring-olympus-gold/40' : 'hover:bg-olympus-gold/10',
