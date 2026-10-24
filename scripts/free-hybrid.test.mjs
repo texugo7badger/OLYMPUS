@@ -79,8 +79,8 @@ const nemotron = (map) => Object.values(map).filter((m) => /nemotron/i.test(Stri
 
   const zen = resolveFreeHybrid(['opencode']);
   expect('S3 Zen-only: Apollo on Beam 1.0', zen.apollo === 'opencode/beam-free', zen.apollo);
-  expect('S3 Zen-only: Atlas on MiniMax M3.1 Flash (512k out)',
-    zen.atlas === 'opencode/minimax-m3.1-flash-free', zen.atlas);
+  expect('S3 Zen-only: Atlas on Beam (the Zen pool)',
+    zen.atlas === 'opencode/beam-free', zen.atlas);
   expect('S3 Zen-only: Hephaestus codes on DeepSeek V4.1 Flash',
     zen.hephaestus === 'opencode/deepseek-v4.1-flash-free', zen.hephaestus);
   expect('S3 Zen-only: Callimachus on DeepSeek V4.1 Flash (the user pick)',
@@ -89,8 +89,8 @@ const nemotron = (map) => Object.values(map).filter((m) => /nemotron/i.test(Stri
   const go = resolveFreeHybrid(['opencode-go']);
   expect('S3 GO-only: Apollo on the GO Beam lane',
     go.apollo === 'opencode-go/beam-free', go.apollo);
-  expect('S3 GO-only: Atlas on GO MiniMax M3.1 Flash',
-    go.atlas === 'opencode-go/minimax-m3.1-flash-free', go.atlas);
+  expect('S3 GO-only: Atlas on GO Beam (the only free GO lane)',
+    go.atlas === 'opencode-go/beam-free', go.atlas);
   expect('S3 GO-only: every lane is a GO id',
     GOD_IDS.every((g) => go[g].startsWith('opencode-go/')), JSON.stringify(go));
 }
@@ -101,8 +101,8 @@ const nemotron = (map) => Object.values(map).filter((m) => /nemotron/i.test(Stri
   const usage = {};
   for (const g of GOD_IDS) usage[full[g]] = (usage[full[g]] || 0) + 1;
   expect('S4 all sources: <=3 gods per lane', Object.values(usage).every((n) => n <= 3), JSON.stringify(usage));
-  expect('S4 all sources: >=7 distinct lanes (spread, not one pool)',
-    Object.keys(usage).length >= 7, JSON.stringify(usage));
+  expect('S4 all sources: >=5 distinct lanes (spread, not one pool)',
+    Object.keys(usage).length >= 5, JSON.stringify(usage));
   expect('S4 all sources: zero Nemotron', nemotron(full).length === 0, nemotron(full).join(','));
 }
 

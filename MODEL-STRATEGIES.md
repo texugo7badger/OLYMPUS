@@ -227,9 +227,9 @@ for each god's TASK, not one model for everything.
 
 | Source | What it unlocks (live, 2026-10-23) |
 |---|---|
-| **OpenCode GO free** | `opencode-go/beam-free` (Beam 1.0, 501B MoE, 1M ctx), `opencode-go/minimax-m3.1-flash-free` (1M/512k out), `cat-jam-free`, `longcat-2.5-preview-free`, `step-5-preview-free` |
-| **OpenCode Zen free** | `opencode/deepseek-v4.1-flash-free` (200k/32k), `beam-free` (1M/131k), `minimax-m3.1-flash-free` (1M/512k out), `kimi-k2.5-free` (262k/262k out), `cat-jam-free`, `deepseek-v4-flash-free` (200k/128k), `glm-5-free`, `qwen3.6-plus-free` |
-| **OpenRouter free** | `thinkingmachines/inkling:free` (1M/262k), `inkling-small:free`, `dots-studio/dots-3-note-preview:free` (512k/460k), `cohere/north-mini-code:free` (256k/64k) |
+| **OpenCode GO free** | `opencode-go/beam-free` (Beam 1.0, 501B MoE, 1M ctx/131k out) — the GO plan's only free lane |
+| **OpenCode Zen free** | `opencode/beam-free` (1M/131k), `opencode/deepseek-v4.1-flash-free` (200k/32k, the coding cost-benefit), `opencode/flint-40b-free` (262k/64k), `opencode/glm-5.3-flash-free` (200k/32k), `opencode/mimo-v2.6-flash-free` (200k/32k) |
+| **OpenRouter free** | `thinkingmachines/inkling:free` (1M/262k out), `inkling-small:free` (1M/262k), `cohere/north-mini-code:free` (256k/64k), `recursive/flint-v1.0:free` (262k/**235k out**), `xingchen-agi/xing4.0-29b-a4b:free` (262k/235k) |
 | **NVIDIA Build free** | GLM-5.3 (1M), MiniMax M3.1 Flash, Muse Glimmer 30B, GPT-OSS-20B — **NO Nemotron** (the user's ban, forever) |
 
 **The roster (best lane first; the resolver picks the first AVAILABLE one and spreads load ≤3 gods/lane):**
@@ -237,15 +237,15 @@ for each god's TASK, not one model for everything.
 | God | First lane | Why (the task fit) |
 |---|---|---|
 | **Apollo** | `opencode-go/beam-free` → Zen Beam → OR inkling → NV GLM-5.3 | planning: 501B reasoner, 1M ctx |
-| **Atlas** | `opencode-go/minimax-m3.1-flash-free` → Zen MiniMax → OR inkling → NV MiniMax | orchestration: 512k output for dispatch plans |
-| **Artemis** | Zen Beam → GO Beam → OR inkling → NV Muse Glimmer | security: deep reasoning over a 1M ctx |
-| **Athena** | Zen MiniMax M3.1 Flash → GO MiniMax → OR inkling → NV GPT-OSS-20B | frontend: 512k output for whole-page components |
-| **Dionysus** | Zen Kimi K2.5 → GO Beam → OR inkling → NV GLM-5.3 | QA: 262k output for long suites + evidence |
-| **Hephaestus** | Zen DeepSeek V4.1 Flash → GO Cat Jam → OR north-mini-code → NV GPT-OSS-20B | backend code: DeepSeek's benchmark cost-benefit |
-| **Hermes** | Zen Cat Jam → GO LongCat 2.5 → OR inkling → NV Muse Glimmer | integrations/research: 1M ctx |
-| **Persephone** | Zen DeepSeek V4 Flash → GO MiniMax → OR north-mini-code → NV GLM-5.3 | database: 128k output for migrations + SQL |
-| **Prometheus** | GO MiniMax M3.1 Flash → Zen MiniMax → OR dots-3-note → NV GPT-OSS-20B | DevOps: long IaC/runbooks |
-| **Callimachus** | Zen DeepSeek V4.1 Flash → OR north-mini-code → GO Step 5 → NV MiniMax | vault curation: fast, cheap, strong (the user's pick) |
+| **Atlas** | Zen **Beam 1.0** → GO Beam → OR inkling → NV MiniMax | orchestration: 1M ctx/131k out for dispatch plans |
+| **Artemis** | Zen Beam → OR inkling → GO Beam → NV Muse Glimmer | security: deep reasoning over a 1M ctx |
+| **Athena** | **OR inkling** (262k out) → Zen Flint 40B (64k) → Zen Beam | frontend: whole-page components |
+| **Dionysus** | **OR inkling** (262k out) → Zen Beam → OR flint-v1.0 (235k out) | QA: long suites + evidence |
+| **Hephaestus** | **Zen DeepSeek V4.1 Flash** → OR north-mini-code → Zen Flint 40B → NV GPT-OSS-20B | backend code: DeepSeek's benchmark cost-benefit |
+| **Hermes** | **OR inkling** (1M/262k) → Zen Beam → GO Beam → NV Muse Glimmer | integrations/research: 1M ctx |
+| **Persephone** | **Zen DeepSeek V4.1 Flash** → OR north-mini-code → Zen Flint 40B | database: migrations + SQL |
+| **Prometheus** | **OR flint-v1.0** (235k out) → Zen Flint 40B → OR xing4 | DevOps: long IaC/runbooks |
+| **Callimachus** | **Zen DeepSeek V4.1 Flash** → OR north-mini-code → Zen GLM-5.3 Flash | vault curation: fast, cheap, strong (the user's pick) |
 
 **The NVIDIA fallback column is the DISTRIBUTED PANTHEON (#106)** — every god on exactly one
 per-family lane (`nvidia-glm` / `nvidia-minimaxai` / `nvidia-meta` / `nvidia-openai`), ≤3 gods

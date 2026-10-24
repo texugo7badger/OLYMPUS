@@ -137,6 +137,13 @@ const FALLBACK_PRICING_USD_PER_1M: Record<string, RatePair> = {
   'opencode/glm-5-free': { input: 0, output: 0 },
   'opencode/glm-5.3-flash-free': { input: 0, output: 0 },
   'opencode/qwen3.6-plus-free': { input: 0, output: 0 },
+  // OpenRouter free lanes used by Free Hybrid — honestly $0.
+  'openrouter/thinkingmachines/inkling:free': { input: 0, output: 0 },
+  'openrouter/thinkingmachines/inkling-small:free': { input: 0, output: 0 },
+  'openrouter/cohere/north-mini-code:free': { input: 0, output: 0 },
+  'openrouter/recursive/flint-v1.0:free': { input: 0, output: 0 },
+  'openrouter/xingchen-agi/xing4.0-29b-a4b:free': { input: 0, output: 0 },
+  'openrouter/dots-studio/dots-3-note-preview:free': { input: 0, output: 0 },
   // OpenCode Zen (pay-as-you-go) — published per-1M rates
   // (https://opencode.ai/docs/zen/, verified 2026-09-28).
   'opencode/glm-5.3': { input: 1.4, output: 4.4 },
