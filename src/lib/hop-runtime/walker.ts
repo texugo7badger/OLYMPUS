@@ -831,11 +831,16 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
 
   let stopped = false;
   const telemetryRow = (hop: PlanHop, r: HopDispatchResult | null, status: string, startedAt: number): HopTelemetryRow => {
+    // `lane` is the MODEL lane (the pool the hop actually ran on), not the
+    // project directory. The dir is already in every other row/event and the
+    // hop state; writing it here made the telemetry's lane column useless for
+    // the one question it exists to answer ("which pool served this hop?").
+    // When the failover moved the hop, the dispatch result names the real lane.
     const row: HopTelemetryRow = {
       ts: new Date().toISOString(),
       hop: hop.id,
       god: hop.god,
-      lane: laneRoot,
+      lane: r?.lane ?? resolveGodModelLane(hop.god) ?? laneRoot,
       tokensIn: r?.tokensIn ?? null,
       tokensOut: r?.tokensOut ?? null,
       durationMs: Date.now() - startedAt,
