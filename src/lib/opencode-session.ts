@@ -41,6 +41,8 @@ import path from 'node:path';
 import { spawnOpencode, freeTierPreflight, authLaneCensus, resolveWorkspaceLane } from '@/lib/opencode-spawn';
 import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
+import { markLaneDead, isLaneDeadClass } from '@/lib/lane-health';
+import { activeModelFor } from '@/lib/lane-probe';
 import { getVaultRoot } from '@/lib/vault-root';
 // Issue #41: explicit, revisable permission policy. Replaces the silent
 // auto-approve branch in the event pump; the vault prefixes below now seed
@@ -1357,6 +1359,20 @@ function noteToolCall(sessionID: string): void {
   b.lastTs = Date.now();
 }
 
+/**
+ * #V2-ERRORS: the lane the CHAT is actually riding — read from the warm
+ * server's workspace config (the file opencode.json the serve loaded).
+ * Returns null when the config is unreadable; the caller then records
+ * nothing rather than guessing a lane name.
+ */
+function resolveActiveLaneForHealth(): string | null {
+  try {
+    return activeModelFor('apollo')?.full ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function noteSessionError(sessionID: string): void {
   getBucket(sessionID, MULTI_KEY).had_error = true;
 }
@@ -1832,6 +1848,20 @@ function mapPart(
       const msg = part.error?.message || part.text || 'unknown error';
       // #98: the retry classifier must never be starved of the real text.
       state.lastErrorText = msg;
+      // #V2-ERRORS (2026-10-24): record the LANE death even from the CHAT
+      // path, not only from hops. The user's session died on
+      // `provider.quota` (GO monthly cap) and nothing anywhere knew it — the
+      // next turn posted into the same dead lane, and the failover layer had
+      // no record to act on. The provider's own class + back-off are the
+      // registry's input; the UI banner reads it back.
+      try {
+        const cls = String(part.error?.type ?? '');
+        const retry = Number((part.error as { retryAfterMs?: number } | undefined)?.retryAfterMs ?? 0);
+        const lane = resolveActiveLaneForHealth();
+        if (lane && isLaneDeadClass(cls)) {
+          markLaneDead(lane, cls, retry || null, msg);
+        }
+      } catch { /* telemetry never breaks the stream */ }
       onEvent({ type: 'error', msg: `OpenCode error: ${msg}`, raw: part, ts });
       return;
     }

@@ -36,6 +36,8 @@ import { dirname } from 'node:path';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
 import { spawnOpencode, findOlympusRoot } from '@/lib/opencode-spawn';
 import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencode-session';
+import { markLaneAlive, markLaneDead, laneChain, isLaneDeadClass } from '@/lib/lane-health';
+import { FREE_HYBRID_ROSTER } from '@/lib/model-strategies';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
 export const MAX_HOP_CONCURRENCY = 3;
@@ -47,6 +49,33 @@ export const MAX_HOP_CONCURRENCY = 3;
  * contention-bound: at most MAX_PER_POOL hops share one provider lane.
  */
 export const MAX_HOP_PER_POOL = 2;
+
+/**
+ * #LANE-CAP (2026-10-24): the per-pool cap is LANE-AWARE, because the two
+ * classes have opposite shapes:
+ *
+ *   - `nvidia-*` free pools — per-key rate-limited and contention-bound; the
+ *     #POOL-CONTENTION specimens (three hops at a third of the throughput)
+ *     say 2 is already generous.
+ *   - paid lanes (`openrouter/`, `opencode/` Zen, `opencode-go/`) — the
+ *     provider multiplexes concurrent requests by design; capping them at 2
+ *     silently halves the parallelism the user is paying for. The 2026-10-24
+ *     measurement (2 parallel turns = 2.4× vs serial) is exactly this.
+ *
+ * A single-lane strategy (e.g. `byok-deepseek`: every god on ONE OpenRouter
+ * lane) would otherwise be pinned to 2 concurrent hops for its whole life.
+ * Env override: OLYMPUS_HOP_PER_POOL.
+ */
+export function maxHopsPerPoolFor(lane: string | null | undefined, env: NodeJS.ProcessEnv = process.env): number {
+  const override = Number.parseInt(env.OLYMPUS_HOP_PER_POOL ?? '', 10);
+  if (Number.isFinite(override) && override > 0) return override;
+  const l = String(lane ?? '');
+  if (/^nvidia/.test(l)) return MAX_HOP_PER_POOL;
+  if (l.startsWith('openrouter/') || l.startsWith('opencode/') || l.startsWith('opencode-go/')) {
+    return MAX_HOP_CONCURRENCY; // a paid/plan lane may ride the full global cap
+  }
+  return MAX_HOP_PER_POOL;
+}
 
 export const HOP_TELEMETRY_FILENAME = '.olympus-hop-telemetry.jsonl';
 
@@ -103,6 +132,15 @@ export interface HopDispatchResult {
   reasoning?: string | null;
   sessionId?: string | null;
   error?: string;
+  /** #V2-ERRORS: the provider error class that ended the run
+   *  (`provider.quota`, `provider.free-limit`, `provider.no-route`,
+   *  `provider.rate-limit`, …) — the lane-health join key. */
+  errorClass?: string | null;
+  /** #V2-ERRORS: the provider's own back-off hint, when it sends one. */
+  retryAfterMs?: number | null;
+  /** #V2-FAILOVER: the lane the hop ACTUALLY ran on (differs from the
+   *  applied lane when the failover moved it). */
+  lane?: string;
 }
 
 export type HopDispatcher = (hop: PlanHop, ctx: {
@@ -219,14 +257,34 @@ interface JsonEventParse {
   reasoningOut: string;
   /** The child's opencode session id — the drill-down's join key. */
   sessionId: string | null;
+  /** #V2-ERRORS: the provider error event(s) emitted on stdout, verbatim. */
+  errorText: string;
+  /** #V2-ERRORS: the provider error class (`provider.quota`, `provider.no-route`, …). */
+  errorClass: string | null;
+  /** #V2-ERRORS: the provider's own back-off hint, when it sends one. */
+  retryAfterMs: number | null;
 }
 
 /** Parse `opencode run --format json` events: text parts + step-finish tokens.
  *  The CLI emits two shapes (probe-verified 2026-10-09): the wrapped
  *  `{type, part}` events and bare `{type:'step-finish', tokens}` lines —
- *  both are honored. */
+ *  both are honored.
+ *
+ *  #V2-ERRORS (the AIME specimen, 2026-10-24): on OpenCode v2 every provider
+ *  failure is an EVENT on STDOUT — `{"type":"error","error":{"type":
+ *  "provider.quota","message":"Go usage limit exceeded",...,"retryAfterMs":
+ *  392658000}}` — while stderr stays EMPTY and the process exits 1. The old
+ *  dispatcher read stderr only, so every real cause collapsed into
+ *  `error: "exit 1"` (five parked hops, zero diagnosis). The error events are
+ *  now captured here, verbatim, so the classifier and the park message name
+ *  the CAUSE and the provider's own words. A `type:'error'` event also marks
+ *  the run FAILED even when the process exits 0 (the
+ *  `provider.no-route` + exit 0 specimen). */
 function parseJsonEvents(raw: string): JsonEventParse {
-  const acc: JsonEventParse = { textOut: '', tokensIn: 0, tokensOut: 0, reasoningOut: '', sessionId: null };
+  const acc: JsonEventParse = {
+    textOut: '', tokensIn: 0, tokensOut: 0, reasoningOut: '', sessionId: null,
+    errorText: '', errorClass: null, retryAfterMs: null,
+  };
   const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
   for (const line of raw.split('\n')) {
     const t = line.trim();
@@ -249,6 +307,19 @@ function parseJsonEvents(raw: string): JsonEventParse {
           acc.tokensIn += n(tokens.input);
           acc.tokensOut += n(tokens.output);
         }
+      }
+      // #V2-ERRORS: the provider failure rides STDOUT as an event.
+      if (ev?.type === 'error' && ev?.error) {
+        const err = ev.error;
+        const cls = typeof err.type === 'string' ? err.type : null;
+        const msg = typeof err.message === 'string' ? err.message : '';
+        const body = err?.response?.body;
+        const bodyText = typeof body === 'string' ? body : body ? JSON.stringify(body) : '';
+        const line = [cls ? `[${cls}]` : '', msg, bodyText].filter(Boolean).join(' ');
+        acc.errorText += (acc.errorText ? '\n' : '') + (line || JSON.stringify(err).slice(0, 500));
+        if (!acc.errorClass && cls) acc.errorClass = cls;
+        const retry = n(err.retryAfterMs);
+        if (retry > 0) acc.retryAfterMs = retry;
       }
     } catch { /* not a JSON line — ignore */ }
   }
@@ -394,23 +465,35 @@ export function classifyCeilingKill(stderrText: string): CeilingKillClassificati
 }
 
 /**
+ * #V2-ERRORS: the lane-death classifier now lives in lane-health.ts (both the
+ * hop dispatcher AND the chat session need it, and importing the walker from
+ * the session would create a cycle). Re-exported here so every existing
+ * caller keeps its import.
+ */
+export { isLaneDeadClass } from '@/lib/lane-health';
+
+/**
  * The default hop dispatcher: one fresh one-shot session per hop on the
  * god's live model lane (the FREE-1 §6.2 transport — sessions are lanes),
  * with the #107 crescendo INSIDE the dispatcher: an overload burst is
  * absorbed per resolveRetryPlan(), exhaustion reported for the PARK.
  */
-export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
-  const lane = resolveGodModelLane(hop.god);
-  if (!lane) {
-    return {
-      ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,
-      retriesAbsorbed: 0, exhausted: false,
-      error: `no live model lane for god '${hop.god}' in opencode.json — cannot dispatch (reassignment is a table edit, the #106 doctrine)`,
-    };
-  }
+/** One lane's attempt loop — the #107 crescendo, unchanged in behaviour. */
+type LaneOutcome =
+  | { kind: 'ok'; result: HopDispatchResult }
+  | { kind: 'lane-dead'; errorClass: string | null; retryAfterMs: number | null; error: string }
+  | { kind: 'failed'; result: HopDispatchResult };
+
+async function attemptLane(
+  lane: string,
+  hop: PlanHop,
+  ctx: { laneRoot: string; prompt: string },
+  retriesAbsorbedStart: number,
+): Promise<LaneOutcome> {
   const plan = resolveRetryPlan();
-  let retriesAbsorbed = 0;
+  let retriesAbsorbed = retriesAbsorbedStart;
   let last: { code: number | null; stdout: string; stderr: string } = { code: null, stdout: '', stderr: '' };
+  const startedAt = Date.now();
   for (let attempt = 0; ; attempt++) {
     // The per-hop runtime budget (#R3: env-tunable — OLYMPUS_HOP_TIMEOUT_MS;
     // the default stays 15 min).
@@ -420,17 +503,34 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
       resolveHopTimeoutMs(),
       hop.god,
     );
-    const ok = last.code === 0;
-    const errText = (last.stderr || '').slice(-2000) || (ok ? '' : `exit ${last.code}`);
+    // #V2-ERRORS: the stdout stream carries the provider's truth. Parse it
+    // BEFORE deciding success — an error event with exit 0 is a FAILED run
+    // (the `provider.no-route` + exit 0 specimen), and an exit-1 run with an
+    // empty stderr still has its cause in here (the GO-quota specimen).
+    const parsed = parseJsonEvents(last.stdout);
+    const ok = last.code === 0 && !parsed.errorText;
+    const errText =
+      parsed.errorText
+      || (last.stderr || '').slice(-2000)
+      || (ok ? '' : `exit ${last.code}`);
     if (ok) {
-      const parsed = parseJsonEvents(last.stdout);
       return {
-        ok: true, exitCode: last.code, output: parsed.textOut || last.stdout.slice(0, 4000),
-        tokensIn: parsed.tokensIn || null, tokensOut: parsed.tokensOut || null,
-        reasoning: parsed.reasoningOut || null,
-        sessionId: parsed.sessionId,
-        retriesAbsorbed, exhausted: false,
+        kind: 'ok',
+        result: {
+          ok: true, exitCode: last.code, output: parsed.textOut || last.stdout.slice(0, 4000),
+          tokensIn: parsed.tokensIn || null, tokensOut: parsed.tokensOut || null,
+          reasoning: parsed.reasoningOut || null,
+          sessionId: parsed.sessionId,
+          retriesAbsorbed, exhausted: false,
+        },
       };
+    }
+    // #V2-ERRORS: a LANE-DEAD class never retries — retrying a monthly quota
+    // (retryAfterMs measured in days) or an unroutable model burns the whole
+    // crescendo budget for nothing. Hand the class up so the caller can move
+    // the hop to the next live lane.
+    if (isLaneDeadClass(parsed.errorClass)) {
+      return { kind: 'lane-dead', errorClass: parsed.errorClass, retryAfterMs: parsed.retryAfterMs, error: errText };
     }
     // #111 (HIGIENIA-1 H1a): the ceiling-kill — classified, never
     // classless. A provider-erroring hang counts as provider-overload
@@ -439,10 +539,10 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
     if (last.code === null) {
       const ck = classifyCeilingKill(last.stderr);
       if (ck.kind === 'hang') {
-        return { ok: false, exitCode: last.code, output: last.stdout.slice(0, 4000), tokensIn: null, tokensOut: null, retriesAbsorbed, exhausted: false, error: ck.error };
+        return { kind: 'failed', result: { ok: false, exitCode: last.code, output: last.stdout.slice(0, 4000), tokensIn: null, tokensOut: null, retriesAbsorbed, exhausted: false, error: ck.error } };
       }
       if (attempt >= plan.maxAttempts - 1) {
-        return { ok: false, exitCode: last.code, output: last.stdout.slice(0, 4000), tokensIn: null, tokensOut: null, retriesAbsorbed, exhausted: true, error: ck.error };
+        return { kind: 'failed', result: { ok: false, exitCode: last.code, output: last.stdout.slice(0, 4000), tokensIn: null, tokensOut: null, retriesAbsorbed, exhausted: true, error: ck.error } };
       }
       retriesAbsorbed++;
       const delay = applyRetryJitter(plan.backoffMs[attempt] ?? plan.backoffMs[plan.backoffMs.length - 1], Math.random(), plan.jitterFraction);
@@ -451,17 +551,26 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
     }
     if (attempt >= plan.maxAttempts - 1) {
       return {
-        ok: false, exitCode: last.code, output: last.stdout.slice(0, 4000),
-        tokensIn: null, tokensOut: null, retriesAbsorbed, exhausted: true,
-        error: errText,
+        kind: 'failed',
+        result: {
+          ok: false, exitCode: last.code, output: last.stdout.slice(0, 4000),
+          tokensIn: null, tokensOut: null, retriesAbsorbed, exhausted: true,
+          error: errText, errorClass: parsed.errorClass, retryAfterMs: parsed.retryAfterMs,
+        },
       };
     }
     const kind = classifyRetry({ code: last.code ?? -1, error: errText, statusCode: undefined } as never);
     if (!kind) {
+      // A non-retryable provider error that is NOT a lane-death (a 400, a
+      // refused prompt) — report it honestly, do not fail over (the next lane
+      // would refuse the same prompt).
       return {
-        ok: false, exitCode: last.code, output: last.stdout.slice(0, 4000),
-        tokensIn: null, tokensOut: null, retriesAbsorbed, exhausted: false,
-        error: errText,
+        kind: 'failed',
+        result: {
+          ok: false, exitCode: last.code, output: last.stdout.slice(0, 4000),
+          tokensIn: null, tokensOut: null, retriesAbsorbed, exhausted: false,
+          error: errText, errorClass: parsed.errorClass, retryAfterMs: parsed.retryAfterMs,
+        },
       };
     }
     retriesAbsorbed++;
@@ -469,6 +578,61 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
     const delay = kind === 'provider-overload' ? applyRetryJitter(base, Math.random(), plan.jitterFraction) : base;
     await new Promise((r) => setTimeout(r, Math.min(delay, 10_000)));
   }
+}
+
+/**
+ * The dispatcher: one hop, over a CHAIN of lanes.
+ *
+ * #V2-FAILOVER (the AIME specimen, 2026-10-24): the applied lane is tried
+ * first — that is the user's strategy and it must win whenever it is alive.
+ * A LANE-DEAD provider class (quota / free-limit / no-route / auth) does not
+ * park the hop: the lane is recorded dead in lane-health and the SAME hop
+ * re-posts on the next healthy lane for that god. Only when every lane in the
+ * chain is dead does the hop park — and then it parks NAMING each lane and
+ * its cause, never `exit 1`.
+ */
+export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
+  const applied = resolveGodModelLane(hop.god);
+  if (!applied) {
+    return {
+      ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,
+      retriesAbsorbed: 0, exhausted: false,
+      error: `no live model lane for god '${hop.god}' in opencode.json — cannot dispatch (reassignment is a table edit, the #106 doctrine)`,
+    };
+  }
+  const roster = (FREE_HYBRID_ROSTER as Record<string, Array<{ id: string }>>)[hop.god]?.map((l) => l.id) ?? [];
+  const chain = laneChain(applied, roster);
+  const deadNotes: string[] = [];
+  let retriesAbsorbed = 0;
+
+  for (const lane of chain) {
+    const outcome = await attemptLane(lane, hop, ctx, retriesAbsorbed);
+    if (outcome.kind === 'ok') {
+      markLaneAlive(lane, undefined);
+      // The failover is NEVER silent: the result names the lane the hop
+      // actually ran on, so the walk can log the switch honestly.
+      return { ...outcome.result, lane };
+    }
+    if (outcome.kind === 'lane-dead') {
+      const entry = markLaneDead(lane, outcome.errorClass, outcome.retryAfterMs, outcome.error);
+      const until = entry?.retryUntil ? new Date(entry.retryUntil).toISOString() : 'indefinido';
+      deadNotes.push(`${lane} [${outcome.errorClass ?? 'erro'}] morto até ${until} — ${outcome.error.slice(0, 200)}`);
+      continue; // #V2-FAILOVER: next lane
+    }
+    // A genuine failure (hang / non-retryable provider error): report it —
+    // another lane would fail the same way for the same prompt.
+    return outcome.result;
+  }
+
+  return {
+    ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,
+    retriesAbsorbed, exhausted: false,
+    error:
+      `todas as lanes de '${hop.god}' estão mortas — nenhuma pode servir este hop:\n  - ` +
+      deadNotes.join('\n  - ') +
+      `\nTroque a estratégia em Settings → LLM Strategy, ou resolva a cota/chave da lane principal.`,
+    errorClass: 'all-lanes-dead',
+  };
 };
 
 /**
@@ -715,7 +879,9 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         const next = pending.find((h) => {
           if (!ready(h) || inFlight.has(h.id) || completed.has(h.id)) return false;
           const lane = resolveGodModelLane(h.god) ?? 'unknown';
-          return (perPool.get(lane) ?? 0) < MAX_HOP_PER_POOL;
+          // #LANE-CAP: the cap depends on the LANE CLASS (a free NVIDIA pool
+          // tolerates 2; a paid/plan lane rides the full global cap).
+          return (perPool.get(lane) ?? 0) < maxHopsPerPoolFor(lane);
         });
         if (!next) return;
         // #SACRED-RUNTIME: self-healing lane — a god (or anything) may have

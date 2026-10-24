@@ -152,6 +152,7 @@ export function harvestPlanFromTurnText(turnText: string): { strict: string; not
 }
 import { join } from 'node:path';
 import { walkPlan, resolveGodModelLane, readHopTelemetry, type HopDispatcher, type HopWalkEvent } from './walker';
+import { acquireWalkLock } from './walk-lock';
 import { buildOvernightDigest, buildWaveReports, writeOvernightDigest } from './overnight';
 import { hopStatePath, saveHopState } from './hop-state';
 import { createGate, getPendingGates, listGates, resolveGate } from '@/lib/hitl-gates';
@@ -502,6 +503,23 @@ export async function maybeWalkThePlan(opts: {
     }
     // approved ('approve' | 'patch') — the walk proceeds below.
   }
+  // #ONE-CAMPAIGN (the AIME specimen, 2026-10-24): five concurrent walks of
+  // the same hop. The lock is taken HERE — the walk itself is the long
+  // section that must never run twice on one lane — and released in the
+  // finally below, so a throwing walk still frees the lane.
+  const lock = acquireWalkLock(opts.laneRoot, { slug: opts.slug, sessionId: opts.sessionId });
+  if (!lock.ok && lock.reason === 'held') {
+    const who = lock.holder;
+    const msg =
+      `Já existe uma campanha caminhando nesta lane${who ? ` (pid ${who.pid}, god plan '${who.slug}', desde ${who.startedAt})` : ''} — `
+      + `este envio NÃO abriu uma segunda caminhada. Acompanhe os hops no painel God Intelligence, `
+      + `ou espere a campanha atual terminar antes de reenviar. Se ela parecer travada, o lock expira sozinho em 5 min sem heartbeat.`;
+    const lockTotal = planHopCount(plan);
+    opts.send?.({ type: 'walk_summary', completed: 0, total: lockTotal, parked: null, msg, ts: new Date().toISOString() });
+    return { walked: false, reason: 'already-walking', completed: 0, total: lockTotal, parked: null, summaryLine: msg };
+  }
+  // Beat while the walk runs so a long campaign never looks stale.
+  const lockBeat = lock.ok ? setInterval(() => lock.heartbeat(), 60_000) : null;
   let result: Awaited<ReturnType<typeof walkPlan>>;
   try {
     result = await walkPlan({
@@ -511,10 +529,16 @@ export async function maybeWalkThePlan(opts: {
       onEvent: (ev) => bridgeEvent(ev, opts.laneRoot, opts.send, opts.publishActivity),
     });
   } catch (e) {
+    if (lockBeat) clearInterval(lockBeat);
+    if (lock.ok) lock.release();
     const msg = `the plan in '${opts.slug}' is invalid — the walk is refused: ${e instanceof Error ? e.message : String(e)}`;
     opts.send?.({ type: 'walk_summary', completed: 0, total: 0, parked: null, msg, ts: new Date().toISOString() });
     return { walked: false, reason: 'plan-invalid', completed: 0, total: 0, parked: null, summaryLine: msg };
   }
+  // The walk itself is done — release the lane NOW (the summary/verdict below
+  // must not hold the lock: they are narration, not a campaign).
+  if (lockBeat) clearInterval(lockBeat);
+  if (lock.ok) lock.release();
   const totalHops = planHopCount(plan);
   // W-S PLAN-SCOPED TRUTH: the counts answer THIS plan — completed ids
   // from retired plans never inflate the number (the "12/5" hybrid).

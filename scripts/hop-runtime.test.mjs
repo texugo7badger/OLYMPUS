@@ -209,7 +209,7 @@ async function main() {
     return;
   }
 
-  const { walkPlan, MAX_HOP_CONCURRENCY, MAX_HOP_PER_POOL } = mod;
+  const { walkPlan, MAX_HOP_CONCURRENCY, MAX_HOP_PER_POOL, maxHopsPerPoolFor, resolveGodModelLane } = mod;
   const schema = await import(OLYMPUS + '/src/lib/hop-runtime/plan-schema.ts');
   const { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS } = schema;
 
@@ -304,8 +304,22 @@ async function main() {
     return { ok: true, exitCode: 0, output: 'ok', tokensIn: 100, tokensOut: 500, retriesAbsorbed: 0, exhausted: false };
   };
   await walkPlan({ plan: poolPlan, dispatcher: poolDisp, stateDir: tempLane() });
-  expect('W: the POOL cap — same-lane roots saturate at MAX_HOP_PER_POOL (the contention cure)',
-    poolMax === MAX_HOP_PER_POOL && MAX_HOP_PER_POOL === 2, 'poolMax=' + poolMax + ' MAX_HOP_PER_POOL=' + MAX_HOP_PER_POOL);
+  // #LANE-CAP (2026-10-24): the per-pool ceiling is LANE-AWARE now — a free
+  // NVIDIA pool still saturates at 2 (the #POOL-CONTENTION cure), while a
+  // paid/plan lane rides the full global cap (a single-lane BYOK strategy
+  // would otherwise be pinned to 2 concurrent hops for its whole life). The
+  // assertion therefore compares against the cap FOR THE LANE THIS WALK USED,
+  // plus the two class behaviours, instead of a constant that changes with
+  // the applied strategy.
+  const capForApplied = maxHopsPerPoolFor(resolveGodModelLane('apollo'));
+  expect('W: the POOL cap — same-lane roots saturate at the LANE-AWARE cap (the contention cure)',
+    poolMax === capForApplied, 'poolMax=' + poolMax + ' capForLane=' + capForApplied);
+  expect('W: the FREE-pool class still saturates at 2 (the #POOL-CONTENTION cure)',
+    MAX_HOP_PER_POOL === 2 && maxHopsPerPoolFor('nvidia-glm/z-ai/glm-5.3') === 2,
+    'MAX_HOP_PER_POOL=' + MAX_HOP_PER_POOL);
+  expect('W: a paid/plan lane rides the full global cap',
+    maxHopsPerPoolFor('openrouter/deepseek/deepseek-v4.1-flash-1017') === MAX_HOP_CONCURRENCY,
+    String(maxHopsPerPoolFor('openrouter/deepseek/deepseek-v4.1-flash-1017')));
   expect('W: topological order — the sink last, after every root',
     order.indexOf('sink') === 4 && ['r1','r2','r3','r4'].every(id => order.indexOf(id) < order.indexOf('sink')),
     JSON.stringify(order));

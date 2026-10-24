@@ -298,8 +298,27 @@ function estimateComplexity(
     return { complexity: 'architectural', estimatedTokens: 150000, needsPlanning: true };
   }
 
+  // W-S PT-BR (the AIME specimen, 2026-10-24): "Planeje e execute o
+  // desenvolvimento do AIME" classified as `simple · planning=false`. The
+  // plan verbs were ENGLISH-ONLY, so Apollo never received the
+  // [OLYMPUS-PLANNER] marker and narrated instead of writing
+  // dispatch-plan.json — the exact "se embola para planejar" symptom. A
+  // Portuguese imperative that names planning OR building a thing is a plan
+  // ask, exactly like its English twin. Kept separate from the English
+  // regex so accented and unaccented forms both match ("planeje", "planejar",
+  // "desenvolva", "implemente", "construa", "crie o projeto",
+  // "faça o app", "monte o sistema").
+  if (/\b(planej\w*|desenvolv\w*|implement\w*|constru\w*|elabor\w*)\b/.test(lower)
+      || /\b(mont(e|ar)|cri(e|ar)|faz|fa[çc]a|fazer)\s+(o|a|um|uma|os|as)\s+(projeto|app|aplicativo|sistema|site|plataforma|servi[çc]o|jogo|dashboard)\b/.test(lower)) {
+    return { complexity: 'architectural', estimatedTokens: 150000, needsPlanning: true };
+  }
+
   // Architectural — explicit design / spec / refactor keywords.
-  if (/\b(design|architect|spec|interview|from scratch|new system|rewrite|refactor (the|entire|whole))\b/.test(lower)) {
+  // W-S PT-BR: the Portuguese twins of the English architecture vocabulary
+  // (arquitetura, especifica[çc][ãa]o, entrevista, do zero, novo sistema,
+  // reescrever, refatorar) — same weight, never a demotion.
+  if (/\b(design|architect|spec|interview|from scratch|new system|rewrite|refactor (the|entire|whole))\b/.test(lower)
+      || /\b(arquitet\w*|especifica\w*|entrevista|do zero|novo sistema|reescrev\w*|refator\w*|reestrutur\w*)\b/.test(lower)) {
     return { complexity: 'architectural', estimatedTokens: 150000, needsPlanning: true };
   }
 
