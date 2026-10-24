@@ -539,7 +539,7 @@
         "uvx",
         "mcp-for-blender"
       ],
-      "enabled": false,
+      "enabled": true,
       "_olympus_note": "v0.0.6 BLENDER-MCP-1 (ahujasid/mcp-for-blender): 3D scene creation/modification. DISABLED by default (probes Blender at spawn; enable when Blender + uv are installed). GPL Blender stays a separate process — the MCP is the bridge, never an embed."
     },
     "comfyui": {
@@ -573,6 +573,32 @@
       "url": "https://mcp.originkit.dev/vellumai",
       "enabled": false,
       "_olympus_note": "v0.0.7 UI-REFERENCES (originkit.dev, the vellum-ai plugin MIT): the animated-component lane — browse the 250+ catalog FREE, fetch source with a FREE API key (10/day, originkit.dev > Settings > API Integration). Probe-verified endpoint (2026-10-20: POST initialize 401 without a key — the auth gate works). DISABLED by default + LOCKED until ORIGINKIT_API_KEY. The curated inspiration rides the [OLYMPUS-DESIGN] marker + the Craft Apps References tab."
+    },
+    "git": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "mcp-server-git",
+        "--repository",
+        "/home/texugo/Projects/olympus"
+      ],
+      "enabled": true
+    },
+    "kubernetes": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "mcp-server-kubernetes"
+      ],
+      "enabled": true
+    },
+    "grafana": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "mcp-grafana"
+      ],
+      "enabled": true
     }
   }
 }
