@@ -2,6 +2,16 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.12] — 2026-10-24
+
+**"THE RELIABLE FREE"** — the 23:08 AIME run exposed that the free roster was riding a **quota-dead lane**: the Zen free models answer "Free usage limit reached" while the GO-plan lanes, NVIDIA and OpenRouter work. The roster is rebuilt on the lanes that actually serve, and the session setup no longer aborts to the one-shot lane.
+
+- **THE LANE CENSUS (live probes, 2026-10-23 23:xx)**: ✅ `opencode-go/beam-free` (GO free), ✅ `opencode-go/deepseek-v4.1-flash` (GO flat plan — included, no per-token charge), ✅ `nvidia-glm/z-ai/glm-5.3` (NVIDIA free), ✅ `openrouter/thinkingmachines/inkling:free`, ❌ `opencode/deepseek-v4.1-flash-free` → **"Free usage limit reached. Connect a provider or subscribe to OpenCode Go…"**. The v0.0.11 roster put Apollo, Hephaestus and Callimachus on that dead Zen lane — every AIME turn failed there.
+- **THE ROSTER v3 — GO-first, Zen-free last**: Apollo/Atlas/Artemis → **GO Beam 1.0** (1M/131k) with **GO DeepSeek V4.1 Flash** second; Athena/Dionysus/Hermes → **OpenRouter inkling** (1M/262k out); **Hephaestus/Persephone/Callimachus → GO DeepSeek V4.1 Flash** (included in the flat plan — the user's pick for the vault, still reserved first); Prometheus → **flint-v1.0** (235k out). The **Zen free lanes remain only as the last-resort column** (quota-gated, honest). Without a GO plan the resolver falls to the NVIDIA free (GLM-5.3 1M / MiniMax / Muse Glimmer / GPT-OSS) and OpenRouter free lanes — the same distributed pantheon.
+- **THE SMALL LANE FIX**: `small_model` (title generation + compaction) was `opencode/deepseek-v4.1-flash-free` — **every turn burned the dead lane before the turn even started**. It now rides `opencode-go/beam-free` (free, quota-safe) with OR/NVIDIA fallbacks.
+- **THE SESSION SETUP TIMEOUT**: a cold serve can take >10s to accept `POST /session`; the 10s default aborted the setup ("Session setup failed (This operation was aborted) — using one-shot run") and dropped the whole turn to the one-shot lane, which then hit the same quota wall. The create now gets **30s**.
+- **Gates**: battery **59 PASS / 0 FAIL / 1 declared SKIP** (60 suites), `tsc --noEmit` 0, eslint 0, `npm audit` 0, `check-strategy-sync` 10/10; end-to-end probe through the real warm path (read + answer) returns code 0 on the GO Beam lane, and the live `opencode run` probes for GO Beam, GO DeepSeek, NVIDIA GLM and OpenRouter inkling all answer OK.
+
 ## [v0.0.11] — 2026-10-24
 
 **"THE TOOL LOOP"** — the AIME field run exposed the last turn-completion bug (a finished `tool-calls` wave taken as the turn's end, killing live runs with "the model produced no answer"), and the Free Hybrid roster moves to **DeepSeek V4.1 Flash as Apollo's planner** — the strongest free tool-caller — over Beam's wide window.
