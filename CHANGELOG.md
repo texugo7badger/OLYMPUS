@@ -2,6 +2,16 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.11] — 2026-10-24
+
+**"THE TOOL LOOP"** — the AIME field run exposed the last turn-completion bug (a finished `tool-calls` wave taken as the turn's end, killing live runs with "the model produced no answer"), and the Free Hybrid roster moves to **DeepSeek V4.1 Flash as Apollo's planner** — the strongest free tool-caller — over Beam's wide window.
+
+- **THE TOOL LOOP FIX (the AIME 21:55 specimen)**: the v2 turn is idle only on a **terminal finish** — a wave completing with `finish=tool-calls` is the tool LOOP (the runtime executes the tools and re-prompts the model), not the answer. The old check accepted it, so the poll declared the turn done ~1s after the last tool output and failed with "the turn ended without assistant text (finish=tool-calls)" while the session was still alive (three consecutive AIME runs). The final readback also names the mid-loop shape honestly ("the turn ended right after a tool call, before the model produced its answer — resend to continue"). Regression: `w1-turn-completion` **S9** (tool-calls wave completes at +1.2s, the text lands at +5s, the run must wait and return code 0).
+- **THE FREE ROSTER v2 — DeepSeek-first**: **Apollo → `opencode/deepseek-v4.1-flash-free`** (the benchmark cost-benefit king, strong tool-calling) with **Beam 1.0 (GO)** as the wide-window second; **Atlas → GO Beam** (1M/131k dispatch plans); **Artemis → Zen Beam**; **Athena/Dionysus/Hermes → OpenRouter inkling** (1M/262k out); **Hephaestus → Zen DeepSeek V4.1 Flash**; **Persephone → north-mini-code** (64k out); **Prometheus → flint-v1.0** (235k out); **Callimachus → Zen DeepSeek V4.1 Flash**, still **reserved first** so the user's pick survives the lane cap. Every god also carries GLM-5.3 Flash (Zen) + GO Beam as universal late fallbacks.
+- **THE TWO-PASS RESOLVER**: the task-fit gods claim their lane BEFORE the fallback gods — a god merely falling back can never displace the god the lane was chosen for (the Zen-only case put Hephaestus on flint because Athena had taken the last DeepSeek slot; now calli/Apollo/Athena hold DeepSeek and the rest spread). GO-only resolves all 10 gods to the GO Beam lane; Zen-only stays entirely on Zen ids.
+- **THE NVIDIA DEEPSEEK 4.1 PROBE (honest)**: NVIDIA's catalogue (`GET /v1/models`, HTTP 200) lists `deepseek-ai/deepseek-v4.1-flash`, but a real chat completion **aborts at 60s** (three attempts across the day, including tonight) — it is catalogued, not servable. It is **not** wired into the roster; the NVIDIA fallback column keeps GLM-5.3 (1M, probe-verified), MiniMax M3.1 Flash, Muse Glimmer and GPT-OSS-20B. The servable DeepSeek 4.1 free lane is OpenCode's.
+- **Gates**: battery **59 PASS / 0 FAIL / 1 declared SKIP** (60 suites, incl. the new S9), `tsc --noEmit` 0, eslint 0, `npm audit` 0, `check-strategy-sync` 10/10.
+
 ## [v0.0.10] — 2026-10-23
 
 **"FREE HYBRID"** — the three free splits become ONE strategy that reads every free source the user registered (OpenCode GO free, OpenCode Zen free, OpenRouter free, NVIDIA Build free), resolves the best lane per god and per TASK, spreads the load, honours user pins — and gets stronger with every API added.
