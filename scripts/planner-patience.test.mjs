@@ -54,7 +54,13 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
     apollo.reasoning_effort === 'low',
     `reasoning_effort=${JSON.stringify(apollo.reasoning_effort)} — a planning turn on a reasoner without it starves the 16384 mouth (the 20-min/67K-chars/output=0 specimen)`);
   check('opencode.json: apollo still rides a planner-class reasoner (the planner stays sacred — GLM-5.3 on the paid tiers; the free-tier clause rides the probe-verified SERVABLE free reasoner)',
-    /glm-5\.3/.test(String(apollo.model || '')) || /north-mini-code:free/.test(String(apollo.model || '')) || /inkling(:|-small)?:free/.test(String(apollo.model || '')),
+    /glm-5\.3/.test(String(apollo.model || ''))
+      || /north-mini-code:free/.test(String(apollo.model || ''))
+      || /inkling(:|-small)?:free/.test(String(apollo.model || ''))
+      // The v0.0.11 Free Hybrid planner class: DeepSeek V4.1 Flash free (the
+      // benchmark tool-caller) and Beam 1.0 (the 1M free flagship).
+      || /deepseek-v4\.1-flash-free/.test(String(apollo.model || ''))
+      || /beam-free/.test(String(apollo.model || '')),
     `apollo model=${apollo.model} — the planner must ride GLM-5.3 (GO/ZEN) or the probe-verified free reasoner class (north-mini / the inkling family — the 15:38 specimen: north-mini 429s at the daily cap, the apply probes and never ships a dead pool); a downgrade to a small/volume model still fails this pin`);
   check('opencode.json: ONLY apollo carries the low effort (the other gods keep full reasoning)',
     Object.entries(cfg.agent || {})
@@ -137,12 +143,15 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
   const glmOut = cfg?.provider?.['nvidia-glm']?.models?.['z-ai/glm-5.3']?.limit?.output;
   const stepOut = cfg?.provider?.['nvidia-step']?.models?.['stepfun-ai/step-5-preview']?.limit?.output;
   const gemmaOut = cfg?.provider?.['nvidia-google']?.models?.['google/gemma-4-31b-it']?.limit?.output;
+  // A free-strategy config carries no NVIDIA lanes at all (the full-power
+  // Free Hybrid resolves to GO/Zen/OpenRouter lanes) — an ABSENT lane is the
+  // honest state (#105); a PRESENT one must carry the authorized bar.
   check('the MOUTH revision: reasoning lanes 32768, volume lanes keep the #76 bar 16384',
     /const REASONING_OUTPUT = 32768;/.test(pantheonSrc)
       && /const VOLUME_OUTPUT = 16384;/.test(pantheonSrc)
-      && glmOut === 32768
+      && (glmOut === 32768 || glmOut === undefined)
       && (stepOut === 32768 || stepOut === undefined)
-      && gemmaOut === 16384,
+      && (gemmaOut === 16384 || gemmaOut === undefined),
     `glm=${glmOut} step=${stepOut} gemma=${gemmaOut} — an unauthorized bar move (the nvidia-step lane may be ABSENT: #129 retired it — step-5-preview died from the catalogue; an absent lane is the honest state, a present one must keep the reasoning bar)`);
 }
 

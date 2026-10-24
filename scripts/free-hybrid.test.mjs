@@ -78,13 +78,17 @@ const nemotron = (map) => Object.values(map).filter((m) => /nemotron/i.test(Stri
     GOD_IDS.every((g) => or[g].startsWith('openrouter/')), JSON.stringify(or));
 
   const zen = resolveFreeHybrid(['opencode']);
-  expect('S3 Zen-only: Apollo on Beam 1.0', zen.apollo === 'opencode/beam-free', zen.apollo);
+  expect('S3 Zen-only: Apollo on DeepSeek V4.1 Flash (the strongest free tool-caller)',
+    zen.apollo === 'opencode/deepseek-v4.1-flash-free', zen.apollo);
   expect('S3 Zen-only: Atlas on Beam (the Zen pool)',
     zen.atlas === 'opencode/beam-free', zen.atlas);
-  expect('S3 Zen-only: Hephaestus codes on DeepSeek V4.1 Flash',
-    zen.hephaestus === 'opencode/deepseek-v4.1-flash-free', zen.hephaestus);
-  expect('S3 Zen-only: Callimachus on DeepSeek V4.1 Flash (the user pick)',
-    zen.callimachus === 'opencode/deepseek-v4.1-flash-free', zen.callimachus);
+  expect('S3 Zen-only: the three task-fit gods ride DeepSeek V4.1 Flash (calli/apollo/athena)',
+    zen.callimachus === 'opencode/deepseek-v4.1-flash-free'
+    && zen.apollo === 'opencode/deepseek-v4.1-flash-free'
+    && zen.athena === 'opencode/deepseek-v4.1-flash-free',
+    JSON.stringify(zen));
+  expect('S3 Zen-only: every lane is a Zen id (never an unregistered source)',
+    GOD_IDS.every((g) => zen[g].startsWith('opencode/')), JSON.stringify(zen));
 
   const go = resolveFreeHybrid(['opencode-go']);
   expect('S3 GO-only: Apollo on the GO Beam lane',

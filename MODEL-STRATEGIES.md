@@ -236,16 +236,16 @@ for each god's TASK, not one model for everything.
 
 | God | First lane | Why (the task fit) |
 |---|---|---|
-| **Apollo** | `opencode-go/beam-free` → Zen Beam → OR inkling → NV GLM-5.3 | planning: 501B reasoner, 1M ctx |
-| **Atlas** | Zen **Beam 1.0** → GO Beam → OR inkling → NV MiniMax | orchestration: 1M ctx/131k out for dispatch plans |
-| **Artemis** | Zen Beam → OR inkling → GO Beam → NV Muse Glimmer | security: deep reasoning over a 1M ctx |
-| **Athena** | **OR inkling** (262k out) → Zen Flint 40B (64k) → Zen Beam | frontend: whole-page components |
-| **Dionysus** | **OR inkling** (262k out) → Zen Beam → OR flint-v1.0 (235k out) | QA: long suites + evidence |
+| **Apollo** | **Zen DeepSeek V4.1 Flash** → GO Beam → Zen Beam → OR inkling → NV GLM-5.3 | planning: the strongest free tool-caller (the planner is the quality bottleneck) |
+| **Atlas** | **GO Beam 1.0** → Zen Beam → Zen DeepSeek → OR inkling → NV MiniMax | orchestration: 1M ctx/131k out for dispatch plans |
+| **Artemis** | Zen Beam → Zen DeepSeek → OR inkling → NV Muse Glimmer → GO Beam | security: deep reasoning over a 1M ctx |
+| **Athena** | **OR inkling** (262k out) → Zen DeepSeek → Zen Flint 40B → NV GPT-OSS-20B | frontend: whole-page components |
+| **Dionysus** | **OR inkling** (262k out) → Zen DeepSeek → Zen Beam → NV GLM-5.3 | QA: long suites + evidence |
 | **Hephaestus** | **Zen DeepSeek V4.1 Flash** → OR north-mini-code → Zen Flint 40B → NV GPT-OSS-20B | backend code: DeepSeek's benchmark cost-benefit |
-| **Hermes** | **OR inkling** (1M/262k) → Zen Beam → GO Beam → NV Muse Glimmer | integrations/research: 1M ctx |
-| **Persephone** | **Zen DeepSeek V4.1 Flash** → OR north-mini-code → Zen Flint 40B | database: migrations + SQL |
-| **Prometheus** | **OR flint-v1.0** (235k out) → Zen Flint 40B → OR xing4 | DevOps: long IaC/runbooks |
-| **Callimachus** | **Zen DeepSeek V4.1 Flash** → OR north-mini-code → Zen GLM-5.3 Flash | vault curation: fast, cheap, strong (the user's pick) |
+| **Hermes** | **OR inkling** (1M/262k) → Zen DeepSeek → Zen Beam → NV Muse Glimmer | integrations/research: 1M ctx |
+| **Persephone** | **OR north-mini-code** (64k out) → Zen DeepSeek → Zen Flint 40B → NV GLM-5.3 | database: migrations + SQL |
+| **Prometheus** | **OR flint-v1.0** (235k out) → Zen DeepSeek → Zen Flint 40B → NV GPT-OSS-20B | DevOps: long IaC/runbooks |
+| **Callimachus** | **Zen DeepSeek V4.1 Flash** → OR north-mini-code → Zen GLM-5.3 Flash | vault curation: fast, cheap, strong (the user's pick, reserved first) |
 
 **The NVIDIA fallback column is the DISTRIBUTED PANTHEON (#106)** — every god on exactly one
 per-family lane (`nvidia-glm` / `nvidia-minimaxai` / `nvidia-meta` / `nvidia-openai`), ≤3 gods
