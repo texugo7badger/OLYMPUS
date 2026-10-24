@@ -38,6 +38,7 @@ import { dirname, join } from 'node:path';
 import * as nodeOs from 'node:os';
 import http from 'node:http';
 import { registerNativeTerminal } from './native-terminal.js';
+import { resolveBootMode } from './boot-mode.js';
 import { registerTerminalBridge, shutdownTerminalBridge } from './terminal-bridge.js';
 import { ensureLinuxSandboxReady } from './linux-sandbox.js';
 
@@ -102,24 +103,17 @@ function buildIsComplete(): boolean {
   }
 }
 
-const buildReady = buildIsComplete();
-// Precedence: `--dev` always wins; a PACKAGED app is always production; a
-// source run is production only when the build is COMPLETE (stamped). `--prod`
-// cannot force an incomplete build — that is the specimen this guard exists
-// for. A source run with no complete build degrades to dev, loudly.
-const isDev = packaged ? false : (devFlag || !buildReady);
-if (!packaged) {
-  const why = devFlag
-    ? 'requested (--dev / OLYMPUS_DEV=1)'
-    : !buildReady
-      ? 'no complete build (run `npm run build:app`) — using the dev server'
-      : prodFlag
-        ? 'requested (--prod) and the build is complete'
-        : 'the build is complete (production)';
-  // safeConsole is defined below; a plain console.log here is safe because the
-  // stdout pipe is guarded by the process-level handler.
-  console.log(`[olympus:electron] mode: ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'} — ${why}`);
-}
+const boot = resolveBootMode({
+  packaged,
+  devRequested: devFlag,
+  prodRequested: prodFlag,
+  hasStandalone,
+  buildStamped: buildIsComplete(),
+});
+const isDev = boot.mode === 'development';
+// Every source run says WHICH server it serves and WHY — the 2026-10-24
+// specimen was undiagnosable precisely because nothing said it.
+console.log(`[olympus:electron] mode: ${boot.mode.toUpperCase()} — ${boot.reason}`);
 const appRoot = packaged
   ? dirname(process.execPath) // packaged: next to the executable
   : sourceRoot;
