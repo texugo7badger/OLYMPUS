@@ -2927,10 +2927,20 @@ async function runWarmMessageAttempt(
           const newestInFlight = messageRole(newestMessage) === 'assistant'
             && messageTime(newestMessage, 'completed') === null
             && !messageError(newestMessage);
+          // #177 (the AIME 21:55 specimen): a wave that completed with
+          // finish=tool-calls is the tool LOOP, not the turn's answer — the
+          // runtime executes the tools and re-prompts the model for another
+          // wave. Treating it as idle ended the run ~1s after the last tool
+          // output with "the turn ended without assistant text
+          // (finish=tool-calls)" while the turn was still alive. Only a
+          // TERMINAL finish can satisfy the idle check.
+          const finish = String(messageInfo(newest)?.finish ?? '').toLowerCase();
+          const nonTerminalFinish = finish === 'tool-calls' || finish === 'tool_call' || finish === 'tool';
           const idle = messageTime(newest, 'completed') !== null
             && !messageError(newest)
             && !messageHasLiveTool(newest)
-            && !newestInFlight;
+            && !newestInFlight
+            && !nonTerminalFinish;
           if (idle) {
             const now = Date.now();
             if (lastIdleAt > 0 && now - lastIdleAt >= 1000) {
@@ -3002,7 +3012,9 @@ async function runWarmMessageAttempt(
           ? (errorMessage || 'the turn ended with finish=error')
           : finish === 'aborted' || finish === 'length' || finish === 'content_filter'
             ? `turn cut server-side mid-reasoning (finish=${finish})`
-            : `the turn ended without assistant text${finish ? ` (finish=${finish})` : ''} — the model produced no answer`;
+            : finish === 'tool-calls' || finish === 'tool_call' || finish === 'tool'
+              ? 'the turn ended right after a tool call, before the model produced its answer — resend to continue (the warm session keeps the context)'
+              : `the turn ended without assistant text${finish ? ` (finish=${finish})` : ''} — the model produced no answer`;
         return { code: 1, sessionId: opts.sessionId, receivedEvents: true, postStarted: true, error: errorMessage || cause };
       }
       if (res.ok) {

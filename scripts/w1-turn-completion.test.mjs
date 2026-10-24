@@ -17,6 +17,8 @@
  *   S5 #175  cleanupServer() mid-run → named abort within seconds.
  *   S6 #176  strategy switch mid-turn → deferred kill, turn completes.
  *   S7 #178  project naming ignores the [Uploaded files: …] manifest.
+ *   S9 #177  a completed finish=tool-calls wave is the tool LOOP, not the
+ *            turn's end — the text arrives seconds later and must land.
  *   S8 #175  the serve rotates its password mid-run → 401 re-resolve and
  *            the run continues (never polls blind).
  *
@@ -88,6 +90,21 @@ function messagesFor() {
         content: [{ type: 'text', text: 'final answer' }],
       });
       return [wave2Done, wave1, oldWave()];
+    }
+    case 'tool-calls-idle': {
+      // #177 (the AIME 21:55 specimen): a completed wave with
+      // finish=tool-calls must NOT be taken as the end of the turn — the
+      // runtime is about to re-prompt the model. The text arrives only at
+      // +5s, far past the two-idle-readings window.
+      const tc = assistant('tc1', {
+        created: t + 500, completed: t + 1_200, finish: 'tool-calls',
+        content: [{ type: 'tool', state: { status: 'completed' } }],
+      });
+      if (elapsed() < 5_000) return [tc, oldWave()];
+      return [assistant('tc2', {
+        created: t + 5_000, completed: t + 5_400, finish: 'stop',
+        content: [{ type: 'text', text: 'answer after the tool loop' }],
+      }), tc, oldWave()];
     }
     case 'cut':
       return [assistant('cut', {
@@ -245,6 +262,25 @@ async function main() {
     expect('S1: the final answer lands', text.includes('final answer'), text.slice(-300));
     expect('S1: the prior turn is never mistaken for this one', !text.includes('OLD TURN'), text.slice(0, 300));
     expect('S1: the run waited past the early tool wave (>= 4s)', took >= 4_000, `took=${took}ms`);
+  }
+
+  // ── S9 (#177): finish=tool-calls is the LOOP, not the turn's end ────────
+  // The AIME 21:55 specimen: Beam completed a tool-calls wave, the poll took
+  // it as idle ~1s after the tool output, and the run died with "the turn
+  // ended without assistant text (finish=tool-calls)" while the turn was
+  // still alive. The turn must wait for the terminal wave.
+  resetStub('tool-calls-idle');
+  {
+    const events = [];
+    const started = Date.now();
+    const result = await run('w1-s9', events);
+    const text = transcriptOf(events);
+    const took = Date.now() - started;
+    expect('S9: tool-calls wave is not the end (code 0)', result.code === 0, JSON.stringify(result));
+    expect('S9: the late answer lands', text.includes('answer after the tool loop'), text.slice(-300));
+    expect('S9: the run waited past the tool-calls completion (>= 5s)', took >= 5_000, `took=${took}ms`);
+    expect('S9: no bogus "no assistant text (finish=tool-calls)" failure',
+      !/finish=tool-calls/.test(String(result.error || '')), String(result.error));
   }
 
   // ── S2 (#174): cut wave — named cause, code 1 ───────────────────────────
