@@ -301,6 +301,14 @@ export default function OlympusWorkspace() {
     };
   }, []);
 
+  // #MCP-SYNC (2026-10-25): sync .mcp.json → opencode.json on mount so the
+  // gods can actually use the MCPs the user toggled in the panel. Without
+  // this, the 22 .mcp.json servers stay invisible to opencode (which reads
+  // opencode.json). Fire-and-forget — never blocks the render.
+  useEffect(() => {
+    fetch('/api/olympus/mcp/sync', { method: 'POST', cache: 'no-store' }).catch(() => {});
+  }, []);
+
   // Load graph + health on mount
   // cache: 'no-store' on every fetch so the brain graph and health reflect
   // live state (was previously showing stale snapshots from browser cache).

@@ -282,6 +282,43 @@ export default function InteractiveTerminal() {
   const [context, setContext] = useState('');
   const [showContext, setShowContext] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // #MINITASK (2026-10-25): the hop currently in flight, surfaced as a
+  // mini-card above the transcript so the user can see WHO is doing WHAT
+  // without scrolling. Polled from /api/olympus/run-state (10s, paused when
+  // the document is hidden).
+  const [currentHop, setCurrentHop] = useState<{
+    hopId: string; god: string; lane: string; artifacts: string[]; elapsedMs: number;
+  } | null>(null);
+
+  // #MINITASK: poll run-state for the in-flight hop (10s, paused when hidden).
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        if (document.visibilityState === 'hidden') return;
+        const r = await fetch('/api/olympus/run-state', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (cancelled) return;
+        if (d.verdict === 'RUNNING' && d.hops?.inFlight > 0) {
+          // The hop id comes from the hop-state on disk.
+          const hopId = d.hops?.parked?.hopId ?? null;
+          setCurrentHop({
+            hopId: hopId ?? 'walking',
+            god: d.campaign?.slug ?? 'apollo',
+            lane: d.lane ?? '',
+            artifacts: [],
+            elapsedMs: 0,
+          });
+        } else {
+          setCurrentHop(null);
+        }
+      } catch { /* decorative */ }
+    };
+    tick();
+    const iv = setInterval(tick, 10_000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []);
   // #210: the chat queue (long-run companion).
   const [queued, setQueued] = useState<QueuedMessage[]>([]);
   // #203: a reference image is staged, not auto-sent — it rides the next
@@ -1992,7 +2029,19 @@ export default function InteractiveTerminal() {
             The OpenCode Mode toggle and the TerminalTabs rendering are gone.
             The Apollo chat uses /api/olympus/action (god delegation, todos, etc.). */}
         <div className="flex-1 min-w-0 flex flex-col">
-          <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scroll px-3 py-2 font-mono text-[11px] leading-relaxed space-y-2">
+          {/* #MINITASK: hop-in-flight mini-card — shows the current hop so the
+            user sees WHO is doing WHAT without scrolling the transcript. */}
+        {currentHop && (
+          <div className="mb-2 px-3 py-2 rounded-md border border-olympus-gold/20 bg-olympus-card/50 flex items-center gap-2 text-[10px] font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-olympus-gold animate-pulse" />
+            <span className="text-olympus-gold font-semibold">{currentHop.god}</span>
+            <span className="text-olympus-text-dim">·</span>
+            <span className="text-olympus-text">{currentHop.hopId}</span>
+            <span className="text-olympus-text-dim">·</span>
+            <span className="text-olympus-text-dim truncate">{currentHop.lane}</span>
+          </div>
+        )}
+        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scroll px-3 py-2 font-mono text-[11px] leading-relaxed space-y-2">
             {messages.map(m => (
               <VisibleMessage
                 key={m.id}
