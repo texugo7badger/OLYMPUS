@@ -313,6 +313,17 @@ function estimateComplexity(
     return { complexity: 'architectural', estimatedTokens: 150000, needsPlanning: true };
   }
 
+  // W-S PT-BR (the AIME specimen, 2026-10-25): "Continue o projeto AIME,
+  // finalize ele!" classified as `simple · planning=no` — the user is asking
+  // to RESUME a complex campaign, but the prompt is short and has no plan
+  // vocabulary. A continuation/resumption of a project with an existing
+  // dispatch-plan must be treated as planning (needsPlanning=true) so Apollo
+  // receives the planner marker and the walk resumes. Without this, Apollo
+  // narrates and never reads the plan on disk.
+  if (/\b(continue (o |a )?(projeto|app|sistema|site|plataforma)|continuar (o |a )?(projeto|app|sistema|site|plataforma)|finalize (o |a )?(projeto|app|sistema|site|plataforma)|termine (o |a )?(projeto|app|sistema|site|plataforma)|retome (o |a )?(projeto|app|sistema|site|plataforma))\b/.test(lower)) {
+    return { complexity: 'architectural', estimatedTokens: 150000, needsPlanning: true };
+  }
+
   // Architectural — explicit design / spec / refactor keywords.
   // W-S PT-BR: the Portuguese twins of the English architecture vocabulary
   // (arquitetura, especifica[çc][ãa]o, entrevista, do zero, novo sistema,
@@ -482,7 +493,12 @@ export function classifyTurnWithInheritance(
   const structuredRedirect = explicitGodAddress(promptText) !== null;
   const freeTextRedirect = isFreeTextGodRedirect(promptText);
   const explicitNewTask = action === 'prompt' && isNewTaskMarker(text);
-  if (!prior || structuredRedirect || freeTextRedirect || explicitNewTask) {
+  // W-S PT-BR (the AIME specimen): a warm continuation that asks to RESUME
+  // or finalize a project must re-classify — the prior classification was
+  // `planning=false` and inheriting it would keep Apollo from reading the
+  // dispatch-plan on disk. Planning triggers are never "just a chat turn".
+  const planningTrigger = /\b(planej\w*|desenvolv\w*|implement\w*|constru\w*|elabor\w*|continue (o |a )?(projeto|app|sistema)|continuar (o |a )?(projeto|app|sistema)|finalize (o |a )?(projeto|app|sistema)|termine (o |a )?(projeto|app|sistema)|retome (o |a )?(projeto|app|sistema))\b/.test(text.toLowerCase());
+  if (!prior || structuredRedirect || freeTextRedirect || explicitNewTask || planningTrigger) {
     return classifyTask(promptText);
   }
   return inheritClassification(prior);

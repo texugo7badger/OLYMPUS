@@ -2876,8 +2876,12 @@ async function runWarmMessageAttempt(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(server.protocol === 'v2' ? {
-              // v2 prompt body: {text} (the strategy block rides inline).
-              text: `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}`,
+              // v2 prompt body: {prompt: {text}} (the strategy block rides inline).
+              // The opencode v2 API requires `prompt` as a wrapper around
+              // `text` — sending `{text}` alone returns "Missing key at [prompt]".
+              prompt: {
+                text: `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}`,
+              },
               ...(opts.agent ? { agent: opts.agent } : {}),
             } : {
               // Prepend the authoritative strategy block so the model never has
