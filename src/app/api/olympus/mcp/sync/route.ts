@@ -58,9 +58,10 @@ export async function POST() {
     if (typeof src.url === 'string') translated.url = src.url;
     if (typeof src.type === 'string') translated.type = src.type;
 
-    let enabled = true;
-    if (AUTH_REQUIRED.has(name)) enabled = false;
-    if (SERVICE_REQUIRED.has(name)) enabled = false;
+    // Default DISABLED: MCPs opt-in. Enabling all 22+ MCPs by default pushed
+    // the tool count past the provider's 128-tool limit (invalid_value),
+    // breaking every strategy. Users enable the ones they need via the panel.
+    let enabled = false;
     translated.enabled = enabled;
 
     ocCfg.mcp[name] = translated;
