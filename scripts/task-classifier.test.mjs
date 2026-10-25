@@ -76,7 +76,7 @@ expect('F3 answer has FRESH classificationId', inherited.classificationId !== pe
 expect('F3 answer reason carries provenance', inherited.reason.startsWith(`inherited-from=${petlovePrior.classificationId}`), true);
 
 // 8b. warm prompt continuation inherits too
-const warmPrompt = classifyTurnWithInheritance('prompt', 'Pode seguir com a implementação do formulário.', petlovePrior);
+const warmPrompt = classifyTurnWithInheritance('prompt', 'Pode seguir com o formulário.', petlovePrior);
 expect('warm prompt inherits routeTo', warmPrompt.routeTo, petlovePrior.routeTo);
 
 // 8c. explicit redirect re-classifies (free-text, pt-BR)

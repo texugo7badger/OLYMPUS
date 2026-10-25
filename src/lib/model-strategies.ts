@@ -53,7 +53,7 @@
  *
  * Format: ISO 8601 date (YYYY-MM-DD) in UTC.
  */
-export const GO_PLAN_LAST_VERIFIED = '2026-09-28';
+export const GO_PLAN_LAST_VERIFIED = '2026-10-25';
 
 /** Canonical docs URL — shown in the UI next to the last-verified date. */
 export const GO_PLAN_DOCS_URL = 'https://opencode.ai/docs/go/';
@@ -65,7 +65,7 @@ export const GO_PLAN_DOCS_URL = 'https://opencode.ai/docs/go/';
  *
  * Format: ISO 8601 date (YYYY-MM-DD) in UTC.
  */
-export const ZEN_PLAN_LAST_VERIFIED = '2026-09-28';
+export const ZEN_PLAN_LAST_VERIFIED = '2026-10-25';
 
 /** Canonical Zen docs URL — shown in the UI next to the last-verified date. */
 export const ZEN_PLAN_DOCS_URL = 'https://opencode.ai/docs/zen/';
@@ -383,14 +383,14 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
     gods: {
       apollo: 'opencode-go/beam-free',
       atlas: 'opencode-go/beam-free',
-      artemis: 'opencode-go/beam-free',
+      artemis: 'opencode-go/deepseek-v4.1-flash',
       athena: 'openrouter/thinkingmachines/inkling:free',
       dionysus: 'openrouter/thinkingmachines/inkling:free',
       hephaestus: 'opencode-go/deepseek-v4.1-flash',
       hermes: 'openrouter/thinkingmachines/inkling:free',
       persephone: 'opencode-go/deepseek-v4.1-flash',
       prometheus: 'openrouter/recursive/flint-v1.0:free',
-      callimachus: 'opencode-go/deepseek-v4.1-flash',
+      callimachus: 'opencode-go/beam-free',
     },
     vaultLlm: 'opencode-go/beam-free',
     estCostPerDay: 'free',
@@ -446,14 +446,14 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
     gods: {
       apollo: 'opencode-go/beam-free',
       atlas: 'opencode-go/beam-free',
-      artemis: 'opencode-go/beam-free',
+      artemis: 'opencode-go/deepseek-v4.1-flash',
       athena: 'openrouter/thinkingmachines/inkling:free',
       dionysus: 'openrouter/thinkingmachines/inkling:free',
       hephaestus: 'opencode-go/deepseek-v4.1-flash',
       hermes: 'openrouter/thinkingmachines/inkling:free',
       persephone: 'opencode-go/deepseek-v4.1-flash',
       prometheus: 'openrouter/recursive/flint-v1.0:free',
-      callimachus: 'opencode-go/deepseek-v4.1-flash',
+      callimachus: 'opencode-go/beam-free',
     },
     vaultLlm: 'opencode-go/beam-free',
     estCostPerDay: 'free',
@@ -469,14 +469,14 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
     gods: {
       apollo: 'opencode-go/beam-free',
       atlas: 'opencode-go/beam-free',
-      artemis: 'opencode-go/beam-free',
+      artemis: 'opencode-go/deepseek-v4.1-flash',
       athena: 'openrouter/thinkingmachines/inkling:free',
       dionysus: 'openrouter/thinkingmachines/inkling:free',
       hephaestus: 'opencode-go/deepseek-v4.1-flash',
       hermes: 'openrouter/thinkingmachines/inkling:free',
       persephone: 'opencode-go/deepseek-v4.1-flash',
       prometheus: 'openrouter/recursive/flint-v1.0:free',
-      callimachus: 'opencode-go/deepseek-v4.1-flash',
+      callimachus: 'opencode-go/beam-free',
     },
     vaultLlm: 'opencode-go/beam-free',
     estCostPerDay: 'free',
@@ -492,14 +492,14 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
     gods: {
       apollo: 'opencode-go/beam-free',
       atlas: 'opencode-go/beam-free',
-      artemis: 'opencode-go/beam-free',
+      artemis: 'opencode-go/deepseek-v4.1-flash',
       athena: 'openrouter/thinkingmachines/inkling:free',
       dionysus: 'openrouter/thinkingmachines/inkling:free',
       hephaestus: 'opencode-go/deepseek-v4.1-flash',
       hermes: 'openrouter/thinkingmachines/inkling:free',
       persephone: 'opencode-go/deepseek-v4.1-flash',
       prometheus: 'openrouter/recursive/flint-v1.0:free',
-      callimachus: 'opencode-go/deepseek-v4.1-flash',
+      callimachus: 'opencode-go/beam-free',
     },
     vaultLlm: 'opencode-go/beam-free',
     estCostPerDay: 'free',
@@ -582,9 +582,9 @@ export const FREE_HYBRID_ROSTER: Record<GodId, FreeHybridLane[]> = {
     { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'integrations: Zen free lane (quota-gated — last resort)' },
   ],
   persephone: [
-    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'database: DeepSeek V4.1 Flash — included in GO, 384k out' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'database: Beam 1M/131k (GO free, quota-safe)' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'database: DeepSeek V4.1 Flash — included in GO, 384k out (quota-gated)' },
     { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'database: north-mini-code 256k/64k' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'database: Beam 1M/131k' },
     { source: 'nvidia', id: 'nvidia-glm/z-ai/glm-5.3', why: 'database: GLM-5.3 1M' },
     { source: 'opencode', id: 'opencode/flint-40b-free', why: 'database: Zen free lane (quota-gated — last resort)' },
   ],
@@ -596,8 +596,8 @@ export const FREE_HYBRID_ROSTER: Record<GodId, FreeHybridLane[]> = {
     { source: 'opencode', id: 'opencode/flint-40b-free', why: 'devops: Zen free lane (quota-gated — last resort)' },
   ],
   callimachus: [
-    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'vault curation: DeepSeek V4.1 Flash — included in the GO flat plan (the user pick)' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'vault curation: Beam 1M/131k' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'vault curation: Beam 1M/131k (GO free, quota-safe)' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'vault curation: DeepSeek V4.1 Flash — included in the GO flat plan (the user pick, quota-gated)' },
     { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'vault curation: north-mini-code' },
     { source: 'nvidia', id: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash', why: 'vault curation: MiniMax M3.1 Flash' },
     { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'vault curation: Zen free lane (quota-gated — last resort)' },
