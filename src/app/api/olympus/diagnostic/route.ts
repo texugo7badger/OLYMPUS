@@ -88,6 +88,22 @@ export async function GET() {
   // Ensure the file exists for future reads
   try { if (!fs.existsSync(LANE_HEALTH)) fs.writeFileSync(LANE_HEALTH, JSON.stringify(laneHealth, null, 2)); } catch { /* non-fatal */ }
 
+  // #V0.0.17: reconcile llm-providers.json with active-strategy.json on
+  // every diagnostic call so the panel and the config never disagree.
+  try {
+    const activePath = path.join(OLYMPUS_HOME, 'active-strategy.json');
+    const providersPath = path.join(OLYMPUS_HOME, 'llm-providers.json');
+    if (fs.existsSync(activePath)) {
+      const active = JSON.parse(fs.readFileSync(activePath, 'utf-8'));
+      const cfg = fs.existsSync(providersPath) ? JSON.parse(fs.readFileSync(providersPath, 'utf-8')) : {};
+      if (cfg.strategy !== active.strategy) {
+        cfg.strategy = active.strategy;
+        cfg.per_god_overrides = cfg.per_god_overrides || {};
+        fs.writeFileSync(providersPath, JSON.stringify(cfg, null, 2));
+      }
+    }
+  } catch { /* non-fatal */ }
+
   let activeStrategy: any = null;
   let providers: any = null;
   try { activeStrategy = JSON.parse(fs.readFileSync(RUN_STATE, 'utf-8')); } catch { /* absent */ }
