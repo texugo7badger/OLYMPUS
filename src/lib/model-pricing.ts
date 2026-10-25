@@ -143,6 +143,11 @@ const FALLBACK_PRICING_USD_PER_1M: Record<string, RatePair> = {
   'openrouter/cohere/north-mini-code:free': { input: 0, output: 0 },
   'openrouter/recursive/flint-v1.0:free': { input: 0, output: 0 },
   'openrouter/xingchen-agi/xing4.0-29b-a4b:free': { input: 0, output: 0 },
+  // Free Hybrid v0.0.19 (NVIDIA Build free, verified working):
+  'nvidia-openai/openai/gpt-oss-20b': { input: 0, output: 0 },
+  'nvidia-meta/meta/muse-glimmer-30b': { input: 0, output: 0 },
+  'nvidia-minimaxai/minimaxai/minimax-m3.1-flash': { input: 0, output: 0 },
+  'nvidia-meta/poolside/laguna-xs-2.1': { input: 0, output: 0 },
   'openrouter/dots-studio/dots-3-note-preview:free': { input: 0, output: 0 },
   // OpenCode Zen (pay-as-you-go) — published per-1M rates
   // (https://opencode.ai/docs/zen/, verified 2026-09-28).

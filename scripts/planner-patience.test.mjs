@@ -79,6 +79,9 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
       // benchmark tool-caller) and Beam 1.0 (the 1M free flagship).
       || /deepseek-v4\.1-flash-free/.test(String(apollo.model || ''))
       || /beam-free/.test(String(apollo.model || ''))
+      // v0.0.19: GPT-OSS-20B (NVIDIA Build free) is the NVIDIA fallback
+      // planner when OpenRouter is unavailable.
+      || /gpt-oss-20b/.test(String(apollo.model || ''))
       // BYOK: the user's own lane, but ONLY when it is literally the model the
       // strategy declares for Apollo (so a silent pin-drift still fails).
       || (isByok && Boolean(byokDeclared) && String(apollo.model || '') === `openrouter/${byokDeclared}`),

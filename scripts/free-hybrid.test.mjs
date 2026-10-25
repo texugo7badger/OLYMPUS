@@ -158,6 +158,9 @@ const nemotron = (map) => Object.values(map).filter((m) => /nemotron/i.test(Stri
       const slash = id.indexOf('/');
       const prov = id.slice(0, slash);
       const mid = id.slice(slash + 1);
+      // OLYMPUS custom providers (nvidia-*) are verified via NVIDIA Build
+      // API, not opencode's cache — skip them here.
+      if (prov.startsWith('nvidia-')) continue;
       if (!cat[prov]?.models?.[mid]) dead.push(id);
     }
     expect('S8 every static lane exists in the live catalogue cache', dead.length === 0, dead.join(', '));

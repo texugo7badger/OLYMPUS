@@ -63,6 +63,7 @@ const STUB_CATALOGUE = {
     'nvidia/minimaxai/minimax-m3.1-flash',
     'nvidia/meta/muse-glimmer-30b',
     'nvidia/openai/gpt-oss-20b',
+    'nvidia/poolside/laguna-xs-2.1',
   ],
   'opencode-go': [
     'opencode-go/glm-5.3', 'opencode-go/glm-5.3-flash', 'opencode-go/hy3',
@@ -197,6 +198,7 @@ function makeHome() {
         { id: 'nvidia/minimaxai/minimax-m3.1-flash', rawId: 'minimaxai/minimax-m3.1-flash', context: 131072, score: 98 },
         { id: 'nvidia/meta/muse-glimmer-30b', rawId: 'meta/muse-glimmer-30b', context: 131072, score: 96 },
         { id: 'nvidia/openai/gpt-oss-20b', rawId: 'openai/gpt-oss-20b', context: 131072, score: 95 },
+        { id: 'nvidia/poolside/laguna-xs-2.1', rawId: 'poolside/laguna-xs-2.1', context: 131072, score: 94 },
       ],
     },
     openrouter: { top: [{ id: 'nvidia/nemotron-3-ultra-550b-a55b:free', context: 1000000, score: 90 }] },
@@ -268,11 +270,11 @@ mkdirSync(WORK, { recursive: true });
     // athena+hephaestus deliberately sharing step-5, gemma as the volume
     // lane (the doctrine revision — see scripts/free-pantheon.test.mjs).
     const PINNED = {
-      apollo: 'nvidia-glm/z-ai/glm-5.3', atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-      artemis: 'nvidia-meta/meta/muse-glimmer-30b', athena: 'nvidia-openai/openai/gpt-oss-20b',
-      dionysus: 'nvidia-glm/z-ai/glm-5.3', hephaestus: 'nvidia-openai/openai/gpt-oss-20b',
-      hermes: 'nvidia-meta/meta/muse-glimmer-30b', persephone: 'nvidia-glm/z-ai/glm-5.3',
-      prometheus: 'nvidia-openai/openai/gpt-oss-20b', callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
+      apollo: 'nvidia-openai/openai/gpt-oss-20b', atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
+      artemis: 'nvidia-meta/meta/muse-glimmer-30b', athena: 'nvidia-meta/poolside/laguna-xs-2.1',
+      dionysus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash', hephaestus: 'nvidia-meta/poolside/laguna-xs-2.1',
+      hermes: 'nvidia-meta/meta/muse-glimmer-30b', persephone: 'nvidia-openai/openai/gpt-oss-20b',
+      prometheus: 'nvidia-meta/poolside/laguna-xs-2.1', callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
     };
     const pinDrift = GODS.filter(g => cfg.agent[g]?.model !== PINNED[g]);
     check('G1 #106: the pinned anchor map lands verbatim (no silent drift)',
