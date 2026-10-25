@@ -152,23 +152,37 @@ export async function registerNode() {
     sendToClient({ type: 'ws_connected', ts: new Date().toISOString() });
   }
 
-  try {
-    const httpServer = http.createServer((_req: any, res: any) => {
-      res.writeHead(426, { 'Content-Type': 'text/plain' });
-      res.end('WebSocket connection required.');
-    });
-    const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-    wss.on('connection', handleConnection);
-    (globalThis as any).__olympusWsBridge = { server: wss, httpServer, ready: false, sessions: new Map(), host: WS_BRIDGE_HOST, port: WS_BRIDGE_PORT };
-    httpServer.listen(WS_BRIDGE_PORT, WS_BRIDGE_HOST, () => {
-      (globalThis as any).__olympusWsBridge.ready = true;
-      console.log(`[olympus-ws] WebSocket bridge listening on ws://${WS_BRIDGE_HOST}:${WS_BRIDGE_PORT}/ws`);
-    });
-    httpServer.on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
+  // Pre-check: if something is already listening on 3738, reuse it instead of
+  // trying to bind (avoids the noisy EADDRINUSE / uncaughtException log when
+  // a previous instance's bridge is still alive).
+  const net = eval('require("net")');
+  const probe = net.createConnection({ host: WS_BRIDGE_HOST, port: WS_BRIDGE_PORT });
+  probe.on('connect', () => {
+    probe.destroy();
+    (globalThis as any).__olympusWsBridge = { server: null, httpServer: null, ready: true, sessions: new Map(), host: WS_BRIDGE_HOST, port: WS_BRIDGE_PORT };
+    console.log(`[olympus-ws] Port ${WS_BRIDGE_PORT} already in use — reusing existing bridge.`);
+  });
+  probe.on('error', () => {
+    probe.destroy();
+    // Port is free — bind normally.
+    try {
+      const httpServer = http.createServer((_req: any, res: any) => {
+        res.writeHead(426, { 'Content-Type': 'text/plain' });
+        res.end('WebSocket connection required.');
+      });
+      const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+      wss.on('connection', handleConnection);
+      (globalThis as any).__olympusWsBridge = { server: wss, httpServer, ready: false, sessions: new Map(), host: WS_BRIDGE_HOST, port: WS_BRIDGE_PORT };
+      httpServer.listen(WS_BRIDGE_PORT, WS_BRIDGE_HOST, () => {
         (globalThis as any).__olympusWsBridge.ready = true;
-        console.log(`[olympus-ws] Port ${WS_BRIDGE_PORT} in use — another worker is serving.`);
-      } else { console.error('[olympus-ws] error:', err.message); }
-    });
-  } catch (e: any) { console.error('[olympus-ws] Failed to start:', e.message); }
+        console.log(`[olympus-ws] WebSocket bridge listening on ws://${WS_BRIDGE_HOST}:${WS_BRIDGE_PORT}/ws`);
+      });
+      httpServer.on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          (globalThis as any).__olympusWsBridge.ready = true;
+          console.log(`[olympus-ws] Port ${WS_BRIDGE_PORT} in use — another worker is serving.`);
+        } else { console.error('[olympus-ws] error:', err.message); }
+      });
+    } catch (e: any) { console.error('[olympus-ws] Failed to start:', e.message); }
+  });
 }
