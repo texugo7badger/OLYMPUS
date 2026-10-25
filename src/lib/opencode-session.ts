@@ -41,7 +41,7 @@ import path from 'node:path';
 import { spawnOpencode, freeTierPreflight, authLaneCensus, resolveWorkspaceLane, ensureOpencodeDbHealthy } from '@/lib/opencode-spawn';
 import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
-import { markLaneDead, isLaneDeadClass } from '@/lib/lane-health';
+import { markLaneDead, isLaneDeadClass, pruneStaleLanes } from '@/lib/lane-health';
 import { activeModelFor } from '@/lib/lane-probe';
 import { getVaultRoot } from '@/lib/vault-root';
 // Issue #41: explicit, revisable permission policy. Replaces the silent
@@ -927,6 +927,9 @@ async function spawnServer(port: number): Promise<ServerInfo> {
   // #DB-HEALTH: repair a partial-migration opencode DB (missing
   // session_input table) before spawning — otherwise every prompt 500s.
   try { ensureOpencodeDbHealthy(); } catch (e) { console.warn('[opencode-session] DB health check failed:', e); }
+  // #V0.0.16: prune stale lane-health entries (older than 24h) so the
+  // registry doesn't carry stale "alive" readings.
+  try { pruneStaleLanes(); } catch (e) { console.warn('[opencode-session] lane-health prune failed:', e); }
 
   try {
     fs.mkdirSync(OLYMPUS_HOME, { recursive: true });
@@ -2512,7 +2515,7 @@ async function runWarmMessageAttempt(
     // client-gone runs become killable.
     const ABORT_GRACE_MS = (opts.text || '').includes('[OLYMPUS UNATTENDED MODE]')
       ? 0
-      : Number(process.env.OLYMPUS_ABORT_GRACE_MS || 10_000);
+      : Number(process.env.OLYMPUS_ABORT_GRACE_MS || 60_000);
     let clientGoneAt: number | null = null;
     let serverAbortSent = false;
     const sendServerAbort = async () => {

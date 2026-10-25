@@ -62,6 +62,28 @@ export function laneHealthPath(override?: string): string {
   return override ?? path.join(os.homedir(), '.olympus', 'lane-health.json');
 }
 
+/**
+ * #V0.0.16: prune stale lane-health entries (older than 24h) so the
+ * registry doesn't carry stale "alive" readings from days ago. Returns the
+ * number of entries pruned.
+ */
+export function pruneStaleLanes(maxAgeMs = 24 * 60 * 60_000, filePath = laneHealthPath()): number {
+  const file = readLaneHealth(filePath);
+  const now = Date.now();
+  let pruned = 0;
+  for (const [lane, entry] of Object.entries(file.lanes)) {
+    if (now - entry.at > maxAgeMs) {
+      delete file.lanes[lane];
+      pruned++;
+    }
+  }
+  if (pruned > 0) {
+    file.updatedAt = new Date().toISOString();
+    writeLaneHealth(file, filePath);
+  }
+  return pruned;
+}
+
 /* ------------------------------------------------------------------ */
 /* Load / save — failure is ALWAYS non-fatal (a corrupt file = no data). */
 /* ------------------------------------------------------------------ */

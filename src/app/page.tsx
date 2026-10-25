@@ -409,10 +409,12 @@ export default function OlympusWorkspace() {
   useEffect(() => {
     let es: EventSource | null = null;
     let reconnect: any;
+    let reconnectDelay = 1000;
+    let reconnectAttempts = 0;
     function connect() {
       es = new EventSource('/api/olympus/activity');
-      es.onopen = () => setSseConnected(true);
-      es.onerror = () => { setSseConnected(false); es?.close(); reconnect = setTimeout(connect, 3000); };
+      es.onopen = () => { setSseConnected(true); reconnectDelay = 1000; reconnectAttempts = 0; };
+      es.onerror = () => { setSseConnected(false); es?.close(); reconnectAttempts++; reconnectDelay = Math.min(reconnectDelay * 2, 30000); reconnect = setTimeout(connect, reconnectDelay); };
       es.onmessage = (e) => {
         try {
           const ev: ActivityEvent = JSON.parse(e.data);

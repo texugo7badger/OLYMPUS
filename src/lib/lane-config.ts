@@ -27,7 +27,7 @@ export function syncLaneFile(src: string, dst: string): LaneFileSyncVerdict {
   try {
     if (readFileSync(src).equals(readFileSync(dst))) return 'in-sync';
   } catch {
-    // unreadable dst (or src changed mid-read) — fall through to refresh
+    // unreadable dst — fall through to refresh
   }
   copyFileSync(src, dst);
   return 'refreshed';
