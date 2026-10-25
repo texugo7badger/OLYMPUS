@@ -189,6 +189,28 @@ export default function StatusBar({ health }: { health: any }) {
      evidence: the walk lock's pid + heartbeat (/api/olympus/run-state),
      per the #105 law — no probe, no claim. */}
  <RunStatePill />
+ {/* DIAGNOSTIC (2026-10-25): one-click bundle — the user asked for "análise
+     dele funcionando em live e tbm o log". Copies the last 5 min of every
+     relevant source (masked) to the clipboard. */}
+ <OlympusTooltip content="Copy the last 5 min diagnostic bundle (feed + bus + logs + health + lanes) to the clipboard" side="bottom" delay={150}>
+   <button
+     type="button"
+     onClick={async () => {
+       try {
+         const r = await fetch('/api/olympus/diagnostic', { cache: 'no-store' });
+         if (!r.ok) throw new Error(`HTTP ${r.status}`);
+         const d = await r.json();
+         await navigator.clipboard.writeText(JSON.stringify(d, null, 2));
+       } catch (e) {
+         console.warn('diagnostic copy failed:', e);
+       }
+     }}
+     className="text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold transition-colors cursor-pointer px-1"
+     aria-label="Copy diagnostic bundle"
+   >
+     diag
+   </button>
+ </OlympusTooltip>
  <div className="flex items-center gap-1 shrink-0" data-tip={workingGods.length > 0 ? workingGods.join(' · ') : (fallbackGod || 'idle')}>
  {workingGods.length > 0 ? (
  workingGods.map((g) => {
