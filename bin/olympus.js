@@ -87,7 +87,7 @@ const ROOT = findOlympusRoot();
  * can never be mistaken for an Electron/Chromium switch.
  */
 const FLAGS_ELECTRON_UNDERSTANDS = new Set([
-  '--dev', '--prod', '--reset-gpu', '--no-sandbox',
+  '--dev', '--prod', '--reset-gpu', '--no-sandbox', '--disable-gpu',
 ]);
 
 const PKG_VERSION = (() => {
@@ -387,7 +387,7 @@ function startElectron(extraArgs = []) {
   // Set WM_CLASS to 'olympus' so the Linux desktop environment matches
   // the .desktop entry (which has StartupWMClass=olympus) and shows the
   // OLYMPUS logo in the taskbar/dock instead of the generic gear icon.
-  let electronArgs = ['--class=olympus', ROOT, ...extraArgs];
+  let electronArgs = ['--class=olympus', '--disable-gpu', ROOT, ...extraArgs];
   if (process.platform === 'linux') {
     const chromeSandbox = join(ROOT, 'node_modules', 'electron', 'dist', 'chrome-sandbox');
     let sandboxOk = false;
