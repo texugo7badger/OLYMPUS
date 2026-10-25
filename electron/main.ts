@@ -33,7 +33,7 @@
 
 import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage, Tray, Menu } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync, symlinkSync } from 'node:fs';
+import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync, cpSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import * as nodeOs from 'node:os';
 import http from 'node:http';
@@ -285,23 +285,29 @@ function spawnNext(): ChildProcess {
       const staticDst = join(standaloneDir, '.next', 'static');
       const publicSrc = join(sourceRoot, 'public');
       const publicDst = join(standaloneDir, 'public');
+      // #STATIC-ASSETS (the 2026-10-24 'tela cortada' specimen): the
+      // standalone server serves from .next/standalone/, which does NOT
+      // contain _next/static/ (CSS, JS, fonts). In a packaged build,
+      // electron-builder copies them via extraResources; in a SOURCE run
+      // they are absent. Symlinks don't work (the server doesn't follow
+      // them for security), so we COPY. Idempotent — skip if already present.
       try {
         mkdirSync(join(standaloneDir, '.next'), { recursive: true });
         if (!existsSync(staticDst)) {
-          symlinkSync(staticSrc, staticDst, 'dir');
-          console.log('[olympus:electron] linked .next/static → standalone/.next/static');
+          // Use cpSync (Node 16.7+) for a recursive copy.
+          cpSync(staticSrc, staticDst, { recursive: true });
+          console.log('[olympus:electron] copied .next/static → standalone/.next/static');
         }
       } catch (e: any) {
-        // A real directory (not a link) already exists — leave it.
-        if (e?.code !== 'EEXIST') console.warn('[olympus:electron] static link failed:', e?.message);
+        console.warn('[olympus:electron] static copy failed:', e?.message);
       }
       try {
         if (!existsSync(publicDst)) {
-          symlinkSync(publicSrc, publicDst, 'dir');
-          console.log('[olympus:electron] linked public → standalone/public');
+          cpSync(publicSrc, publicDst, { recursive: true });
+          console.log('[olympus:electron] copied public → standalone/public');
         }
       } catch (e: any) {
-        if (e?.code !== 'EEXIST') console.warn('[olympus:electron] public link failed:', e?.message);
+        console.warn('[olympus:electron] public copy failed:', e?.message);
       }
     }
     args = [standalonePath];
