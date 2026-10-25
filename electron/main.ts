@@ -33,7 +33,7 @@
 
 import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync } from 'node:fs';
+import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync, symlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import * as nodeOs from 'node:os';
 import http from 'node:http';
@@ -272,6 +272,39 @@ function spawnNext(): ChildProcess {
       console.error(`[olympus:electron] Run "npm run build:app" (or reinstall the packaged app).`);
       app.quit();
       process.exit(1);
+    }
+    // #STATIC-ASSETS (the 2026-10-24 'tela cortada' specimen): the standalone
+    // server serves from .next/standalone/, which does NOT contain the
+    // _next/static/ chunks (CSS, JS, fonts) — those live in .next/static/.
+    // In a packaged build, electron-builder copies them via extraResources;
+    // in a SOURCE run they are simply absent, so the page renders as raw
+    // text on a black background with infinite spinners. Symlink them in
+    // before spawn (idempotent — a stale link is replaced, a real directory
+    // is left alone). The same for public/.
+    if (!packaged) {
+      const standaloneDir = dirname(standalonePath);
+      const staticSrc = join(sourceRoot, '.next', 'static');
+      const staticDst = join(standaloneDir, '.next', 'static');
+      const publicSrc = join(sourceRoot, 'public');
+      const publicDst = join(standaloneDir, 'public');
+      try {
+        mkdirSync(join(standaloneDir, '.next'), { recursive: true });
+        if (!existsSync(staticDst)) {
+          symlinkSync(staticSrc, staticDst, 'dir');
+          console.log('[olympus:electron] linked .next/static → standalone/.next/static');
+        }
+      } catch (e: any) {
+        // A real directory (not a link) already exists — leave it.
+        if (e?.code !== 'EEXIST') console.warn('[olympus:electron] static link failed:', e?.message);
+      }
+      try {
+        if (!existsSync(publicDst)) {
+          symlinkSync(publicSrc, publicDst, 'dir');
+          console.log('[olympus:electron] linked public → standalone/public');
+        }
+      } catch (e: any) {
+        if (e?.code !== 'EEXIST') console.warn('[olympus:electron] public link failed:', e?.message);
+      }
     }
     args = [standalonePath];
     cwd = dirname(standalonePath);
