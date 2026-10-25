@@ -172,8 +172,6 @@ function safeConsole(kind: 'log' | 'error', ...args: any[]): void {
 // #177: after two GPU process crashes, persist a marker and relaunch with
 // hardware acceleration disabled (Electron's documented recovery path —
 // disableHardwareAcceleration() only takes effect before app ready).
-const GPU_FALLBACK_ARG = '--olympus-disable-gpu';
-const GPU_FALLBACK_MARKER = join(nodeOs.homedir(), '.olympus', 'gpu-fallback');
 let gpuCrashCount = 0;
 
 /**
@@ -1188,54 +1186,37 @@ ipcMain.handle('olympus:get-version-info', () => {
 // .desktop entry). Must be called before app.whenReady().
 app.setName('OLYMPUS');
 
-// #177: a persisted GPU fallback (or the relaunch arg) disables hardware
-// acceleration BEFORE the app becomes ready — the only window where the
-// switch takes effect.
+// #GPU-DISABLE (2026-10-25): the AMD Radeon RX 6600 on this machine crashes
+// Electron's GPU process on launch (error_code=1002, "GPU process isn't
+// usable. Goodbye."). The fallback marker + TTL approach doesn't work because
+// the FATAL error kills the process before the marker is read.
 //
-// #GPU-TTL (2026-10-24): the marker used to be FOREVER — one bad driver week
-// and the app rendered the Three.js brain on the CPU for the rest of its
-// life ("OLYMPUS está bem travado"). A driver update usually fixes the crash,
-// so the marker now expires: after GPU_FALLBACK_TTL_MS we try the GPU again
-// (and if it crashes twice, the marker is rewritten). `--reset-gpu` forces
-// that retry immediately.
+// FIX: disable GPU UNCONDITIONALLY on this machine. The user can re-enable
+// with --reset-gpu (which clears the marker and tries GPU again).
 //
-// #GPU-CRASH-FATAL (2026-10-25): the AMD Radeon RX 6600 on this machine
-// crashes Electron's GPU process on launch (error_code=1002, "GPU process
-// isn't usable. Goodbye."). The fallback marker was supposed to disable GPU
-// on the NEXT boot, but the FATAL error kills the process before the marker
-// is even read. Fix: disable GPU PROACTIVELY when the marker exists OR when
-// --disable-gpu is passed, AND also try --disable-gpu-sandbox as a fallback.
-// The user can re-enable GPU with --reset-gpu.
-const GPU_FALLBACK_TTL_MS = 7 * 24 * 60 * 60_000;
-function gpuFallbackActive(): boolean {
-  if (process.argv.includes(GPU_FALLBACK_ARG)) return true;
-  if (process.argv.includes('--disable-gpu')) return true;
-  if (process.argv.includes('--reset-gpu')) {
-    try { unlinkSync(GPU_FALLBACK_MARKER); } catch { /* already gone */ }
-    console.log('[olympus:electron] --reset-gpu: GPU fallback marker cleared — trying hardware acceleration again.');
-    return false;
-  }
-  if (!existsSync(GPU_FALLBACK_MARKER)) return false;
-  try {
-    const age = Date.now() - statSync(GPU_FALLBACK_MARKER).mtimeMs;
-    if (age > GPU_FALLBACK_TTL_MS) {
-      console.log(`[olympus:electron] GPU fallback marker is ${Math.round(age / 86_400_000)}d old — retrying hardware acceleration (a driver update usually heals it).`);
-      try { unlinkSync(GPU_FALLBACK_MARKER); } catch { /* keep going */ }
-      return false;
-    }
-  } catch { /* unreadable marker: honor it */ }
-  return true;
-}
+// The marker is kept for telemetry (when was GPU last disabled) but the
+// decision is now: always disable unless --reset-gpu is explicitly passed.
+const GPU_FALLBACK_MARKER = join(nodeOs.homedir(), '.olympus', 'gpu-fallback');
+const GPU_FALLBACK_ARG = '--olympus-disable-gpu';
 
-if (gpuFallbackActive()) {
+if (!process.argv.includes('--reset-gpu')) {
   try {
     app.disableHardwareAcceleration();
     app.commandLine.appendSwitch('disable-gpu');
     app.commandLine.appendSwitch('disable-gpu-sandbox');
-    console.log('[olympus:electron] hardware acceleration DISABLED (GPU crash fallback) — run with --reset-gpu to retry');
+    app.commandLine.appendSwitch('disable-software-rasterizer');
+    console.log('[olympus:electron] hardware acceleration DISABLED (GPU incompatible with this machine — run with --reset-gpu to retry)');
+    // Persist the marker so the state is visible.
+    try {
+      mkdirSync(join(nodeOs.homedir(), '.olympus'), { recursive: true });
+      writeFileSync(GPU_FALLBACK_MARKER, new Date().toISOString(), 'utf-8');
+    } catch { /* non-fatal */ }
   } catch (err) {
-    logError('gpu-fallback-apply', err);
+    console.error('[olympus:electron] GPU disable failed:', err);
   }
+} else {
+  try { unlinkSync(GPU_FALLBACK_MARKER); } catch { /* already gone */ }
+  console.log('[olympus:electron] --reset-gpu: GPU fallback marker cleared — trying hardware acceleration again.');
 }
 
 const gotLock = app.requestSingleInstanceLock();
