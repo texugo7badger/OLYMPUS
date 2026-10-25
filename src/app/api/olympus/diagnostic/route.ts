@@ -83,8 +83,10 @@ export async function GET() {
   const serverLog = readTail(SERVER_LOG, 32 * 1024).slice(-50);
   const errorsLog = readTail(ERRORS_LOG, 16 * 1024).slice(-20);
 
-  let laneHealth: any = null;
-  try { laneHealth = JSON.parse(fs.readFileSync(LANE_HEALTH, 'utf-8')); } catch { /* absent */ }
+  let laneHealth: any = { version: 1, lanes: {}, updatedAt: '' };
+  try { const parsed = JSON.parse(fs.readFileSync(LANE_HEALTH, 'utf-8')); if (parsed && parsed.lanes) laneHealth = parsed; } catch { /* absent — empty registry */ }
+  // Ensure the file exists for future reads
+  try { if (!fs.existsSync(LANE_HEALTH)) fs.writeFileSync(LANE_HEALTH, JSON.stringify(laneHealth, null, 2)); } catch { /* non-fatal */ }
 
   let activeStrategy: any = null;
   let providers: any = null;

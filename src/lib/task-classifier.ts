@@ -320,7 +320,7 @@ function estimateComplexity(
   // dispatch-plan must be treated as planning (needsPlanning=true) so Apollo
   // receives the planner marker and the walk resumes. Without this, Apollo
   // narrates and never reads the plan on disk.
-  if (/\b(continue (o |a )?(projeto|app|sistema|site|plataforma)|continuar (o |a )?(projeto|app|sistema|site|plataforma)|finalize (o |a )?(projeto|app|sistema|site|plataforma)|termine (o |a )?(projeto|app|sistema|site|plataforma)|retome (o |a )?(projeto|app|sistema|site|plataforma))\b/.test(lower)) {
+  if (/\b(continue\b|continuar (o |a )?(projeto|app|sistema|site|plataforma)|finalize (o |a )?(projeto|app|sistema|site|plataforma)|termine (o |a )?(projeto|app|sistema|site|plataforma)|retome (o |a )?(projeto|app|sistema|site|plataforma))\b/.test(lower)) {
     return { complexity: 'architectural', estimatedTokens: 150000, needsPlanning: true };
   }
 
@@ -497,7 +497,7 @@ export function classifyTurnWithInheritance(
   // or finalize a project must re-classify — the prior classification was
   // `planning=false` and inheriting it would keep Apollo from reading the
   // dispatch-plan on disk. Planning triggers are never "just a chat turn".
-  const planningTrigger = /\b(planej\w*|desenvolv\w*|implement\w*|constru\w*|elabor\w*|continue (o |a )?(projeto|app|sistema)|continuar (o |a )?(projeto|app|sistema)|finalize (o |a )?(projeto|app|sistema)|termine (o |a )?(projeto|app|sistema)|retome (o |a )?(projeto|app|sistema))\b/.test(text.toLowerCase());
+  const planningTrigger = /\b(planej\w*|desenvolv\w*|implement\w*|constru\w*|elabor\w*|continue\b|continuar (o |a )?(projeto|app|sistema)|finalize (o |a )?(projeto|app|sistema)|termine (o |a )?(projeto|app|sistema)|retome (o |a )?(projeto|app|sistema))\b/.test(text.toLowerCase());
   if (!prior || structuredRedirect || freeTextRedirect || explicitNewTask || planningTrigger) {
     return classifyTask(promptText);
   }

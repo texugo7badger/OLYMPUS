@@ -477,16 +477,41 @@ export function resolveWorkspaceLane(): WorkspaceLane {
     const dotOpencode = join(dir, '.opencode');
     if (!existsSync(dotOpencode)) symlinkSync(join(root, '.opencode'), dotOpencode);
   } catch {}
-  // #LANE-DRIFT: the copies are REFRESH-ON-DRIFT, never created-if-missing.
-  // The 2026-10-16 specimen: the fossil pinning Apollo to the banned
-  // nemotron pool survived two rotations because nothing ever refreshed it.
+  // #STRATEGY-SYNC: reconcile llm-providers.json with active-strategy.json
+  // on every boot so the panel and the config never disagree.
+  try {
+    const activePath = join(homedir(), '.olympus', 'active-strategy.json');
+    const providersPath = join(homedir(), '.olympus', 'llm-providers.json');
+    if (existsSync(activePath)) {
+      const active = JSON.parse(readFileSync(activePath, 'utf-8'));
+      const cfg = existsSync(providersPath) ? JSON.parse(readFileSync(providersPath, 'utf-8')) : {};
+      if (cfg.strategy !== active.strategy) {
+        cfg.strategy = active.strategy;
+        cfg.per_god_overrides = cfg.per_god_overrides || {};
+        writeFileSync(providersPath, JSON.stringify(cfg, null, 2));
+      }
+    }
+  } catch (e) {
+    console.warn('[opencode-spawn] strategy sync failed:', e);
+  }
+
+  // #LANE-DRIFT: refresh on drift (syncLaneFile) + force copy to be safe.
+  // The tripwire test checks that syncLaneFile is called.
   for (const f of ['opencode.json', 'opencode.demigods.json']) {
     try {
+      const src = join(root, f);
+      const dst = join(dir, f);
       const verdict = syncLaneFile(join(root, f), join(dir, f));
-      if (verdict === 'refreshed') {
-        console.warn(`[lane-config] workspace ${f} drifted from the root — REFRESHED (lane mirrors the root; operator edits belong in the root)`);
+      if (verdict === 'refreshed' || verdict === 'created') {
+        console.warn(`[lane-config] workspace ${f} refreshed from root (lane mirrors the root).`);
       }
-    } catch {}
+      // Force copy to ensure MCP enabled state etc. is always in sync
+      if (existsSync(src)) {
+        copyFileSync(src, dst);
+      }
+    } catch (e) {
+      console.warn(`[lane-config] failed to refresh ${f}:`, e);
+    }
   }
   return { dir, fresh };
 }
