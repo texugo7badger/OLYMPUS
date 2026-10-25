@@ -58,12 +58,11 @@ function expect(name, cond, detail) {
   expect('M3 McpRegistryEntry has opencodeEnabled', /opencodeEnabled\?: boolean/.test(reg));
 }
 
-// M4 — godot + rea enabled by default
+// M4 — all MCPs disabled by default (opt-in) due to the provider 128-tool limit
 {
   const oc = JSON.parse(fs.readFileSync(path.join(ROOT, 'opencode.json'), 'utf-8'));
   const m = oc.mcp || {};
-  expect('M4 godot is enabled by default', m.godot?.enabled === true);
-  expect('M4 rea is enabled by default', m.rea?.enabled === true);
+  expect('M4 all MCPs disabled by default (128-tool limit)', Object.values(m).every((v) => v?.enabled === false));
 }
 
 // M5 — uvx-dependent MCPs disabled by default (uvx not installed)
