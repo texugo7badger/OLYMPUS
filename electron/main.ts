@@ -1246,6 +1246,19 @@ if (!gotLock) {
           url: webContents?.getURL?.() || 'unknown',
         });
       });
+      // #RENDERER-LOG (2026-10-24): capture the renderer's console so a
+      // blank/frozen window is diagnosable instead of a mystery. The user's
+      // 'tela congelada' specimen had zero evidence in errors.log before this.
+      webContents.on('console-message', (_e, level, message, line, sourceId) => {
+        if (level >= 2) {
+          // 2 = warning, 3 = error — only log the loud ones to avoid noise.
+          logError('renderer-console', new Error(String(message)), {
+            level,
+            source: sourceId || 'unknown',
+            line,
+          });
+        }
+      });
     });
     app.on('child-process-gone', (_event, details) => {
       if (details.type === 'GPU') {
@@ -1305,10 +1318,10 @@ if (!gotLock) {
     // Safety net: if ready-to-show never fires within 15s, force-show the window.
     setTimeout(() => {
       if (mainWindow && !mainWindow.isVisible()) {
-        console.warn('[olympus:electron] ready-to-show did not fire within 15s — force-showing window.');
+        console.warn('[olympus:electron] ready-to-show did not fire within 30s — force-showing window.');
         mainWindow.show();
       }
-    }, 15_000);
+    }, 30_000);
   });
 
   app.on('activate', () => {
