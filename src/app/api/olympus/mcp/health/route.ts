@@ -22,7 +22,7 @@ import { listMcpServers } from '@/lib/mcp-registry';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const HEALTH_TIMEOUT_MS = 10_000;
+const HEALTH_TIMEOUT_MS = 5_000;
 const CACHE_TTL_MS = 60_000;
 
 interface McpHealthResult {

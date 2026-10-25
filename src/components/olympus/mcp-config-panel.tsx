@@ -61,17 +61,27 @@ export default function MCPConfigPanel() {
     setLoading(true);
     setError(null);
     try {
-      const [mcpRes, apiRes, healthRes] = await Promise.all([
+      const [mcpRes, apiRes] = await Promise.all([
         fetch('/api/olympus/mcp/list', { cache: 'no-store' }),
         fetch('/api/olympus/api-configs', { cache: 'no-store' }),
-        fetch('/api/olympus/mcp/health', { cache: 'no-store' }).catch(() => null),
       ]);
       if (!mcpRes.ok) throw new Error(`MCP list API returned ${mcpRes.status}`);
       const mcpData: McpListResponse = await mcpRes.json();
       const apiConfigs = apiRes.ok ? await apiRes.json() : { configs: {} };
-      const healthData = healthRes?.ok ? await healthRes.json() : { results: [] };
+
+      // Health is fetched in the BACKGROUND — never blocks the panel render.
+      // The panel shows enabled/disabled immediately; dots update when the
+      // health probe lands (up to 5s per MCP).
       const healthMap: Record<string, { status: string; error?: string; latencyMs?: number }> = {};
-      for (const h of (healthData.results || [])) healthMap[h.name] = h;
+      fetch('/api/olympus/mcp/health', { cache: 'no-store' })
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => {
+          if (!d?.results) return;
+          const next: Record<string, any> = {};
+          for (const h of d.results) next[h.name] = h;
+          setServers((prev) => prev.map((s) => ({ ...s, health: next[s.name] })));
+        })
+        .catch(() => {});
 
       // Determine which API keys are configured
       const configuredKeys = new Set<string>();
@@ -88,7 +98,10 @@ export default function MCPConfigPanel() {
 
       const enriched: McpServerInfo[] = mcpData.servers.map(s => {
         const apiKeysConfigured = s.apiKeyEnvVars.every(v => configuredKeys.has(v));
-        const fallback = s.registry === 'opencode' ? (s.opencodeEnabled ?? true) : true;
+        // .mcp.json entries default to DISABLED (the user opts in). opencode-native
+        // entries default to their opencode.json `enabled` flag (the honest
+        // default — tool MCPs ship disabled).
+        const fallback = s.registry === 'opencode' ? (s.opencodeEnabled ?? true) : false;
         const enabled = enabledMap[s.name] ?? fallback;
         return { ...s, apiKeysConfigured, enabled, health: healthMap[s.name] as McpServerInfo['health'] };
       });
