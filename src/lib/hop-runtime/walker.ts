@@ -755,7 +755,7 @@ export interface WalkResult {
  * bridges these to the terminal stream (WHO the god is, WHERE the lane is,
  * what happened) so the walk is visible while it runs. */
 export type HopWalkEvent =
-  | { type: 'hop_start'; hop: string; god: string; artifacts?: string[]; arsenal?: string[] }
+  | { type: 'hop_start'; hop: string; god: string; artifacts?: string[]; arsenal?: string[]; skill?: string; mcp?: string; demigod?: string }
   /** W-T HOP-HEARTBEAT: the long-hop visibility — every 45s the in-flight
    *  hops narrate their elapsed time (the 'demora mt' cure: a silent
    *  2-minute spawn reads as a hang; a heartbeat reads as work). */
@@ -900,7 +900,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         // #PANTHEON-RAIL: the hop's ARTIFACTS ride the start event — the
         // rail shows WHAT each god is creating (the file list from the
         // plan), not just that it started.
-        opts.onEvent?.({ type: 'hop_start', hop: next.id, god: next.god, artifacts: next.artifacts });
+        opts.onEvent?.({ type: 'hop_start', hop: next.id, god: next.god, artifacts: next.artifacts, skill: next.skill, mcp: next.mcp, demigod: next.demigod });
         persistState();
         task.promise = (async () => {
           // #CRASH-ARMOR (the 05:42 specimen): the DEV SERVER DIED on an

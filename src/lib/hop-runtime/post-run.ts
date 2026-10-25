@@ -195,7 +195,7 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
   let msg = '';
   if (ev.type === 'hop_start') {
     msg = `Hop '${ev.hop}' started — god ${ev.god}${poolNote}, lane ${laneRoot}`;
-    if (send) send({ type: 'hop_start', hop: ev.hop, god: ev.god, pool, lane: laneRoot, artifacts: ev.artifacts, arsenal: (ev as { arsenal?: string[] }).arsenal, msg, ts });
+    if (send) send({ type: 'hop_start', hop: ev.hop, god: ev.god, pool, lane: laneRoot, artifacts: ev.artifacts, arsenal: (ev as { arsenal?: string[] }).arsenal, skill: (ev as { skill?: string }).skill, mcp: (ev as { mcp?: string }).mcp, demigod: (ev as { demigod?: string }).demigod, msg, ts });
   } else if (ev.type === 'hop_heartbeat') {
     msg = `Hop '${ev.hop}' running — god ${ev.god}${poolNote}, ${Math.round(ev.elapsedMs / 1000)}s (the spawn works; the next event lands on completion)`;
     if (send) send({ type: 'log', msg, ts });

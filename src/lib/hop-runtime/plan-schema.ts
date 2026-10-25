@@ -28,6 +28,12 @@ export interface PlanHop {
   prompt: string;
   /** The artifacts this hop contracts to write (relative to laneRoot). */
   artifacts: string[];
+  /** Optional skill invoked by this hop (for UI visibility, #225). */
+  skill?: string;
+  /** Optional MCP used by this hop (for UI visibility, #225). */
+  mcp?: string;
+  /** Optional demigod dispatched by this hop (for UI visibility, #225). */
+  demigod?: string;
   /** Optional DAG edges: hop ids that must complete first. Absent/empty = root. */
   after?: string[];
   /** The verify policy. Deterministic-first (0 tokens); 'llm' is the opt-in
@@ -122,6 +128,9 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
     hops.push({
       id, god: h.god as string, prompt: h.prompt as string,
       artifacts: Array.isArray(h.artifacts) ? [...(h.artifacts as string[])] : [],
+      skill: typeof h.skill === 'string' ? h.skill : undefined,
+      mcp: typeof h.mcp === 'string' ? h.mcp : undefined,
+      demigod: typeof h.demigod === 'string' ? h.demigod : undefined,
       after, verify: { review, checks }, budgetTokens: budget,
     });
   }
