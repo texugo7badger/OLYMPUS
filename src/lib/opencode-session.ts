@@ -38,7 +38,7 @@ import * as http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnOpencode, freeTierPreflight, authLaneCensus, resolveWorkspaceLane } from '@/lib/opencode-spawn';
+import { spawnOpencode, freeTierPreflight, authLaneCensus, resolveWorkspaceLane, ensureOpencodeDbHealthy } from '@/lib/opencode-spawn';
 import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
 import { markLaneDead, isLaneDeadClass } from '@/lib/lane-health';
@@ -923,6 +923,10 @@ export async function ensureServer(): Promise<ServerInfo> {
 
 async function spawnServer(port: number): Promise<ServerInfo> {
   const password = randomBytes(16).toString('hex');
+
+  // #DB-HEALTH: repair a partial-migration opencode DB (missing
+  // session_input table) before spawning — otherwise every prompt 500s.
+  try { ensureOpencodeDbHealthy(); } catch (e) { console.warn('[opencode-session] DB health check failed:', e); }
 
   try {
     fs.mkdirSync(OLYMPUS_HOME, { recursive: true });

@@ -25,8 +25,8 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync } from 'node:fs';
+import { spawn, execFileSync, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync, copyFileSync, unlinkSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { syncLaneFile } from './lane-config';
 import { platform, homedir } from 'node:os';
@@ -973,4 +973,69 @@ export function spawnOpencode(
  */
 export function isOpencodeInstalled(): boolean {
   return findOpencodeBinary() !== null;
+}
+
+/**
+ * #DB-HEALTH (2026-10-25): the opencode SQLite DB can end up with a
+ * partial migration — the `session_input` table is recorded as applied in
+ * the `migration` table but does not actually exist. Every prompt then fails
+ * with `SQLiteError: no such table: session_input` → "Unexpected server
+ * error", breaking ALL strategies identically.
+ *
+ * This helper checks that the DB has the `session_input` table. If it
+ * doesn't, it backs up the DB (`opencode.db.bak-<ts>`) and removes it (+
+ * -shm / -wal) so opencode recreates a clean schema on next boot. Keeps
+ * the 3 most recent backups, pruning older ones.
+ *
+ * Returns true if a repair was performed.
+ */
+export function ensureOpencodeDbHealthy(): boolean {
+  const dbPath = join(homedir(), '.local', 'share', 'opencode', 'opencode.db');
+  if (!existsSync(dbPath)) return false; // nothing to repair; opencode creates it
+  let needsRepair = false;
+  try {
+    // Use a child process? No — use node's better-sqlite3 if available, else
+    // fall back to probing via the opencode binary's own check. We use a
+    // lightweight probe: open with sqlite3 CLI if present.
+    let tables = '';
+    try {
+      tables = execFileSync('python3', ['-c',
+        `import sqlite3,sys; c=sqlite3.connect('${dbPath}'); print(' '.join(r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()))`
+      ], { encoding: 'utf-8', timeout: 5000 });
+    } catch {
+      // python3 unavailable — assume healthy (don't risk data loss)
+      return false;
+    }
+    if (!tables.split(/\s+/).includes('session_input')) {
+      needsRepair = true;
+    }
+  } catch {
+    return false;
+  }
+  if (!needsRepair) return false;
+
+  // Back up + remove
+  try {
+    const ts = Date.now();
+    const backup = `${dbPath}.bak-${ts}`;
+    copyFileSync(dbPath, backup);
+    // prune older backups (keep 3 newest)
+    const dir = dirname(dbPath);
+    const backups = readdirSync(dir)
+      .filter((f) => f.startsWith('opencode.db.bak-'))
+      .sort()
+      .reverse();
+    for (const old of backups.slice(3)) {
+      try { unlinkSync(join(dir, old)); } catch {}
+    }
+    unlinkSync(dbPath);
+    for (const suffix of ['-shm', '-wal']) {
+      try { unlinkSync(dbPath + suffix); } catch {}
+    }
+    console.log(`[opencode-spawn] Repaired OpenCode database (missing session_input table). Previous saved as ${backup}`);
+    return true;
+  } catch (err) {
+    console.error('[opencode-spawn] DB repair failed:', err);
+    return false;
+  }
 }
