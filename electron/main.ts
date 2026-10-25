@@ -1199,6 +1199,9 @@ app.setName('OLYMPUS');
 const GPU_FALLBACK_MARKER = join(nodeOs.homedir(), '.olympus', 'gpu-fallback');
 const GPU_FALLBACK_ARG = '--olympus-disable-gpu';
 
+// #GPU-DISABLE: disable GPU unconditionally on this machine. The AMD Radeon
+// RX 6600 crashes Electron's GPU process on launch (error_code=1002).
+// The user can re-enable with --reset-gpu.
 if (!process.argv.includes('--reset-gpu')) {
   try {
     app.disableHardwareAcceleration();
@@ -1206,11 +1209,6 @@ if (!process.argv.includes('--reset-gpu')) {
     app.commandLine.appendSwitch('disable-gpu-sandbox');
     app.commandLine.appendSwitch('disable-software-rasterizer');
     console.log('[olympus:electron] hardware acceleration DISABLED (GPU incompatible with this machine — run with --reset-gpu to retry)');
-    // Persist the marker so the state is visible.
-    try {
-      mkdirSync(join(nodeOs.homedir(), '.olympus'), { recursive: true });
-      writeFileSync(GPU_FALLBACK_MARKER, new Date().toISOString(), 'utf-8');
-    } catch { /* non-fatal */ }
   } catch (err) {
     console.error('[olympus:electron] GPU disable failed:', err);
   }

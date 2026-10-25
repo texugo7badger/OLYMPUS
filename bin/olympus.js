@@ -387,7 +387,14 @@ function startElectron(extraArgs = []) {
   // Set WM_CLASS to 'olympus' so the Linux desktop environment matches
   // the .desktop entry (which has StartupWMClass=olympus) and shows the
   // OLYMPUS logo in the taskbar/dock instead of the generic gear icon.
-  let electronArgs = ['--class=olympus', '--disable-gpu', ROOT, ...extraArgs];
+  // #GPU-DISABLE: this machine's AMD Radeon RX 6600 crashes Electron's GPU
+  // process on launch. Always pass --disable-gpu so the app runs in software
+  // rendering mode. The user can re-enable with --reset-gpu (which removes
+  // the marker and clears the flag).
+  const gpuDisabled = !process.argv.includes('--reset-gpu');
+  let electronArgs = gpuDisabled
+    ? ['--class=olympus', '--disable-gpu', '--disable-gpu-sandbox', ROOT, ...extraArgs]
+    : ['--class=olympus', ROOT, ...extraArgs];
   if (process.platform === 'linux') {
     const chromeSandbox = join(ROOT, 'node_modules', 'electron', 'dist', 'chrome-sandbox');
     let sandboxOk = false;
