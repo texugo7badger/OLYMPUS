@@ -224,8 +224,8 @@ export const FREE_HYBRID_ROSTER = {
     { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'QA: Zen free lane (quota-gated — last resort)' },
   ],
   hephaestus: [
-    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'backend code: DeepSeek V4.1 Flash — included in the GO flat plan' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'backend code: Beam 1.0 1M/131k' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'backend code: Beam 1.0 1M/131k (GO free, quota-safe)' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'backend code: DeepSeek V4.1 Flash — included in the GO flat plan (quota-gated)' },
     { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'backend code: north-mini-code 256k/64k' },
     { source: 'nvidia', id: 'nvidia-openai/openai/gpt-oss-20b', why: 'backend code: GPT-OSS-20B' },
     { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'backend code: Zen free lane (quota-gated — last resort)' },
@@ -252,8 +252,8 @@ export const FREE_HYBRID_ROSTER = {
     { source: 'opencode', id: 'opencode/flint-40b-free', why: 'devops: Zen free lane (quota-gated — last resort)' },
   ],
   callimachus: [
-    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'vault curation: DeepSeek V4.1 Flash — included in the GO flat plan (the user pick)' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'vault curation: Beam 1M/131k' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'vault curation: Beam 1M/131k (GO free, quota-safe)' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'vault curation: DeepSeek V4.1 Flash — included in the GO flat plan (the user pick, quota-gated)' },
     { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'vault curation: north-mini-code' },
     { source: 'nvidia', id: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash', why: 'vault curation: MiniMax M3.1 Flash' },
     { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'vault curation: Zen free lane (quota-gated — last resort)' },
@@ -318,6 +318,24 @@ export function loadFreeHybridOverrides() {
 export function resolveFreeHybridMap() {
   const sources = detectFreeHybridSources();
   const overrides = loadFreeHybridOverrides();
+  // FREE STRATEGY CALIBRATION (2026-10-25): read the lane health registry so
+  // dead lanes (quota/free-limit/no-route/auth) are skipped. A free strategy
+  // that picks a dead lane is useless — the user sees 'all free strategies
+  // gave errors'. The lane-health file is written by the app at runtime;
+  // when absent, every lane is assumed alive (optimistic, same as the app).
+  let deadLanes = new Set();
+  try {
+    const lh = JSON.parse(fs.readFileSync(path.join(OLYMPUS_HOME, 'lane-health.json'), 'utf-8'));
+    const now = Date.now();
+    for (const [lane, info] of Object.entries(lh.lanes || {})) {
+      if (info && info.status !== 'alive' && (!info.retryUntil || info.retryUntil > now)) {
+        deadLanes.add(lane);
+      }
+    }
+  } catch { /* no lane-health file — assume all alive */ }
+  if (deadLanes.size > 0) {
+    log(`  Free Hybrid: ${deadLanes.size} dead lane(s) skipped: ${[...deadLanes].join(', ')}`);
+  }
   const usage = new Map();
   const map = {};
 
@@ -333,15 +351,15 @@ export function resolveFreeHybridMap() {
   for (const god of order) {
     if (overrides[god]) { take(god, overrides[god]); continue; }
     const roster = FREE_HYBRID_ROSTER[god] || [];
-    const available = roster.filter((lane) => sources.has(lane.source));
-    const first = available[0] || roster[0];
+    const available = roster.filter((lane) => sources.has(lane.source) && !deadLanes.has(lane.id));
+    const first = available[0] || roster.filter((lane) => sources.has(lane.source))[0] || roster[0];
     if ((usage.get(first.id) || 0) < FREE_HYBRID_MAX_PER_LANE) take(god, first.id);
     else pending.push(god);
   }
   // PASS 2 — the displaced gods take the next available lane under the cap.
   for (const god of pending) {
     const roster = FREE_HYBRID_ROSTER[god] || [];
-    const available = roster.filter((lane) => sources.has(lane.source));
+    const available = roster.filter((lane) => sources.has(lane.source) && !deadLanes.has(lane.id));
     const pick = available.find((lane) => (usage.get(lane.id) || 0) < FREE_HYBRID_MAX_PER_LANE)
       || available[0]
       || roster[0];

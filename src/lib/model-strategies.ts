@@ -568,8 +568,8 @@ export const FREE_HYBRID_ROSTER: Record<GodId, FreeHybridLane[]> = {
     { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'QA: Zen free lane (quota-gated — last resort)' },
   ],
   hephaestus: [
-    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'backend code: DeepSeek V4.1 Flash — included in the GO flat plan' },
-    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'backend code: Beam 1.0 1M/131k' },
+    { source: 'opencode-go', id: 'opencode-go/beam-free', why: 'backend code: Beam 1.0 1M/131k (GO free, quota-safe)' },
+    { source: 'opencode-go', id: 'opencode-go/deepseek-v4.1-flash', why: 'backend code: DeepSeek V4.1 Flash — included in the GO flat plan (quota-gated)' },
     { source: 'openrouter', id: 'openrouter/cohere/north-mini-code:free', why: 'backend code: north-mini-code 256k/64k' },
     { source: 'nvidia', id: 'nvidia-openai/openai/gpt-oss-20b', why: 'backend code: GPT-OSS-20B' },
     { source: 'opencode', id: 'opencode/deepseek-v4.1-flash-free', why: 'backend code: Zen free lane (quota-gated — last resort)' },

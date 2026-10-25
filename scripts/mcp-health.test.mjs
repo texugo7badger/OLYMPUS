@@ -70,7 +70,10 @@ function expect(name, cond, detail) {
 {
   const oc = JSON.parse(fs.readFileSync(path.join(ROOT, 'opencode.json'), 'utf-8'));
   const m = oc.mcp || {};
-  expect('M5 blender is disabled (needs uvx)', m.blender?.enabled === false);
+  // uvx is now installed (2026-10-25), so blender CAN run — but it still
+  // needs the blender app itself, so it stays disabled until the user
+  // confirms blender is installed.
+  expect('M5 blender is disabled (needs the blender app)', m.blender?.enabled === false);
   expect('M5 comfyui is disabled (needs comfyui)', m.comfyui?.enabled === false);
   expect('M5 fal is disabled (needs API key)', m.fal?.enabled === false);
   expect('M5 originkit is disabled (needs API key)', m.originkit?.enabled === false);
