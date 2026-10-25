@@ -31,7 +31,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage, Tray, Menu } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync, symlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -429,6 +429,15 @@ function waitForNext(): Promise<void> {
 // ─── Window ───────────────────────────────────────────────────────────────────
 
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
+// Extend the app type to track quitting state.
+declare global {
+  namespace Electron {
+    interface App {
+      isQuitting?: boolean;
+    }
+  }
+}
 
 function resolveIcon(): Electron.NativeImage {
   // PNG is most compatible with GTK/Wayland taskbars on Linux.
@@ -672,6 +681,51 @@ button:hover{background:#D4A57433}
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+
+  // ─── SYSTEM TRAY — minimize to background ────────────────────────────────
+  // The user wants to keep OLYMPUS running while playing games etc. without
+  // it consuming the taskbar. The tray icon lives in the notification area;
+  // closing the window hides it instead of quitting. Double-click restores.
+  if (!tray) {
+    try {
+      const iconPath = existsSync(join(appRoot, 'public', 'logo-32x32.png'))
+        ? join(appRoot, 'public', 'logo-32x32.png')
+        : join(appRoot, 'public', 'logo.png');
+      const icon = nativeImage.createFromPath(iconPath);
+      tray = new Tray(icon.resize({ width: 16, height: 16 }));
+      tray.setToolTip('OLYMPUS — click to restore');
+      const contextMenu = Menu.buildFromTemplate([
+        { label: 'Show OLYMPUS', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } else createWindow(); } },
+        { label: 'Hide to tray', click: () => { if (mainWindow) mainWindow.hide(); } },
+        { type: 'separator' },
+        { label: 'Quit OLYMPUS', click: () => { app.isQuitting = true; app.quit(); } },
+      ]);
+      tray.setContextMenu(contextMenu);
+      tray.on('double-click', () => {
+        if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+        else createWindow();
+      });
+      console.log('[olympus:electron] system tray created');
+    } catch (err: any) {
+      console.warn('[olympus:electron] tray creation failed:', err?.message);
+    }
+  }
+
+  // Minimize to tray instead of closing.
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow?.hide();
+      // Notify the renderer that it's now in background mode (reduce polling).
+      mainWindow?.webContents.send('olympus:background-mode', true);
+      console.log('[olympus:electron] window hidden to tray (running in background)');
+    }
+  });
+
+  // When restored from tray, notify the renderer to resume full polling.
+  mainWindow.on('show', () => {
+    mainWindow?.webContents.send('olympus:background-mode', false);
   });
 }
 
@@ -1144,9 +1198,18 @@ app.setName('OLYMPUS');
 // so the marker now expires: after GPU_FALLBACK_TTL_MS we try the GPU again
 // (and if it crashes twice, the marker is rewritten). `--reset-gpu` forces
 // that retry immediately.
+//
+// #GPU-CRASH-FATAL (2026-10-25): the AMD Radeon RX 6600 on this machine
+// crashes Electron's GPU process on launch (error_code=1002, "GPU process
+// isn't usable. Goodbye."). The fallback marker was supposed to disable GPU
+// on the NEXT boot, but the FATAL error kills the process before the marker
+// is even read. Fix: disable GPU PROACTIVELY when the marker exists OR when
+// --disable-gpu is passed, AND also try --disable-gpu-sandbox as a fallback.
+// The user can re-enable GPU with --reset-gpu.
 const GPU_FALLBACK_TTL_MS = 7 * 24 * 60 * 60_000;
 function gpuFallbackActive(): boolean {
   if (process.argv.includes(GPU_FALLBACK_ARG)) return true;
+  if (process.argv.includes('--disable-gpu')) return true;
   if (process.argv.includes('--reset-gpu')) {
     try { unlinkSync(GPU_FALLBACK_MARKER); } catch { /* already gone */ }
     console.log('[olympus:electron] --reset-gpu: GPU fallback marker cleared — trying hardware acceleration again.');
@@ -1167,6 +1230,8 @@ function gpuFallbackActive(): boolean {
 if (gpuFallbackActive()) {
   try {
     app.disableHardwareAcceleration();
+    app.commandLine.appendSwitch('disable-gpu');
+    app.commandLine.appendSwitch('disable-gpu-sandbox');
     console.log('[olympus:electron] hardware acceleration DISABLED (GPU crash fallback) — run with --reset-gpu to retry');
   } catch (err) {
     logError('gpu-fallback-apply', err);
@@ -1362,6 +1427,8 @@ if (!gotLock) {
   });
 
   app.on('window-all-closed', () => {
+    // Minimized to tray: keep running in the background instead of quitting.
+    if (tray) return;
     app.quit();
   });
 
