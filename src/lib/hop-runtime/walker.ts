@@ -529,8 +529,13 @@ async function attemptLane(
     // (retryAfterMs measured in days) or an unroutable model burns the whole
     // crescendo budget for nothing. Hand the class up so the caller can move
     // the hop to the next live lane.
-    if (isLaneDeadClass(parsed.errorClass)) {
-      return { kind: 'lane-dead', errorClass: parsed.errorClass, retryAfterMs: parsed.retryAfterMs, error: errText };
+    // 402 / payment errors may surface in the message text rather than the
+    // error class (e.g. "APIError" with a 402 body), so check both.
+    const deadClass = isLaneDeadClass(parsed.errorClass)
+      ? parsed.errorClass
+      : (isLaneDeadClass(parsed.errorText) ? (parsed.errorText.match(/muse-wonder|payment|402/i)?.[0] ?? parsed.errorClass) : null);
+    if (deadClass) {
+      return { kind: 'lane-dead', errorClass: deadClass, retryAfterMs: parsed.retryAfterMs, error: errText };
     }
     // #111 (HIGIENIA-1 H1a): the ceiling-kill — classified, never
     // classless. A provider-erroring hang counts as provider-overload

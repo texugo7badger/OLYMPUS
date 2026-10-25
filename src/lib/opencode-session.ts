@@ -1862,8 +1862,11 @@ function mapPart(
         const cls = String(part.error?.type ?? '');
         const retry = Number((part.error as { retryAfterMs?: number } | undefined)?.retryAfterMs ?? 0);
         const lane = resolveActiveLaneForHealth();
-        if (lane && isLaneDeadClass(cls)) {
-          markLaneDead(lane, cls, retry || null, msg);
+        // 402 / payment errors may surface in the message text even when the
+        // error type is generic (e.g. "APIError"), so check both.
+        const deadClass = isLaneDeadClass(cls) || isLaneDeadClass(msg) ? (isLaneDeadClass(cls) ? cls : msg) : null;
+        if (lane && deadClass) {
+          markLaneDead(lane, deadClass, retry || null, msg);
         }
       } catch { /* telemetry never breaks the stream */ }
       onEvent({ type: 'error', msg: `OpenCode error: ${msg}`, raw: part, ts });
@@ -2165,7 +2168,7 @@ const STREAM_IDLE_TIMEOUT_RE = /stream[ _-]?idle[ _-]?timeout/i;
 /** Provider statuses worth re-posting: rate limits + upstream/gateway faults. */
 const RETRYABLE_PROVIDER_STATUS = new Set([429, 500, 502, 503, 504]);
 /** Deterministic client/auth failures — a retry just burns the route budget. */
-const NEVER_RETRY_STATUS = new Set([400, 401, 403, 404]);
+const NEVER_RETRY_STATUS = new Set([400, 401, 402, 403, 404]);
 /** Display-string fallback mirroring TRANSPORT_DEAD_RE, used only when no
  *  status was threaded. Kept deliberately tight to avoid matching stray ids. */
 const PROVIDER_TRANSIENT_RE = /\b(?:429|500|502|503|504)\b/;
@@ -2187,6 +2190,9 @@ type RetryClass = 'transport' | 'provider-overload' | 'provider-rate-limit';
 export function classifyRetry(result: WarmRunResult): RetryClass | null {
   if (result.code === 0 || !result.error) return null;
   if (NEVER_RETRY_RE.test(result.error)) return null;
+  // 402 Payment Required (e.g. opencode's muse-wonder-1.0) is never retryable
+  // — the lane is dead for billing reasons; failover handles it.
+  if (/\b402\b/.test(result.error) || /payment required/i.test(result.error) || /muse-wonder/i.test(result.error)) return null;
   const sc = result.statusCode;
   if (typeof sc === 'number') {
     if (NEVER_RETRY_STATUS.has(sc)) return null;

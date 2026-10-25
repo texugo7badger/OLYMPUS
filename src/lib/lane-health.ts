@@ -116,13 +116,20 @@ export function isLaneDeadClass(cls: string | null | undefined): boolean {
     || c.includes('model-not-found')
     || c.includes('unauthorized')
     || c.includes('auth')
+    // 402 Payment Required — the model requires credits the account lacks
+    // (e.g. opencode's muse-wonder-1.0). Treat as a dead lane so we failover
+    // instead of retrying into the void.
+    || c.includes('payment')
+    || c.includes('402')
+    || c.includes('muse-wonder')
   );
 }
 
 export function statusFromErrorClass(cls: string | null | undefined): LaneStatus {
   const c = String(cls ?? '').toLowerCase();
   if (!c) return 'unknown';
-  if (c.includes('quota') || c.includes('free-limit') || c.includes('free_limit') || c.includes('limit')) return 'quota';
+  if (c.includes('quota') || c.includes('free-limit') || c.includes('free_limit') || c.includes('limit')
+    || c.includes('payment') || c.includes('402') || c.includes('muse-wonder')) return 'quota';
   if (c.includes('no-route') || c.includes('no_route') || c.includes('not-found') || c.includes('model-not-found')) return 'no-route';
   if (c.includes('auth') || c.includes('unauthorized') || c.includes('forbidden')) return 'auth';
   if (c.includes('rate')) return 'rate-limit';
