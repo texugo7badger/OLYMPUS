@@ -321,7 +321,7 @@ function estimateComplexity(
   // receives the planner marker and the walk resumes. Without this, Apollo
   // narrates and never reads the plan on disk.
   if (/\b(continue\b|continuar (o |a )?(projeto|app|sistema|site|plataforma)|finalize (o |a )?(projeto|app|sistema|site|plataforma)|termine (o |a )?(projeto|app|sistema|site|plataforma)|retome (o |a )?(projeto|app|sistema|site|plataforma))\b/.test(lower)) {
-    return { complexity: 'architectural', estimatedTokens: 150000, needsPlanning: true };
+    return { complexity: 'architectural', estimatedTokens: 60000, needsPlanning: true };
   }
 
   // Architectural — explicit design / spec / refactor keywords.
