@@ -115,7 +115,12 @@ export default function MCPConfigPanel() {
   };
 
   useEffect(() => {
-    load();
+    // Auto-sync .mcp.json entries into opencode.json on mount (idempotent:
+    // existing entries are skipped). Ensures newly declared MCPs become
+    // available to the gods without a manual sync click (#236).
+    fetch('/api/olympus/mcp/sync', { method: 'POST', cache: 'no-store' })
+      .catch(() => {})
+      .finally(() => load());
   }, []);
 
   const toggleMcp = async (name: string) => {

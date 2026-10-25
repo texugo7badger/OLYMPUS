@@ -271,35 +271,10 @@ export default function OlympusWorkspace() {
     }
   }, [focusMode]);
 
-  // GLOBAL_TICK_PATCH — applied ONCE at app root, NEVER removed.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const origRAF = window.requestAnimationFrame.bind(window);
-    if ((window as any).__olympusRAFPatched) return;
-    (window as any).__olympusRAFPatched = true;
-    window.requestAnimationFrame = function(cb: FrameRequestCallback): number {
-      return origRAF((ts: number) => {
-        try {
-          cb(ts);
-        } catch (e: any) {
-          const msg = e?.message || String(e);
-          if (msg.includes('state.layout') || msg.includes("'tick'") || msg.includes('layoutTick')) {
-            return;
-          }
-          throw e;
-        }
-      });
-    };
-    const origOnError = window.onerror;
-    window.onerror = function(message, source, lineno, colno, error) {
-      const msg = String(message || '');
-      if (msg.includes('state.layout') || msg.includes("'tick'") || msg.includes('layoutTick')) {
-        return true;
-      }
-      if (origOnError) return origOnError(message, source, lineno, colno, error);
-      return false;
-    };
-  }, []);
+  // The global RAF patch (GLOBAL_TICK_PATCH) was removed per #232: it masked
+  // resizable-panels layout errors instead of fixing them. The panel loading
+  // is now handled by PanelLoading + production builds. Any remaining layout
+  // error surfaces normally so it can be diagnosed.
 
   // #MCP-SYNC (2026-10-25): sync .mcp.json → opencode.json on mount so the
   // gods can actually use the MCPs the user toggled in the panel. Without
