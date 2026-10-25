@@ -1235,6 +1235,54 @@ if (!gotLock) {
   });
 
   app.whenReady().then(async () => {
+    // #V0.0.20: Auto-heal on boot — reconcile llm-providers.json with
+    // active-strategy.json, repair opencode DB, prune stale lane-health.
+    try {
+      const os = require('os');
+      const fs = require('fs');
+      const path = require('path');
+      const home = os.homedir();
+      const olympusHome = path.join(home, '.olympus');
+      // 1. Reconcile strategy
+      const activePath = path.join(olympusHome, 'active-strategy.json');
+      const providersPath = path.join(olympusHome, 'llm-providers.json');
+      if (fs.existsSync(activePath)) {
+        const active = JSON.parse(fs.readFileSync(activePath, 'utf-8'));
+        const cfg = fs.existsSync(providersPath) ? JSON.parse(fs.readFileSync(providersPath, 'utf-8')) : {};
+        if (cfg.strategy !== active.strategy) {
+          cfg.strategy = active.strategy;
+          cfg.per_god_overrides = cfg.per_god_overrides || {};
+          fs.writeFileSync(providersPath, JSON.stringify(cfg, null, 2));
+          console.log('[olympus:electron] Strategy reconciled:', active.strategy);
+        }
+      }
+      // 2. Prune stale lane-health
+      const lhPath = path.join(olympusHome, 'lane-health.json');
+      if (fs.existsSync(lhPath)) {
+        try {
+          const lh = JSON.parse(fs.readFileSync(lhPath, 'utf-8'));
+          const now = Date.now();
+          let pruned = 0;
+          for (const [lane, entry] of Object.entries(lh.lanes || {})) {
+            if (now - (entry as any).at > 24 * 60 * 60 * 1000) {
+              delete lh.lanes[lane];
+              pruned++;
+            }
+          }
+          if (pruned > 0) {
+            lh.updatedAt = new Date().toISOString();
+            fs.writeFileSync(lhPath, JSON.stringify(lh, null, 2));
+            console.log(`[olympus:electron] Pruned ${pruned} stale lane-health entries`);
+          }
+        } catch {}
+      } else {
+        // Create empty lane-health
+        fs.writeFileSync(lhPath, JSON.stringify({ version: 1, lanes: {}, updatedAt: new Date().toISOString() }, null, 2));
+      }
+    } catch (e) {
+      console.error('[olympus:electron] Auto-heal failed:', e);
+    }
+
     // Register the native terminal (node-pty + xterm.js) IPC handlers.
     // Now supports multiple PTY sessions (Map<ptyId, IPty>).
     registerNativeTerminal();

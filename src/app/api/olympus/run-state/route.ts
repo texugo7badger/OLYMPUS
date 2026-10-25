@@ -38,6 +38,25 @@ import { workspaceLaneDir } from '@/lib/opencode-spawn';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// #V0.0.20: reconcile llm-providers.json with active-strategy.json on every
+// run-state check so the panel and the config never disagree.
+function reconcileStrategy() {
+  try {
+    const home = os.homedir();
+    const activePath = path.join(home, '.olympus', 'active-strategy.json');
+    const providersPath = path.join(home, '.olympus', 'llm-providers.json');
+    if (fs.existsSync(activePath)) {
+      const active = JSON.parse(fs.readFileSync(activePath, 'utf-8'));
+      const cfg = fs.existsSync(providersPath) ? JSON.parse(fs.readFileSync(providersPath, 'utf-8')) : {};
+      if (cfg.strategy !== active.strategy) {
+        cfg.strategy = active.strategy;
+        cfg.per_god_overrides = cfg.per_god_overrides || {};
+        fs.writeFileSync(providersPath, JSON.stringify(cfg, null, 2));
+      }
+    }
+  } catch { /* non-fatal */ }
+}
+
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
 
 function readJson<T>(file: string): T | null {
@@ -65,6 +84,7 @@ function candidateLanes(slug: string | null): string[] {
 }
 
 export async function GET() {
+  reconcileStrategy();
   const slug = activeSlug();
   const lanes = candidateLanes(slug);
 

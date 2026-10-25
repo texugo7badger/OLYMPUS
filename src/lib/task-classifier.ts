@@ -310,7 +310,7 @@ function estimateComplexity(
   // "faça o app", "monte o sistema").
   if (/\b(planej\w*|desenvolv\w*|implement\w*|constru\w*|elabor\w*)\b/.test(lower)
       || /\b(mont(e|ar)|cri(e|ar)|faz|fa[çc]a|fazer)\s+(o|a|um|uma|os|as)\s+(projeto|app|aplicativo|sistema|site|plataforma|servi[çc]o|jogo|dashboard)\b/.test(lower)) {
-    return { complexity: 'architectural', estimatedTokens: 150000, needsPlanning: true };
+    return { complexity: 'architectural', estimatedTokens: 30000, needsPlanning: true };
   }
 
   // W-S PT-BR (the AIME specimen, 2026-10-25): "Continue o projeto AIME,
@@ -321,7 +321,7 @@ function estimateComplexity(
   // receives the planner marker and the walk resumes. Without this, Apollo
   // narrates and never reads the plan on disk.
   if (/\b(continue\b|continuar (o |a )?(projeto|app|sistema|site|plataforma)|finalize (o |a )?(projeto|app|sistema|site|plataforma)|termine (o |a )?(projeto|app|sistema|site|plataforma)|retome (o |a )?(projeto|app|sistema|site|plataforma))\b/.test(lower)) {
-    return { complexity: 'architectural', estimatedTokens: 60000, needsPlanning: true };
+    return { complexity: 'architectural', estimatedTokens: 30000, needsPlanning: true };
   }
 
   // Architectural — explicit design / spec / refactor keywords.

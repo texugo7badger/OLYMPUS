@@ -2605,7 +2605,7 @@ async function runWarmMessageAttempt(
     //     live countdown and the kill bound — then the same decisive
     //     server-side kill + auto-retry. The max-runtime no-retry death
     //     becomes unreachable for stalls: every stall ends in a RETRY.
-    const FIRST_BYTE_STALL_MS = Number(process.env.OLYMPUS_FIRST_BYTE_STALL_MS || 180_000);
+    const FIRST_BYTE_STALL_MS = Number(process.env.OLYMPUS_FIRST_BYTE_STALL_MS || 60_000);
     const ALIVE_STALL_KILL_MS = Number(process.env.OLYMPUS_ALIVE_STALL_KILL_MS || 120_000);
     const STALL_HEARTBEAT_MS = Number(process.env.OLYMPUS_STALL_HEARTBEAT_MS || 30_000);
     let warnedSilence = false;

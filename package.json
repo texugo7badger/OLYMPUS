@@ -1,6 +1,6 @@
 {
   "name": "olympus",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "Olympus — automated multi-agent operating system built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
   "author": "OLYMPUS Contributors",
   "license": "AGPL-3.0-or-later",
