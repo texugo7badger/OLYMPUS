@@ -13,7 +13,7 @@
  *   1. Editor detection — auto-detect installed editors, let the user pick.
  *   2. Auth detection — check if OpenCode GO is authorized. If yes, skip
  *      to step 4. If no, show step 3.
- *   3. Free-tier config — guides the user to add Groq and/or OpenRouter API
+ *   3. Local config — guides the user to probe their own hardware (Ollama/LM Studio/vLLM/llama.cpp)
  *      keys inside OpenCode (`olympus opencode` → Settings → Providers).
  *      One key is enough (OpenRouter recommended); a second adds the Groq
  *      path. Free models are picked automatically from the live provider
@@ -26,11 +26,11 @@
  *
  * Key UX changes from v1:
  *   - Step 2 detects GO plan auth (not just "OpenCode is authorized").
- *     If GO is detected, step 3 (free-tier config) is skipped entirely.
+ *     If GO is detected, step 3 (local config) is skipped entirely.
  *   - Step 3 has actual input fields for Groq + OpenRouter keys (not just
  *     instructions to edit a JSON file). The keys are saved via the
  *     /api/olympus/providers/keys endpoint, which also applies the
- *     recommended free strategy (free-openrouter) automatically.
+ *     recommended strategy automatically.
  *   - Step 4 shows the active strategy + lets the user dispatch a first
  *     task. If no strategy is active, applies the recommended one.
  */
@@ -144,7 +144,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
     loadStatus();
   }, [open]);
 
-  // After loading, if GO plan is configured, jump to step 3 (skip free-tier config)
+  // After loading, if GO plan is configured, jump to step 3 (skip local config)
   useEffect(() => {
     if (!loading && authStatus?.go_plan?.configured && step === 0) {
       // Don't auto-skip — let the user see the GO detection message on step 1
@@ -250,7 +250,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
       : [
           { icon: Edit, label: 'Editor', title: 'Pick your editor' },
           { icon: ShieldCheck, label: 'Auth', title: 'Choose your auth path' },
-          { icon: Key, label: 'Free Keys', title: 'Configure free-tier API keys' },
+          { icon: Key, label: 'Local', title: 'Probe your own hardware' },
           { icon: Zap, label: 'Dispatch', title: 'Apply strategy + dispatch' },
         ];
 
@@ -393,7 +393,7 @@ export default function OnboardingWizard({ open, onClose }: OnboardingWizardProp
                     <p className="text-[11px] text-olympus-text-dim font-mono leading-relaxed">
                       OLYMPUS uses OpenCode as its CLI. You need to authorize OpenCode with a GO plan
                       account (paid, best quality), an OpenCode Zen key (pay-as-you-go, no request caps),
-                      or free-tier API keys (OpenRouter and/or NVIDIA Build — both free).
+                      or a local LLM server on your own hardware (Ollama / LM Studio / vLLM / llama.cpp).
                     </p>
 
                     <div className="text-[11px] font-mono text-olympus-amber-soft bg-olympus-amber-soft/10 border border-olympus-amber-soft/20 rounded p-3">
@@ -435,39 +435,19 @@ olympus opencode`}
                       </div>
                     </div>
 
-                    {/* Option C: Free-tier */}
+                    {/* Option C: Local (your own hardware) */}
                     <div className="space-y-2">
                       <div className="text-[10px] font-mono text-olympus-text-dim uppercase">
-                        Option C: Free-tier (no plan needed)
+                        Option C: Local — your own hardware (no plan, no key)
                       </div>
                       <div className="text-[11px] font-mono text-olympus-text leading-relaxed">
-                        Get a free API key (one provider is enough — OpenRouter is the most reliable; NVIDIA Build adds the GLM-5.3 / Nemotron endpoints):
+                        Run a local LLM server (Ollama, LM Studio, vLLM, llama.cpp, or any OpenAI-compatible endpoint) and OLYMPUS wires the full 10-god + 122-demigod arsenal to it. Nothing leaves this machine.
                       </div>
-                      <div className="flex gap-2">
-                        <a
-                          href="https://openrouter.ai/keys"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-[10px] font-mono text-olympus-gold hover:text-olympus-gold/80 border border-olympus-gold/20 rounded px-2 py-1"
-                        >
-                          OpenRouter keys <ExternalLink size={9} />
-                        </a>
-                        <a
-                          href="https://build.nvidia.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-[10px] font-mono text-olympus-gold hover:text-olympus-gold/80 border border-olympus-gold/20 rounded px-2 py-1"
-                        >
-                          NVIDIA Build keys <ExternalLink size={9} />
-                        </a>
-                      </div>
-                      <div className="text-[10px] font-mono text-olympus-amber-soft bg-olympus-amber-soft/5 border border-olympus-amber-soft/20 rounded p-2">
-                        <strong>One key is enough.</strong> The Free strategy routes gods to the strongest free models
-                        currently live (nemotron-3-ultra-550b with 1M context, super-120b, ling-3.0-flash) — refreshed
-                        automatically from the provider lists. A Groq key adds the second path; an NVIDIA Build key unlocks the free GLM-5.3 / Nemotron endpoints.
+                      <div className="text-[10px] font-mono text-olympus-text-dim bg-olympus-bg border border-olympus-gold/10 rounded p-2">
+                        <strong>Probe first:</strong> <span className="text-olympus-gold">node scripts/local-llm-probe.js</span> — it names every endpoint it found (or the exact reason none answered). Requirements: tool calling + ≥32k context. See docs/LOCAL-LLM.md for the honest hardware table.
                       </div>
                       <div className="text-[10px] font-mono text-olympus-text-dim">
-                        Click <strong>Next</strong> for step-by-step instructions on adding the keys inside OpenCode (Step 2).
+                        Then apply: <span className="text-olympus-gold">olympus apply-strategy local</span>
                       </div>
                     </div>
 
@@ -483,13 +463,14 @@ olympus opencode`}
               </div>
             )}
 
-            {/* Step 2: Free-tier key config (only on free path) */}
+            {/* Step 2: Local lane setup (only when no plan is configured) */}
             {step === 2 && !isGoPath && !isZenPath && (
               <div>
                 <h3 className="text-sm font-mono text-olympus-text mb-2">{steps[2].title}</h3>
                 <p className="text-[11px] text-olympus-text-dim font-mono mb-3 leading-relaxed">
-                  OLYMPUS uses OpenCode's own provider system for free-tier API keys.
-                  Configure your Groq, OpenRouter and/or NVIDIA Build keys inside OpenCode's settings.
+                  The zero-cost path in v0.0.22 is your own hardware. Start a local LLM
+                  server and OLYMPUS probes it (Ollama / LM Studio / vLLM / llama.cpp / any
+                  OpenAI-compatible endpoint) — see docs/LOCAL-LLM.md.
                 </p>
 
                 <div className="space-y-3">
@@ -573,7 +554,7 @@ olympus opencode`}
                     ) : (
                       <div className="text-olympus-amber-soft bg-olympus-amber-soft/10 border border-olympus-amber-soft/20 rounded p-2">
                         <AlertCircle size={11} className="inline mr-1" />
-                        No free-tier keys detected yet.
+                        No local endpoint or plan detected yet.
                       </div>
                     )}
                   </div>

@@ -160,25 +160,25 @@ export async function GET() {
   } else if (!goPlan.configured && !zenPlan.configured && freeTier.both_keys) {
     recommendations.push({
       severity: 'info',
-      action: 'Free-tier mode ready (free-openrouter / free-big-pickle / free-nvidia-build). Consider signing up for the GO plan for better quality (Apollo on GLM-5.3, specialists on Kimi K3).',
+      action: 'No paid plan detected. The zero-cost path is the Local strategy (your own hardware). The free tier is retired in v0.0.22. Consider the GO plan for cloud quality.',
       command: 'https://opencode.ai/docs/go/',
     });
   } else if (!goPlan.configured && freeTier.groq_key && !freeTier.openrouter_key) {
     recommendations.push({
       severity: 'warn',
-      action: 'Only Groq key configured. Groq\'s free tier was removed from OLYMPUS (12K TPM window too small) — add an OpenRouter key for the free strategies.',
+      action: 'Only a Groq key is configured. Groq free was removed (12K TPM window too small). Use the Local strategy (your own hardware) or a GO/Zen plan.',
       command: 'Get a free key at https://openrouter.ai/keys — add inside OpenCode (`olympus opencode` → Settings → Providers).',
     });
   } else if (!goPlan.configured && !zenPlan.configured && !freeTier.groq_key && freeTier.openrouter_key) {
     recommendations.push({
       severity: 'info',
-      action: 'OpenRouter key configured — free-openrouter is ready.',
+      action: 'OpenRouter key configured — BYOK strategies (e.g. byok-deepseek) are ready.',
       command: 'Get a free key at https://openrouter.ai/keys — add inside OpenCode (`olympus opencode` → Settings → Providers).',
     });
   } else if (!goPlan.configured && !zenPlan.configured && !freeTier.groq_key && !freeTier.openrouter_key && freeTier.nvidia_key) {
     recommendations.push({
       severity: 'info',
-      action: 'NVIDIA Build key configured — the Free Nvidia Build strategy is ready (GLM-5.3 + Nemotron family free endpoints, refreshed automatically).',
+      action: 'NVIDIA Build key configured — but the free strategies were retired in v0.0.22. Use GO, Zen, Local, or BYOK.',
       command: 'https://build.nvidia.com — or run `node scripts/apply-strategy.js --strategy free-nvidia-build`.',
     });
   }

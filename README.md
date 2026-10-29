@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Low-cost. Excellent quality. Always free.</strong>
+  <strong>Full arsenal. Every step visible. Yours to own.</strong>
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@ OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencod
   <img src="public/olympus.jpeg" alt="OLYMPUS Interface — Brain graph and Interactive Terminal" width="900" />
 </div>
 
-- **Three ways to run.** The GO plan ($10/month flat, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps — full 128-agent OLYMPUS without a GO plan), or **free** (**Free Hybrid** — one strategy over every free source you register: OpenCode Zen/GO free lanes, OpenRouter free and NVIDIA Build free; OLYMPUS stays 100% functional at zero cost).
+- **Three ways to run.** The GO plan (flat monthly, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps), or **Local** — your own hardware (Ollama, LM Studio, vLLM, llama.cpp, or any OpenAI-compatible endpoint). The free tier is retired in v0.0.22: the local lane is the zero-cost path, and it tells you exactly what it found (see [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md)).
 - **10 gods + 122 demigods (132 agents).** Apollo is the only god who talks to you; the other 9 are dispatched by Apollo via Symphony.
 - **The Craft Apps inside (v0.0.8).** The thirteen open-source ArtCraft apps (image editor, vector illustration, video, PDF, word processing, CAD, spreadsheets) are DOWNLOADED INTO OLYMPUS — the self-hosted web builds run embedded from your own disk (no login, ever; auto-update ON), the native portable builds open as real OS windows, and the `olympus-craft` MCP gives the agents headless CLI/JSON control. The AI crafting Studio rides the live lane.
 - **Self-curating brain.** Each god maintains an instinct pool — empirical patterns that, at confidence ≥ 0.85, **short-circuit** deliberation. OLYMPUS gets faster and cheaper with use. Live telemetry in the God Intelligence Dashboard shows the short-circuit hit rate + tokens saved.
@@ -145,11 +145,12 @@ GLM-5.3 is reserved for go-max-quality (Apollo + Artemis). The daily strategies 
 | `zen-max-quality` (**Zen**) | GLM-5.3 | GPT 6 Sol | Claude Sonnet 5 / GPT 5.6 Terra / GPT 5.6 Luna / Gemini 3.1 Pro / Grok Build 0.1 | Claude Haiku 4.5 |
 | `zen-balanced` (**Zen**) | GLM-5.3 | GPT 6 Sol | Claude Sonnet 5 / GPT 5.6 Terra / GPT 5.6 Luna / GPT 5.4 Mini / Gemini 3.1 Pro / Grok Build 0.1 | Claude Haiku 4.5 |
 | `zen-budget` (**Zen**) | GLM-5.3 | GPT 6 Luna | GLM-5.3-Flash | Claude Haiku 4.5 |
-| `free-hybrid` (**Free Hybrid**) | DeepSeek V4.1 Flash (planning) | Beam 1.0 — 501B, 1M ctx (orchestration) | inkling 1M/262k out (QA, frontend, research) | **DeepSeek V4.1 Flash (code, vault, Callimachus)** |
+| `byok-deepseek` (BYOK) | DeepSeek V4.1 Flash (OpenRouter) | DeepSeek V4.1 Flash | DeepSeek V4.1 Flash | DeepSeek V4.1 Flash |
+| `local` (**Local**) | your harness model | your harness model | your harness model | your harness model |
 
 The **Zen** strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) run the full 128-agent OLYMPUS on OpenCode Zen — pay-as-you-go, **no request caps**, built around **proprietary APIs** (Claude Sonnet 5, GPT-5.4, Gemini 3.5 Flash, Kimi K2.7 Code, MiniMax) while the GO plan runs the open-weight line (GLM, DeepSeek, Qwen, Hy3). Model ids use `opencode/<id>`. Authorize via `olympus opencode` → `/connect` → OpenCode Zen (key stored in OpenCode's own auth.json under the `opencode` provider; env override `OPENCODE_API_KEY`). NOTE: OpenAI/Anthropic requests are retained 30 days per their data policies — the open-weight and free-on-Zen models are zero-retention.
 
-The **free** strategy requires no plan: **Free Hybrid** distributes the 10 gods across every free/zero-marginal-cost source registered. On the **GO flat plan** it rides **Beam 1.0** (1M) and **DeepSeek V4.1 Flash** (included — no per-token charge); without GO it falls to **NVIDIA Build free** (GLM-5.3 1M, MiniMax M3.1 Flash, Muse Glimmer, GPT-OSS-20B — **NO Nemotron**) and **OpenRouter free** (inkling 1M/262k, north-mini-code, flint 235k out). Apollo/Atlas/Artemis plan and orchestrate on Beam, Athena/Dionysus/Hermes ride inkling, Hephaestus/Persephone/Callimachus run DeepSeek V4.1 Flash, Prometheus writes IaC on flint. The **Zen free lanes are the last resort** (quota-gated — the probe shows "Free usage limit reached"). Load-spread ≤3 gods/lane, user pins in `~/.olympus/free-hybrid-overrides.json`, deprecated free ids kept as aliases. See [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md).
+The **Local** strategy (`local`) requires no plan and no key: OLYMPUS probes your machine for a local LLM server (Ollama `:11434`, LM Studio `:1234`, vLLM `:8000`, llama.cpp `:8080`, or any OpenAI-compatible endpoint) and wires the full 10-god + 122-demigod arsenal to it. The apply refuses with the exact probe result if nothing answers — no dead config, no hidden fallback. Requirements: tool calling + ≥32k context; see [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) for the honest hardware table.
 
 ## Uninstall
 

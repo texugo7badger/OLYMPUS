@@ -1022,9 +1022,11 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           ? "GO plan models only — no ZEN, no free-tier, no BYO-key."
           : activeStrategy.startsWith("zen-")
             ? "OpenCode Zen pay-as-you-go models."
-            : activeStrategy.startsWith("free-")
-              ? "Free-tier models on the active free provider (OpenRouter / Groq / NVIDIA Build)."
-              : `Active strategy: ${activeStrategy}.`;
+            : activeStrategy === "local"
+              ? "Local models on YOUR hardware (the probe names the endpoint and model; no data leaves the machine)."
+              : activeStrategy.startsWith("byok-")
+                ? "BYOK — the user's own paid key."
+                : `Active strategy: ${activeStrategy}.`;
       const contextBlock = [
         "# Olympus Overlay Context (preserve across compaction)",
         "",

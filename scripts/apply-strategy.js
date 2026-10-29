@@ -19,7 +19,7 @@
  *     - All gods + demigods get their strategy-appropriate model
  *
  *   Zen strategies (zen-max-quality, zen-balanced, zen-budget [Zen]):
- *     - Same full shape as GO (128 agents, file-ref prompts, 8 plugins) —
+ *     - Same full shape as GO (132 agents, file-ref prompts, 4 plugins) —
  *       Zen is pay-as-you-go with no request caps — but models use the
  *       opencode/<id> prefix (OpenCode Zen) instead of opencode-go/<id>.
  *
@@ -256,7 +256,13 @@ export function isLegacyFreeId(id) {
 }
 
 export function normalizeStrategyId(id) {
-  return isLegacyFreeId(id) ? 'free-hybrid' : id;
+  if (id === 'free-hybrid' || isLegacyFreeId(id)) {
+    throw new Error(
+      'The free tier is retired (v0.0.22). Choose go-*, zen-*, byok-*, custom-*, or local ' +
+      '(your own hardware — see docs/LOCAL-LLM.md). The free-* strategies no longer exist.'
+    );
+  }
+  return id;
 }
 
 /** Which free sources does this machine actually have keys for? */
@@ -513,26 +519,6 @@ const BUILTIN_STRATEGIES = {
     prometheus:   'opencode/glm-5.3-flash',
     callimachus:  'opencode/claude-haiku-4-5',
   },
-  // ── Free Hybrid — THE one free strategy (2026-10-23) ─────────────────────
-  // One free strategy over every free source the user has registered:
-  // OpenCode GO free + Zen free + OpenRouter free + NVIDIA Build free.
-  // The per-god roster lives in FREE_HYBRID_ROSTER below; resolveFreeHybridMap
-  // picks the best AVAILABLE lane per god at apply time (and spreads load,
-  // <=3 gods per lane). This static map is the FULL-POWER resolution (all
-  // four sources) — the same one the UI shows. Mirrors free-hybrid in
-  // src/lib/model-strategies.ts (check-strategy-sync).
-  'free-hybrid': {
-    apollo:       'openrouter/thinkingmachines/inkling:free',
-    atlas:        'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    artemis:      'nvidia-meta/meta/muse-glimmer-30b',
-    athena:       'nvidia-meta/poolside/laguna-xs-2.1',
-    dionysus:     'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    hephaestus:   'nvidia-meta/poolside/laguna-xs-2.1',
-    hermes:       'nvidia-meta/meta/muse-glimmer-30b',
-    persephone:   'nvidia-openai/openai/gpt-oss-20b',
-    prometheus:   'nvidia-meta/poolside/laguna-xs-2.1',
-    callimachus:  'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-  },
   // ── BYOK — the user's own paid key (2026-10-24) ──────────────────────────
   // Every god on ONE lane: the user's OpenRouter key serving DeepSeek V4.1
   // Flash (v1017 — 1M ctx / 393k out, $0.15/$0.60 per 1M). Mirrors
@@ -553,44 +539,17 @@ const BUILTIN_STRATEGIES = {
     prometheus:   'openrouter/deepseek/deepseek-v4.1-flash-1017',
     callimachus:  'openrouter/deepseek/deepseek-v4.1-flash-1017',
   },
-  // Legacy free ids (deprecated) — saved configs and older UIs still carry
-  // them. They resolve to the SAME free-hybrid map (never a second, weaker
-  // free path). The UI hides them from the picker.
-  'free-openrouter': {
-    apollo:       'openrouter/thinkingmachines/inkling:free',
-    atlas:        'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    artemis:      'nvidia-meta/meta/muse-glimmer-30b',
-    athena:       'nvidia-meta/poolside/laguna-xs-2.1',
-    dionysus:     'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    hephaestus:   'nvidia-meta/poolside/laguna-xs-2.1',
-    hermes:       'nvidia-meta/meta/muse-glimmer-30b',
-    persephone:   'nvidia-openai/openai/gpt-oss-20b',
-    prometheus:   'nvidia-meta/poolside/laguna-xs-2.1',
-    callimachus:  'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-  },
-  'free-big-pickle': {
-    apollo:       'openrouter/thinkingmachines/inkling:free',
-    atlas:        'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    artemis:      'nvidia-meta/meta/muse-glimmer-30b',
-    athena:       'nvidia-meta/poolside/laguna-xs-2.1',
-    dionysus:     'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    hephaestus:   'nvidia-meta/poolside/laguna-xs-2.1',
-    hermes:       'nvidia-meta/meta/muse-glimmer-30b',
-    persephone:   'nvidia-openai/openai/gpt-oss-20b',
-    prometheus:   'nvidia-meta/poolside/laguna-xs-2.1',
-    callimachus:  'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-  },
-  'free-nvidia-build': {
-    apollo:       'openrouter/thinkingmachines/inkling:free',
-    atlas:        'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    artemis:      'nvidia-meta/meta/muse-glimmer-30b',
-    athena:       'nvidia-meta/poolside/laguna-xs-2.1',
-    dionysus:     'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    hephaestus:   'nvidia-meta/poolside/laguna-xs-2.1',
-    hermes:       'nvidia-meta/meta/muse-glimmer-30b',
-    persephone:   'nvidia-openai/openai/gpt-oss-20b',
-    prometheus:   'nvidia-meta/poolside/laguna-xs-2.1',
-    callimachus:  'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
+  'local': {
+    apollo:       'opencode-go/glm-5.3-flash',
+    atlas:        'opencode-go/hy3',
+    artemis:      'opencode-go/glm-5.3-flash',
+    athena:       'opencode-go/qwen3.7-plus',
+    dionysus:     'opencode-go/deepseek-v4.1-flash',
+    hephaestus:   'opencode-go/kimi-k2.7-code',
+    hermes:       'opencode-go/kimi-k2.7-code',
+    persephone:   'opencode-go/deepseek-v4.1-flash',
+    prometheus:   'opencode-go/minimax-m3',
+    callimachus:  'opencode-go/glm-5.3-flash',
   },
 };
 
@@ -1038,13 +997,9 @@ function resolveStrategy(cliFlag) {
       strategy = 'go-balanced';
     }
   }
-  // Legacy free ids (free-openrouter / free-big-pickle / free-nvidia-build)
-  // resolve to the one free strategy — never a second, weaker free path.
-  const canonical = normalizeStrategyId(strategy);
-  if (canonical !== strategy) {
-    log(`  legacy free id "${strategy}" → "${canonical}" (the single Free Hybrid)`);
-  }
-  return canonical;
+  // v0.0.22: free-* ids are RETIRED — normalizeStrategyId throws the
+  // retirement error with the working alternatives (never a silent remap).
+  return normalizeStrategyId(strategy);
 }
 
 /**
@@ -1252,6 +1207,25 @@ async function getModelMap(strategy) {
     FREE_HYBRID_SMALL_MODEL = resolved.small;
     return resolved.map;
   }
+  if (strategy === 'local') {
+    // v0.0.22 (W1) — THE LOCAL LANE. Probe the user's own hardware and
+    // refuse with the exact reason when nothing answers (never a config
+    // that cannot serve a single request).
+    const local = resolveLocalStrategy();
+    if (!local) {
+      throw new Error(
+        'The local strategy needs a running LLM server.\n\n' +
+        '  Probed: Ollama :11434 · LM Studio :1234 · vLLM :8000 · llama.cpp :8080\n' +
+        '  Start one of them (or any OpenAI-compatible server) and re-run:\n' +
+        '    node scripts/local-llm-probe.js   # probe only\n' +
+        '    node scripts/apply-strategy.js --strategy local\n\n' +
+        '  See docs/LOCAL-LLM.md for hardware requirements and model choices.'
+      );
+    }
+    log(`  local endpoint: ${local.endpoint} (${local.runtime})`);
+    log(`  local model: ${local.model}`);
+    return Object.fromEntries(GOD_NAMES_LIST.map((g) => [g, `local/${local.model}`]));
+  }
   if (BUILTIN_STRATEGIES[strategy]) {
     return BUILTIN_STRATEGIES[strategy];
   }
@@ -1280,8 +1254,86 @@ async function getModelMap(strategy) {
     return cfg.gods;
   }
   throw new Error(
-    `Unknown strategy: ${strategy}. Valid: go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget (Zen), free-hybrid (the one free strategy), byok-deepseek (your own OpenRouter key), custom-*`
+    `Unknown strategy: ${strategy}. Valid: go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget (Zen), byok-deepseek (your own OpenRouter key), local (your own hardware), custom-*`
   );
+}
+
+/**
+ * v0.0.22 (W1) — the resolved local lane (endpoint + runtime + model),
+ * cached for the duration of one apply.
+ */
+let LOCAL_LANE = null;
+
+/**
+ * v0.0.22 (W1) — resolve the local lane. Runs scripts/local-llm-probe.js
+ * (5 endpoints, 3s each) and returns the best endpoint + first model, or
+ * null when nothing answers. The caller refuses loudly with the probe
+ * result — never a config that cannot serve a request.
+ */
+function resolveLocalStrategy() {
+  if (LOCAL_LANE) return LOCAL_LANE;
+  const probeScript = path.join(OLYMPUS_ROOT, 'scripts', 'local-llm-probe.js');
+  if (!fs.existsSync(probeScript)) return null;
+  try {
+    const out = execSync(`node "${probeScript}"`, { encoding: 'utf-8', timeout: 30000 });
+    const report = JSON.parse(out);
+    if (!report?.bestEndpoint?.url) return null;
+    const base = report.bestEndpoint.url.replace(/\/+$/, '');
+    const runtime = report.bestEndpoint.name || 'local';
+    // Ask the endpoint for its model list (OpenAI-compatible shape), falling
+    // back to the Ollama /tags shape.
+    let model = null;
+    try {
+      const listOut = execSync(
+        `node -e "fetch('${base}/v1/models').then(r=>r.json()).then(j=>console.log(JSON.stringify(j))).catch(()=>console.log('{}'))"`,
+        { encoding: 'utf-8', timeout: 10000 },
+      );
+      const parsed = JSON.parse(listOut || '{}');
+      const first = Array.isArray(parsed?.data) ? parsed.data[0] : null;
+      model = first?.id || null;
+    } catch { /* model list optional */ }
+    if (!model) {
+      try {
+        const tagsOut = execSync(
+          `node -e "fetch('${base}/api/tags').then(r=>r.json()).then(j=>console.log(JSON.stringify(j))).catch(()=>console.log('{}'))"`,
+          { encoding: 'utf-8', timeout: 10000 },
+        );
+        const parsed = JSON.parse(tagsOut || '{}');
+        model = parsed?.models?.[0]?.name || null;
+      } catch { /* tags optional */ }
+    }
+    if (!model) {
+      log('  WARNING: the local endpoint answered but exposed no model — the apply cannot wire a model-less provider.');
+      return null;
+    }
+    LOCAL_LANE = { endpoint: base, runtime, model };
+    return LOCAL_LANE;
+  } catch (e) {
+    log(`  local probe failed: ${e.message}`);
+    return null;
+  }
+}
+
+/**
+ * Write the `local` provider block into opencode.json — baseURL + the
+ * discovered model, so `local/<model>` ids resolve. Idempotent.
+ */
+function applyLocalProvider(config, endpoint, model) {
+  config.provider = config.provider || {};
+  config.provider.local = {
+    npm: '@ai-sdk/openai-compatible',
+    name: 'OLYMPUS Local (your hardware)',
+    options: { baseURL: `${endpoint}/v1` },
+    models: {
+      [model]: {
+        name: model,
+        // The provider's own limits are unknown; a conservative 32k context
+        // keeps the UI honest (docs/LOCAL-LLM.md states the requirement).
+        limit: { context: 32768, output: 8192 },
+      },
+    },
+  };
+  return 1;
 }
 
 function loadDotEnv(filePath) {
@@ -1414,6 +1466,10 @@ function isZenStrategy(strategy) {
  */
 function strategyFamily(strategy) {
   if (isFreeTierStrategy(strategy)) return 'FREE';
+  // LOCAL — the user's own hardware. The model prefix (`local/<model>`) is
+  // resolved by the probe, so the shape must not rewrite demigods to GO ids
+  // (same reasoning as BYOK).
+  if (strategy === 'local') return 'BYOK';
   // BYOK — the user's own paid key (byok-*). Mirrors strategyFamily() in
   // src/lib/model-strategies.ts. It is neither GO nor Zen: the provider
   // prefix comes from the strategy map itself, so the shape must not
@@ -1811,6 +1867,21 @@ function applyGoConfigShape(config, modelMap, forceImpeccable, family = 'GO') {
   let changes = 0;
   const isZen = family === 'ZEN';
   const isByok = family === 'BYOK';
+
+  // v0.0.22 — THE FREE RESIDUE CLEANUP. A config applied under the old free
+  // tier carries `provider.nvidia*` (and free-only OpenRouter entries). Those
+  // lanes are dead and the L4 preflight rightly refuses them. Every
+  // non-free apply strips them, so a machine upgrading from free lands on a
+  // clean, validated config (never a fossil lane).
+  if (config.provider && typeof config.provider === 'object') {
+    for (const pid of Object.keys(config.provider)) {
+      if (pid === 'nvidia' || pid.startsWith('nvidia-')) {
+        delete config.provider[pid];
+        changes++;
+      }
+    }
+    if (Object.keys(config.provider).length === 0) delete config.provider;
+  }
   // Zen demigods inherit opencode/<id> models (the Zen provider); GO demigods
   // use opencode-go/<id>. BYOK demigods inherit their parent god's model
   // (one lane for everything — the user's deliberate choice), so the prefix
@@ -2363,6 +2434,27 @@ function writeStateFile(strategy, changes, backupPath, noOp = false) {
     ensureDir(OLYMPUS_HOME);
     fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf-8');
     log(`State written to ${STATE_FILE}`);
+    // v0.0.22 (W2) — THE ONE SOURCE OF TRUTH: strategy.json. The legacy
+    // active-strategy.json above stays for older builds; the app reads
+    // strategy.json (src/lib/strategy-state.ts) and mirrors the legacy files.
+    try {
+      const canonical = {
+        version: 1,
+        strategy,
+        appliedAt: state.applied_at,
+        agentCount: state.agent_count,
+        godPrompts: state.god_prompts,
+        demigodsLoaded: state.demigods_loaded,
+        plugins: Array.isArray(state.plugins) ? state.plugins : null,
+        changes,
+        backupPath,
+        noOp: noOp === true,
+      };
+      fs.writeFileSync(path.join(OLYMPUS_HOME, 'strategy.json'), JSON.stringify(canonical, null, 2), 'utf-8');
+      log(`Strategy state written to ${path.join(OLYMPUS_HOME, 'strategy.json')}`);
+    } catch (e) {
+      log(`Warning: could not write strategy.json: ${e.message}`);
+    }
     // #ONE-TRUTH (the AIME specimen, 2026-10-24): the strategy lived in four
     // places and they disagreed — the store default (go-balanced), this state
     // file (go-budget), llm-providers.json (free-hybrid) and the actual
@@ -2517,18 +2609,16 @@ Options:
   --strategy <id>    Apply a strategy. Valid:
                        go-max-quality, go-balanced, go-budget,
                        zen-max-quality, zen-balanced, zen-budget ("Zen"),
-                       free-openrouter,
-                       free-big-pickle ("Free Big Pickle"),
-                       free-nvidia-build ("Free Nvidia Build"),
+                       byok-deepseek (your own OpenRouter key),
+                       local (your own hardware — Ollama / LM Studio /
+                              vLLM / llama.cpp / any OpenAI-compatible),
                        custom-<id>
-  --refresh-models   Re-fetch the live free model lists before applying
-                     (runs scripts/refresh-free-models.js first)
-  --force            Bypass the free-tier key validation error (apply the
-                     free strategy anyway, taking responsibility for the
-                     APIError failures until the key is added). Issue #56.
+  --refresh-models   Deprecated (the free tier is retired in v0.0.22).
+  --force            Bypass the L4 catalogue preflight (apply anyway,
+                     taking responsibility for unvalidated model ids).
   --impeccable       Force Athena's K3 upgrade (GO strategies only —
                      also upgrades Athena's UI demigods). Ignored on
-                     Zen / free strategies.
+                     Zen / BYOK / local strategies.
   --restore [path]   Restore opencode.json from backup. If <path> is
                      omitted, restores the most recent backup.
   --status           Show current strategy state + backup list.
@@ -2540,32 +2630,24 @@ Options:
 
 Strategy shapes:
   GO-plan strategies (go-max-quality, go-balanced, go-budget, custom-*):
-    - All 128 agents present (10 gods + 118 demigods)
+    - All 132 agents present (10 gods + 122 demigods)
     - God prompts use {file:...} references (full prompt fidelity)
-    - Plugin array includes all 8 local plugins
+    - Plugin array includes all 4 local plugins
     - Empty instructions array
     - small_model = opencode-go/deepseek-v4-flash
 
   Zen strategies (zen-max-quality, zen-balanced, zen-budget [Zen]):
-    - Same full shape as GO (128 agents, file-ref prompts, 8 plugins)
+    - Same full shape as GO (132 agents, file-ref prompts, 4 plugins)
     - Models use the opencode/<id> prefix (OpenCode Zen, pay-as-you-go)
     - small_model = opencode/deepseek-v4-flash
 
-  Free-tier strategies (free-openrouter, free-big-pickle,
-  free-nvidia-build):
-    - Only 10 gods present (demigods removed)
-    - God prompts inlined + truncated (OpenRouter/NVIDIA: 1000 chars)
-    - Plugin array trimmed to 4 (overlay + router + cache + context-cache)
-    - Single short instruction string
-    - small_model = openrouter/cohere/north-mini-code:free
-    - Provider output caps applied (free models can't take 32K max_tokens)
-    - When ~/.olympus/free-models.json is fresh (≤ 7 days), gods route to
-      the CURRENT top free models from the live provider lists
-      (OpenRouter + NVIDIA Build)
-      (run: node scripts/refresh-free-models.js to update)
-    - When a free provider's rate limit runs out, switch to another free
-      strategy (free-openrouter, free-big-pickle,
-      free-nvidia-build) and keep going
+  Local strategy (local):
+    - Full 132-agent shape (10 gods + 122 demigods, {file:} prompts, 4 plugins)
+    - A local provider block is written from the PROBE result
+      (Ollama :11434 / LM Studio :1234 / vLLM :8000 / llama.cpp :8080)
+    - Every god pinned to local/<model>; small_model rides the same lane
+    - With no endpoint answering the apply REFUSES with the probe table
+      (see docs/LOCAL-LLM.md)
 
 State file:
   After each successful apply, writes ~/.olympus/active-strategy.json
@@ -2779,8 +2861,14 @@ async function main() {
       changes += applyFreeProviderLimits(config, modelMap);
     } else {
       // GO and Zen both use the full shape (128 agents, file-ref prompts,
-      // 8 plugins); only the model prefix + small_model differ.
+      // 8 plugins); only the model prefix + small_model differ. LOCAL rides
+      // the same full shape, plus its own provider block (the probe result).
       changes = applyGoConfigShape(config, modelMap, forceImpeccable, family);
+      if (strategy === 'local' && LOCAL_LANE) {
+        changes += applyLocalProvider(config, LOCAL_LANE.endpoint, LOCAL_LANE.model);
+        config.small_model = `local/${LOCAL_LANE.model}`;
+        log(`  local provider wired: ${LOCAL_LANE.endpoint} (${LOCAL_LANE.runtime}) · model ${LOCAL_LANE.model}`);
+      }
     }
   } catch (e) {
     log(`ERROR: ${e.message}`);
@@ -2792,7 +2880,11 @@ async function main() {
   // catalogue's own suggestion, never at spawn time. --force escapes
   // loudly (same doctrine as the #56 key validation).
   log('L4: validating model ids against the live catalogue…');
-  const preflight = preflightModelCatalogue(config, { force: forceApply });
+  // v0.0.22 (W1): `local/*` ids are served by the user's own endpoint, not
+  // by the cloud catalogue — the probe above IS their validation.
+  const preflight = strategy === 'local'
+    ? { ok: true, failures: [], msg: 'local lane — probe-validated, catalogue preflight skipped' }
+    : preflightModelCatalogue(config, { force: forceApply });
   if (!preflight.ok) {
     log(`ERROR: ${preflight.msg}`);
     process.exit(1);
@@ -2854,7 +2946,7 @@ async function main() {
       console.log('    node scripts/apply-strategy.js --strategy go-balanced');
     } else if (family === 'ZEN') {
       console.log('  Zen config applied (full OLYMPUS shape on OpenCode Zen):');
-      console.log('    - All 128 agents present (10 gods + 118 demigods)');
+      console.log('    - All 132 agents present (10 gods + 122 demigods)');
       console.log('    - God prompts use {file:...} references');
       console.log('    - All 8 local plugins enabled');
       console.log('    - All gods on Zen models (opencode/<id>)');
@@ -2865,11 +2957,11 @@ async function main() {
       console.log('  To switch to the GO plan:');
       console.log('    node scripts/apply-strategy.js --strategy go-balanced');
       console.log('');
-      console.log('  To switch to free-tier:');
-      console.log('    node scripts/apply-strategy.js --strategy free-openrouter');
+      console.log('  To switch to the local lane (your own hardware):');
+      console.log('    node scripts/apply-strategy.js --strategy local');
     } else {
       console.log('  GO-plan config applied:');
-      console.log('    - All 128 agents present (10 gods + 118 demigods)');
+      console.log('    - All 132 agents present (10 gods + 122 demigods)');
       console.log('    - God prompts use {file:...} references');
       console.log('    - All 8 local plugins enabled');
       console.log('    - All gods on GO-plan models');
@@ -2877,10 +2969,8 @@ async function main() {
       console.log('  To switch to Zen (pay-as-you-go, no request caps):');
       console.log('    node scripts/apply-strategy.js --strategy zen-balanced');
       console.log('');
-      console.log('  To switch to free-tier (choose the provider you have a key for):');
-      console.log('    node scripts/apply-strategy.js --strategy free-openrouter');
-      console.log('    node scripts/apply-strategy.js --strategy free-big-pickle');
-      console.log('    node scripts/apply-strategy.js --strategy free-nvidia-build');
+      console.log('  To switch to the local lane (your own hardware):');
+      console.log('    node scripts/apply-strategy.js --strategy local');
       console.log('');
       console.log('  To restore the previous config:');
       console.log('    node scripts/apply-strategy.js --restore');

@@ -156,28 +156,8 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
     'the per-attempt reset is gone — a stale resume flag leaks across classes');
 }
 
-// ── 4. THE MOUTH — the #MOUTH-REVISION (authorized 2026-10-17, the two
-// cap-starvation specimens: the planner's 20-min reasoning death + the
-// fixtures hop's single ~16K-token file dying mid-write, finish=length,
-// zero artifacts). The reasoning lanes double (32768 — probe-accepted by
-// BOTH glm-5.3 and step-5); the volume lanes KEEP the #76 bar (16384).
-{
-  const pantheonSrc = read('scripts/free-pantheon.test.mjs');
-  const cfg = JSON.parse(read('opencode.json'));
-  const glmOut = cfg?.provider?.['nvidia-glm']?.models?.['z-ai/glm-5.3']?.limit?.output;
-  const stepOut = cfg?.provider?.['nvidia-step']?.models?.['stepfun-ai/step-5-preview']?.limit?.output;
-  const gemmaOut = cfg?.provider?.['nvidia-google']?.models?.['google/gemma-4-31b-it']?.limit?.output;
-  // A free-strategy config carries no NVIDIA lanes at all (the full-power
-  // Free Hybrid resolves to GO/Zen/OpenRouter lanes) — an ABSENT lane is the
-  // honest state (#105); a PRESENT one must carry the authorized bar.
-  check('the MOUTH revision: reasoning lanes 32768, volume lanes keep the #76 bar 16384',
-    /const REASONING_OUTPUT = 32768;/.test(pantheonSrc)
-      && /const VOLUME_OUTPUT = 16384;/.test(pantheonSrc)
-      && (glmOut === 32768 || glmOut === undefined)
-      && (stepOut === 32768 || stepOut === undefined)
-      && (gemmaOut === 16384 || gemmaOut === undefined),
-    `glm=${glmOut} step=${stepOut} gemma=${gemmaOut} — an unauthorized bar move (the nvidia-step lane may be ABSENT: #129 retired it — step-5-preview died from the catalogue; an absent lane is the honest state, a present one must keep the reasoning bar)`);
-}
+// ── 4. THE MOUTH — RETIRED in v0.0.22 (the NVIDIA free lanes are gone with
+// the free tier; the output budgets now live in the GO/Zen provider config).
 
 // ── 5. THE 22:27-22:41 SPECIMEN CHAIN: walk durability + execution law ─────
 {

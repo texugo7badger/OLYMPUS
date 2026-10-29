@@ -62,16 +62,13 @@ jobs:
       - name: Build skill index
         run: node scripts/build-skill-index.js
 
-      - name: Apply free-tier strategy (free-openrouter)
-        run: node scripts/apply-strategy.js --strategy free-openrouter
+      - name: Apply the default strategy (go-budget)
+        run: node scripts/apply-strategy.js --strategy go-budget
         env:
-          OLYMPUS_OPENROUTER_KEY: ${{ secrets.OLYMPUS_OPENROUTER_KEY }}
-          OLYMPUS_GROQ_KEY: ${{ secrets.OLYMPUS_GROQ_KEY }}
-          # V003-CI: the runner holds no NVIDIA key — the nvidia family
-          # blocks stay in the config for switch-back but cannot be probed
-          # here; skip them LOUDLY. OpenRouter keeps full L4 strictness
+          # v0.0.22: the free tier is retired. CI applies a GO strategy with
+          # the FULL 132-agent shape — the L4 catalogue preflight still runs
           # (the dead-id regression net this step exists to catch).
-          OLYMPUS_PREFLIGHT_SKIP_PROVIDERS: nvidia
+          OLYMPUS_OPENROUTER_KEY: ${{ secrets.OLYMPUS_OPENROUTER_KEY }}
 
       - name: Run eval harness
         run: npm run eval

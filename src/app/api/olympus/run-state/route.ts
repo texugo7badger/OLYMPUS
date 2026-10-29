@@ -38,29 +38,51 @@ import { workspaceLaneDir } from '@/lib/opencode-spawn';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// #V0.0.20: reconcile llm-providers.json with active-strategy.json on every
-// run-state check so the panel and the config never disagree.
-function reconcileStrategy() {
-  try {
-    const home = os.homedir();
-    const activePath = path.join(home, '.olympus', 'active-strategy.json');
-    const providersPath = path.join(home, '.olympus', 'llm-providers.json');
-    if (fs.existsSync(activePath)) {
-      const active = JSON.parse(fs.readFileSync(activePath, 'utf-8'));
-      const cfg = fs.existsSync(providersPath) ? JSON.parse(fs.readFileSync(providersPath, 'utf-8')) : {};
-      if (cfg.strategy !== active.strategy) {
-        cfg.strategy = active.strategy;
-        cfg.per_god_overrides = cfg.per_god_overrides || {};
-        fs.writeFileSync(providersPath, JSON.stringify(cfg, null, 2));
-      }
-    }
-  } catch { /* non-fatal */ }
-}
+// v0.0.22 (W2): the old reconcileStrategy() band-aid is GONE. strategy.json
+// is the single source of truth and readStrategyState() migrates the legacy
+// files once; the run-state route no longer patches drift on every poll.
+import { readStrategyState } from '@/lib/strategy-state';
 
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
 
 function readJson<T>(file: string): T | null {
   try { return JSON.parse(fs.readFileSync(file, 'utf-8')) as T; } catch { return null; }
+}
+
+/**
+ * v0.0.22 — PROVENANCE. The StatusBar line must name WHO is working and on
+ * WHICH lane, not just "campaign running". Reads the last hop_start event
+ * from the telemetry tail and the god→model map from the applied config.
+ * Missing data is reported as null (never guessed) — the UI renders "—".
+ */
+function readProvenance(telemetry: Array<Record<string, unknown>>): {
+  god: string | null;
+  hopId: string | null;
+  skill: string | null;
+  elapsedMs: number | null;
+} {
+  for (let i = telemetry.length - 1; i >= 0; i--) {
+    const ev = telemetry[i];
+    if (ev?.type === 'hop_start' || ev?.event === 'hop_start') {
+      const god = typeof ev.god === 'string' ? ev.god : null;
+      const hopId = typeof ev.hopId === 'string' ? ev.hopId : (typeof ev.hop === 'string' ? ev.hop : null);
+      const skill = typeof ev.skill === 'string' ? ev.skill : null;
+      const started = typeof ev.ts === 'string' ? Date.parse(ev.ts) : NaN;
+      const elapsedMs = Number.isFinite(started) ? Math.max(0, Date.now() - started) : null;
+      return { god, hopId, skill, elapsedMs };
+    }
+  }
+  return { god: null, hopId: null, skill: null, elapsedMs: null };
+}
+
+/** The god → model map from the APPLIED config (what is actually running). */
+function readAppliedModels(root: string): Record<string, string> {
+  const cfg = readJson<{ agent?: Record<string, { model?: string }> }>(path.join(root, 'opencode.json'));
+  const out: Record<string, string> = {};
+  for (const [id, agent] of Object.entries(cfg?.agent ?? {})) {
+    if (agent?.model) out[id] = agent.model;
+  }
+  return out;
 }
 
 /** The active project slug — the same pointer the Project Switcher writes. */
@@ -84,7 +106,9 @@ function candidateLanes(slug: string | null): string[] {
 }
 
 export async function GET() {
-  reconcileStrategy();
+  // v0.0.22 (W2) — reading the state also performs the one-time migration
+  // from the legacy files; no reconcile writes on every poll.
+  const strategyState = readStrategyState();
   const slug = activeSlug();
   const lanes = candidateLanes(slug);
 
@@ -121,6 +145,17 @@ export async function GET() {
   const completed = hopState?.completed?.length ?? 0;
   const parked = hopState?.parked ?? null;
 
+  // v0.0.22 PROVENANCE — god + model + hop + elapsed, so the strip never
+  // says "something is running" without naming it.
+  const provenance = readProvenance(telemetry);
+  const models = readAppliedModels(process.cwd());
+  const model = provenance.god ? (models[provenance.god] ?? null) : null;
+  const elapsedLabel = provenance.elapsedMs != null
+    ? (provenance.elapsedMs >= 60_000
+      ? `${Math.floor(provenance.elapsedMs / 60_000)}m${Math.round((provenance.elapsedMs % 60_000) / 1000)}s`
+      : `${Math.round(provenance.elapsedMs / 1000)}s`)
+    : null;
+
   const verdict =
     campaign.state === 'running' ? 'RUNNING'
     : parked ? 'PARKED'
@@ -128,12 +163,15 @@ export async function GET() {
     : inFlight > 0 ? 'UNVERIFIED'
     : 'IDLE';
 
-  // The single human line — the StatusBar renders exactly this.
+  // The single human line — the StatusBar renders exactly this. RUNNING now
+  // names the god, the lane/model, the hop and the elapsed time (the
+  // no-black-box rule); anything unknown stays "—", never invented.
+  const who = [provenance.god, model, provenance.hopId].filter(Boolean).join(' · ');
   const line =
     verdict === 'RUNNING'
-      ? `RUNNING · ${campaign.state === 'running' ? campaign.campaignId : 'campaign'} · pid ${campaign.state === 'running' ? campaign.pid : '?'} · ${completed} hop(s) ok`
+      ? `RUNNING · ${who || (campaign.state === 'running' ? campaign.campaignId : 'campaign')}${elapsedLabel ? ` · ${elapsedLabel}` : ''} · ${completed} hop(s) ok`
       : verdict === 'PARKED'
-        ? `PARKED · ${parked?.hopId ?? '?'} · ${parked?.reason ?? 'sem causa registrada'}`
+        ? `PARKED · ${parked?.hopId ?? '?'} · ${parked?.reason ?? 'no recorded cause'}`
         : verdict === 'UNVERIFIED'
           ? 'UNVERIFIED — state on disk, but no process could be confirmed'
           : 'IDLE';
@@ -143,7 +181,22 @@ export async function GET() {
     lane,
     verdict,
     line,
+    strategy: {
+      id: strategyState.strategy,
+      appliedAt: strategyState.appliedAt,
+      agentCount: strategyState.agentCount,
+      demigodsLoaded: strategyState.demigodsLoaded,
+      noOp: strategyState.noOp,
+    },
     campaign,
+    provenance: {
+      god: provenance.god,
+      model,
+      hopId: provenance.hopId,
+      skill: provenance.skill,
+      elapsedMs: provenance.elapsedMs,
+      elapsedLabel,
+    },
     hops: {
       completed,
       inFlight,

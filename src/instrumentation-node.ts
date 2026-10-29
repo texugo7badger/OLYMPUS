@@ -19,7 +19,7 @@ export async function registerNode() {
   const fs = eval('require("fs")');
   const os = eval('require("os")');
 
-  // v0.0.21 — Global crash protection.
+  // v0.0.22 — Global crash protection.
   //   The ttyd/vscodium launchers create child processes with logStreams.
   //   If a logStream emits an 'error' event without a listener (e.g. disk
   //   full, file locked), Node.js throws an uncaughtException that CRASHES

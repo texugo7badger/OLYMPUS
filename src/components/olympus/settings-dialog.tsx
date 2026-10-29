@@ -44,8 +44,8 @@ interface StrategyEntry {
   id: string;
   label: string;
   description: string;
-  plan?: 'GO' | 'ZEN' | 'CUSTOM';
-  tier?: 'quality' | 'balanced' | 'budget' | 'free' | 'custom';
+  plan?: 'GO' | 'ZEN' | 'CUSTOM' | 'LOCAL';
+  tier?: 'quality' | 'balanced' | 'budget' | 'local' | 'custom';
   terminalModel?: string;
   estCostPerDay: 'low' | 'moderate' | 'higher' | 'free' | string;
   /** Per-god model map (custom strategies only — loaded from disk). */
@@ -328,17 +328,17 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     prometheus: 'opencode/glm-5.3-flash',
     callimachus: 'opencode/claude-haiku-4-5',
   },
-  'free-hybrid': {
-    apollo: 'openrouter/thinkingmachines/inkling:free',
-    atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    artemis: 'nvidia-meta/meta/muse-glimmer-30b',
-    athena: 'nvidia-meta/poolside/laguna-xs-2.1',
-    dionysus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    hephaestus: 'nvidia-meta/poolside/laguna-xs-2.1',
-    hermes: 'nvidia-meta/meta/muse-glimmer-30b',
-    persephone: 'nvidia-openai/openai/gpt-oss-20b',
-    prometheus: 'nvidia-meta/poolside/laguna-xs-2.1',
-    callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
+  'local': {
+    apollo: 'opencode-go/glm-5.3-flash',
+    atlas: 'opencode-go/hy3',
+    artemis: 'opencode-go/glm-5.3-flash',
+    athena: 'opencode-go/qwen3.7-plus',
+    dionysus: 'opencode-go/deepseek-v4.1-flash',
+    hephaestus: 'opencode-go/kimi-k2.7-code',
+    hermes: 'opencode-go/kimi-k2.7-code',
+    persephone: 'opencode-go/deepseek-v4.1-flash',
+    prometheus: 'opencode-go/minimax-m3',
+    callimachus: 'opencode-go/glm-5.3-flash',
   },
   // BYOK — the user's own OpenRouter key, every god on DeepSeek V4.1 Flash
   // v1017 (1M ctx / 393k out). Mirrors byok-deepseek in
@@ -355,43 +355,6 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     prometheus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
     callimachus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
   },
-  // Legacy free ids — deprecated aliases of free-hybrid (saved configs only).
-  'free-big-pickle': {
-    apollo: 'openrouter/thinkingmachines/inkling:free',
-    atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    artemis: 'nvidia-meta/meta/muse-glimmer-30b',
-    athena: 'nvidia-meta/poolside/laguna-xs-2.1',
-    dionysus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    hephaestus: 'nvidia-meta/poolside/laguna-xs-2.1',
-    hermes: 'nvidia-meta/meta/muse-glimmer-30b',
-    persephone: 'nvidia-openai/openai/gpt-oss-20b',
-    prometheus: 'nvidia-meta/poolside/laguna-xs-2.1',
-    callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-  },
-  'free-openrouter': {
-    apollo: 'openrouter/thinkingmachines/inkling:free',
-    atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    artemis: 'nvidia-meta/meta/muse-glimmer-30b',
-    athena: 'nvidia-meta/poolside/laguna-xs-2.1',
-    dionysus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    hephaestus: 'nvidia-meta/poolside/laguna-xs-2.1',
-    hermes: 'nvidia-meta/meta/muse-glimmer-30b',
-    persephone: 'nvidia-openai/openai/gpt-oss-20b',
-    prometheus: 'nvidia-meta/poolside/laguna-xs-2.1',
-    callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-  },
-  'free-nvidia-build': {
-    apollo: 'openrouter/thinkingmachines/inkling:free',
-    atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    artemis: 'nvidia-meta/meta/muse-glimmer-30b',
-    athena: 'nvidia-meta/poolside/laguna-xs-2.1',
-    dionysus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    hephaestus: 'nvidia-meta/poolside/laguna-xs-2.1',
-    hermes: 'nvidia-meta/meta/muse-glimmer-30b',
-    persephone: 'nvidia-openai/openai/gpt-oss-20b',
-    prometheus: 'nvidia-meta/poolside/laguna-xs-2.1',
-    callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-  },
 };
 
 // Fallback family split (used when the API is offline). The live API sends
@@ -406,7 +369,7 @@ const FALLBACK_CLASS_FAMILIES: Record<'GO' | 'ZEN' | 'FREE', string[]> = {
 // only offer opencode-go/*; Zen only opencode/*; Free only openrouter/* +
 // nvidia/*. custom-* strategies are FREE-ONLY (money safety — a
 // paid model in a custom strategy could silently burn credits).
-type StrategyFamilyKey = 'GO' | 'ZEN' | 'FREE' | 'BYOK' | 'ALL';
+type StrategyFamilyKey = 'GO' | 'ZEN' | 'FREE' | 'BYOK' | 'LOCAL' | 'ALL';
 function familyForStrategy(s: StrategyEntry | undefined): StrategyFamilyKey {
   if (!s) return 'GO';
   if (s.plan === 'GO') return 'GO';
@@ -414,7 +377,10 @@ function familyForStrategy(s: StrategyEntry | undefined): StrategyFamilyKey {
   // BYOK — the user's own paid key (byok-*). It is not free, so it must not
   // borrow the FREE label ("best free lane per god") in the dropdown header.
   if (typeof s.id === 'string' && s.id.startsWith('byok-')) return 'BYOK';
-  return 'FREE'; // free-* + custom-* (custom is free-only)
+  // v0.0.22 — local is the user's own hardware; it borrows the GO catalog for
+  // the per-god dropdown (its own models are discovered by the probe).
+  if (s.plan === 'LOCAL' || s.id === 'local') return 'LOCAL';
+  return 'FREE'; // custom-* (legacy saved ids)
 }
 
 function fallbackData(): SettingsData {
@@ -445,7 +411,7 @@ function fallbackData(): SettingsData {
       { id: 'zen-budget',      label: 'ZEN Budget',   description: 'Lowest cost on OpenCode Zen — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. All others: MiniMax M2.7.', plan: 'ZEN', tier: 'budget', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'low' },
       // Free — ONE strategy over every free source registered (GO/Zen free,
       // OpenRouter free, NVIDIA Build free). More APIs = a stronger free.
-      { id: 'free-hybrid', label: 'Free Hybrid', description: 'The perfect free — one strategy over every free/zero-marginal-cost source. On the GO flat plan: Beam 1.0 (1M) + DeepSeek V4.1 Flash (included, no per-token charge). Without GO: NVIDIA Build free (GLM-5.3 1M, MiniMax M3.1 Flash, Muse Glimmer, GPT-OSS-20B) and OpenRouter free (inkling 1M/262k, north-mini-code, flint 235k out). Apollo/Atlas/Artemis on Beam, Athena/Dionysus/Hermes on inkling, Hephaestus/Persephone/Callimachus on DeepSeek V4.1 Flash, Prometheus on flint. Zen free lanes are the last resort (quota-gated). Load-spread ≤3/lane, pins in ~/.olympus/free-hybrid-overrides.json.', plan: 'CUSTOM', tier: 'free', terminalModel: 'opencode-go/beam-free', estCostPerDay: 'free' },
+      { id: 'local', label: 'Local', description: 'Your own hardware — zero cost, zero data leaving this machine. A local LLM server (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint) serves the full 10-god + 122-demigod arsenal. The apply probes your endpoints and refuses with the exact reason if nothing answers (docs/LOCAL-LLM.md).', plan: 'LOCAL', tier: 'local', terminalModel: 'local/<model>', estCostPerDay: 'free' },
     ],
     go_plan_last_verified: '2026-07-29',
     go_plan_docs_url: 'https://opencode.ai/docs/go/',
@@ -879,8 +845,8 @@ export default function SettingsDialog() {
     selectedFamily === 'GO' ? 'GO models'
     : selectedFamily === 'ZEN' ? 'ZEN models'
     : selectedFamily === 'BYOK' ? 'Your key (BYOK) — the lane you pay for'
-    : strategy === 'free-hybrid' || strategy === 'free-openrouter' || strategy === 'free-nvidia-build' || strategy === 'free-big-pickle'
-      ? 'Free Hybrid — best free lane per god'
+    : strategy === 'local'
+      ? 'Local — your own hardware (the probe names the model)'
     : 'Free models (all providers)';
   // Activation gate — a strategy whose required API is not authorized cannot
   // be selected. Unknown auth (offline fallback) never blocks.
@@ -995,7 +961,7 @@ export default function SettingsDialog() {
                         {blocked ? (
                           <span className="text-olympus-amber-soft inline-flex items-center gap-1">needs {req?.label} <Lock size={9} /></span>
                         ) : (
-                          <span className="text-olympus-text-dim">{s.tier === 'free' ? 'FREE' : `cost: ${s.estCostPerDay}`}</span>
+                          <span className="text-olympus-text-dim">{s.tier === 'local' ? 'LOCAL · $0' : `cost: ${s.estCostPerDay}`}</span>
                         )}
                       </div>
                     </button>

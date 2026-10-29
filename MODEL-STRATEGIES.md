@@ -21,17 +21,20 @@
 | `zen-max-quality` (**Zen**) | **Zen plan** | $$ | Best | **No caps** (pay-as-you-go) | Best quality on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Sol, Hephaestus/Artemis/Hermes on Claude Sonnet 5, Athena on GPT 5.6 Terra, Dionysus on GPT 5.6 Luna, Persephone on Gemini 3.1 Pro, Prometheus on Grok Build 0.1, Callimachus on Claude Haiku 4.5, vault on GLM-5.3 |
 | `zen-balanced` (**Zen**) | **Zen plan** | $ | Great | **No caps** (pay-as-you-go) | Full 128-agent OLYMPUS without a GO plan — Apollo on GLM-5.3, Atlas on GPT 6 Sol, Hephaestus/Artemis on Claude Sonnet 5, Athena on GPT 5.6 Terra, Dionysus on GPT 5.6 Luna, Hermes on GPT 5.4 Mini, Persephone on Gemini 3.1 Pro, Prometheus on Grok Build 0.1, Callimachus on Claude Haiku 4.5, vault on GLM-5.3-Flash. Proprietary APIs, charged per request |
 | `zen-budget` (**Zen**) | **Zen plan** | ¢ | Good | **No caps** (pay-as-you-go) | Lowest cost on Zen — Apollo on GLM-5.3, Atlas on GPT 6 Luna, all others on GLM-5.3-Flash, Callimachus on Claude Haiku 4.5 |
-| `free-hybrid` (**Free Hybrid**) | **At least one free source** (GO/Zen free, OpenRouter, NVIDIA Build) | **Free** | Lower | Unlimited (rate-limited) | **THE one free strategy** — a per-god roster over every free source registered: GO free (Beam 1.0 1M, MiniMax M3.1 Flash 1M/512k, Cat Jam, LongCat), Zen free (DeepSeek V4.1 Flash, Beam, Kimi K2.5 262k out, MiniMax M3.1 Flash 512k out), OpenRouter free (inkling 1M/262k, dots-3-note 512k/460k) and NVIDIA Build free (GLM-5.3, MiniMax M3.1 Flash, Muse Glimmer, GPT-OSS-20B — no Nemotron). Apollo plans on Beam, Atlas orchestrates on MiniMax M3.1 Flash, Hephaestus codes on DeepSeek V4.1 Flash, Hermes researches on Cat Jam, Callimachus curates on DeepSeek V4.1 Flash. Load-spread (≤3 gods/lane), user pins via `~/.olympus/free-hybrid-overrides.json`. The three old ids remain as deprecated aliases for saved configs |
+| `byok-deepseek` (BYOK) | Your OpenRouter key — DeepSeek V4.1 Flash (1M ctx / 393k out) | same lane | same lane | same lane |
+| `local` (**Local**) | Your hardware — Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint | same lane | same lane | same lane |
 
 Switch strategies at any time:
 ```bash
-olympus apply-strategy free-hybrid
+olympus apply-strategy local
 # or: Settings → LLM strategy in the app
 ```
 
-> **Activation gate:** strategies are **blocked** until the API they need is authorized inside OpenCode — you can't switch to a plan you can't call. `go-*` needs the **GO plan** (`opencode-go` provider), `zen-*` needs the **ZEN key** (`opencode` provider), `free-hybrid` needs **at least one** of the four free sources (OpenCode Zen free, OpenCode GO free, an OpenRouter key, or an NVIDIA Build key `nvapi-...`) — more sources = a stronger free pantheon. The Settings cards show a lock + what's missing; the providers API rejects blocked switches. Custom (`custom-*`) strategies have no static requirement.
+> **Activation gate:** strategies are **blocked** until the API they need is authorized inside OpenCode — you can't switch to a plan you can't call. `go-*` needs the **GO plan** (`opencode-go` provider), `zen-*` needs the **ZEN key** (`opencode` provider), `local` needs a running local LLM server (the apply probes it and refuses with the exact reason otherwise). The Settings cards show a lock + what's missing; the providers API rejects blocked switches. Custom (`custom-*`) strategies have no static requirement.
 
-Free Hybrid spreads the gods across every free source you registered, so one provider's rate limit never stops the pantheon — the next lane in that god's roster takes over. Register another free source (Settings → Providers) and re-apply to strengthen it; pin any god in `~/.olympus/free-hybrid-overrides.json`. The NVIDIA fallback lanes stay USER-PINNED (the distributed pantheon — #106).
+The **Local** strategy (`local`) is the zero-cost path in v0.0.22: it probes the machine for a local LLM server and wires the full arsenal to it, refusing with the exact probe result when nothing answers. Requirements: tool calling + ≥32KB context. See [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md).
+
+The free tier (and its three aliases) is **retired** in v0.0.22 — the endpoint refuses `free-*` with the working alternatives.
 
 
 
@@ -128,7 +131,7 @@ Despite optimization, you may hit a model's monthly cap during heavy usage:
 
 - **GLM-5.3 (Apollo):** Never downgraded. Apollo is sacred — if the rolling/monthly cap is hit, Apollo stops planning until the reset. This prevents silent quality degradation.
 - **Kimi K3 (Artemis, go-max-quality):** Tightest cap at 490/month. Switch to `go-balanced` (GLM-5.3-Flash) or to a Zen strategy — Zen is pay-as-you-go with no request caps.
-- **Any model:** Switch to **Free Hybrid** in Settings to continue working with free-tier models (lower quality, zero cost, no cap). It spreads the gods across every free source you registered — one provider's rate limit does not stop the run.
+- **Any model:** Switch to **Local** in Settings to run the full arsenal on your own hardware at zero cost (no cap, no data leaving the machine). The local probe reports exactly what it found.
 
 See [opencode.ai/docs/go](https://opencode.ai/docs/go) for the latest plan details.
 
@@ -216,65 +219,28 @@ The lowest-cost tier on OpenCode Zen, still on proprietary APIs: Apollo on GLM-5
 
 **When to use:** Maximum throughput on Zen at minimum cost — without leaving the proprietary-API world.
 
-### `free-groq` — removed (Groq free tier cannot serve OLYMPUS)
+### `local` — your own hardware (the zero-cost path in v0.0.22)
 
-Groq's free tier was removed from OLYMPUS. Its **12K TPM window** (prompt + max_tokens counted together) cannot serve the ~46K-token OLYMPUS system prompt (AGENTS.md + god prompts + instructions) — every request overflows, opencode auto-compacts, and the session falls into an endless compaction loop. The `free-groq` strategy, all `groq/*` model entries, and Groq's entry in the live-refresh list have been removed. Use **Free Hybrid** instead.
+The free tier is **retired**. The zero-cost path is now a local LLM server on your own machine.
 
-### `free-hybrid` — THE one free strategy (every free source, per-god roster)
-
-**One strategy, every free source you have registered**, and a roster per god — the best lane
-for each god's TASK, not one model for everything.
-
-| Source | What it unlocks (live, 2026-10-23) |
+| Runtime | Default endpoint |
 |---|---|
-| **OpenCode GO free** | `opencode-go/beam-free` (Beam 1.0, 501B MoE, 1M ctx/131k out) — the GO plan's only free lane |
-| **OpenCode Zen free** | `opencode/beam-free` (1M/131k), `opencode/deepseek-v4.1-flash-free` (200k/32k, the coding cost-benefit), `opencode/flint-40b-free` (262k/64k), `opencode/glm-5.3-flash-free` (200k/32k), `opencode/mimo-v2.6-flash-free` (200k/32k) |
-| **OpenRouter free** | `thinkingmachines/inkling:free` (1M/262k out), `inkling-small:free` (1M/262k), `cohere/north-mini-code:free` (256k/64k), `recursive/flint-v1.0:free` (262k/**235k out**), `xingchen-agi/xing4.0-29b-a4b:free` (262k/235k) |
-| **NVIDIA Build free** | GLM-5.3 (1M), MiniMax M3.1 Flash, Muse Glimmer 30B, GPT-OSS-20B — **NO Nemotron** (the user's ban, forever) |
+| Ollama | `http://localhost:11434` |
+| LM Studio | `http://localhost:1234` |
+| vLLM | `http://localhost:8000` |
+| llama.cpp server | `http://localhost:8080` |
+| Any OpenAI-compatible | user-entered `baseURL` |
 
-**The roster (best lane first; the resolver picks the first AVAILABLE one and spreads load ≤3 gods/lane):**
+**How it works:** `olympus apply-strategy local` runs `scripts/local-llm-probe.js` (5 endpoints,
+3s each), picks the best answering endpoint, reads its first model, writes the `local` provider
+block into `opencode.json` and pins every god to `local/<model>` — the full 10-god + 122-demigod
+arsenal, full prompts, all plugins. **With no endpoint answering, the apply refuses** with the
+probe table and the fix — never a config that cannot serve a request.
 
-| God | First lane | Why (the task fit) |
-|---|---|---|
-| **Apollo** | **GO Beam 1.0** → GO DeepSeek V4.1 Flash → OR inkling → NV GLM-5.3 → Zen free (last) | planning: the proven 501B free lane (GO plan), DeepSeek as the second |
-| **Atlas** | **GO Beam 1.0** → GO DeepSeek → OR inkling → NV MiniMax | orchestration: 1M ctx/131k out |
-| **Artemis** | **GO Beam 1.0** → GO DeepSeek → OR inkling → NV Muse Glimmer | security: deep reasoning over a 1M ctx |
-| **Athena** | **OR inkling** (262k out) → GO Beam → GO DeepSeek → NV GPT-OSS-20B | frontend: whole-page components |
-| **Dionysus** | **OR inkling** (262k out) → GO Beam → GO DeepSeek → NV GLM-5.3 | QA: long suites + evidence |
-| **Hephaestus** | **GO DeepSeek V4.1 Flash** (included in the flat plan) → GO Beam → OR north-mini-code → NV GPT-OSS-20B | backend code: the benchmark cost-benefit |
-| **Hermes** | **OR inkling** (1M/262k) → GO Beam → GO DeepSeek → NV Muse Glimmer | integrations/research: 1M ctx |
-| **Persephone** | **GO DeepSeek V4.1 Flash** → OR north-mini-code → GO Beam → NV GLM-5.3 | database: migrations + SQL |
-| **Prometheus** | **OR flint-v1.0** (235k out) → GO Beam → GO DeepSeek → NV GPT-OSS-20B | DevOps: long IaC/runbooks |
-| **Callimachus** | **GO DeepSeek V4.1 Flash** (reserved first) → GO Beam → OR north-mini-code → NV MiniMax | vault curation: fast, cheap, strong (the user's pick) |
+**Requirements:** tool calling + ≥32k context. See [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) for the
+honest hardware table (S/A/B/C tiers). Cost: $0. Data: never leaves the machine.
 
-**Reliability note (2026-10-23 probes):** the Zen free lanes (`opencode/*-free`) answer **"Free usage limit reached"** once the daily quota is spent — they are the LAST column only. The lanes that serve today: GO Beam (free), GO DeepSeek 4.1 Flash (included in the GO flat plan), NVIDIA Build free (GLM-5.3 1M, MiniMax M3.1 Flash, Muse Glimmer, GPT-OSS-20B) and OpenRouter free (inkling 1M/262k, north-mini-code, flint 235k out).
-
-**The NVIDIA fallback column is the DISTRIBUTED PANTHEON (#106)** — every god on exactly one
-per-family lane (`nvidia-glm` / `nvidia-minimaxai` / `nvidia-meta` / `nvidia-openai`), ≤3 gods
-per anchor, Apollo's entry lane never shared with Athena/Hephaestus, Callimachus + `small_model`
-on the fast volume lane, no Nemotron ever. A machine with only an `nvapi-...` key therefore still
-gets the struggle-tested distributed shape; a machine with GO/Zen free rides those first.
-
-**Resolution at apply time:** `scripts/apply-strategy.js` reads OpenCode's `auth.json` (plus env /
-`llm-providers.json`), logs the detected sources, the lane chosen for each god and what a missing
-source would unlock (e.g. "add nvidia → unlocks GLM-5.3 1M, MiniMax M3.1 Flash…"). With **zero**
-sources the apply refuses with the explicit registration guidance (never a config that cannot
-serve one request).
-
-**User pins ("o usuário pode modar"):** `~/.olympus/free-hybrid-overrides.json`
-```json
-{ "athena": "opencode/minimax-m3.1-flash-free", "callimachus": "opencode/deepseek-v4.1-flash-free" }
-```
-
-**Requirements:** at least one of — OpenCode Zen (`opencode` key), OpenCode GO (`opencode-go`
-key), OpenRouter, NVIDIA Build. More sources = a stronger free. Configure via
-`olympus opencode` → Settings → Providers.
-
-**Deprecated aliases:** `free-openrouter`, `free-big-pickle`, `free-nvidia-build` still resolve
-— for saved configs only — to the same Free Hybrid (they are hidden from the picker).
-
-**When to use:** always, when you want zero cost. It is the strongest free shape OLYMPUS can
-build from the APIs you have.
+**Probe only:** `node scripts/local-llm-probe.js` (JSON report, exit 0 when an endpoint answers).
 
 ### `byok-deepseek` — your own OpenRouter key, every god on one strong lane
 
@@ -358,7 +324,7 @@ There are **no automatic model fallbacks** — OLYMPUS never silently downgrades
 
 - **Kimi K3 (Artemis in go-max-quality only):** its GO cap ($15/mo → $3/5h rolling, 490/month) is too tight for multi-god duty — that is why only ONE god rides it. Grok 4.7 stays unused. Switch to `go-balanced` for more headroom, or a **Zen** strategy (`zen-max-quality` keeps frontier quality with Claude Sonnet 5 / GPT 6 Sol; `zen-balanced`/`zen-budget` use GPT 5.6 Terra/Luna / GLM-5.3-Flash — pay-as-you-go, **no request caps**).
 - **GLM-5.3 capped (1,080 req/month; four gods in go-max-quality, Apollo in go-balanced):** the hop runtime's small-burst shape stretches the cap, but when it runs out switch to `go-budget` (Apollo on Flash), a Zen strategy (Apollo stays on `opencode/glm-5.3`, pay-as-you-go) or a free strategy.
-- **Any GO model capped:** switch to **Free Hybrid** in Settings and keep working at zero cost. One provider's rate limit does not stop the run — the roster falls through to the next free lane.
+- **Any GO model capped:** switch to **Zen** (pay-as-you-go), **BYOK** (your own key), or **Local** (your own hardware) in Settings.
 
 ## Why no OpenAI/Anthropic direct providers?
 
@@ -409,7 +375,7 @@ The v0.0.9 release ships **`docs/research/cost-strategy-remodel.md`** — the fr
 - **Apollo stays GLM** (the sacred law) — a `cost-first` mode that moves Apollo to DeepSeek requires an explicit accept.
 - **Free tier is capacity, not contract:** a hard paid cap (default US$ 5/month) plus a provider budget ledger are prerequisites for any automatic fallback.
 
-Tracked by the COST-1 issues: the budget ledger, the workload router, the `free-hybrid` preset, the free/paid telemetry, and the A/B benchmark. Until those land, the manual strategy switch remains the only routing surface.
+Tracked by the COST-1 issues: the budget ledger, the workload router, the local-lane telemetry, and the A/B benchmark. Until those land, the manual strategy switch remains the only routing surface.
 
 ## License
 

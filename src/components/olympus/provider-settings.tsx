@@ -28,9 +28,6 @@ const FREE_PROVIDERS: Array<{ id: 'openrouter' | 'nvidia'; label: string; keyUrl
 
 /** Which free strategy needs which provider key. */
 const FREE_STRATEGY_PROVIDER: Record<string, 'openrouter' | 'nvidia'> = {
-  'free-openrouter': 'openrouter',
-  'free-big-pickle': 'openrouter', // the flagship default is an OpenRouter model
-  'free-nvidia-build': 'nvidia',
 };
 
 /** Human label for the store a key was authorized in. */
@@ -63,8 +60,8 @@ interface StrategyEntry {
   id: string;
   label: string;
   description: string;
-  plan?: 'GO' | 'ZEN' | 'CUSTOM';
-  tier?: 'quality' | 'balanced' | 'budget' | 'free' | 'custom';
+  plan?: 'GO' | 'ZEN' | 'CUSTOM' | 'LOCAL';
+  tier?: 'quality' | 'balanced' | 'budget' | 'local' | 'custom';
   terminalModel?: string;
   estCostPerDay: 'low' | 'moderate' | 'higher' | 'free' | string;
   isCustom?: boolean;
@@ -98,9 +95,7 @@ function fallbackData(): ProviderSettingsData {
       { id: 'zen-max-quality', label: 'ZEN Max Quality', description: 'Frontier quality on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. Athena+Hephaestus: Claude Sonnet 5. Others: GPT-5.4. Vault: Gemini 3.5 Flash.', plan: 'ZEN', tier: 'quality', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'higher' },
       { id: 'zen-balanced',    label: 'ZEN Balanced', description: 'Full OLYMPUS on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. Athena+Hephaestus: Claude Sonnet 5. Specialists: Kimi K2.7 Code. Vault: MiniMax M2.7.', plan: 'ZEN', tier: 'balanced', terminalModel: 'opencode/glm-5.3',  estCostPerDay: 'moderate' },
       { id: 'zen-budget',      label: 'ZEN Budget',   description: 'Lowest cost on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. All others: MiniMax M2.7.', plan: 'ZEN', tier: 'budget', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'low' },
-      { id: 'free-openrouter', label: 'Free OpenRouter', description: 'All 10 gods on OpenRouter\'s strongest free model live right now (cohere/north-mini-code:free — probe-verified 2026-10-16, 256K ctx, 64K output). One pool, zero cost, one key.', plan: 'CUSTOM', tier: 'free', terminalModel: 'openrouter/cohere/north-mini-code:free', estCostPerDay: 'free' },
-      { id: 'free-big-pickle', label: 'Free Big Pickle', description: 'All 10 gods (Callimachus included) on one free model — the strongest currently live, refreshed automatically.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
-      { id: 'free-nvidia-build', label: 'Free Nvidia Build', description: 'NVIDIA Build free endpoints — the DISTRIBUTED PANTHEON: per-god model lanes on the user-pinned anchors (GLM-5.3 / Step 5 Preview / Gemma 4 31B / Muse Glimmer / GPT-OSS-20B — the 2026-10-16 rotation), per-family client pools, no single pool, NO Nemotron (the user\'s ban). The anchor set is pinned — the refresh verifies availability, never replaces.', plan: 'CUSTOM', tier: 'free', terminalModel: 'nvidia-glm/z-ai/glm-5.3', estCostPerDay: 'free' },
+      { id: 'local', label: 'Local', description: 'Your own hardware — zero cost, zero data leaving this machine. Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint serves the full arsenal. The apply probes your setup and refuses with the exact reason if nothing answers (docs/LOCAL-LLM.md).', plan: 'LOCAL', tier: 'local', terminalModel: 'local/<model>', estCostPerDay: 'free' },
     ],
     customStrategies: [],
     availableProviders: [
@@ -179,7 +174,7 @@ export default function ProviderSettings() {
   const activeStrategy = allStrategies.find(s => s.id === (data.strategy ?? storeStrategy));
   const goStrategies = (data.availableStrategies ?? []).filter(s => s.plan === 'GO');
   const zenStrategies = (data.availableStrategies ?? []).filter(s => s.plan === 'ZEN');
-  const freeStrategies = (data.availableStrategies ?? []).filter(s => s.plan === 'CUSTOM' && s.tier === 'free');
+  const localStrategies = (data.availableStrategies ?? []).filter(s => s.plan === 'LOCAL');
   const customStrategies = data.customStrategies ?? [];
 
   const freeKeys: Record<'openrouter' | 'nvidia', boolean> = {
@@ -269,7 +264,7 @@ export default function ProviderSettings() {
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">Active</span>
           <span className="text-[9px] font-mono text-olympus-green uppercase tracking-wide">
-            {activeStrategy?.tier === 'free' ? 'FREE' : `cost: ${activeStrategy?.estCostPerDay ?? '—'}`}
+            {activeStrategy?.tier === 'local' ? 'LOCAL · $0' : `cost: ${activeStrategy?.estCostPerDay ?? '—'}`}
           </span>
         </div>
         <div className="text-sm font-mono font-semibold text-olympus-gold mb-1">
@@ -434,7 +429,7 @@ export default function ProviderSettings() {
 	      )}
 
 	      {/* Free-tier strategies — one card per provider (OpenRouter, Big Pickle, Nvidia Build) */}
-	      {freeStrategies.map(freeStrategy => {
+	      {localStrategies.map(freeStrategy => {
 	        const isOnFreeStrategy = activeStrategy?.id === freeStrategy.id;
 	        const needsProvider = FREE_STRATEGY_PROVIDER[freeStrategy.id];
 	        const missingKey = needsProvider ? !freeKeys[needsProvider] : false;

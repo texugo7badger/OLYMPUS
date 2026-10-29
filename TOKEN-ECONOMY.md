@@ -1,6 +1,6 @@
 # OLYMPUS Token Economy
 
-> How OLYMPUS achieves high quality at low cost — from zero (free tier) to the GO plan ($10/mo flat). 5-layer compression · Hot/Warm/Cold tiers · Instinct short-circuits · Symphony Layer 5 · Free economics.
+> How OLYMPUS achieves high quality at low cost — from zero (your own hardware) to the GO plan. 5-layer compression · Hot/Warm/Cold tiers · Instinct short-circuits · Symphony Layer 5 · Free economics.
 
 ## 5-layer compression stack
 
@@ -110,7 +110,7 @@ When > 70% of dispatches short-circuit AND average confidence > 0.80, Apollo sug
 
 ### Free economics ($0)
 
-The **free strategies** run OLYMPUS entirely on free-tier providers — no plan required. `free-openrouter` / `free-big-pickle` refresh their picks automatically from the live provider lists (`scripts/refresh-free-models.js`); `free-nvidia-build` is the **distributed pantheon (#106)** — a USER-PINNED anchor set (probe-verified 2026-10-08):
+The **`local` strategy** runs OLYMPUS entirely on your own hardware — no plan, no key, no network. `olympus apply-strategy local` probes Ollama/LM Studio/vLLM/llama.cpp/any OpenAI-compatible endpoint and wires the full arsenal to it; the apply refuses with the probe table when nothing answers (docs/LOCAL-LLM.md). The old free strategies were retired in v0.0.22.
 
 | Provider | Model lane | Role | Cost |
 |----------|-------|------|------|
@@ -218,5 +218,5 @@ When benchmark recording is enabled (Settings → Benchmark Recording toggle), e
 | Symphony latent transport | 70–90% parallel dispatch | Pure local code, zero tokens |
 | Caveman compression | 65% per god output | Terse natural language |
 | Strategic-compact | Boundary-gated | Only compacts at logical task edges |
-| Free strategies | 100% cost | $0 — runs on OpenRouter + Groq + NVIDIA Build free tiers |
+| `local` (your hardware) | 100% cost | $0 — your own LLM server, no network |
 | Terminal Bridge | 100% (not applicable) | Local IPC, zero LLM tokens |

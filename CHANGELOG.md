@@ -2,6 +2,28 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.22] — 2026-10-29
+
+**"THE LOCAL LANE"** — the free tier is retired, and OLYMPUS gets its zero-cost path back without lying about it: your own hardware. Every strategy now ships ONE config shape (the full 132-agent arsenal); the free tier's degraded 10-agent / 1,000-char-prompt shell is gone, and with it a whole class of drift, dead-lane and silent-fallback bugs.
+
+- **THE FREE TIER IS RETIRED (W0)**: `free-hybrid` and its aliases (`free-openrouter`, `free-big-pickle`, `free-nvidia-build`) are removed from the strategy registry, the type, the picker and the apply. `POST /api/olympus/strategy` refuses any `free-*` id with a 400 that names the working alternatives (`go-*`, `zen-*`, `byok-*`, `custom-*`, `local`); `apply-strategy.js` throws the same retirement error. The free-era suites (`free-hybrid`, `free-pantheon`, `free-lane-generator`, `refresh-anchor-pin`) are deleted, replaced by `strategy-registry.test.mjs` (17 assertions) and `local-lane.test.mjs` (24 assertions).
+- **THE DEGRADED SHAPE IS GONE**: `FREE_CONFIG_SHAPE` was a second runtime (10 agents, prompts truncated to 1,000 chars, `execute: deny` for Apollo, 3 plugins). Every strategy now applies `GO_CONFIG_SHAPE` — 132 agents, `{file:}` prompts, 4 plugins, demigods loaded. The dynamic demigod injector (`dynamic-dispatch-loader.js`) becomes a no-op guard (deleted with the free path).
+- **THE LOCAL LANE (W1)**: new `local` strategy — Ollama (`:11434`), LM Studio (`:1234`), vLLM (`:8000`), llama.cpp (`:8080`), or any OpenAI-compatible endpoint. `scripts/local-llm-probe.js` probes all five (3 s each) and prints a JSON report; `apply-strategy local` wires the `local` provider block + `local/<model>` ids into the full 132-agent config, skips the cloud catalogue preflight (the probe IS the validation) and **refuses with the probe table when nothing answers**. Docs: `docs/LOCAL-LLM.md` (S/A/B/C hardware tiers, tool-calling + ≥32k context requirement).
+- **ONE STATE TRUTH (W2)**: `~/.olympus/strategy.json` is now the single record (`src/lib/strategy-state.ts`). The legacy `active-strategy.json` + `llm-providers.json` are migrated once and mirrored, never authoritative. The `reconcileStrategy()` band-aid in the run-state route is deleted; the strategy route reads and writes the unified state. Kills the #251/#256/#259 divergence class by construction.
+- **PROVENANCE IN THE RUN-STATE (W4)**: `GET /api/olympus/run-state` now returns `provenance { god, model, hopId, skill, elapsedMs }` and the status line names them — `RUNNING · hephaestus · kimi-k2.7-code · f0-3 · 2m14s · 4 hop(s) ok`. Unknown values stay `null`/`—`, never invented.
+- **BANNER + DOCS**: `public/header.svg` reads **v0.0.22 — Full arsenal. Always clear.**; README/MODEL-STRATEGIES drop the free promise and document the local lane; tooltips remain OlympusTooltip-only (`tooltips.test.mjs` 6/6).
+- **Version**: `VERSION` + `package.json` → 0.0.22.
+- **Gates**: `tsc --noEmit` 0; `check-strategy-sync` 7/7; `strategy-registry` 17/17; `local-lane` 24/24; `tooltips` 6/6.
+
+### Backfill — v0.0.15 → v0.0.21 (shipped 2026-10-25)
+
+- **v0.0.21 "AUTO-HEAL"**: boot-time strategy sync, lane-health prune, lane refresh; 30 s session-create window; 60 s stall budget; clean rebuild from scratch; providersStrategy reconciled. Battery 64 PASS / 0 FAIL.
+- **v0.0.20** — auto-heal boot, provider sync, lane refresh (superseded by v0.0.21).
+- **v0.0.19** — free strategy remodel (NVIDIA verified models, Nemotron banned, one free strategy) — now RETIRED by v0.0.22.
+- **v0.0.18 / v0.0.17** — strategy sync, lane refresh, classifier planning, lane-health diagnostic; WebSocket port pre-check.
+- **v0.0.16** — 60 s grace, SSE backoff, lane-health prune, DB auto-repair (missing `session_input` table), 402 as dead lane.
+- **v0.0.15** — mini-task mini-card, MCP sync on mount, one-click diagnostic bundle, tool disables under the 128-tool provider limit.
+
 ## [v0.0.14] — 2026-10-24
 
 **"THE HONEST LANE"** — the app was not broken by a bug; it was broken by five faults that multiplied. The GO plan's monthly quota was spent and nothing knew it, the walker threw away the provider's own error (it read `stderr`; v2 emits errors on `stdout`), five walkers ran the same hop at once, a Portuguese "planeje e execute" classified as `simple / no-planning` (so Apollo narrated instead of writing the plan), and the shell ran Turbopack in dev with `loading: () => null` on every panel (a blank pane looks like a dead dashboard). All five are fixed, with the evidence pinned in two new suites.

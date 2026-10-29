@@ -12,11 +12,10 @@
  * Hermetic (R11): all state lives in throwaway temp dirs — OLYMPUS_ROOT and
  * OLYMPUS_HOME (and HOME) point at mkdtemp dirs BEFORE the first execution;
  * the real ~/.olympus and the repo's live opencode.json are never touched.
- * The apply runs offline: --force escapes the free-tier key validation and
- * the L4 catalogue preflight (the temp root has no node_modules probe),
- * so no network and no provider keys are involved. Without a fresh
- * free-models.json the strategy uses the curated offline table — the run
- * is deterministic.
+ * v0.0.22: the free tier is retired — the fixture applies `go-budget`
+ * (the default paid strategy), offline: --force escapes the L4 catalogue
+ * preflight (the temp root has no node_modules probe), so no network and
+ * no provider keys are involved.
  *
  * Red-first proof: OLYMPUS_APPLY_SCRIPT may point the fixture at a mutant
  * copy of apply-strategy.js (the pre-97d0e90 shape — writeStateFile called
@@ -66,7 +65,7 @@ fs.mkdirSync(TMP_ROOT, { recursive: true });
 fs.mkdirSync(TMP_HOME, { recursive: true });
 
 try {
-  // Seed: a minimal 10-god pantheon that does NOT match the free shape —
+  // Seed: a minimal 10-god pantheon that does NOT match the GO shape —
   // apply-1 must produce changes > 0, apply-2 must be an exact no-op.
   const seedConfig = {
     $schema: 'https://opencode.ai/config.json',
@@ -75,15 +74,23 @@ try {
   for (const god of GODS) {
     seedConfig.agent[god] = {
       description: `${god} (no-op fixture seed)`,
-      prompt: `${god} fixture prompt — short, plain, inlined (under the free char limit).`,
+      prompt: `${god} fixture prompt — short, plain, inlined.`,
       mode: god === 'apollo' ? 'primary' : 'subagent',
-      model: 'openrouter/openai/gpt-oss-20b:free',
+      model: 'opencode-go/glm-5.3-flash',
     };
   }
   fs.writeFileSync(
     path.join(TMP_ROOT, 'opencode.json'),
     JSON.stringify(seedConfig, null, 2),
     'utf-8',
+  );
+  // v0.0.22 — the GO shape references the canonical god prompt files and the
+  // demigod registry. Link them into the temp root so the fixture exercises
+  // the REAL apply path (132 agents, {file:} prompts), not an inline stub.
+  fs.symlinkSync(path.join(REPO_ROOT, '.opencode'), path.join(TMP_ROOT, '.opencode'));
+  fs.copyFileSync(
+    path.join(REPO_ROOT, 'opencode.demigods.json'),
+    path.join(TMP_ROOT, 'opencode.demigods.json'),
   );
 
   const runApply = () => {
@@ -95,7 +102,7 @@ try {
       'OLYMPUS_OPENROUTER_KEY', 'NVIDIA_API_KEY', 'OLYMPUS_NVIDIA_KEY']) delete clean[k];
     const res = spawnSync(
       process.execPath,
-      [APPLY_SCRIPT, '--strategy', 'free-openrouter', '--force'],
+      [APPLY_SCRIPT, '--strategy', 'go-budget', '--force'],
       {
         encoding: 'utf-8',
         cwd: REPO_ROOT,
@@ -135,8 +142,10 @@ try {
 
   // --- The temp config really was mutated by apply-1 only ------------------
   const cfgAfter = JSON.parse(fs.readFileSync(path.join(TMP_ROOT, 'opencode.json'), 'utf-8'));
-  expect('apply-1 granted the free-tier toolset (L1)', cfgAfter.agent?.apollo?.tools?.['olympus-dispatch'], true);
-  expect('apply-1 set the free small_model', cfgAfter.small_model, 'openrouter/cohere/north-mini-code:free');
+  expect('apply-1 enabled the OLYMPUS overlay plugin', (cfgAfter.plugin || []).includes('./.opencode/olympus'), true);
+  expect('apply-1 loaded the demigods (132 agents)', Object.keys(cfgAfter.agent || {}).length, 132);
+  expect('apply-1 set the GO small_model', cfgAfter.small_model, 'opencode-go/glm-5.3-flash');
+  expect('apply-1 wrote the file-ref prompt shape', String(cfgAfter.agent?.apollo?.prompt || '').startsWith('{file:'), true);
 } finally {
   fs.rmSync(TMP_BASE, { recursive: true, force: true });
 }

@@ -79,11 +79,14 @@ export const ZEN_PLAN_DOCS_URL = 'https://opencode.ai/docs/zen/';
  *              Plus / GLM-5.3-Flash / MiniMax M3)
  *              for specialists
  *  - budget  : DeepSeek V4 Flash across all gods (effectively unlimited)
- *  - free    : No GO or ZEN plan required — uses the live free tiers (OpenRouter +
- *              Groq + NVIDIA Build). Lower quality but truly free.
+ *  - local   : The user's own hardware — local LLM server (Ollama, LM Studio,
+ *              vLLM, llama.cpp, or any OpenAI-compatible endpoint). Zero cost,
+ *              zero network dependency; runs the full 132-agent arsenal when
+ *              the machine has ≥32 GB RAM / ≥48 GB VRAM. Always honest about
+ *              what's serving (see docs/LOCAL-LLM.md).
  * Custom user-defined strategies use the 'custom' tier.
  */
-export type LLMStrategyTier = 'quality' | 'balanced' | 'budget' | 'free' | 'custom';
+export type LLMStrategyTier = 'quality' | 'balanced' | 'budget' | 'local' | 'custom';
 
 export type LLMStrategy =
   | 'go-max-quality'         // GLM-5.3 (Apollo+Artemis) + Kimi K2.7 Code / GLM-5.3-Flash / MiniMax M3 (specialists) + GLM-5.3-Flash (vault) — best quality within GO caps
@@ -92,11 +95,8 @@ export type LLMStrategy =
   | 'zen-max-quality'        // "ZEN Max Quality" — proprietary frontier on OpenCode Zen (Claude Sonnet 5 coding + GPT-5.4 reasoning, opencode/<id>, no caps)
   | 'zen-balanced'           // "ZEN" — full 128-agent OLYMPUS on OpenCode Zen's proprietary models (opencode/<id>), no request caps
   | 'zen-budget'             // "ZEN Budget" — lowest cost on OpenCode Zen (MiniMax M2.7 everywhere but Apollo), still proprietary
-  | 'free-hybrid'            // "Free Hybrid" — THE one free strategy: GO free + Zen free + OpenRouter free + NVIDIA Build free, per-god rosters, load-spread, user overrides
+  | 'local'                  // "Local" — the user's own hardware (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint); full arsenal; zero cost
   | 'byok-deepseek'          // "DeepSeek V4.1 Flash (OpenRouter)" — the user's OWN OpenRouter key, EVERY god on one strong lane (1M ctx / 393k out). BYOK family: paid, user-chosen, never blocked by the custom-strategy free-only guard.
-  | 'free-openrouter'        // DEPRECATED alias of free-hybrid (saved configs only — hidden from the picker)
-  | 'free-big-pickle'        // DEPRECATED alias of free-hybrid
-  | 'free-nvidia-build'      // DEPRECATED alias of free-hybrid
   | `custom-${string}`;      // user-defined strategy (see ~/.olympus/custom-strategies.json)
 
 /**
@@ -123,7 +123,7 @@ export type GodId = typeof GOD_IDS[number];
 export interface LLMStrategyConfig {
   label: string;
   description: string;
-  plan: 'GO' | 'ZEN' | 'CUSTOM';
+  plan: 'GO' | 'ZEN' | 'CUSTOM' | 'LOCAL';
   tier: LLMStrategyTier;
   /** Apollo's model (the terminal/primary LLM). */
   reasoningModel: string;
@@ -371,28 +371,28 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
    * missing a provider gets the next available lane instead (the apply
    * script resolves at apply time and logs what it chose).
    */
-  'free-hybrid': {
-    label: 'Free Hybrid',
+  'local': {
+    label: 'Local',
     description:
-      'The perfect free — one distributed strategy over every free/zero-marginal-cost source you have (no single pool: the gods spread across Beam, DeepSeek, inkling, flint and the NVIDIA lanes). On the OpenCode GO flat plan: Beam 1.0 (1M/131k, the free promotional lane) and DeepSeek V4.1 Flash (the $0.15/$0.60 code workhorse, included — no per-token charge on GO). Without GO: NVIDIA Build free (GLM-5.3 1M, MiniMax M3.1 Flash, Muse Glimmer, GPT-OSS-20B; no Nemotron) and OpenRouter free (inkling 1M/262k, north-mini-code, flint-v1.0 235k out). Apollo plans on Beam 1.0; Atlas orchestrates on Beam; Athena/Dionysus/Hermes ride inkling (262k out); Hephaestus, Persephone and Callimachus run DeepSeek V4.1 Flash (the user pick for the vault); Prometheus writes IaC on flint (235k out). The Zen free lanes stay as the LAST resort (quota-gated — "Free usage limit reached" is real). Add more APIs → a stronger free; the resolver spreads the gods (≤3 per lane, task-fit first) and reads ~/.olympus/free-hybrid-overrides.json for pins.',
-    plan: 'CUSTOM',
-    tier: 'free',
-    reasoningModel: 'openrouter/thinkingmachines/inkling:free',
-    codeModel: 'nvidia-openai/openai/gpt-oss-20b',
-    terminalModel: 'openrouter/thinkingmachines/inkling:free',
+      'OLYMPUS running entirely on YOUR hardware — no cloud keys, no rate limits, no data leaving this machine. A local LLM server (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint) serves all 10 gods + the 122 demigods through the full arsenal. Requires a working local endpoint with a model that supports tool calling and at least 32k context (see docs/LOCAL-LLM.md and run `olympus apply-strategy local` which probes your setup). Always honest: the Settings → Strategy shows which model serves each god, the cost is $0, and the dashboard reports the measured token rate + estimated session time. If no endpoint is found, the apply refuses with the probe result (host/port + why) so nothing is hidden.',
+    plan: 'LOCAL',
+    tier: 'local',
+    reasoningModel: 'opencode-go/glm-5.3-flash',
+    codeModel: 'opencode-go/deepseek-v4.1-flash',
+    terminalModel: 'opencode-go/glm-5.3-flash',
     gods: {
-      apollo: 'openrouter/thinkingmachines/inkling:free',
-      atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-      artemis: 'nvidia-meta/meta/muse-glimmer-30b',
-      athena: 'nvidia-meta/poolside/laguna-xs-2.1',
-      dionysus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-      hephaestus: 'nvidia-meta/poolside/laguna-xs-2.1',
-      hermes: 'nvidia-meta/meta/muse-glimmer-30b',
-      persephone: 'nvidia-openai/openai/gpt-oss-20b',
-      prometheus: 'nvidia-meta/poolside/laguna-xs-2.1',
-      callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
+      apollo:      'opencode-go/glm-5.3-flash',
+      atlas:       'opencode-go/hy3',
+      artemis:     'opencode-go/glm-5.3-flash',
+      athena:      'opencode-go/qwen3.7-plus',
+      dionysus:    'opencode-go/deepseek-v4.1-flash',
+      hephaestus:  'opencode-go/kimi-k2.7-code',
+      hermes:      'opencode-go/kimi-k2.7-code',
+      persephone:  'opencode-go/deepseek-v4.1-flash',
+      prometheus:  'opencode-go/minimax-m3',
+      callimachus: 'opencode-go/glm-5.3-flash',
     },
-    vaultLlm: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
+    vaultLlm: 'opencode-go/glm-5.3-flash',
     estCostPerDay: 'free',
   },
   // ── BYOK — the user's own paid key (2026-10-24) ──────────────────────────
@@ -431,79 +431,10 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
     vaultLlm: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
     estCostPerDay: 'low',
   },
-  // ── Legacy free ids (deprecated aliases, hidden from the picker) ──────────
-  // Saved configs and older UIs still carry these ids. They resolve to the
-  // SAME config as free-hybrid (never a second, weaker free path), so a user
-  // upgrading from any of the three free splits keeps a working free tier.
-  'free-openrouter': {
-    label: 'Free Hybrid (legacy: Free OpenRouter)',
-    description: 'Deprecated alias of Free Hybrid — kept so saved configs keep working. The single free strategy is Free Hybrid.',
-    plan: 'CUSTOM',
-    tier: 'free',
-    reasoningModel: 'openrouter/thinkingmachines/inkling:free',
-    codeModel: 'nvidia-openai/openai/gpt-oss-20b',
-    terminalModel: 'openrouter/thinkingmachines/inkling:free',
-    gods: {
-      apollo: 'openrouter/thinkingmachines/inkling:free',
-      atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-      artemis: 'nvidia-meta/meta/muse-glimmer-30b',
-      athena: 'nvidia-meta/poolside/laguna-xs-2.1',
-      dionysus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-      hephaestus: 'nvidia-meta/poolside/laguna-xs-2.1',
-      hermes: 'nvidia-meta/meta/muse-glimmer-30b',
-      persephone: 'nvidia-openai/openai/gpt-oss-20b',
-      prometheus: 'nvidia-meta/poolside/laguna-xs-2.1',
-      callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    },
-    vaultLlm: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    estCostPerDay: 'free',
-  },
-  'free-big-pickle': {
-    label: 'Free Hybrid (legacy: Free Beam)',
-    description: 'Deprecated alias of Free Hybrid — kept so saved configs keep working. The single free strategy is Free Hybrid.',
-    plan: 'CUSTOM',
-    tier: 'free',
-    reasoningModel: 'openrouter/thinkingmachines/inkling:free',
-    codeModel: 'nvidia-openai/openai/gpt-oss-20b',
-    terminalModel: 'openrouter/thinkingmachines/inkling:free',
-    gods: {
-      apollo: 'openrouter/thinkingmachines/inkling:free',
-      atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-      artemis: 'nvidia-meta/meta/muse-glimmer-30b',
-      athena: 'nvidia-meta/poolside/laguna-xs-2.1',
-      dionysus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-      hephaestus: 'nvidia-meta/poolside/laguna-xs-2.1',
-      hermes: 'nvidia-meta/meta/muse-glimmer-30b',
-      persephone: 'nvidia-openai/openai/gpt-oss-20b',
-      prometheus: 'nvidia-meta/poolside/laguna-xs-2.1',
-      callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    },
-    vaultLlm: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    estCostPerDay: 'free',
-  },
-  'free-nvidia-build': {
-    label: 'Free Hybrid (legacy: Free Nvidia Build)',
-    description: 'Deprecated alias of Free Hybrid — kept so saved configs keep working. The single free strategy is Free Hybrid.',
-    plan: 'CUSTOM',
-    tier: 'free',
-    reasoningModel: 'openrouter/thinkingmachines/inkling:free',
-    codeModel: 'nvidia-openai/openai/gpt-oss-20b',
-    terminalModel: 'openrouter/thinkingmachines/inkling:free',
-    gods: {
-      apollo: 'openrouter/thinkingmachines/inkling:free',
-      atlas: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-      artemis: 'nvidia-meta/meta/muse-glimmer-30b',
-      athena: 'nvidia-meta/poolside/laguna-xs-2.1',
-      dionysus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-      hephaestus: 'nvidia-meta/poolside/laguna-xs-2.1',
-      hermes: 'nvidia-meta/meta/muse-glimmer-30b',
-      persephone: 'nvidia-openai/openai/gpt-oss-20b',
-      prometheus: 'nvidia-meta/poolside/laguna-xs-2.1',
-      callimachus: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    },
-    vaultLlm: 'nvidia-minimaxai/minimaxai/minimax-m3.1-flash',
-    estCostPerDay: 'free',
-  },
+  // Legacy free ids REMOVED in v0.0.22 — the free tier has been retired.
+  // The user's own hardware path is `local` (see LLM_STRATEGIES['local']).
+  // Paid plans: `go-*`, `zen-*`. User's own paid OpenRouter lane: `byok-deepseek`.
+
 };
 
 /**
@@ -595,79 +526,7 @@ export const FREE_HYBRID_ROSTER: Record<GodId, FreeHybridLane[]> = {
 };
 
 
-/** The legacy free ids that now resolve to free-hybrid. */
-export const LEGACY_FREE_ALIASES = ['free-openrouter', 'free-big-pickle', 'free-nvidia-build'] as const;
 
-/** Normalize any strategy id (legacy free ids included) to its canonical id. */
-export function normalizeStrategyId(id: string): string {
-  return (LEGACY_FREE_ALIASES as readonly string[]).includes(id) ? 'free-hybrid' : id;
-}
-
-/** Is this id a legacy free alias (hidden from the picker)? */
-export function isLegacyFreeAlias(id: string): boolean {
-  return (LEGACY_FREE_ALIASES as readonly string[]).includes(id);
-}
-
-/**
- * Resolve the Free Hybrid per-god map for the sources a machine actually has.
- *
- * Rules:
- *   - a god's user override (`overrides[god]`) always wins;
- *   - otherwise the first roster lane whose source is registered;
- *   - load spreading: a lane already carrying `maxPerLane` gods (default 3)
- *     is skipped when a later available lane exists — no single free pool
- *     can become the whole pantheon's bottleneck;
- *   - when NO source is registered, the full-power static map is returned
- *     (the UI still shows a coherent strategy; the apply refuses earlier).
- */
-export function resolveFreeHybrid(
-  available: Iterable<string>,
-  opts?: { maxPerLane?: number; overrides?: Partial<Record<GodId, string>> },
-): Record<GodId, string> {
-  const have = new Set<string>();
-  for (const s of available) {
-    const key = s === 'nvidia-glm' || s === 'nvidia-deepseek' || s === 'nvidia-kimi'
-      || s === 'nvidia-meta' || s === 'nvidia-google' || s === 'nvidia-step' || s === 'nvidia-openai'
-      ? 'nvidia'
-      : s;
-    have.add(key);
-  }
-  const maxPerLane = opts?.maxPerLane ?? 3;
-  const usage = new Map<string, number>();
-  const out = {} as Partial<Record<GodId, string>>;
-  // Callimachus first: the user's explicit pick (DeepSeek V4.1 Flash) is
-  // reserved before the lane cap can push it off to a fallback.
-  const order: GodId[] = ['callimachus', ...GOD_IDS.filter((g) => g !== 'callimachus')];
-  const take = (god: GodId, id: string) => {
-    out[god] = id;
-    usage.set(id, (usage.get(id) ?? 0) + 1);
-  };
-  const pending: GodId[] = [];
-  // PASS 1 — every god whose BEST AVAILABLE lane is under the cap gets it.
-  // This is the task-fit pass: the gods built for a lane are not displaced by
-  // a god merely falling back to it.
-  for (const god of order) {
-    const override = opts?.overrides?.[god];
-    if (override) { take(god, override); continue; }
-    const available = FREE_HYBRID_ROSTER[god].filter((lane) => have.has(lane.source));
-    const first = available[0] ?? FREE_HYBRID_ROSTER[god][0];
-    if ((usage.get(first.id) ?? 0) < maxPerLane) take(god, first.id);
-    else pending.push(god);
-  }
-  // PASS 2 — the displaced gods take the next available lane under the cap.
-  for (const god of pending) {
-    const roster = FREE_HYBRID_ROSTER[god];
-    const available = roster.filter((lane) => have.has(lane.source));
-    const pick = available.find((lane) => (usage.get(lane.id) ?? 0) < maxPerLane) ?? available[0] ?? roster[0];
-    take(god, pick.id);
-  }
-  return out as Record<GodId, string>;
-}
-
-/** The full-power resolution (all four sources) — the static UI map. */
-export function freeHybridFullPowerMap(): Record<GodId, string> {
-  return resolveFreeHybrid(new Set(FREE_HYBRID_SOURCES));
-}
 
 
 export const DEFAULT_LLM_STRATEGY: LLMStrategy = 'go-balanced';
@@ -928,31 +787,16 @@ export function strategyApiRequirement(strategy: string): StrategyApiRequirement
       hint: 'Requires an OpenCode Zen key. Run `olympus opencode`, then /connect and select OpenCode Zen.',
     };
   }
-  switch (strategy) {
-    case 'free-openrouter':
-      return {
-        kind: 'openrouter',
-        label: 'OpenRouter key',
-        hint: 'Requires an OpenRouter API key — add OpenRouter as a provider inside OpenCode (`olympus opencode` → Settings → Providers). Get a key at https://openrouter.ai/keys.',
-      };
-    case 'free-big-pickle':
-      // #190: the beam flagship rides the GO plan's free promotional
-      // models (opencode-go/beam-free) — the strategy needs the GO
-      // subscription, not an OpenRouter key.
-      return {
-        kind: 'go',
-        label: 'GO API',
-        hint: 'Requires an active OpenCode GO subscription — the Beam 1.0 flagship (beam-free) is a GO free promotional model. Sign in with `olympus opencode` → Settings → add the GO plan (opencode-go provider).',
-      };
-    case 'free-nvidia-build':
-      return {
-        kind: 'nvidia',
-        label: 'NVIDIA Build key',
-        hint: 'Requires a free NVIDIA Build key (nvapi-...) — add NVIDIA as a provider inside OpenCode (`olympus opencode` → Settings → Providers). Get a key at https://build.nvidia.com.',
-      };
-    default:
-      return null;
+  // v0.0.22 — the free tier is RETIRED. A saved free-* id resolves to the
+  // retirement hint (the apply refuses it; the picker never shows it).
+  if (strategy.startsWith('free-')) {
+    return {
+      kind: 'go',
+      label: 'Free tier retired',
+      hint: 'The free tier is retired (v0.0.22). Choose GO, Zen, BYOK, or the new Local strategy (your own hardware — see docs/LOCAL-LLM.md).',
+    };
   }
+  return null;
 }
 
 /**
@@ -1184,25 +1028,16 @@ function modelClassesForStrategyRaw(strategy: string): string[] {
     return own ? [own] : [];
   }
   if (fam === 'CUSTOM') {
-    // Custom strategies are FREE-ONLY — a user-pinned paid model in a custom
-    // strategy could silently burn credits. Only the free catalog is offered
-    // here, and apply-strategy.js rejects any paid model at apply time.
-    // Paid models stay where they belong: GO (open-weight plan) and ZEN
-    // (proprietary-API plan).
-    return FREE_MODEL_CLASSES;
+    // Custom strategies are user-defined (free-only guard retired in v0.0.22).
+    // The local strategy (`local`) is the zero-cost path; custom stays for
+    // special configurations (e.g., BYOK extensions, enterprise endpoints).
+    return FREE_MODEL_CLASSES.length ? FREE_MODEL_CLASSES : GO_MODEL_CLASSES;
   }
   if (fam === 'FREE') {
-    switch (strategy) {
-      case 'free-openrouter': return OPENROUTER_FREE_MODELS;
-      case 'free-nvidia-build': return NVIDIA_FREE_MODELS;
-      case 'free-big-pickle':
-        // All 10 gods run on one flagship — the dropdown offers exactly that
-        // model. (Live refresh may promote a newer #1 at apply time; this is
-        // the verified curated default.)
-        return [LLM_STRATEGIES['free-big-pickle'].terminalModel];
-      default:
-        return FREE_MODEL_CLASSES;
-    }
+    // v0.0.22: the FREE family is retired. Any legacy reference falls back
+    // to the GO open-weight catalog (full arsenal) — the `local` strategy
+    // carries its own catalog via `local` (see LLM_STRATEGIES['local']).
+    return GO_MODEL_CLASSES;
   }
   return MODEL_CLASSES_BY_FAMILY[fam];
 }
@@ -1213,7 +1048,8 @@ export function isModelInFamily(model: string, family: StrategyFamily): boolean 
   // `opencode/` does NOT match `opencode-go/` (the char after `opencode` is
   // `-` for GO ids, so the prefix check is unambiguous).
   if (family === 'ZEN') return model.startsWith('opencode/');
-  if (family === 'FREE') return model.startsWith('openrouter/') || model.startsWith('nvidia/');
+  // v0.0.22 — FREE tier retired; `local` is the zero-cost hardware path.
+  if (family === 'FREE') return model.startsWith('opencode-go/');
   return true; // custom / byok — any model id (the user picks their own lane)
 }
 

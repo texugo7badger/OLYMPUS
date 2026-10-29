@@ -25,7 +25,7 @@ After install, **authorize OpenCode** (the only manual step — required for the
 olympus opencode
 #   → Path A (GO plan):  sign in with your GO plan account (OAuth flow inside OpenCode)
 #   → Path B (Zen):      run /connect and select OpenCode Zen, paste your API key
-#   → Path C (free tier): open Settings, add Groq and/or OpenRouter as providers
+#   → Path C (local): run a local LLM server (Ollama/LM Studio/vLLM/llama.cpp) and apply the local strategy
 #   → Exit (Ctrl+C or /exit)
 ```
 

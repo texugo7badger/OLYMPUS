@@ -18,6 +18,7 @@ import { execSync } from 'child_process';
 // Next.js-side serverPromise must be dropped or the next message posts to a
 // dead server.
 import { killWarmServerForStrategy } from '@/lib/opencode-session';
+import { readStrategyState, writeStrategyState } from '@/lib/strategy-state';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,15 +35,11 @@ const LLM_PROVIDERS_PATH = path.join(os.homedir(), '.olympus', 'llm-providers.js
 export async function GET() {
   try {
     let strategy = 'go-balanced';
-    if (fs.existsSync(LLM_PROVIDERS_PATH)) {
-      try {
-        const raw = JSON.parse(fs.readFileSync(LLM_PROVIDERS_PATH, 'utf-8'));
-        if (typeof raw.strategy === 'string' && raw.strategy) {
-          strategy = raw.strategy;
-        }
-      } catch { /* malformed — fall back to default */ }
-    }
-    return NextResponse.json({ ok: true, strategy });
+    // v0.0.22 — strategy.json is the ONE source of truth (W2). The legacy
+    // llm-providers.json is mirrored by writeStrategyState/readStrategyState.
+    const state = readStrategyState();
+    strategy = state.strategy;
+    return NextResponse.json({ ok: true, strategy, appliedAt: state.appliedAt, agentCount: state.agentCount });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
   }
@@ -69,14 +66,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // v0.0.22 — The free tier is RETIRED. Any free-* strategy is refused.
+    // The user's own hardware path is `local` (run `olympus apply-strategy local`).
+    // Paid plans: `go-*`, `zen-*`. User's own paid key: `byok-*`.
+    // Legacy saved configs with free-* must migrate; the freeze refuses them.
+    if (strategy.startsWith('free-')) {
+      return NextResponse.json(
+        { ok: false, error: `The free tier is retired (v0.0.22). Strategy "${strategy}" cannot be applied. Choose: go-*, zen-*, byok-*, custom-*, or the new "local" strategy (run "olympus apply-strategy local" for your own hardware — see docs/LOCAL-LLM.md).` },
+        { status: 400 },
+      );
+    }
+
     // Validate strategy format to prevent shell injection (since we pass it
     // to execSync as part of a command string). Accepted formats:
     //   go-* (max-quality/balanced/budget), zen-* (max-quality/balanced/budget),
-    //   free-* (free-openrouter/free-big-pickle/free-nvidia-build),
-    //   custom-<id>
-    if (!/^(go-[a-z-]+|zen-[a-z-]+|free-[a-z-]+|custom-[a-zA-Z0-9_-]+)$/.test(strategy)) {
+    //   byok-*, custom-<id>, local (the user's own hardware, zero-cost path in v0.0.22)
+    if (!/^(go-[a-z-]+|zen-[a-z-]+|byok-[a-z-]+|custom-[a-zA-Z0-9_-]+|local)$/.test(strategy)) {
       return NextResponse.json(
-        { ok: false, error: `Invalid strategy format: "${strategy}". Expected go-*|zen-*|free-*|custom-*` },
+        { ok: false, error: `Invalid strategy format: "${strategy}". Expected go-*|zen-*|byok-*|custom-*|local (free-* is retired — see docs/LOCAL-LLM.md)` },
         { status: 400 },
       );
     }
@@ -133,11 +140,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 3. v0.0.22 (W2) — record the apply in the ONE state file. The UI and
+    // every reader (run-state, providers, self-check) now agree by
+    // construction, never by a reconcile band-aid.
+    let applied: ReturnType<typeof writeStrategyState> | null = null;
+    try {
+      const cfg = JSON.parse(fs.readFileSync(path.join(root, 'opencode.json'), 'utf-8'));
+      applied = writeStrategyState({
+        strategy,
+        agentCount: Object.keys(cfg?.agent ?? {}).length,
+        plugins: Array.isArray(cfg?.plugin) ? cfg.plugin : null,
+        noOp: false,
+      });
+    } catch { /* the apply itself already succeeded; state detail is best-effort */ }
+
     return NextResponse.json({
       ok: true,
       strategy,
       stdout,
       deferred,
+      applied,
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });

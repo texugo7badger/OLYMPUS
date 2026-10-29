@@ -157,7 +157,7 @@ export default function StatusBar({ health }: { health: any }) {
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.21'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.22'}
    </span>
 )}
  </div>
@@ -352,6 +352,10 @@ function RunStatePill() {
   line: string;
   evidence: string;
   blockedCount: number;
+  god: string | null;
+  model: string | null;
+  hopId: string | null;
+  elapsedLabel: string | null;
  } | null>(null);
 
  useEffect(() => {
@@ -367,6 +371,10 @@ function RunStatePill() {
      line: d.line,
      evidence: d.evidence,
      blockedCount: d?.laneHealth?.blockedCount ?? 0,
+     god: d?.provenance?.god ?? null,
+     model: d?.provenance?.model ?? null,
+     hopId: d?.provenance?.hopId ?? null,
+     elapsedLabel: d?.provenance?.elapsedLabel ?? null,
     });
    } catch { /* a dead API never breaks the status bar */ }
   };
@@ -396,6 +404,11 @@ function RunStatePill() {
   >
    <span className={cn('w-1.5 h-1.5 rounded-full', dot)} />
    <span className="hidden xl:inline">{state.verdict}</span>
+   {state.verdict === 'RUNNING' && (state.god || state.model) && (
+    <span className="hidden 2xl:inline text-olympus-text-dim">
+     · {[state.god, state.model, state.hopId, state.elapsedLabel].filter(Boolean).join(' · ')}
+    </span>
+   )}
    {state.blockedCount > 0 && (
     <OlympusTooltip
       content={`${state.blockedCount} dead model lane(s) (quota/route/key) — click to inspect and retry`}
