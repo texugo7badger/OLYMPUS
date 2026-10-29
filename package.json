@@ -73,7 +73,8 @@
     "prebuild:app": "node scripts/invalidate-build-stamp.js",
     "prebuild:linux": "node scripts/invalidate-build-stamp.js",
     "mcp:audit": "node scripts/mcp-audit.mjs",
-    "local:probe": "node scripts/local-llm-probe.js"
+    "local:probe": "node scripts/local-llm-probe.js",
+    "badges:update": "node scripts/update-badges.mjs"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",

@@ -1,0 +1,44 @@
+name: Badges
+
+# Keeps public/badge-bar.svg and the header version in sync with reality.
+# Runs when a release is published, daily, and on demand. The commit carries
+# [skip ci] so the badge refresh never triggers the eval/security pipelines.
+
+on:
+  release:
+    types: [published]
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Refresh the SVG numbers from the GitHub API
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/update-badges.mjs
+
+      - name: Commit when the numbers moved
+        run: |
+          if git diff --quiet -- public/badge-bar.svg public/header.svg; then
+            echo "badges already current"
+            exit 0
+          fi
+          git config user.name "olympus-badges"
+          git config user.email "noreply@texugo7badger.github.io"
+          git add public/badge-bar.svg public/header.svg
+          git commit -m "chore(badges): refresh SVG numbers from the GitHub API [skip ci]"
+          git push origin main

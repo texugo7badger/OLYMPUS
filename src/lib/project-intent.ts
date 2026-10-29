@@ -15,7 +15,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { listProjects, getActiveProjectSlug, setActiveProject, slugify, PROJECTS_DIR, type ProjectNote } from './project-context';
+import { listProjects, getActiveProjectSlug, setActiveProject, slugify, canonicalSlug, PROJECTS_DIR, type ProjectNote } from './project-context';
 import { join } from 'node:path';
 
 export type FirstPromptIntent =
@@ -402,7 +402,7 @@ export async function resolveAndRegisterIntent(
   // NOT pre-create the dir — createProject owns creation (its existence
   // check would else collide).
   const { quickIntake } = await import('./intake-orchestrator');
-  const slug = slugify(intent.projectName);
+  const slug = canonicalSlug(intent.projectName);
   const laneProjectDir = join(PROJECTS_DIR, slug);
   const result = await quickIntake({
     userRequest,

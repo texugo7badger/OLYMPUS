@@ -63,6 +63,28 @@ export function slugify(name: string): string {
     .slice(0, 64);
 }
 
+/**
+ * #242 (v0.0.23) — THE CANONICAL SLUG.
+ *
+ * The AIME specimen: the terminal appended its upload manifest to the prompt
+ * ("AIME Uploaded Files AIME") and `slugify` produced
+ * `aime-uploaded-files-aime` — a SECOND project next to `aime`. The canonical
+ * form strips the manifest bracket, drops the harness noise tokens when real
+ * tokens remain, and collapses duplicates, so the same project always lands
+ * on the same slug.
+ */
+const MANIFEST_NOISE = new Set(['uploaded', 'upload', 'files', 'file', 'saved', 'extracted', 'archive']);
+
+export function canonicalSlug(name: string): string {
+  const stripped = String(name || '').replace(/\[Uploaded files:[^\]]*\]/gi, ' ');
+  const tokens = slugify(stripped).split('-').filter(Boolean);
+  const meaningful = tokens.filter((t) => !MANIFEST_NOISE.has(t));
+  const kept = meaningful.length > 0 ? meaningful : tokens;
+  const deduped: string[] = [];
+  for (const t of kept) if (deduped[deduped.length - 1] !== t) deduped.push(t);
+  return deduped.join('-').slice(0, 64) || 'project';
+}
+
 /** Ensure required directories exist. Idempotent. */
 function ensureDirs() {
   for (const dir of [PROJECTS_DIR, WORKSPACES_DIR, path.dirname(ACTIVE_FILE)]) {
@@ -273,7 +295,7 @@ export interface CreateProjectResult {
  */
 export function createProject(input: CreateProjectInput): CreateProjectResult {
   ensureDirs();
-  const slug = slugify(input.name);
+  const slug = canonicalSlug(input.name);
   if (!slug) throw new Error('Project name must produce a non-empty slug');
 
   const projectDir = path.join(PROJECTS_DIR, slug);

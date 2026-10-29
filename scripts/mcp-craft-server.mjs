@@ -19,11 +19,61 @@
  */
 
 import readline from 'node:readline';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const PORT = Number(process.env.OLYMPUS_APP_PORT || 3737);
 const BASE = `http://localhost:${PORT}/api/olympus/craft-apps`;
-const SERVER_INFO = { name: 'olympus-craft', version: '0.0.14' };
+const SERVER_INFO = { name: 'olympus-craft', version: '0.0.23' };
 const PROTOCOL_VERSION = '2025-06-18';
+
+/**
+ * #240/#248 (v0.0.23) — THE STORM CAP.
+ *
+ * This is a stdio MCP: each OpenCode client spawns its own process, so a
+ * strict singleton would break parallel sessions. What must NOT happen is a
+ * spawn storm (the P1-7 specimen: dozens of instances looping). The cap
+ * keeps at most MAX_INSTANCES live processes: on start we prune dead pids
+ * and, above the cap, exit cleanly with a stderr note — the storm is stopped
+ * without starving legitimate parallel work (the curated config normally
+ * runs 1–2).
+ */
+const MAX_INSTANCES = Number(process.env.OLYMPUS_CRAFT_MAX_INSTANCES || 3);
+const LOCK_DIR = path.join(os.homedir(), '.olympus', 'craft-mcp');
+
+function stormGuard() {
+  try {
+    fs.mkdirSync(LOCK_DIR, { recursive: true });
+    const files = fs.readdirSync(LOCK_DIR).filter((f) => f.endsWith('.pid'));
+    let live = 0;
+    for (const f of files) {
+      const full = path.join(LOCK_DIR, f);
+      const pid = Number(fs.readFileSync(full, 'utf-8').trim());
+      let alive = false;
+      if (Number.isFinite(pid) && pid > 0) {
+        try { process.kill(pid, 0); alive = true; } catch { alive = false; }
+      }
+      if (alive) live++;
+      else { try { fs.unlinkSync(full); } catch { /* gone */ } }
+    }
+    if (live >= MAX_INSTANCES) {
+      fs.writeSync(2, `[olympus-craft] storm cap reached (${live}/${MAX_INSTANCES} live instances) — refusing to spawn another\n`);
+      return false;
+    }
+    const mine = path.join(LOCK_DIR, `${process.pid}.pid`);
+    fs.writeFileSync(mine, String(process.pid));
+    const release = () => { try { fs.unlinkSync(mine); } catch { /* gone */ } };
+    process.on('exit', release);
+    process.on('SIGINT', () => { release(); process.exit(0); });
+    process.on('SIGTERM', () => { release(); process.exit(0); });
+    return true;
+  } catch {
+    return true; // the guard never blocks a legitimate start
+  }
+}
+
+if (!stormGuard()) process.exit(0);
 
 async function api(path, init) {
   const r = await fetch(`${BASE}${path}`, { signal: AbortSignal.timeout(600000), ...init });

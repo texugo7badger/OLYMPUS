@@ -79,7 +79,7 @@
   <text x="335" y="178" font-family="'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace" font-size="17" fill="#D4A574" opacity="0.7" letter-spacing="2">Low-cost. Excellent quality. Always free.</text>
 
   <!-- Stats line — updated for v0.0.8 (10 gods, 122 demigods, 334 skills, 28 MCPs, 9 plugins) -->
-  <text x="335" y="212" font-family="'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace" font-size="13" fill="#8B8B8B" letter-spacing="1">v0.0.23  ·  10 gods  ·  122 demigods  ·  321 skills  ·  28 MCPs  ·  4 plugins  ·  GO · ZEN · LOCAL</text>
+  <text x="335" y="212" font-family="'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace" font-size="13" fill="#8B8B8B" letter-spacing="1"><tspan data-field="version">v0.0.23</tspan>  ·  10 gods  ·  122 demigods  ·  321 skills  ·  28 MCPs  ·  4 plugins  ·  GO · ZEN · LOCAL</text>
 
   <!-- Tagline (italic serif, dimmed) -->
   <text x="335" y="250" font-family="Georgia, 'Times New Roman', serif" font-size="14" fill="#D4A574" opacity="0.5" font-style="italic">Gods do not talk to each other — they talk through the brain.</text>

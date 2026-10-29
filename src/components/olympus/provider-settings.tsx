@@ -119,6 +119,9 @@ export default function ProviderSettings() {
 
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
   const [strategyWarn, setStrategyWarn] = useState<string | null>(null);
+  // #224 (v0.0.23) — the lane-health panel: which model lanes are dead right
+  // now (quota/route/auth) and until when. Fed by the run-state probe.
+  const [blockedLanes, setBlockedLanes] = useState<Array<{ lane: string; status: string; retryUntil?: number | null; error?: string | null }>>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -276,6 +279,29 @@ export default function ProviderSettings() {
         {activeStrategy?.terminalModel && (
           <div className="text-[9px] font-mono text-olympus-text-dim/80 mt-1">
             terminal: <code className="text-olympus-gold">{activeStrategy.terminalModel}</code>
+          </div>
+        )}
+      </div>
+
+      {/* Lane health (#224) — dead lanes and the reason, always visible */}
+      <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3 mb-3">
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide">Model lanes</span>
+          <span className={`text-[8px] px-1 py-0.5 rounded font-mono ml-auto ${blockedLanes.length ? 'bg-olympus-red/15 text-olympus-red' : 'bg-olympus-green/15 text-olympus-green'}`}>
+            {blockedLanes.length ? `${blockedLanes.length} dead` : 'all clear'}
+          </span>
+        </div>
+        {blockedLanes.length === 0 ? (
+          <div className="text-[9.5px] font-mono text-olympus-text-dim">No lane is known-dead right now.</div>
+        ) : (
+          <div className="space-y-1">
+            {blockedLanes.slice(0, 6).map((l) => (
+              <div key={l.lane} className="flex items-center gap-2 text-[9.5px] font-mono">
+                <span className="text-olympus-text truncate flex-1">{l.lane}</span>
+                <span className="text-olympus-red uppercase">{l.status}</span>
+                {l.retryUntil && <span className="text-olympus-text-dim">until {new Date(l.retryUntil).toLocaleString()}</span>}
+              </div>
+            ))}
           </div>
         )}
       </div>
