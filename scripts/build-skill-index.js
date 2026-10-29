@@ -155,17 +155,44 @@ console.log(`  DB path: ${DB_PATH}`);
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 // Read all skills
-const skillDirs = fs.readdirSync(SKILLS_ROOT, { withFileTypes: true })
-  .filter(e => e.isDirectory())
-  .map(e => e.name);
+/**
+ * v0.0.23 — DEEP SKILL DISCOVERY.
+ *
+ * The indexer only read `skills/<name>/SKILL.md` (one level). The
+ * superpowers suite ships as `skills/superpowers/<name>/SKILL.md`, so its
+ * eleven skills (brainstorming, systematic-debugging, TDD, …) were loaded
+ * natively by OpenCode but INVISIBLE to OLYMPUS's own skill router
+ * (hot/warm/cold + TF-IDF search). Walk every depth and index any directory
+ * that carries a SKILL.md.
+ */
+function discoverSkillDirs(root) {
+  const out = [];
+  const walk = (dir, depth) => {
+    if (depth > 4) return;
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    if (entries.some((e) => e.isFile() && e.name === 'SKILL.md')) out.push(dir);
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      if (e.name === 'node_modules' || e.name === '.git') continue;
+      walk(path.join(dir, e.name), depth + 1);
+    }
+  };
+  walk(root, 0);
+  return out;
+}
+
+const skillDirs = discoverSkillDirs(SKILLS_ROOT);
 
 const documents = [];
 const godSkillsMap = mapSkillsToGods();
 
-for (const skillName of skillDirs) {
-  const skillDir = path.join(SKILLS_ROOT, skillName);
+for (const skillDir of skillDirs) {
   const skill = readSkill(skillDir);
   if (!skill) continue;
+  // The id is the directory that holds SKILL.md (nested skills keep their
+  // own name); the parent grouping (e.g. "superpowers") is a namespace.
+  const skillName = path.basename(skillDir);
   const gods = godSkillsMap.get(skillName) || ['all'];
   for (const god of gods) {
     documents.push({

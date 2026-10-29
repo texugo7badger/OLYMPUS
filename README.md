@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.23, AGPL-3.0, 10 gods and 122 demigods, GO · ZEN · LOCAL" width="560" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.23, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---

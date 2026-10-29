@@ -14,6 +14,8 @@ All notable changes to OLYMPUS are documented in this file.
 - **STALE IN-FLIGHT RECONCILIATION** — a resumed walk drops `inFlight` entries older than 20 minutes (the walk lock is the process evidence) and re-enters them in the DAG (#244).
 - **IDENTITY** — `public/header.svg` and `badge-bar.svg` corrected and simplified: v0.0.23, real counts (10 gods · 122 demigods · 321 skills · 28 MCPs · 4 plugins), `GO · ZEN · LOCAL`, one gold accent, no gradient glow. The README highlight stays **“Low-cost. Excellent quality. Always free.”**
 - **Docs**: README strategy table, MODEL-STRATEGIES TL;DR, AGENTS local lane, ROADMAP current release.
+- **Badge bar restored (same release)**: the eight interactive badges are back (version · license · downloads · forks · stars · last commit · size · contributors) in the new minimalist style — one gold accent, thin dividers, no glow, real current values.
+- **Deep skill discovery (same release)**: `scripts/build-skill-index.js` now walks every depth, so the eleven **superpowers** skills (`skills/superpowers/<name>/SKILL.md`) are indexed by OLYMPUS's own router (380 documents, was 369). They were always functional as native OpenCode skills — they were simply invisible to the hot/warm/cold search.
 - **Gates**: `tsc` 0, `check-strategy-sync` green, battery green, `next build` green.
 
 ## [v0.0.22] — 2026-10-29
