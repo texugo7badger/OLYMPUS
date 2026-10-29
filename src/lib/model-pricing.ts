@@ -121,6 +121,17 @@ const FALLBACK_PRICING_USD_PER_1M: Record<string, RatePair> = {
   'opencode-go/grok-4.6': { input: 4.0, output: 12.0 },
   'opencode-go/grok-4.5': { input: 4.0, output: 12.0 },
   'opencode-go/mimo-v2.5': { input: 0.14, output: 0.28 },
+  // v0.0.23 — the rebuilt GO/ZEN rosters (opencode.ai/v2/docs/console/go, verified 2026-10-29).
+  'opencode-go/mimo-v2.6-flash': { input: 0.14, output: 0.28 },
+  'opencode-go/qwen3.8-flash': { input: 0.15, output: 0.47 },
+  'opencode-go/qwen3.8-max': { input: 2.0, output: 6.0 },
+  'opencode-go/gpt-6-luna': { input: 0.1, output: 0.5 },
+  'opencode-go/claude-haiku-5-5': { input: 0.1, output: 0.5 },
+  'opencode-go/kimi-k3.1-pro': { input: 2.0, output: 10.0 },
+  'opencode/gpt-6.1-sol': { input: 2.0, output: 10.0 },
+  'opencode/claude-sonnet-5-5': { input: 2.0, output: 10.0 },
+  'opencode/claude-opus-5-5': { input: 4.0, output: 20.0 },
+  'opencode/claude-haiku-5-5': { input: 0.1, output: 0.5 },
   // #190: the GO free promotional flagship — honestly $0.
   'opencode-go/beam-free': { input: 0, output: 0 },
   // Free Hybrid (2026-10-23): every free lane is honestly $0.

@@ -1,6 +1,6 @@
 # OLYMPUS Roadmap
 
-**v0.0.22 is the current release** (shipped 2026-10-29 — "THE LOCAL LANE": the free tier is retired and replaced by a first-class local strategy — Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint, probed and wired into the full 132-agent arsenal; every strategy now applies ONE config shape (no more 10-agent/1,000-char free shell); `~/.olympus/strategy.json` becomes the single strategy truth (W2); the run-state names the god + model + hop + elapsed (W4); the banner + docs + strategy picker speak the new law, in English. See [CHANGELOG.md](CHANGELOG.md).
+**v0.0.23 is the current release** (shipped 2026-10-29 — "THE STRATEGY ENGINE": the GO/ZEN rosters rebuilt from the live catalogue with DeepSeek V4.1 Flash as the preferred lane (DeepSeek V4 Pro retired), BYOK deleted, the interactive Strategy Builder (search any model registered in OpenCode), the MCP arsenal probed and curated to 44 tools, the demigod TEAM CONTRACT (2–5 parallel sub-agents per hop), stale in-flight reconciliation, and a minimalist header/badge identity. See [CHANGELOG.md](CHANGELOG.md).
 
 ---
 

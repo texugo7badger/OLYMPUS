@@ -96,7 +96,6 @@ export type LLMStrategy =
   | 'zen-balanced'           // "ZEN" — full 128-agent OLYMPUS on OpenCode Zen's proprietary models (opencode/<id>), no request caps
   | 'zen-budget'             // "ZEN Budget" — lowest cost on OpenCode Zen (MiniMax M2.7 everywhere but Apollo), still proprietary
   | 'local'                  // "Local" — the user's own hardware (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint); full arsenal; zero cost
-  | 'byok-deepseek'          // "DeepSeek V4.1 Flash (OpenRouter)" — the user's OWN OpenRouter key, EVERY god on one strong lane (1M ctx / 393k out). BYOK family: paid, user-chosen, never blocked by the custom-strategy free-only guard.
   | `custom-${string}`;      // user-defined strategy (see ~/.olympus/custom-strategies.json)
 
 /**
@@ -143,85 +142,71 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'go-max-quality': {
     label: 'GO Max Quality',
     description:
-      'Best quality within GO caps (the 2026-10-16 upgrade). Apollo: GLM-5.3 (sacred). Atlas: Hy3 (sacred). Artemis: Kimi K3. Athena/Dionysus/Persephone: GLM-5.3. Hephaestus+Hermes: Kimi K2.7 Code. Prometheus: MiniMax M3. Callimachus: GLM-5.3-Flash. NOTE: GLM-5.3\'s $3/5h rolling cap is now shared by FOUR gods — this tier burns caps for quality; switch to go-balanced when exhausted.',
+      'Best quality within GO caps. Apollo plans on DeepSeek V4.1 Flash (1M ctx / 384k out — the 1017 benchmark leader at $0.15/$0.60), Atlas orchestrates on Hy3, Hephaestus codes on Kimi K2.7 Code (262k out), Athena/Hermes on Qwen3.7 Plus, Artemis on Kimi K3 (security depth), Dionysus/Persephone/Callimachus on DeepSeek V4.1 Flash, Prometheus on MiniMax M3. DeepSeek V4 Pro is retired — V4.1 Flash 1017 beats it while costing a fraction.',
     plan: 'GO',
     tier: 'quality',
-    reasoningModel: 'glm-5.3',
-    codeModel: 'kimi-k2.7-code',
-    terminalModel: 'opencode-go/glm-5.3',
+    reasoningModel: 'deepseek-v4.1-flash',
+    codeModel: 'deepseek-v4.1-flash',
+    terminalModel: 'opencode-go/deepseek-v4.1-flash',
     gods: {
-      apollo:      'opencode-go/glm-5.3',
+      apollo:      'opencode-go/deepseek-v4.1-flash',
       atlas:       'opencode-go/hy3',
-      // Cap discipline (Go $10): the $15/mo flagships — GLM-5.3, Kimi K3,
-      // Grok 4.7, Qwen3.8 Max — have a $3/5h rolling cap and are too tight for
-      // multi-god duty. GLM-5.3 is reserved for Apollo (sacred) + Artemis
-      // (security). See https://opencode.ai/docs/go/ — verified 2026-09-28.
       hephaestus:  'opencode-go/kimi-k2.7-code',
-      athena:      'opencode-go/glm-5.3',
-      // GLM-5.3-Flash ($60/mo → $12/5h rolling, 31,580 req/mo) is the
-      // workhorse for the high-volume roles.
+      athena:      'opencode-go/qwen3.7-plus',
       artemis:     'opencode-go/kimi-k3',
-      dionysus:    'opencode-go/glm-5.3',
-      hermes:      'opencode-go/kimi-k2.7-code',
-      persephone:  'opencode-go/glm-5.3',
+      dionysus:    'opencode-go/deepseek-v4.1-flash',
+      hermes:      'opencode-go/qwen3.7-plus',
+      persephone:  'opencode-go/deepseek-v4.1-flash',
       prometheus:  'opencode-go/minimax-m3',
-      callimachus: 'opencode-go/glm-5.3-flash',
+      callimachus: 'opencode-go/deepseek-v4.1-flash',
     },
-    vaultLlm: 'opencode-go/glm-5.3-flash',
+    vaultLlm: 'opencode-go/deepseek-v4.1-flash',
     estCostPerDay: 'higher',
   },
   'go-balanced': {
     label: 'GO Balanced',
     description:
-      'Default — sustainable 5h/day (the 2026-10-16 upgrade: Apollo rides FULL GLM-5.3 — the planner is the quality bottleneck; the hop runtime\'s small-burst request shape stretches the $3/5h rolling cap much further than the old interactive turns. When the cap blows, switch to go-budget). Atlas: Hy3 (orchestration). Hephaestus/Hermes: Kimi K2.7 Code. Athena: Qwen3.7 Plus. Prometheus: MiniMax M3. Dionysus/Persephone (#194): DeepSeek V4.1 Flash ($0.15/$0.60 per 1M, 1M ctx/384k out — cheaper output than GLM-5.3-Flash with 3x the output window). Artemis/Callimachus: GLM-5.3-Flash.',
+      'Default — sustainable 8h/day. Apollo plans on DeepSeek V4.1 Flash (1M ctx / 384k out, 173k req/mo — the 1017 benchmark leader), Atlas orchestrates on Hy3 (cheapest per hop), Hephaestus/Artemis/Persephone/Callimachus ride DeepSeek V4.1 Flash, Athena/Dionysus/Hermes ride Qwen3.7 Plus, Prometheus on MiniMax M3. DeepSeek V4 Pro is retired: V4.1 Flash 1017 is better and cheaper.',
     plan: 'GO',
     tier: 'balanced',
-    reasoningModel: 'glm-5.3-flash',
-    codeModel: 'kimi-k2.7-code',
-    terminalModel: 'opencode-go/glm-5.3',
+    reasoningModel: 'deepseek-v4.1-flash',
+    codeModel: 'deepseek-v4.1-flash',
+    terminalModel: 'opencode-go/deepseek-v4.1-flash',
     gods: {
-      apollo:      'opencode-go/glm-5.3',
+      apollo:      'opencode-go/deepseek-v4.1-flash',
       atlas:       'opencode-go/hy3',
-      hephaestus:  'opencode-go/kimi-k2.7-code',
+      hephaestus:  'opencode-go/deepseek-v4.1-flash',
       athena:      'opencode-go/qwen3.7-plus',
-      artemis:     'opencode-go/glm-5.3-flash',
-      // #194 (2026-10-23): the deepseek-lane gods (dionysus + persephone)
-      // adopt DeepSeek V4.1 Flash — $0.15/$0.60 per 1M, 1M ctx/384k out
-      // (launched this week on GO; user directive: use it). Cheaper output
-      // than GLM-5.3-Flash ($0.50) with 3x the output window.
-      dionysus:    'opencode-go/deepseek-v4.1-flash',
-      hermes:      'opencode-go/kimi-k2.7-code',
+      artemis:     'opencode-go/deepseek-v4.1-flash',
+      dionysus:    'opencode-go/qwen3.7-plus',
+      hermes:      'opencode-go/qwen3.7-plus',
       persephone:  'opencode-go/deepseek-v4.1-flash',
       prometheus:  'opencode-go/minimax-m3',
-      callimachus: 'opencode-go/glm-5.3-flash',
+      callimachus: 'opencode-go/deepseek-v4.1-flash',
     },
-    vaultLlm: 'opencode-go/glm-5.3-flash',
+    vaultLlm: 'opencode-go/deepseek-v4.1-flash',
     estCostPerDay: 'moderate',
   },
   'go-budget': {
     label: 'GO Budget',
     description:
-      'Lowest cost within GO caps — sustainable 8h/day. Apollo: GLM-5.3-Flash (sacred — the GLM family is never downgraded; #194 keeps Apollo on his cap-aware GLM lane). Atlas: Hy3 (sacred — orchestration). All volume gods (#194): DeepSeek V4.1 Flash — $0.15/$0.60 per 1M, 1M ctx/384k out, launched 2026-10-20 on GO; cheaper output than GLM-5.3-Flash with 3x the output window.',
+      'Lowest cost within GO caps — sustainable 8h/day. Apollo stays on DeepSeek V4.1 Flash (the planner is the quality floor), Atlas on Hy3, Hephaestus/Artemis/Persephone on DeepSeek V4.1 Flash, Athena on Qwen3.8 Flash, and the volume gods on MiMo-V2.6-Flash ($0.14/$0.28, 150k req/mo). DeepSeek V4 Pro is retired.',
     plan: 'GO',
     tier: 'budget',
-    reasoningModel: 'glm-5.3-flash',
+    reasoningModel: 'deepseek-v4.1-flash',
     codeModel: 'deepseek-v4.1-flash',
-    terminalModel: 'opencode-go/glm-5.3-flash',
+    terminalModel: 'opencode-go/deepseek-v4.1-flash',
     gods: {
-      apollo:      'opencode-go/glm-5.3-flash',
+      apollo:      'opencode-go/deepseek-v4.1-flash',
       atlas:       'opencode-go/hy3',
-      // #194 (2026-10-23): every volume god moves from GLM-5.3-Flash to
-      // DeepSeek V4.1 Flash ($0.15/$0.60 per 1M, 1M ctx/384k out — the new
-      // GO workhorse; ~173K req/mo per the $80 cap). Apollo stays GLM
-      // (sacred), Atlas stays Hy3 (sacred).
-      artemis:     'opencode-go/deepseek-v4.1-flash',
-      athena:      'opencode-go/deepseek-v4.1-flash',
-      dionysus:    'opencode-go/deepseek-v4.1-flash',
       hephaestus:  'opencode-go/deepseek-v4.1-flash',
-      hermes:      'opencode-go/deepseek-v4.1-flash',
+      athena:      'opencode-go/qwen3.8-flash',
+      artemis:     'opencode-go/deepseek-v4.1-flash',
+      dionysus:    'opencode-go/mimo-v2.6-flash',
+      hermes:      'opencode-go/mimo-v2.6-flash',
       persephone:  'opencode-go/deepseek-v4.1-flash',
-      prometheus:  'opencode-go/deepseek-v4.1-flash',
-      callimachus: 'opencode-go/deepseek-v4.1-flash',
+      prometheus:  'opencode-go/mimo-v2.6-flash',
+      callimachus: 'opencode-go/mimo-v2.6-flash',
     },
     vaultLlm: 'opencode-go/deepseek-v4.1-flash',
     estCostPerDay: 'low',
@@ -245,25 +230,25 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'zen-max-quality': {
     label: 'ZEN Max Quality',
     description:
-      'Frontier quality on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: GPT 6 Sol (orchestration; Hy3 is GO-only). Hephaestus+Artemis+Hermes: Claude Sonnet 5. Athena: GPT 5.6 Terra. Dionysus: GPT 5.6 Luna. Persephone: Gemini 3.1 Pro. Prometheus: Grok Build 0.1. Callimachus: Claude Haiku 4.5. Vault: GLM-5.3.',
+      'Frontier private models on OpenCode Zen (pay-as-you-go, no request caps). Apollo/Atlas/Dionysus on GPT 6.1 Sol, Hephaestus/Hermes/Artemis on Claude Sonnet 5.5 and Opus 5.5 (security), Athena on GPT 6 Sol, Persephone on Gemini 3.1 Pro, Prometheus on Grok 4.7, Callimachus on Claude Haiku 5.5.',
     plan: 'ZEN',
     tier: 'quality',
     reasoningModel: 'glm-5.3',
     codeModel: 'claude-sonnet-5',
     terminalModel: 'opencode/glm-5.3',
     gods: {
-      apollo:      'opencode/glm-5.3',
-      atlas:       'opencode/gpt-6-sol',
-      hephaestus:  'opencode/claude-sonnet-5',
-      athena:      'opencode/gpt-5.6-terra',
-      artemis:     'opencode/claude-sonnet-5',
-      dionysus:    'opencode/gpt-5.6-luna',
-      hermes:      'opencode/claude-sonnet-5',
+      apollo:      'opencode/gpt-6.1-sol',
+      atlas:       'opencode/gpt-6.1-sol',
+      hephaestus:  'opencode/claude-sonnet-5-5',
+      athena:      'opencode/gpt-6-sol',
+      artemis:     'opencode/claude-opus-5-5',
+      dionysus:    'opencode/gpt-6.1-sol',
+      hermes:      'opencode/claude-sonnet-5-5',
       persephone:  'opencode/gemini-3.1-pro',
-      prometheus:  'opencode/grok-build-0.1',
-      callimachus: 'opencode/claude-haiku-4-5',
+      prometheus:  'opencode/grok-4.7',
+      callimachus: 'opencode/claude-haiku-5-5',
     },
-    vaultLlm: 'opencode/glm-5.3',
+    vaultLlm: 'opencode/glm-5.3-flash',
     estCostPerDay: 'higher',
   },
   /**
@@ -291,23 +276,23 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'zen-balanced': {
     label: 'ZEN Balanced',
     description:
-      'Full OLYMPUS on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: GPT 6 Sol (Hy3 is GO-only). Hephaestus+Artemis: Claude Sonnet 5. Athena: GPT 5.6 Terra. Dionysus: GPT 5.6 Luna. Hermes: GPT 5.4 Mini. Persephone: Gemini 3.1 Pro. Prometheus: Grok Build 0.1. Callimachus: Claude Haiku 4.5. Vault: GLM-5.3-Flash.',
+      'Full OLYMPUS on OpenCode Zen without runaway cost. Apollo on GPT 6.1 Sol, Atlas/Athena/Hermes on GPT 6 Luna, Hephaestus/Artemis on Claude Sonnet 5.5, Dionysus/Callimachus on Claude Haiku 5.5, Persephone on DeepSeek V4.1 Flash, Prometheus on Grok Build 0.1.',
     plan: 'ZEN',
     tier: 'balanced',
     reasoningModel: 'glm-5.3',
     codeModel: 'claude-sonnet-5',
     terminalModel: 'opencode/glm-5.3',
     gods: {
-      apollo:      'opencode/glm-5.3',
-      atlas:       'opencode/gpt-6-sol',
-      hephaestus:  'opencode/claude-sonnet-5',
-      athena:      'opencode/gpt-5.6-terra',
-      artemis:     'opencode/claude-sonnet-5',
-      dionysus:    'opencode/gpt-5.6-luna',
-      hermes:      'opencode/gpt-5.4-mini',
-      persephone:  'opencode/gemini-3.1-pro',
+      apollo:      'opencode/gpt-6.1-sol',
+      atlas:       'opencode/gpt-6-luna',
+      hephaestus:  'opencode/claude-sonnet-5-5',
+      athena:      'opencode/gpt-6-luna',
+      artemis:     'opencode/claude-sonnet-5-5',
+      dionysus:    'opencode/claude-haiku-5-5',
+      hermes:      'opencode/gpt-6-luna',
+      persephone:  'opencode/deepseek-v4.1-flash',
       prometheus:  'opencode/grok-build-0.1',
-      callimachus: 'opencode/claude-haiku-4-5',
+      callimachus: 'opencode/claude-haiku-5-5',
     },
     vaultLlm: 'opencode/glm-5.3-flash',
     estCostPerDay: 'moderate',
@@ -322,23 +307,23 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'zen-budget': {
     label: 'ZEN Budget',
     description:
-      'Lowest cost on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: GPT 6 Luna (orchestration). All others: GLM-5.3-Flash. Callimachus: Claude Haiku 4.5.',
+      'Lowest cost on OpenCode Zen. Apollo/Atlas on GPT 6 Luna, the volume gods on DeepSeek V4.1 Flash and GLM-5.3-Flash, Callimachus on Claude Haiku 5.5.',
     plan: 'ZEN',
     tier: 'budget',
     reasoningModel: 'glm-5.3',
     codeModel: 'glm-5.3-flash',
     terminalModel: 'opencode/glm-5.3',
     gods: {
-      apollo:      'opencode/glm-5.3',
+      apollo:      'opencode/gpt-6-luna',
       atlas:       'opencode/gpt-6-luna',
-      artemis:     'opencode/glm-5.3-flash',
+      hephaestus:  'opencode/deepseek-v4.1-flash',
       athena:      'opencode/glm-5.3-flash',
-      dionysus:    'opencode/glm-5.3-flash',
-      hephaestus:  'opencode/glm-5.3-flash',
-      hermes:      'opencode/glm-5.3-flash',
-      persephone:  'opencode/glm-5.3-flash',
+      artemis:     'opencode/deepseek-v4.1-flash',
+      dionysus:    'opencode/deepseek-v4.1-flash',
+      hermes:      'opencode/deepseek-v4.1-flash',
+      persephone:  'opencode/deepseek-v4.1-flash',
       prometheus:  'opencode/glm-5.3-flash',
-      callimachus: 'opencode/claude-haiku-4-5',
+      callimachus: 'opencode/claude-haiku-5-5',
     },
     vaultLlm: 'opencode/glm-5.3-flash',
     estCostPerDay: 'low',
@@ -395,45 +380,9 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
     vaultLlm: 'opencode-go/glm-5.3-flash',
     estCostPerDay: 'free',
   },
-  // ── BYOK — the user's own paid key (2026-10-24) ──────────────────────────
-  // THE AIME SPECIMEN: the GO monthly quota was spent, every go-* strategy
-  // was dead, and the user's own OpenRouter key was already paying for
-  // DeepSeek V4.1 Flash on another surface. This strategy puts that ONE lane
-  // under all ten gods: 1,048,576 ctx / 393,216 out, $0.15 in / $0.60 out
-  // per 1M (cache read $0.003) — the cheapest lane in the catalogue that can
-  // hold a whole dispatch plan in context.
-  //
-  // It is deliberately ONE lane (the honest cost picture: every hop on one
-  // bill), which is exactly why the runtime FAILOVER matters — if this lane
-  // rate-limits or runs out of credits, the hop moves to the free chain
-  // instead of parking. See src/lib/lane-health.ts + FREE_HYBRID_ROSTER.
-  'byok-deepseek': {
-    label: 'DeepSeek V4.1 Flash (OpenRouter)',
-    description:
-      'Every god on one strong BYOK lane: DeepSeek V4.1 Flash on YOUR OpenRouter key — 1M context, 393k output, $0.15/$0.60 per 1M tokens (cache read $0.003). One lane means one bill and one behaviour across all ten gods; the runtime failover keeps the campaign alive if the lane rate-limits or the credit runs out. Requires an OpenRouter key in OpenCode.',
-    plan: 'CUSTOM',
-    tier: 'budget',
-    reasoningModel: 'deepseek/deepseek-v4.1-flash-1017',
-    codeModel: 'deepseek/deepseek-v4.1-flash-1017',
-    terminalModel: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    gods: {
-      apollo:      'openrouter/deepseek/deepseek-v4.1-flash-1017',
-      atlas:       'openrouter/deepseek/deepseek-v4.1-flash-1017',
-      artemis:     'openrouter/deepseek/deepseek-v4.1-flash-1017',
-      athena:      'openrouter/deepseek/deepseek-v4.1-flash-1017',
-      dionysus:    'openrouter/deepseek/deepseek-v4.1-flash-1017',
-      hephaestus:  'openrouter/deepseek/deepseek-v4.1-flash-1017',
-      hermes:      'openrouter/deepseek/deepseek-v4.1-flash-1017',
-      persephone:  'openrouter/deepseek/deepseek-v4.1-flash-1017',
-      prometheus:  'openrouter/deepseek/deepseek-v4.1-flash-1017',
-      callimachus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    },
-    vaultLlm: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    estCostPerDay: 'low',
-  },
   // Legacy free ids REMOVED in v0.0.22 — the free tier has been retired.
   // The user's own hardware path is `local` (see LLM_STRATEGIES['local']).
-  // Paid plans: `go-*`, `zen-*`. User's own paid OpenRouter lane: `byok-deepseek`.
+  // Paid plans: `go-*`, `zen-*`. Any other provider: custom-* via the Strategy Builder.
 
 };
 
@@ -713,16 +662,10 @@ export function getProviderById(id: string): LLMProvider | undefined {
  *   - FREE  → openrouter/<vendor>/<model>:free + nvidia/<vendor>/<model> (no plan needed)
  *   - CUSTOM → user-defined (~/.olympus/custom-strategies.json)
  */
-export type StrategyFamily = 'GO' | 'ZEN' | 'FREE' | 'BYOK' | 'CUSTOM';
+export type StrategyFamily = 'GO' | 'ZEN' | 'LOCAL' | 'CUSTOM';
 
 export function strategyFamily(id: string): StrategyFamily {
-  if (id.startsWith('free-')) return 'FREE';
-  // BYOK = "bring your own key" — a PAID lane the user already owns outside
-  // the GO/Zen plans (OpenRouter, NVIDIA Build, …). Deliberately NOT
-  // `custom-`: custom strategies are hard-restricted to free models by a
-  // money-safety check in apply-strategy.js, and a user who wants their own
-  // paid OpenRouter lane is not doing anything unsafe — they are choosing it.
-  if (id.startsWith('byok-')) return 'BYOK';
+  if (id === 'local') return 'LOCAL';
   if (id.startsWith('custom-')) return 'CUSTOM';
   const cfg = LLM_STRATEGIES[id as Exclude<LLMStrategy, `custom-${string}`>];
   if (cfg && cfg.plan === 'ZEN') return 'ZEN';
@@ -758,21 +701,6 @@ export interface StrategyApiRequirement {
 
 export function strategyApiRequirement(strategy: string): StrategyApiRequirement | null {
   if (strategy.startsWith('custom-')) return null;
-  if (strategy.startsWith('byok-')) {
-    // BYOK = the user's own key. The family names the provider it rides.
-    if (strategy.includes('nvidia')) {
-      return {
-        kind: 'nvidia',
-        label: 'NVIDIA Build key',
-        hint: 'Requires an NVIDIA Build API key (https://build.nvidia.com) — add NVIDIA as a provider inside OpenCode.',
-      };
-    }
-    return {
-      kind: 'openrouter',
-      label: 'OpenRouter key',
-      hint: 'Requires an OpenRouter API key WITH CREDIT — add OpenRouter as a provider inside OpenCode (`olympus opencode` → Settings → Providers). Get a key at https://openrouter.ai/keys. This strategy bills every hop to that key.',
-    };
-  }
   if (strategy.startsWith('go-')) {
     return {
       kind: 'go',
@@ -793,7 +721,7 @@ export function strategyApiRequirement(strategy: string): StrategyApiRequirement
     return {
       kind: 'go',
       label: 'Free tier retired',
-      hint: 'The free tier is retired (v0.0.22). Choose GO, Zen, BYOK, or the new Local strategy (your own hardware — see docs/LOCAL-LLM.md).',
+      hint: 'The free tier is retired (v0.0.22). Choose GO, Zen, or the Local strategy (your own hardware — see docs/LOCAL-LLM.md).',
     };
   }
   return null;
@@ -971,10 +899,9 @@ export const FREE_MODEL_CLASSES = [
 ];
 
 /** All model classes, keyed by family. */
-export const MODEL_CLASSES_BY_FAMILY: Record<Exclude<StrategyFamily, 'CUSTOM' | 'BYOK'>, string[]> = {
+export const MODEL_CLASSES_BY_FAMILY: Record<Exclude<StrategyFamily, 'CUSTOM' | 'LOCAL'>, string[]> = {
   GO: GO_MODEL_CLASSES,
   ZEN: ZEN_MODEL_CLASSES,
-  FREE: FREE_MODEL_CLASSES,
 };
 
 /**
@@ -1019,25 +946,11 @@ export function modelClassesForStrategy(strategy: string): string[] {
 
 function modelClassesForStrategyRaw(strategy: string): string[] {
   const fam = strategyFamily(strategy);
-  if (fam === 'BYOK') {
-    // The user's own paid lane — the dropdown offers exactly that lane. A
-    // per-god pin to another provider stays possible through the free
-    // families; this strategy is deliberately ONE lane so the user can see
-    // the cost of every hop on the provider bill they already pay.
-    const own = LLM_STRATEGIES[strategy as Exclude<LLMStrategy, `custom-${string}`>]?.terminalModel;
-    return own ? [own] : [];
-  }
   if (fam === 'CUSTOM') {
     // Custom strategies are user-defined (free-only guard retired in v0.0.22).
     // The local strategy (`local`) is the zero-cost path; custom stays for
-    // special configurations (e.g., BYOK extensions, enterprise endpoints).
+    // special configurations (e.g., OpenRouter/NVIDIA lanes, enterprise endpoints).
     return FREE_MODEL_CLASSES.length ? FREE_MODEL_CLASSES : GO_MODEL_CLASSES;
-  }
-  if (fam === 'FREE') {
-    // v0.0.22: the FREE family is retired. Any legacy reference falls back
-    // to the GO open-weight catalog (full arsenal) — the `local` strategy
-    // carries its own catalog via `local` (see LLM_STRATEGIES['local']).
-    return GO_MODEL_CLASSES;
   }
   return MODEL_CLASSES_BY_FAMILY[fam];
 }
@@ -1048,9 +961,7 @@ export function isModelInFamily(model: string, family: StrategyFamily): boolean 
   // `opencode/` does NOT match `opencode-go/` (the char after `opencode` is
   // `-` for GO ids, so the prefix check is unambiguous).
   if (family === 'ZEN') return model.startsWith('opencode/');
-  // v0.0.22 — FREE tier retired; `local` is the zero-cost hardware path.
-  if (family === 'FREE') return model.startsWith('opencode-go/');
-  return true; // custom / byok — any model id (the user picks their own lane)
+  return true; // custom / local — any model id (the user picks their own lane)
 }
 
 /**

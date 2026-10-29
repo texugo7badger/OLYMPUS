@@ -62,7 +62,13 @@ function expect(name, cond, detail) {
 {
   const oc = JSON.parse(fs.readFileSync(path.join(ROOT, 'opencode.json'), 'utf-8'));
   const m = oc.mcp || {};
-  expect('M4 all MCPs disabled by default (128-tool limit)', Object.values(m).every((v) => v?.enabled === false));
+  expect('M4 the curated set is enabled and stays under the 128-tool budget',
+      (() => {
+        const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'opencode.json'), 'utf-8'));
+        const on = Object.entries(cfg.mcp || {}).filter(([, v]) => v?.enabled === true).map(([k]) => k).sort();
+        const curated = ['context7', 'filesystem', 'git', 'memory', 'olympus-craft', 'sequential-thinking'];
+        return JSON.stringify(on) === JSON.stringify(curated);
+      })(), 'the curated default set must be exactly the measured six (44 tools)');
 }
 
 // M5 — uvx-dependent MCPs disabled by default (uvx not installed)

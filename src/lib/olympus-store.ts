@@ -142,7 +142,6 @@ export type LLMStrategy =
   | 'zen-max-quality'
   | 'zen-balanced'
   | 'zen-budget'
-  | 'byok-deepseek'
   | 'local'
   | `custom-${string}`;
 

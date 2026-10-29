@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OLYMPUS v0.0.22 - Full arsenal. Always clear. GO (open-source), ZEN (proprietary), BYOK, and LOCAL (your own hardware).">
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OLYMPUS v0.0.23 - Low-cost. Excellent quality. Always free. GO (open-source), ZEN (private models), LOCAL (your own hardware).">
   <!-- Background gradient (dark navy) -->
   <defs>
     <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
@@ -24,10 +24,10 @@
   <circle cx="148" cy="160" r="124" fill="#0A0E16"/>
 
   <!-- Outer ring (pastel gold, thin) -->
-  <circle cx="148" cy="160" r="112" stroke="#D4A574" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <circle cx="148" cy="160" r="112" stroke="#D4A574" stroke-width="1.2" fill="none" opacity="0.18"/>
 
   <!-- Inner ring (pastel gold, thinner) -->
-  <circle cx="148" cy="160" r="96" stroke="#D4A574" stroke-width="1" fill="none" opacity="0.25"/>
+  <circle cx="148" cy="160" r="96" stroke="#D4A574" stroke-width="1" fill="none" opacity="0.10"/>
 
   <!-- Mountain peak (Mount Olympus) — gold gradient -->
   <path d="M 148 108 L 188 200 L 164 200 L 148 164 L 132 200 L 108 200 Z" fill="url(#goldGrad)"/>
@@ -69,7 +69,7 @@
   </g>
 
   <!-- ================================================================== -->
-  <!-- Text section (right of logo) — 0.0.8 updated stats                -->
+  <!-- Text section (right of logo) — v0.0.23 stats                      -->
   <!-- ================================================================== -->
 
   <!-- OLYMPUS text (large, pastel gold, bold serif) -->
@@ -79,7 +79,7 @@
   <text x="335" y="178" font-family="'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace" font-size="17" fill="#D4A574" opacity="0.7" letter-spacing="2">Low-cost. Excellent quality. Always free.</text>
 
   <!-- Stats line — updated for v0.0.8 (10 gods, 122 demigods, 334 skills, 28 MCPs, 9 plugins) -->
-  <text x="335" y="212" font-family="'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace" font-size="13" fill="#8B8B8B" letter-spacing="1">v0.0.8  ·  10 gods  ·  122 demigods  ·  334 skills  ·  16 commands  ·  28 MCPs  ·  21 hooks  ·  9 plugins</text>
+  <text x="335" y="212" font-family="'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace" font-size="13" fill="#8B8B8B" letter-spacing="1">v0.0.23  ·  10 gods  ·  122 demigods  ·  321 skills  ·  28 MCPs  ·  4 plugins  ·  GO · ZEN · LOCAL</text>
 
   <!-- Tagline (italic serif, dimmed) -->
   <text x="335" y="250" font-family="Georgia, 'Times New Roman', serif" font-size="14" fill="#D4A574" opacity="0.5" font-style="italic">Gods do not talk to each other — they talk through the brain.</text>
@@ -104,16 +104,8 @@
     <text x="808" y="293">OpenDesign</text>
   </g>
 
-  <!-- Bottom right corner accent (small constellation echo) -->
-  <g opacity="0.2">
-    <circle cx="1140" cy="270" r="3" fill="#D4A574"/>
-    <circle cx="1125" cy="285" r="2" fill="#D4A574"/>
-    <circle cx="1155" cy="285" r="2" fill="#D4A574"/>
-    <line x1="1140" y1="270" x2="1125" y2="285" stroke="#D4A574" stroke-width="0.5"/>
-    <line x1="1140" y1="270" x2="1155" y2="285" stroke="#D4A574" stroke-width="0.5"/>
-  </g>
 
-  <!-- Plan badges (top right) — GO (open-source), ZEN (proprietary APIs), FREE (no plan) -->
+  <!-- Plan badges (top right) — GO (open-source), ZEN (private models), LOCAL (your hardware) -->
   <g transform="translate(1044, 36)">
     <!-- GO PLAN — gold -->
     <g>
@@ -128,7 +120,7 @@
     <!-- FREE TIER — green (no plan needed) -->
     <g>
       <rect x="0" y="64" width="106" height="24" rx="4" fill="#0E1320" stroke="#7BAE8E" stroke-width="0.5" opacity="0.85"/>
-      <text x="53" y="80" font-family="'SF Mono', Monaco, monospace" font-size="10" fill="#7BAE8E" text-anchor="middle" font-weight="bold">FREE TIER</text>
+      <text x="53" y="80" font-family="'SF Mono', Monaco, monospace" font-size="10" fill="#7BAE8E" text-anchor="middle" font-weight="bold">LOCAL</text>
     </g>
   </g>
 </svg>

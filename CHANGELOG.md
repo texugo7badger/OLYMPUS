@@ -2,6 +2,20 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.23] — 2026-10-29
+
+**"THE STRATEGY ENGINE"** — the rosters are rebuilt from the live OpenCode catalogue, BYOK is gone, the user can build their own strategy from any model registered in OpenCode, the MCP arsenal is probed and curated, and the gods now lead teams of demigods by contract.
+
+- **THE ROSTERS, REBUILT (GO first)** — DeepSeek V4.1 Flash (the 1017 line: 1M ctx / 384k out, $0.15/$0.60, 173k req/mo) is the preferred lane everywhere, replacing **DeepSeek V4 Pro (retired)** and **GLM-5.3-Flash** on the quality roles. `go-max-quality`: Apollo DS 4.1 Flash, Atlas Hy3, Hephaestus Kimi K2.7 Code, Athena/Hermes Qwen3.7 Plus, Artemis Kimi K3, Dionysus/Persephone/Callimachus DS 4.1 Flash, Prometheus MiniMax M3. `go-balanced`: DS 4.1 Flash on Apollo/Hephaestus/Artemis/Persephone/Callimachus, Qwen3.7 Plus on Athena/Dionysus/Hermes, Hy3 + MiniMax M3. `go-budget`: DS 4.1 Flash on the quality floor, Qwen3.8 Flash (frontend), MiMo-V2.6-Flash (volume). ZEN rebuilt on the private catalogue: GPT 6.1 Sol, Claude Sonnet 5.5 / Opus 5.5, GPT 6 Sol, Gemini 3.1 Pro, Grok 4.7, Claude Haiku 5.5.
+- **BYOK DELETED** — `byok-deepseek` and the BYOK family are gone. Every provider (OpenRouter and NVIDIA included) is registered inside OpenCode; there is no second billing path in OLYMPUS. `custom-*` is the only bring-your-own lane and may use **any model registered in OpenCode**.
+- **THE STRATEGY BUILDER (new screen)** — Settings → LLM Strategy → **Build**: one search box over the live catalogue (id, name, provider), a per-god picker with context/output/price and a fit hint, a live lane/cost summary, and Save & apply. Backed by `GET /api/olympus/models` and `POST /api/olympus/strategy/custom` (validates every id before applying).
+- **THE MCP ARSENAL, PROBED** — new `scripts/mcp-audit.mjs` performs the JSON-RPC handshake (`initialize` + `tools/list`) on every server (28) and reports alive/dead, latency, tool count and the exact failure. Curated default set enabled (44 tools): filesystem (14), memory (9), git (12), context7 (2), sequential-thinking (1), olympus-craft (6). The heavy/domain servers (rea 207 tools, grafana 79, comfyui 41, godot, blender) stay one click away — the 128-tool provider limit is now measured, not guessed.
+- **DEMIGOD TEAMS (contract)** — every hop's arsenal directive now carries the TEAM CONTRACT: size the work first, dispatch 2–5 independent sub-tasks in ONE parallel wave, verify every artifact, synthesize and report the chain. A trivial hop works alone (cost discipline is part of the contract).
+- **STALE IN-FLIGHT RECONCILIATION** — a resumed walk drops `inFlight` entries older than 20 minutes (the walk lock is the process evidence) and re-enters them in the DAG (#244).
+- **IDENTITY** — `public/header.svg` and `badge-bar.svg` corrected and simplified: v0.0.23, real counts (10 gods · 122 demigods · 321 skills · 28 MCPs · 4 plugins), `GO · ZEN · LOCAL`, one gold accent, no gradient glow. The README highlight stays **“Low-cost. Excellent quality. Always free.”**
+- **Docs**: README strategy table, MODEL-STRATEGIES TL;DR, AGENTS local lane, ROADMAP current release.
+- **Gates**: `tsc` 0, `check-strategy-sync` green, battery green, `next build` green.
+
 ## [v0.0.22] — 2026-10-29
 
 **"THE LOCAL LANE"** — the free tier is retired, and OLYMPUS gets its zero-cost path back without lying about it: your own hardware. Every strategy now ships ONE config shape (the full 132-agent arsenal); the free tier's degraded 10-agent / 1,000-char-prompt shell is gone, and with it a whole class of drift, dead-lane and silent-fallback bugs.

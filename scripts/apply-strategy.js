@@ -258,7 +258,7 @@ export function isLegacyFreeId(id) {
 export function normalizeStrategyId(id) {
   if (id === 'free-hybrid' || isLegacyFreeId(id)) {
     throw new Error(
-      'The free tier is retired (v0.0.22). Choose go-*, zen-*, byok-*, custom-*, or local ' +
+      'The free tier is retired (v0.0.22). Choose go-*, zen-*, custom-*, or local ' +
       '(your own hardware — see docs/LOCAL-LLM.md). The free-* strategies no longer exist.'
     );
   }
@@ -417,30 +417,28 @@ export function resolveFreeHybridMap() {
 
 const BUILTIN_STRATEGIES = {
   'go-max-quality': {
-    apollo:       'opencode-go/glm-5.3',
+    apollo:       'opencode-go/deepseek-v4.1-flash',
     atlas:        'opencode-go/hy3',
     artemis:      'opencode-go/kimi-k3',
-    athena:       'opencode-go/glm-5.3',
-    dionysus:     'opencode-go/glm-5.3',
-    hephaestus:   'opencode-go/kimi-k2.7-code',
-    hermes:       'opencode-go/kimi-k2.7-code',
-    persephone:   'opencode-go/glm-5.3',
-    prometheus:   'opencode-go/minimax-m3',
-    callimachus:  'opencode-go/glm-5.3-flash',
-  },
-  'go-balanced': {
-    apollo:       'opencode-go/glm-5.3',
-    atlas:        'opencode-go/hy3',
-    artemis:      'opencode-go/glm-5.3-flash',
     athena:       'opencode-go/qwen3.7-plus',
-    // #194: the deepseek-lane gods adopt DeepSeek V4.1 Flash ($0.15/$0.60
-    // per 1M, 1M ctx/384k out — launched 2026-10-20 on GO; user directive).
     dionysus:     'opencode-go/deepseek-v4.1-flash',
     hephaestus:   'opencode-go/kimi-k2.7-code',
-    hermes:       'opencode-go/kimi-k2.7-code',
+    hermes:       'opencode-go/qwen3.7-plus',
     persephone:   'opencode-go/deepseek-v4.1-flash',
     prometheus:   'opencode-go/minimax-m3',
-    callimachus:  'opencode-go/glm-5.3-flash',
+    callimachus:  'opencode-go/deepseek-v4.1-flash',
+  },
+  'go-balanced': {
+    apollo:       'opencode-go/deepseek-v4.1-flash',
+    atlas:        'opencode-go/hy3',
+    artemis:      'opencode-go/deepseek-v4.1-flash',
+    athena:       'opencode-go/qwen3.7-plus',
+    dionysus:     'opencode-go/qwen3.7-plus',
+    hephaestus:   'opencode-go/deepseek-v4.1-flash',
+    hermes:       'opencode-go/qwen3.7-plus',
+    persephone:   'opencode-go/deepseek-v4.1-flash',
+    prometheus:   'opencode-go/minimax-m3',
+    callimachus:  'opencode-go/deepseek-v4.1-flash',
   },
   // GO Budget — #194 (2026-10-23): every volume god moves from GLM-5.3-Flash
   // to DeepSeek V4.1 Flash ($0.15/$0.60 per 1M, 1M ctx/384k out — cheaper
@@ -449,16 +447,16 @@ const BUILTIN_STRATEGIES = {
   // downgraded); Atlas stays Hy3 (sacred — orchestration).
   // Mirrors go-budget in src/lib/model-strategies.ts (check-strategy-sync).
   'go-budget': {
-    apollo:       'opencode-go/glm-5.3-flash',
+    apollo:       'opencode-go/deepseek-v4.1-flash',
     atlas:        'opencode-go/hy3',
     artemis:      'opencode-go/deepseek-v4.1-flash',
-    athena:       'opencode-go/deepseek-v4.1-flash',
-    dionysus:     'opencode-go/deepseek-v4.1-flash',
+    athena:       'opencode-go/qwen3.8-flash',
+    dionysus:     'opencode-go/mimo-v2.6-flash',
     hephaestus:   'opencode-go/deepseek-v4.1-flash',
-    hermes:       'opencode-go/deepseek-v4.1-flash',
+    hermes:       'opencode-go/mimo-v2.6-flash',
     persephone:   'opencode-go/deepseek-v4.1-flash',
-    prometheus:   'opencode-go/deepseek-v4.1-flash',
-    callimachus:  'opencode-go/deepseek-v4.1-flash',
+    prometheus:   'opencode-go/mimo-v2.6-flash',
+    callimachus:  'opencode-go/mimo-v2.6-flash',
   },
   // ZEN Max Quality — frontier proprietary APIs on OpenCode Zen (opencode/<id>).
   // Apollo stays on GLM-5.3 (sacred); Atlas uses GPT 6 Sol for orchestration
@@ -469,16 +467,16 @@ const BUILTIN_STRATEGIES = {
   // retained 30 days (zero-retention open models are on GO).
   // Mirrors zen-max-quality in src/lib/model-strategies.ts (check-strategy-sync).
   'zen-max-quality': {
-    apollo:       'opencode/glm-5.3',
-    atlas:        'opencode/gpt-6-sol',
-    artemis:      'opencode/claude-sonnet-5',
-    athena:       'opencode/gpt-5.6-terra',
-    dionysus:     'opencode/gpt-5.6-luna',
-    hephaestus:   'opencode/claude-sonnet-5',
-    hermes:       'opencode/claude-sonnet-5',
+    apollo:       'opencode/gpt-6.1-sol',
+    atlas:        'opencode/gpt-6.1-sol',
+    artemis:      'opencode/claude-opus-5-5',
+    athena:       'opencode/gpt-6-sol',
+    dionysus:     'opencode/gpt-6.1-sol',
+    hephaestus:   'opencode/claude-sonnet-5-5',
+    hermes:       'opencode/claude-sonnet-5-5',
     persephone:   'opencode/gemini-3.1-pro',
-    prometheus:   'opencode/grok-build-0.1',
-    callimachus:  'opencode/claude-haiku-4-5',
+    prometheus:   'opencode/grok-4.7',
+    callimachus:  'opencode/claude-haiku-5-5',
   },
   // ZEN — full 128-agent OLYMPUS on OpenCode Zen (pay-as-you-go, no request
   // caps) built around proprietary APIs — the whole point of Zen vs the GO
@@ -491,16 +489,16 @@ const BUILTIN_STRATEGIES = {
   // GLM-5.3-Flash.
   // Mirrors zen-balanced in src/lib/model-strategies.ts (check-strategy-sync).
   'zen-balanced': {
-    apollo:       'opencode/glm-5.3',
-    atlas:        'opencode/gpt-6-sol',
-    artemis:      'opencode/claude-sonnet-5',
-    athena:       'opencode/gpt-5.6-terra',
-    dionysus:     'opencode/gpt-5.6-luna',
-    hephaestus:   'opencode/claude-sonnet-5',
-    hermes:       'opencode/gpt-5.4-mini',
-    persephone:   'opencode/gemini-3.1-pro',
+    apollo:       'opencode/gpt-6.1-sol',
+    atlas:        'opencode/gpt-6-luna',
+    artemis:      'opencode/claude-sonnet-5-5',
+    athena:       'opencode/gpt-6-luna',
+    dionysus:     'opencode/claude-haiku-5-5',
+    hephaestus:   'opencode/claude-sonnet-5-5',
+    hermes:       'opencode/gpt-6-luna',
+    persephone:   'opencode/deepseek-v4.1-flash',
     prometheus:   'opencode/grok-build-0.1',
-    callimachus:  'opencode/claude-haiku-4-5',
+    callimachus:  'opencode/claude-haiku-5-5',
   },
   // ZEN Budget — lowest cost on OpenCode Zen, still proprietary. Apollo stays
   // on GLM-5.3 (sacred); Atlas uses GPT 6 Luna for orchestration; everything
@@ -508,36 +506,16 @@ const BUILTIN_STRATEGIES = {
   // class on Zen); Callimachus Claude Haiku 4.5.
   // Mirrors zen-budget in src/lib/model-strategies.ts (check-strategy-sync).
   'zen-budget': {
-    apollo:       'opencode/glm-5.3',
+    apollo:       'opencode/gpt-6-luna',
     atlas:        'opencode/gpt-6-luna',
-    artemis:      'opencode/glm-5.3-flash',
+    artemis:      'opencode/deepseek-v4.1-flash',
     athena:       'opencode/glm-5.3-flash',
-    dionysus:     'opencode/glm-5.3-flash',
-    hephaestus:   'opencode/glm-5.3-flash',
-    hermes:       'opencode/glm-5.3-flash',
-    persephone:   'opencode/glm-5.3-flash',
+    dionysus:     'opencode/deepseek-v4.1-flash',
+    hephaestus:   'opencode/deepseek-v4.1-flash',
+    hermes:       'opencode/deepseek-v4.1-flash',
+    persephone:   'opencode/deepseek-v4.1-flash',
     prometheus:   'opencode/glm-5.3-flash',
-    callimachus:  'opencode/claude-haiku-4-5',
-  },
-  // ── BYOK — the user's own paid key (2026-10-24) ──────────────────────────
-  // Every god on ONE lane: the user's OpenRouter key serving DeepSeek V4.1
-  // Flash (v1017 — 1M ctx / 393k out, $0.15/$0.60 per 1M). Mirrors
-  // byok-deepseek in src/lib/model-strategies.ts (check-strategy-sync).
-  // NOT a custom-* strategy: custom is free-only by a money-safety guard,
-  // and this lane is the user's deliberate choice — the runtime failover
-  // (src/lib/lane-health.ts) protects it by moving a hop to the free chain
-  // if this lane rate-limits or the credit runs out.
-  'byok-deepseek': {
-    apollo:       'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    atlas:        'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    artemis:      'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    athena:       'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    dionysus:     'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    hephaestus:   'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    hermes:       'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    persephone:   'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    prometheus:   'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    callimachus:  'openrouter/deepseek/deepseek-v4.1-flash-1017',
+    callimachus:  'opencode/claude-haiku-5-5',
   },
   'local': {
     apollo:       'opencode-go/glm-5.3-flash',
@@ -553,10 +531,10 @@ const BUILTIN_STRATEGIES = {
   },
 };
 
-const SMALL_MODEL_GO = 'opencode-go/glm-5.3-flash';
+const SMALL_MODEL_GO = 'opencode-go/deepseek-v4.1-flash'; // v0.0.23 — the 1017 workhorse for titles/compaction
 // Zen (pay-as-you-go) uses the same Flash class for background tasks —
 // opencode/deepseek-v4-flash costs $0.14/$0.28 per 1M tokens on Zen.
-const SMALL_MODEL_ZEN = 'opencode/deepseek-v4-flash';
+const SMALL_MODEL_ZEN = 'opencode/deepseek-v4.1-flash'; // v0.0.23
 // small_model runs title generation + compaction. The OpenRouter free
 // strategies ride the OpenRouter volume lane (cohere/north-mini-code:free —
 // probe-verified 2026-10-16, 256K ctx); zero cross-provider key needs.
@@ -1242,19 +1220,12 @@ async function getModelMap(strategy) {
       if (!cfg.gods[g]) {
         throw new Error(`Custom strategy "${strategy}" missing model for god: ${g}`);
       }
-      // MONEY SAFETY: custom strategies are FREE-ONLY — a paid model here
-      // could silently burn the user's credits. Reject with a clear error.
-      if (!KNOWN_FREE_MODELS.has(cfg.gods[g])) {
-        throw new Error(
-          `Custom strategy "${strategy}" uses "${cfg.gods[g]}" for ${g} — custom strategies are FREE-ONLY (no paid models). ` +
-          `Pick a free model or use a GO/Zen strategy for paid models.`
-        );
-      }
+      // v0.0.23: custom strategies may use any model registered in OpenCode.
     }
     return cfg.gods;
   }
   throw new Error(
-    `Unknown strategy: ${strategy}. Valid: go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget (Zen), byok-deepseek (your own OpenRouter key), local (your own hardware), custom-*`
+    `Unknown strategy: ${strategy}. Valid: go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget (Zen), local (your own hardware), custom-*`
   );
 }
 
@@ -1468,13 +1439,8 @@ function strategyFamily(strategy) {
   if (isFreeTierStrategy(strategy)) return 'FREE';
   // LOCAL — the user's own hardware. The model prefix (`local/<model>`) is
   // resolved by the probe, so the shape must not rewrite demigods to GO ids
-  // (same reasoning as BYOK).
-  if (strategy === 'local') return 'BYOK';
-  // BYOK — the user's own paid key (byok-*). Mirrors strategyFamily() in
-  // src/lib/model-strategies.ts. It is neither GO nor Zen: the provider
-  // prefix comes from the strategy map itself, so the shape must not
-  // rewrite demigods to opencode-go/*.
-  if (strategy.startsWith('byok-')) return 'BYOK';
+  // (same reasoning as the old BYOK family).
+  if (strategy === 'local') return 'LOCAL';
   if (isZenStrategy(strategy)) return 'ZEN';
   return 'GO';
 }
@@ -1532,17 +1498,9 @@ function mergePerGodOverrides(modelMap, strategy) {
   const cfg = loadProviders();
   const overrides = (cfg && cfg.per_god_overrides) || {};
   const freeOnly = strategy.startsWith('free-') || strategy.startsWith('custom-');
-  const byok = strategy.startsWith('byok-');
   const known = freeOnly
     ? KNOWN_FREE_MODELS
-    // BYOK: the user owns the lane, so any id on the provider they are paying
-    // for is legitimate (plus the curated sets, for pins across providers).
-    : byok
-      ? new Set([
-        ...KNOWN_FREE_MODELS, ...KNOWN_GO_MODELS, ...KNOWN_ZEN_MODELS,
-        ...Object.values(BUILTIN_STRATEGIES['byok-deepseek'] || {}),
-      ])
-      : new Set([...KNOWN_FREE_MODELS, ...KNOWN_GO_MODELS, ...KNOWN_ZEN_MODELS]);
+    : new Set([...KNOWN_FREE_MODELS, ...KNOWN_GO_MODELS, ...KNOWN_ZEN_MODELS]);
   let merged = 0;
   let dropped = 0;
   for (const god of GOD_NAMES_LIST) {
@@ -1866,7 +1824,6 @@ function demigodModel(demigodName, parentGod, parentModel, athenaOnK3, isFreeTie
 function applyGoConfigShape(config, modelMap, forceImpeccable, family = 'GO') {
   let changes = 0;
   const isZen = family === 'ZEN';
-  const isByok = family === 'BYOK';
 
   // v0.0.22 — THE FREE RESIDUE CLEANUP. A config applied under the old free
   // tier carries `provider.nvidia*` (and free-only OpenRouter entries). Those
@@ -1890,15 +1847,13 @@ function applyGoConfigShape(config, modelMap, forceImpeccable, family = 'GO') {
   // Kimi K3 upgrades are a GO-plan concept (the impeccable flag forces the GO
   // K3 class). Zen has no K3 cap, and BYOK has no GO/Zen models at all —
   // the flag is ignored for both.
-  const athenaOnK3 = !isZen && !isByok && (forceImpeccable || modelMap.athena === 'opencode-go/kimi-k3');
+  const athenaOnK3 = !isZen && (forceImpeccable || modelMap.athena === 'opencode-go/kimi-k3');
   // small_model runs title generation + compaction (volume work). On BYOK it
   // must NOT fall back to a GO lane (the whole point of this strategy is that
   // GO may be out of quota) — it rides the verified free north-mini lane.
   const smallModel = isZen
     ? SMALL_MODEL_ZEN
-    : isByok
-      ? SMALL_MODEL_FREE
-      : GO_CONFIG_SHAPE.small_model;
+    : GO_CONFIG_SHAPE.small_model;
 
   // --- 1. Restore god prompts to {file:...} references ---
   // L1 (MADRUGA-3 p1): the {file:} contract is only real when the file
@@ -1953,7 +1908,7 @@ function applyGoConfigShape(config, modelMap, forceImpeccable, family = 'GO') {
     // passed where the GO/Zen shapes pass `false`, so the flash/K3 upgrade
     // branches — which only make sense inside the GO/Zen catalogs — never
     // fire on a provider that does not serve those ids).
-    const newModel = demigodModel(name, parentGod, parentModel, athenaOnK3, isByok, prefix);
+    const newModel = demigodModel(name, parentGod, parentModel, athenaOnK3, false, prefix);
 
     if (!config.agent[name]) {
       // Add the demigod
@@ -2609,7 +2564,6 @@ Options:
   --strategy <id>    Apply a strategy. Valid:
                        go-max-quality, go-balanced, go-budget,
                        zen-max-quality, zen-balanced, zen-budget ("Zen"),
-                       byok-deepseek (your own OpenRouter key),
                        local (your own hardware — Ollama / LM Studio /
                               vLLM / llama.cpp / any OpenAI-compatible),
                        custom-<id>

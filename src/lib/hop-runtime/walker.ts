@@ -28,7 +28,7 @@ import { join, isAbsolute } from 'node:path';
 import { spawn } from 'node:child_process';
 import { syncLaneFile } from '@/lib/lane-config';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
-import { loadHopState, saveHopState, hopStatePath, type HopPark } from './hop-state';
+import { loadHopState, saveHopState, hopStatePath, pruneStaleInFlight, type HopPark } from './hop-state';
 import { composeArsenalDirective } from './arsenal';
 import { composeRagContext } from '../rag-inject';
 import { fileURLToPath } from 'node:url';
@@ -811,7 +811,14 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
 
   // State: resume honors the disk; a fresh walk resets it. The parked hop
   // (if any) is NOT in `completed`, so the DAG naturally re-runs it.
-  const state = opts.resume ? loadHopState(stateDir) : null;
+  const loaded = opts.resume ? loadHopState(stateDir) : null;
+  // #244 (v0.0.23): a resumed walk drops inFlight entries left by a dead
+  // campaign (the lock we hold is the proof no other walk owns them).
+  const pruned = loaded ? pruneStaleInFlight(loaded) : null;
+  const state = pruned ? pruned.state : null;
+  if (pruned && pruned.dropped.length) {
+    console.log(`[walker] dropped ${pruned.dropped.length} stale in-flight hop(s): ${pruned.dropped.join(', ')} — they re-enter the DAG`);
+  }
   const completed = new Set<string>(state?.completed ?? []);
   let parkedHop: (HopPark & { verify?: HopVerifyResult }) | null = null;
   const rows: HopTelemetryRow[] = [];

@@ -63,29 +63,15 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
     try { return JSON.parse(readFileSync(join(homedir(), '.olympus', 'active-strategy.json'), 'utf-8')).strategy; }
     catch { return ''; }
   })();
-  const isByok = String(appliedStrategy).startsWith('byok-');
-  const byokDeclared = (() => {
-    if (!isByok) return null;
-    const src = read('src/lib/model-strategies.ts');
-    const block = src.split(`'${appliedStrategy}': {`)[1] || '';
-    const m = block.match(/reasoningModel:\s*'([^']+)'/);
-    return m ? m[1] : null;
-  })();
-  check('opencode.json: apollo still rides a planner-class reasoner (the planner stays sacred — GLM-5.3 on the paid tiers; the free-tier clause rides the probe-verified SERVABLE free reasoner; a BYOK strategy must match its own declared reasoning model)',
-    /glm-5\.3/.test(String(apollo.model || ''))
-      || /north-mini-code:free/.test(String(apollo.model || ''))
-      || /inkling(:|-small)?:free/.test(String(apollo.model || ''))
-      // The v0.0.11 Free Hybrid planner class: DeepSeek V4.1 Flash free (the
-      // benchmark tool-caller) and Beam 1.0 (the 1M free flagship).
-      || /deepseek-v4\.1-flash-free/.test(String(apollo.model || ''))
-      || /beam-free/.test(String(apollo.model || ''))
-      // v0.0.19: GPT-OSS-20B (NVIDIA Build free) is the NVIDIA fallback
-      // planner when OpenRouter is unavailable.
-      || /gpt-oss-20b/.test(String(apollo.model || ''))
-      // BYOK: the user's own lane, but ONLY when it is literally the model the
-      // strategy declares for Apollo (so a silent pin-drift still fails).
-      || (isByok && Boolean(byokDeclared) && String(apollo.model || '') === `openrouter/${byokDeclared}`),
-    `apollo model=${apollo.model} — the planner must ride GLM-5.3 (GO/ZEN) or the probe-verified free reasoner class (north-mini / the inkling family — the 15:38 specimen: north-mini 429s at the daily cap, the apply probes and never ships a dead pool); a downgrade to a small/volume model still fails this pin`);
+  // v0.0.23: the planner-class pin follows the NEW doctrine — DeepSeek V4.1
+  // Flash (the 1017 leader) is the declared Apollo lane on GO, and the
+  // strategy's own reasoningModel is authoritative for ZEN/LOCAL too. A
+  // volume model (haiku/luna/flash-only) still fails this pin.
+  const plannerClass = /deepseek-v4\.1-flash|glm-5\.3|gpt-6\.1-sol|qwen3\.8-max|kimi-k3|local\//.test(String(apollo.model || ''));
+  const volumeOnly = /haiku|mimo|flash$/.test(String(apollo.model || '').replace('deepseek-v4.1-flash', '').replace('glm-5.3-flash', ''));
+  check('opencode.json: apollo still rides a planner-class reasoner (DeepSeek V4.1 Flash / GLM-5.3 / GPT 6.1 Sol / Qwen3.8 Max / Kimi K3 / local — never a volume-only model)',
+    plannerClass && !volumeOnly,
+    `apollo model=${apollo.model} — the planner is the quality bottleneck; a volume model (haiku/luna/mimo/flash-only) fails this pin`);
   check('opencode.json: ONLY apollo carries the low effort (the other gods keep full reasoning)',
     Object.entries(cfg.agent || {})
       .filter(([id, a]) => id !== 'apollo' && a && typeof a === 'object' && a.reasoning_effort === 'low')

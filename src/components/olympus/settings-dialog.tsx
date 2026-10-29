@@ -18,6 +18,7 @@ import { Settings, Save, Loader2, Check, AlertCircle, AlertTriangle, Zap, BarCha
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { strategyApiRequirement, modelClassesForStrategy, estimateStrategyCost, type CostEstimate } from '@/lib/model-strategies';
+import StrategyBuilder from './strategy-builder';
 
 /* ------------------------------------------------------------------ */
 /* Settings Dialog — minimalist refactor.                              */
@@ -106,16 +107,16 @@ const GOD_DOMAINS: Record<string, string> = {
 // Do NOT edit by hand — update the canonical file and run `npm run check-strategy-sync`.
 // Enforced by scripts/check-strategy-sync.js in CI.
 const DEFAULT_CLASSES: Record<string, string> = {
-  apollo: 'opencode-go/glm-5.3',
+  apollo: 'opencode-go/deepseek-v4.1-flash',
   atlas: 'opencode-go/hy3',
-  artemis: 'opencode-go/glm-5.3-flash',
+  artemis: 'opencode-go/deepseek-v4.1-flash',
   athena: 'opencode-go/qwen3.7-plus',
-  dionysus: 'opencode-go/deepseek-v4.1-flash',
-  hephaestus: 'opencode-go/kimi-k2.7-code',
-  hermes: 'opencode-go/kimi-k2.7-code',
+  dionysus: 'opencode-go/qwen3.7-plus',
+  hephaestus: 'opencode-go/deepseek-v4.1-flash',
+  hermes: 'opencode-go/qwen3.7-plus',
   persephone: 'opencode-go/deepseek-v4.1-flash',
   prometheus: 'opencode-go/minimax-m3',
-  callimachus: 'opencode-go/glm-5.3-flash',
+  callimachus: 'opencode-go/deepseek-v4.1-flash',
 };
 
 const ALL_CLASSES = [
@@ -253,80 +254,80 @@ const ALL_CLASSES = [
 // Enforced by scripts/check-strategy-sync.js in CI.
 const STRATEGY_MODELS: Record<string, Record<string, string>> = {
   'go-max-quality': {
-    apollo: 'opencode-go/glm-5.3',
+    apollo: 'opencode-go/deepseek-v4.1-flash',
     atlas: 'opencode-go/hy3',
-    hephaestus: 'opencode-go/kimi-k2.7-code',
-    athena: 'opencode-go/glm-5.3',
     artemis: 'opencode-go/kimi-k3',
-    dionysus: 'opencode-go/glm-5.3',
-    hermes: 'opencode-go/kimi-k2.7-code',
-    persephone: 'opencode-go/glm-5.3',
+    athena: 'opencode-go/qwen3.7-plus',
+    dionysus: 'opencode-go/deepseek-v4.1-flash',
+    hephaestus: 'opencode-go/kimi-k2.7-code',
+    hermes: 'opencode-go/qwen3.7-plus',
+    persephone: 'opencode-go/deepseek-v4.1-flash',
     prometheus: 'opencode-go/minimax-m3',
-    callimachus: 'opencode-go/glm-5.3-flash',
+    callimachus: 'opencode-go/deepseek-v4.1-flash',
   },
   'go-balanced': {
-    apollo: 'opencode-go/glm-5.3',
-    atlas: 'opencode-go/hy3',
-    hephaestus: 'opencode-go/kimi-k2.7-code',
-    athena: 'opencode-go/qwen3.7-plus',
-    artemis: 'opencode-go/glm-5.3-flash',
-    dionysus: 'opencode-go/deepseek-v4.1-flash',
-    hermes: 'opencode-go/kimi-k2.7-code',
-    persephone: 'opencode-go/deepseek-v4.1-flash',
-    prometheus: 'opencode-go/minimax-m3',
-    callimachus: 'opencode-go/glm-5.3-flash',
-  },
-  'go-budget': {
-    apollo: 'opencode-go/glm-5.3-flash',
+    apollo: 'opencode-go/deepseek-v4.1-flash',
     atlas: 'opencode-go/hy3',
     artemis: 'opencode-go/deepseek-v4.1-flash',
-    athena: 'opencode-go/deepseek-v4.1-flash',
-    dionysus: 'opencode-go/deepseek-v4.1-flash',
+    athena: 'opencode-go/qwen3.7-plus',
+    dionysus: 'opencode-go/qwen3.7-plus',
     hephaestus: 'opencode-go/deepseek-v4.1-flash',
-    hermes: 'opencode-go/deepseek-v4.1-flash',
+    hermes: 'opencode-go/qwen3.7-plus',
     persephone: 'opencode-go/deepseek-v4.1-flash',
-    prometheus: 'opencode-go/deepseek-v4.1-flash',
+    prometheus: 'opencode-go/minimax-m3',
     callimachus: 'opencode-go/deepseek-v4.1-flash',
+  },
+  'go-budget': {
+    apollo: 'opencode-go/deepseek-v4.1-flash',
+    atlas: 'opencode-go/hy3',
+    artemis: 'opencode-go/deepseek-v4.1-flash',
+    athena: 'opencode-go/qwen3.8-flash',
+    dionysus: 'opencode-go/mimo-v2.6-flash',
+    hephaestus: 'opencode-go/deepseek-v4.1-flash',
+    hermes: 'opencode-go/mimo-v2.6-flash',
+    persephone: 'opencode-go/deepseek-v4.1-flash',
+    prometheus: 'opencode-go/mimo-v2.6-flash',
+    callimachus: 'opencode-go/mimo-v2.6-flash',
   },
   // Zen — full 128-agent shape on OpenCode Zen (pay-as-you-go). Models
   // use the opencode/<id> prefix (distinct from GO's opencode-go/<id>).
   // Zen is built around PROPRIETARY APIs (GPT, Claude, Gemini, Kimi,
   // MiniMax) — the GO plan runs the open-weight line.
   'zen-max-quality': {
-    apollo: 'opencode/glm-5.3',
-    atlas: 'opencode/gpt-6-sol',
-    hephaestus: 'opencode/claude-sonnet-5',
-    athena: 'opencode/gpt-5.6-terra',
-    artemis: 'opencode/claude-sonnet-5',
-    dionysus: 'opencode/gpt-5.6-luna',
-    hermes: 'opencode/claude-sonnet-5',
+    apollo: 'opencode/gpt-6.1-sol',
+    atlas: 'opencode/gpt-6.1-sol',
+    artemis: 'opencode/claude-opus-5-5',
+    athena: 'opencode/gpt-6-sol',
+    dionysus: 'opencode/gpt-6.1-sol',
+    hephaestus: 'opencode/claude-sonnet-5-5',
+    hermes: 'opencode/claude-sonnet-5-5',
     persephone: 'opencode/gemini-3.1-pro',
-    prometheus: 'opencode/grok-build-0.1',
-    callimachus: 'opencode/claude-haiku-4-5',
+    prometheus: 'opencode/grok-4.7',
+    callimachus: 'opencode/claude-haiku-5-5',
   },
   'zen-balanced': {
-    apollo: 'opencode/glm-5.3',
-    atlas: 'opencode/gpt-6-sol',
-    hephaestus: 'opencode/claude-sonnet-5',
-    athena: 'opencode/gpt-5.6-terra',
-    artemis: 'opencode/claude-sonnet-5',
-    dionysus: 'opencode/gpt-5.6-luna',
-    hermes: 'opencode/gpt-5.4-mini',
-    persephone: 'opencode/gemini-3.1-pro',
+    apollo: 'opencode/gpt-6.1-sol',
+    atlas: 'opencode/gpt-6-luna',
+    artemis: 'opencode/claude-sonnet-5-5',
+    athena: 'opencode/gpt-6-luna',
+    dionysus: 'opencode/claude-haiku-5-5',
+    hephaestus: 'opencode/claude-sonnet-5-5',
+    hermes: 'opencode/gpt-6-luna',
+    persephone: 'opencode/deepseek-v4.1-flash',
     prometheus: 'opencode/grok-build-0.1',
-    callimachus: 'opencode/claude-haiku-4-5',
+    callimachus: 'opencode/claude-haiku-5-5',
   },
   'zen-budget': {
-    apollo: 'opencode/glm-5.3',
+    apollo: 'opencode/gpt-6-luna',
     atlas: 'opencode/gpt-6-luna',
-    artemis: 'opencode/glm-5.3-flash',
+    artemis: 'opencode/deepseek-v4.1-flash',
     athena: 'opencode/glm-5.3-flash',
-    dionysus: 'opencode/glm-5.3-flash',
-    hephaestus: 'opencode/glm-5.3-flash',
-    hermes: 'opencode/glm-5.3-flash',
-    persephone: 'opencode/glm-5.3-flash',
+    dionysus: 'opencode/deepseek-v4.1-flash',
+    hephaestus: 'opencode/deepseek-v4.1-flash',
+    hermes: 'opencode/deepseek-v4.1-flash',
+    persephone: 'opencode/deepseek-v4.1-flash',
     prometheus: 'opencode/glm-5.3-flash',
-    callimachus: 'opencode/claude-haiku-4-5',
+    callimachus: 'opencode/claude-haiku-5-5',
   },
   'local': {
     apollo: 'opencode-go/glm-5.3-flash',
@@ -340,21 +341,6 @@ const STRATEGY_MODELS: Record<string, Record<string, string>> = {
     prometheus: 'opencode-go/minimax-m3',
     callimachus: 'opencode-go/glm-5.3-flash',
   },
-  // BYOK — the user's own OpenRouter key, every god on DeepSeek V4.1 Flash
-  // v1017 (1M ctx / 393k out). Mirrors byok-deepseek in
-  // src/lib/model-strategies.ts (check-strategy-sync).
-  'byok-deepseek': {
-    apollo: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    atlas: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    artemis: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    athena: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    dionysus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    hephaestus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    hermes: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    persephone: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    prometheus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-    callimachus: 'openrouter/deepseek/deepseek-v4.1-flash-1017',
-  },
 };
 
 // Fallback family split (used when the API is offline). The live API sends
@@ -367,20 +353,16 @@ const FALLBACK_CLASS_FAMILIES: Record<'GO' | 'ZEN' | 'FREE', string[]> = {
 
 // Map a strategy entry to the family whose models it may use. GO strategies
 // only offer opencode-go/*; Zen only opencode/*; Free only openrouter/* +
-// nvidia/*. custom-* strategies are FREE-ONLY (money safety — a
-// paid model in a custom strategy could silently burn credits).
-type StrategyFamilyKey = 'GO' | 'ZEN' | 'FREE' | 'BYOK' | 'LOCAL' | 'ALL';
+// nvidia/*. custom-* strategies may use any model registered in OpenCode.
+type StrategyFamilyKey = 'GO' | 'ZEN' | 'LOCAL' | 'ALL';
 function familyForStrategy(s: StrategyEntry | undefined): StrategyFamilyKey {
   if (!s) return 'GO';
   if (s.plan === 'GO') return 'GO';
   if (s.plan === 'ZEN') return 'ZEN';
-  // BYOK — the user's own paid key (byok-*). It is not free, so it must not
-  // borrow the FREE label ("best free lane per god") in the dropdown header.
-  if (typeof s.id === 'string' && s.id.startsWith('byok-')) return 'BYOK';
   // v0.0.22 — local is the user's own hardware; it borrows the GO catalog for
   // the per-god dropdown (its own models are discovered by the probe).
   if (s.plan === 'LOCAL' || s.id === 'local') return 'LOCAL';
-  return 'FREE'; // custom-* (legacy saved ids)
+  return 'ALL'; // custom-* — the user may pick any model registered in OpenCode
 }
 
 function fallbackData(): SettingsData {
@@ -440,6 +422,8 @@ export default function SettingsDialog() {
   const [benchSaving, setBenchSaving] = useState(false);
   // Custom Strategy Creator modal
   const [customStrategyOpen, setCustomStrategyOpen] = useState(false);
+  // v0.0.23 — the interactive Strategy Builder (search by model/provider).
+  const [builderOpen, setBuilderOpen] = useState(false);
   const [customStrategyName, setCustomStrategyName] = useState('');
   const [customStrategyGodModels, setCustomStrategyGodModels] = useState<Record<string, string>>({});
   const [customStrategyAuth, setCustomStrategyAuth] = useState<ApiAuth | null>(null);
@@ -844,7 +828,6 @@ export default function SettingsDialog() {
   const familyLabel =
     selectedFamily === 'GO' ? 'GO models'
     : selectedFamily === 'ZEN' ? 'ZEN models'
-    : selectedFamily === 'BYOK' ? 'Your key (BYOK) — the lane you pay for'
     : strategy === 'local'
       ? 'Local — your own hardware (the probe names the model)'
     : 'Free models (all providers)';
@@ -912,9 +895,17 @@ export default function SettingsDialog() {
                 <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">LLM Strategy</h3>
                 <Button
                   variant="ghost"
+                  onClick={() => setBuilderOpen(true)}
+                  className="ml-auto h-6 px-2 text-[9px] font-mono text-olympus-gold hover:bg-olympus-gold/10"
+                  aria-label="Build a strategy — pick a model per god"
+                >
+                  <Plus size={11} className="mr-1" /> Build
+                </Button>
+                <Button
+                  variant="ghost"
                   size="icon"
                   onClick={() => setCustomStrategyOpen(true)}
-                  className="ml-auto text-olympus-gold hover:bg-olympus-gold/10"
+                  className="text-olympus-gold hover:bg-olympus-gold/10"
                   aria-label="Create custom strategy"
                 >
                   <Plus size={12} />
@@ -1263,7 +1254,13 @@ export default function SettingsDialog() {
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+          <StrategyBuilder
+        open={builderOpen}
+        onClose={() => setBuilderOpen(false)}
+        initial={STRATEGY_MODELS[strategy]}
+        onApplied={() => { void loadProvidersData(); }}
+      />
+</Dialog>
     </>
   );
 }

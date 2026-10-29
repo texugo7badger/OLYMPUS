@@ -701,16 +701,16 @@ async function main() {
     const { composeHopPrompt } = await import(OLYMPUS + '/src/lib/hop-runtime/walker.ts');
     const prompt = composeHopPrompt({ id: 'probe', god: 'hephaestus', prompt: 'Build the API layer.', artifacts: [], after: [] }, '/tmp/fake-lane');
     expect('ARSENAL: the hop prompt carries the directive header',
-      prompt.includes('[YOUR ARSENAL — DEMIGOD ORCHESTRATION]'), 'missing the header');
+      prompt.includes('[YOUR ARSENAL — DEMIGOD TEAM ORCHESTRATION]'), 'missing the header');
     expect('ARSENAL: the doctrine names olympus-dispatch + verification',
-      /olympus-dispatch/.test(prompt) && /verify their artifacts/.test(prompt), 'the doctrine must ride the prompt');
+      /olympus-dispatch/.test(prompt) && /VERIFY, THEN SYNTHESIZE/.test(prompt), 'the doctrine must ride the prompt');
     expect('ARSENAL: the roster carries a REAL hephaestus demigod (build-resolver)',
       prompt.includes('- build_resolver'), 'the roster loader must read .opencode/prompts/agents/demigods/hephaestus/');
     expect('ARSENAL: the roster is a menu, not a biography (>= 5 one-liners)',
       (prompt.match(/^- [a-z_0-9-]+ — /gm) || []).length >= 5, 'expected >= 5 roster lines');
     const apolloPrompt = composeHopPrompt({ id: 'p', god: 'apollo', prompt: 'Plan.', artifacts: [], after: [] }, '/tmp/fake-lane');
     expect('ARSENAL: apollo carries its own roster (planner et al)',
-      apolloPrompt.includes('[YOUR ARSENAL — DEMIGOD ORCHESTRATION]') && apolloPrompt.includes('- planner'), 'apollo has demigods');
+      apolloPrompt.includes('[YOUR ARSENAL — DEMIGOD TEAM ORCHESTRATION]') && apolloPrompt.includes('- planner'), 'apollo has demigods');
   }
 
 main().then(() => {

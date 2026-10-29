@@ -69,6 +69,31 @@ export function loadHopState(stateDir: string): HopStateFile | null {
   };
 }
 
+/**
+ * #244 (v0.0.23) — STALE IN-FLIGHT RECONCILIATION.
+ *
+ * The spec: a hop left `inFlight` by a dead campaign (f3-4, stuck since
+ * 2026-10-24) blocked every new walk on the same lane. A hop is in flight
+ * only while a process carries it; the walk lock is the process evidence.
+ * A resumed walk therefore drops inFlight entries older than `maxAgeMs`
+ * and reports them — never a silent block, never a lost hop (it is not in
+ * `completed`, so the DAG re-runs it).
+ */
+export function pruneStaleInFlight(
+  state: HopStateFile,
+  maxAgeMs = 20 * 60_000,
+): { state: HopStateFile; dropped: string[] } {
+  const now = Date.now();
+  const keep: HopStateFile['inFlight'] = [];
+  const dropped: string[] = [];
+  for (const f of state.inFlight ?? []) {
+    const started = Date.parse(f.startedAt);
+    if (Number.isFinite(started) && now - started > maxAgeMs) dropped.push(f.hopId);
+    else keep.push(f);
+  }
+  return { state: { ...state, inFlight: keep }, dropped };
+}
+
 export function saveHopState(stateDir: string, state: HopStateFile): void {
   const p = hopStatePath(stateDir);
   writeFileSync(p, JSON.stringify({ ...state, updatedAt: new Date().toISOString() }, null, 2));

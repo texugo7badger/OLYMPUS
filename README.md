@@ -3,11 +3,11 @@
 </p>
 
 <p align="center">
-  <strong>Full arsenal. Every step visible. Yours to own.</strong>
+  <strong>Low-cost. Excellent quality. Always free.</strong>
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS badges — version, license, forks, stars, contributors" width="820" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.23, AGPL-3.0, 10 gods and 122 demigods, GO · ZEN · LOCAL" width="560" />
 </p>
 
 ---
@@ -98,10 +98,10 @@ olympus apply-strategy go-budget
 | **Atlas** | Orchestration & execution | Hy3 (sacred) |
 | **Artemis** | Security / auditing | Qwen3.7 Plus |
 | **Athena** | Frontend / design | Qwen3.7 Plus |
-| **Dionysus** | QA / testing | DeepSeek V4 Pro |
-| **Hephaestus** | Backend / infrastructure | DeepSeek V4 Pro |
+| **Dionysus** | QA / testing | DeepSeek V4.1 Flash |
+| **Hephaestus** | Backend / infrastructure | DeepSeek V4.1 Flash |
 | **Hermes** | Integrations / APIs / MCPs | Qwen3.7 Plus |
-| **Persephone** | Database / persistence | DeepSeek V4 Pro |
+| **Persephone** | Database / persistence | DeepSeek V4.1 Flash |
 | **Prometheus** | DevOps / CI-CD / deploy | Qwen3.7 Plus |
 | **Callimachus** | Background vault curator | DeepSeek V4 Flash |
 
@@ -139,16 +139,17 @@ GLM-5.3 is reserved for go-max-quality (Apollo + Artemis). The daily strategies 
 
 | Strategy | Apollo | Atlas | Specialists | Callimachus |
 |----------|--------|-------|-------------|-----------|
-| `go-max-quality` | GLM-5.3 | Hy3 | Kimi K2.7 Code / GLM-5.3-Flash / MiniMax M3 | GLM-5.3-Flash |
-| `go-balanced` (default) | GLM-5.3-Flash | Hy3 | Kimi K2.7 Code / Qwen3.7 Plus / GLM-5.3-Flash / MiniMax M3 | GLM-5.3-Flash |
-| `go-budget` | GLM-5.3-Flash | Hy3 | GLM-5.3-Flash | GLM-5.3-Flash |
-| `zen-max-quality` (**Zen**) | GLM-5.3 | GPT 6 Sol | Claude Sonnet 5 / GPT 5.6 Terra / GPT 5.6 Luna / Gemini 3.1 Pro / Grok Build 0.1 | Claude Haiku 4.5 |
-| `zen-balanced` (**Zen**) | GLM-5.3 | GPT 6 Sol | Claude Sonnet 5 / GPT 5.6 Terra / GPT 5.6 Luna / GPT 5.4 Mini / Gemini 3.1 Pro / Grok Build 0.1 | Claude Haiku 4.5 |
-| `zen-budget` (**Zen**) | GLM-5.3 | GPT 6 Luna | GLM-5.3-Flash | Claude Haiku 4.5 |
-| `byok-deepseek` (BYOK) | DeepSeek V4.1 Flash (OpenRouter) | DeepSeek V4.1 Flash | DeepSeek V4.1 Flash | DeepSeek V4.1 Flash |
-| `local` (**Local**) | your harness model | your harness model | your harness model | your harness model |
+| `go-max-quality` | DeepSeek V4.1 Flash | Hy3 | Kimi K2.7 Code (backend) · Qwen3.7 Plus (frontend/integrations) · Kimi K3 (security) · DeepSeek V4.1 Flash (QA/DB/vault) · MiniMax M3 (DevOps) | DeepSeek V4.1 Flash |
+| `go-balanced` (default) | DeepSeek V4.1 Flash | Hy3 | Qwen3.7 Plus (frontend/QA/integrations) · DeepSeek V4.1 Flash (backend/security/DB/vault) · MiniMax M3 (DevOps) | DeepSeek V4.1 Flash |
+| `go-budget` | DeepSeek V4.1 Flash | Hy3 | DeepSeek V4.1 Flash (backend/security/DB) · Qwen3.8 Flash (frontend) · MiMo-V2.6-Flash (QA/integrations/DevOps/vault) | MiMo-V2.6-Flash |
+| `zen-max-quality` (**Zen**) | GPT 6.1 Sol | GPT 6.1 Sol | Claude Sonnet 5.5 (backend/integrations) · GPT 6 Sol (frontend) · Claude Opus 5.5 (security) · Gemini 3.1 Pro (DB) · Grok 4.7 (DevOps) | Claude Haiku 5.5 |
+| `zen-balanced` (**Zen**) | GPT 6.1 Sol | GPT 6 Luna | Claude Sonnet 5.5 (backend/security) · GPT 6 Luna (frontend/integrations) · Claude Haiku 5.5 (QA) · DeepSeek V4.1 Flash (DB) · Grok Build 0.1 (DevOps) | Claude Haiku 5.5 |
+| `zen-budget` (**Zen**) | GPT 6 Luna | GPT 6 Luna | DeepSeek V4.1 Flash (backend/security/QA/DB) · GLM-5.3-Flash (frontend/DevOps) | Claude Haiku 5.5 |
+| `local` (**Local**) | your harness model | same | same | same |
 
 The **Zen** strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) run the full 128-agent OLYMPUS on OpenCode Zen — pay-as-you-go, **no request caps**, built around **proprietary APIs** (Claude Sonnet 5, GPT-5.4, Gemini 3.5 Flash, Kimi K2.7 Code, MiniMax) while the GO plan runs the open-weight line (GLM, DeepSeek, Qwen, Hy3). Model ids use `opencode/<id>`. Authorize via `olympus opencode` → `/connect` → OpenCode Zen (key stored in OpenCode's own auth.json under the `opencode` provider; env override `OPENCODE_API_KEY`). NOTE: OpenAI/Anthropic requests are retained 30 days per their data policies — the open-weight and free-on-Zen models are zero-retention.
+
+DeepSeek V4.1 Flash (the 1017 line) is the preferred lane across GO Balanced/Budget and the max-quality specialists; DeepSeek V4 Pro is retired. **ZEN** is the private-model lane (GPT 6.1 Sol, Claude Sonnet 5.5/Opus 5.5, Gemini 3.1 Pro, Grok 4.7) for users who want proprietary models.
 
 The **Local** strategy (`local`) requires no plan and no key: OLYMPUS probes your machine for a local LLM server (Ollama `:11434`, LM Studio `:1234`, vLLM `:8000`, llama.cpp `:8080`, or any OpenAI-compatible endpoint) and wires the full 10-god + 122-demigod arsenal to it. The apply refuses with the exact probe result if nothing answers — no dead config, no hidden fallback. Requirements: tool calling + ≥32k context; see [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) for the honest hardware table.
 

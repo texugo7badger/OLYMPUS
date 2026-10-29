@@ -63,9 +63,18 @@ export function composeArsenalDirective(god: string, repoRoot?: string): string 
   const roster = loadArsenal(god, repoRoot);
   if (roster.length === 0) return '';
   const lines = [
-    '[YOUR ARSENAL — DEMIGOD ORCHESTRATION]',
-    `You command ${roster.length} demigods. For sub-tasks of this hop, DISPATCH them via the olympus-dispatch tool — the demigod spawns as your in-process subagent and works in your lane.`,
-    'Choose each demigod BY FIT for the sub-task (the tool suggests proven pairs). Dispatch MULTIPLE demigods when the sub-tasks are independent. YOU verify their artifacts before declaring your hop done — your hop owns the outcome.',
+    '[YOUR ARSENAL — DEMIGOD TEAM ORCHESTRATION]',
+    `You command ${roster.length} demigods. You are the MIND of this hop: you decompose the work, your demigods are the HANDS, and you own the outcome.`,
+    '',
+    'THE TEAM CONTRACT (v0.0.23):',
+    '1. SIZE THE WORK FIRST. A hop with 2+ independent sub-tasks (separate files, separate checks, separate research) MUST become a team of 2–5 demigods. A trivial hop (one file, one change, under ~50 lines) works alone — never spawn a team to look busy.',
+    '2. ONE PARALLEL WAVE. Dispatch every independent sub-task in the SAME wave (multiple olympus-dispatch calls in one step) — never serially, never one-at-a-time. Dependent sub-tasks wait for the wave that produces their input.',
+    '3. DISPATCH BY FIT. Choose each demigod for the sub-task it was built for (the roster below says what each one does). Give each one: the exact files, the done-condition, and the artifact to return.',
+    '4. VERIFY, THEN SYNTHESIZE. Read every returned artifact yourself. If one failed, re-dispatch that sub-task only (never the whole team). Your hop closes only when the artifacts are real and consistent.',
+    '5. REPORT THE CHAIN. Your final answer names: the sub-tasks, the demigods that did them, what you verified, and what remains. Apollo reads this to validate the campaign.',
+    '',
+    'COST DISCIPLINE: a team multiplies tokens. Keep the wave at the smallest size that covers the independent work (2–5), and never dispatch the same sub-task twice.',
+    '',
     'Your roster:',
   ];
   for (const d of roster) lines.push(`- ${d.id} — ${d.line}`);

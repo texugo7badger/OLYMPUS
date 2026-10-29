@@ -144,7 +144,7 @@ try {
   const cfgAfter = JSON.parse(fs.readFileSync(path.join(TMP_ROOT, 'opencode.json'), 'utf-8'));
   expect('apply-1 enabled the OLYMPUS overlay plugin', (cfgAfter.plugin || []).includes('./.opencode/olympus'), true);
   expect('apply-1 loaded the demigods (132 agents)', Object.keys(cfgAfter.agent || {}).length, 132);
-  expect('apply-1 set the GO small_model', cfgAfter.small_model, 'opencode-go/glm-5.3-flash');
+  expect('apply-1 set the GO small_model', cfgAfter.small_model, 'opencode-go/deepseek-v4.1-flash');
   expect('apply-1 wrote the file-ref prompt shape', String(cfgAfter.agent?.apollo?.prompt || '').startsWith('{file:'), true);
 } finally {
   fs.rmSync(TMP_BASE, { recursive: true, force: true });
