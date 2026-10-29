@@ -55,5 +55,10 @@ check('T4 prune keeps young entries', /now - started > maxAgeMs/.test(hopState))
 check('T5 walker prunes on resume', /pruneStaleInFlight\(loaded\)/.test(walker));
 check('T5 walker logs the dropped hops', /dropped .* stale in-flight hop/.test(walker));
 
+// T6 — vault TTL prune on idle (#233), bounded to once per 6h.
+const hooks = fs.readFileSync(join(ROOT, '.opencode/olympus/olympus-hooks.ts'), 'utf-8');
+check('T6 session.idle prunes the vault', /VAULT TTL PRUNE ON IDLE/.test(hooks) && /vault-prune\.js/.test(hooks));
+check('T6 prune is bounded to once per 6h', /SIX_HOURS/.test(hooks) && /last-vault-prune/.test(hooks));
+
 console.log(`\nteam-orchestration: ${checked - failures} passed, ${failures} failed`);
 process.exit(failures === 0 ? 0 : 1);

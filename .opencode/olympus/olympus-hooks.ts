@@ -767,6 +767,28 @@ function buildRootSessionHooks(): Record<string, unknown> {
         });
         atlasRecordHeartbeat(rootAgent, "idle");
       } catch { /* never blocks the idle path */ }
+      // #233 (v0.0.23) — VAULT TTL PRUNE ON IDLE, bounded to once per 6h.
+      // The vault grows with every session; the prune script enforces the
+      // TTL policy. A marker file keeps it from spawning on every idle.
+      try {
+        const { spawn } = await import("node:child_process");
+        const { existsSync, statSync, writeFileSync, realpathSync } = await import("node:fs");
+        const os = await import("node:os");
+        const path = await import("node:path");
+        const marker = path.join(os.homedir(), ".olympus", "last-vault-prune");
+        const SIX_HOURS = 6 * 60 * 60 * 1000;
+        const fresh = existsSync(marker) && Date.now() - statSync(marker).mtimeMs < SIX_HOURS;
+        if (!fresh) {
+          // The lane carries `.opencode` as a symlink to the OLYMPUS repo —
+          // resolve it to find scripts/vault-prune.js from any project.
+          const repo = realpathSync(path.join(process.cwd(), ".opencode"));
+          const script = path.join(repo, "scripts", "vault-prune.js");
+          if (existsSync(script)) {
+            writeFileSync(marker, new Date().toISOString());
+            spawn(process.execPath, [script], { detached: true, stdio: "ignore" }).unref();
+          }
+        }
+      } catch { /* pruning is maintenance — never blocks the idle path */ }
     },
   };
 }
