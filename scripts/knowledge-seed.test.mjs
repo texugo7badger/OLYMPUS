@@ -112,6 +112,11 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf-8');
   expect('K6 the block is bounded', /700/.test(src));
   const route = read('src/app/api/olympus/action/route.ts');
   expect('K6 the action route injects the knowledge block', /composeKnowledgeBlock/.test(route) && /knowledgeBlock/.test(route));
+  const { selectKnowledgeForTask } = await import('../src/lib/knowledge-hints.ts');
+  const a11y = selectKnowledgeForTask({ god: 'athena', stacks: ['react'], text: 'build an accessible landing page' });
+  expect('K6 an a11y task selects the accessibility reference', a11y[0]?.relPath === 'design/accessibility.md', JSON.stringify(a11y.slice(0, 2)));
+  const data = selectKnowledgeForTask({ god: 'persephone', stacks: ['postgres'], text: 'design a schema and optimize a slow query' });
+  expect('K6 a data task selects schema/query references', data.some((x) => /schema-design|query-performance/.test(x.relPath)), JSON.stringify(data));
 }
 
 console.log(`\nknowledge-seed: ${passed} passed, ${failures} failed`);

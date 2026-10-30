@@ -124,6 +124,7 @@ export function selectKnowledgeForTask(opts: {
   const wants = words(opts.text || '');
   const stacks = new Set((opts.stacks ?? []).map((s) => s.toLowerCase()));
   const god = (opts.god || '').toLowerCase();
+  const text = (opts.text || '').toLowerCase();
   const scored = notes.map((n) => {
     let score = 0;
     if (god && (n.god === god || CATEGORY_GOD[n.category] === god)) score += 4;
@@ -134,6 +135,13 @@ export function selectKnowledgeForTask(opts: {
       for (const w of wants) if (noteWords.has(w)) overlap++;
       score += Math.min(overlap, 4);
     }
+    // Stem-level intent (accessible → accessibility, a11y → accessibility).
+    if (/accessib|a11y|wcag/.test(text) && /accessibility/.test(n.relPath)) score += 7;
+    if (/perform|slow|latency|vital|core web/.test(text) && /performance/.test(n.relPath)) score += 5;
+    if (/schema|migration|database|table/.test(text) && /schema-design/.test(n.relPath)) score += 5;
+    if (/query|index|explain/.test(text) && /query-performance/.test(n.relPath)) score += 5;
+    if (/threat|attack|owasp|stride/.test(text) && /threat-modeling/.test(n.relPath)) score += 6;
+    if (/mcp|tool server/.test(text) && /integrations\/mcp/.test(n.relPath)) score += 5;
     return { ...n, score };
   });
   return scored
