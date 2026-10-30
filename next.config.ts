@@ -42,6 +42,22 @@ const nextConfig = {
       'docs/**',
       'extensions/**',
       'Todas as estratégias*.md',
+      // v0.0.25 — the standalone must carry ONLY what the Next server needs.
+      // Turbopack traced the OpenCode CLI packages (1.2 GB @opencode + 171 MB
+      // opencode-ai) because the app resolves those paths dynamically at
+      // runtime; they are read from the app root/asar, never from the
+      // standalone tree. Excluding them turns a 1.5 GB standalone into ~100 MB
+      // that can be copied into the packaged app.
+      'node_modules/@opencode/**',
+      'node_modules/opencode-ai/**',
+      'node_modules/electron/**',
+      'node_modules/@electron/**',
+      'node_modules/typescript/**',
+      'node_modules/tsx/**',
+      'node_modules/esbuild/**',
+      'node_modules/@esbuild/**',
+      'node_modules/playwright/**',
+      'node_modules/@playwright/**',
     ],
   },
   // #STANDALONE-WS (v0.0.25, the boot crash): the instrumentation hook loads

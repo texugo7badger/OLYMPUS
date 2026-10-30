@@ -105,16 +105,14 @@ files:
 # These go into the app's `resources/` directory (outside the ASAR).
 # extensions/ is included so the packaged app ships the olympus-bridge .vsix
 # for users to install into their editor of choice.
-extraResources:
-  - from: .next/standalone
-    to: next-standalone
-    filter: ['**/*']
-  - from: .next/static
-    to: next-standalone/.next/static
-    filter: ['**/*']
-  - from: public
-    to: next-standalone/public
-    filter: ['**/*']
+# v0.0.25 — the standalone tree is copied by scripts/after-pack.cjs, NOT by
+# extraResources. electron-builder's extraResources silently dropped
+# `node_modules` (the packaged server then died with "Cannot find module
+# 'next'"), and the AppImage shipped a server that could not boot. The
+# afterPack hook does a deterministic fs.cpSync of the complete tree.
+# (scripts/sync-standalone-assets.mjs already put .next/static + public INSIDE
+# .next/standalone, so one copy is enough.)
+afterPack: scripts/after-pack.cjs
 # Pack the main process into an ASAR archive for integrity + faster loads.
 asar: true
 # Unpack native modules so they can be loaded by Node from disk
