@@ -86,16 +86,16 @@ async function main() {
     /setQueued\(prev => \[/.test(termSrc) && /queuePausedRef\.current = true/.test(termSrc),
     'the queue never drains / never pauses');
 
-  const studioSrc = read('src/app/api/olympus/design-studio/route.ts');
-  const studioUiSrc = read('src/components/olympus/design-studio.tsx');
-  expect('#208: the Design Studio route serves proposals + saved decisions',
-    /filterReferences/.test(studioSrc) && /PALETTES/.test(studioSrc)
-    && /LOGOS/.test(studioSrc) && /design-decisions\.jsonl/.test(studioSrc),
-    'no proposal route');
-  expect('#208: the Design Studio UI is wired into the terminal',
-    /DesignStudio/.test(termSrc) && /Athena's Design Studio/.test(termSrc)
-    && /references/.test(studioUiSrc) && /palettes/.test(studioUiSrc) && /logos/.test(studioUiSrc),
-    'the proposals have no surface');
+  const choiceRouteSrc = read('src/app/api/olympus/design-choice/route.ts');
+  const choiceUiSrc = read('src/components/olympus/design-choice-card.tsx');
+  expect('#208: the in-chat design choice route serves + persists decisions',
+    /export async function GET/.test(choiceRouteSrc) && /design-decisions\.jsonl/.test(choiceRouteSrc)
+    && /function safeSlug/.test(choiceRouteSrc) && /design-choice-selected/.test(choiceRouteSrc),
+    'no in-chat choice route');
+  expect('#208: the DesignChoiceCard is wired inline in the terminal',
+    /DesignChoiceCard/.test(termSrc) && !/DesignStudio/.test(termSrc)
+    && /o\.svg/.test(choiceUiSrc) && /o\.colors/.test(choiceUiSrc) && /refineOpen/.test(choiceUiSrc),
+    'the choices have no inline surface');
 
   // ── Functional: language (fresh module against a temp OLYMPUS_HOME) ──────
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-w5-home-'));
@@ -204,46 +204,38 @@ async function main() {
     !!hitlRow && hitlRow.meta.decision === 'patch' && hitlRow.meta.rider === 'use a shadow instead of a border',
     'no hitl-decision feed row');
 
-  // ── Functional: Design Studio (#208) ─────────────────────────────────────
-  const studio = await imp('src/app/api/olympus/design-studio/route.ts');
-  const allRes = await studio.GET({ url: 'http://localhost/api/olympus/design-studio?project=aurora' });
-  const allBody = await allRes.json();
-  expect('#208: GET returns the full proposal set (10 references, 5 palettes, 3 logos)',
-    allBody.ok && allBody.references.length === 10 && allBody.palettes.length === 5 && allBody.logos.length === 3,
-    `refs=${allBody.references?.length} palettes=${allBody.palettes?.length} logos=${allBody.logos?.length}`);
-  const getRes = await studio.GET({ url: 'http://localhost/api/olympus/design-studio?project=aurora&query=pricing' });
-  const getBody = await getRes.json();
-  expect('#208: the query filters references toward the task (pricing first)',
-    getBody.references[0]?.id === 'ref-pricing-anchor',
-    getBody.references[0]?.id);
-  const badKind = await studio.POST({ json: async () => ({ project: 'aurora', kind: 'vibes', decision: { id: 'x' } }) });
-  expect('#208: an invalid kind is rejected (400)', badKind.status === 400, `status=${badKind.status}`);
-  const traversal = await studio.POST({ json: async () => ({ project: '../evil', kind: 'palette', decision: { id: 'x' } }) });
-  expect('#208: a path-traversal slug is rejected (400)', traversal.status === 400, `status=${traversal.status}`);
-  const saveRes = await studio.POST({
-    json: async () => ({
-      project: 'aurora', kind: 'palette', conversationId: 'conv-1',
-      decision: { id: 'pal-aurora-noir', name: 'Aurora Noir' },
-    }),
-  });
-  const saveBody = await saveRes.json();
-  expect('#208: a valid decision is appended to the project record',
-    saveRes.status === 200 && saveBody.ok && saveBody.saved.kind === 'palette'
-    && saveBody.saved.decision.name === 'Aurora Noir',
-    JSON.stringify(saveBody));
+  // ── Functional: in-chat design choice (#208) ─────────────────────────────
+  const feedPath = path.join(vault, '06_Activity_Feed', 'live.jsonl');
+  fs.appendFileSync(feedPath, JSON.stringify({
+    ts: new Date().toISOString(), god: 'athena', action: 'design-choice-requested',
+    review_id: 'review-w5-1', project: 'aurora', task_context: 'A coffee brand',
+    options: [
+      { id: 'opt-a', label: 'Aurora mark', kind: 'logo', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><circle cx="60" cy="60" r="30" fill="currentColor"/></svg>' },
+      { id: 'opt-b', label: 'Warm editorial', kind: 'palette', colors: [{ role: 'bg', hex: '#F5EFE6' }, { role: 'ink', hex: '#2B1D14' }] },
+    ],
+    suggestions: ['warmer'], allow_refine: true,
+  }) + '\n');
+  const choice = await imp('src/app/api/olympus/design-choice/route.ts');
+  const getChoice = await choice.GET();
+  const getChoiceBody = await getChoice.json();
+  expect('#208: GET returns the pending dynamic options',
+    getChoiceBody.ok && getChoiceBody.choice?.reviewId === 'review-w5-1' && getChoiceBody.choice.options.length === 2,
+    JSON.stringify(getChoiceBody).slice(0, 240));
+  const saveChoice = await choice.POST({ json: async () => ({ reviewId: 'review-w5-1', action: 'select', optionId: 'opt-b', conversationId: 'conv-1' }) });
+  const saveChoiceBody = await saveChoice.json();
+  expect('#208: POST selects the option and returns the follow-up turn',
+    saveChoice.status === 200 && saveChoiceBody.ok && /I chose "Warm editorial"/.test(saveChoiceBody.followUp),
+    JSON.stringify(saveChoiceBody).slice(0, 240));
   const decisionsFile = path.join(vault, '02_Projects', 'aurora', 'design-decisions.jsonl');
-  expect('#208: the record file exists with the decision',
-    fs.existsSync(decisionsFile) && fs.readFileSync(decisionsFile, 'utf-8').includes('Aurora Noir'),
+  expect('#208: the decision is persisted in the project record',
+    fs.existsSync(decisionsFile) && fs.readFileSync(decisionsFile, 'utf-8').includes('Warm editorial'),
     'the decision was not persisted');
-  const reread = await studio.GET({ url: 'http://localhost/api/olympus/design-studio?project=aurora' });
-  const rereadBody = await reread.json();
-  expect('#208: a later GET re-serves the saved decision',
-    rereadBody.saved.length === 1 && rereadBody.saved[0].decision.id === 'pal-aurora-noir',
-    JSON.stringify(rereadBody.saved));
-  const feedRows = fs.readFileSync(path.join(vault, '06_Activity_Feed', 'live.jsonl'), 'utf-8').trim().split('\n').map((l) => JSON.parse(l));
-  expect('#208: the saved decision lands on the activity feed',
-    feedRows.some((r) => r.action === 'design-decision' && r.god === 'athena' && r.meta?.project === 'aurora'),
-    'no design-decision feed row');
+  const afterChoice = await (await choice.GET()).json();
+  expect('#208: the resolved choice is no longer pending', afterChoice.choice === null, JSON.stringify(afterChoice));
+  const feedRows = fs.readFileSync(feedPath, 'utf-8').trim().split('\n').map((l) => JSON.parse(l));
+  expect('#208: the selection lands on the activity feed',
+    feedRows.some((r) => r.action === 'design-choice-selected' && r.review_id === 'review-w5-1'),
+    'no design-choice-selected row');
 
   console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);

@@ -197,7 +197,7 @@ export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
               ) : o.colors && o.colors.length > 0 ? (
                 <div className="flex rounded overflow-hidden ring-1 ring-white/10 h-8">
                   {o.colors.slice(0, 8).map((c, i) => (
-                    <div key={`${c.role}-${i}`} className="flex-1" style={{ background: c.hex }} title={`${c.role} · ${c.hex}`} />
+                    <div key={`${c.role}-${i}`} className="flex-1" style={{ background: c.hex }} data-tip={`${c.role} · ${c.hex}`} data-tip-side="bottom" />
                   ))}
                 </div>
               ) : o.text ? (
