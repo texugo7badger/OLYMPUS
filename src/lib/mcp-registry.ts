@@ -22,6 +22,7 @@ import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'node:url';
 import { findMcpRequirement, getMcpEnvVarKeys, findMcpServerRequirement } from './mcp-api-requirements';
+import { findOlympusRoot } from './opencode-spawn';
 import {
   normalizeMcpEntry,
   toRuntimeConfig,
@@ -47,14 +48,30 @@ export const CURATED_MCP_SERVERS = [
   'olympus-craft',
 ] as const;
 
-/** Resolve the repo root (the OLYMPUS_ROOT env or the module's own tree). */
+/**
+ * Resolve the repo root (v0.0.25).
+ *
+ * Order: the env root IF it holds opencode.json → the shared resolver (which
+ * normalizes `.next/standalone` back to the repo) → the module-relative tree
+ * IF it holds opencode.json → cwd. The old version trusted the env blindly and
+ * fell back to a bundled-chunk path, which is how a standalone run read a
+ * build-time copy (or nothing) instead of the project.
+ */
 function olympusRoot(): string {
-  if (process.env.OLYMPUS_ROOT) return process.env.OLYMPUS_ROOT;
+  const hasConfig = (dir: string) => {
+    try { return fs.existsSync(path.join(dir, 'opencode.json')); } catch { return false; }
+  };
+  const env = process.env.OLYMPUS_ROOT;
+  if (env && hasConfig(env)) return env;
   try {
-    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-  } catch {
-    return process.cwd();
-  }
+    const found = findOlympusRoot();
+    if (hasConfig(found)) return found;
+  } catch { /* fall through */ }
+  try {
+    const rel = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+    if (hasConfig(rel)) return rel;
+  } catch { /* fall through */ }
+  return process.cwd();
 }
 
 export interface ListMcpServersOpts {

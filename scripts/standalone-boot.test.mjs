@@ -24,6 +24,8 @@
  */
 
 import fs from 'node:fs';
+import os from 'node:os';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -111,6 +113,31 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf-8');
   } else {
     console.log('SKIP  S7 no standalone build present (run `next build` to exercise it)');
   }
+}
+
+// ── S9: root normalization (a standalone run must read the REPO config) ──
+{
+  const { normalizeProjectRoot } = await import('../src/lib/opencode-spawn.ts');
+  expect('S9 .next/standalone normalizes to the repo',
+    normalizeProjectRoot('/home/x/proj/.next/standalone') === '/home/x/proj',
+    normalizeProjectRoot('/home/x/proj/.next/standalone'));
+  expect('S9 a packaged next-standalone is left alone',
+    normalizeProjectRoot('/mnt/resources/next-standalone') === '/mnt/resources/next-standalone');
+
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-root-'));
+  const proj = path.join(tmp, 'proj');
+  const standalone = path.join(proj, '.next', 'standalone');
+  fs.mkdirSync(standalone, { recursive: true });
+  fs.writeFileSync(path.join(proj, 'package.json'), JSON.stringify({ name: 'olympus' }));
+  fs.writeFileSync(path.join(proj, 'opencode.json'), '{"mcp":{}}');
+  fs.writeFileSync(path.join(standalone, 'package.json'), JSON.stringify({ name: 'olympus' }));
+  fs.writeFileSync(path.join(standalone, 'opencode.json'), '{"mcp":{}}');
+  const child = spawnSync('npx', ['tsx', '-e',
+    `import { findOlympusRoot } from ${JSON.stringify(path.join(ROOT, 'src/lib/opencode-spawn.ts'))}; console.log(findOlympusRoot())`,
+  ], { cwd: standalone, encoding: 'utf-8', timeout: 120_000, env: { ...process.env, OLYMPUS_ROOT: '' } });
+  const out = String(child.stdout || '').trim().split('\n').pop();
+  expect('S9 findOlympusRoot from .next/standalone returns the repo', out === proj, out || child.stderr);
+  fs.rmSync(tmp, { recursive: true, force: true });
 }
 
 console.log(`\nstandalone-boot: ${passed} passed, ${failures} failed`);

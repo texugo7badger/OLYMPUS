@@ -27,7 +27,7 @@
 
 import { spawn, execFileSync, type ChildProcess, type SpawnOptions } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync, copyFileSync, unlinkSync, readdirSync, appendFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { syncLaneFile } from './lane-config';
 import { platform, homedir } from 'node:os';
 import { decryptValue } from './env-crypto';
@@ -45,14 +45,35 @@ const isWindows = platform() === 'win32';
  */
 let _cachedRoot: string | null = null;
 
+/**
+ * v0.0.25 — NORMALIZE the standalone path.
+ *
+ * A production/source run serves `<repo>/.next/standalone/server.js`, and that
+ * directory carries a COPY of package.json + opencode.json. The old resolver
+ * stopped there: the app read a build-time config copy (the root of the
+ * "24 vs 28 servers" mystery), wrote MCP toggles into `.next/` (lost on every
+ * rebuild), and looked for the OpenCode CLI under `.next/standalone/node_modules`.
+ * The real project root is two levels up.
+ */
+export function normalizeProjectRoot(dir: string): string {
+  const abs = resolve(dir);
+  if (basename(abs) === 'standalone' && basename(dirname(abs)) === '.next') {
+    return dirname(dirname(abs));
+  }
+  return abs;
+}
+
 export function findOlympusRoot(): string {
   if (_cachedRoot) return _cachedRoot;
 
   // 1. OLYMPUS_ROOT env var (set by the Electron main process when it
   //    spawns Next.js — see electron/main.ts + native-terminal.ts).
-  if (process.env.OLYMPUS_ROOT && existsSync(join(process.env.OLYMPUS_ROOT, 'opencode.json'))) {
-    _cachedRoot = process.env.OLYMPUS_ROOT;
-    return _cachedRoot;
+  if (process.env.OLYMPUS_ROOT) {
+    const envRoot = normalizeProjectRoot(process.env.OLYMPUS_ROOT);
+    if (existsSync(join(envRoot, 'opencode.json'))) {
+      _cachedRoot = envRoot;
+      return _cachedRoot;
+    }
   }
 
   // 2. Walk up from process.cwd().
@@ -67,6 +88,11 @@ export function findOlympusRoot(): string {
         const pkgRaw = readFileSync(join(dir, 'package.json'), 'utf-8');
         const pkg = JSON.parse(pkgRaw);
         if (pkg?.name === 'olympus') {
+          const normalized = normalizeProjectRoot(dir);
+          if (existsSync(join(normalized, 'opencode.json'))) {
+            _cachedRoot = normalized;
+            return _cachedRoot;
+          }
           _cachedRoot = dir;
           return _cachedRoot;
         }
