@@ -1,6 +1,8 @@
 # OLYMPUS Roadmap
 
-**v0.0.23 is the current release** (shipped 2026-10-29 — "THE STRATEGY ENGINE": the GO/ZEN rosters rebuilt from the live catalogue with DeepSeek V4.1 Flash as the preferred lane (DeepSeek V4 Pro retired), BYOK deleted, the interactive Strategy Builder (search any model registered in OpenCode), the MCP arsenal probed and curated to 44 tools, the demigod TEAM CONTRACT (2–5 parallel sub-agents per hop), stale in-flight reconciliation, and a minimalist header/badge identity. See [CHANGELOG.md](CHANGELOG.md).
+**v0.0.24 is the current release** (shipped 2026-10-30 — "THE HONEST SURFACE": one canonical MCP registry (28 unique, 44 tools, the curated six connected), one portal tooltip, the retired free-tier UI/plumbing removed, Athena's in-chat design choices (Design Studio deleted), 13 sourced god-domain knowledge references, project homes in `OLYMPUS-VAULT/02_Projects`, and the four open flow issues (#231 adaptive polling/paginated feed, #226 campaign grouping, #227 live in-flight panel, #241 warm hop transport). See [CHANGELOG.md](CHANGELOG.md).
+
+**v0.0.23** (shipped 2026-10-29 — "THE STRATEGY ENGINE": the GO/ZEN rosters rebuilt from the live catalogue with DeepSeek V4.1 Flash as the preferred lane (DeepSeek V4 Pro retired), BYOK deleted, the interactive Strategy Builder (search any model registered in OpenCode), the MCP arsenal probed and curated to 44 tools, the demigod TEAM CONTRACT (2–5 parallel sub-agents per hop), stale in-flight reconciliation, and a minimalist header/badge identity. See [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
