@@ -634,7 +634,7 @@ export default function SettingsDialog() {
             headers: { 'Content-Type': 'application/json' },
             // Send the target strategy so the API validates this override
             // against the target's catalog (a stale persisted strategy would
-            // otherwise reject a valid pin, e.g. on free-big-pickle).
+            // otherwise reject a valid pin from a retired strategy).
             body: JSON.stringify({ god, override, strategy }),
           });
           if (!res.ok) {
