@@ -8,20 +8,20 @@ Gods are `mode: "primary"` or `mode: "subagent"` agents in `opencode.json`. Apol
 
 | God | Domain | Model (go-balanced) | Role |
 |-----|--------|---------------------|------|
-| **Apollo** | Planning & architecture | `opencode-go/glm-5.3` | The only god who talks to the user. Plans the task DAG, defines acceptance criteria, hands execution to Atlas. |
+| **Apollo** | Planning & architecture | `opencode-go/deepseek-v4.1-flash` | The only god who talks to the user. Plans the task DAG, defines acceptance criteria, hands execution to Atlas. |
 | **Atlas** | Orchestration & execution | `opencode-go/hy3` | The god who executes the plan. Apollo plans, Atlas dispatches. Hy3 is sacred — never downgraded. Excels at agent orchestration with lower token cost. |
-| **Artemis** | Security & auditing | `opencode-go/qwen3.7-plus` | SAST, pentesting, compliance, threat modeling, secrets scanning. |
+| **Artemis** | Security & auditing | `opencode-go/deepseek-v4.1-flash` | SAST, pentesting, compliance, threat modeling, secrets scanning. |
 | **Athena** | Frontend & design | `opencode-go/qwen3.7-plus` | React/Next.js, accessibility, design systems, UI verification. |
-| **Dionysus** | QA & testing | `opencode-go/deepseek-v4-pro` | TDD, E2E, evidence collection, performance testing, mutation testing. |
-| **Hephaestus** | Backend code | `opencode-go/deepseek-v4-pro` | Multi-language code review, build resolution, API design, refactoring. |
+| **Dionysus** | QA & testing | `opencode-go/qwen3.7-plus` | TDD, E2E, evidence collection, performance testing, mutation testing. |
+| **Hephaestus** | Backend code | `opencode-go/deepseek-v4.1-flash` | Multi-language code review, build resolution, API design, refactoring. |
 | **Hermes** | Integrations & MCPs | `opencode-go/qwen3.7-plus` | MCP building, API wiring, LLM architecture, research. |
-| **Persephone** | Database & persistence | `opencode-go/deepseek-v4-pro` | Schema design, migrations, data engineering, DBRE. |
-| **Prometheus** | DevOps & CI/CD | `opencode-go/qwen3.7-plus` | Docker, Terraform, SRE, incident response, release engineering. |
-| **Callimachus** | Vault curation | `opencode-go/deepseek-v4-flash` | Instinct lifecycle, brain backup/restore, docs verification. Runs the 7-stage brain maintenance loop on `session.idle`. |
+| **Persephone** | Database & persistence | `opencode-go/deepseek-v4.1-flash` | Schema design, migrations, data engineering, DBRE. |
+| **Prometheus** | DevOps & CI/CD | `opencode-go/minimax-m3` | Docker, Terraform, SRE, incident response, release engineering. |
+| **Callimachus** | Vault curation | `opencode-go/deepseek-v4.1-flash` | Instinct lifecycle, brain backup/restore, docs verification. Runs the 7-stage brain maintenance loop on `session.idle`. |
 
 **Total: 10 gods + 122 demigods = 132 agents.**
 
-Apollo is always on the GLM family (sacred — never downgraded): FULL GLM-5.3 in go-max-quality (shared with Athena/Dionysus/Persephone there) AND in go-balanced (the 2026-10-16 upgrade — the planner is the quality bottleneck, and the hop runtime's small-burst request shape stretches the $3/5h rolling cap far past the old interactive-turn economics); GLM-5.3-Flash only in go-budget (the cap-aware fallback). **The free-tier clause is RETIRED (v0.0.22)**: the free tier is gone; the zero-cost path is the `local` strategy (the user's own hardware — Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint), where the probe names the model and the dashboard shows it. A stalled lane is not planning quality. Atlas is always on Hy3 in the GO strategies (sacred — never downgraded; Zen substitutes GPT 6 Sol/Luna because Hy3 is GO-only). Hy3 excels at agent orchestration — Atlas's domain — and is more cost-effective than alternatives.
+**Apollo rides DeepSeek V4.1 Flash** (1M ctx / 384k out, 173k req/mo on GO) in every GO strategy — the 1017 line is the planner floor; the old GLM-5.3 "sacred" rule was retired with DeepSeek V4 Pro in v0.0.23. `go-max-quality` upgrades the specialists (Kimi K2.7 Code, Kimi K3, Qwen3.7 Plus, MiniMax M3), never the planner. **The free-tier clause is RETIRED (v0.0.22)**: the zero-cost path is the `local` strategy (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint), where the probe names the model. Atlas is always on Hy3 in the GO strategies (Zen substitutes GPT 6.1 Sol / GPT 6 Luna because Hy3 is GO-only).
 
 ---
 
@@ -46,7 +46,7 @@ Demigods are **unprefixed** — a demigod is `build-resolver`, not `hephaestus-b
 
 > **Editor Bridge:** OLYMPUS does not ship a built-in code editor. Gods edit code by launching the user's preferred external editor (Zed, VSCode, VSCodium, Cursor) on the active project via the Editor Bridge tab. The live terminal is shared between the Electron app and the user's IDE via the Terminal Bridge (port 3740) — see [EDITORS.md](EDITORS.md). Agent dispatch + Symphony + instinct system are unchanged.
 
-> **Strategy engine + teams (v0.0.23):** DeepSeek V4.1 Flash (1017) is the preferred lane across the GO strategies — it replaced DeepSeek V4 Pro and GLM-5.3-Flash on the quality roles; BYOK is deleted (every provider, OpenRouter and NVIDIA included, is registered in OpenCode and chosen in the Strategy Builder). A hop's god leads a TEAM: the arsenal directive requires 2–5 independent demigods in one parallel wave, artifact verification, and a synthesis that reports the chain — trivial hops work alone. The MCP arsenal is measured (`scripts/mcp-audit.mjs`) and curated to 44 tools by default (filesystem, memory, git, context7, sequential-thinking, olympus-craft); heavy servers (rea 207 tools, grafana 79, comfyui 41) are opt-in.
+> **Strategy engine + teams (v0.0.23):** DeepSeek V4.1 Flash (1017) is the preferred lane across the GO strategies — it replaced DeepSeek V4 Pro and GLM-5.3-Flash on the quality roles; BYOK is deleted (every provider, OpenRouter and NVIDIA included, is registered in OpenCode and chosen in the Strategy Builder). A hop's god leads a TEAM: the arsenal directive requires 2–5 independent demigods in one parallel wave, artifact verification, and a synthesis that reports the chain — trivial hops work alone. The MCP arsenal is measured (`scripts/mcp-audit.ts`) and curated to 44 tools by default (filesystem, memory, git, context7, sequential-thinking, olympus-craft); heavy servers (rea 207 tools, grafana 79, comfyui 41) are opt-in.
 
 > **Local lane + telemetry (v0.0.22):** the free tier is **retired**. The zero-cost path is **`local`** — the user's own hardware (Ollama `:11434`, LM Studio `:1234`, vLLM `:8000`, llama.cpp `:8080`, or any OpenAI-compatible endpoint). `scripts/local-llm-probe.js` probes all five; `apply-strategy local` wires the `local/<model>` ids into the full 132-agent config and REFUSES with the probe table when nothing answers (see [LOCAL-LLM.md](LOCAL-LLM.md)). Paid paths: the GO strategies (`go-max-quality`, `go-balanced`, `go-budget`), and the Zen strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`). **Models are lanes; the cable carries context** — the gods share context through Symphony regardless of which pool each god rides. **Sessions are lanes; the disk carries the campaign** (#109's hop runtime) — an architectural task is a DETERMINISTIC SPINE (a script, zero LLM tokens) walking SMALL LLM HOPS (`src/lib/hop-runtime/`): Apollo emits `dispatch-plan.json` (a DAG of ≤16k-token hops, one god each, artifacts on disk), the walker dispatches per hop on the god's lane, verifies deterministic-first (0 tokens), and PARKS on exhaustion with resume — a burst kills one hop, never a 5-minute run. Every instinct gate evaluation is logged to `~/OLYMPUS-VAULT/05_Auto_Learning/shortcircuit-log.jsonl` for live telemetry (see the Short-Circuit Health panel in the God Intelligence Dashboard). Vault TTL pruning prevents unbounded growth (see [BENCHMARKS.md](BENCHMARKS.md)).
 
@@ -92,7 +92,7 @@ Each god declares mastered skills in `.opencode/vault-brain/mastered-skills/<god
 - **Warm** — stack-relevant skills (loaded for non-trivial tasks, capped at 20)
 - **Cold** — all other skills (not loaded; lazy via skill index search)
 
-The skill index (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) provides sub-millisecond TF-IDF cosine search across all 330 skills. When the instinct gate doesn't short-circuit, the router searches the index for the top-5 relevant skills and surfaces them as hints.
+The skill index (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) provides sub-millisecond TF-IDF cosine search across all 321 skills. When the instinct gate doesn't short-circuit, the router searches the index for the top-5 relevant skills and surfaces them as hints.
 
 ---
 

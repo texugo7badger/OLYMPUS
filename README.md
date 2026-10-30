@@ -111,7 +111,7 @@ olympus apply-strategy go-budget
 | **Prometheus** | DevOps / CI-CD / deploy | MiniMax M3 |
 | **Callimachus** | Background vault curator | DeepSeek V4.1 Flash |
 
-The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash (the 1017 line) is the preferred lane across the GO strategies; DeepSeek V4 Pro is retired; GLM-5.3 only appears in `go-max-quality` where the planner needs the premium reasoning lane.
+The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash (the 1017 line) is the preferred lane across the GO strategies; DeepSeek V4 Pro is retired; The planner rides DeepSeek V4.1 Flash in every GO strategy; the old GLM-5.3 planner rule is retired.
 
 ## Architecture (brief)
 
@@ -132,7 +132,7 @@ The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash
                           ↕
 ┌────────────────────────────────────────────────────────────────┐
 │  OpenCode + Agents                                             │
-│  • 10 OLYMPUS gods → 122 demigods → 18 tools + 25 MCP servers  │
+│  • 10 OLYMPUS gods → 122 demigods → 44 curated tools + 28 MCP servers  │
 │  • Cascading compression (caveman → strategic-compact →        │
 │    Symphony harmonics)                                         │
 │  • Cache instrumentation (olympus-go-cache + context-cache +   │
@@ -153,7 +153,7 @@ The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash
 | `zen-budget` (**Zen**) | GPT 6 Luna | GPT 6 Luna | DeepSeek V4.1 Flash (backend/security/QA/DB) · GLM-5.3-Flash (frontend/DevOps) | Claude Haiku 5.5 |
 | `local` (**Local**) | your harness model | same | same | same |
 
-The **Zen** strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) run the full 132-agent OLYMPUS on OpenCode Zen — pay-as-you-go, **no request caps**, built around **proprietary APIs** (Claude Sonnet 5, GPT-5.4, Gemini 3.5 Flash, Kimi K2.7 Code, MiniMax) while the GO plan runs the open-weight line (GLM, DeepSeek, Qwen, Hy3). Model ids use `opencode/<id>`. Authorize via `olympus opencode` → `/connect` → OpenCode Zen (key stored in OpenCode's own auth.json under the `opencode` provider; env override `OPENCODE_API_KEY`). NOTE: OpenAI/Anthropic requests are retained 30 days per their data policies — the open-weight and trial models are zero-retention.
+The **Zen** strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) run the full 132-agent OLYMPUS on OpenCode Zen — pay-as-you-go, **no request caps**, built around **proprietary APIs** (GPT 6.1 Sol, Claude Sonnet 5.5/Opus 5.5, Gemini 3.1 Pro, Grok 4.7) while the GO plan runs the open-weight line (GLM, DeepSeek, Qwen, Hy3). Model ids use `opencode/<id>`. Authorize via `olympus opencode` → `/connect` → OpenCode Zen (key stored in OpenCode's own auth.json under the `opencode` provider; env override `OPENCODE_API_KEY`). NOTE: OpenAI/Anthropic requests are retained 30 days per their data policies — the open-weight and trial models are zero-retention.
 
 DeepSeek V4.1 Flash (the 1017 line) is the preferred lane across GO Balanced/Budget and the max-quality specialists; DeepSeek V4 Pro is retired. **ZEN** is the private-model lane (GPT 6.1 Sol, Claude Sonnet 5.5/Opus 5.5, Gemini 3.1 Pro, Grok 4.7) for users who want proprietary models.
 

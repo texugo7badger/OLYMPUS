@@ -1,5 +1,7 @@
 # OLYMPUS Benchmarks + Eval Harness
 
+> **Provenance convention (v0.0.26).** Every number carries one tag: `[MEASURED]` (live run on this machine), `[COUNTERFACTUAL]` (computed from live data for a payload that did not go out), `[DESIGN-MATH]` (unverified projection). The CAL-1 calibration (`research/CAL-1.md`) converts the target tables below to MEASURED — or refutes them. An untagged number is a bug.
+
 > How to measure OLYMPUS's performance — both in CI (golden tasks) and in real-world use (always-on opt-in recording).
 
 **Version:** v0.0.9

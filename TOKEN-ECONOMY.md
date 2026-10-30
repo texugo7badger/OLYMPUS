@@ -88,15 +88,15 @@ This is the feedback loop that makes OLYMPUS more efficient over time — every 
 
 | Strategy | Apollo | Atlas | Specialists | Vault | Est. cost/day |
 |----------|--------|-------|-------------|-------|---------------|
-| **go-max-quality** | GLM-5.3 | Hy3 | Kimi K3 / K2.7 Code | DeepSeek V4 Flash | Higher |
-| **go-balanced** (default) | GLM-5.3 | Hy3 | DeepSeek V4 Pro / Qwen3.7 Plus | DeepSeek V4 Flash | Moderate |
-| **go-budget** | GLM-5.3 (sacred) | Hy3 | DeepSeek V4 Flash | DeepSeek V4 Flash | Low |
-| **zen-max-quality** (**ZEN**) | GLM-5.3 | Gemini 3.5 Flash | Claude Sonnet 5 / GPT-5.4 | Gemini 3.5 Flash | Higher (pay-as-you-go) |
-| **zen-balanced** (**ZEN**) | GLM-5.3 | Gemini 3.5 Flash | Claude Sonnet 5 / Kimi K2.7 Code | MiniMax M2.7 | Moderate (pay-as-you-go) |
-| **zen-budget** (**ZEN**) | GLM-5.3 | Gemini 3.5 Flash | MiniMax M2.7 | MiniMax M2.7 | Low (pay-as-you-go) |
+| **go-max-quality** | DeepSeek V4.1 Flash | Hy3 | Kimi K2.7 Code (backend) · Qwen3.7 Plus (frontend/integrations) · Kimi K3 (security) · MiniMax M3 (DevOps) | DeepSeek V4.1 Flash | Higher |
+| **go-balanced** (default) | DeepSeek V4.1 Flash | Hy3 | Qwen3.7 Plus (frontend/QA/integrations) · DeepSeek V4.1 Flash (backend/security/DB) · MiniMax M3 (DevOps) | DeepSeek V4.1 Flash | Moderate |
+| **go-budget** | DeepSeek V4.1 Flash | Hy3 | DeepSeek V4.1 Flash (backend/security/DB) · Qwen3.8 Flash (frontend) · MiMo-V2.6-Flash (QA/integrations/DevOps/vault) | MiMo-V2.6-Flash | Low |
+| **zen-max-quality** (**ZEN**) | GPT 6.1 Sol | GPT 6.1 Sol | Claude Sonnet 5.5 (backend/integrations) · GPT 6 Sol (frontend) · Claude Opus 5.5 (security) · Gemini 3.1 Pro (DB) · Grok 4.7 (DevOps) | Claude Haiku 5.5 | Higher (pay-as-you-go) |
+| **zen-balanced** (**ZEN**) | GPT 6.1 Sol | GPT 6 Luna | Claude Sonnet 5.5 (backend/security) · GPT 6 Luna (frontend/integrations) · Claude Haiku 5.5 (QA) · DeepSeek V4.1 Flash (DB) · Grok Build 0.1 (DevOps) | Claude Haiku 5.5 | Moderate (pay-as-you-go) |
+| **zen-budget** (**ZEN**) | GPT 6 Luna | GPT 6 Luna | DeepSeek V4.1 Flash (backend/security/QA/DB) · GLM-5.3-Flash (frontend/DevOps) | Claude Haiku 5.5 | Low (pay-as-you-go) |
 | **local** (**Local**) | the probed local model | the probed local model | the probed local model | the probed local model | **$0** |
 
-Apollo is always on GLM-5.3 in the GO + ZEN strategies. Atlas is on Hy3 in all GO strategies and on Gemini 3.5 Flash in the ZEN strategies (Hy3 is GO-plan-only). In the budget strategies, all gods except Apollo and Atlas drop to DeepSeek V4 Flash (GO) / MiniMax M2.7 (ZEN) for maximum savings.
+Apollo rides **DeepSeek V4.1 Flash** in every GO strategy and **GPT 6.1 Sol / GPT 6 Luna** in ZEN — the planner is the quality floor, not a premium-model luxury. Atlas is Hy3 in GO (GO-only) and GPT 6.1 Sol / Luna in ZEN. DeepSeek V4 Pro and the GLM-5.3 planner rule are retired; GLM-5.3-Flash survives only in `zen-budget` frontend/DevOps. The source of truth is `src/lib/model-strategies.ts` — this table is checked against it by `npm run check-strategy-sync`.
 
 ### GO plan budget
 
@@ -128,7 +128,7 @@ The Terminal Bridge (port 3740) and WebSocket bridge (port 3738) are pure local 
 | 5 specialist gods | ~575K in / 15K out | ~110K in / 15K out |
 | 10 demigods (70% short-circuit) | ~1,150K in / 30K out | ~71K in / 10K out |
 | **Total** | **1,840K in / 48K out** | **203K in / 28K out** |
-| **Savings** | — | **89% input / 42% output** |
+| **Savings** | — | **89% input / 42% output** [DESIGN-MATH] |
 
 The same project on the **`local` strategy**: **$0 total cost**, same short-circuit rate. A custom strategy using free endpoints is also $0 but is rate-limited and slow. The savings come from: hot/warm/cold tier filtering (81%), instinct short-circuits (97% on 70% of demigod dispatches), and MCP allowlist enforcement (only the god's allowed MCPs load).
 
@@ -144,13 +144,15 @@ When benchmark recording is enabled (Settings → Benchmark Recording toggle), e
 
 | Mechanism | Reduction | Notes |
 |-----------|-----------|-------|
-| Hot/Warm/Cold tiers | 81% input | Only mastered + stack-relevant skills load |
-| Instinct short-circuits | 97% per dispatch | Kicks in as brain matures (70%+ hit rate) |
-| Symphony latent transport | 70–90% parallel dispatch | Pure local code, zero tokens |
-| Caveman compression | 65% per god output | Terse natural language |
+| Hot/Warm/Cold tiers | 81% input [DESIGN-MATH] | Only mastered + stack-relevant skills load — CAL-1 claim #1 |
+| Instinct short-circuits | 97% per dispatch [DESIGN-MATH] | Kicks in as brain matures (70%+ hit rate) — claim #2/#5 |
+| Symphony latent transport | 70–90% parallel dispatch [DESIGN-MATH] | Pure local code, zero tokens — claim #4 |
+| Caveman compression | 65% per god output [DESIGN-MATH] | Terse natural language — claim #3 |
 | Strategic-compact | Boundary-gated | Only compacts at logical task edges |
 | `local` (your hardware) | 100% cost | $0 — your own LLM server, no network |
 | Terminal Bridge | 100% (not applicable) | Local IPC, zero LLM tokens |
+
+> **Read this before quoting a percentage.** Every number in this file is currently `[DESIGN-MATH]` except where tagged otherwise. The v0.0.26 CAL-1 campaign (`research/CAL-1.md`) measures them on a real medium build and replaces or refutes each tag. The cost example above is a projection, not a measurement.
 
 ## Hop runtime economics
 
