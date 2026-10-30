@@ -46,6 +46,13 @@ jobs:
 
       - name: Build Next.js
         run: npx next build
+      # v0.0.25 — the standalone must be COMPLETE before packaging: the
+      # static/public copy plus the ws/tracing/perf gate (the
+      # "Cannot find module './websocket'" boot crash).
+      - name: Complete the standalone tree
+        run: node scripts/sync-standalone-assets.mjs
+      - name: Verify the standalone (boot gate)
+        run: node scripts/verify-standalone.mjs
       - name: Build Linux installers
         run: npx electron-builder --linux
         env:
