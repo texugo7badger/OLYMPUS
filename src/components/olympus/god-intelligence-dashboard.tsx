@@ -105,7 +105,9 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  const live = useHopLive();
  const docVisible = useDocVisible();
  const [stats, setStats] = useState<BrainStats | null>(null);
- const [scStats, setScStats] = useState<ShortCircuitStats | null>(null);
+ const [scStats, setScStats] = useState<ShortCircuitStats | null>(null);  // v0.0.26 — classifier ↔ dispatch agreement (the feedback loop).
+  const [agreement, setAgreement] = useState<{ rate: number | null; windows: number }>({ rate: null, windows: 0 });
+
  const [loading, setLoading] = useState(true);
  const [error, setError] = useState<string | null>(null);
 
@@ -138,6 +140,13 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  .then(r => r.ok ? r.json() : null)
  .then((d: ShortCircuitStats | null) => {
  if (mounted && d) setScStats(d);
+ })
+ .catch(() => {});
+ // v0.0.26 — the agreement window the heartbeat records.
+ fetch('/api/olympus/agreement?limit=50', { cache: 'no-store' })
+ .then(r => r.ok ? r.json() : null)
+ .then((d: any) => {
+   if (mounted && d?.ok) setAgreement({ rate: typeof d.average_agreement === 'number' ? d.average_agreement : null, windows: d.windows ?? 0 });
  })
  .catch(() => {});
  };
@@ -360,6 +369,13 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  <div className="text-[9px] text-olympus-text-dim font-mono uppercase">Avg Confidence</div>
  <div className="text-sm font-mono text-olympus-text font-semibold mt-0.5">
  <AnimatedNumber value={scStats.avg_confidence} decimals={3} />
+ </div>
+ <div className="rounded border border-olympus-gold/10 bg-olympus-bg/50 p-2">
+ <div className="text-[9px] text-olympus-text-dim font-mono uppercase">Classifier Agreement</div>
+ <div className="text-sm font-mono text-olympus-gold font-semibold mt-0.5">
+ {agreement.rate === null ? '—' : `${Math.round(agreement.rate * 100)}%`}
+ <span className="text-[8px] font-mono text-olympus-text-dim ml-1">{agreement.windows}w</span>
+ </div>
  </div>
  </div>
  </div>
