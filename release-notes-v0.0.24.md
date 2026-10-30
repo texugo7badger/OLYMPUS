@@ -55,3 +55,15 @@ Every project home, artifact, plan and decision is under `~/OLYMPUS-VAULT/02_Pro
 ## Gates
 
 `tsc --noEmit` 0 · the new MCP/design/knowledge/vault/hop suites green · `opencode mcp list` six connected · `npm run mcp:audit` 44 tools · `next build` green.
+
+## Manual test (10 minutes)
+
+1. **MCP Configuration** — expect **28 rows**, `6 enabled · 4 locked · 18 off / 28`, `Enabled 6/6 healthy · 44 tools`. Hover a green/red dot: one horizontal tooltip, never vertical. No duplicate rows.
+2. **LLM Strategy** — no “No GO or ZEN plan? Free”, no `LocalFREE`, no “Free-tier Providers”. **Local hardware** is its own card. Only the **Build** button opens the custom strategy screen.
+3. **Builder** — search `free`; the chips show registered providers (groq / nvidia / opencode / opencode-go / openrouter) and the list only shows free endpoints; the warning explains the speed/limit risk.
+4. **Athena design** — ask “Create a coffee landing page; show 3 logo options first.” Expect the inline card with 3 options and a refinement box. Pick one; check `02_Projects/<slug>/design-decisions.jsonl`.
+5. **Vault** — create a new project in chat; the code lands in `~/OLYMPUS-VAULT/02_Projects/<slug>`, not `~/.local/share/olympus/workspace`.
+6. **Live flow** — run a multi-hop plan: the God Intelligence **Live campaign** card shows god · lane · artifacts · elapsed; Recent Activity groups the hops under one campaign; “Load older” pages the feed.
+7. **Tooltips** — hover god cards, MCP dots, status pills: horizontal, unclipped.
+8. **Knowledge** — the vault/brain view shows planning, orchestration, design, QA, data, vault, release nodes linked to the right gods.
+9. **Commands** — `npm run mcp:audit` → 6/6 alive, 44 tools; `opencode mcp list` → six connected.
