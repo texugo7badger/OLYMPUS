@@ -100,14 +100,53 @@ export function findOpencodeBinary(root: string = findOlympusRoot()): string | n
   // with a .exe extension). The .bin directory has `opencode` (shell
   // shim), `opencode.cmd`, and `opencode.ps1`. We prefer the `.cmd`
   // shim — it's the most reliable for spawn with shell:true.
+  // #BIN-OWNERSHIP (v0.0.24): TWO packages ship an `opencode` bin — the
+  // legacy `opencode-ai` (1.x) and `@opencode/cli` (2.x). npm links whichever
+  // it resolves last; a plain `npm install` can leave `.bin/opencode` on 1.x,
+  // and the v1 CLI cannot open the v2 DB ("Database is not empty and has no
+  // session table"). Resolve the v2 package binary FIRST, so a shadowed bin
+  // can never break every dispatch.
+  const v2PackageBins = [
+    join(root, 'node_modules', '@opencode', 'cli', 'bin', 'opencode.exe'),
+    join(root, 'node_modules', '@opencode', 'cli', 'bin', 'opencode'),
+  ];
+  for (const c of v2PackageBins) {
+    if (existsSync(c)) return c;
+  }
+
+  // Packaged installs can carry ONLY the platform package (electron-builder
+  // does not always pack the launcher's 248MB `bin/` hardlink): the same
+  // executable lives at `@opencode/cli-<platform>-<arch>/bin/opencode`.
+  // Prefer the exact platform+arch, then the baseline/musl siblings.
+  try {
+    const platformDir = platform() === 'win32' ? 'windows' : platform();
+    const preferred = `cli-${platformDir}-${process.arch}`;
+    const names = readdirSync(join(root, 'node_modules', '@opencode'), { withFileTypes: true })
+      .filter((d) => d.isDirectory() && d.name.startsWith('cli-'))
+      .map((d) => d.name)
+      .sort((a, b) => {
+        const rank = (n: string) => (n === preferred ? 0 : n.startsWith(preferred) ? 1 : 2);
+        return rank(a) - rank(b) || a.localeCompare(b);
+      });
+    for (const name of names) {
+      for (const bin of ['opencode', 'opencode.exe']) {
+        const candidate = join(root, 'node_modules', '@opencode', name, 'bin', bin);
+        if (existsSync(candidate)) return candidate;
+      }
+    }
+  } catch { /* no platform package — fall through to the shims */ }
+
   const candidates = isWindows
     ? [
+        join(binDir, 'opencode2.cmd'),
+        join(binDir, 'opencode2'),
         join(binDir, 'opencode.cmd'),
         join(binDir, 'opencode.ps1'),
         join(binDir, 'opencode'),
         join(binDir, 'opencode.exe'),
       ]
     : [
+        join(binDir, 'opencode2'),
         join(binDir, 'opencode'),
       ];
 

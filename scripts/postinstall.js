@@ -47,7 +47,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { existsSync, statSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, statSync, mkdirSync, writeFileSync, readFileSync, realpathSync, symlinkSync, unlinkSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -113,8 +113,42 @@ if (existsSync(v2CliPkg)) {
   }
 }
 
-if (existsSync(opencodeBin) || existsSync(opencodeAlt)) {
-  ok(`OpenCode CLI found in node_modules/.bin/${v2CliVersion ? ` (v2 v${v2CliVersion})` : ''}`);
+// #BIN-OWNERSHIP (v0.0.24): TWO packages ship an `opencode` bin — the legacy
+// `opencode-ai` (1.x) and `@opencode/cli` (2.x). npm links whichever it
+// resolves last, and after a plain `npm install` the link pointed at 1.x.
+// The v1 CLI cannot open the v2 database ("Database is not empty and has no
+// session table"), and every OLYMPUS spawn goes through `.bin/opencode` —
+// so the bin MUST be the v2 CLI. Repair the symlink and name the truth.
+const v2Bin = join(ROOT, 'node_modules', '@opencode', 'cli', 'bin', 'opencode.exe');
+if (!isWindows && existsSync(v2Bin)) {
+  try {
+    const linkPath = join(ROOT, 'node_modules', '.bin', 'opencode');
+    const wanted = realpathSync(v2Bin);
+    let current = null;
+    try { current = realpathSync(linkPath); } catch { current = null; }
+    if (current !== wanted) {
+      const reason = current
+        ? `points at ${current.split('node_modules/').pop()}`
+        : 'is missing or not a symlink';
+      log(`node_modules/.bin/opencode ${reason} -- relinking to the v2 CLI (v${v2CliVersion || '?'})`);
+      try { unlinkSync(linkPath); } catch { /* absent */ }
+      symlinkSync(v2Bin, linkPath);
+      ok('node_modules/.bin/opencode -> @opencode/cli (v2)');
+    }
+  } catch (e) {
+    warn(`could not verify the opencode bin ownership: ${e.message}`);
+  }
+}
+
+let resolvedBin = null;
+try { resolvedBin = realpathSync(opencodeBin); } catch { resolvedBin = null; }
+const binIsV2 = Boolean(resolvedBin && resolvedBin.includes(join('@opencode', 'cli')));
+
+if (binIsV2) {
+  ok(`OpenCode CLI found in node_modules/.bin/ (v2 v${v2CliVersion || '?'})`);
+} else if (existsSync(opencodeBin) || existsSync(opencodeAlt)) {
+  warn('node_modules/.bin/opencode is NOT the v2 CLI (a legacy 1.x bin shadows it).');
+  console.warn('    Fix: npm run postinstall   (relinks the bin to @opencode/cli)');
 } else if (existsSync(opencodePkg)) {
   ok('opencode-ai package installed (binary symlink may be missing -- run: npm rebuild opencode-ai)');
 } else {

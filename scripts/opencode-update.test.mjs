@@ -139,6 +139,41 @@ async function main() {
     !!installed && upd.compareVersions(installed, '2.1.4') >= 0,
     installed);
 
+  // ── #BIN-OWNERSHIP: a legacy 1.x bin must never shadow the v2 CLI ────────
+  {
+    const spawnMod = await import(pathToFileURL(path.join(OLYMPUS, 'src/lib/opencode-spawn.ts')).href + `?t=${Date.now()}`);
+    const resolved = spawnMod.findOpencodeBinary(OLYMPUS);
+    expect('#212: findOpencodeBinary resolves the @opencode/cli package (never a shadowed 1.x bin)',
+      typeof resolved === 'string' && resolved.includes(path.join('@opencode', 'cli')),
+      resolved);
+    const { execFileSync } = await import('node:child_process');
+    let versionOut = '';
+    try {
+      versionOut = execFileSync(resolved, ['--version'], { encoding: 'utf-8', timeout: 60_000 }).trim();
+    } catch (e) { versionOut = `ERR ${e.message}`; }
+    expect('#212: the resolved binary reports v2 (the v1 CLI cannot open the v2 DB)',
+      /v?2\.\d+\.\d+/.test(versionOut) && !/^1\./.test(versionOut),
+      versionOut);
+
+    const postinstall = read('scripts/postinstall.js');
+    expect('#212: postinstall repairs the bin ownership on a fresh install',
+      /BIN-OWNERSHIP/.test(postinstall) && /symlinkSync\(v2Bin/.test(postinstall),
+      'the postinstall no longer relinks .bin/opencode to @opencode/cli');
+
+    // Packaged installs carry only the PLATFORM package — a fixture root with
+    // no launcher `bin/` and no `.bin` must still resolve the binary.
+    const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-cli-fixture-'));
+    const platformDir = process.platform === 'win32' ? 'windows' : process.platform;
+    const platformPkg = path.join(fixture, 'node_modules', '@opencode', `cli-${platformDir}-${process.arch}`, 'bin');
+    fs.mkdirSync(platformPkg, { recursive: true });
+    fs.writeFileSync(path.join(platformPkg, 'opencode'), '#!/bin/sh\necho fixture\n', { mode: 0o755 });
+    const packagedResolution = spawnMod.findOpencodeBinary(fixture);
+    expect('#212: the packaged shape resolves the platform binary (no launcher bin)',
+      packagedResolution === path.join(platformPkg, 'opencode'),
+      packagedResolution);
+    fs.rmSync(fixture, { recursive: true, force: true });
+  }
+
   console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);
 }
