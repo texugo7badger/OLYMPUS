@@ -11,20 +11,28 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import { NextResponse } from 'next/server';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** undefined = not resolved yet; null = git unavailable. */
+let CACHED_REV: string | null | undefined;
+
 export async function GET() {
   const cwd = process.cwd();
-  let rev: string | null = null;
-  try {
-    rev = execSync('git rev-parse --short HEAD', { encoding: 'utf-8', cwd }).trim() || null;
-  } catch {
-    rev = null; // packaged builds may not carry git — the banner says unknown, never lies
+  // v0.0.25 — the revision cannot change within a running server (a rebuild
+  // restarts it); resolve it ONCE instead of spawning git on every mount.
+  let rev: string | null = CACHED_REV ?? null;
+  if (CACHED_REV === undefined) {
+    try {
+      rev = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf-8', cwd }).trim() || null;
+    } catch {
+      rev = null; // packaged builds may not carry git — the banner says unknown, never lies
+    }
+    CACHED_REV = rev;
   }
   let mainBuiltAt: string | null = null;
   try {

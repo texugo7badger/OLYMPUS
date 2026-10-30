@@ -3,10 +3,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { getVaultRoot } from '@/lib/vault-root';
+import { withTtl } from '@/lib/ttl-cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,11 +55,13 @@ export async function GET() {
       });
     }
 
-    // Get commit log: hash|iso-date|author|message
-    const log = execSync(
-      'git log --format="%H|%aI|%an|%s" --no-merges',
-      { cwd: VAULT, encoding: 'utf-8', timeout: 5000 },
-    ).trim();
+    // v0.0.25 — async + cached: the old execSync blocked the single event
+    // loop (and therefore every other pane) for up to 5s on each open.
+    const log = await withTtl('history:log', () => new Promise<string>((resolve, reject) => {
+      execFile('git', ['log', '--format=%H|%aI|%an|%s', '--no-merges'], { cwd: VAULT, encoding: 'utf-8', timeout: 5000 }, (err, stdout) => {
+        if (err) reject(err); else resolve(String(stdout || '').trim());
+      });
+    }), { ttlMs: 30_000 });
 
     if (!log) {
       return NextResponse.json({
