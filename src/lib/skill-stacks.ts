@@ -98,6 +98,10 @@ export function isSkillVisible(
   skillName: string,
   activeStacks: string[],
 ): { visible: boolean; reason: string; stacks?: string[] } {
+  // v0.0.26 — MEASUREMENT CONTROL LANE: load every skill description.
+  if (process.env.OLYMPUS_SKILL_TIERS === 'off') {
+    return { visible: true, reason: 'measurement: tiers off' };
+  }
   const stacks = SKILL_STACKS[skillName];
 
   // Stack-agnostic

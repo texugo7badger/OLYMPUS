@@ -40,6 +40,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnOpencode, freeTierPreflight, authLaneCensus, resolveWorkspaceLane, ensureOpencodeDbHealthy } from '@/lib/opencode-spawn';
 import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
+import { identityFor, rememberSessionAgent, type AgentScope, type SessionAgent } from '@/lib/benchmark-attribution';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
 import { markLaneDead, isLaneDeadClass, pruneStaleLanes } from '@/lib/lane-health';
 import { activeModelFor } from '@/lib/lane-probe';
@@ -1300,12 +1301,25 @@ interface AgentBucket {
   taskSignature: string;
   firstTs: number;
   lastTs: number;
+  /** v0.0.26 — the row's god (never 'multi' for an attributed bucket). */
+  god: string;
+  /** v0.0.26 — god turn vs demigod child turn vs unknown. */
+  scope: AgentScope;
 }
 
 /** sessionID -> agentName -> bucket */
 const accumulators = new Map<string, Map<string, AgentBucket>>();
 
-function getBucket(sessionID: string, agentName: string): AgentBucket {
+/**
+ * v0.0.26 — session → (agent, topic god). The warm run sets its own entry;
+ * child sessions are registered when the stream names their agent. Without
+ * this every row bucketed as `multi` (the v1 attribution limit).
+ */
+const sessionAgents = new Map<string, SessionAgent>();
+
+function getBucket(sessionID: string, fallbackGod?: string | null): AgentBucket {
+  const identity = identityFor(sessionAgents, sessionID, fallbackGod);
+  const agentName = identity.agentName;
   let byAgent = accumulators.get(sessionID);
   if (!byAgent) {
     byAgent = new Map();
@@ -1315,6 +1329,8 @@ function getBucket(sessionID: string, agentName: string): AgentBucket {
   if (!b) {
     b = {
       agentName,
+      god: identity.god,
+      scope: identity.scope,
       tokens_input: 0,
       tokens_output: 0,
       tokens_reasoning: 0,
@@ -1338,7 +1354,7 @@ function getBucket(sessionID: string, agentName: string): AgentBucket {
 /** message.updated: remember the runtime model for this messageID. */
 function noteMessageModel(sessionID: string, info: any): void {
   if (!info || typeof info.id !== 'string') return;
-  const b = getBucket(sessionID, MULTI_KEY);
+  const b = getBucket(sessionID);
   if (typeof info.modelID === 'string' && info.modelID) b.modelByMessage.set(info.id, info.modelID);
   if (typeof info.providerID === 'string' && info.providerID) b.providerByMessage.set(info.id, info.providerID);
 }
@@ -1346,7 +1362,7 @@ function noteMessageModel(sessionID: string, info: any): void {
 /** step-finish: fold this step's tokens + cost into the bucket. */
 function noteStepFinish(sessionID: string, part: any): void {
   if (!part || typeof part.id !== 'string') return;
-  const b = getBucket(sessionID, MULTI_KEY);
+  const b = getBucket(sessionID);
   if (b.countedSteps.has(part.id)) return; // re-sent part, already counted
   b.countedSteps.add(part.id);
   const t = part.tokens || {};
@@ -1361,7 +1377,7 @@ function noteStepFinish(sessionID: string, part: any): void {
 }
 
 function noteToolCall(sessionID: string): void {
-  const b = getBucket(sessionID, MULTI_KEY);
+  const b = getBucket(sessionID);
   b.tool_call_count++;
   b.lastTs = Date.now();
 }
@@ -1381,7 +1397,7 @@ function resolveActiveLaneForHealth(): string | null {
 }
 
 function noteSessionError(sessionID: string): void {
-  getBucket(sessionID, MULTI_KEY).had_error = true;
+  getBucket(sessionID).had_error = true;
 }
 
 /**
@@ -1436,7 +1452,8 @@ function flushBenchmarkAccumulator(sessionID: string): void {
       let model: string | null = null;
       for (const m of b.modelByMessage.values()) model = m;
       if (!model) for (const m of b.providerByMessage.values()) model = m;
-      const unattributed = b.agentName === MULTI_KEY;
+      // v0.0.26 — the bucket knows who it is: a god turn is (god, null), a
+      // child session is (parentGod, demigod), unknown stays 'multi'.
       appendBenchmarkEntry({
         sessionID,
         taskSignature: b.taskSignature || sessionID,
@@ -1453,8 +1470,8 @@ function flushBenchmarkAccumulator(sessionID: string): void {
         had_error: b.had_error,
         tool_call_count: b.tool_call_count,
         duration_ms: b.lastTs - b.firstTs,
-        god: unattributed ? 'multi' : b.agentName,
-        demigod: unattributed ? null : b.agentName,
+        god: b.god,
+        demigod: b.scope === 'demigod' ? b.agentName : null,
       });
     }
     accumulators.delete(sessionID);
@@ -1550,6 +1567,7 @@ function mapEvent(
     const info = props.info;
     if (info.id !== sessionId && info.parentID === sessionId && typeof info.agent === 'string' && info.agent) {
       state.childSessions?.set(info.id, info.agent);
+      rememberSessionAgent(sessionAgents, info.id, { agent: info.agent, god: state.god || 'apollo' });
     }
     return;
   }
@@ -1579,6 +1597,7 @@ function mapEvent(
       // demigod source when the session frame lacked it.
       if (props?.sessionID !== sessionId && props?.info?.role === 'assistant' && typeof props?.info?.agent === 'string' && props.info.agent) {
         state.childSessions?.set(props.sessionID, props.info.agent);
+        rememberSessionAgent(sessionAgents, props.sessionID, { agent: props.info.agent, god: state.god || 'apollo' });
       }
       return;
     }
@@ -1715,6 +1734,15 @@ function mapChildPart(
       onEvent({ type: 'demigod_reasoning', timestamp: Date.now(), sessionID: part.sessionID, god, demigod, text: suffix, partId: part.id });
     }
     return;
+  }
+  // v0.0.26 — the demigod's tokens were NEVER counted (mapChildPart dropped
+  // step-finish). Fold them into the child bucket so per_demigod_top is real.
+  if (part.type === 'step-finish' && typeof part.sessionID === 'string') {
+    noteStepFinish(part.sessionID, part);
+    return;
+  }
+  if (part.type === 'tool' && typeof part.id === 'string') {
+    noteToolCall(part.sessionID);
   }
   if (part.type === 'tool' && typeof part.id === 'string' && !state.childToolEmitted?.has(part.id)) {
     state.childToolEmitted?.add(part.id);
@@ -2430,6 +2458,8 @@ async function runWarmMessageAttempt(
   // reaps the dead owner) and re-posts once. Orphan reaping (fix a+b)
   // prevents the crash-loop that caused the original "fetch failed".
 
+  // v0.0.26 — the run KNOWS its god; stamp it so benchmark rows are attributable.
+  rememberSessionAgent(sessionAgents, opts.sessionId, { agent: opts.agent || 'apollo', god: opts.agent || 'apollo' });
   const state = {
     // #185/#186: the run's god + the child-session → demigod map.
     god: opts.agent || '',

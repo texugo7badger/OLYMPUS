@@ -667,7 +667,9 @@ async function dispatchExecuteInner(args: {
       godId,
       demigod,
       task,
-      skill = "caveman",
+      // v0.0.26 — OLYMPUS_CAVEMAN=off is the control lane for the output
+      // compression claim: the demigod gets no caveman skill.
+      skill = process.env.OLYMPUS_CAVEMAN === "off" ? "" : "caveman",
       mcp,
       shortCircuit = false,
       instinctId,

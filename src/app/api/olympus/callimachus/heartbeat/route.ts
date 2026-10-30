@@ -3,6 +3,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { recordAgreementWindow } from '@/lib/agreement-metric';
+import { backfillShortCircuitSavings } from '@/lib/shortcircuit-savings';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -90,6 +92,22 @@ export async function POST(req: NextRequest) {
       // Prune failure is non-fatal — Callimachus should still run.
       console.error(`[olympus:callimachus] vault prune failed: ${pruneErr.message}`);
     }
+
+    // v0.0.26 — the MEASUREMENT loop runs before the LLM heartbeat (deterministic,
+    // zero tokens): ground short-circuit tokens_saved and record the classifier's
+    // agreement window. Both are best-effort and never block Callimachus.
+    try {
+      const bf = backfillShortCircuitSavings();
+      if (bf.backfilled > 0) {
+        console.log(`[olympus:callimachus] short-circuit backfill: ${bf.backfilled} row(s) grounded`);
+      }
+    } catch { /* telemetry never blocks the heartbeat */ }
+    try {
+      const ag = await recordAgreementWindow({ windowMin: 60 });
+      if (ag) {
+        console.log(`[olympus:callimachus] agreement window recorded: ${ag.summary.joined_pairs} joined · rate ${ag.summary.agreement_rate ?? 'N/A'}`);
+      }
+    } catch { /* the metric is best-effort */ }
 
     // ─── Spawn Callimachus ───────────────────────────────────────────
     // Callimachus runs via `opencode run /callimachus-heartbeat --agent callimachus`

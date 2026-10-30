@@ -10,6 +10,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { getVaultRoot } from './vault-root';
+import { readShortCircuitBackfill } from './shortcircuit-savings';
 
 const SHORTCIRCUIT_LOG = join(getVaultRoot(), '05_Auto_Learning', 'shortcircuit-log.jsonl');
 
@@ -85,6 +86,14 @@ export function getShortCircuitStats(maxLines: number = 100_000): ShortCircuitSt
     }
   } catch (err) {
     // Log read failed — return empty stats.
+  }
+
+  // v0.0.26 — merge the measured backfill (keyed by the log row's ts). A row
+  // the backfill could not ground stays 0; the stats carry the basis counts.
+  const backfill = readShortCircuitBackfill();
+  for (const e of entries) {
+    const b = backfill.get(e.ts);
+    if (b && b.tokens_saved > 0) e.tokens_saved = b.tokens_saved;
   }
 
   const totalEvaluations = entries.length;

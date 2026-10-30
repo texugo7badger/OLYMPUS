@@ -269,7 +269,13 @@ const plugin: Plugin = async (input, options) => {
             ? hookInput.message
             : (hookInput.message as { text?: string })?.text ?? "";
         if (messageText.length === 0) return;
-        const result = queryInstincts("god", agent, messageText, 3);
+        // v0.0.26 — MEASUREMENT CONTROL LANE. OLYMPUS_INSTINCT_GATE=off makes
+        // the classifier's confidence inert (no short-circuit) so a calibration
+        // run can compare the gate ON vs OFF without editing instincts.
+        const gateDisabled = process.env.OLYMPUS_INSTINCT_GATE === "off";
+        const result = gateDisabled
+          ? { confidence: 0, matching_instinct: null, alternatives: [], scope: "god" as const, agent_name: agent, short_circuit: false }
+          : queryInstincts("god", agent, messageText, 3);
         // W-A RAG-CERT A5: the evaluation is LOGGED — the Short-Circuit
         // Health panel's data file finally has a writer (AGENTS.md's claim
         // made true). Non-fatal by contract.
