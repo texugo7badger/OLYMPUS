@@ -122,6 +122,7 @@ if (child.status !== 0) {
   expect('V5 apply moves the new project', fs.existsSync(path.join(vault2, '02_Projects', 'new-project', 'README.md')), applied.stdout);
   expect('V5 the move keeps the vault home canonical on collision', fs.existsSync(path.join(vault2, '02_Projects', 'both-project', 'project.md')));
   expect('V5 the legacy collision is archived', fs.existsSync(path.join(legacy, '_migrated')), applied.stdout);
+  expect('V5 the legacy code is merged into the vault home (no clobber)', fs.existsSync(path.join(vault2, '02_Projects', 'both-project', 'old.txt')) && fs.readFileSync(path.join(vault2, '02_Projects', 'both-project', 'project.md'), 'utf-8').includes('slug: both-project'));
 }
 
 console.log(`\nvault-projects: ${passed} passed, ${failures} failed`);

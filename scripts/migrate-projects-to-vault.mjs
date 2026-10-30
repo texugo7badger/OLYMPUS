@@ -35,13 +35,16 @@ const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 
 const SKIP = new Set(['node_modules', '.next', 'dist', 'dist-electron', 'dist-electron-tsc', '.turbo', '.cache', 'coverage']);
 
-function copyTree(from, to) {
+function copyTree(from, to, opts = {}) {
   const st = fs.statSync(from);
   if (st.isDirectory()) {
     if (SKIP.has(path.basename(from))) return;
     fs.mkdirSync(to, { recursive: true });
-    for (const e of fs.readdirSync(from)) copyTree(path.join(from, e), path.join(to, e));
+    for (const e of fs.readdirSync(from)) copyTree(path.join(from, e), path.join(to, e), opts);
   } else if (st.isFile()) {
+    // A vault home with its own project.md/design-decisions wins; the legacy
+    // copy only FILLS THE GAPS (never clobbers the vault's notes).
+    if (opts.noClobber && fs.existsSync(to)) return;
     fs.copyFileSync(from, to);
   }
 }
@@ -106,14 +109,18 @@ function main() {
     } else if (!hasProjectNote) {
       action = 'merge-into-home';
       if (apply) {
-        copyTree(src, dst);
+        copyTree(src, dst, { noClobber: true });
         const archived = path.join(ARCHIVE, `${slug}-${stamp}`);
         fs.mkdirSync(ARCHIVE, { recursive: true });
         fs.renameSync(src, archived);
       }
     } else {
-      action = 'archive-legacy';
+      action = 'merge+archive-legacy';
       if (apply) {
+        // The vault home is canonical (it has project.md + decisions); copy
+        // the legacy CODE into it without overwriting those notes, then
+        // archive the legacy copy.
+        copyTree(src, dst, { noClobber: true });
         const archived = path.join(ARCHIVE, `${slug}-${stamp}`);
         fs.mkdirSync(ARCHIVE, { recursive: true });
         fs.renameSync(src, archived);
