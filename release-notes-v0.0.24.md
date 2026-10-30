@@ -45,6 +45,10 @@ Every project home, artifact, plan and decision is under `~/OLYMPUS-VAULT/02_Pro
 - **#227** — God Intelligence “Live campaign” card (god · lane · artifacts · elapsed) fed by one hop SSE stream.
 - **#241** — warm-server hop transport (`auto` = warm first, spawn fallback), dynamic concurrency, no orphan servers. The warm lane uses the v1 `/session` + `/session/:id/message` API (the v2 prompt endpoint has no agent/model fields); the chat keeps `{prompt:{text}}`. A real 1-hop campaign completed via warm in 18.3s with the artifact on disk.
 
+## A packaging bug caught at the last minute
+
+A plain `npm install` left `node_modules/.bin/opencode` pointing at the legacy **1.x** CLI, which cannot open the v2 database — every spawn would have failed with `Database is not empty and has no session table`. The resolver now prefers the **v2 `@opencode/cli`** binary (and, in the packaged app, the platform package `@opencode/cli-<platform>-<arch>`), and `npm run postinstall` relinks a shadowed bin. Verify with `node_modules/.bin/opencode --version` → `opencode v2.2.2`.
+
 ## Upgrade notes
 
 - `opencode.json` was canonicalized; a backup is in `~/.olympus/backups/`.
@@ -66,4 +70,4 @@ Every project home, artifact, plan and decision is under `~/OLYMPUS-VAULT/02_Pro
 6. **Live flow** — run a multi-hop plan: the God Intelligence **Live campaign** card shows god · lane · artifacts · elapsed; Recent Activity groups the hops under one campaign; “Load older” pages the feed.
 7. **Tooltips** — hover god cards, MCP dots, status pills: horizontal, unclipped.
 8. **Knowledge** — the vault/brain view shows planning, orchestration, design, QA, data, vault, release nodes linked to the right gods.
-9. **Commands** — `npm run mcp:audit` → 6/6 alive, 44 tools; `opencode mcp list` → six connected.
+9. **Commands** — `node_modules/.bin/opencode --version` → `opencode v2.2.2`; `npm run mcp:audit` → 6/6 alive, 44 tools; `opencode mcp list` → six connected.
