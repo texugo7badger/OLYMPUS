@@ -2,6 +2,19 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.26] — 2026-10-30
+
+**"THE MEASURED FLOOR"** — the instruments come first: `tokens_saved` is grounded from measured demigod deltas, benchmark rows finally attribute to a god and a demigod, the classifier gets an automated agreement loop, and the docs stop claiming rosters that no longer ship. CAL-1 then runs the engine on a real medium build and publishes verdicts — including a refuted claim.
+
+- **DOC-TRUTH** — `TOKEN-ECONOMY.md` claimed Apollo on GLM-5.3, go-balanced on DeepSeek V4 Pro and ZEN Atlas on Gemini 3.5 Flash; the shipped rosters are DeepSeek V4.1 Flash / Hy3 / GPT 6.1 Sol. AGENTS.md's god table and the "Apollo is always GLM (sacred)" paragraph were equally stale. Both now match `src/lib/model-strategies.ts`, the counts are corrected (321 skills, 44 curated tools, 28 MCPs), and every number carries a provenance tag: `[MEASURED]`, `[COUNTERFACTUAL]`, `[DESIGN-MATH]`.
+- **M-1 `tokens_saved` IS REAL** — the short-circuit log's honest 0 had no backfill. The new `shortcircuit-savings.ts` grounds each short-circuit row from the **measured median demigod input** for that god (basis + sample count recorded, skipped below 3 samples), persists `shortcircuit-backfill.jsonl`, and the Short-Circuit Health panel's Tokens Saved now sums it. A heartbeat hook runs the backfill automatically.
+- **M-2 BENCHMARK ATTRIBUTION** — the v1 limit (every row `god: "multi"`, `demigod: null`) was half a data problem, half a writer bug: the warm run knows its god and child sessions carry `info.agent`, but the accumulator bucketed everything as `multi` and dropped child `step-finish` tokens entirely. `benchmark-attribution.ts` resolves (agent, parent god, scope); `per_god` and the Top-10 demigod breakdowns are populated.
+- **M-3 CLASSIFIER FEEDBACK** — the offline agreement metric now runs inside the Callimachus heartbeat (deterministic, no LLM), persists a window to `07_Reviews/agreement.jsonl`, and is served by `GET /api/olympus/agreement` + a Classifier Agreement card in the brain dashboard.
+- **MEASUREMENT CONTROL LANE** — `OLYMPUS_INSTINCT_GATE=off`, `OLYMPUS_CAVEMAN=off`, `OLYMPUS_SKILL_TIERS=off`: the A/B switches the calibration needs, with zero surface growth.
+- **CAL-1 (MERIDIAN)** — a real bookmarking service built in a sibling workspace by the hop runtime. Measured: the first hop consumed **102,761 input / 3,712 output** tokens. The report (`research/CAL-1.md`) carries a verdict per claim: the 70–90% Symphony reduction is **confirmed above ~4.7 KB** (71–83%) and **refuted below ~1 KB** (the signature is 39–159% larger); the 81% tier claim measures **90.0% on skill descriptions** only (COUNTERFACTUAL); caveman output compression is **NOT-MEASURABLE-HERE** without a second control run.
+- **Tests**: `measure-close` (25 assertions: grounded backfill, attribution resolver, agreement join, control flags).
+- **Version**: `VERSION` + `package.json` → 0.0.26.
+
 ## [v0.0.25] — 2026-10-30
 
 **"THE STABLE SURFACE"** — the boot crash is gone and gated, the MCP panel tells the truth about *why* a server cannot run, the tool budget is enforced, and the panes answer from cache instead of re-reading the vault.

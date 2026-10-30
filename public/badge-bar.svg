@@ -13,7 +13,7 @@
     <!-- version -->
     <a href="https://github.com/texugo7badger/olympus/releases" target="_blank">
       <text x="16" y="23" fill="#7A7F88">version</text>
-      <text x="70" y="23" fill="#D4A574" font-weight="600" data-field="version">0.0.25</text>
+      <text x="70" y="23" fill="#D4A574" font-weight="600" data-field="version">0.0.26</text>
     </a>
     <line x1="124" y1="11" x2="124" y2="25" stroke="#D4A574" stroke-opacity="0.12" />
 

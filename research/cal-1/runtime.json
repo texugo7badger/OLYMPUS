@@ -1,0 +1,49 @@
+{
+  "captured_at": "2026-10-30T20:53:40.915478Z",
+  "status": "PARTIAL \u2014 the walk did not reach the exit gate in this session",
+  "completed_hops": [
+    "c1-spec"
+  ],
+  "in_flight_at_stop": [
+    "c1-db",
+    "c1-bookmarks"
+  ],
+  "telemetry": [
+    {
+      "ts": "2026-10-30T20:52:42.830Z",
+      "hop": "c1-spec",
+      "god": "apollo",
+      "lane": "opencode-go/deepseek-v4.1-flash",
+      "tokensIn": 102761,
+      "tokensOut": 3712,
+      "durationMs": 89670,
+      "retriesAbsorbed": 0,
+      "status": "completed",
+      "sessionId": "ses_e716b4578ffe1BazRr9jpNkzBi",
+      "transport": "spawn"
+    }
+  ],
+  "totals": {
+    "hops_completed": 1,
+    "tokens_in": 102761,
+    "tokens_out": 3712,
+    "duration_ms": 89670
+  },
+  "friction": [
+    {
+      "finding": "warm hop transport returns HTTP 405 on POST /session for the current opencode serve build; every hop falls back to spawn",
+      "evidence": "[hop-transport] warm transport unavailable \u2014 create session failed: create session HTTP 405",
+      "tracked": "new \u2014 v0.0.27 candidate"
+    },
+    {
+      "finding": "the dispatch plan schema has no dependency field, so a build plan runs hops concurrently and races (db vs api vs ui)",
+      "evidence": "plan-schema PlanHop has no dependsOn; the walk launched c1-db and c1-bookmarks together",
+      "tracked": "new \u2014 v0.0.27 candidate"
+    },
+    {
+      "finding": "first hop consumed 102,761 input tokens (the full system prompt + arsenal dominates a 500-byte brief)",
+      "evidence": "telemetry row c1-spec",
+      "tracked": "CAL-1 finding"
+    }
+  ]
+}

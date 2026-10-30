@@ -1,6 +1,8 @@
 # OLYMPUS Roadmap
 
-**v0.0.25 is the current release** (shipped 2026-10-30 — "THE STABLE SURFACE": the standalone `ws` boot crash fixed and gated by `verify:standalone`, MCP dependency preflight + honest amber states + the 128-tool budget with one-click cures, cached pane endpoints (`npm run perf:routes` warm p95 ≤ 300ms), check-only craft updates. See [CHANGELOG.md](CHANGELOG.md).
+**v0.0.26 is the current release** (shipped 2026-10-30 — "THE MEASURED FLOOR": doc-truth rosters + provenance tags, grounded `tokens_saved`, benchmark attribution (god/demigod), the classifier agreement loop, control-lane flags, and the CAL-1 calibration with a refuted Symphony claim below 1 KB. See [CHANGELOG.md](CHANGELOG.md) and `research/CAL-1.md`.
+
+**v0.0.25** (shipped 2026-10-30 — "THE STABLE SURFACE": the standalone `ws` boot crash fixed and gated by `verify:standalone`, MCP dependency preflight + honest amber states + the 128-tool budget with one-click cures, cached pane endpoints (`npm run perf:routes` warm p95 ≤ 300ms), check-only craft updates. See [CHANGELOG.md](CHANGELOG.md).
 
 **v0.0.24** (shipped 2026-10-30 — "THE HONEST SURFACE": one canonical MCP registry (28 unique, 44 tools, the curated six connected), one portal tooltip, the retired free-tier UI/plumbing removed, Athena's in-chat design choices (Design Studio deleted), 13 sourced god-domain knowledge references, project homes in `OLYMPUS-VAULT/02_Projects`, and the four open flow issues (#231 adaptive polling/paginated feed, #226 campaign grouping, #227 live in-flight panel, #241 warm hop transport). See [CHANGELOG.md](CHANGELOG.md).
 
