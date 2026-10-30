@@ -63,6 +63,8 @@ files:
   - scripts/build-skill-index.js
   - scripts/postinstall.js
   - scripts/setup-mcp-gateway.sh
+  - scripts/mcp-craft-server.mjs
+  - scripts/knowledge/**
   - scripts/install/**
   - package.json
   - next.config.ts
