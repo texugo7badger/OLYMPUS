@@ -22,6 +22,23 @@ interface Slot<T> {
 
 const SLOTS = new Map<string, Slot<unknown>>();
 
+/**
+ * Bound the map: `episodes` is keyed by arbitrary cursors, so an unbounded
+ * cache would grow with every distinct query. 300 entries is far more than
+ * the panes use; the oldest are dropped first.
+ */
+const MAX_SLOTS = 300;
+function evictIfNeeded(): void {
+  if (SLOTS.size <= MAX_SLOTS) return;
+  const entries = [...SLOTS.entries()].sort((a, b) => a[1].at - b[1].at);
+  for (const [key] of entries.slice(0, SLOTS.size - MAX_SLOTS)) SLOTS.delete(key);
+}
+
+function setSlot<T>(key: string, value: T): void {
+  SLOTS.set(key, { value, at: Date.now(), refreshing: false });
+  evictIfNeeded();
+}
+
 export interface TtlOptions {
   /** Fresh window (ms). */
   ttlMs?: number;
@@ -51,7 +68,7 @@ export async function withTtl<T>(
         slot.refreshing = true;
         Promise.resolve()
           .then(compute)
-          .then((value) => { SLOTS.set(key, { value, at: Date.now(), refreshing: false }); })
+          .then((value) => { setSlot(key, value); })
           .catch((e) => { slot.refreshing = false; slot.error = e?.message || String(e); });
       }
       return slot.value;
@@ -60,7 +77,7 @@ export async function withTtl<T>(
 
   try {
     const value = await compute();
-    SLOTS.set(key, { value, at: Date.now(), refreshing: false });
+    setSlot(key, value);
     return value;
   } catch (e: any) {
     if (slot) {

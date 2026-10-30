@@ -39,6 +39,7 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf-8');
   expect('L1 it is stale-while-revalidate', /staleMs/.test(src) && /refreshing/.test(src));
   expect('L1 a failed refresh keeps the last good value', /the last good answer/.test(src));
   expect('L1 it exposes invalidation', /export function invalidateTtl/.test(src));
+  expect('L1 the cache is bounded', /MAX_SLOTS/.test(src) && /evictIfNeeded/.test(src));
 }
 
 // ── L2: the routes ────────────────────────────────────────────────────────
