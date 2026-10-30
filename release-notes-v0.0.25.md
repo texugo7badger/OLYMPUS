@@ -20,6 +20,10 @@ Instrumentation loaded `ws` through `eval('require("ws")')`, so Turbopack never 
 
 Every `npm run build` / `build:app` / `build:linux` runs sync → verify **before** packaging.
 
+## A second boot bug, in the packaged app itself
+
+The audit found the shipped **AppImage could never start**: electron-builder's `extraResources` silently dropped `node_modules` from `.next/standalone`, so the packaged server died with `Error: Cannot find module 'next'` (only source runs worked). The standalone is now pruned (1.5 GB → 104 MB) and copied by `scripts/after-pack.cjs`, which fails the package if `next`, `ws`, `react`, `BUILD_ID` or the static chunks are missing.
+
 ## MCP: red means broken — not “needs Docker”
 
 Enabling the whole arsenal used to paint absent dependencies red as “dead”. Now a preflight runs **before any spawn**:

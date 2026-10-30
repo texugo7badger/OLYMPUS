@@ -87,6 +87,21 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf-8');
   expect('S6 verify:standalone script exists', pkg.scripts['verify:standalone'] === 'node scripts/verify-standalone.mjs');
 }
 
+// ── S8: the PACKAGED copy (the AppImage shipped without node_modules) ────
+{
+  const yml = read('electron-builder.yml');
+  expect('S8 packaging uses the afterPack hook', /afterPack:\s*scripts\/after-pack\.cjs/.test(yml));
+  expect('S8 extraResources no longer copies the standalone', !/from:\s*\.next\/standalone/.test(yml));
+  const p = path.join(ROOT, 'scripts/after-pack.cjs');
+  expect('S8 after-pack.cjs exists', fs.existsSync(p));
+  const src = fs.existsSync(p) ? fs.readFileSync(p, 'utf-8') : '';
+  expect('S8 it copies the complete tree', /fs\.cpSync\(src, dst/.test(src));
+  expect('S8 it refuses an incomplete package', /node_modules\/next\/package\.json/.test(src) && /node_modules\/ws\/lib\/websocket\.js/.test(src));
+  const cfg = read('next.config.ts');
+  expect('S8 the CLI/electron packages are excluded from the standalone',
+    /node_modules\/@opencode\/\*\*/.test(cfg) && /node_modules\/opencode-ai\/\*\*/.test(cfg));
+}
+
 // ── S7: the live artifact (when a build exists) ───────────────────────────
 {
   const wsFile = path.join(ROOT, '.next/standalone/node_modules/ws/lib/websocket.js');
