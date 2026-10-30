@@ -30,7 +30,7 @@ The "Attribution limit (v1)" was half data, half bug: the warm run **knows its g
 
 ## The classifier gets a feedback loop
 
-`scripts/agreement-metric.mjs` now runs inside the heartbeat (deterministic, zero LLM tokens), persists a window to `07_Reviews/agreement.jsonl`, and is served by `GET /api/olympus/agreement`. The brain dashboard shows a **Classifier Agreement** card.
+the agreement computation now runs natively inside the heartbeat (deterministic, zero LLM tokens; the CLI script remains the human reference), persists a window to `07_Reviews/agreement.jsonl`, and is served by `GET /api/olympus/agreement`. The brain dashboard shows a **Classifier Agreement** card.
 
 ## The control lane (for honest A/B)
 
