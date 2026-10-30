@@ -272,8 +272,11 @@ if (process.argv[2] === 'child') {
 
 
   // the lane project dir the manager must spawn in (#99: lane, never the repo)
+  // v0.0.24 — the default lane IS the vault (02_Projects), not the legacy
+  // ~/.local/share lane. Guard mode still proves the spawn never lands in the
+  // fake OLYMPUS root; the fallback it lands in is now the vault home.
   const effectiveLane = mode === 'guard'
-    ? join(home, '.local', 'share', 'olympus', 'workspace')
+    ? join(vault, '02_Projects')
     : lane;
   const slug = 'fixture-manager';
   const projectDir = join(effectiveLane, slug);
@@ -404,7 +407,21 @@ if (process.argv[2] === 'child') {
     // best-effort cleanup + the honest sweep: never leave a managed fixture
     // server behind (zero orphans — the pids below were created by this suite)
     try { await mgr.stop(slug); } catch {}
-    for (const p of out.pids) { try { process.kill(-p, 'SIGKILL'); } catch {} try { process.kill(p, 'SIGKILL'); } catch {} }
+    // NEVER group-kill a pid that shares this runner's process group: a
+    // `kill(-p)` where p's pgid is our own group kills the test runner
+    // itself (the intermittent SIGKILL-after-A12). Signal the pid only.
+    const selfPgid = (() => { try { return process.getpgid(0); } catch { return null; } })();
+    for (const p of out.pids) {
+      if (!Number.isInteger(p) || p <= 0) continue;
+      let pgid = null;
+      try { pgid = process.getpgid(p); } catch { pgid = null; }
+      if (selfPgid !== null && pgid === selfPgid) {
+        try { process.kill(p, 'SIGKILL'); } catch {}
+        continue;
+      }
+      try { process.kill(-p, 'SIGKILL'); } catch {}
+      try { process.kill(p, 'SIGKILL'); } catch {}
+    }
     await new Promise(r => setTimeout(r, 300));
     out.steps.sweepPortSilent = !(await probeDevServer(notePort, 800)).running;
   }
