@@ -1,0 +1,36 @@
+{
+  "campaign": "CAL-1",
+  "captured_at": "2026-10-30",
+  "machine": "texugo-desktop (Linux, 15 GiB RAM)",
+  "version": "0.0.26-dev",
+  "skill_tiers": {
+    "provenance": "COUNTERFACTUAL",
+    "method": "sum of the `description:` field bytes across .opencode/skills/*/SKILL.md; frontend-visible subset = names matching react|next|frontend|ui|css|tailwind|design|a11y",
+    "skills_total": 321,
+    "all_description_bytes": 51673,
+    "frontend_visible_skills": 48,
+    "frontend_description_bytes": 5179,
+    "description_reduction_pct": 90.0,
+    "note": "This measures the skill-DESCRIPTION slice only. The 81% claim covers the whole input (system prompt + context + histories); that share is not measured here."
+  },
+  "symphony_transport": {
+    "provenance": "MEASURED",
+    "method": "legacyPayloadToSignature + signatureToLegacyPrompt on a real hop brief, repeated 1x/4x/10x",
+    "samples": [
+      { "payload_bytes": 467, "signature_json_bytes": 648, "legacy_prompt_bytes": 1208, "reduction_vs_payload_pct": -158.7, "signature_vs_payload_pct": -38.8 },
+      { "payload_bytes": 1868, "signature_json_bytes": 697, "legacy_prompt_bytes": 1208, "reduction_vs_payload_pct": 32.8, "signature_vs_payload_pct": 62.7 },
+      { "payload_bytes": 4670, "signature_json_bytes": 800, "legacy_prompt_bytes": 1352, "reduction_vs_payload_pct": 71.0, "signature_vs_payload_pct": 82.9 }
+    ],
+    "finding": "The 70-90% reduction is REAL for large payloads (>= ~4.7KB: 71-83%) and INVERTED for short briefs (< ~1KB: -39% to -159%). A size threshold must accompany the claim."
+  },
+  "brain_state_at_start": {
+    "seed_instincts": 112,
+    "empirical_instincts": 3,
+    "shortcircuit_evaluations_logged": 3,
+    "shortcircuits_logged": 0,
+    "skills": 321,
+    "demigods": 122,
+    "mcp_servers": 28,
+    "mcp_enabled": 6
+  }
+}
