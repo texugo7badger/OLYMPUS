@@ -56,7 +56,7 @@ async function run() {
     bestEndpoint: best ? { name: best.name, url: best.url, modelCount: best.modelCount } : null,
     working,
     all: results,
-    message: best ? `Local endpoint found: ${best.name}` : 'No local endpoint responded. Check docs/LOCAL-LLM.md and start your server.',
+    message: best ? `Local endpoint found: ${best.name}` : 'No local endpoint responded. Check LOCAL-LLM.md and start your server.',
   }, null, 2));
   return best ? 0 : 1;
 }

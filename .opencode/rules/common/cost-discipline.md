@@ -8,27 +8,33 @@
 - **5-hour rolling**: $12 of usage
 - **Weekly**: $30 of usage
 - **Monthly**: $60 of usage
-- When limits are hit, GO blocks requests. There are **no automatic fallbacks** — switch strategies instead: a Zen strategy (`zen-max-quality` / `zen-balanced` / `zen-budget` — pay-as-you-go, no request caps) or one of the three free strategies (`free-openrouter` / `free-big-pickle` / `free-nvidia-build`).
+- When limits are hit, GO blocks requests. There are **no automatic fallbacks** — switch strategies instead: a Zen strategy (`zen-max-quality` / `zen-balanced` / `zen-budget` — pay-as-you-go, no request caps) or **Local** (your own hardware, $0). The free tier was retired in v0.0.22.
 
 ## Per-Model Request Budgets (GO plan)
 
 | Model | req/5hr | req/week | req/month |
 |-------|---------|----------|-----------|
-| GLM-5.3 (Apollo only) | 880 | 2,150 | 4,300 |
-| Kimi K2.7 Code | 1,350 | 4,630 | 9,250 |
-| DeepSeek V4 Pro | 3,450 | 8,550 | 17,150 |
+| DeepSeek V4.1 Flash (1017) | 34,670 | 86,670 | 173,330 |
+| Hy3 | 4,300 | 10,750 | 21,500 |
 | Qwen3.7 Plus | 4,300 | 10,800 | 21,600 |
-| DeepSeek V4 Flash | 31,650 | 79,050 | 158,150 |
+| Kimi K2.7 Code | 1,350 | 3,380 | 6,750 |
+| MiniMax M3 | 3,200 | 8,000 | 16,000 |
+| Qwen3.8 Flash | 5,400 | 13,500 | 27,000 |
+| MiMo-V2.6-Flash | 30,100 | 75,200 | 150,400 |
+| Kimi K3 (max-quality only) | 110 | 250 | 490 |
+
+> Verified against https://opencode.ai/v2/docs/console/go/ on 2026-10-29 (Go plan, $10/mo).
 
 ## Strategy Allocation (go-balanced, the default)
 
-- **Apollo**: GLM-5.3 — protected by 80/20 fast-path discipline. 80% of prompts cost ~few hundred output tokens (single DISPATCH line). 20% cost 5-15K tokens (spec-interview + plan).
-- **Specialist gods (backend/QA/DB)**: DeepSeek V4 Pro — 17,150 req/month, enough for autonomous loops.
-- **Specialist gods (security/frontend/integrations/devops)**: Qwen3.7 Plus — 21,600 req/month.
-- **Callimachus**: DeepSeek V4 Flash — 158,150 req/month, effectively unlimited for background vault curation.
-- **ECC heavy agents** (21 agents): DeepSeek V4 Pro.
-- **ECC light agents** (5 agents): DeepSeek V4 Flash.
-- **small_model** (session titles, etc.): DeepSeek V4 Flash.
+- **Apollo**: DeepSeek V4.1 Flash (1M ctx / 384k out) — the 1017 benchmark leader; 173,330 req/month makes planning effectively uncapped.
+- **Atlas**: Hy3 — orchestration at $0.14/$0.58.
+- **Specialist gods (backend/security/DB/vault)**: DeepSeek V4.1 Flash.
+- **Specialist gods (frontend/QA/integrations)**: Qwen3.7 Plus.
+- **DevOps**: MiniMax M3.
+- **Volume tier (go-budget)**: MiMo-V2.6-Flash — $0.14/$0.28, 150,400 req/month.
+- **small_model** (session titles, etc.): DeepSeek V4.1 Flash.
+- **Retired**: DeepSeek V4 Pro (V4.1 Flash 1017 is better and cheaper), GLM-5.3-Flash on quality roles, and the free tier.
 
 ## Token Savings Techniques
 

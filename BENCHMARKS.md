@@ -65,8 +65,8 @@ Each task has a `qualityThreshold` (default 0.7). Tasks scoring below the thresh
 The `.github/workflows/eval.yml` GitHub Action runs the harness on every PR + push to `main` that touches `.opencode/`, `src/`, or `scripts/eval/`. It:
 
 1. Installs dependencies + builds TypeScript (ECC plugin + OLYMPUS overlay + Electron).
-2. Authorizes OpenCode using free-tier keys stored as GitHub Actions secrets (`OLYMPUS_OPENROUTER_KEY`, `OLYMPUS_GROQ_KEY`).
-3. Applies the `free-openrouter` strategy.
+2. Authorizes OpenCode with the keys registered in OpenCode (CI uses `OLYMPUS_OPENROUTER_KEY` only for the fallback lane). The free tier is retired.
+3. Applies `go-balanced` (the default strategy).
 4. Runs the harness with a 180s per-task timeout.
 5. Uploads the JSON + HTML reports as build artifacts (30-day retention).
 6. **Fails the build** if any task fails.

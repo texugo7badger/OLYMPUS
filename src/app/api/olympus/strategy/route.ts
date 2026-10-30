@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     // Legacy saved configs with free-* must migrate; the freeze refuses them.
     if (strategy.startsWith('free-')) {
       return NextResponse.json(
-        { ok: false, error: `The free tier is retired (v0.0.22). Strategy "${strategy}" cannot be applied. Choose: go-*, zen-*, byok-*, custom-*, or the new "local" strategy (run "olympus apply-strategy local" for your own hardware — see docs/LOCAL-LLM.md).` },
+        { ok: false, error: `The free tier is retired (v0.0.22). Strategy "${strategy}" cannot be applied. Choose: go-*, zen-*, byok-*, custom-*, or the new "local" strategy (run "olympus apply-strategy local" for your own hardware — see LOCAL-LLM.md).` },
         { status: 400 },
       );
     }
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     //   byok-*, custom-<id>, local (the user's own hardware, zero-cost path in v0.0.22)
     if (!/^(go-[a-z-]+|zen-[a-z-]+|byok-[a-z-]+|custom-[a-zA-Z0-9_-]+|local)$/.test(strategy)) {
       return NextResponse.json(
-        { ok: false, error: `Invalid strategy format: "${strategy}". Expected go-*|zen-*|byok-*|custom-*|local (free-* is retired — see docs/LOCAL-LLM.md)` },
+        { ok: false, error: `Invalid strategy format: "${strategy}". Expected go-*|zen-*|byok-*|custom-*|local (free-* is retired — see LOCAL-LLM.md)` },
         { status: 400 },
       );
     }

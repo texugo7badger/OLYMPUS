@@ -90,7 +90,7 @@ The MCP Configuration panel writes enable/disable state to `~/.olympus/mcp-state
 
 MCPs requiring API keys are blocked unless the key is configured. The gate checks (in order):
 1. `~/.olympus/api-configs.json` (UI-managed)
-2. `~/.olympus/.env` and the project `.env` (KEY=value lines)
+2. OpenCode's `auth.json` (`~/.local/share/opencode/auth.json`) — the ONLY place LLM keys live. OLYMPUS never asks for an LLM key in its own UI.
 3. `process.env` (set by the launcher)
 
 MCPs NOT in the requirements map (e.g., filesystem, memory, git) require no API key and pass through (subject to the toggle).
@@ -123,7 +123,7 @@ The `file-lock-guard.cjs` hook (`.opencode/hooks/`) prevents concurrent vault wr
 
 ## API key storage
 
-API keys stored in `~/.olympus/.env` are **encrypted at rest** using AES-256-GCM.
+LLM API keys are **never stored by OLYMPUS**. They live in OpenCode's own `auth.json` (OS file permissions), written by `olympus opencode` → `/connect`. The legacy `~/.olympus/.env` (AES-256-GCM, machine-bound) is honoured for old installs only — it is not the setup path and new installs never create it.
 
 ### Encryption
 
@@ -136,7 +136,7 @@ API keys stored in `~/.olympus/.env` are **encrypted at rest** using AES-256-GCM
 
 1. **OpenCode `auth.json`** (`~/.local/share/opencode/auth.json`, legacy `~/.config/opencode/auth.json`) — **all LLM provider keys** (GO plan OAuth + free-tier Groq/OpenRouter) are authorized inside OpenCode via `olympus opencode` → Settings → Providers. OLYMPUS never injects these keys; it reads them from OpenCode's own auth file. Legacy keys may also live in `~/.olympus/.env` / `~/.olympus/llm-providers.json` (checked next).
 
-2. **`~/.olympus/.env`** (legacy) — encrypted at rest. Only used for free-tier keys set up via the CLI fallback (`node scripts/install/setup-keys.mjs`). New installs configure keys inside OpenCode instead. Keys never need manual editing.
+2. **OpenCode `auth.json`** — the setup path. Authorize with `olympus opencode` → `/connect` (Go/Zen) or Settings → Providers (OpenRouter/NVIDIA). OLYMPUS only detects what is registered there; no key field, no manual file editing.
 
 3. **`~/.olympus/api-configs.json`** — UI-managed via Settings → API Keys. Plaintext JSON, `chmod 600`, never logged, never sent over the network except to the upstream MCP provider as a Bearer token. Stores keys for: GitHub (`GITHUB_PERSONAL_ACCESS_TOKEN`), Grafana (`GRAFANA_URL`, `GRAFANA_API_KEY`), Figma (`FIGMA_API_KEY`).
 
@@ -148,7 +148,7 @@ API keys stored in `~/.olympus/.env` are **encrypted at rest** using AES-256-GCM
 
 - Keys are **never exposed to the renderer process** — the Electron main process reads them and passes them as env vars only to the specific spawned process that needs each key.
 - The `.env` file is created with `chmod 600` (owner read/write only).
-- The encryption is machine-bound — copying `~/.olympus/.env` to another machine won't allow decryption.
+- The legacy `.env` encryption (when present) is machine-bound — copying it to another machine does not decrypt.
 - Keys entered via the installer or UI are encrypted before being written to disk.
 
 ---
@@ -173,7 +173,7 @@ When using a free strategy (`free-openrouter`, `free-big-pickle`, `free-nvidia-b
 
 These are third-party API providers. Your prompts and code context are sent to their servers. Review their privacy policies before use. The free-tier keys are obtained with no credit card and have no billing risk, but the privacy tradeoff is the same as any cloud LLM API.
 
-Keys for these providers are authorized inside OpenCode (`olympus opencode` → Settings → add OpenRouter/NVIDIA as providers) and stored in OpenCode's own `auth.json` (`~/.local/share/opencode/auth.json`). Legacy keys in `~/.olympus/.env` (AES-256-GCM, machine-bound) are still honored. OLYMPUS never injects LLM keys — no manual file editing needed. Free models are picked from the live provider lists (`scripts/refresh-free-models.js`) — the refresh only fetches public model metadata, never keys. See [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) for the full strategy reference.
+Keys for these providers are authorized inside OpenCode (`olympus opencode` → `/connect` for Go/Zen, Settings → Providers for OpenRouter/NVIDIA) and stored in OpenCode's own `auth.json` (`~/.local/share/opencode/auth.json`). OLYMPUS never injects LLM keys and never stores them — no manual file editing. MCP keys (GitHub, Grafana, Figma, fal) are a separate surface configured in Settings → API Keys. See [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) for the full strategy reference.
 
 ---
 

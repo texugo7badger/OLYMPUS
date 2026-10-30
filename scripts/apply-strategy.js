@@ -259,7 +259,7 @@ export function normalizeStrategyId(id) {
   if (id === 'free-hybrid' || isLegacyFreeId(id)) {
     throw new Error(
       'The free tier is retired (v0.0.22). Choose go-*, zen-*, custom-*, or local ' +
-      '(your own hardware — see docs/LOCAL-LLM.md). The free-* strategies no longer exist.'
+      '(your own hardware — see LOCAL-LLM.md). The free-* strategies no longer exist.'
     );
   }
   return id;
@@ -1197,7 +1197,7 @@ async function getModelMap(strategy) {
         '  Start one of them (or any OpenAI-compatible server) and re-run:\n' +
         '    node scripts/local-llm-probe.js   # probe only\n' +
         '    node scripts/apply-strategy.js --strategy local\n\n' +
-        '  See docs/LOCAL-LLM.md for hardware requirements and model choices.'
+        '  See LOCAL-LLM.md for hardware requirements and model choices.'
       );
     }
     log(`  local endpoint: ${local.endpoint} (${local.runtime})`);
@@ -1299,7 +1299,7 @@ function applyLocalProvider(config, endpoint, model) {
       [model]: {
         name: model,
         // The provider's own limits are unknown; a conservative 32k context
-        // keeps the UI honest (docs/LOCAL-LLM.md states the requirement).
+        // keeps the UI honest (LOCAL-LLM.md states the requirement).
         limit: { context: 32768, output: 8192 },
       },
     },
@@ -2601,7 +2601,7 @@ Strategy shapes:
       (Ollama :11434 / LM Studio :1234 / vLLM :8000 / llama.cpp :8080)
     - Every god pinned to local/<model>; small_model rides the same lane
     - With no endpoint answering the apply REFUSES with the probe table
-      (see docs/LOCAL-LLM.md)
+      (see LOCAL-LLM.md)
 
 State file:
   After each successful apply, writes ~/.olympus/active-strategy.json

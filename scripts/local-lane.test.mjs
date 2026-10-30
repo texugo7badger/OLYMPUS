@@ -6,7 +6,7 @@
  * The free tier is gone; the zero-cost path is the user's own hardware.
  * This suite pins the honesty contract:
  *
- *   L1  docs/LOCAL-LLM.md exists and names the supported runtimes
+ *   L1  LOCAL-LLM.md exists and names the supported runtimes
  *   L2  scripts/local-llm-probe.js exists, probes the 4 well-known ports
  *       and prints JSON
  *   L3  apply-strategy.js resolves the local lane by PROBE (never a guess)
@@ -37,8 +37,8 @@ function check(name, ok, detail = '') {
 }
 
 // L1 — the doc.
-const docPath = join(ROOT, 'docs', 'LOCAL-LLM.md');
-check('L1 docs/LOCAL-LLM.md exists', fs.existsSync(docPath));
+const docPath = join(ROOT, 'LOCAL-LLM.md');
+check('L1 LOCAL-LLM.md exists', fs.existsSync(docPath));
 if (fs.existsSync(docPath)) {
   const doc = fs.readFileSync(docPath, 'utf-8');
   for (const rt of ['Ollama', 'LM Studio', 'vLLM', 'llama.cpp']) {

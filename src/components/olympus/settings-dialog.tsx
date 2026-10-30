@@ -393,7 +393,7 @@ function fallbackData(): SettingsData {
       { id: 'zen-budget',      label: 'ZEN Budget',   description: 'Lowest cost on OpenCode Zen — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. All others: MiniMax M2.7.', plan: 'ZEN', tier: 'budget', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'low' },
       // Free — ONE strategy over every free source registered (GO/Zen free,
       // OpenRouter free, NVIDIA Build free). More APIs = a stronger free.
-      { id: 'local', label: 'Local', description: 'Your own hardware — zero cost, zero data leaving this machine. A local LLM server (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint) serves the full 10-god + 122-demigod arsenal. The apply probes your endpoints and refuses with the exact reason if nothing answers (docs/LOCAL-LLM.md).', plan: 'LOCAL', tier: 'local', terminalModel: 'local/<model>', estCostPerDay: 'free' },
+      { id: 'local', label: 'Local', description: 'Your own hardware — zero cost, zero data leaving this machine. A local LLM server (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint) serves the full 10-god + 122-demigod arsenal. The apply probes your endpoints and refuses with the exact reason if nothing answers (LOCAL-LLM.md).', plan: 'LOCAL', tier: 'local', terminalModel: 'local/<model>', estCostPerDay: 'free' },
     ],
     go_plan_last_verified: '2026-07-29',
     go_plan_docs_url: 'https://opencode.ai/docs/go/',

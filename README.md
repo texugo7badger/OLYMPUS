@@ -20,7 +20,7 @@ OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencod
   <img src="public/olympus.jpeg" alt="OLYMPUS Interface — Brain graph and Interactive Terminal" width="900" />
 </div>
 
-- **Three ways to run.** The GO plan (flat monthly, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps), or **Local** — your own hardware (Ollama, LM Studio, vLLM, llama.cpp, or any OpenAI-compatible endpoint). The free tier is retired in v0.0.22: the local lane is the zero-cost path, and it tells you exactly what it found (see [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md)).
+- **Three ways to run.** The GO plan (flat monthly, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps), or **Local** — your own hardware (Ollama, LM Studio, vLLM, llama.cpp, or any OpenAI-compatible endpoint). The free tier is retired in v0.0.22: the local lane is the zero-cost path, and it tells you exactly what it found (see [LOCAL-LLM.md](LOCAL-LLM.md)).
 - **10 gods + 122 demigods (132 agents).** Apollo is the only god who talks to you; the other 9 are dispatched by Apollo via Symphony.
 - **The Craft Apps inside (v0.0.8).** The thirteen open-source ArtCraft apps (image editor, vector illustration, video, PDF, word processing, CAD, spreadsheets) are DOWNLOADED INTO OLYMPUS — the self-hosted web builds run embedded from your own disk (no login, ever; auto-update ON), the native portable builds open as real OS windows, and the `olympus-craft` MCP gives the agents headless CLI/JSON control. The AI crafting Studio rides the live lane.
 - **Self-curating brain.** Each god maintains an instinct pool — empirical patterns that, at confidence ≥ 0.85, **short-circuit** deliberation. OLYMPUS gets faster and cheaper with use. Live telemetry in the God Intelligence Dashboard shows the short-circuit hit rate + tokens saved.
@@ -37,12 +37,22 @@ OLYMPUS runs as a **standalone desktop application** — it opens its own window
 ```bash
 # 1. Download the latest AppImage from GitHub Releases:
 #    https://github.com/texugo7badger/olympus/releases
-#    OLYMPUS-0.0.9-linux-x86_64.AppImage (~660 MB)
+#    OLYMPUS-0.0.23-linux-x86_64.AppImage (~457 MB)
 
 # 2. Make it executable and run:
 chmod +x OLYMPUS-*.AppImage
 ./OLYMPUS-*.AppImage
 ```
+
+**Before opening the app, authorize your providers inside OpenCode** (there is no API key field anywhere in OLYMPUS):
+
+```bash
+olympus opencode      # the OpenCode TUI
+# inside: /connect  → OpenCode Go (plan) or OpenCode Zen (pay-as-you-go)
+# optional: Settings → Providers → OpenRouter / NVIDIA (registered in OpenCode)
+```
+
+Then open OLYMPUS. Every key lives in OpenCode's own `auth.json`; OLYMPUS only detects what is registered there. The zero-cost path is **Local** (your own Ollama/LM Studio/vLLM server — see [LOCAL-LLM.md](LOCAL-LLM.md)).
 
 OLYMPUS opens as its own desktop window. Use the **Editor Bridge** tab to launch your IDE on a project.
 
@@ -56,11 +66,7 @@ cd olympus
 # 2. Install (interactive installer):
 bash scripts/install/install.sh
 
-# 3. Set up free keys (or skip for GO plan):
-#    The installer will ask about Groq/OpenRouter API keys.
-#    Keys are saved to ~/.olympus/.env (encrypted at rest).
-
-# 4. Launch
+# 3. Launch
 npm run dev
 ```
 
@@ -94,18 +100,18 @@ olympus apply-strategy go-budget
 
 | God | Domain | Model (go-balanced) |
 |-----|--------|---------------------|
-| **Apollo** | Planning & architecture | GLM-5.3-Flash (sacred family) |
-| **Atlas** | Orchestration & execution | Hy3 (sacred) |
-| **Artemis** | Security / auditing | Qwen3.7 Plus |
+| **Apollo** | Planning & architecture | DeepSeek V4.1 Flash (1M ctx / 384k out) |
+| **Atlas** | Orchestration & execution | Hy3 |
+| **Artemis** | Security / auditing | DeepSeek V4.1 Flash |
 | **Athena** | Frontend / design | Qwen3.7 Plus |
-| **Dionysus** | QA / testing | DeepSeek V4.1 Flash |
+| **Dionysus** | QA / testing | Qwen3.7 Plus |
 | **Hephaestus** | Backend / infrastructure | DeepSeek V4.1 Flash |
 | **Hermes** | Integrations / APIs / MCPs | Qwen3.7 Plus |
 | **Persephone** | Database / persistence | DeepSeek V4.1 Flash |
-| **Prometheus** | DevOps / CI-CD / deploy | Qwen3.7 Plus |
-| **Callimachus** | Background vault curator | DeepSeek V4 Flash |
+| **Prometheus** | DevOps / CI-CD / deploy | MiniMax M3 |
+| **Callimachus** | Background vault curator | DeepSeek V4.1 Flash |
 
-GLM-5.3 is reserved for go-max-quality (Apollo + Artemis). The daily strategies run Apollo on GLM-5.3-Flash (cap-aware). The 1,080 req/month GO cap is protected by the 80/20 fast-path.
+The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash (the 1017 line) is the preferred lane across the GO strategies; DeepSeek V4 Pro is retired; GLM-5.3 only appears in `go-max-quality` where the planner needs the premium reasoning lane.
 
 ## Architecture (brief)
 
@@ -151,7 +157,7 @@ The **Zen** strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) run the
 
 DeepSeek V4.1 Flash (the 1017 line) is the preferred lane across GO Balanced/Budget and the max-quality specialists; DeepSeek V4 Pro is retired. **ZEN** is the private-model lane (GPT 6.1 Sol, Claude Sonnet 5.5/Opus 5.5, Gemini 3.1 Pro, Grok 4.7) for users who want proprietary models.
 
-The **Local** strategy (`local`) requires no plan and no key: OLYMPUS probes your machine for a local LLM server (Ollama `:11434`, LM Studio `:1234`, vLLM `:8000`, llama.cpp `:8080`, or any OpenAI-compatible endpoint) and wires the full 10-god + 122-demigod arsenal to it. The apply refuses with the exact probe result if nothing answers — no dead config, no hidden fallback. Requirements: tool calling + ≥32k context; see [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) for the honest hardware table.
+The **Local** strategy (`local`) requires no plan and no key: OLYMPUS probes your machine for a local LLM server (Ollama `:11434`, LM Studio `:1234`, vLLM `:8000`, llama.cpp `:8080`, or any OpenAI-compatible endpoint) and wires the full 10-god + 122-demigod arsenal to it. The apply refuses with the exact probe result if nothing answers — no dead config, no hidden fallback. Requirements: tool calling + ≥32k context; see [LOCAL-LLM.md](LOCAL-LLM.md) for the honest hardware table.
 
 ## Uninstall
 
@@ -168,7 +174,7 @@ bash scripts/install/uninstall.sh
 | [AGENTS.md](AGENTS.md) | The 10 gods, 122 demigods, dispatch protocol, instinct system, Symphony |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Layered architecture, plugin/MCP stacks, cache instrumentation, Symphony |
 | [EDITORS.md](EDITORS.md) | Supported external editors (Zed, VSCode, VSCodium, Cursor), per-OS install commands, Terminal Bridge protocol |
-| [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) | LLM strategy reference — GO plan strategies, Zen (pay-as-you-go), Free strategies (OpenRouter / Groq / NVIDIA Build free tiers), custom strategies, demigod inheritance, switching strategies |
+| [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) | LLM strategy reference — GO plan strategies, Zen (private models), Local (your hardware), the Strategy Builder, demigod inheritance, switching strategies |
 | [BENCHMARKS.md](BENCHMARKS.md) | Eval harness (CI golden tasks) + always-on opt-in benchmark recording (real-world metrics), vault pruning policy |
 | [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) | Token cost flow — how OLYMPUS achieves quality at low cost |
 | [WORKFLOW.md](WORKFLOW.md) | How a task flows end-to-end — standard dispatch + Symphony latent path |
@@ -195,8 +201,6 @@ All contributors must accept the [Contributor License Agreement (CLA)](CLA.md) b
 
 - **Issues:** [github.com/texugo7badger/olympus/issues](https://github.com/texugo7badger/olympus/issues)
 - **Discussions:** [github.com/texugo7badger/olympus/discussions](https://github.com/texugo7badger/olympus/discussions)
-
----
 
 <div align="center">
 

@@ -1,6 +1,6 @@
 # OLYMPUS Installer
 
-> Linux installer + uninstaller for **OLYMPUS v0.0.3**.
+> Linux installer + uninstaller for **OLYMPUS v0.0.23**.
 > Other platforms: use WSL. No built-in IDE — bridges to the user's
 > preferred editor (Zed, VSCode, VSCodium, Cursor) and shared terminal.
 
@@ -17,9 +17,9 @@ The installer runs **6 interactive steps**:
 3. **TypeScript build** — compiles the ECC plugin, the OLYMPUS overlay + Symphony extension, and the Electron main process.
 4. **Bootstrap runtime state** — creates `~/.olympus/`, seeds the vault at `~/OLYMPUS-VAULT/`, applies the default model strategy (e.g. `go-balanced`).
 5. **Detect external editors** — scans `PATH` for Zed / VSCode / VSCodium / Cursor and saves the result to `~/.olympus/editor-config.json`. This drives the **Editor Bridge** (the "Edit in IDE" button opens the user's preferred editor on the active project).
-6. **OpenCode authorization** — prints instructions to launch the local OpenCode CLI via `olympus opencode` and authorize **all** LLM access inside OpenCode — GO plan OAuth, OpenCode Zen (`/connect`), or free-tier Groq/OpenRouter providers. Keys are never injected by the installer.
+6. **OpenCode authorization** — prints instructions to launch the local OpenCode CLI via `olympus opencode` and authorize **all** LLM access inside OpenCode — GO plan OAuth, OpenCode Zen (`/connect`), or any other provider (OpenRouter/NVIDIA) registered in OpenCode. Keys are never injected by the installer.
 
-After install, **authorize OpenCode** (the only manual step — required for the GO plan, Zen, and free-tier keys):
+After install, **authorize OpenCode before opening the app** (the only manual step — required for GO, Zen, and any other provider):
 
 ```bash
 olympus opencode
@@ -31,7 +31,7 @@ olympus opencode
 
 (If you don't have `olympus` on PATH, use `npx olympus opencode` or `./node_modules/.bin/opencode`.)
 
-Zen + free-tier API keys are authorized the same way — inside OpenCode — and OLYMPUS detects them automatically. There is no installer or UI field for LLM keys.
+Every provider is authorized the same way — inside OpenCode — and OLYMPUS detects what is registered automatically. There is no installer or UI field for LLM keys. The zero-cost path is **Local** (your own Ollama/LM Studio/vLLM server; see [LOCAL-LLM.md](../../LOCAL-LLM.md)).
 
 Then launch:
 
@@ -42,7 +42,7 @@ olympus dev          # if you have the CLI on PATH
 ```
 
 
-> **Authorized inside OpenCode, not `.env`.** The GO API uses OAuth — it cannot be automated via `.env`. Zen and free-tier providers (Groq, OpenRouter) are authorized inside OpenCode too. After authorization, OpenCode handles all LLM API key routing automatically. MCP API keys (GitHub, Grafana, Figma) are configured later via Settings → API Keys inside OLYMPUS.
+> **Authorized inside OpenCode, never `.env`.** GO uses OAuth; Zen and every other provider (OpenRouter, NVIDIA) are connected inside OpenCode too. After authorization OpenCode handles all LLM key routing — OLYMPUS never stores an LLM key. MCP keys (GitHub, Grafana, Figma, fal) are a separate surface in Settings → API Keys inside OLYMPUS.
 
 ---
 
@@ -94,7 +94,7 @@ This shapes the install story:
 3. **Builds TypeScript** — `tsc -p .opencode/tsconfig.json` (ECC plugin + tools), `tsc -p .opencode/olympus/tsconfig.json` (OLYMPUS overlay + Symphony), then `tsc -p electron/tsconfig.json && node scripts/electron-postcompile.js` (Electron main).
 4. **Bootstraps runtime state** — creates `~/.olympus/` (config), seeds `~/OLYMPUS-VAULT/` (gods, instincts, patterns, activity feed, indices) via `python3 scripts/seed-vault.py`, applies the default model strategy via `node scripts/apply-strategy.js`, creates sub-agent instincts.
 5. **Detects external editors** — runs `node scripts/detect-editors.js`, saves to `~/.olympus/editor-config.json` (consumed by the Editor Bridge tab).
-6. **OpenCode authorization** — prints instructions to launch OpenCode via `olympus opencode` and authorize all LLM access inside OpenCode (GO plan OAuth, OpenCode Zen `/connect`, or free-tier Groq/OpenRouter providers).
+6. **OpenCode authorization** — prints instructions to launch OpenCode via `olympus opencode` and authorize all LLM access inside OpenCode (GO plan OAuth, OpenCode Zen `/connect`, or any provider registered there).
 
 > **No skill index build at install time.** The skill TF-IDF index (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) is built on-demand by the OLYMPUS Electron main process (it spawns an incremental watcher on launch). You can force a full rebuild manually with `npm run skill-index` if you want it ready before first launch.
 
@@ -131,4 +131,4 @@ After install, run:
 node scripts/olympus-doctor.js
 ```
 
-This checks ~70 installation health points. A clean v0.0.3 install reports **0 failures**. The 6 warnings a fresh install will show are all expected runtime-state items (MCP servers not configured, terminal bridge not yet spawned, short-circuit log not yet created) — they clear the first time you launch OLYMPUS.
+This checks ~70 installation health points. A clean v0.0.23 install reports **0 failures**. The 6 warnings a fresh install will show are all expected runtime-state items (MCP servers not configured, terminal bridge not yet spawned, short-circuit log not yet created) — they clear the first time you launch OLYMPUS.

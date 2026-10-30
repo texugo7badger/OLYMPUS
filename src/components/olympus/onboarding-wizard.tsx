@@ -444,7 +444,7 @@ olympus opencode`}
                         Run a local LLM server (Ollama, LM Studio, vLLM, llama.cpp, or any OpenAI-compatible endpoint) and OLYMPUS wires the full 10-god + 122-demigod arsenal to it. Nothing leaves this machine.
                       </div>
                       <div className="text-[10px] font-mono text-olympus-text-dim bg-olympus-bg border border-olympus-gold/10 rounded p-2">
-                        <strong>Probe first:</strong> <span className="text-olympus-gold">node scripts/local-llm-probe.js</span> — it names every endpoint it found (or the exact reason none answered). Requirements: tool calling + ≥32k context. See docs/LOCAL-LLM.md for the honest hardware table.
+                        <strong>Probe first:</strong> <span className="text-olympus-gold">node scripts/local-llm-probe.js</span> — it names every endpoint it found (or the exact reason none answered). Requirements: tool calling + ≥32k context. See LOCAL-LLM.md for the honest hardware table.
                       </div>
                       <div className="text-[10px] font-mono text-olympus-text-dim">
                         Then apply: <span className="text-olympus-gold">olympus apply-strategy local</span>
@@ -470,7 +470,7 @@ olympus opencode`}
                 <p className="text-[11px] text-olympus-text-dim font-mono mb-3 leading-relaxed">
                   The zero-cost path in v0.0.22 is your own hardware. Start a local LLM
                   server and OLYMPUS probes it (Ollama / LM Studio / vLLM / llama.cpp / any
-                  OpenAI-compatible endpoint) — see docs/LOCAL-LLM.md.
+                  OpenAI-compatible endpoint) — see LOCAL-LLM.md.
                 </p>
 
                 <div className="space-y-3">

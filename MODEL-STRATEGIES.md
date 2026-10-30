@@ -239,7 +239,7 @@ block into `opencode.json` and pins every god to `local/<model>` — the full 10
 arsenal, full prompts, all plugins. **With no endpoint answering, the apply refuses** with the
 probe table and the fix — never a config that cannot serve a request.
 
-**Requirements:** tool calling + ≥32k context. See [docs/LOCAL-LLM.md](docs/LOCAL-LLM.md) for the
+**Requirements:** tool calling + ≥32k context. See [LOCAL-LLM.md](LOCAL-LLM.md) for the
 honest hardware table (S/A/B/C tiers). Cost: $0. Data: never leaves the machine.
 
 **Probe only:** `node scripts/local-llm-probe.js` (JSON report, exit 0 when an endpoint answers).

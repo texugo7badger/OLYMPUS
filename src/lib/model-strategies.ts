@@ -83,7 +83,7 @@ export const ZEN_PLAN_DOCS_URL = 'https://opencode.ai/docs/zen/';
  *              vLLM, llama.cpp, or any OpenAI-compatible endpoint). Zero cost,
  *              zero network dependency; runs the full 132-agent arsenal when
  *              the machine has ≥32 GB RAM / ≥48 GB VRAM. Always honest about
- *              what's serving (see docs/LOCAL-LLM.md).
+ *              what's serving (see LOCAL-LLM.md).
  * Custom user-defined strategies use the 'custom' tier.
  */
 export type LLMStrategyTier = 'quality' | 'balanced' | 'budget' | 'local' | 'custom';
@@ -359,7 +359,7 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'local': {
     label: 'Local',
     description:
-      'OLYMPUS running entirely on YOUR hardware — no cloud keys, no rate limits, no data leaving this machine. A local LLM server (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint) serves all 10 gods + the 122 demigods through the full arsenal. Requires a working local endpoint with a model that supports tool calling and at least 32k context (see docs/LOCAL-LLM.md and run `olympus apply-strategy local` which probes your setup). Always honest: the Settings → Strategy shows which model serves each god, the cost is $0, and the dashboard reports the measured token rate + estimated session time. If no endpoint is found, the apply refuses with the probe result (host/port + why) so nothing is hidden.',
+      'OLYMPUS running entirely on YOUR hardware — no cloud keys, no rate limits, no data leaving this machine. A local LLM server (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint) serves all 10 gods + the 122 demigods through the full arsenal. Requires a working local endpoint with a model that supports tool calling and at least 32k context (see LOCAL-LLM.md and run `olympus apply-strategy local` which probes your setup). Always honest: the Settings → Strategy shows which model serves each god, the cost is $0, and the dashboard reports the measured token rate + estimated session time. If no endpoint is found, the apply refuses with the probe result (host/port + why) so nothing is hidden.',
     plan: 'LOCAL',
     tier: 'local',
     reasoningModel: 'opencode-go/glm-5.3-flash',
@@ -721,7 +721,7 @@ export function strategyApiRequirement(strategy: string): StrategyApiRequirement
     return {
       kind: 'go',
       label: 'Free tier retired',
-      hint: 'The free tier is retired (v0.0.22). Choose GO, Zen, or the Local strategy (your own hardware — see docs/LOCAL-LLM.md).',
+      hint: 'The free tier is retired (v0.0.22). Choose GO, Zen, or the Local strategy (your own hardware — see LOCAL-LLM.md).',
     };
   }
   return null;

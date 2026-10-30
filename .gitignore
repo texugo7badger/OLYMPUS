@@ -118,3 +118,6 @@ vault-sim*/
 
 # Private debug transcript (user session log) — never publish
 Todas as estrat*deram erro* Ajuda..md
+
+# Maintainer-only docs — they live on the maintainer's machine, never in the repo.
+docs/

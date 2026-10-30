@@ -143,9 +143,10 @@ print_opencode_auth_instructions() {
   echo ''
   echo -e "${BOLD}${GOLD}  ── OpenCode Authorization ─────────────────────────────────────────${RESET}"
   echo ''
-  echo -e "  ${GRAY}OLYMPUS runs on OpenCode. ALL LLM access — GO plan, Zen, AND${RESET}"
-  echo -e "  ${GRAY}free-tier providers — is authorized inside OpenCode itself. OLYMPUS never${RESET}"
-  echo -e "  ${GRAY}injects API keys; it reads them from OpenCode's own auth file.${RESET}"
+  echo -e "  ${GRAY}OLYMPUS runs on OpenCode. ALL LLM access — GO plan, Zen, and every${RESET}"
+  echo -e "  ${GRAY}other provider (OpenRouter, NVIDIA) — is authorized inside OpenCode${RESET}"
+  echo -e "  ${GRAY}itself. OLYMPUS never stores an LLM key; it reads OpenCode's auth file.${RESET}"
+  echo -e "  ${GRAY}Do this BEFORE opening the app. Zero-cost path: Local (your hardware).${RESET}"
   echo -e "  ${GRAY}Launch the local OpenCode CLI with the olympus command:${RESET}"
   echo ''
   echo -e "       ${GREEN}olympus opencode${RESET}"

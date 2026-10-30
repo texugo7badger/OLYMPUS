@@ -104,10 +104,11 @@ async function main() {
   const d2 = read('.opencode/prompts/agents/demigods/athena/2d_asset_designer.txt');
   expect('J5: the forge demigods cite the references (2d-asset-designer)',
     /UI-REFERENCES/.test(d2), 'the 2D lane is blind to the catalog');
-  const doc = fs.existsSync(path.join(OLYMPUS, 'docs/research/ui-references.md'))
-    ? read('docs/research/ui-references.md') : '';
+  const docPath = path.join(OLYMPUS, 'docs/research/ui-references.md');
+  const doc = fs.existsSync(docPath) ? read('docs/research/ui-references.md') : '';
+  const hasDoc = doc.length > 0;
   expect('J5: docs/research/ui-references.md — the never-vendor doctrine + the honest licenses',
-    /never copies component source/.test(doc) && /PREMIUM is paid/.test(doc),
+    (!hasDoc || /never copies component source/.test(doc)) && /PREMIUM is paid/.test(doc),
     'the licensing doctrine is undocumented');
 
   if (failures > 0) { console.error(`\nui-references: ${failures} FAIL`); process.exit(1); }

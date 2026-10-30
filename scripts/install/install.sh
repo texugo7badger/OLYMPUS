@@ -138,7 +138,7 @@ step_progress "Creating OLYMPUS home + vault" 4 6
 	create_sub_agent_instincts "$OLYMPUS_SRC"
 	apply_default_strategy "$OLYMPUS_SRC"
 
-	# LLM API keys (GO plan + free-tier Groq/OpenRouter) are NOT configured
+	# LLM API keys (GO plan, Zen, OpenRouter, NVIDIA) are NOT configured
 	# here -- they are authorized inside OpenCode via `olympus opencode`
 	# (Step 6). OLYMPUS never injects or stores LLM keys itself.
 
