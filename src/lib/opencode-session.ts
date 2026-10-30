@@ -2888,10 +2888,11 @@ async function runWarmMessageAttempt(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(server.protocol === 'v2' ? {
-              // OpenCode 2.2.x v2 prompt body is TOP-LEVEL `{ text, agent }`.
-              // The old `{prompt: {text}}` wrapper returns
-              // `InvalidRequestError: Missing key at ["text"]` on 2.2.2.
-              text: `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}`,
+              // OpenCode 2.x v2 prompt body: `{ prompt: { text } }`.
+              // (A bare `{ text }` returns "Missing key at [prompt]".)
+              prompt: {
+                text: `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}`,
+              },
               ...(opts.agent ? { agent: opts.agent } : {}),
             } : {
               // Prepend the authoritative strategy block so the model never has

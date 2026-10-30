@@ -22,6 +22,8 @@ export interface HopTransportRequest {
   args: string[];
   prompt: string;
   agent: string;
+  /** The model lane id (e.g. opencode-go/deepseek-v4.1-flash). */
+  model?: string;
   cwd: string;
   timeoutMs: number;
   firstByteMs: number;
@@ -99,6 +101,7 @@ export class WarmHopTransport implements HopTransport {
     const r = await runWarmHop({
       laneRoot: req.cwd,
       agent: req.agent,
+      model: req.model,
       text: req.prompt,
       timeoutMs: req.timeoutMs,
       firstByteMs: req.firstByteMs,

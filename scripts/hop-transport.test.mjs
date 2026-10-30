@@ -53,39 +53,37 @@ function fakeServer(opts = { failCreate: false }) {
     const url = req.url || '';
     if (req.method === 'GET' && url === '/config') { res.writeHead(200); res.end('{}'); return; }
     if (req.method === 'GET' && url === '/api/info') { res.writeHead(200); res.end('{}'); return; }
-    if (req.method === 'GET' && url === '/api/event') {
+    if (req.method === 'GET' && url === '/event') {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
       res.write(`data: ${JSON.stringify({ type: 'step-start' })}\n\n`);
       req.on('close', () => res.end());
       return;
     }
-    if (req.method === 'POST' && url === '/api/session') {
+    if (req.method === 'POST' && url === '/session') {
       if (opts.failCreate) { res.writeHead(500); res.end('boom'); return; }
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ id: 'ses_test' }));
       return;
     }
-    if (req.method === 'POST' && url === '/api/session/ses_test/prompt') {
+    if (req.method === 'POST' && (url === '/session/ses_test/agent' || url === '/session/ses_test/model')) {
+      res.writeHead(204); res.end(); return;
+    }
+    if (req.method === 'POST' && url === '/session/ses_test/message') {
       let body = '';
       req.on('data', (c) => { body += c; });
       req.on('end', () => {
-        res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ data: { id: 'msg_user', sessionID: 'ses_test', type: 'user' } }));
+        setTimeout(() => {
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({
+            info: { id: 'msg_a', role: 'assistant', agent: 'athena', modelID: 'beam-free', providerID: 'opencode-go', sessionID: 'ses_test', time: { created: Date.now(), completed: Date.now() }, tokens: { input: 10, output: 20 } },
+            parts: [
+              { type: 'text', text: 'warm-ok' },
+              { type: 'reasoning', text: 'warm-think' },
+              { type: 'step-finish', tokens: { input: 10, output: 20 } },
+            ],
+          }));
+        }, 60);
       });
-      return;
-    }
-    if (req.method === 'GET' && url === '/api/session/ses_test/message') {
-      res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({
-        data: [{
-          info: { id: 'msg_a', role: 'assistant', sessionID: 'ses_test', time: { created: Date.now(), completed: Date.now() }, tokens: { input: 10, output: 20 } },
-          parts: [
-            { type: 'text', text: 'warm-ok' },
-            { type: 'reasoning', text: 'warm-think' },
-            { type: 'step-finish', tokens: { input: 10, output: 20 } },
-          ],
-        }],
-      }));
       return;
     }
     if (req.method === 'POST' && /\/api\/session\/.+\/interrupt$/.test(url)) { res.writeHead(200); res.end('{}'); return; }
@@ -102,7 +100,7 @@ function fakeServer(opts = { failCreate: false }) {
 {
   __clearHopServersForTest();
   const { srv, port } = await fakeServer();
-  __registerHopServerForTest(ROOT, { port, password: 'pw', protocol: 'v2' });
+  __registerHopServerForTest(ROOT, { port, password: 'pw', protocol: 'v1' });
   const r = await runWarmHop({
     laneRoot: ROOT,
     agent: 'athena',
@@ -124,7 +122,7 @@ function fakeServer(opts = { failCreate: false }) {
 {
   __clearHopServersForTest();
   const { srv, port } = await fakeServer({ failCreate: true });
-  __registerHopServerForTest(ROOT, { port, password: 'pw', protocol: 'v2' });
+  __registerHopServerForTest(ROOT, { port, password: 'pw', protocol: 'v1' });
   let threw = null;
   try {
     await runWarmHop({ laneRoot: ROOT, agent: 'athena', text: 'x', timeoutMs: 5_000, firstByteMs: 2_000, silenceMs: 2_000 });
@@ -168,8 +166,7 @@ function fakeServer(opts = { failCreate: false }) {
   const fs = await import('node:fs');
   const session = fs.readFileSync(path.join(ROOT, 'src/lib/opencode-session.ts'), 'utf-8');
   const region = session.slice(session.indexOf("server.protocol === 'v2' ?"), session.indexOf("server.protocol === 'v2' ?") + 1200);
-  expect('T6 chat v2 body uses top-level text', /text: `\$\{buildStrategyContextBlock/.test(region), region.slice(0, 200));
-  expect('T6 chat v2 body has no prompt wrapper', !/prompt:\s*\{\s*\n?\s*text:/.test(region));
+  expect('T6 chat v2 body uses the prompt wrapper', /prompt:\s*\{\s*\n?\s*text:/.test(region), region.slice(0, 200));
 }
 
 

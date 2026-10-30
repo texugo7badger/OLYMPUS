@@ -526,6 +526,7 @@ async function attemptLane(
       args: ['run', '--model', lane, '--format', 'json', ...(resolveHopVariant() ? ['--variant', resolveHopVariant()!] : []), ctx.prompt],
       prompt: ctx.prompt,
       agent: hop.god,
+      model: lane,
       cwd: ctx.laneRoot,
       timeoutMs: resolveHopTimeoutMs(),
       firstByteMs: resolveHopFirstByteMs(),

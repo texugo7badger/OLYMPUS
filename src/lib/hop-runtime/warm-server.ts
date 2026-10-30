@@ -24,6 +24,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { spawnOpencode } from '@/lib/opencode-spawn';
+import { symlinkSync, mkdirSync as mkdirSyncFs, existsSync as existsSyncFs } from 'node:fs';
 
 export interface WarmServerInfo {
   port: number;
@@ -32,6 +33,8 @@ export interface WarmServerInfo {
   child: ReturnType<typeof spawnOpencode>;
   laneRoot: string;
   lastUsed: number;
+  /** Turns currently running on this server — the idle sweeper must not kill it. */
+  activeTurns: number;
   logFile: string;
 }
 
@@ -112,6 +115,7 @@ function startSweeper(): void {
   sweeper = setInterval(() => {
     const now = Date.now();
     for (const [key, info] of SERVERS) {
+      if (info.activeTurns > 0) continue;
       if (now - info.lastUsed < IDLE_MS) continue;
       try { info.child.kill('SIGTERM'); } catch { /* gone */ }
       SERVERS.delete(key);
@@ -141,6 +145,20 @@ export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo>
 
   const port = await freePort();
   const password = randomBytes(16).toString('hex');
+  // The hop server gets its OWN OpenCode data dir. Reusing the chat's shared
+  // DB hit "Database is not empty and has no session table" (the chat and a
+  // standalone serve raced the same schema). The auth file is symlinked so
+  // every provider the user registered stays available.
+  const hopData = path.join(olympusHome(), 'hop-data');
+  const hopDataOpencode = path.join(hopData, 'opencode');
+  try {
+    mkdirSyncFs(hopDataOpencode, { recursive: true });
+    const authSrc = path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'opencode', 'auth.json');
+    const authDst = path.join(hopDataOpencode, 'auth.json');
+    if (existsSyncFs(authSrc) && !existsSyncFs(authDst)) {
+      try { symlinkSync(authSrc, authDst); } catch { /* copy fallback */ }
+    }
+  } catch { /* the server still starts; auth may be missing */ }
   const logFile = path.join(olympusHome(), `hop-server-${port}.log`);
   fs.mkdirSync(path.dirname(logFile), { recursive: true });
   const logFd = fs.openSync(logFile, 'a');
@@ -151,6 +169,7 @@ export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo>
       extraEnv: {
         OPENCODE_SERVER_PASSWORD: password,
         OPENCODE_DISABLE_AUTOUPDATE: '1',
+        XDG_DATA_HOME: hopData,
       },
       stdio: ['ignore', logFd, logFd] as const,
       detached: true,
@@ -179,14 +198,13 @@ export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo>
     await new Promise((r) => setTimeout(r, 400));
   }
 
-  // Protocol detection: v2 answers /api/info.
-  let protocol: 'v1' | 'v2' = 'v1';
-  try {
-    const info = await httpRequest(port, password, 'GET', '/api/info', undefined, 3_000);
-    if (info.status > 0 && info.status < 500) protocol = 'v2';
-  } catch { /* v1 */ }
+  // The v1 /session + /session/:id/message API is present on OpenCode 2.x
+  // (verified 2026-10-30): it accepts `agent` + `model` per turn and returns
+  // the full assistant result. The v2 /api/session/:id/prompt only admits a
+  // prompt and has no agent/model fields — unusable for per-god hops.
+  const protocol: 'v1' = 'v1';
 
-  const server: WarmServerInfo = { port, password, protocol, child, laneRoot: key, lastUsed: Date.now(), logFile };
+  const server: WarmServerInfo = { port, password, protocol, child, laneRoot: key, lastUsed: Date.now(), activeTurns: 0, logFile };
   SERVERS.set(key, server);
   return server;
 }
@@ -331,6 +349,8 @@ function newestAssistant(messages: any[]): any | null {
 export async function runWarmHop(opts: {
   laneRoot: string;
   agent: string;
+  /** The model lane id, e.g. `opencode-go/deepseek-v4.1-flash`. */
+  model?: string;
   text: string;
   timeoutMs: number;
   firstByteMs: number;
@@ -339,6 +359,8 @@ export async function runWarmHop(opts: {
 }): Promise<WarmHopResult> {
   const server = await ensureHopServer(opts.laneRoot);
   server.lastUsed = Date.now();
+  server.activeTurns += 1;
+  try {
 
   // 1) session
   let sessionId: string | null = null;
@@ -354,6 +376,24 @@ export async function runWarmHop(opts: {
   }
   if (!sessionId) throw new WarmTransportUnavailable('create session returned no id');
 
+  // 1b) v2 selects the god and the model ON THE SESSION — the prompt body
+  // does not carry an agent/model (the OpenAPI schema: {prompt:{text}}).
+  if (server.protocol === 'v2') {
+    const agentRes = await httpRequest(server.port, server.password, 'POST', `/api/session/${sessionId}/agent`, { agent: opts.agent }, 10_000);
+    if (agentRes.status < 200 || agentRes.status >= 300) {
+      throw new WarmTransportUnavailable(`select agent ${opts.agent} failed: HTTP ${agentRes.status} ${agentRes.text.slice(0, 200)}`);
+    }
+    if (opts.model && opts.model.includes('/')) {
+      const idx = opts.model.indexOf('/');
+      const providerID = opts.model.slice(0, idx);
+      const modelID = opts.model.slice(idx + 1);
+      const modelRes = await httpRequest(server.port, server.password, 'POST', `/api/session/${sessionId}/model`, { model: { providerID, id: modelID } }, 10_000);
+      if (modelRes.status < 200 || modelRes.status >= 300) {
+        throw new WarmTransportUnavailable(`select model ${opts.model} failed: HTTP ${modelRes.status} ${modelRes.text.slice(0, 200)}`);
+      }
+    }
+  }
+
   // 2) SSE watch (first-byte, silence, errors, permissions)
   const errors: string[] = [];
   const permissions = new Set<string>();
@@ -362,6 +402,7 @@ export async function runWarmHop(opts: {
   const sse = openSse(server, (ev) => {
     if (!sawFirstByte) sawFirstByte = true;
     lastEventAt = Date.now();
+    server.lastUsed = Date.now();
     if (ev?.type === 'error') {
       errors.push(typeof ev.error === 'string' ? ev.error : JSON.stringify(ev.error ?? ev).slice(0, 400));
     }
@@ -374,7 +415,10 @@ export async function runWarmHop(opts: {
     for (const pid of [...permissions]) {
       permissions.delete(pid);
       try {
-        await httpRequest(server.port, server.password, 'POST', `/permission/${encodeURIComponent(pid)}/reply`, { reply: 'once' }, 5_000);
+        const v1 = await httpRequest(server.port, server.password, 'POST', `/session/${sessionId}/permissions/${encodeURIComponent(pid)}`, { response: 'once' }, 5_000);
+        if (v1.status < 200 || v1.status >= 300) {
+          await httpRequest(server.port, server.password, 'POST', `/permission/${encodeURIComponent(pid)}/reply`, { reply: 'once' }, 5_000);
+        }
         opts.onNotice?.(`permission ${pid} auto-approved (hop session)`);
       } catch { /* the ceiling still bounds the turn */ }
     }
@@ -401,11 +445,14 @@ export async function runWarmHop(opts: {
   let code: number | null = null;
   let raw = '';
   try {
-    // OpenCode 2.x: the v2 prompt body is TOP-LEVEL `{ text, agent }`.
-    // `{ prompt: { text } }` returns InvalidRequest (Missing key at ["text"]).
+    // OpenCode 2.x: the v2 prompt body is `{ prompt: { text }, agent }`.
+    // A bare `{ text }` returns "Missing key at [prompt]".
+    const modelRef = opts.model && opts.model.includes('/')
+      ? { providerID: opts.model.slice(0, opts.model.indexOf('/')), modelID: opts.model.slice(opts.model.indexOf('/') + 1) }
+      : undefined;
     const body = server.protocol === 'v2'
-      ? { text: opts.text, agent: opts.agent }
-      : { parts: [{ type: 'text', text: opts.text }], agent: opts.agent };
+      ? { prompt: { text: opts.text } }
+      : { parts: [{ type: 'text', text: opts.text }], agent: opts.agent, ...(modelRef ? { model: modelRef } : {}) };
     const res = await httpRequest(server.port, server.password, 'POST', promptPath(server, sessionId), body, opts.timeoutMs);
     raw = res.text;
     code = res.status >= 200 && res.status < 300 ? 0 : 1;
@@ -421,6 +468,7 @@ export async function runWarmHop(opts: {
       while (!done && Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, 1000));
         if (errors.length > 0 && errors.some((e) => /hop-first-byte-timeout|provider\.|auth:/i.test(e))) break;
+        server.lastUsed = Date.now();
         const msgs = await readMessages(server, sessionId);
         const assistant = newestAssistant(msgs);
         if (!assistant) continue;
@@ -471,6 +519,10 @@ export async function runWarmHop(opts: {
     transport: 'warm',
     sessionId: acc.sessionId,
   };
+  } finally {
+    server.activeTurns = Math.max(0, server.activeTurns - 1);
+    server.lastUsed = Date.now();
+  }
 }
 
 /** Kill every warm hop server (tests / app exit). */
@@ -494,6 +546,7 @@ export function __registerHopServerForTest(laneRoot: string, info: Omit<WarmServ
     ...info,
     laneRoot: path.resolve(laneRoot),
     lastUsed: Date.now(),
+    activeTurns: 0,
     child: { kill: () => true, exitCode: null, signalCode: null } as any,
     logFile: '(test)',
   });
