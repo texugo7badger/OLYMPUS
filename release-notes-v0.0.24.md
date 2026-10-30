@@ -43,7 +43,7 @@ Every project home, artifact, plan and decision is under `~/OLYMPUS-VAULT/02_Pro
 - **#231** — adaptive polling (hidden tabs pause) + a paginated activity feed (60 + `since` deltas + “Load older”).
 - **#226** — Recent Activity grouped by campaign with the hop chain.
 - **#227** — God Intelligence “Live campaign” card (god · lane · artifacts · elapsed) fed by one hop SSE stream.
-- **#241** — warm-server hop transport (`auto` = warm first, spawn fallback), dynamic concurrency, no orphan servers. The OpenCode 2.2.2 v2 prompt-body bug was found and fixed.
+- **#241** — warm-server hop transport (`auto` = warm first, spawn fallback), dynamic concurrency, no orphan servers. The warm lane uses the v1 `/session` + `/session/:id/message` API (the v2 prompt endpoint has no agent/model fields); the chat keeps `{prompt:{text}}`. A real 1-hop campaign completed via warm in 18.3s with the artifact on disk.
 
 ## Upgrade notes
 
