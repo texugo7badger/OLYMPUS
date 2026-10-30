@@ -37,14 +37,15 @@ let fails = 0, checked = 0;
 const check = (n, ok, d = '') => { checked++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${ok ? '' : `  -- ${String(d).slice(0, 300)}`}`); if (!ok) fails++; };
 
 const child = (mode) => {
-  const fake = join(WORK, `fake-${mode}`), home = join(WORK, `home-${mode}`), lane = join(WORK, `lane-${mode}`);
-  for (const d of [fake, home, lane]) mkdirSync(d, { recursive: true });
+  const fake = join(WORK, `fake-${mode}`), home = join(WORK, `home-${mode}`), lane = join(WORK, `lane-${mode}`), vault = join(WORK, `vault-${mode}`);
+  for (const d of [fake, home, lane, vault]) mkdirSync(d, { recursive: true });
   // the fake OLYMPUS root must look like one to findOlympusRoot()
   writeFileSync(join(fake, 'opencode.json'), JSON.stringify({ agent: {} }));
   const env = {
     ...process.env,
     OLYMPUS_ROOT: fake,
     OLYMPUS_HOME: home,
+    OLYMPUS_VAULT: vault,
     // guard mode: the workspace points INSIDE the fake root — the resolver must refuse it
     OLYMPUS_WORKSPACE: mode === 'guard' ? join(fake, 'workspace') : lane,
   };
