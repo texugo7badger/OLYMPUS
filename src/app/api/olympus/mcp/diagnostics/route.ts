@@ -22,6 +22,13 @@ import { findOlympusRoot } from '@/lib/opencode-spawn';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** Keep `{env:VAR}` visible but never its VALUE (a key must not be exported). */
+function redactPlaceholders(value: string): string {
+  return String(value)
+    .replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, '{env:$1}')
+    .replace(/\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g, '{env:$1}');
+}
+
 export async function GET(req: NextRequest) {
   try {
     const doProbe = req.nextUrl.searchParams.get('probe') === '1';
@@ -42,9 +49,12 @@ export async function GET(req: NextRequest) {
         requires: s.requires ?? null,
         dependency: dep,
         configIssues: s.configIssues,
-        command: (s.command ?? []).map((c) => expandMcpPlaceholders(c, { lane: root })),
+        // v0.0.25 — NEVER expand secret placeholders into a downloadable file.
+        // `{env:FAL_KEY}` / `--figma-api-key={env:FIGMA_API_KEY}` are redacted
+        // to `{env:…}`; only path placeholders (cwd) are resolved.
+        command: (s.command ?? []).map((c) => redactPlaceholders(c)),
         cwd: s.cwd ? expandMcpPlaceholders(s.cwd, { lane: root }) : root,
-        url: s.url ?? null,
+        url: s.url ? redactPlaceholders(s.url) : null,
         environmentKeys: envKeys,
         requiredKeys: required,
         keysConfigured: Object.fromEntries(required.map((k) => [k, keys.has(k)])),

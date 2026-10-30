@@ -131,6 +131,7 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf-8');
   expect('M7 it reports dependency verdicts', /dependency: dep/.test(src));
   expect('M7 it reports key PRESENCE (not values)', /keysConfigured/.test(src) && !/process\.env\[k\]\s*[,}]/.test(src));
   expect('M7 it expands the command for the lane', /expandMcpPlaceholders/.test(src));
+  expect('M7 it redacts secret placeholders (never exports a key)', /redactPlaceholders/.test(src) && !/command: \(s\.command \?\? \[\]\)\.map\(\(c\) => expandMcpPlaceholders/.test(src));
 }
 
 // ── M8: curated ──────────────────────────────────────────────────────────
