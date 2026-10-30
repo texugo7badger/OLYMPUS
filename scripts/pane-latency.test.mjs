@@ -92,5 +92,15 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf-8');
   expect('L6 the old 10s poll is gone', !/\}, 10000\)/.test(src));
 }
 
+// ── L7: the remaining request-path blockers ───────────────────────────────
+{
+  const history = read('src/app/api/olympus/history/route.ts');
+  expect('L7 history does not execSync()', !/execSync\(/.test(history));
+  expect('L7 history is cached + async', /withTtl\('history:log'/.test(history) && /execFile\(/.test(history));
+  const buildInfo = read('src/app/api/olympus/build-info/route.ts');
+  expect('L7 build-info resolves the revision once', /CACHED_REV/.test(buildInfo));
+  expect('L7 build-info does not execSync()', !/execSync\(/.test(buildInfo));
+}
+
 console.log(`\npane-latency: ${passed} passed, ${failures} failed`);
 process.exit(failures === 0 ? 0 : 1);
