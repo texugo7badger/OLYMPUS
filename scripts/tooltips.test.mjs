@@ -63,13 +63,19 @@ for (const f of files) {
 }
 expect('T2 OlympusTooltip or data-tip present across the components', hasAny >= 20, `only ${hasAny} files`);
 
-// T3: the global CSS rule exists with the Olympus card background.
+// T3: the portal is the only tooltip renderer (v0.0.24). A pseudo-element
+//     cannot escape a tiny positioned parent — the vertical-text bug.
 {
   const css = fs.readFileSync(path.join(ROOT, 'src', 'app', 'globals.css'), 'utf-8');
-  expect('T3 [data-tip]::after rule exists', /\[data-tip\]::after/.test(css));
-  expect('T3 card background #121826', /#121826/.test(css));
-  expect('T3 gold hairline border', /rgba\(212,\s*165,\s*116/.test(css));
-  expect('T3 400ms delay', /transition-delay:\s*400ms/.test(css));
+  const portalPath = path.join(ROOT, 'src', 'components', 'olympus', 'global-tooltip.tsx');
+  expect('T3 GlobalTooltip portal exists', fs.existsSync(portalPath));
+  const portal = fs.existsSync(portalPath) ? fs.readFileSync(portalPath, 'utf-8') : '';
+  expect('T3 portal is fixed-position and width:max-content', /position:\s*fixed/.test(portal) || /className="fixed/.test(portal));
+  expect('T3 portal uses width:max-content', /width:\s*'max-content'/.test(portal));
+  expect('T3 portal has a 400ms delay', /DELAY_MS\s*=\s*400/.test(portal));
+  expect('T3 no [data-tip]::after pseudo-element remains', !/\[data-tip\]::after/.test(css));
+  const layout = fs.readFileSync(path.join(ROOT, 'src', 'app', 'layout.tsx'), 'utf-8');
+  expect('T3 layout mounts <GlobalTooltip />', /<GlobalTooltip\s*\/>/.test(layout));
 }
 
 console.log(`\ntooltips: ${passed} passed, ${failures} failed`);

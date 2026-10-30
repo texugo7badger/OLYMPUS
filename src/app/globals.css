@@ -383,48 +383,8 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* OLYMPUS global tooltip — for elements that use `data-tip` instead of */
-/* the OlympusTooltip component (non-interactive spans, code, iframes, */
-/* dense grids where a wrapper would break layout). Matches the Olympus */
-/* tooltip design: card background, gold hairline, mono 10px, 400ms     */
-/* delay so quick traversal never flashes.                               */
+/* Tooltips: `data-tip` is rendered by the GlobalTooltip portal        */
+/* (src/components/olympus/global-tooltip.tsx). Do NOT reintroduce a   */
+/* ::after pseudo-element — a pseudo-element cannot escape a tiny      */
+/* positioned parent (the vertical "timeout after 5000ms" bug).        */
 /* ------------------------------------------------------------------ */
-[data-tip] {
-  position: relative;
-}
-[data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  z-index: 200;
-  left: 50%;
-  bottom: calc(100% + 8px);
-  transform: translateX(-50%);
-  max-width: 256px;
-  padding: 6px 10px;
-  background: #121826;
-  border: 1px solid rgba(212, 165, 116, 0.2);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-  color: #b8b8b8;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
-  line-height: 1.4;
-  white-space: normal;
-  word-break: break-word;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 120ms ease;
-  transition-delay: 400ms;
-}
-[data-tip]:hover::after {
-  opacity: 1;
-}
-/* Edges: when there is no room above, flip below. */
-[data-tip][data-tip-side='bottom']::after {
-  bottom: auto;
-  top: calc(100% + 8px);
-}
-/* Respect reduced motion. */
-@media (prefers-reduced-motion: reduce) {
-  [data-tip]::after { transition: none; }
-}

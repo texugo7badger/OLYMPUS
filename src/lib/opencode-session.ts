@@ -2271,11 +2271,10 @@ export function retryExhaustionGuidance(
   // the dying strategy's own key is present (different pools entirely).
   const census = authLaneCensus(authDirs);
   const alternatives: string[] = [];
-  if (census.hasOpenRouter) alternatives.push('free-openrouter / free-big-pickle (OpenRouter key present)');
-  if (census.hasNvidia) alternatives.push('free-nvidia-build (NVIDIA key present)');
-  const altLine = alternatives.length
-    ? `  Alternatives whose key IS present: ${alternatives.join('; ')}\n`
-    : '  No alternative free strategy has a key present either (per the auth census).\n';
+  if (census.hasOpenRouter) alternatives.push('a custom strategy using OpenRouter (registered)');
+  if (census.hasNvidia) alternatives.push('a custom strategy using NVIDIA Build (registered)');
+  alternatives.push('local (your own hardware — zero cost)');
+  const altLine = `  Alternatives that can work here: ${alternatives.join('; ')}\n`;
   const lanesLine = census.providerIds.length
     ? `  Lanes with keys present: ${census.providerIds.join(', ')}\n`
     : '  No lane has a key present (per the auth census — both auth.json paths).\n';
@@ -2313,7 +2312,7 @@ export function retryExhaustionGuidance(
   );
   if (goLine) lines.push(goLine.trimEnd());
   lines.push(
-    `  To switch explicitly: node scripts/apply-strategy.js --strategy <id>   (free-openrouter | free-big-pickle | free-nvidia-build)`,
+    `  To switch explicitly: node scripts/apply-strategy.js --strategy <id>   (go-* | zen-* | local | custom-*)`,
     `  To absorb a rate-limited pool, simply resend — the warm session and its context are preserved.`,
   );
   return lines.join('\n');
@@ -2889,12 +2888,10 @@ async function runWarmMessageAttempt(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(server.protocol === 'v2' ? {
-              // v2 prompt body: {prompt: {text}} (the strategy block rides inline).
-              // The opencode v2 API requires `prompt` as a wrapper around
-              // `text` — sending `{text}` alone returns "Missing key at [prompt]".
-              prompt: {
-                text: `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}`,
-              },
+              // OpenCode 2.2.x v2 prompt body is TOP-LEVEL `{ text, agent }`.
+              // The old `{prompt: {text}}` wrapper returns
+              // `InvalidRequestError: Missing key at ["text"]` on 2.2.2.
+              text: `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}`,
               ...(opts.agent ? { agent: opts.agent } : {}),
             } : {
               // Prepend the authoritative strategy block so the model never has

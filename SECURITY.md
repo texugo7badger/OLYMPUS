@@ -8,7 +8,7 @@ OLYMPUS is a standalone Electron desktop app. It does not expose any network por
 
 - Outbound HTTPS to the OpenCode GO API / OpenCode Zen (LLM inference)
 - Outbound HTTPS to MCP servers (GitHub, Figma, Grafana, etc.)
-- Outbound HTTPS to free-tier providers (OpenRouter, Groq, NVIDIA Build) when using a `free-*` strategy
+- Outbound HTTPS to the providers a custom strategy uses (OpenRouter, NVIDIA Build, etc.) — free endpoints included, with the Builder warning
 - Local SSE stream (`/api/olympus/activity`) for the UI activity feed
 - Local WebSocket bridge (port 3738) for real-time UI updates
 - Local Terminal Bridge (port 3740) for IDE extension PTY sharing
@@ -134,7 +134,7 @@ LLM API keys are **never stored by OLYMPUS**. They live in OpenCode's own `auth.
 
 ### Key locations (checked in order)
 
-1. **OpenCode `auth.json`** (`~/.local/share/opencode/auth.json`, legacy `~/.config/opencode/auth.json`) — **all LLM provider keys** (GO plan OAuth + free-tier Groq/OpenRouter) are authorized inside OpenCode via `olympus opencode` → Settings → Providers. OLYMPUS never injects these keys; it reads them from OpenCode's own auth file. Legacy keys may also live in `~/.olympus/.env` / `~/.olympus/llm-providers.json` (checked next).
+1. **OpenCode `auth.json`** (`~/.local/share/opencode/auth.json`, legacy `~/.config/opencode/auth.json`) — **all LLM provider keys** (GO/Zen OAuth + any registered provider key) are authorized inside OpenCode via `olympus opencode` → Settings → Providers. OLYMPUS never injects these keys; it reads them from OpenCode's own auth file. Legacy keys may also live in `~/.olympus/.env` / `~/.olympus/llm-providers.json` (checked next).
 
 2. **OpenCode `auth.json`** — the setup path. Authorize with `olympus opencode` → `/connect` (Go/Zen) or Settings → Providers (OpenRouter/NVIDIA). OLYMPUS only detects what is registered there; no key field, no manual file editing.
 
@@ -166,12 +166,12 @@ OLYMPUS records uncaught exceptions and unhandled promise rejections from the El
 
 ## Free-tier strategy security
 
-When using a free strategy (`free-openrouter`, `free-big-pickle`, `free-nvidia-build`), OLYMPUS makes outbound HTTPS calls to:
+When a custom strategy uses a third-party provider (OpenRouter, NVIDIA Build, etc.), OLYMPUS makes outbound HTTPS calls to:
 
 - **OpenRouter** (`https://openrouter.ai/api/v1/chat/completions`) — with your OpenRouter key as a Bearer token.
 - **NVIDIA Build** (`https://integrate.api.nvidia.com/v1/...`) — with your NVIDIA key (`nvapi-...`) as a Bearer token.
 
-These are third-party API providers. Your prompts and code context are sent to their servers. Review their privacy policies before use. The free-tier keys are obtained with no credit card and have no billing risk, but the privacy tradeoff is the same as any cloud LLM API.
+These are third-party API providers. Your prompts and code context are sent to their servers. Review their privacy policies before use. Free endpoints may have no billing risk, but the privacy tradeoff is the same as any cloud LLM API.
 
 Keys for these providers are authorized inside OpenCode (`olympus opencode` → `/connect` for Go/Zen, Settings → Providers for OpenRouter/NVIDIA) and stored in OpenCode's own `auth.json` (`~/.local/share/opencode/auth.json`). OLYMPUS never injects LLM keys and never stores them — no manual file editing. MCP keys (GitHub, Grafana, Figma, fal) are a separate surface configured in Settings → API Keys. See [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) for the full strategy reference.
 
@@ -185,7 +185,7 @@ The Zen strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) use OpenCod
 - The **free-on-Zen trial models** (Big Pickle, DeepSeek V4 Flash Free, MiMo-V2.5 Free, Laguna S 2.1 Free, Ling-3.0-flash Free, North Mini Code Free, Nemotron 3 Ultra Free) may retain/use data during their free period. Do not submit personal or confidential data to the free trial models.
 - NVIDIA-served free endpoints log session data for security purposes.
 
-Gemini, Kimi, MiniMax, Qwen-Max/Plus and the open-weight models (GLM, DeepSeek) are zero-retention. If 30-day retention is unacceptable, use a GO strategy (open-weight models) or a free-tier strategy instead of the OpenAI/Anthropic ZEN roles.
+Gemini, Kimi, MiniMax, Qwen-Max/Plus and the open-weight models (GLM, DeepSeek) are zero-retention. If 30-day retention is unacceptable, use a GO strategy (open-weight models) or the local lane instead of the OpenAI/Anthropic ZEN roles.
 
 The Zen key is stored in OpenCode's own `auth.json` under the `opencode` provider (env override `OPENCODE_API_KEY`) — configured via `olympus opencode` → `/connect` → OpenCode Zen. OLYMPUS never injects the key. There are no request caps; charges are per request with auto-reload + optional monthly limits, so set a monthly limit if you want cost control.
 

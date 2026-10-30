@@ -630,6 +630,13 @@ export function buildGraph(activeProject?: ActiveProjectContext | null): GraphDa
       security: 'artemis',
       testing: 'dionysus',
       integrations: 'hermes',
+      planning: 'apollo',
+      orchestration: 'atlas',
+      design: 'athena',
+      qa: 'dionysus',
+      data: 'persephone',
+      vault: 'callimachus',
+      release: 'prometheus',
     };
     const targetGod = categoryToGod[k.category];
     if (targetGod) {

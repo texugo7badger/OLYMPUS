@@ -3,11 +3,11 @@
 </p>
 
 <p align="center">
-  <strong>Low-cost. Excellent quality. Always free.</strong>
+  <strong>Low-cost. Excellent quality. Local when you need it.</strong>
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.23, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.24, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -20,7 +20,7 @@ OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencod
   <img src="public/olympus.jpeg" alt="OLYMPUS Interface — Brain graph and Interactive Terminal" width="900" />
 </div>
 
-- **Three ways to run.** The GO plan (flat monthly, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps), or **Local** — your own hardware (Ollama, LM Studio, vLLM, llama.cpp, or any OpenAI-compatible endpoint). The free tier is retired in v0.0.22: the local lane is the zero-cost path, and it tells you exactly what it found (see [LOCAL-LLM.md](LOCAL-LLM.md)).
+- **Three ways to run.** The GO plan (flat monthly, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps), or **Local** — your own hardware (Ollama, LM Studio, vLLM, llama.cpp, or any OpenAI-compatible endpoint). The zero-cost path is the local lane, and it tells you exactly what it found (see [LOCAL-LLM.md](LOCAL-LLM.md)).
 - **10 gods + 122 demigods (132 agents).** Apollo is the only god who talks to you; the other 9 are dispatched by Apollo via Symphony.
 - **The Craft Apps inside (v0.0.8).** The thirteen open-source ArtCraft apps (image editor, vector illustration, video, PDF, word processing, CAD, spreadsheets) are DOWNLOADED INTO OLYMPUS — the self-hosted web builds run embedded from your own disk (no login, ever; auto-update ON), the native portable builds open as real OS windows, and the `olympus-craft` MCP gives the agents headless CLI/JSON control. The AI crafting Studio rides the live lane.
 - **Self-curating brain.** Each god maintains an instinct pool — empirical patterns that, at confidence ≥ 0.85, **short-circuit** deliberation. OLYMPUS gets faster and cheaper with use. Live telemetry in the God Intelligence Dashboard shows the short-circuit hit rate + tokens saved.
@@ -37,7 +37,7 @@ OLYMPUS runs as a **standalone desktop application** — it opens its own window
 ```bash
 # 1. Download the latest AppImage from GitHub Releases:
 #    https://github.com/texugo7badger/olympus/releases
-#    OLYMPUS-0.0.23-linux-x86_64.AppImage (~457 MB)
+#    OLYMPUS-0.0.24-linux-x86_64.AppImage (~457 MB)
 
 # 2. Make it executable and run:
 chmod +x OLYMPUS-*.AppImage
@@ -153,7 +153,7 @@ The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash
 | `zen-budget` (**Zen**) | GPT 6 Luna | GPT 6 Luna | DeepSeek V4.1 Flash (backend/security/QA/DB) · GLM-5.3-Flash (frontend/DevOps) | Claude Haiku 5.5 |
 | `local` (**Local**) | your harness model | same | same | same |
 
-The **Zen** strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) run the full 128-agent OLYMPUS on OpenCode Zen — pay-as-you-go, **no request caps**, built around **proprietary APIs** (Claude Sonnet 5, GPT-5.4, Gemini 3.5 Flash, Kimi K2.7 Code, MiniMax) while the GO plan runs the open-weight line (GLM, DeepSeek, Qwen, Hy3). Model ids use `opencode/<id>`. Authorize via `olympus opencode` → `/connect` → OpenCode Zen (key stored in OpenCode's own auth.json under the `opencode` provider; env override `OPENCODE_API_KEY`). NOTE: OpenAI/Anthropic requests are retained 30 days per their data policies — the open-weight and free-on-Zen models are zero-retention.
+The **Zen** strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) run the full 132-agent OLYMPUS on OpenCode Zen — pay-as-you-go, **no request caps**, built around **proprietary APIs** (Claude Sonnet 5, GPT-5.4, Gemini 3.5 Flash, Kimi K2.7 Code, MiniMax) while the GO plan runs the open-weight line (GLM, DeepSeek, Qwen, Hy3). Model ids use `opencode/<id>`. Authorize via `olympus opencode` → `/connect` → OpenCode Zen (key stored in OpenCode's own auth.json under the `opencode` provider; env override `OPENCODE_API_KEY`). NOTE: OpenAI/Anthropic requests are retained 30 days per their data policies — the open-weight and trial models are zero-retention.
 
 DeepSeek V4.1 Flash (the 1017 line) is the preferred lane across GO Balanced/Budget and the max-quality specialists; DeepSeek V4 Pro is retired. **ZEN** is the private-model lane (GPT 6.1 Sol, Claude Sonnet 5.5/Opus 5.5, Gemini 3.1 Pro, Grok 4.7) for users who want proprietary models.
 

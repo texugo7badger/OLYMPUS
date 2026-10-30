@@ -452,8 +452,8 @@ async function main() {
   // The contract: the runSpawn CALL SITE threads the resolved knob (a named
   // DEFAULT constant elsewhere in the file is the sane-default home, not a
   // violation).
-  expect('R3: spawnHopDispatcher threads the resolved knob into runSpawn (no hard-coded ceiling at the call site)',
-    /resolveHopTimeoutMs\(\)/.test(walkerSrc) && /runSpawn\(\s*\[\s*'run',[\s\S]{0,220}?resolveHopTimeoutMs\(\)/.test(walkerSrc) && !/runSpawn\(\s*\[[\s\S]{0,240}?\d+ \* 60_000/.test(walkerSrc),
+  expect('R3: the dispatcher threads the resolved ceiling into the transport (no hard-coded ceiling at the call site)',
+    /resolveHopTimeoutMs\(\)/.test(walkerSrc) && /timeoutMs:\s*resolveHopTimeoutMs\(\)/.test(walkerSrc) && !/timeoutMs:\s*\d+ \* 60_000/.test(walkerSrc),
     'the call site still hard-codes the ceiling');
 
   // ── 8. PLANO-MASTER-1 B3 (#117): the PRODUCT FLOW walks the plan ────────

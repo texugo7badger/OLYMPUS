@@ -1,17 +1,19 @@
 #!/usr/bin/env node
 /**
- * mcp-arsenal.test.mjs — v0.0.23 MCP curation law.
+ * mcp-arsenal.test.mjs — v0.0.24 MCP curation law.
  * Run: npx tsx scripts/mcp-arsenal.test.mjs
  *
  * The 128-tool provider limit is real: enabling every MCP blows the registry.
  * This suite pins the curated default set and the audit's honesty:
  *
- *   M1  the audit script exists and performs the JSON-RPC handshake
+ *   M1  the audit script exists, uses the SHARED probe and performs the
+ *       JSON-RPC handshake
  *   M2  the curated set is exactly the measured six (filesystem, memory, git,
  *       context7, sequential-thinking, olympus-craft)
  *   M3  every other server is explicitly disabled (no half-enabled state)
  *   M4  the curated tool budget stays under 128 (the provider limit)
  *   M5  the panel-facing status route still exists (live health)
+ *   M6  every runtime entry is canonical (type + command array)
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
@@ -29,15 +31,15 @@ function check(name, ok, detail = '') {
 }
 
 const CURATED = ['filesystem', 'memory', 'git', 'context7', 'sequential-thinking', 'olympus-craft'];
-const CURATED_TOOLS = 14 + 9 + 12 + 2 + 1 + 6; // measured by scripts/mcp-audit.mjs
+const CURATED_TOOLS = 14 + 9 + 12 + 2 + 1 + 6; // measured by scripts/mcp-audit.ts
 
 // M1 — the audit.
-const auditPath = join(ROOT, 'scripts/mcp-audit.mjs');
-check('M1 mcp-audit.mjs exists', fs.existsSync(auditPath));
+const auditPath = join(ROOT, 'scripts/mcp-audit.ts');
+check('M1 mcp-audit.ts exists', fs.existsSync(auditPath));
 if (fs.existsSync(auditPath)) {
   const a = fs.readFileSync(auditPath, 'utf-8');
-  check('M1 audit performs initialize + tools/list', /initialize/.test(a) && /tools\/list/.test(a));
-  check('M1 audit merges command + args', /server\.args/.test(a));
+  check('M1 audit uses the shared probe', /probeMcpBatch/.test(a) && /mcp-probe/.test(a));
+  check('M1 audit uses the merged registry', /listMcpServers/.test(a));
   check('M1 audit supports --enable', /--enable/.test(a));
 }
 
@@ -54,6 +56,11 @@ check(`M4 curated tools ${CURATED_TOOLS} < 128`, CURATED_TOOLS < 128, String(CUR
 
 // M5 — the live health route.
 check('M5 /api/olympus/mcp/health exists', fs.existsSync(join(ROOT, 'src/app/api/olympus/mcp/health/route.ts')));
+
+// M6 — canonical runtime shape.
+check('M6 every entry has a type', Object.values(mcp).every((v) => v?.type === 'local' || v?.type === 'remote'));
+check('M6 every local entry has a command array', Object.values(mcp).filter((v) => v?.type === 'local').every((v) => Array.isArray(v.command)));
+check('M6 no legacy args/env fields', Object.values(mcp).every((v) => v?.args === undefined && v?.env === undefined));
 
 console.log(`\nmcp-arsenal: ${checked - failures} passed, ${failures} failed`);
 process.exit(failures === 0 ? 0 : 1);

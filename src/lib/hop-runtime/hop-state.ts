@@ -24,12 +24,23 @@ export interface HopPark {
 export interface HopInFlight {
   hopId: string;
   startedAt: string;
+  /** v0.0.24 (#227): the live panel's provenance. */
+  god?: string;
+  artifacts?: string[];
+  skill?: string;
+  mcp?: string;
+  demigod?: string;
+  status?: 'running' | 'verifying';
+  lastHeartbeatAt?: string;
+  transport?: 'warm' | 'spawn';
 }
 
 export interface HopStateFile {
   version: 1;
   completed: string[];
   parked: HopPark | null;
+  /** v0.0.24 (#226): the campaign this state belongs to. */
+  campaignId?: string;
   /** W-D2 (v0.0.6 MISSION-CONTROL-TRUE): the hops RUNNING right now —
    *  written at every launch/settle so the tasks sheet has GROUND TRUTH
    *  (telemetry rows land only at hop settle; before this, a running hop
@@ -61,9 +72,18 @@ export function loadHopState(stateDir: string): HopStateFile | null {
     version: 1,
     completed: [...s.completed],
     parked: s.parked ?? null,
+    campaignId: typeof s.campaignId === 'string' ? s.campaignId : undefined,
     inFlight: Array.isArray(s.inFlight) ? s.inFlight.map((f) => ({
       hopId: String(f?.hopId ?? ''),
       startedAt: String(f?.startedAt ?? new Date().toISOString()),
+      god: typeof f?.god === 'string' ? f.god : undefined,
+      artifacts: Array.isArray(f?.artifacts) ? f.artifacts.filter((a): a is string => typeof a === 'string') : undefined,
+      skill: typeof f?.skill === 'string' ? f.skill : undefined,
+      mcp: typeof f?.mcp === 'string' ? f.mcp : undefined,
+      demigod: typeof f?.demigod === 'string' ? f.demigod : undefined,
+      status: (f?.status === 'verifying' ? 'verifying' : 'running') as 'running' | 'verifying',
+      lastHeartbeatAt: typeof f?.lastHeartbeatAt === 'string' ? f.lastHeartbeatAt : undefined,
+      transport: f?.transport === 'warm' || f?.transport === 'spawn' ? f.transport : undefined,
     })).filter((f) => f.hopId) : [],
     updatedAt: typeof s.updatedAt === 'string' ? s.updatedAt : new Date().toISOString(),
   };

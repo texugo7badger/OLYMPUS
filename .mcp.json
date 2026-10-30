@@ -215,7 +215,7 @@
       "env": {
         "BRAVE_API_KEY": "${BRAVE_API_KEY}"
       },
-      "_comment": "W-N FIELD-POLISH (v0.0.8): the websearch lane for the FREE strategies — on the GO plan websearch rides Exa free; on free-openrouter/free-nvidia-build there was NO search lane at all. Brave Search API: free tier 2,000 queries/month, key at api-dashboard.search.brave.com (register → API Keys → free plan). Used by Hermes + the researcher demigod; locked until BRAVE_API_KEY lands (the Originkit free-key pattern)."
+      "_comment": "W-N FIELD-POLISH: the websearch lane for custom strategies using OpenRouter/NVIDIA (on the GO plan websearch rides Exa free). Brave Search API: free tier 2,000 queries/month, key at api-dashboard.search.brave.com (register → API Keys → free plan). Used by Hermes + the researcher demigod; locked until BRAVE_API_KEY lands (the Originkit free-key pattern)."
     }
   },
   "_olympus_notes": {

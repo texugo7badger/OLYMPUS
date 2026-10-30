@@ -211,8 +211,8 @@ if (process.argv[2] === 'child') {
   else {
     check('guard: workspaceLaneDir refuses OLYMPUS_WORKSPACE inside the OLYMPUS root (falls back, never the repo)',
       G.laneDirInsideRoot === false, `laneDir=${G.laneDir}`);
-    check('guard: reconcileProjectPath never returns a path inside the OLYMPUS root (no lane copy → the lane dir itself, no write)',
-      G.inRootInside === false && G.inRoot?.source === 'lane' && G.inRoot?.noteUpdated === false && G.inRootNoteAfter?.startsWith(join(WORK, 'fake-guard')) === true,
+    check('guard: reconcileProjectPath never returns a path inside the OLYMPUS root (no lane copy → the vault home, self-healed)',
+      G.inRootInside === false && G.inRoot?.source === 'lane' && G.inRoot?.noteUpdated === true && G.inRootNoteAfter?.startsWith(join(WORK, 'vault-guard', '02_Projects')) === true,
       JSON.stringify(G.inRoot).slice(0, 200));
   }
 }

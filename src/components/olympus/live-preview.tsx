@@ -17,6 +17,7 @@ import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
 import { normalizePreviewUrl } from '@/lib/live-preview-url';
+import { useDocVisible } from '@/lib/use-doc-visible';
 
 const DEFAULT_PORT = 3000;
 const PROBE_INTERVAL_MS = 3000;
@@ -24,6 +25,9 @@ const PROBE_INTERVAL_MS = 3000;
 interface ProbeStatus { running: boolean; port: number; url: string; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; demoLogin?: string | null; manager?: { running: boolean; port: number | null; url: string | null; slug: string; startedAt: string | null; responseTimeMs: number | null; note: string } | null; }
 
 export default function LivePreview() {
+  // #231 — the preview probe pauses when the window is hidden.
+  const docVisible = useDocVisible();
+
   const activeProject = useOlympus(s => s.activeProject);
   const pushEvent = useOlympus(s => s.pushEvent);
   const [status, setStatus] = useState<ProbeStatus | null>(null);
@@ -63,7 +67,12 @@ export default function LivePreview() {
     } catch { setStatus({ running: false, port, url: previewUrl, host: null, responseTimeMs: 0 }); setProbing(false); }
   }, [projectSlug, port, previewUrl]);
 
-  useEffect(() => { setIframeLoaded(false); setProbing(true); probe(); const iv = setInterval(probe, PROBE_INTERVAL_MS); return () => clearInterval(iv); }, [probe]);
+  useEffect(() => {
+    if (!docVisible) return;
+    setIframeLoaded(false); setProbing(true); probe();
+    const iv = setInterval(probe, PROBE_INTERVAL_MS);
+    return () => clearInterval(iv);
+  }, [probe, docVisible]);
 
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
     if (!markMode) return;

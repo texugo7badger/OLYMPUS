@@ -183,7 +183,7 @@ The frontier tier on OpenCode Zen, built around **proprietary APIs** — the who
 
 ### `zen-balanced` — full OLYMPUS on OpenCode Zen (pay-as-you-go)
 
-OpenCode Zen is OpenCode's curated AI gateway: a tested list of models, **no request caps** — you pay per request. Zen's differentiator is **proprietary APIs**: the ZEN strategies route gods to closed frontier models (Claude, GPT, Gemini, Kimi, MiniMax) that the GO plan's open-weight lineup can't match. This makes it a great middle path between the GO plan and the free tier: the **full 128-agent OLYMPUS** (10 gods + 118 demigods, `{file:...}` prompt references, all 8 plugins) without a GO subscription.
+OpenCode Zen is OpenCode's curated AI gateway: a tested list of models, **no request caps** — you pay per request. Zen's differentiator is **proprietary APIs**: the ZEN strategies route gods to closed frontier models (Claude, GPT, Gemini, Kimi, MiniMax) that the GO plan's open-weight lineup can't match. This makes it a great middle path between the GO plan and a local server: the **full 128-agent OLYMPUS** (10 gods + 118 demigods, `{file:...}` prompt references, all 8 plugins) without a GO subscription.
 
 Model IDs use the **`opencode/<model-id>`** prefix — distinct from the GO plan's `opencode-go/<id>`. The per-god map:
 
@@ -208,7 +208,7 @@ Model IDs use the **`opencode/<model-id>`** prefix — distinct from the GO plan
 **When to use:**
 - You don't have a GO plan but want the full 128-agent experience.
 - You want the best-tested models for coding without a flat monthly plan.
-- The free tier's rate limits are too tight for your workflow.
+- A free endpoint rate limit is too tight for your workflow.
 
 <!-- TODO(post-v0.0.2): refresh Zen pricing + cap table — verified 2026-09-28 -->
 **Pricing:** per-1M-token rates (input/output, verified 2026-07-31): GLM 5.2 $1.40/$4.40 · Gemini 3.5 Flash $1.50/$9.00 · Claude Sonnet 5 $2.00/$10.00 · Kimi K2.7 Code $0.95/$4.00 · GPT-5.4 $2.50/$15.00 · MiniMax M2.7 $0.30/$1.20 · MiniMax M3 $0.30/$1.20 · Qwen3.7 Max $2.50/$7.50 · Grok 4.5 $2/$6 · DeepSeek V4 Flash $0.14/$0.28. See [https://opencode.ai/docs/zen/](https://opencode.ai/docs/zen/) for the current list.
@@ -287,9 +287,9 @@ Demigods don't have their own model assignment — they inherit from their paren
 | Athena's UI (impeccable upgrade) | `frontend-reviewer`, `ui-designer`, `visual-verifier` | Kimi K3 when Athena is on K3 |
 | All others | (most demigods) | Inherit parent god's model |
 
-For free-tier strategies, **all overrides are disabled** — every demigod inherits its parent god's model. The hardcoded overrides assume GO/Zen-plan models which don't exist on the free tier. On the Zen strategy the same overrides apply as GO (Flash for mechanical demigods, Pro for Apollo's planners, K3 for Athena's UI demigods when applicable) but with `opencode/` prefixed ids.
+For a custom strategy, **all overrides are disabled** — every demigod inherits its parent god’s model unless the custom map says otherwise. The hardcoded overrides assume GO/Zen-plan models. On the Zen strategy the same overrides apply as GO (Flash for mechanical demigods, Pro for Apollo's planners, K3 for Athena's UI demigods when applicable) but with `opencode/` prefixed ids.
 
-Per-god overrides set in the Settings dialog **do route** for free strategies: apply-strategy.js reads `per_god_overrides` from `~/.olympus/llm-providers.json` and merges them into the model map. Overrides naming a model outside the verified free list (or the GO list) are dropped in favor of the strategy default, so stale entries (e.g. the removed `deepseek-chat-v3-0324:free`) can never point a god at a dead endpoint.
+Per-god overrides set in the Settings dialog **do route** for custom strategies: apply-strategy.js reads `per_god_overrides` from `~/.olympus/llm-providers.json` and merges them into the model map. Overrides naming a model outside the verified free list (or the GO list) are dropped in favor of the strategy default, so stale entries (e.g. the removed `deepseek-chat-v3-0324:free`) can never point a god at a dead endpoint.
 
 ## When you hit the cap: switch strategies
 
@@ -301,9 +301,7 @@ There are **no automatic model fallbacks** — OLYMPUS never silently downgrades
 
 ## Why no OpenAI/Anthropic direct providers?
 
-OLYMPUS does not wire OpenAI or Anthropic as direct providers — and it doesn't need to. **OpenCode Zen is the gateway to those proprietary APIs**: the ZEN strategies route gods to `opencode/gpt-6-sol` and `opencode/claude-sonnet-5` (plus Gemini, Grok, Kimi, MiniMax, Qwen-Max) pay-as-you-go with no request caps, through OpenCode's curated, benchmarked serving. The GO plan covers the open-weight line (GLM, DeepSeek, Qwen, Hy3); the free tier covers zero-cost providers (OpenRouter free, NVIDIA Build). BYO-key OpenAI/Anthropic (via those vendors' own CLIs or direct API keys) is out of scope — OLYMPUS runs on OpenCode providers only.
-
-The free-tier providers (OpenRouter free, NVIDIA Build free) are different — they let users without any paid plan try OLYMPUS end-to-end. That's the "Always free" promise from the README.
+OLYMPUS does not wire OpenAI or Anthropic as direct providers — and it doesn't need to. **OpenCode Zen is the gateway to those proprietary APIs**: the ZEN strategies route gods to `opencode/gpt-6-sol` and `opencode/claude-sonnet-5` (plus Gemini, Grok, Kimi, MiniMax, Qwen-Max) pay-as-you-go with no request caps, through OpenCode's curated, benchmarked serving. The GO plan covers the open-weight line (GLM, DeepSeek, Qwen, Hy3); a custom strategy may use any provider registered in OpenCode, including OpenRouter and NVIDIA Build. Free endpoints are allowed but are rate-limited and often much slower — the Builder warns you before saving one. BYO-key OpenAI/Anthropic (via those vendors' own CLIs or direct API keys) is out of scope — OLYMPUS runs on OpenCode providers only.
 
 ## Configuration files
 

@@ -294,10 +294,8 @@ export function checkFreeTierKeys(): FreeTierAuth {
       nvidia: nvidiaSource,
     },
     detail: keys.length === 0
-      ? 'No free-tier keys configured.'
-      : both
-        ? `Free-tier keys configured (${keys.join(' + ')}) — provider-specific free strategies available (free-openrouter, free-big-pickle, free-nvidia-build).`
-        : `Only ${keys.join(' + ')} configured. Add another free-tier provider key to unlock more free strategy options.`,
+      ? 'No provider keys detected.'
+      : `Provider keys detected (${keys.join(' + ')}) — usable by custom strategies registered in OpenCode. Free endpoints are allowed but are rate-limited and slow.`,
   };
 }
 

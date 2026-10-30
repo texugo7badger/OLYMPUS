@@ -89,7 +89,7 @@ export const MCP_API_REQUIREMENTS: McpApiRequirement[] = [
     envVars: [
       { key: 'BRAVE_API_KEY', label: 'Brave Search API Key', url: 'https://api-dashboard.search.brave.com/app/documentation', note: 'Free plan: 2,000 queries/month. Register at api-dashboard.search.brave.com → API Keys.' },
     ],
-    note: 'The websearch lane for the FREE strategies (on GO the websearch tool rides Exa free; on free-openrouter/free-nvidia-build this is the search lane). Used by Hermes + the researcher lane.',
+    note: 'The websearch lane for OpenRouter/NVIDIA custom strategies (on GO the websearch tool rides Exa free). Used by Hermes + the researcher lane.',
   },
   {
     names: ['fal'],
@@ -123,4 +123,69 @@ export function getMcpEnvVarKeys(name: string): string[] {
  */
 export function getMcpNote(name: string): string | undefined {
   return findMcpRequirement(name)?.note;
+}
+
+/**
+ * v0.0.24 — the HONEST NEED per shipped MCP.
+ *
+ * The panel no longer renders a bare red dot. Every server is either:
+ *   - enabled + healthy,
+ *   - enabled + dead (a real bug),
+ *   - locked (API key missing),
+ *   - off because it needs a service/app/binary the machine may not have,
+ *   - opt-in (heavy/domain-specific).
+ *
+ * Key requirements are DERIVED from MCP_API_REQUIREMENTS so there is one
+ * source of truth for the env var names. Service/app/binary entries are
+ * declared here.
+ */
+import type { McpServerRequirement } from './mcp-shape';
+
+const OPTIONAL = (label: string): McpServerRequirement => ({ kind: 'optional', label });
+const SERVICE = (label: string): McpServerRequirement => ({ kind: 'service', label });
+const APP = (label: string): McpServerRequirement => ({ kind: 'app', label });
+const BINARY = (label: string): McpServerRequirement => ({ kind: 'binary', label });
+
+const SERVICE_AND_APP: Record<string, McpServerRequirement> = {
+  godot: APP('needs the Godot editor + a project'),
+  blender: APP('needs Blender running with the blender-mcp addon'),
+  comfyui: SERVICE('needs a local ComfyUI server (default :8188)'),
+  rea: APP('needs REAPER + the REAPER MCP bridge (207 tools — heavy)'),
+  kubernetes: SERVICE('needs a reachable cluster + kubeconfig'),
+  docker: SERVICE('needs the Docker daemon'),
+  postgres: SERVICE('needs a DATABASE_URL for the target database'),
+  grafana: SERVICE('needs a Grafana URL + service-account token'),
+  'chrome-devtools': OPTIONAL('heavy browser automation (opt-in)'),
+  playwright: OPTIONAL('heavy browser automation (opt-in)'),
+  serena: OPTIONAL('LSP symbol editing — activate a project first'),
+  'mcp-gateway': BINARY('needs the `mcp-gateway` binary'),
+  tamp: OPTIONAL('output compression (opt-in)'),
+  nakkas: OPTIONAL('animated SVG generation (opt-in)'),
+  shadcn: OPTIONAL('shadcn component registry (opt-in)'),
+  opendesign: OPTIONAL('design-system references (opt-in)'),
+  pollinations: OPTIONAL('free image/text/audio generation (opt-in)'),
+  'brave-search': OPTIONAL('web search — needs a Brave API key'),
+  fal: OPTIONAL('remote image generation — needs FAL_KEY'),
+  originkit: OPTIONAL('remote UI references — needs ORIGINKIT_API_KEY'),
+  figma: OPTIONAL('Figma import — needs FIGMA_API_KEY'),
+  github: OPTIONAL('GitHub tools — needs GITHUB_PERSONAL_ACCESS_TOKEN'),
+  filesystem: OPTIONAL('curated — filesystem tools (14)'),
+  memory: OPTIONAL('curated — knowledge-graph memory (9)'),
+  git: OPTIONAL('curated — git tools (12)'),
+  context7: OPTIONAL('curated — live library docs (2)'),
+  'sequential-thinking': OPTIONAL('curated — structured reasoning (1)'),
+  'olympus-craft': OPTIONAL('curated — Craft Apps control (6)'),
+};
+
+export function findMcpServerRequirement(name: string): McpServerRequirement {
+  const keyReq = findMcpRequirement(name);
+  if (keyReq) {
+    return {
+      kind: 'key',
+      label: `needs ${keyReq.envVars.map(v => v.key).join(', ')}`,
+      envVars: keyReq.envVars.map(v => v.key),
+      url: keyReq.envVars[0]?.url,
+    };
+  }
+  return SERVICE_AND_APP[name] ?? { kind: 'optional', label: 'optional' };
 }

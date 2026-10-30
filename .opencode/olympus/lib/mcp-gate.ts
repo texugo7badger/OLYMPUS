@@ -38,10 +38,9 @@ export const MCP_API_REQUIREMENTS: Record<string, {
   github:        { envVars: ["GITHUB_PERSONAL_ACCESS_TOKEN"] },
   grafana:       { envVars: ["GRAFANA_URL", "GRAFANA_API_KEY"] },
   figma:         { envVars: ["FIGMA_API_KEY"] },
-  // OpenCode-native (opencode.json mcp block) BYOK MCP — the W-B IMAGE-GEN
-  // registration. Keep in sync with src/lib/mcp-api-requirements.ts.
   fal:           { envVars: ["FAL_KEY"] },
   originkit:     { envVars: ["ORIGINKIT_API_KEY"] },
+  "brave-search": { envVars: ["BRAVE_API_KEY"] },
 };
 
 /**
@@ -126,21 +125,42 @@ export function isMcpApiKeyConfigured(mcpServer: string): {
 }
 
 /**
- * Check if an MCP is enabled in ~/.olympus/mcp-state.json.
- * Returns true if enabled (default when not in the state file).
+ * Check if an MCP is enabled.
+ *
+ * v0.0.24: opencode.json is the runtime truth (OpenCode reads it at spawn).
+ * mcp-state.json is the legacy per-tool-call gate; it is consulted only when
+ * the server is absent from opencode.json (a catalog-only entry). Returning
+ * `true` for an unknown name is safe; returning `true` for a server OpenCode
+ * just disabled was the bug this fixes.
  */
 function isMcpEnabled(mcpServer: string): boolean {
+  // 1) opencode.json — the config OpenCode actually loads.
+  try {
+    const root = process.env.OLYMPUS_ROOT || process.cwd();
+    const p = join(root, "opencode.json");
+    if (existsSync(p)) {
+      const cfg = JSON.parse(readFileSync(p, "utf-8"));
+      const entry = cfg?.mcp?.[mcpServer];
+      if (entry && typeof entry === "object") {
+        if (typeof entry.enabled === "boolean") return entry.enabled;
+        if (typeof entry.disabled === "boolean") return !entry.disabled;
+        return true;
+      }
+    }
+  } catch { /* unreadable config — fall through to the state file */ }
+
+  // 2) ~/.olympus/mcp-state.json — the legacy gate store.
   try {
     const p = join(homedir(), ".olympus", "mcp-state.json");
-    if (!existsSync(p)) return true; // default: enabled
+    if (!existsSync(p)) return true;
     const data = JSON.parse(readFileSync(p, "utf-8"));
     const enabled = data.enabled || data;
     if (typeof enabled === "object" && mcpServer in enabled) {
       return enabled[mcpServer] === true;
     }
-    return true; // not in the map → default enabled
+    return true;
   } catch {
-    return true; // error reading → default enabled
+    return true;
   }
 }
 

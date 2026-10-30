@@ -44,6 +44,13 @@ interface Episode {
   /** #MINITASK (2026-10-24): the demigod roster the god commands for this
    *  hop (available arsenal). Populated on `hop` events only. */
   arsenal?: string[] | null;
+  /** v0.0.24 (#226): the campaign this row belongs to (null for legacy rows). */
+  campaignId?: string | null;
+  /** v0.0.24 (#226): project slug + hop id + lane + artifact paths. */
+  project?: string | null;
+  hop?: string | null;
+  lane?: string | null;
+  artifacts?: string[] | null;
 }
 
 const VAULT = getVaultRoot();
@@ -213,6 +220,12 @@ function readLiveEpisodes(): Episode[] {
       demigod: demigod ? String(demigod) : null,
       type: isDispatch ? 'delegation' : undefined,
       ...dna,
+      // v0.0.24 (#226) — the campaign grouping keys.
+      campaignId: ev.campaign_id ?? meta.campaignId ?? null,
+      project: ev.project ?? meta.project ?? null,
+      hop: ev.hop ?? meta.hop ?? null,
+      lane: ev.lane ?? meta.lane ?? null,
+      artifacts: Array.isArray(ev.artifacts ?? meta.artifacts) ? (ev.artifacts ?? meta.artifacts) : null,
     });
   }
   // Newest first, capped for payload sanity.
@@ -333,21 +346,64 @@ function readVaultEpisodes(): { eps: Episode[]; count: number } {
   return vaultWalkCache;
 }
 
-export async function GET() {
-  // The LIVE feed first — Recent Activity is what the gods are doing NOW.
-  const live = readLiveEpisodes();
-  // The Symphony BUS (W2): outcomes + heartbeat transitions.
-  const bus = readBusEpisodes();
-  // Then the vault's curated episodes (the learning loop's digests).
-  const vault = readVaultEpisodes();
-  const out = [...live, ...bus, ...vault.eps].sort(
+/**
+ * GET /api/olympus/episodes
+ *
+ * v0.0.24 (#231) pagination + #226 grouping keys.
+ * Query:
+ *   limit  1..200 (default 60)
+ *   before opaque cursor "<isoTs>|<id>" — return rows OLDER than it
+ *   since  ISO timestamp — return rows NEWER than it (live delta)
+ *   include=live|vault|all (default all)
+ *
+ * The response keeps the legacy `episodes/total` fields and adds
+ * `page: { limit, total, hasMore, nextCursor }`.
+ */
+export async function GET(req?: Request) {
+  const url = req ? new URL(req.url) : null;
+  const limitRaw = Number.parseInt(url?.searchParams.get('limit') ?? '60', 10);
+  const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(limitRaw, 200)) : 60;
+  const before = url?.searchParams.get('before') ?? null;
+  const since = url?.searchParams.get('since') ?? null;
+  const include = (url?.searchParams.get('include') ?? 'all') as 'live' | 'vault' | 'all';
+
+  const live = include === 'vault' ? [] : readLiveEpisodes();
+  const bus = include === 'vault' ? [] : readBusEpisodes();
+  const vault = include === 'live' ? { eps: [], count: 0, at: Date.now() } : readVaultEpisodes();
+  const all = [...live, ...bus, ...vault.eps].sort(
     (a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime(),
   );
+
+  let rows = all;
+  if (since) {
+    const sinceMs = new Date(since).getTime();
+    if (Number.isFinite(sinceMs)) rows = rows.filter((e) => new Date(e.ts).getTime() > sinceMs);
+  }
+  if (before) {
+    const [ts, id] = before.split('|');
+    const beforeMs = new Date(ts).getTime();
+    if (Number.isFinite(beforeMs)) {
+      rows = rows.filter((e) => {
+        const t = new Date(e.ts).getTime();
+        if (t < beforeMs) return true;
+        if (t > beforeMs) return false;
+        return id ? e.id < id : false;
+      });
+    }
+  }
+
+  const hasMore = rows.length > limit;
+  const pageRows = rows.slice(0, limit);
+  const last = pageRows[pageRows.length - 1];
+  const nextCursor = hasMore && last ? `${last.ts}|${last.id}` : null;
+
   return NextResponse.json({
-    episodes: out,
-    total: out.length,
+    episodes: pageRows,
+    total: all.length,
+    filteredTotal: rows.length,
     vaultCount: vault.count,
     liveCount: live.length,
+    page: { limit, total: rows.length, hasMore, nextCursor },
   }, {
     headers: NO_CACHE_HEADERS,
   });

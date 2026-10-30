@@ -18,6 +18,7 @@
 import { ChevronsLeft, ChevronsRight, Sparkles, type LucideIcon } from 'lucide-react';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
+import { useDocVisible } from '@/lib/use-doc-visible';
 import { useEffect, useState } from 'react';
 import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
 import type { DemigodLive } from '@/lib/tasks-sheet';
@@ -93,6 +94,8 @@ interface GodPanelProps {
  * scroll) belongs to the terminal so sibling panels can share one column.
  */
 export default function GodPanel({ states, focusedGod, onFocus, children, onCollapse }: GodPanelProps) {
+  // #231 — always mounted; pause both polls in a hidden tab.
+  const docVisible = useDocVisible();
   const ordered = orderGodStates(states);
   const active = ordered.filter(s => s.status === 'working').length;
 
@@ -129,6 +132,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           : {});
       } catch { /* decorative — the panel works without tasks */ }
     };
+    if (!docVisible) return;
     load();
     const iv = setInterval(load, 15_000);
     // W1-1: the live second tick — running durations count up in real time.
@@ -136,7 +140,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
     // second; running durations tolerate a 5s grain).
     const tk = setInterval(() => setTick(n => n + 1), 5_000);
     return () => { cancelled = true; clearInterval(iv); clearInterval(tk); };
-  }, []);
+  }, [docVisible]);
 
   return (
     <>

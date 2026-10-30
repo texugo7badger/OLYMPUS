@@ -20,6 +20,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { ShieldAlert, Check, Edit, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useDocVisible } from '@/lib/use-doc-visible';
 
 interface HitlGate {
   id: string;
@@ -35,6 +36,8 @@ interface HitlGate {
 }
 
 export default function HitlGateToast() {
+  // #231 — never poll the gate list in a hidden tab.
+  const docVisible = useDocVisible();
   const [gates, setGates] = useState<HitlGate[]>([]);
   const [resolving, setResolving] = useState<Set<string>>(new Set());
   const [seenGateIds, setSeenGateIds] = useState<Set<string>>(new Set());
@@ -72,10 +75,11 @@ export default function HitlGateToast() {
   }, [seenGateIds]);
 
   useEffect(() => {
+    if (!docVisible) return;
     fetchGates();
     const iv = setInterval(fetchGates, 5000);
     return () => clearInterval(iv);
-  }, [fetchGates]);
+  }, [fetchGates, docVisible]);
 
   const resolveGate = useCallback(async (gateId: string, decision: 'approve' | 'patch' | 'abort') => {
     setResolving(prev => new Set(prev).add(gateId));

@@ -52,6 +52,8 @@ Demigods are **unprefixed** — a demigod is `build-resolver`, not `hephaestus-b
 
 ---
 
+> **Honest surface + live flow (v0.0.24):** the MCP surface is now ONE canonical registry — 28 unique servers (never the old 50-row double count), the OpenCode v2 shape (`type` + one `command` array + `environment` + numeric `timeout`), a real JSON-RPC handshake, and a curated 6/44-tool default that is measured by `npm run mcp:audit`. A server without `type`, with `args`, with `env`, or with an object `timeout` is invisible to OpenCode — never write that shape. Project homes live in `~/OLYMPUS-VAULT/02_Projects/<slug>` (the legacy `~/.local/share/olympus/workspace` lane is migrated; `npm run projects:migrate -- --apply`). God-domain knowledge is seeded from `scripts/knowledge/` into `04_Knowledge/references/` (`npm run seed:knowledge`) and injected into task prompts by `src/lib/knowledge-hints.ts`. Athena's design decisions are INLINE in the chat (`olympus-design-review` → `DesignChoiceCard`), not a modal. Hops use a pluggable transport (`OLYMPUS_HOP_TRANSPORT=auto|spawn|warm`, default auto = warm first, spawn fallback) and publish one hop stream at `/api/olympus/hops/stream` for the live panel and campaign-grouped activity.
+
 ## Dispatch protocol
 
 Every god-to-demigod dispatch flows through **Symphony** — there is no textual dispatch path.
@@ -113,8 +115,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 Every issue is complete at creation time:
 
 - **Title:** `type(scope): title` — type ∈ feat | fix | docs | refactor | test | chore;
-  scope ∈ autonomy | telemetry | permissions | harness | dev-server | free-tier |
-  registry | build | vault | cost (extend the scope set only by standing-rule update).
+  scope ∈ autonomy | telemetry | permissions | harness | dev-server | free-tier | ui | hop | activity | vault |
+  registry | build | cost (extend the scope set only by standing-rule update).
 - **Labels:** one type label (bug / enhancement / documentation) + area labels matching
   the scope — set via the GitHub API at creation. Deferring labels is a batch defect.
 - **Retroactive hygiene:** before commenting on, referencing, or closing any issue,
@@ -126,7 +128,7 @@ Every issue is complete at creation time:
   Closing an off-pattern issue without fixing its taxonomy first is an incomplete
   closure.
 
-Known label areas: autonomy, telemetry, permissions, harness, dev-server, free-tier,
+Known label areas: autonomy, telemetry, permissions, harness, dev-server, free-tier, ui, hop, activity, vault,
 registry.
 
 ---

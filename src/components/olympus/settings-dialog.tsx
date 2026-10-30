@@ -17,7 +17,7 @@ import { useOlympus, GOD_ICONS, GOD_IDS, type LLMStrategy } from '@/lib/olympus-
 import { Settings, Save, Loader2, Check, AlertCircle, AlertTriangle, Zap, BarChart3, Lock, Plus, X, Trash2, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { strategyApiRequirement, modelClassesForStrategy, estimateStrategyCost, type CostEstimate } from '@/lib/model-strategies';
+import { strategyApiRequirement, modelClassesForStrategy } from '@/lib/model-strategies';
 import StrategyBuilder from './strategy-builder';
 
 /* ------------------------------------------------------------------ */
@@ -420,17 +420,8 @@ export default function SettingsDialog() {
   const [benchRecording, setBenchRecording] = useState(false);
   const [benchSessionLabel, setBenchSessionLabel] = useState('');
   const [benchSaving, setBenchSaving] = useState(false);
-  // Custom Strategy Creator modal
-  const [customStrategyOpen, setCustomStrategyOpen] = useState(false);
   // v0.0.23 — the interactive Strategy Builder (search by model/provider).
   const [builderOpen, setBuilderOpen] = useState(false);
-  const [customStrategyName, setCustomStrategyName] = useState('');
-  const [customStrategyGodModels, setCustomStrategyGodModels] = useState<Record<string, string>>({});
-  const [customStrategyAuth, setCustomStrategyAuth] = useState<ApiAuth | null>(null);
-  const [customStrategyCost, setCustomStrategyCost] = useState<'free' | 'low' | 'moderate' | 'higher' | 'unknown'>('unknown');
-  const [customStrategyDescription, setCustomStrategyDescription] = useState('');
-  const [customStrategyCreating, setCustomStrategyCreating] = useState(false);
-  const [customStrategyError, setCustomStrategyError] = useState<string | null>(null);
   const [overrideCount, setOverrideCount] = useState(0);
   const [clearingOverrides, setClearingOverrides] = useState(false);
 
@@ -567,31 +558,6 @@ export default function SettingsDialog() {
     }
   };
 
-  // Compute available models for custom strategies based on authorized APIs
-  // GO plan -> GO models, Zen plan -> Zen models, Free keys -> their free models
-  const getCustomStrategyModels = () => {
-    if (!data?.auth) return [];
-    const models: string[] = [];
-    if (data.auth.go) models.push(...ALL_CLASSES.filter(c => c.startsWith('opencode-go/')));
-    if (data.auth.zen) models.push(...ALL_CLASSES.filter(c => c.startsWith('opencode/')));
-    if (data.auth.openrouter) models.push(...ALL_CLASSES.filter(c => c.startsWith('openrouter/')));
-    if (data.auth.nvidia) models.push(...ALL_CLASSES.filter(c => c.startsWith('nvidia/')));
-    // Always include free models as fallback
-    if (models.length === 0) models.push(...ALL_CLASSES.filter(c => c.startsWith('openrouter/') || c.startsWith('nvidia/')));
-    return [...new Set(models)]; // deduplicate
-  };
-
-  const customStrategyModels = getCustomStrategyModels();
-
-  // Update cost estimate when god models change
-  useEffect(() => {
-    if (!data) return;
-    const auth = data.auth ?? null;
-    const cost = estimateStrategyCost(customStrategyGodModels, auth);
-    setCustomStrategyCost(cost.tier);
-    setCustomStrategyDescription(cost.description);
-  }, [customStrategyGodModels, data?.auth]);
-
   const isDirty = (god: string) => edits[god] !== (data?.perGodClass[god] ?? DEFAULT_CLASSES[god]);
 
   // REAL-TIME Per-God Model Class updates.
@@ -618,81 +584,6 @@ export default function SettingsDialog() {
 
     setEdits(newEdits);
   }, [strategy, provider]);
-
-  // Map cost estimate tier to valid LLMStrategyTier for the API
-  const getStrategyTier = (costTier: string): 'quality' | 'balanced' | 'budget' | 'free' | 'custom' => {
-    switch (costTier) {
-      case 'free': return 'free';
-      case 'low': return 'budget';
-      case 'moderate': return 'balanced';
-      case 'higher': return 'quality';
-      default: return 'custom';
-    }
-  };
-
-  const createCustomStrategy = async () => {
-    if (!data || !customStrategyName.trim() || Object.keys(customStrategyGodModels).length < GOD_IDS.length) {
-      setCustomStrategyError('Please fill in all fields and select a model for every god');
-      return;
-    }
-    setCustomStrategyCreating(true);
-    setCustomStrategyError(null);
-    try {
-      const id = `custom-${customStrategyName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-').replace(/^-|-$/g, '')}`;
-      if (!id.startsWith('custom-') || id.length <= 7) {
-        throw new Error('Invalid strategy name');
-      }
-      // Build the custom strategy config
-      const gods: Record<string, string> = {};
-      for (const god of GOD_IDS) {
-        gods[god] = customStrategyGodModels[god];
-      }
-      const terminalModel = gods.apollo;
-      const smallModel = customStrategyGodModels.callimachus || terminalModel;
-      
-      const body = {
-        id,
-        name: customStrategyName.trim(),
-        description: customStrategyDescription,
-        plan: 'CUSTOM',
-        tier: getStrategyTier(customStrategyCost),
-        gods,
-        terminal_llm: { model: terminalModel },
-        vault_llm: { model: smallModel },
-        estCostPerDay: customStrategyCost,
-      };
-      const res = await fetch('/api/olympus/providers/gods', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customStrategy: body }),
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Failed to create custom strategy');
-      
-      // Refresh strategies list
-      const r = await fetch('/api/olympus/providers/gods', { cache: 'no-store' });
-      const d = await r.json();
-      if (d?.customStrategies) {
-        setCustomGodModels(prev => ({
-          ...prev,
-          [id]: d.customStrategies.find((s: any) => s.id === id)?.gods || gods,
-        }));
-      }
-      
-      toast.success('Custom strategy created', { description: `${customStrategyName} is now available in the strategy picker` });
-      setCustomStrategyOpen(false);
-      setCustomStrategyName('');
-      setCustomStrategyGodModels({});
-      setCustomStrategyCost('unknown');
-      setCustomStrategyDescription('');
-      // Select the new strategy
-      setStrategy(id as LLMStrategy);
-    } catch (e: any) {
-      setCustomStrategyError(e.message);
-    } finally {
-      setCustomStrategyCreating(false);
-    }
-  };
 
   const deleteCustomStrategy = async (customStrategyId: string) => {
     if (!confirm(`Delete custom strategy ${customStrategyId}?`)) return;
@@ -830,7 +721,7 @@ export default function SettingsDialog() {
     : selectedFamily === 'ZEN' ? 'ZEN models'
     : strategy === 'local'
       ? 'Local — your own hardware (the probe names the model)'
-    : 'Free models (all providers)';
+    : 'All registered models';
   // Activation gate — a strategy whose required API is not authorized cannot
   // be selected. Unknown auth (offline fallback) never blocks.
   const activeReq = strategyApiRequirement(strategy);
@@ -895,20 +786,11 @@ export default function SettingsDialog() {
                 <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">LLM Strategy</h3>
                 <Button
                   variant="ghost"
-                  onClick={() => setBuilderOpen(true)}
+                  onClick={() => { setOpen(false); setBuilderOpen(true); }}
                   className="ml-auto h-6 px-2 text-[9px] font-mono text-olympus-gold hover:bg-olympus-gold/10"
                   aria-label="Build a strategy — pick a model per god"
                 >
                   <Plus size={11} className="mr-1" /> Build
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setCustomStrategyOpen(true)}
-                  className="text-olympus-gold hover:bg-olympus-gold/10"
-                  aria-label="Create custom strategy"
-                >
-                  <Plus size={12} />
                 </Button>
               </div>
               <div className="grid grid-cols-3 gap-1.5 mb-2">
@@ -1137,130 +1019,13 @@ export default function SettingsDialog() {
       </DialogContent>
     </Dialog>
 
-    {/* Custom Strategy Creator Modal */}
-    <Dialog open={customStrategyOpen} onOpenChange={setCustomStrategyOpen}>
-      <DialogContent className="bg-olympus-panel border-olympus-gold/20 text-olympus-text max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-olympus-gold">
-            <Plus size={16} /> Create Custom Strategy
-          </DialogTitle>
-          <DialogDescription className="text-olympus-text-dim">
-            Pick a model for each god from your authorized APIs. Cost tier is estimated automatically.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto custom-scroll pr-1">
-          {/* Strategy Name */}
-          <div>
-            <Label className="text-[10px] font-mono text-olympus-text uppercase tracking-wide mb-1 block">Strategy Name</Label>
-            <Input
-              value={customStrategyName}
-              onChange={e => setCustomStrategyName(e.target.value.trim())}
-              placeholder="e.g. my-hybrid-strategy"
-              className="bg-olympus-bg border-olympus-gold/20 text-olympus-text font-mono text-[11px] h-8"
-              maxLength={50}
-            />
-            <div className="text-[9px] text-olympus-text-dim font-mono mt-1">Must be unique. Will be prefixed with 'custom-'.</div>
-          </div>
-
-          {/* Cost Estimate Banner */}
-          <div className={cn(
-            'rounded-md border p-3 text-[10px] font-mono',
-            customStrategyCost === 'free' ? 'border-olympus-green/30 bg-olympus-green/5 text-olympus-green' :
-            customStrategyCost === 'low' ? 'border-olympus-gold/30 bg-olympus-gold/5 text-olympus-gold' :
-            customStrategyCost === 'moderate' ? 'border-olympus-amber-soft/30 bg-olympus-amber-soft/5 text-olympus-amber-soft' :
-            customStrategyCost === 'higher' ? 'border-olympus-red/30 bg-olympus-red/5 text-olympus-red' :
-            'border-olympus-gold/10 bg-olympus-card/50 text-olympus-text-dim'
-          )}>
-            <div className="flex items-center gap-2">
-              <Calculator size={11} />
-              <span className="uppercase tracking-wide">Estimated Cost: {customStrategyCost.toUpperCase()}</span>
-            </div>
-            <div className="mt-1">{customStrategyDescription}</div>
-          </div>
-
-          {/* Per-God Model Selection */}
-          <div>
-            <Label className="text-[10px] font-mono text-olympus-text uppercase tracking-wide mb-2 block flex items-center gap-1">
-              <span>Per-God Models</span>
-              <span className="text-[9px] text-olympus-text-dim">({customStrategyModels.length} available)</span>
-            </Label>
-            <div className="grid grid-cols-2 gap-2">
-              {GOD_IDS.map(god => {
-                const Icon = GOD_ICONS[god];
-                const val = customStrategyGodModels[god] || customStrategyModels[0] || '';
-                return (
-                  <div key={god} className="rounded-md border border-olympus-gold/15 bg-olympus-card/50 p-2">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Icon size={11} className="text-olympus-gold shrink-0" />
-                      <span className="text-[10px] font-mono text-olympus-text">{god.charAt(0).toUpperCase() + god.slice(1)}</span>
-                      <span className="text-[9px] text-olympus-text-dim font-mono">{GOD_DOMAINS[god]}</span>
-                    </div>
-                    <Select value={val} onValueChange={v => setCustomStrategyGodModels(prev => ({ ...prev, [god]: v }))}>
-                      <SelectTrigger className="bg-olympus-bg border-olympus-gold/20 text-olympus-text font-mono text-[9px] h-8">
-                        <SelectValue placeholder="Select model" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-60">
-                        {customStrategyModels.map(m => (
-                          <SelectItem key={m} value={m}>
-                            {m.replace(/^[^/]+\//, '')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Auto-generated description preview */}
-          <div className="rounded-md border border-olympus-gold/10 bg-olympus-card/50 p-2">
-            <div className="text-[9px] font-mono text-olympus-text-dim mb-1">Card Description Preview:</div>
-            <div className="text-[9px] font-mono text-olympus-text leading-relaxed">
-              {customStrategyDescription || 'Select models to generate description'}
-            </div>
-          </div>
-
-          {customStrategyError && (
-            <div className="flex items-center gap-1.5 text-[10px] font-mono text-olympus-red">
-              <AlertCircle size={11} /> {customStrategyError}
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setCustomStrategyOpen(false);
-              setCustomStrategyName('');
-              setCustomStrategyGodModels({});
-              setCustomStrategyCost('unknown');
-              setCustomStrategyDescription('');
-              setCustomStrategyError(null);
-            }}
-            className="text-olympus-text-dim hover:text-olympus-text hover:bg-olympus-gold/5"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={createCustomStrategy}
-            disabled={customStrategyCreating || !customStrategyName.trim() || Object.keys(customStrategyGodModels).length < GOD_IDS.length || customStrategyCost === 'unknown'}
-            className="bg-olympus-gold/15 text-olympus-gold border border-olympus-gold/30 hover:bg-olympus-gold/25"
-          >
-            {customStrategyCreating ? <Loader2 size={12} className="animate-spin mr-1.5" /> : <Plus size={12} className="mr-1.5" />}
-            {customStrategyCreating ? 'Creating...' : 'Create Strategy'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-          <StrategyBuilder
-        open={builderOpen}
-        onClose={() => setBuilderOpen(false)}
-        initial={STRATEGY_MODELS[strategy]}
-        onApplied={() => { void loadProvidersData(); }}
-      />
-</Dialog>
+    {/* The Strategy Builder is the ONLY custom-strategy entry point (v0.0.24). */}
+    <StrategyBuilder
+      open={builderOpen}
+      onClose={() => setBuilderOpen(false)}
+      initial={STRATEGY_MODELS[strategy]}
+      onApplied={() => { void loadProvidersData(); }}
+    />
     </>
   );
 }

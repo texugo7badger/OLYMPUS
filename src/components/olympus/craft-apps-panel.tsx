@@ -546,7 +546,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
               <iframe
                 src={view.src}
                 className="flex-1 w-full bg-white"
-                title={view.app.name} data-tip={view.app.name}
+                data-tip={view.app.name}
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"
               />
             ) : view.probe === null ? (
@@ -557,7 +557,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
               <iframe
                 src={view.src}
                 className="flex-1 w-full bg-white"
-                title={view.app.name} data-tip={view.app.name}
+                data-tip={view.app.name}
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"
               />
             ) : (

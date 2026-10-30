@@ -19,6 +19,7 @@ const ApiConfigDialog = dynamic(() => import('./api-config-dialog'), { ssr: fals
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip';
 import { useWorkingGods } from '@/lib/use-working-gods';
+import { useDocVisible } from '@/lib/use-doc-visible';
 
 interface ProviderInfo {
  name: string; isFree: boolean; displayName: string; capsDisplay: string;
@@ -48,7 +49,10 @@ function shouldShowCustomWindowControls(): boolean {
  return true;
 }
 
-export default function StatusBar({ health }: { health: any }) {
+export default function StatusBar({
+  health }: { health: any }) {
+  // #231 — the status bar is always mounted; never poll in a hidden tab.
+  const docVisible = useDocVisible();
  const activeGod = useOlympus(s => s.activeGod);
  // W-D1: the idle fallback reads the user's SELECTED god (its own comment
  // always claimed it) — activeGod alone is the live session, reset to
@@ -111,6 +115,7 @@ export default function StatusBar({ health }: { health: any }) {
  }, [apiConfigOpen]);
 
  useEffect(() => {
+	 if (!docVisible) return;
 	// Use cache: 'no-store' so cost reflects the latest events.
 	 const load = () => fetch('/api/olympus/costs', { cache: 'no-store' }).then(r => r.json()).then(d => {
 	 // #179: prefer the real provider-reported token aggregate; the mixed
@@ -126,7 +131,7 @@ export default function StatusBar({ health }: { health: any }) {
  load();
  const iv = setInterval(load, 10000);
  return () => clearInterval(iv);
- }, []);
+ }, [docVisible]);
 
 	 const prov = cost?.provider;
 	 const isFree = prov?.isFree ?? false;
@@ -157,7 +162,7 @@ export default function StatusBar({ health }: { health: any }) {
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.23'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.24'}
    </span>
 )}
  </div>
@@ -347,6 +352,7 @@ export default function StatusBar({ health }: { health: any }) {
    #105 law applied to liveness: no probe, no claim. A `disk-only` answer
    renders the literal refusal, never a green dot. */
 function RunStatePill() {
+ const docVisible = useDocVisible();
  const [state, setState] = useState<{
   verdict: 'RUNNING' | 'PARKED' | 'IDLE' | 'UNVERIFIED';
   line: string;
@@ -359,6 +365,7 @@ function RunStatePill() {
  } | null>(null);
 
  useEffect(() => {
+  if (!docVisible) return;
   let cancelled = false;
   const tick = async () => {
    try {
@@ -382,7 +389,7 @@ function RunStatePill() {
   // 10s: fast enough that a park/start is felt, slow enough to stay free.
   const iv = setInterval(tick, 10_000);
   return () => { cancelled = true; clearInterval(iv); };
- }, []);
+ }, [docVisible]);
 
  if (!state) return null;
 

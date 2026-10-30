@@ -9,7 +9,7 @@ import {
   Send, Loader2, CornerDownLeft, ChevronRight,
   Zap, CheckCircle2, AlertCircle, Users, Sun, Hammer, Bird,
   Compass, Target, Wine, Flower2, Flame, Square, RefreshCw, Paperclip, type LucideIcon,
-  Landmark, Terminal as TerminalIcon, ImageIcon, Globe, X, Pencil, Palette,
+  Landmark, Terminal as TerminalIcon, ImageIcon, Globe, X, Pencil,
 } from 'lucide-react';
 import { marked } from 'marked';
 import { useOlympus } from '@/lib/olympus-store';
@@ -18,9 +18,6 @@ import OlympusTooltip from './olympus-tooltip';
 // ContextIndicator polls /api/olympus/context-usage every 5s and shows
 // a compact "ctx N%" bar. Shows a "new session" button at warning/critical levels.
 import ContextIndicator from './context-indicator';
-// DesignReviewCard renders inline when Athena surfaces design-system candidates
-// for the user to review and select.
-import DesignReviewCard from './design-review-card';
 // Issue #42: the Parthenon panel. One card per god — status, current tool,
 // step count — and a click focuses the message stream on that god.
 import GodPanel, { ParthenonRailCollapsed, type GodState } from './god-panel';
@@ -30,10 +27,10 @@ import PlanPanel, { normalizeTodoEvent, type PlanItem } from './plan-panel';
 // Issue #47 — /permissions panel (list + revoke). Separate file so the
 // terminal's own surface doesn't keep growing.
 import PermissionsPanel from './permissions-panel';
-// #208 — Athena's Design Studio: reference cards, palettes, and logo
-// concepts proposed at design decision moments; a chosen proposal is saved
-// to <project>/design-decisions.jsonl.
-import DesignStudio from './design-studio';
+// #208/v0.0.24 — Athena's IN-CHAT design choice: dynamic options (palettes,
+// logo SVGs, layout references) generated for the task, with a refinement
+// prompt. Replaces the removed Design Studio modal.
+import DesignChoiceCard from './design-choice-card';
 // #212 — the honest OpenCode v2 update indicator (renders only when a
 // newer npm `latest` exists; OLYMPUS controls the update lane).
 import OpencodeUpdateBadge from './opencode-update-badge';
@@ -411,8 +408,6 @@ export default function InteractiveTerminal() {
   // top-of-component state) because `submit` reads it — see the comment
   // above `submit` about the TDZ this file already fixed once.
   const [showPermissions, setShowPermissions] = useState(false);
-  // #208 — Design Studio modal (Athena's proposal surface).
-  const [showDesignStudio, setShowDesignStudio] = useState(false);
   // Removed the terminalMode toggle. The Olympus
   // Terminal now renders ONLY the Interactive (Apollo) chat. The OpenCode
   // Chat pane and the TUI are gone from this surface. (The opencode one-shot
@@ -1455,20 +1450,12 @@ export default function InteractiveTerminal() {
     void submit(next.text, next.context, next.image);
   }, [submitting, awaitingAnswer, awaitingContext, queued, submit]);
 
-  // DesignReviewCard onSelect handler.
-  // Declared AFTER `submit` to avoid the block-scoped TDZ (submit referenced
-  // before its declaration). Both handlers are consumed by <DesignReviewCard>
-  // further down in the JSX, so being declared here is safe.
-  const handleDesignReviewSelect = useCallback((selection: string, _reviewId: string) => {
-    const message = `I selected "${selection}". Please proceed with this design reference.`;
-    // Auto-submit the selection as a user message
-    submit(message);
+  // v0.0.24 — DesignChoiceCard onAnswer. The card has already POSTed the
+  // decision; this only injects the follow-up user turn so Athena proceeds
+  // (or generates new options after a refinement).
+  const handleDesignChoiceAnswer = useCallback((followUp: string, _reviewId: string) => {
+    submit(followUp);
   }, [submit]);
-
-  const handleDesignReviewDismiss = useCallback((_reviewId: string) => {
-    // The user dismissed the card without selecting — no action needed.
-    // The card removes itself from the DOM via its own state.
-  }, []);
 
   const handleChoice = useCallback((choice: string, context?: string) => {
     // POST the choice instead of WS.
@@ -1939,14 +1926,6 @@ export default function InteractiveTerminal() {
               <span>{todos.filter(t => t.status !== 'done').length}/{todos.length} todos</span>
             </>
           )}
-          <OlympusTooltip content="Athena's Design Studio — references, palettes, logos" side="bottom">
-            <button
-              onClick={() => setShowDesignStudio(true)}
-              className="ml-2 text-olympus-text-dim hover:text-olympus-gold transition-colors"
-            >
-              <Palette size={10} />
-            </button>
-          </OlympusTooltip>
           <OlympusTooltip content="Reset terminal (clears all messages + context)" side="bottom">
             <button
               onClick={() => setShowResetConfirm(true)}
@@ -2009,21 +1988,6 @@ export default function InteractiveTerminal() {
           revoke confirmations, so it stays out of the terminal's state. */}
       {showPermissions && <PermissionsPanel onClose={() => setShowPermissions(false)} />}
 
-      {/* #208 — Design Studio. The last user turn seeds the reference query
-          so the proposals match the task being discussed. A saved decision
-          is echoed into the chat so the transcript records the choice. */}
-      <DesignStudio
-        open={showDesignStudio}
-        project={activeProject ? { slug: activeProject.slug, name: activeProject.name } : null}
-        conversationId={conversationIdRef.current || ''}
-        query={messages.filter(m => m.type === 'user').slice(-1)[0]?.text?.slice(0, 400)}
-        onClose={() => setShowDesignStudio(false)}
-        onSaved={(record) => addMessage({
-          type: 'system',
-          text: `[DESIGN] ${record.kind} saved to ${record.project}/design-decisions.jsonl: ${record.decision?.name || record.decision?.title || record.decision?.id}`,
-        })}
-      />
-
       <div className="flex-1 min-h-0 flex">
         {/* Only the Interactive (Apollo) chat remains.
             The OpenCode Mode toggle and the TerminalTabs rendering are gone.
@@ -2051,14 +2015,13 @@ export default function InteractiveTerminal() {
                 onPermissionReply={handlePermissionReply}
               />
             ))}
-            {/* DesignReviewCard renders inline when Athena
-                surfaces design-system candidates. The card polls
-                /api/olympus/design-review for pending requests and renders
-                itself when one exists. The user clicks a candidate to select
-                it, which auto-submits a user message to the chat. */}
-            <DesignReviewCard
-              onSelect={handleDesignReviewSelect}
-              onDismiss={handleDesignReviewDismiss}
+            {/* v0.0.24 — Athena's IN-CHAT design choice. Renders inline after
+                the current turn when the olympus-design-review tool writes a
+                design-choice-requested event. The user picks one option or
+                writes a refinement; the answer auto-submits as a user turn. */}
+            <DesignChoiceCard
+              onAnswer={handleDesignChoiceAnswer}
+              conversationId={conversationIdRef.current || ''}
             />
             {submitting && !awaitingAnswer && !awaitingContext && (
               <div className="flex items-center gap-2 text-olympus-text-dim">

@@ -183,7 +183,7 @@ async function main() {
   expect('S2: run fails (non-zero)', r2.code !== 0, JSON.stringify(r2).slice(0, 120));
   expect('S2: exhaustion line', t2.includes('RETRY EXHAUSTED after 2 retries'), t2.slice(0, 400));
   expect('S2: no silent downgrade (explicit wording)', /no strategy was auto-switched/i.test(t2), t2.slice(0, 400));
-  expect('S2: alternatives line present (#56-style)', /Alternatives whose key IS present|No alternative free strategy has a key present/.test(t2), t2.slice(0, 400));
+  expect('S2: alternatives line present (#56-style)', /Alternatives that can work here/.test(t2), t2.slice(0, 400));
   expect('S2: guidance names the explicit switch command', t2.includes('apply-strategy'), t2.slice(0, 400));
   expect('S2: still no parallelism', stub.maxConcurrent === 1, 'max=' + stub.maxConcurrent);
 
@@ -318,7 +318,7 @@ async function main() {
   expect('S6B: exhaustion guidance fires on the in-stream overload path', t6b.includes('RETRY EXHAUSTED after 2 retries'), t6b.slice(0, 500));
   expect('S6B: guidance names the REAL error text (not the generic string)', /failed with:[^\n]*Service temporarily overloaded/.test(t6b), t6b.slice(0, 500));
   expect('S6B: no silent downgrade (explicit wording)', /no strategy was auto-switched/i.test(t6b), t6b.slice(0, 500));
-  expect('S6B: alternatives line present (#56-style)', /Alternatives whose key IS present|No alternative free strategy has a key present/.test(t6b), t6b.slice(0, 500));
+  expect('S6B: alternatives line present (#56-style)', /Alternatives that can work here/.test(t6b), t6b.slice(0, 500));
   expect('S6B: exactly 3 POSTs before the loud death', stub.postCount === 3, 'count=' + stub.postCount);
 
   // ── #107 unit layer: resolveRetryPlan + applyRetryJitter + the finer
@@ -565,9 +565,11 @@ async function main() {
   expect('S7: resolveWorkspaceLane is exported (#99)', typeof spawnMod.resolveWorkspaceLane === 'function', 'the workspace lane resolver is missing — interactive sessions default to the repo cwd');
   if (typeof spawnMod.resolveWorkspaceLane === 'function') {
     const wsTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-ws-'));
+    const oldOlympusHome = process.env.OLYMPUS_HOME;
+    process.env.OLYMPUS_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-home-ws-'));
     process.env.OLYMPUS_WORKSPACE = wsTmp;
     const lane = spawnMod.resolveWorkspaceLane();
-    expect('S7: OLYMPUS_WORKSPACE override used verbatim', lane.dir === wsTmp, JSON.stringify(lane));
+    expect('S7: OLYMPUS_WORKSPACE override used verbatim (no active project)', lane.dir === wsTmp, JSON.stringify(lane));
     expect('S7: lane bootstrapped with the kit shape (.opencode symlink)', fs.existsSync(path.join(lane.dir, '.opencode')), 'the .opencode link is missing');
     expect('S7: lane carries the opencode.json copy', fs.existsSync(path.join(lane.dir, 'opencode.json')), 'the config copy is missing');
     expect('S7: lane carries the opencode.demigods.json copy', fs.existsSync(path.join(lane.dir, 'opencode.demigods.json')), 'the demigods copy is missing');
@@ -575,6 +577,7 @@ async function main() {
     expect('S7: second resolve is NOT fresh (the ask/notice fires once)', lane2.fresh === false, JSON.stringify(lane2));
     // The never-the-repo guard: OLYMPUS_WORKSPACE pointed INSIDE the repo
     // falls back to the default lane — never silently the repo.
+    if (oldOlympusHome === undefined) delete process.env.OLYMPUS_HOME; else process.env.OLYMPUS_HOME = oldOlympusHome;
     process.env.OLYMPUS_WORKSPACE = path.join(OLYMPUS, 'inside-repo-test');
     const lane3 = spawnMod.resolveWorkspaceLane();
     expect('S7: a workspace pointing INSIDE the repo falls back to the default',

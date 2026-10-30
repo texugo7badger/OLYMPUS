@@ -117,7 +117,7 @@ async function main() {
 
   // ── Functional: the boot-check route ─────────────────────────────────────
   const realFetch = globalThis.fetch;
-  const routeFetch = async () => ({ ok: true, json: async () => ({ version: '2.2.0' }) });
+  const routeFetch = async () => ({ ok: true, json: async () => ({ version: '9.9.9' }) });
   globalThis.fetch = routeFetch;
   try {
     const route = await import(pathToFileURL(path.join(OLYMPUS, 'src/app/api/olympus/opencode-update/route.ts')).href + `?t=${Date.now()}`);

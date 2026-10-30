@@ -30,6 +30,7 @@ import { syncLaneFile } from '@/lib/lane-config';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
 import { loadHopState, saveHopState, hopStatePath, pruneStaleInFlight, type HopPark } from './hop-state';
 import { composeArsenalDirective } from './arsenal';
+import { createHopTransport, type HopTransport } from './transport';
 import { composeRagContext } from '../rag-inject';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -41,6 +42,26 @@ import { FREE_HYBRID_ROSTER } from '@/lib/model-strategies';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
 export const MAX_HOP_CONCURRENCY = 3;
+
+/**
+ * v0.0.24 (#241) — DYNAMIC CONCURRENCY (AIMD).
+ *
+ * Start at 2, +1 after each green hop, halve on a provider-overload/429,
+ * -1 on a hang; never below 1, never above MAX_HOP_CONCURRENCY. Per-pool
+ * caps still apply on top. Env override: OLYMPUS_HOP_CONCURRENCY.
+ */
+export function resolveHopConcurrency(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number.parseInt(env.OLYMPUS_HOP_CONCURRENCY ?? '', 10);
+  if (Number.isFinite(n) && n > 0) return Math.max(1, Math.min(n, MAX_HOP_CONCURRENCY));
+  return 2;
+}
+
+export function nextConcurrency(current: number, outcome: 'ok' | 'overload' | 'hang'): number {
+  const cur = Math.max(1, Math.min(current, MAX_HOP_CONCURRENCY));
+  if (outcome === 'ok') return Math.min(cur + 1, MAX_HOP_CONCURRENCY);
+  if (outcome === 'overload') return Math.max(1, Math.floor(cur / 2));
+  return Math.max(1, cur - 1);
+}
 /**
  * #POOL-CONTENTION (the 06:15-06:40 specimens): three athena/hephaestus
  * hops launched CONCURRENTLY on the SAME nvidia-step pool — each crawled at
@@ -98,6 +119,8 @@ export interface HopTelemetryRow {
   reasoning?: string;
   /** The child's opencode session id — the drill-down join key. */
   sessionId?: string | null;
+  /** v0.0.24 (#241): warm | spawn. */
+  transport?: 'warm' | 'spawn';
 }
 
 export function hopTelemetryPath(stateDir: string): string {
@@ -141,6 +164,8 @@ export interface HopDispatchResult {
   /** #V2-FAILOVER: the lane the hop ACTUALLY ran on (differs from the
    *  applied lane when the failover moved it). */
   lane?: string;
+  /** v0.0.24 (#241): which transport carried the hop. */
+  transport?: 'warm' | 'spawn';
 }
 
 export type HopDispatcher = (hop: PlanHop, ctx: {
@@ -487,22 +512,26 @@ type LaneOutcome =
 async function attemptLane(
   lane: string,
   hop: PlanHop,
-  ctx: { laneRoot: string; prompt: string },
+  ctx: { laneRoot: string; prompt: string; transport: HopTransport },
   retriesAbsorbedStart: number,
 ): Promise<LaneOutcome> {
   const plan = resolveRetryPlan();
   let retriesAbsorbed = retriesAbsorbedStart;
-  let last: { code: number | null; stdout: string; stderr: string } = { code: null, stdout: '', stderr: '' };
+  let last: { code: number | null; stdout: string; stderr: string; transport?: 'warm' | 'spawn' } = { code: null, stdout: '', stderr: '' };
   const startedAt = Date.now();
   for (let attempt = 0; ; attempt++) {
     // The per-hop runtime budget (#R3: env-tunable — OLYMPUS_HOP_TIMEOUT_MS;
     // the default stays 15 min).
-    last = await runSpawn(
-      ['run', '--model', lane, '--format', 'json', ...(resolveHopVariant() ? ['--variant', resolveHopVariant()!] : []), ctx.prompt],
-      ctx.laneRoot,
-      resolveHopTimeoutMs(),
-      hop.god,
-    );
+    last = await ctx.transport.run({
+      args: ['run', '--model', lane, '--format', 'json', ...(resolveHopVariant() ? ['--variant', resolveHopVariant()!] : []), ctx.prompt],
+      prompt: ctx.prompt,
+      agent: hop.god,
+      cwd: ctx.laneRoot,
+      timeoutMs: resolveHopTimeoutMs(),
+      firstByteMs: resolveHopFirstByteMs(),
+      silenceMs: resolveHopSilenceMs(),
+      onNotice: (msg) => console.log(`[hop-transport] ${msg}`),
+    });
     // #V2-ERRORS: the stdout stream carries the provider's truth. Parse it
     // BEFORE deciding success — an error event with exit 0 is a FAILED run
     // (the `provider.no-route` + exit 0 specimen), and an exit-1 run with an
@@ -521,6 +550,7 @@ async function attemptLane(
           tokensIn: parsed.tokensIn || null, tokensOut: parsed.tokensOut || null,
           reasoning: parsed.reasoningOut || null,
           sessionId: parsed.sessionId,
+          transport: last.transport,
           retriesAbsorbed, exhausted: false,
         },
       };
@@ -609,9 +639,13 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
   const chain = laneChain(applied, roster);
   const deadNotes: string[] = [];
   let retriesAbsorbed = 0;
+  // v0.0.24 (#241): one transport per hop chain — auto = warm first, spawn
+  // on any warm failure. The spawn path is unchanged.
+  const transport = createHopTransport();
+  const ctxWithTransport = { ...ctx, transport };
 
   for (const lane of chain) {
-    const outcome = await attemptLane(lane, hop, ctx, retriesAbsorbed);
+    const outcome = await attemptLane(lane, hop, ctxWithTransport, retriesAbsorbed);
     if (outcome.kind === 'ok') {
       markLaneAlive(lane, undefined);
       // The failover is NEVER silent: the result names the lane the hop
@@ -759,14 +793,15 @@ export interface WalkResult {
 /** #117 (PLANO-MASTER-1 B3): the live narration events — the product flow
  * bridges these to the terminal stream (WHO the god is, WHERE the lane is,
  * what happened) so the walk is visible while it runs. */
-export type HopWalkEvent =
+export type HopWalkEvent = (
   | { type: 'hop_start'; hop: string; god: string; artifacts?: string[]; arsenal?: string[]; skill?: string; mcp?: string; demigod?: string }
   /** W-T HOP-HEARTBEAT: the long-hop visibility — every 45s the in-flight
    *  hops narrate their elapsed time (the 'demora mt' cure: a silent
    *  2-minute spawn reads as a hang; a heartbeat reads as work). */
   | { type: 'hop_heartbeat'; hop: string; god: string; elapsedMs: number }
-  | { type: 'hop_done'; hop: string; god: string; durationMs: number; tokensIn: number | null; tokensOut: number | null; retriesAbsorbed: number }
-  | { type: 'hop_parked'; hop: string; god: string; reason: string; error?: string };
+  | { type: 'hop_done'; hop: string; god: string; durationMs: number; tokensIn: number | null; tokensOut: number | null; retriesAbsorbed: number; transport?: 'warm' | 'spawn' }
+  | { type: 'hop_parked'; hop: string; god: string; reason: string; error?: string }
+) & { campaignId?: string };
 
 export interface WalkOptions {
   plan: DispatchPlan | unknown;
@@ -776,6 +811,8 @@ export interface WalkOptions {
   resume?: boolean;
   /** Where the state + telemetry live. Defaults to the plan's laneRoot. */
   stateDir?: string;
+  /** v0.0.24 (#226): the campaign identity from the walk lock. */
+  campaignId?: string;
   /** #117: the live narration bridge (optional — the battery fixtures omit it). */
   onEvent?: (ev: HopWalkEvent) => void;
 }
@@ -803,6 +840,9 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   const laneRoot = plan.laneRoot;
   const stateDir = opts.stateDir ?? laneRoot;
   const dispatch = opts.dispatcher ?? spawnHopDispatcher;
+  // v0.0.24 (#226): every narration event carries the campaign id, so the
+  // activity feed can group the hop chain without guessing.
+  const emit = (ev: HopWalkEvent) => opts.onEvent?.({ ...ev, campaignId: opts.campaignId });
 
   // #121: the lane config bootstrap BEFORE any dispatch — the intake home
   // must carry the config copy the #99 lanes always had, or every hop dies
@@ -860,6 +900,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       status,
       reasoning: r?.reasoning ?? undefined,
       sessionId: r?.sessionId ?? undefined,
+      transport: r?.transport,
     };
     appendHopTelemetry(stateDir, row);
     rows.push(row);
@@ -868,6 +909,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
 
   await new Promise<void>((resolveWalk) => {
     const inFlight = new Map<string, WalkTask>();
+    let concurrency = resolveHopConcurrency();
     // W-D2 (v0.0.6 MISSION-CONTROL-TRUE): the persisted RUNNING set — written
     // on every launch + settle, so the tasks sheet has GROUND TRUTH about
     // which hops are running right now (telemetry rows land only at settle;
@@ -878,14 +920,25 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           version: 1,
           completed: [...completed],
           parked: parkedHop,
-          inFlight: [...inFlight.values()].map((t) => ({ hopId: t.hop.id, startedAt: new Date(t.startedAt).toISOString() })),
+          campaignId: opts.campaignId,
+          inFlight: [...inFlight.values()].map((t) => ({
+            hopId: t.hop.id,
+            startedAt: new Date(t.startedAt).toISOString(),
+            god: t.hop.god,
+            artifacts: t.hop.artifacts,
+            skill: t.hop.skill,
+            mcp: t.hop.mcp,
+            demigod: t.hop.demigod,
+            status: 'running' as const,
+            lastHeartbeatAt: new Date().toISOString(),
+          })),
           updatedAt: new Date().toISOString(),
         });
       } catch { /* a state-write failure must never kill the walk */ }
     };
     const launch = () => {
       if (stopped) return;
-      while (inFlight.size < MAX_HOP_CONCURRENCY) {
+      while (inFlight.size < concurrency) {
         // #POOL-CONTENTION: count the in-flight hops per provider lane; a
         // saturated lane's hops wait (other-pool hops can still launch).
         const perPool = new Map<string, number>();
@@ -912,7 +965,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         // #PANTHEON-RAIL: the hop's ARTIFACTS ride the start event — the
         // rail shows WHAT each god is creating (the file list from the
         // plan), not just that it started.
-        opts.onEvent?.({ type: 'hop_start', hop: next.id, god: next.god, artifacts: next.artifacts, skill: next.skill, mcp: next.mcp, demigod: next.demigod });
+        emit({ type: 'hop_start', hop: next.id, god: next.god, artifacts: next.artifacts, skill: next.skill, mcp: next.mcp, demigod: next.demigod });
         persistState();
         task.promise = (async () => {
           // #CRASH-ARMOR (the 05:42 specimen): the DEV SERVER DIED on an
@@ -932,15 +985,20 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
               error: e instanceof Error ? e.message : String(e),
             };
           }
+          // #241 — the scheduler learns from the hop that just settled.
+          concurrency = nextConcurrency(concurrency, result.ok
+            ? 'ok'
+            : (/overload|429|rate.?limit/i.test(result.error ?? '') ? 'overload' : 'hang'));
           if (result.ok) {
             const verify = verifyHopDeterministic(next, laneRoot);
             if (verify.ok) {
               completed.add(next.id);
               telemetryRow(next, result, 'completed', startedAt);
-              opts.onEvent?.({
+              emit({
                 type: 'hop_done', hop: next.id, god: next.god,
                 durationMs: Date.now() - startedAt, tokensIn: result.tokensIn,
                 tokensOut: result.tokensOut, retriesAbsorbed: result.retriesAbsorbed,
+                transport: result.transport,
               });
             } else {
               if (!stopped) {
@@ -952,7 +1010,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
                 };
               }
               telemetryRow(next, result, 'parked-verify-failed', startedAt);
-              opts.onEvent?.({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'verify-failed', error: verify.checks.find((c) => !c.ok)?.detail });
+              emit({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'verify-failed', error: verify.checks.find((c) => !c.ok)?.detail });
             }
           } else if (result.exhausted) {
             if (!stopped) {
@@ -963,7 +1021,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
               };
             }
             telemetryRow(next, result, 'parked-retry-exhausted', startedAt);
-            opts.onEvent?.({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'retry-exhausted', error: result.error });
+            emit({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'retry-exhausted', error: result.error });
           } else {
             if (!stopped) {
               stopped = true;
@@ -973,7 +1031,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
               };
             }
             telemetryRow(next, result, 'parked-dispatch-failed', startedAt);
-            opts.onEvent?.({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'dispatch-failed', error: result.error });
+            emit({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'dispatch-failed', error: result.error });
           }
           task.done = true;
           } catch (e) {
@@ -989,7 +1047,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
             }
             try {
               telemetryRow(next, null, 'parked-walker-internal-error', startedAt);
-              opts.onEvent?.({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'walker-internal-error', error: e instanceof Error ? e.message : String(e) });
+              emit({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'walker-internal-error', error: e instanceof Error ? e.message : String(e) });
             } catch { /* never again */ }
             task.done = true;
           }
@@ -1023,9 +1081,10 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       for (const t of inFlight.values()) {
         const elapsed = now - t.startedAt;
         if (elapsed >= 45_000) {
-          opts.onEvent?.({ type: 'hop_heartbeat', hop: t.hop.id, god: t.hop.god, elapsedMs: elapsed });
+          emit({ type: 'hop_heartbeat', hop: t.hop.id, god: t.hop.god, elapsedMs: elapsed });
         }
       }
+      if (inFlight.size > 0) persistState();
     }, 45_000);
     (inFlight as any).__stopHeartbeat = () => clearInterval(heartbeat);
     launch();
@@ -1038,6 +1097,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     version: 1,
     completed: [...completed],
     parked: parkedHop,
+    campaignId: opts.campaignId,
     inFlight: [],
     updatedAt: new Date().toISOString(),
   });

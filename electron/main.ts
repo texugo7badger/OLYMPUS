@@ -436,6 +436,8 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 // Extend the app type to track quitting state.
 declare global {
+  // Declaration merging requires a namespace (the Electron App type).
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Electron {
     interface App {
       isQuitting?: boolean;

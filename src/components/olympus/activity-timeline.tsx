@@ -4,11 +4,12 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useOlympus, GOD_ICONS } from '@/lib/olympus-store';
 import { useDocVisible } from '@/lib/use-doc-visible';
+import { groupEpisodesByCampaign, campaignLabel, campaignDuration, type CampaignGroup } from '@/lib/campaign-groups';
 import {
-  History, Activity, Clock, AlertCircle, CheckCircle2, GitBranch, Wrench, ArrowRight, Timer,
+  History, Activity, Clock, AlertCircle, CheckCircle2, GitBranch, Wrench, ArrowRight, Timer, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AnimatedNumber from './animated-number';
@@ -42,6 +43,12 @@ interface Episode {
   durationMs?: number | null;
   toolCalls?: number | null;
   findings?: string | null;
+  /** v0.0.24 (#226) campaign keys. */
+  campaignId?: string | null;
+  project?: string | null;
+  hop?: string | null;
+  lane?: string | null;
+  artifacts?: string[] | null;
 }
 
 const IMPACT_COLORS: Record<string, string> = {
@@ -76,7 +83,11 @@ export default function ActivityTimeline() {
   const docVisible = useDocVisible();
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState<{ hasMore: boolean; nextCursor: string | null; total: number }>({ hasMore: false, nextCursor: null, total: 0 });
+  const newestTsRef = useRef<string | null>(null);
   const [filterGod, setFilterGod] = useState<string | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   // W1-5: the drill-down — click a hop/task row for the full sheet.
   const [sheetHop, setSheetHop] = useState<string | null>(null);
   // The PARITY poll (v0.0.4): the same /api/olympus/tasks the Parthenon
@@ -107,33 +118,90 @@ export default function ActivityTimeline() {
   const setActiveGod = useOlympus(s => s.setActiveGod);
   const pushEvent = useOlympus(s => s.pushEvent);
 
+  const mergeEpisodes = (incoming: Episode[], mode: 'prepend' | 'append') => {
+    setEpisodes((prev) => {
+      const seen = new Set(prev.map((e) => e.id));
+      const fresh = incoming.filter((e) => !seen.has(e.id));
+      if (fresh.length === 0) return prev;
+      const next = mode === 'prepend' ? [...fresh, ...prev] : [...prev, ...fresh];
+      return next.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+    });
+  };
+
+  const loadInitial = async () => {
+    try {
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 5000);
+      const r = await fetch('/api/olympus/episodes?limit=60', { signal: ctrl.signal, cache: 'no-store' });
+      clearTimeout(timeout);
+      if (!r.ok) throw new Error(`API ${r.status}`);
+      const d = await r.json();
+      const rows: Episode[] = Array.isArray(d?.episodes) ? d.episodes : [];
+      setEpisodes(rows);
+      setPage({
+        hasMore: Boolean(d?.page?.hasMore),
+        nextCursor: d?.page?.nextCursor ?? null,
+        total: d?.page?.total ?? rows.length,
+      });
+      newestTsRef.current = rows[0]?.ts ?? null;
+      setLoading(false);
+    } catch {
+      setEpisodes([]);
+      setPage({ hasMore: false, nextCursor: null, total: 0 });
+      setLoading(false);
+    }
+  };
+
+  const loadDelta = async () => {
+    const since = newestTsRef.current;
+    if (!since) return;
+    try {
+      const r = await fetch(`/api/olympus/episodes?since=${encodeURIComponent(since)}&limit=100`, { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      const rows: Episode[] = Array.isArray(d?.episodes) ? d.episodes : [];
+      mergeEpisodes(rows, 'prepend');
+      if (rows[0]?.ts) newestTsRef.current = rows[0].ts;
+    } catch { /* a delta failure keeps the current page */ }
+  };
+
+  const loadOlder = async () => {
+    if (!page.nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const r = await fetch(`/api/olympus/episodes?before=${encodeURIComponent(page.nextCursor)}&limit=60`, { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      const rows: Episode[] = Array.isArray(d?.episodes) ? d.episodes : [];
+      mergeEpisodes(rows, 'append');
+      setPage((p) => ({
+        hasMore: Boolean(d?.page?.hasMore),
+        nextCursor: d?.page?.nextCursor ?? null,
+        total: d?.page?.total ?? p.total,
+      }));
+    } catch { /* keep the loaded page */ }
+    finally { setLoadingMore(false); }
+  };
+
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const ctrl = new AbortController();
-        const timeout = setTimeout(() => ctrl.abort(), 5000);
-        const r = await fetch('/api/olympus/episodes', { signal: ctrl.signal, cache: 'no-store' });
-        clearTimeout(timeout);
-        if (!r.ok) throw new Error(`API ${r.status}`);
-        const d = await r.json();
-        if (cancelled) return;
-        setEpisodes(Array.isArray(d?.episodes) ? d.episodes : []);
-        setLoading(false);
-      } catch (e) {
-        if (cancelled) return;
-        // On error, stop loading and show empty state (no infinite spinner).
-        setEpisodes([]);
-        setLoading(false);
-      }
-    };
-    load();
-    if (!docVisible) { cancelled = true; return; }
-    const iv = setInterval(load, 15000);
-    return () => { cancelled = true; clearInterval(iv); };
+    void loadInitial();
+  }, []);
+
+  useEffect(() => {
+    if (!docVisible) return;
+    const iv = setInterval(() => { void loadDelta(); }, 15_000);
+    return () => clearInterval(iv);
   }, [docVisible]);
 
   const filtered = filterGod ? episodes.filter(e => e.god === filterGod) : episodes;
+  // #226 — the minitask chain: one collapsible group per campaign, current
+  // campaign first. Legacy rows (no campaignId) land in one "Earlier" bucket.
+  const groups = groupEpisodesByCampaign(filtered as any);
+  const toggleGroup = (key: string) => setExpandedGroups((prev) => {
+    const next = new Set(prev);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+  });
   const highImpact = filtered.filter(e => e.impact === 'high').length;
   // Count delegations — episodes where the outcome mentions "delegated" or the type field is delegation.
   // (The Activity Timeline now absorbs the Delegation History view — user request.)
@@ -241,27 +309,72 @@ export default function ActivityTimeline() {
             </p>
           </div>
         )}
-        {filtered.map((ep, i) => {
-          // W1-5: hop rows are the campaign's tasks — the msg carries the
-          // hop id verbatim (Hop '<id>' started/GREEN/…). Click = sheet.
-          const hopMatch = ep.action === 'hop' ? ep.summary.match(/Hop '([^']+)'/) : null;
-          const hopId = hopMatch ? hopMatch[1] : null;
-          const hopTask = hopId ? taskById[hopId] : undefined;
+        {groups.map((g, gi) => {
+          const key = g.campaignId ?? '__legacy__';
+          const isOpen = g.status === 'running' || gi === 0 || expandedGroups.has(key);
+          const statusTone = g.status === 'running'
+            ? 'text-olympus-gold ring-olympus-gold/30'
+            : g.status === 'parked'
+              ? 'text-olympus-red ring-olympus-red/30'
+              : g.status === 'legacy'
+                ? 'text-olympus-text-dim ring-olympus-text-dim/20'
+                : 'text-olympus-green ring-olympus-green/30';
           return (
-          <TimelineItem
-            key={ep.id}
-            ep={ep}
-            isLast={i === filtered.length - 1}
-            onClick={() => {
-              setActiveGod(ep.god);
-              pushEvent({ type: 'timeline_select', god: ep.god, msg: `Focused ${ep.god} from timeline`, ts: new Date().toISOString() });
-              if (hopId) setSheetHop(hopId);
-            }}
-            hopId={hopId}
-            hopTask={hopTask}
-          />
+            <div key={key} className="mb-1.5">
+              <button
+                onClick={() => toggleGroup(key)}
+                className="sticky top-0 z-10 w-full text-left pl-8 pr-2 py-1.5 bg-olympus-bg/95 backdrop-blur-sm border-b border-olympus-gold/10 hover:bg-olympus-gold/5 transition-colors"
+              >
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <ChevronRight size={10} className={cn('text-olympus-text-dim transition-transform', isOpen && 'rotate-90')} />
+                  <span className="text-[10px] font-mono font-semibold text-olympus-gold">
+                    {campaignLabel(g.campaignId)}
+                  </span>
+                  {g.project && <span className="text-[9px] font-mono text-olympus-text-dim">· {g.project}</span>}
+                  <span className="text-[8.5px] font-mono text-olympus-text-dim">
+                    {g.hopCount} hop{g.hopCount === 1 ? '' : 's'}{g.parkedHops > 0 ? ` · ${g.parkedHops} parked` : ''} · {campaignDuration(g)}
+                  </span>
+                  <span className={cn('text-[8px] font-mono px-1 py-0.5 rounded ring-1 uppercase', statusTone)}>
+                    {g.status}
+                  </span>
+                  {!isOpen && <span className="text-[8px] font-mono text-olympus-text-dim ml-auto">expand</span>}
+                </div>
+              </button>
+              {isOpen && g.rows.map((ep, i) => {
+                const hopId = ep.hop ?? (ep.action === 'hop' ? ep.summary.match(/Hop '([^']+)'/)?.[1] ?? null : null);
+                const hopTask = hopId ? taskById[hopId] : undefined;
+                return (
+                  <TimelineItem
+                    key={ep.id}
+                    ep={ep as any}
+                    isLast={i === g.rows.length - 1}
+                    onClick={() => {
+                      setActiveGod(ep.god);
+                      pushEvent({ type: 'timeline_select', god: ep.god, msg: `Focused ${ep.god} from timeline`, ts: new Date().toISOString() });
+                      if (hopId) setSheetHop(hopId);
+                    }}
+                    hopId={hopId}
+                    hopTask={hopTask}
+                  />
+                );
+              })}
+            </div>
           );
         })}
+        {!loading && episodes.length > 0 && (
+          <div className="pl-8 pr-2 py-2 flex items-center gap-2">
+            <span className="text-[9px] font-mono text-olympus-text-dim">
+              showing {filtered.length} of {page.total || episodes.length}
+            </span>
+            <button
+              onClick={() => void loadOlder()}
+              disabled={!page.hasMore || loadingMore}
+              className="ml-auto text-[9px] font-mono px-2 py-1 rounded border border-olympus-gold/20 text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
+            >
+              {loadingMore ? 'loading…' : page.hasMore ? 'Load older' : 'end of feed'}
+            </button>
+          </div>
+        )}
       </div>
       {sheetHop && <TaskSheetModal hopId={sheetHop} onClose={() => setSheetHop(null)} />}
     </div>

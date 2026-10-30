@@ -1163,28 +1163,6 @@ function getNvidiaBuildModelMap() {
 }
 
 async function getModelMap(strategy) {
-  if (strategy === 'free-hybrid' || isLegacyFreeId(strategy)) {
-    // THE one free strategy (2026-10-23). Resolve the per-god roster for the
-    // sources this machine actually has. No key at all = the explicit
-    // free-tier error (never a config that cannot serve a single request).
-    const sources = detectFreeHybridSources();
-    if (sources.size === 0 && !FORCE_FREE_APPLY) {
-      throw new Error(
-        `Free Hybrid needs at least one free source registered.\n\n` +
-        `  Fastest path (no external key): open OpenCode → Settings → Providers\n` +
-        `  and connect OpenCode Zen (free lanes) or OpenCode GO (free lanes).\n\n` +
-        `  Or add any of: OpenRouter (https://openrouter.ai/keys),\n` +
-        `  NVIDIA Build (https://build.nvidia.com).\n\n` +
-        `  More sources = a stronger free pantheon.`
-      );
-    }
-    if (sources.size === 0 && FORCE_FREE_APPLY) {
-      log('  WARNING: Free Hybrid with --force and ZERO free sources — the full-power map is written; requests will fail until a key is added.');
-    }
-    const resolved = resolveFreeHybridMap();
-    FREE_HYBRID_SMALL_MODEL = resolved.small;
-    return resolved.map;
-  }
   if (strategy === 'local') {
     // v0.0.22 (W1) — THE LOCAL LANE. Probe the user's own hardware and
     // refuse with the exact reason when nothing answers (never a config
@@ -2715,9 +2693,6 @@ async function main() {
     modelMap = await getModelMap(strategy);
   } catch (e) {
     log(`ERROR: ${e.message}`);
-    if (isFreeTierStrategy(strategy) && !forceApply) {
-      log(`  (Re-run with --force to apply anyway, taking responsibility for the failures.)`);
-    }
     process.exit(1);
   }
   // #106: the provider split's key plumbing — mirror the user's nvidia key
@@ -2725,46 +2700,8 @@ async function main() {
   // path reads auth.json per provider id). Free Hybrid mirrors only when the
   // resolved map actually rides an nvidia-* lane. Skipped on --dry-run.
   const usesNvidiaLanes = Object.values(modelMap || {}).some((m) => String(m).startsWith('nvidia-'));
-  if ((strategy === 'free-nvidia-build' || usesNvidiaLanes) && !dryRun) {
+  if (usesNvidiaLanes && !dryRun) {
     mirrorNvidiaFamilyAuthKeys();
-  }
-
-  // Validate free-tier API keys before applying any free strategy.
-  if (isFreeTierStrategy(strategy)) {
-    if (strategy === 'free-hybrid') {
-      // The resolver already refused a zero-source apply; here we only
-      // report what the machine has (the incentive line lives in the
-      // resolver log).
-      const sources = [...detectFreeHybridSources()];
-      log(`Free Hybrid sources present: ${sources.length ? sources.join(', ') : 'NONE'}`);
-    } else {
-    try {
-      const keys = validateFreeFallbackKeys(strategy);
-      log(`Free-tier keys present: openrouter=${keys.openrouter}, nvidia=${keys.nvidia}`);
-    } catch (e) {
-      if (forceApply) {
-        // Issue #56 (BATCH 12d): --force is the explicit escape hatch —
-        // the operator takes responsibility for a strategy whose key is
-        // missing. Loud, never silent.
-        log(`WARNING: free-tier key validation FAILED, but --force given — applying anyway.`);
-        log(`  Runs on '${strategy}' will fail with APIError until the key is added.`);
-        log(`  Guidance:\n${e.message}`);
-      } else {
-        log(`ERROR: ${e.message}`);
-        log(`  (Re-run with --force to apply anyway, taking responsibility for the failures.)`);
-        process.exit(1);
-      }
-    }
-    // Issue #56 (BATCH 12d): stale free-model cache. loadFreeModelsRefresh
-    // silently returns null when ~/.olympus/free-models.json is absent or
-    // older than 24h — the strategy then routes gods to the curated list,
-    // which may reference DEAD endpoints (the 12b finding: fetched_at was
-    // two months old). ONE loud warning naming the fix, never silent.
-    if (!loadFreeModelsRefresh()) {
-      log(`WARNING: free-models.json is missing or older than 24h — gods will be routed to the curated offline list, which may reference dead endpoints.`);
-      log(`  Refresh with: node scripts/apply-strategy.js --strategy ${strategy} --refresh-models`);
-    }
-    }
   }
 
   // Force Athena to K3 if --impeccable is set (GO strategies only — K3 is a

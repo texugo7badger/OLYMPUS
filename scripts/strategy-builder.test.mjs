@@ -83,5 +83,43 @@ if (fs.existsSync(builder)) {
 check('B7 apply has a local branch', /strategy === 'local'/.test(APPLY));
 check('B7 apply has no byok family', !/strategy\.startsWith\('byok-'\)/.test(APPLY));
 
+// B8 — the retired free-tier UI is gone from the strategy surfaces.
+const PROVIDER = fs.readFileSync(join(ROOT, 'src/components/olympus/provider-settings.tsx'), 'utf-8');
+check('B8 no Free-tier Providers heading', !/Free-tier Providers/.test(PROVIDER));
+check('B8 no "No GO or ZEN plan? Free" heading', !/No GO or ZEN plan\? Free/.test(PROVIDER));
+check('B8 no FREE badge on the Local card', !/>FREE</.test(PROVIDER));
+check('B8 no dead free strategy plumbing', !/FREE_STRATEGY_PROVIDER|activeFreeNeedsKey|unlockedFreeStrategies/.test(PROVIDER));
+
+// B9 — one custom-strategy entry point (Build), the old modal is gone.
+check('B9 exactly one Build entry point', (SETTINGS.match(/setBuilderOpen\(true\)/g) || []).length === 1, String((SETTINGS.match(/setBuilderOpen\(true\)/g) || []).length));
+check('B9 old custom-strategy modal removed', !/Custom Strategy Creator Modal/.test(SETTINGS) && !/createCustomStrategy/.test(SETTINGS));
+
+// B10 — the catalogue marks registered + free.
+{
+  const r = fs.readFileSync(modelsRoute, 'utf-8');
+  check('B10 models route returns registered', /registered:/.test(r));
+  check('B10 models route returns a free flag', /free:/.test(r));
+  check('B10 models route summarizes providers', /providers,/.test(r) && /freeCount/.test(r));
+}
+
+// B11 — the Builder defaults to registered and matches the free flag.
+{
+  const b = fs.readFileSync(builder, 'utf-8');
+  check('B11 registered-only default', /useState\(true\)/.test(b) && /registeredOnly && !m\.registered/.test(b));
+  check('B11 free filter + free query', /freeOnly/.test(b) && /q === 'free' && m\.free/.test(b));
+  check('B11 free warning banner', /rate-limited and often much slower/.test(b));
+  check('B11 provider chips', /registeredProviderChips/.test(b));
+}
+
+// B12 — the custom route rejects an unregistered provider.
+{
+  const r = fs.readFileSync(customRoute, 'utf-8');
+  check('B12 custom route imports the registration check', /isProviderRegistered/.test(r));
+  check('B12 custom route refuses unregistered providers', /not registered on this machine/.test(r));
+}
+
+// B13 — the refresh-free-models script is gone.
+check('B13 scripts/refresh-free-models.js is gone', !fs.existsSync(join(ROOT, 'scripts/refresh-free-models.js')));
+
 console.log(`\nstrategy-builder: ${checked - failures} passed, ${failures} failed`);
 process.exit(failures === 0 ? 0 : 1);

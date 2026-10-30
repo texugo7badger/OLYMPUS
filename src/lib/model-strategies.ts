@@ -947,10 +947,11 @@ export function modelClassesForStrategy(strategy: string): string[] {
 function modelClassesForStrategyRaw(strategy: string): string[] {
   const fam = strategyFamily(strategy);
   if (fam === 'CUSTOM') {
-    // Custom strategies are user-defined (free-only guard retired in v0.0.22).
-    // The local strategy (`local`) is the zero-cost path; custom stays for
-    // special configurations (e.g., OpenRouter/NVIDIA lanes, enterprise endpoints).
-    return FREE_MODEL_CLASSES.length ? FREE_MODEL_CLASSES : GO_MODEL_CLASSES;
+    // Custom strategies are user-defined: any model registered in OpenCode
+    // may be chosen (free endpoints included, with a warning in the Builder).
+    // The static catalogue is the offline fallback; the Builder's live
+    // catalogue is the authoritative picker.
+    return [...GO_MODEL_CLASSES, ...ZEN_MODEL_CLASSES, ...FREE_MODEL_CLASSES];
   }
   return MODEL_CLASSES_BY_FAMILY[fam];
 }

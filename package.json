@@ -1,7 +1,7 @@
 {
   "name": "olympus",
-  "version": "0.0.23",
-  "description": "Olympus \u2014 automated multi-agent operating system built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
+  "version": "0.0.24",
+  "description": "Olympus — automated multi-agent operating system built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
   "author": "OLYMPUS Contributors",
   "license": "AGPL-3.0-or-later",
   "type": "module",
@@ -72,7 +72,10 @@
     "prebuild": "node scripts/invalidate-build-stamp.js",
     "prebuild:app": "node scripts/invalidate-build-stamp.js",
     "prebuild:linux": "node scripts/invalidate-build-stamp.js",
-    "mcp:audit": "node scripts/mcp-audit.mjs",
+    "mcp:audit": "npx tsx scripts/mcp-audit.ts",
+    "mcp:sync": "npx tsx scripts/mcp-sync.ts",
+    "seed:knowledge": "node scripts/seed-knowledge-base.mjs",
+    "projects:migrate": "node scripts/migrate-projects-to-vault.mjs",
     "local:probe": "node scripts/local-llm-probe.js",
     "badges:update": "node scripts/update-badges.mjs"
   },
@@ -80,8 +83,8 @@
     "@alloc/quick-lru": "^5.2.0",
     "@excalidraw/excalidraw": "^0.18.1",
     "@google/model-viewer": "^4.4.0",
-    "@opencode/cli": "^2.1.4",
-    "@opencode/plugin": "^2.1.4",
+    "@opencode/cli": "^2.2.2",
+    "@opencode/plugin": "^2.2.2",
     "@radix-ui/primitive": "^1.2.0",
     "better-sqlite3": "latest",
     "chokidar": "latest",
@@ -150,8 +153,8 @@
     "tw-animate-css": "latest",
     "typescript": "latest",
     "wait-on": "latest",
-    "zustand": "latest",
-    "yaml": "^2.9.1"
+    "yaml": "^2.9.1",
+    "zustand": "latest"
   },
   "overrides": {
     "ini": "^6.0.0",

@@ -289,6 +289,25 @@ export interface CreateProjectResult {
   vscodiumWorkspace: string;
 }
 
+/** Copy an imported project tree into the vault home (heavy build dirs skipped). */
+function importProjectTree(source: string, home: string): void {
+  const skip = new Set(['node_modules', '.next', 'dist', 'dist-electron', 'dist-electron-tsc', '.turbo', '.cache', 'coverage']);
+  const copy = (from: string, to: string) => {
+    const st = fs.statSync(from);
+    if (st.isDirectory()) {
+      const name = path.basename(from);
+      if (skip.has(name)) return;
+      fs.mkdirSync(to, { recursive: true });
+      for (const entry of fs.readdirSync(from)) copy(path.join(from, entry), path.join(to, entry));
+    } else if (st.isFile()) {
+      fs.copyFileSync(from, to);
+    }
+  };
+  for (const entry of fs.readdirSync(source)) {
+    copy(path.join(source, entry), path.join(home, entry));
+  }
+}
+
 /**
  * Create a new project note + workspace file + delegation folders.
  * Throws if the project already exists or the path is invalid.
@@ -311,7 +330,26 @@ export function createProject(input: CreateProjectInput): CreateProjectResult {
     throw new Error(`Project path does not exist or is not a directory: ${input.path}`);
   }
 
+  // v0.0.24 — THE VAULT HOME. A project's code lives in
+  // 02_Projects/<slug>, never in the OLYMPUS repo and never in the old
+  // ~/.local/share lane. A path outside the vault is treated as an IMPORT
+  // source: its files are copied into the home (heavy build dirs skipped).
+  const root = findOlympusRoot();
+  const insideRoot = (p: string) => p === root || p.startsWith(root + path.sep);
+  if (insideRoot(input.path)) {
+    throw new Error('Projects never live inside the OLYMPUS working tree — choose a name and let OLYMPUS create 02_Projects/<slug>.');
+  }
+
   fs.mkdirSync(projectDir, { recursive: true });
+  const source = path.resolve(input.path);
+  const home = path.resolve(projectDir);
+  if (source !== home) {
+    const entries = fs.readdirSync(home);
+    if (entries.length > 0) {
+      throw new Error(`Project home ${home} already has files; choose a new project name or import into an empty home.`);
+    }
+    importProjectTree(source, home);
+  }
 
   // Run stack detection synchronously (we're already on the server)
   const fsAdapter: FsAdapter = {
@@ -319,7 +357,7 @@ export function createProject(input: CreateProjectInput): CreateProjectResult {
     readFileSync: (p) => fs.readFileSync(p, 'utf-8'),
     statSync: (p) => fs.statSync(p),
   };
-  const detection = detectStacksWithFs(input.path, fsAdapter);
+  const detection = detectStacksWithFs(projectDir, fsAdapter);
 
   const stacks = input.stacks && input.stacks.length > 0 ? input.stacks : detection.stacks;
   const now = new Date().toISOString();
@@ -327,7 +365,7 @@ export function createProject(input: CreateProjectInput): CreateProjectResult {
   // Generate VSCodium workspace file (multi-root compatible)
   const workspacePath = path.join(WORKSPACES_DIR, `${slug}.code-workspace`);
   const workspaceContent = {
-    folders: [{ path: input.path }],
+    folders: [{ path: projectDir }],
     settings: {
       'olympus.projectSlug': slug,
       'olympus.projectName': input.name,
@@ -345,7 +383,7 @@ export function createProject(input: CreateProjectInput): CreateProjectResult {
   const project: ProjectNote = {
     slug,
     name: input.name,
-    path: input.path,
+    path: projectDir,
     stacks,
     created: now,
     last_active: now,
@@ -360,7 +398,7 @@ export function createProject(input: CreateProjectInput): CreateProjectResult {
 type: project
 slug: ${slug}
 name: ${input.name}
-path: ${input.path}
+path: ${projectDir}
 stacks: [${stacks.join(', ')}]
 created: ${now}
 last_active: ${now}
@@ -394,7 +432,7 @@ ${foundMarkers.length > 0 ? foundMarkers.map(m => `- \`${m.file}\` → \`${m.sta
 
 ## Notes
 - Created: ${now}
-- Path: \`${input.path}\`
+- Path: \`${projectDir}\`
 - VSCodium workspace: \`${workspacePath}\`
 `;
   fs.writeFileSync(path.join(projectDir, 'project.md'), noteContent, 'utf-8');
@@ -417,7 +455,7 @@ ${foundMarkers.length > 0 ? foundMarkers.map(m => `- \`${m.file}\` → \`${m.sta
   const contextJson = {
     slug,
     name: input.name,
-    path: input.path,
+    path: projectDir,
     stacks,
     livePreviewPort,
     vscodiumWorkspace: workspacePath,

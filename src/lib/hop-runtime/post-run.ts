@@ -158,6 +158,7 @@ import { buildOvernightDigest, buildWaveReports, writeOvernightDigest } from './
 import { hopStatePath, saveHopState } from './hop-state';
 import { createGate, getPendingGates, listGates, resolveGate } from '@/lib/hitl-gates';
 import { appendActivity } from '@/lib/activity-feed';
+import { publishHopEvent } from './hop-events';
 
 export const DISPATCH_PLAN_FILENAME = 'dispatch-plan.json';
 
@@ -192,6 +193,8 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
   const pool = resolveGodModelLane(ev.god);
   const poolNote = pool ? ` · pool ${pool}` : '';
   const ts = new Date().toISOString();
+  const campaignId = (ev as { campaignId?: string }).campaignId ?? null;
+  const project = laneRoot.split(/[\\/]/).filter(Boolean).pop() ?? null;
   let msg = '';
   if (ev.type === 'hop_start') {
     msg = `Hop '${ev.hop}' started — god ${ev.god}${poolNote}, lane ${laneRoot}`;
@@ -207,6 +210,27 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
     msg = `Hop '${ev.hop}' PARKED (${ev.reason}) — god ${ev.god}${poolNote}${errHead ? `: ${errHead}` : ''}`;
     if (send) send({ type: 'hop_parked', hop: ev.hop, god: ev.god, pool, lane: laneRoot, reason: ev.reason, msg, ts });
   }
+  // v0.0.24 (#227): the single hop stream — every live surface replays this.
+  publishHopEvent({
+    type: ev.type === 'hop_start' ? 'hop_start' : ev.type === 'hop_done' ? 'hop_done' : ev.type === 'hop_heartbeat' ? 'hop_heartbeat' : 'hop_parked',
+    campaignId,
+    project,
+    lane: laneRoot,
+    hop: ev.hop,
+    god: ev.god,
+    artifacts: (ev as { artifacts?: string[] }).artifacts ?? null,
+    skill: (ev as { skill?: string }).skill ?? null,
+    mcp: (ev as { mcp?: string }).mcp ?? null,
+    demigod: (ev as { demigod?: string }).demigod ?? null,
+    transport: (ev as { transport?: 'warm' | 'spawn' }).transport ?? null,
+    elapsedMs: ev.type === 'hop_heartbeat' ? ev.elapsedMs : null,
+    durationMs: ev.type === 'hop_done' ? ev.durationMs : null,
+    tokensIn: ev.type === 'hop_done' ? ev.tokensIn : null,
+    tokensOut: ev.type === 'hop_done' ? ev.tokensOut : null,
+    reason: ev.type === 'hop_parked' ? ev.reason : null,
+    error: ev.type === 'hop_parked' ? (ev.error ?? null) : null,
+  });
+
   // #120 (B6d): the OPT-IN durable publish — the product flow opts in so
   // the hop states reach the activity feed (ANY terminal + the auditor can
   // see who is walking what, across sessions — #85's foundation). Fixtures
@@ -224,8 +248,11 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
       appendActivity({
         god: ev.god,
         action: 'hop',
+        project: project ?? undefined,
         msg,
         meta: {
+          campaignId,
+          project,
           hop: ev.hop,
           lane: laneRoot,
           pool,
@@ -542,12 +569,21 @@ export async function maybeWalkThePlan(opts: {
   }
   // Beat while the walk runs so a long campaign never looks stale.
   const lockBeat = lock.ok ? setInterval(() => lock.heartbeat(), 60_000) : null;
+  const campaignId = lock.ok ? lock.holder.campaignId : undefined;
+  publishHopEvent({
+    type: 'campaign_start',
+    campaignId: campaignId ?? null,
+    project: opts.slug,
+    lane: opts.laneRoot,
+    total: planHopCount(plan),
+  });
   let result: Awaited<ReturnType<typeof walkPlan>>;
   try {
     result = await walkPlan({
       plan,
       dispatcher: opts.dispatcher,
       resume,
+      campaignId: lock.ok ? lock.holder.campaignId : undefined,
       onEvent: (ev) => bridgeEvent(ev, opts.laneRoot, opts.send, opts.publishActivity),
     });
   } catch (e) {
@@ -566,6 +602,15 @@ export async function maybeWalkThePlan(opts: {
   // from retired plans never inflate the number (the "12/5" hybrid).
   const completed = result.completed.filter((id) => planIds.has(id)).length;
   const parked = result.parked ? { hopId: result.parked.hopId, reason: result.parked.reason } : null;
+  publishHopEvent({
+    type: 'campaign_end',
+    campaignId: campaignId ?? null,
+    project: opts.slug,
+    lane: opts.laneRoot,
+    total: totalHops,
+    completed,
+    reason: parked?.reason ?? null,
+  });
   // W-D3: the parked summary carries the projected remaining time — the
   // tasks sheet's critical-path model over the same lane artifacts.
   let projectedRemainingMs: number | undefined;

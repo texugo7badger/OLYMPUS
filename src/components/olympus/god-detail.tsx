@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useOlympus, GOD_ICONS, GOD_DOMAINS } from '@/lib/olympus-store';
 import { Cpu, Zap, Clock, TrendingUp, Activity as ActivityIcon, BookOpenText, FileText, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDocVisible } from '@/lib/use-doc-visible';
 import { demigodShortDescription } from '@/lib/demigod-short-desc';
 import DemigodPromptModal from './demigod-prompt-modal';
 // Instincts section removed from God-Detail (instincts
@@ -58,6 +59,8 @@ interface GodStats {
 }
 
 export default function GodDetail() {
+  // #231 — the 10s poll pauses in a hidden tab.
+  const docVisible = useDocVisible();
  const node = useOlympus(s => s.selectedNode);
  const god = node?.god;
  const GodIcon = god ? GOD_ICONS[god] : null;
@@ -155,6 +158,7 @@ export default function GodDetail() {
  loadReferences();
  loadResonance();
 
+ if (!docVisible) return () => {};
  const iv = setInterval(() => {
  loadDispatch();
  loadStats();
@@ -167,7 +171,7 @@ export default function GodDetail() {
  clearInterval(iv);
  window.removeEventListener('olympus:demigods-changed', onDemigodsChanged);
  };
- }, [god]);
+}, [god, docVisible]);
 
  if (!god || !GodIcon) {
  return (

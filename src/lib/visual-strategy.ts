@@ -3,7 +3,7 @@
  * image modality of the OLYMPUS strategy system. Two cascades:
  *
  *   VISION (understand/describe/tag — the vision-describer):
- *     OpenRouter :free vision (the SAME key as free-openrouter — probed
+ *     OpenRouter :free vision (the SAME OpenRouter key — probed
  *     live 2026-10-18: gemma-4-31b-it:free / gemma-4-26b-a4b-it:free /
  *     dots-3-note-preview:free — the dots probe returned a perfect
  *     describe while both gemmas sat rate-limited: the cascade IS the
@@ -48,4 +48,4 @@ No prose outside the JSON.`;
 
 /** The user-visible strategy summary (the settings card text). */
 export const VISUAL_STRATEGY_SUMMARY =
-  'Vision: OpenRouter free cascade (Gemma 4 31B → 26B → dots-3-note) — the free-openrouter key, zero cost, no Nemotron. Generation: Pollinations free tier → price-routed BYOK (SDXL-turbo drafts → FLUX → Nano Banana finals).';
+  'Vision: OpenRouter free cascade (Gemma 4 31B → 26B → dots-3-note) — the OpenRouter key, zero cost, no Nemotron. Generation: Pollinations free tier → price-routed BYOK (SDXL-turbo drafts → FLUX → Nano Banana finals).';

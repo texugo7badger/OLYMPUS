@@ -200,6 +200,9 @@ export async function GET() {
     hops: {
       completed,
       inFlight,
+      /** v0.0.24 (#227): the live hops with god/lane/artifacts/elapsed. */
+      inFlightList: hopState?.inFlight ?? [],
+      campaignId: hopState?.campaignId ?? campaign?.campaignId ?? null,
       parked: parked ? { hopId: parked.hopId, reason: parked.reason, error: parked.error ?? null, ts: parked.ts } : null,
       updatedAt: hopState?.updatedAt ?? null,
     },

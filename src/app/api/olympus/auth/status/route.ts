@@ -119,67 +119,29 @@ export async function GET() {
 
   if (goPlan.configured) {
     recommendedStrategy = 'go-balanced';
-    recommendedReason = 'GO plan detected — use go-balanced for the full 128-agent OLYMPUS experience. Switch to go-budget for savings or go-max-quality for best quality.';
+    recommendedReason = 'GO plan detected — use go-balanced for the full 132-agent OLYMPUS experience. Switch to go-budget for savings or go-max-quality for best quality.';
   } else if (zenPlan.configured) {
     recommendedStrategy = 'zen-balanced';
-    recommendedReason = 'OpenCode Zen detected — use zen-balanced for the full 128-agent OLYMPUS experience on pay-as-you-go models (no request caps). Zero-retention, charged per request.';
-  } else if (freeTier.both_keys) {
-    recommendedStrategy = 'free-openrouter';
-    recommendedReason = 'Free-tier keys detected — free-openrouter routes the primary trio to the strongest OpenRouter free model currently live, specialists to the second-strongest, Callimachus to a fast background model. OpenRouter alone is enough for a working free tier.';
-  } else if (freeTier.openrouter_key) {
-    recommendedStrategy = 'free-openrouter';
-    recommendedReason = 'Only OpenRouter key detected — free-openrouter routes gods to the strongest OpenRouter free models (nemotron-3-ultra-550b, super-120b, ling-3.0-flash).';
-  } else if (freeTier.groq_key) {
-    // Groq's free tier (12K TPM) cannot serve the OLYMPUS system prompt —
-    // there is no free-groq strategy anymore. Tell the user to add OpenRouter.
-    recommendedStrategy = '(none)';
-    recommendedReason = 'Groq key detected, but the Groq free tier was removed from OLYMPUS (12K TPM window too small for the system prompt). Add an OpenRouter key (https://openrouter.ai/keys) to use the free strategies.';
-  } else if (freeTier.nvidia_key) {
-    recommendedStrategy = 'free-nvidia-build';
-    recommendedReason = 'NVIDIA Build key detected — the "Free Nvidia Build" strategy routes gods to NVIDIA\'s free endpoints (build.nvidia.com: GLM-5.3, the Nemotron family, etc.), refreshed automatically from the live NVIDIA model list.';
+    recommendedReason = 'OpenCode Zen detected — use zen-balanced for the full 132-agent OLYMPUS experience on pay-as-you-go models (no request caps). Zero-retention, charged per request.';
   } else {
-    recommendedStrategy = '(none)';
-    recommendedReason = 'No auth configured. Run `olympus opencode` and either sign in to the GO plan or add free-tier API keys (OpenRouter / NVIDIA Build) inside OpenCode.';
+    recommendedStrategy = 'local';
+    recommendedReason = 'No GO or ZEN plan detected. The zero-cost path is the LOCAL lane (your own hardware — Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint). You can also build a custom strategy from any provider registered in OpenCode (free endpoints included, with a speed/limit warning).';
   }
 
   // Build recommendations
   const recommendations: AuthStatus['recommendations'] = [];
 
-  if (!goPlan.configured && !zenPlan.configured && !freeTier.groq_key && !freeTier.openrouter_key && !freeTier.nvidia_key) {
+  if (!goPlan.configured && !zenPlan.configured && !freeTier.openrouter_key && !freeTier.nvidia_key) {
     recommendations.push({
       severity: 'crit',
       action: 'No LLM auth configured. OLYMPUS cannot dispatch tasks.',
-      command: 'Run `olympus opencode`, then sign in to the GO plan, add OpenCode Zen (`/connect`), or add OpenRouter/NVIDIA as providers in Settings.',
+      command: 'Run `olympus opencode`, then sign in to the GO plan, add OpenCode Zen (`/connect`), or add a provider in Settings. The zero-cost path is the Local lane.',
     });
-  } else if (!goPlan.configured && zenPlan.configured && !freeTier.groq_key && !freeTier.openrouter_key && !freeTier.nvidia_key) {
+  } else if (!goPlan.configured && !zenPlan.configured) {
     recommendations.push({
       severity: 'info',
-      action: 'OpenCode Zen authorized — the ZEN strategy (full 128-agent OLYMPUS, pay-as-you-go) is ready. Consider the GO plan for fixed monthly pricing.',
-      command: 'https://opencode.ai/docs/zen/',
-    });
-  } else if (!goPlan.configured && !zenPlan.configured && freeTier.both_keys) {
-    recommendations.push({
-      severity: 'info',
-      action: 'No paid plan detected. The zero-cost path is the Local strategy (your own hardware). The free tier is retired in v0.0.22. Consider the GO plan for cloud quality.',
-      command: 'https://opencode.ai/docs/go/',
-    });
-  } else if (!goPlan.configured && freeTier.groq_key && !freeTier.openrouter_key) {
-    recommendations.push({
-      severity: 'warn',
-      action: 'Only a Groq key is configured. Groq free was removed (12K TPM window too small). Use the Local strategy (your own hardware) or a GO/Zen plan.',
-      command: 'Get a free key at https://openrouter.ai/keys — add inside OpenCode (`olympus opencode` → Settings → Providers).',
-    });
-  } else if (!goPlan.configured && !zenPlan.configured && !freeTier.groq_key && freeTier.openrouter_key) {
-    recommendations.push({
-      severity: 'info',
-      action: 'OpenRouter key configured — BYOK strategies (e.g. byok-deepseek) are ready.',
-      command: 'Get a free key at https://openrouter.ai/keys — add inside OpenCode (`olympus opencode` → Settings → Providers).',
-    });
-  } else if (!goPlan.configured && !zenPlan.configured && !freeTier.groq_key && !freeTier.openrouter_key && freeTier.nvidia_key) {
-    recommendations.push({
-      severity: 'info',
-      action: 'NVIDIA Build key configured — but the free strategies were retired in v0.0.22. Use GO, Zen, Local, or BYOK.',
-      command: 'https://build.nvidia.com — or run `node scripts/apply-strategy.js --strategy free-nvidia-build`.',
+      action: 'No GO or ZEN plan detected. The zero-cost path is the Local strategy (your own hardware). A custom strategy may also use any provider registered in OpenCode — free endpoints are allowed but are slow and rate-limited.',
+      command: 'https://opencode.ai/docs/go/ · https://opencode.ai/docs/zen/',
     });
   }
 

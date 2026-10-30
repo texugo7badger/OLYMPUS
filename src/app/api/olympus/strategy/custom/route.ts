@@ -22,6 +22,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { GOD_IDS } from '@/lib/model-strategies';
+import { isProviderRegistered, registeredProviders } from '@/lib/opencode-providers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -79,6 +80,23 @@ export async function POST(req: NextRequest) {
         {
           ok: false,
           error: `Model(s) not registered in OpenCode: ${unknown.map(([g, m]) => `${g}=${m}`).join(', ')}. Register the provider first (Settings → Providers) or pick a listed model.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    // v0.0.24: a model can exist in OpenCode's catalogue while its provider
+    // is NOT authorized on this machine. That lane would die on the first
+    // dispatch — refuse it BEFORE the apply, naming the provider.
+    const registered = registeredProviders();
+    const unregistered = Object.entries(gods)
+      .filter(([, m]) => !isProviderRegistered(m, registered))
+      .map(([g, m]) => `${g}=${m}`);
+    if (unregistered.length) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Provider(s) not registered on this machine: ${unregistered.join(', ')}. Add the provider inside OpenCode (Settings → Providers) and reopen the Builder. Free endpoints are allowed once their provider is registered — they are slow and rate-limited, so prefer GO/ZEN or Local for real work.`,
         },
         { status: 400 },
       );

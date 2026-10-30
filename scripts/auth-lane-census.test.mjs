@@ -74,29 +74,24 @@ async function main() {
     // ── The preflight ERROR block: full sight, never blocks ──
     const pre = freeTierPreflight('free-nvidia-build', dirsB);
     expect('P: the preflight stays purely diagnostic (ERROR block shape)', /FREE-STRATEGY PREFLIGHT ERROR/.test(pre), pre.slice(0, 200));
-    expect('P: the block lists the auth lanes (the vault is NOT empty)', pre.includes('Lanes with keys present: opencode-go, openrouter'), pre);
-    expect('P: the free alternative named (OpenRouter key present)', pre.includes('free-openrouter / free-big-pickle (OpenRouter key present)'), pre);
-    expect('P: the GO valve line explicit (the premium fallback, named)', pre.includes('GO key present: node scripts/apply-strategy.js --strategy go-balanced (premium valve)'), pre);
+    expect('P: the block names the retirement (no free-* strategy exists)', /free tier was retired/i.test(pre), pre);
+    expect('P: the block names the working alternatives', /go-\*.*zen-\*.*local.*custom-\*/is.test(pre), pre);
     expect('P: no silent downgrade stands', /No strategy was auto-switched/.test(pre), pre);
 
     const preEmpty = freeTierPreflight('free-nvidia-build', dirsEmpty);
-    expect('P: empty vault -> the honest none (no lanes, no alternatives, no GO line)',
-      /Lanes with keys present: none/.test(preEmpty) && !preEmpty.includes('GO key present') && !preEmpty.includes('Alternatives whose key IS present'),
+    expect('P: the retirement is the same with an empty vault (no key scavenger hunt)',
+      /free tier was retired/i.test(preEmpty) && !/Lanes with keys present/.test(preEmpty),
       preEmpty);
-
-    const dirsGroq = makeAuthTree(['groq']);
-    const preGroq = freeTierPreflight('free-nvidia-build', dirsGroq);
-    expect('P: the GO valve appears IFF GO auth present (groq-only: absent)', !preGroq.includes('GO key present'), preGroq);
 
     const dirsFamily = makeAuthTree(['nvidia-glm', 'nvidia-kimi']);
     const preFamily = freeTierPreflight('free-nvidia-build', dirsFamily);
-    expect('P: family-mirrored nvidia ids satisfy the nvidia check (the shipped R4 shape)',
-      /INFO/.test(preFamily) && !/PREFLIGHT ERROR/.test(preFamily), preFamily);
+    expect('P: the retirement is the same even when an nvidia key is present',
+      /free tier was retired/i.test(preFamily) && !/PREFLIGHT ERROR: missing/i.test(preFamily), preFamily);
 
     // ── The #98 exhaustion card: every REAL switch, free AND paid ──
     const card = retryExhaustionGuidance('upstream 503', 503, undefined, dirsB);
     expect('X: the card carries the census (both lanes named)', card.includes('Lanes with keys present: opencode-go, openrouter'), card);
-    expect('X: the card names the openrouter switch (a pool-contention death is a REAL reason to switch)', card.includes('Alternatives whose key IS present: free-openrouter / free-big-pickle (OpenRouter key present)'), card);
+    expect('X: the card names the openrouter switch (a pool-contention death is a REAL reason to switch)', card.includes('a custom strategy using OpenRouter (registered)'), card);
     expect('X: the GO valve on the card (the explicit premium switch)', card.includes('GO key present: node scripts/apply-strategy.js --strategy go-balanced (premium valve)'), card);
     expect('X: the card still names the explicit switch command', card.includes('apply-strategy'), card);
     expect('X: the card still refuses the silent downgrade', /NO strategy was auto-switched/i.test(card), card);

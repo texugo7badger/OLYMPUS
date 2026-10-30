@@ -3,7 +3,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { basename, dirname } from 'node:path';
+import { basename, dirname, join } from 'node:path';
+import fs from 'node:fs';
 import { requireAuth } from '@/lib/auth';
 // Uses spawnOpencode() for Windows shell:true + stdin:'ignore' + local binary resolution.
 import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
@@ -13,8 +14,9 @@ import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-
 import { pickPlanRoot, walkRootNote } from '@/lib/hop-runtime/walk-root';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
 import { probeLane } from '@/lib/lane-probe';
-import { reconcileProjectPath } from '@/lib/project-context';
+import { reconcileProjectPath, PROJECTS_DIR } from '@/lib/project-context';
 import { composePlannerRag } from '@/lib/rag-inject';
+import { composeKnowledgeBlock } from '@/lib/knowledge-hints';
 import { uiReferencesMarkerBlock } from '@/lib/ui-references';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
@@ -380,6 +382,11 @@ export async function POST(req: NextRequest) {
     // read. The marker and the walk now use the SAME resolved root: the lane
     // carrying the plan/plan.md, else the dispatch cwd, else the note home.
     const walkRootFor = (slug: string): string => {
+      // v0.0.24 — the pinned directive: a project's plan and artifacts live
+      // in its vault home. This is checked FIRST; the legacy resolver is the
+      // fallback for a project whose home has not been created yet.
+      const vaultHome = join(PROJECTS_DIR, slug);
+      if (fs.existsSync(vaultHome)) return vaultHome;
       const rec = reconcileProjectPath(slug);
       const res = pickPlanRoot([resolveDispatchCwd(slug), rec?.lanePath, rec?.path]);
       return res.root;
@@ -417,6 +424,7 @@ Components: design with PERSONALITY. Each component must have at least ONE disti
 Assets: for logos, icons, and illustrations — create a simple inline SVG or CSS-based logo mark. If the project needs a vector logo, include a hop that creates it as an SVG.
 Deliverables: the project root must contain ONLY deliverable files. No planning artifacts (dispatch-plan.json, .olympus-* files, opencode.json, .opencode) inside the project — the machine cleans these after the walk. Add a .gitignore that excludes any worklog/ or .olympus-* files.
 Design review: include a design-review hop as the SECOND-TO-LAST hop (god: athena, artifacts: ["design-review.json"], budgetTokens: 4096). Its prompt must tell the god to: (1) run \`node scripts/extract-page-styles.mjs <preview-url> <project-root>\` to get the REAL visual data (fonts, colors, spacing, slop signals, component quality signals — extracted from the served page, not from source alone). (2) Read the key component files. (3) Rate each dimension 0-10 (typography, color, spacing, components, hierarchy, darkTheme, content, motion). (4) Write design-review.json with {"scores":{...},"overall":N,"issues":[...],"fixInstructions":[...]}. The verify check: design-score:7.
+Interactive design choices: in an INTERACTIVE session (not a hop), Athena must call \`olympus-design-review\` BEFORE implementing visible UI and present 2–6 dynamic options (logo SVGs, palettes, layout references) with a refinement box. In a hop/unattended context she must NOT wait for a user — decide from this contract and record the choice. The choice card is rendered inline in the terminal; there is no Design Studio modal anymore.
 ${uiReferencesBlock}`
       : '';
     // #206: the user can address a god directly (@athena / "para a Athena" /
@@ -425,9 +433,14 @@ ${uiReferencesBlock}`
     const directGod = action === 'prompt' ? addressedGodFromText(text) : null;
     const agent = directGod ?? 'apollo';
     const addressMarker = directGod ? `[OLYMPUS-ADDRESS god=${directGod}] ` : '';
+    // v0.0.24 — the vault's domain references reach the task prompt. Bounded
+    // (top 3, ~700 chars); a hint the god can open, never a context dump.
+    const knowledgeBlock = action === 'prompt'
+      ? composeKnowledgeBlock({ god: agent, stacks: classification.stack ?? [], text: promptText })
+      : '';
     const runText = unattended
-      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + plannerMarker + designMarker
-      : sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + plannerMarker + designMarker;
+      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker
+      : sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker;
 
     return streamWarm(req, {
       conversationId,

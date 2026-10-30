@@ -1,20 +1,23 @@
 'use client';
 
 /**
- * StrategyBuilder — the interactive strategy screen (v0.0.23).
+ * StrategyBuilder — the interactive strategy screen (v0.0.24).
  *
  * The user picks a model per god from the models REGISTERED IN OPENCODE
- * (GET /api/olympus/models). One search box filters by id, display name or
- * provider; the per-god rows show context, output and price; a fit hint
- * suggests the role each model suits. Save & apply posts to
- * /api/olympus/strategy/custom, which validates and applies the config.
+ * (GET /api/olympus/models). v0.0.24 adds:
+ *   - a REGISTERED-ONLY default (the old list showed 8,917 models across 233
+ *     providers, including providers the machine cannot route);
+ *   - a `free` match + Free-only chip (free endpoints are allowed, honestly
+ *     warned about);
+ *   - provider chips with live/free counts;
+ *   - tool-calling / ≥32k context filters.
  *
  * Design: Olympus palette, mono 10-11px, one gold accent, no glow.
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, X, Check, Loader2, Cpu, DollarSign } from 'lucide-react';
+import { Search, X, Check, Loader2, Cpu, DollarSign, AlertTriangle, Globe2 } from 'lucide-react';
 import { GOD_IDS, GOD_ICONS } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +30,16 @@ interface ModelEntry {
   inputCost: number | null;
   outputCost: number | null;
   free: boolean;
+  registered: boolean;
+  toolCall: boolean;
   fits: string[];
+}
+
+interface ProviderSummary {
+  id: string;
+  count: number;
+  freeCount: number;
+  registered: boolean;
 }
 
 interface Props {
@@ -59,6 +71,7 @@ function price(m: ModelEntry): string {
 
 export default function StrategyBuilder({ open, onClose, initial, onApplied }: Props) {
   const [models, setModels] = useState<ModelEntry[]>([]);
+  const [providers, setProviders] = useState<ProviderSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('My strategy');
   const [query, setQuery] = useState('');
@@ -66,24 +79,41 @@ export default function StrategyBuilder({ open, onClose, initial, onApplied }: P
   const [gods, setGods] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [registeredOnly, setRegisteredOnly] = useState(true);
+  const [freeOnly, setFreeOnly] = useState(false);
+  const [toolCallOnly, setToolCallOnly] = useState(false);
+  const [minContext, setMinContext] = useState(false);
+  const [providerFilter, setProviderFilter] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     fetch('/api/olympus/models', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setModels(Array.isArray(d?.models) ? d.models : []))
-      .catch(() => setModels([]))
+      .then((d) => {
+        setModels(Array.isArray(d?.models) ? d.models : []);
+        setProviders(Array.isArray(d?.providers) ? d.providers : []);
+      })
+      .catch(() => { setModels([]); setProviders([]); })
       .finally(() => setLoading(false));
     if (initial && Object.keys(initial).length === 10) setGods(initial);
   }, [open, initial]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return models;
-    return models.filter((m) =>
-      m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q) || m.provider.toLowerCase().includes(q));
-  }, [models, query]);
+    return models.filter((m) => {
+      if (registeredOnly && !m.registered) return false;
+      if (providerFilter && m.provider !== providerFilter) return false;
+      if (freeOnly && !m.free) return false;
+      if (toolCallOnly && !m.toolCall) return false;
+      if (minContext && !(m.context != null && m.context >= 32_000)) return false;
+      if (!q) return true;
+      if (m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q) || m.provider.toLowerCase().includes(q)) return true;
+      // The word "free" is a filter, not only a substring.
+      if (q === 'free' && m.free) return true;
+      return false;
+    });
+  }, [models, query, registeredOnly, freeOnly, toolCallOnly, minContext, providerFilter]);
 
   const activeModel = gods[activeGod] ?? '';
   const lanes = new Set(Object.values(gods).filter(Boolean));
@@ -95,6 +125,14 @@ export default function StrategyBuilder({ open, onClose, initial, onApplied }: P
       output += m?.outputCost ?? 0;
     }
     return `${lanes.size} lane(s) · $${input.toFixed(2)}/$${output.toFixed(2)} per 1M`;
+  }, [lanes, models]);
+
+  const selectedFree = useMemo(() => {
+    for (const id of lanes) {
+      const m = models.find((x) => x.id === id);
+      if (m?.free) return true;
+    }
+    return false;
   }, [lanes, models]);
 
   if (!open) return null;
@@ -121,6 +159,8 @@ export default function StrategyBuilder({ open, onClose, initial, onApplied }: P
     }
   };
 
+  const registeredProviderChips = providers.filter((p) => p.registered).slice(0, 10);
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
@@ -129,12 +169,12 @@ export default function StrategyBuilder({ open, onClose, initial, onApplied }: P
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-olympus-gold/10 px-4 py-2.5">
-          <div className="flex items-center gap-2">
-            <Cpu size={13} className="text-olympus-gold" />
+          <div className="flex items-center gap-2 min-w-0">
+            <Cpu size={13} className="text-olympus-gold shrink-0" />
             <span className="text-[11px] font-mono text-olympus-text">Strategy Builder</span>
-            <span className="text-[9px] font-mono text-olympus-text-dim">pick a model per god — from the providers registered in OpenCode</span>
+            <span className="text-[9px] font-mono text-olympus-text-dim truncate">pick a model per god — registered in OpenCode</span>
           </div>
-          <button onClick={onClose} className="text-olympus-text-dim hover:text-olympus-text"><X size={14} /></button>
+          <button onClick={onClose} className="text-olympus-text-dim hover:text-olympus-text" aria-label="Close"><X size={14} /></button>
         </div>
 
         <div className="flex min-h-0 flex-1">
@@ -164,20 +204,59 @@ export default function StrategyBuilder({ open, onClose, initial, onApplied }: P
             })}
           </div>
 
-          {/* Right: search + list */}
+          {/* Right: search + filters + list */}
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-2 border-b border-olympus-gold/10 px-3 py-2">
-              <Search size={11} className="text-olympus-text-dim" />
+              <Search size={11} className="text-olympus-text-dim shrink-0" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={`search a model for ${activeGod} — name, provider, id…`}
+                placeholder={`search a model for ${activeGod} — id, provider, "free"…`}
                 className="flex-1 bg-transparent text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim/60 outline-none"
                 autoFocus
               />
               {loading && <Loader2 size={11} className="animate-spin text-olympus-gold" />}
               <span className="text-[9px] font-mono text-olympus-text-dim">{filtered.length}</span>
             </div>
+
+            {/* Filters */}
+            <div className="flex items-center gap-1.5 flex-wrap border-b border-olympus-gold/10 px-3 py-1.5">
+              <FilterChip on={registeredOnly} onClick={() => setRegisteredOnly(!registeredOnly)} label="Registered" />
+              <FilterChip on={freeOnly} onClick={() => setFreeOnly(!freeOnly)} label="Free only" />
+              <FilterChip on={toolCallOnly} onClick={() => setToolCallOnly(!toolCallOnly)} label="Tool calling" />
+              <FilterChip on={minContext} onClick={() => setMinContext(!minContext)} label="≥32k ctx" />
+              <span className="flex-1" />
+              <button
+                onClick={() => { setRegisteredOnly(false); setProviderFilter(null); }}
+                className="flex items-center gap-1 text-[8.5px] font-mono text-olympus-text-dim hover:text-olympus-gold"
+                data-tip="Show every provider in OpenCode's catalogue (most are not registered)"
+                data-tip-side="bottom"
+              >
+                <Globe2 size={9} /> all providers
+              </button>
+            </div>
+
+            {/* Provider chips */}
+            {registeredProviderChips.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap border-b border-olympus-gold/10 px-3 py-1.5">
+                {registeredProviderChips.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setProviderFilter(providerFilter === p.id ? null : p.id)}
+                    className={cn(
+                      'text-[8.5px] font-mono px-1.5 py-0.5 rounded ring-1 transition-colors',
+                      providerFilter === p.id
+                        ? 'bg-olympus-gold/15 text-olympus-gold ring-olympus-gold/40'
+                        : 'text-olympus-text-dim ring-olympus-gold/15 hover:text-olympus-text',
+                    )}
+                  >
+                    {p.id}
+                    <span className="text-olympus-text-dim/70 ml-1">{p.count}</span>
+                    {p.freeCount > 0 && <span className="text-olympus-green/80 ml-1">{p.freeCount} free</span>}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-white/[0.03]">
               {filtered.map((m) => {
@@ -192,7 +271,10 @@ export default function StrategyBuilder({ open, onClose, initial, onApplied }: P
                     )}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[10px] font-mono text-olympus-text truncate">{m.id}</span>
+                      <span className="block text-[10px] font-mono text-olympus-text truncate">
+                        {m.id}
+                        {!m.registered && <span className="text-[8px] text-olympus-amber-soft ml-1.5">not registered</span>}
+                      </span>
                       <span className="block text-[8.5px] font-mono text-olympus-text-dim truncate">
                         {m.name} · ctx {compact(m.context)} · out {compact(m.output)} · {m.fits.join(' / ')}
                       </span>
@@ -206,10 +288,21 @@ export default function StrategyBuilder({ open, onClose, initial, onApplied }: P
               })}
               {!filtered.length && !loading && (
                 <div className="px-3 py-6 text-center text-[10px] font-mono text-olympus-text-dim">
-                  No model matches “{query}”. Register the provider in OpenCode first, then reopen.
+                  No model matches “{query}”. Register the provider in OpenCode first, or enable “all providers”.
                 </div>
               )}
             </div>
+
+            {selectedFree && (
+              <div className="flex items-start gap-2 border-t border-olympus-amber-soft/20 bg-olympus-amber-soft/5 px-3 py-2">
+                <AlertTriangle size={11} className="text-olympus-amber-soft mt-0.5 shrink-0" />
+                <div className="text-[9px] font-mono text-olympus-amber-soft leading-relaxed">
+                  This roster uses free endpoints. They are rate-limited and often much slower; stalls are
+                  expected. Prefer GO/ZEN or Local for real work — free models are useful for experiments,
+                  not for a deadline.
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -243,5 +336,21 @@ export default function StrategyBuilder({ open, onClose, initial, onApplied }: P
         </div>
       </div>
     </div>
+  );
+}
+
+function FilterChip({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'text-[8.5px] font-mono px-1.5 py-0.5 rounded ring-1 transition-colors',
+        on
+          ? 'bg-olympus-gold/15 text-olympus-gold ring-olympus-gold/40'
+          : 'text-olympus-text-dim ring-olympus-gold/15 hover:text-olympus-text',
+      )}
+    >
+      {label}
+    </button>
   );
 }

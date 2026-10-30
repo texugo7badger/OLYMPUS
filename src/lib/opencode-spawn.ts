@@ -26,7 +26,7 @@
  */
 
 import { spawn, execFileSync, type ChildProcess, type SpawnOptions } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync, copyFileSync, unlinkSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync, copyFileSync, unlinkSync, readdirSync, appendFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { syncLaneFile } from './lane-config';
 import { platform, homedir } from 'node:os';
@@ -198,53 +198,15 @@ export function authLaneCensus(authDirs?: string[]): AuthLaneCensus {
   };
 }
 
-export function freeTierPreflight(strategy: string, authDirs?: string[]): string {
-  // Key presence, auth.json first (Priority 1) — the FULL census (#108),
-  // never just the 3 historical fields.
-  const census = authLaneCensus(authDirs);
-
-  // Required key per strategy (same semantics as validateFreeFallbackKeys:
-  // free-nvidia-build needs a nvidia-family key (the bare id OR the family
-  // mirrors — the shipped R4 shape); every other free strategy needs
-  // OpenRouter ids, which work with openrouter OR nvidia keys present).
-  const needsNvidiaOnly = strategy === 'free-nvidia-build';
-  const satisfied = needsNvidiaOnly
-    ? census.hasNvidia
-    : census.hasOpenRouter || census.hasNvidia;
-
-  if (satisfied) {
-    const source = needsNvidiaOnly ? 'nvidia' : (census.hasOpenRouter ? 'openrouter' : 'nvidia');
-    return `[opencode-spawn] INFO: strategy '${strategy}' — required key found in OpenCode auth.json (${source}). No env key needed; proceeding.`;
-  }
-
-  const missing = needsNvidiaOnly ? 'NVIDIA_API_KEY' : 'OPENROUTER_API_KEY';
-  const remedy = needsNvidiaOnly
-    ? 'add NVIDIA as a provider inside OpenCode (Settings → Providers) or export NVIDIA_API_KEY — free key at https://build.nvidia.com'
-    : 'add OpenRouter as a provider inside OpenCode (Settings → Providers) or export OPENROUTER_API_KEY — free key at https://openrouter.ai/keys';
-  const alternatives: string[] = [];
-  if (needsNvidiaOnly) {
-    if (census.hasOpenRouter) alternatives.push('free-openrouter / free-big-pickle (OpenRouter key present)');
-  } else if (census.hasNvidia) {
-    alternatives.push('free-nvidia-build (NVIDIA key present)');
-  }
-  // #108: the SIGHT lines — the census, the alternatives, the GO valve.
-  const lanesLine = census.providerIds.length
-    ? `  Lanes with keys present: ${census.providerIds.join(', ')}\n`
-    : '  Lanes with keys present: none — no provider id in either auth.json path carries a key.\n';
-  const altLine = alternatives.length
-    ? `  Alternatives whose key IS present: ${alternatives.join('; ')}\n`
-    : '  No alternative free strategy has a key present either.\n';
-  const goLine = census.hasGoValve
-    ? '  GO key present: node scripts/apply-strategy.js --strategy go-balanced (premium valve)\n'
-    : '';
+export function freeTierPreflight(strategy: string, _authDirs?: string[]): string {
+  // v0.0.24: the free tier is RETIRED. A stale config may still name a
+  // free-* id; the honest answer is the replacement, never a "missing key"
+  // scavenger hunt for a strategy that no longer exists.
   return [
     `[opencode-spawn] FREE-STRATEGY PREFLIGHT ERROR (strategy: ${strategy})`,
-    `  Missing: ${missing} — ${strategy} cannot make model requests without it; runs will fail with APIError.`,
-    `  Remedy: ${remedy}.`,
-    lanesLine.trimEnd(),
-    altLine.trimEnd(),
-    ...(goLine ? [goLine.trimEnd()] : []),
-    '  No strategy was auto-switched (no silent downgrade). The spawn proceeds and will fail until the key is added.',
+    '  The free tier was retired in v0.0.22. No free-* strategy exists.',
+    '  Choose go-* (GO plan), zen-* (pay-as-you-go), local (your own hardware), or custom-* (any registered provider).',
+    '  No strategy was auto-switched (no silent downgrade).',
   ].join('\n');
 }
 
@@ -439,7 +401,10 @@ export interface WorkspaceLane {
  */
 export function workspaceLaneDir(): string {
   const root = findOlympusRoot();
-  const defaultDir = join(homedir(), '.local', 'share', 'olympus', 'workspace');
+  // v0.0.24 — the user's pinned directive: every project lives in the vault.
+  // 02_Projects is the lane ROOT; the active project's own home is the cwd
+  // (resolveWorkspaceLane below).
+  const defaultDir = join(getVaultRoot(), '02_Projects');
   let dir = process.env.OLYMPUS_WORKSPACE
     ? resolve(process.env.OLYMPUS_WORKSPACE)
     : defaultDir;
@@ -448,6 +413,30 @@ export function workspaceLaneDir(): string {
     dir = defaultDir;
   }
   return dir;
+}
+
+/** The active project slug from ~/.olympus/active-project.json (null when none). */
+export function activeProjectSlugFromDisk(): string | null {
+  try {
+    const home = process.env.OLYMPUS_HOME || join(homedir(), '.olympus');
+    const p = join(home, 'active-project.json');
+    const raw = JSON.parse(readFileSync(p, 'utf-8'));
+    const slug = typeof raw?.slug === 'string' ? raw.slug : null;
+    return slug && /^[a-z0-9][a-z0-9-]*$/i.test(slug) ? slug : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The canonical project home: <vault>/02_Projects/<slug> (or the OLYMPUS_WORKSPACE override). */
+export function resolveProjectHome(slug: string | null | undefined): string | null {
+  if (!slug || !/^[a-z0-9][a-z0-9-]*$/i.test(slug)) return null;
+  return join(workspaceLaneDir(), slug);
+}
+
+/** The active project's home, or null when no project is active. */
+export function activeProjectHome(): string | null {
+  return resolveProjectHome(activeProjectSlugFromDisk());
 }
 
 /**
@@ -467,7 +456,10 @@ export function workspaceLaneDir(): string {
  */
 export function resolveWorkspaceLane(): WorkspaceLane {
   const root = findOlympusRoot();
-  const dir = workspaceLaneDir();
+  // v0.0.24 — the ACTIVE PROJECT is the lane cwd, so relative writes land in
+  // 02_Projects/<slug>, never the 02_Projects root or the repo. No active
+  // project = the 02_Projects root (a safe, still-in-vault fallback).
+  const dir = activeProjectHome() ?? workspaceLaneDir();
   let fresh = false;
   if (!existsSync(dir)) {
     fresh = true;
@@ -513,7 +505,26 @@ export function resolveWorkspaceLane(): WorkspaceLane {
       console.warn(`[lane-config] failed to refresh ${f}:`, e);
     }
   }
+  ensureProjectGitExclude(dir);
   return { dir, fresh };
+}
+
+/**
+ * Keep OLYMPUS runtime files out of the project's git history WITHOUT
+ * touching the user's committed .gitignore: append a managed block to
+ * `.git/info/exclude` (local-only). A non-git project is left alone.
+ */
+function ensureProjectGitExclude(dir: string): void {
+  try {
+    const gitDir = join(dir, '.git');
+    if (!existsSync(gitDir)) return;
+    const exclude = join(gitDir, 'info', 'exclude');
+    const marker = '# OLYMPUS runtime files (managed)';
+    const current = existsSync(exclude) ? readFileSync(exclude, 'utf-8') : '';
+    if (current.includes(marker)) return;
+    mkdirSync(join(gitDir, 'info'), { recursive: true });
+    appendFileSync(exclude, `\n${marker}\n.opencode/\nopencode.json\nopencode.demigods.json\n.olympus-*\ndispatch-plan.json\nworklog/\n`);
+  } catch { /* a VCS exclude is best-effort; never blocks the lane */ }
 }
 
 /**
@@ -542,8 +553,11 @@ export function resolveDispatchCwd(projectSlug?: string | null): string {
   // current truth, never a fossil.
   const laneDir = resolveWorkspaceLane().dir;
   if (!projectSlug) return laneDir;
-  const projectDir = join(laneDir, projectSlug);
-  return existsSync(projectDir) ? projectDir : laneDir;
+  // v0.0.24 — the project home is <vault>/02_Projects/<slug>. Never a
+  // non-vault legacy path unless OLYMPUS_WORKSPACE explicitly overrides.
+  const projectDir = resolveProjectHome(projectSlug);
+  if (projectDir && existsSync(projectDir)) return projectDir;
+  return laneDir;
 }
 
 // --- Strategy-aware config verification -----------------------------------

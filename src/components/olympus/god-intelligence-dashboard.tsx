@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import AnimatedNumber from './animated-number';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { useDocVisible } from '@/lib/use-doc-visible';
+import { useHopLive } from '@/hooks/use-hop-live';
 
 // Short-circuit telemetry — live stats from the instinct gate.
 interface ShortCircuitStats {
@@ -100,6 +101,8 @@ const GOD_ORDER = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaest
  * out that "AVG conf" was overused.
  */
 export default function GodIntelligenceDashboard({ health }: { health?: any }) {
+ // #227 — the live hook must run before any early return (rules-of-hooks).
+ const live = useHopLive();
  const docVisible = useDocVisible();
  const [stats, setStats] = useState<BrainStats | null>(null);
  const [scStats, setScStats] = useState<ShortCircuitStats | null>(null);
@@ -193,6 +196,49 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  </span>
  </div>
 
+ {/* #227 — LIVE CAMPAIGN: the hops in flight RIGHT NOW (god, lane, artifacts,
+     elapsed). Driven by the single hop SSE stream, not a panel poll. */}
+ {(live.inFlight.length > 0 || live.campaign?.status === 'running') && (
+  <div className="rounded-lg border border-olympus-gold/30 bg-olympus-gold/5 p-3 mb-4">
+   <div className="flex items-center gap-2 mb-2">
+    <span className={cn('w-1.5 h-1.5 rounded-full', live.connected ? 'bg-olympus-green animate-pulse' : 'bg-olympus-amber-soft')} />
+    <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase tracking-wide">Live campaign</span>
+    {live.campaign?.campaignId && (
+     <span className="text-[9px] font-mono text-olympus-text-dim">{live.campaign.campaignId}</span>
+    )}
+    {live.campaign?.project && <span className="text-[9px] font-mono text-olympus-text-dim">· {live.campaign.project}</span>}
+    <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">
+     {live.campaign ? `${live.campaign.completed}/${live.campaign.total} hop(s)` : `${live.inFlight.length} in flight`}
+    </span>
+   </div>
+   <div className="space-y-1.5">
+    {live.inFlight.map((h) => {
+     const Icon = GOD_ICONS[h.god] ?? GOD_ICONS.atlas;
+     const secs = Math.max(0, Math.round(h.elapsedMs / 1000));
+     const elapsed = secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m${String(secs % 60).padStart(2, '0')}s`;
+     return (
+      <div key={h.hopId} className="flex items-center gap-2 rounded-md border border-olympus-gold/10 bg-olympus-bg/50 px-2 py-1.5">
+       {Icon && <Icon size={12} className="text-olympus-gold shrink-0" />}
+       <span className="text-[10px] font-mono text-olympus-text capitalize w-20 shrink-0">{h.god}</span>
+       <span className="text-[10px] font-mono text-olympus-gold shrink-0">{h.hopId}</span>
+       {h.lane && <span className="text-[8.5px] font-mono text-olympus-text-dim truncate max-w-[28%]">{h.lane.split(/[\/]/).filter(Boolean).pop()}</span>}
+       <span className="flex items-center gap-1 min-w-0 flex-1">
+        {h.artifacts.slice(0, 2).map((a) => (
+         <span key={a} className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/20 truncate max-w-[140px]">{a}</span>
+        ))}
+        {h.artifacts.length > 2 && <span className="text-[8px] font-mono text-olympus-text-dim">+{h.artifacts.length - 2}</span>}
+       </span>
+       {h.transport && <span className="text-[8px] font-mono text-olympus-text-dim uppercase shrink-0">{h.transport}</span>}
+       <span className="text-[9px] font-mono text-olympus-gold shrink-0 tabular-nums">{elapsed}</span>
+      </div>
+     );
+    })}
+    {live.inFlight.length === 0 && (
+     <div className="text-[9px] font-mono text-olympus-text-dim">Campaign starting — no hop in flight yet.</div>
+    )}
+   </div>
+  </div>
+ )}
  {/* Aggregate KPIs — dropped duplicate "Avg confidence" (already in per-god table). */}
  <div className="grid grid-cols-2 gap-2.5 mb-4">
  <KpiCard

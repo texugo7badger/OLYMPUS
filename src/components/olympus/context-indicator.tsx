@@ -32,6 +32,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Loader2, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip';
+import { useDocVisible } from '@/lib/use-doc-visible';
 
 export interface ContextUsage {
   used: number;
@@ -101,6 +102,8 @@ export default function ContextIndicator({
   onEvent,
   onDone,
 }: ContextIndicatorProps) {
+  // #231 — the 5s poll pauses in a hidden tab.
+  const docVisible = useDocVisible();
   const [usage, setUsage] = useState<ContextUsage | null>(null);
   // Issue #32: the reset control is NOT gated on context quality. It used to
   // be, via `showBtn` (default false), so a user stuck at 14% context with a
@@ -150,10 +153,11 @@ export default function ContextIndicator({
   }, []);
 
   useEffect(() => {
+    if (!docVisible) return;
     poll();
     const iv = setInterval(poll, POLL_MS);
     return () => clearInterval(iv);
-  }, [poll]);
+  }, [poll, docVisible]);
 
   // When the parent rotates the conversationId (terminal reset / new
   // session), clear the displayed usage immediately so the bar resets to

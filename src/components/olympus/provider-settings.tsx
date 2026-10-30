@@ -20,16 +20,6 @@ interface AuthStatus {
   recommendations: Array<{ severity: string; action: string; command?: string }>;
 }
 
-/** Free-tier providers surfaced in the panel — id → display label + key page. */
-const FREE_PROVIDERS: Array<{ id: 'openrouter' | 'nvidia'; label: string; keyUrl: string }> = [
-  { id: 'openrouter', label: 'OpenRouter', keyUrl: 'https://openrouter.ai/keys' },
-  { id: 'nvidia', label: 'NVIDIA Build', keyUrl: 'https://build.nvidia.com' },
-];
-
-/** Which free strategy needs which provider key. */
-const FREE_STRATEGY_PROVIDER: Record<string, 'openrouter' | 'nvidia'> = {
-};
-
 /** Human label for the store a key was authorized in. */
 function sourceLabel(src: string | null | undefined): string {
   if (src === 'auth.json') return 'OpenCode auth';
@@ -180,21 +170,7 @@ export default function ProviderSettings() {
   const localStrategies = (data.availableStrategies ?? []).filter(s => s.plan === 'LOCAL');
   const customStrategies = data.customStrategies ?? [];
 
-  const freeKeys: Record<'openrouter' | 'nvidia', boolean> = {
-    openrouter: authStatus?.free_tier?.openrouter_key ?? false,
-    nvidia: authStatus?.free_tier?.nvidia_key ?? false,
-  };
-  const freeSources: Record<'openrouter' | 'nvidia', string | null> = {
-    openrouter: authStatus?.free_tier?.sources?.openrouter ?? null,
-    nvidia: authStatus?.free_tier?.sources?.nvidia ?? null,
-  };
   const activeAppliedStrategy = authStatus?.active_strategy?.strategy ?? null;
-  const activeFreeNeedsKey = activeAppliedStrategy?.startsWith('free-')
-    ? (FREE_STRATEGY_PROVIDER[activeAppliedStrategy] ?? null)
-    : null;
-  const unlockedFreeStrategies = Object.entries(FREE_STRATEGY_PROVIDER)
-    .filter(([, provider]) => freeKeys[provider])
-    .map(([id]) => id);
   const hasGoPlan = authStatus?.go_plan?.configured || false;
   const hasZen = authStatus?.zen_plan?.configured || false;
   // While auth status is still loading (or unavailable), don't block — we
@@ -202,10 +178,11 @@ export default function ProviderSettings() {
   const authKnown = authStatus !== null;
   const isOnGoStrategy = activeStrategy?.plan === 'GO';
   const isOnZenStrategy = activeStrategy?.plan === 'ZEN';
+  const isOnLocalStrategy = activeStrategy?.plan === 'LOCAL' || activeStrategy?.id === 'local';
   // Header badge — the plan the active strategy belongs to.
-  const activePlan = isOnZenStrategy ? 'OpenCode ZEN' : isOnGoStrategy ? 'OpenCode GO' : 'Free tier';
+  const activePlan = isOnZenStrategy ? 'OpenCode ZEN' : isOnGoStrategy ? 'OpenCode GO' : isOnLocalStrategy ? 'Local hardware' : 'Custom';
 
-  // Shared strategy-apply handler (GO / Zen / Free cards)
+  // Shared strategy-apply handler (GO / Zen / Local cards)
   const applyStrategy = async (id: string, warn: string | null) => {
     setRefreshKey(k => k+1);
     setStrategyWarn(warn);
@@ -454,38 +431,30 @@ export default function ProviderSettings() {
 	        </div>
 	      )}
 
-	      {/* Free-tier strategies — one card per provider (OpenRouter, Big Pickle, Nvidia Build) */}
-	      {localStrategies.map(freeStrategy => {
-	        const isOnFreeStrategy = activeStrategy?.id === freeStrategy.id;
-	        const needsProvider = FREE_STRATEGY_PROVIDER[freeStrategy.id];
-	        const missingKey = needsProvider ? !freeKeys[needsProvider] : false;
-	        const providerLabel = needsProvider ? FREE_PROVIDERS.find(p => p.id === needsProvider)?.label : null;
-	        const keyHint = missingKey
-	          ? `Requires a ${providerLabel} key — run \`olympus opencode\` and add ${providerLabel} as a provider`
-	          : freeStrategy.description;
+	      {/* Local lane — the user's own hardware. No free-tier badge: the
+	          local lane is a real strategy with a probe-verified model. */}
+	      {localStrategies.map(localStrategy => {
+	        const isOnLocal = activeStrategy?.id === localStrategy.id;
 	        return (
-	          <div className="mb-3" key={freeStrategy.id}>
-	            <div className="text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide mb-1.5">No GO or ZEN plan? Free</div>
+	          <div className="mb-3" key={localStrategy.id}>
+	            <div className="text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide mb-1.5">Local hardware</div>
 	            <button
-	              disabled={authKnown && missingKey}
-	              onClick={() => applyStrategy(freeStrategy.id, null)}
+	              onClick={() => applyStrategy(localStrategy.id, null)}
 	              className={cn(
 	                'w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-all',
-	                isOnFreeStrategy
+	                isOnLocal
 	                  ? 'border-olympus-green/30 bg-olympus-green/10 ring-1 ring-olympus-green/30'
-	                  : 'border-olympus-amber-soft/20 bg-olympus-amber-soft/5 hover:bg-olympus-amber-soft/10',
-	                (authKnown && missingKey) && 'opacity-50 olympus-ban-cursor hover:bg-olympus-amber-soft/5',
+	                  : 'border-olympus-gold/15 bg-olympus-card/50 hover:bg-olympus-gold/5',
 	              )}
 	            >
-	              {isOnFreeStrategy && <Check size={12} className="text-olympus-green shrink-0" />}
-	              {(authKnown && missingKey) && <Lock size={11} className="text-olympus-amber-soft shrink-0" />}
+	              {isOnLocal && <Check size={12} className="text-olympus-green shrink-0" />}
 	              <div className="flex-1 min-w-0">
-	                <div className={cn('text-[11px] font-mono font-semibold', isOnFreeStrategy ? 'text-olympus-green' : 'text-olympus-amber-soft')}>
-	                  {freeStrategy.label}
-	                  <span className="text-[9px] font-mono text-olympus-green ml-2">FREE</span>
+	                <div className={cn('text-[11px] font-mono font-semibold', isOnLocal ? 'text-olympus-green' : 'text-olympus-text')}>
+	                  {localStrategy.label}
+	                  <span className="text-[9px] font-mono text-olympus-text-dim ml-2">$0 · your hardware</span>
 	                </div>
 	                <div className="text-[9px] font-mono text-olympus-text-dim">
-	                  {keyHint}
+	                  {localStrategy.description}
 	                </div>
 	              </div>
 	            </button>
@@ -544,12 +513,13 @@ export default function ProviderSettings() {
         </div>
       )}
 
-      {/* Free-tier API keys — authorized inside OpenCode */}
+      {/* Registered providers — the neutral truth. OLYMPUS stores no keys;
+          it reads what OpenCode already authorized. */}
       <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3 mb-3">
         <div className="flex items-center gap-2 mb-2">
           <Terminal size={12} className="text-olympus-gold" />
           <span className="text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide">
-            Free-tier Providers
+            Registered providers
           </span>
           {activeStrategy?.id && (
             <span className="text-[8px] px-1 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ml-auto font-mono">
@@ -559,93 +529,70 @@ export default function ProviderSettings() {
         </div>
 
         <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mb-2">
-          Keys live inside OpenCode (Settings → Providers) — OLYMPUS detects what is authorized there and
-          what each key unlocks. One key is enough (OpenRouter is the most reliable); NVIDIA Build adds the free distributed pantheon endpoints (GLM-5.3 / Step 5 / Gemma 4 / Muse / GPT-OSS — zero Nemotron, the user ban). Free models are picked
-          automatically from the live provider lists (refreshed daily or on demand).
+          Keys live inside OpenCode (Settings → Providers). OLYMPUS detects what is authorized there;
+          it never stores an LLM key. Any provider registered in OpenCode can be used by a custom
+          strategy from the Builder — free endpoints are allowed but are rate-limited and often much
+          slower.
         </div>
 
-        {/* Per-provider status — configured + where the key is authorized */}
         <div className="text-[10px] font-mono mb-2 space-y-1">
-          {FREE_PROVIDERS.map(p => {
-            const configured = freeKeys[p.id];
-            const src = sourceLabel(freeSources[p.id]);
-            return (
-              <div className="flex items-center gap-2" key={p.id}>
-                <span className="text-olympus-text-dim w-28">{p.label}:</span>
-                {configured ? (
-                  <span className="text-olympus-green">✓ Configured</span>
-                ) : (
-                  <span className="text-olympus-red/60">— Not configured</span>
-                )}
-                {configured && src && (
-                  <span className="text-[9px] text-olympus-text-dim">({src})</span>
-                )}
-                <a
-                  href={p.keyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[9px] font-mono text-olympus-gold hover:text-olympus-gold/80 ml-auto"
-                >
-                  get key <ExternalLink size={8} className="inline" />
-                </a>
-              </div>
-            );
-          })}
+          {[
+            { label: 'OpenCode GO', ok: hasGoPlan, src: authStatus?.go_plan?.source },
+            { label: 'OpenCode ZEN', ok: hasZen, src: authStatus?.zen_plan?.source },
+            { label: 'OpenRouter', ok: authStatus?.free_tier?.openrouter_key ?? false, src: authStatus?.free_tier?.sources?.openrouter },
+            { label: 'NVIDIA Build', ok: authStatus?.free_tier?.nvidia_key ?? false, src: authStatus?.free_tier?.sources?.nvidia },
+          ].map((p) => (
+            <div className="flex items-center gap-2" key={p.label}>
+              <span className="text-olympus-text-dim w-28">{p.label}:</span>
+              {p.ok ? (
+                <span className="text-olympus-green">✓ Configured</span>
+              ) : (
+                <span className="text-olympus-text-dim/60">— Not configured</span>
+              )}
+              {p.ok && sourceLabel(p.src) && (
+                <span className="text-[9px] text-olympus-text-dim">({sourceLabel(p.src)})</span>
+              )}
+            </div>
+          ))}
+          <div className="flex items-center gap-2">
+            <span className="text-olympus-text-dim w-28">Local:</span>
+            <span className="text-olympus-text-dim">Ollama / LM Studio / vLLM / llama.cpp — probed on apply</span>
+          </div>
         </div>
 
-        {/* Strategy alignment — what's unlocked + what the active strategy needs */}
+        {/* Active strategy truth — no free-tier fiction. */}
         <div className="bg-olympus-bg border border-olympus-gold/10 rounded p-2.5 mb-2 text-[9px] font-mono space-y-1">
-          <div>
-            <span className="text-olympus-text-dim">Unlocked strategies: </span>
-            {unlockedFreeStrategies.length > 0 ? (
-              <span className="text-olympus-green">{unlockedFreeStrategies.join(' · ')}</span>
-            ) : (
-              <span className="text-olympus-red/60">none — add a free-tier key above</span>
-            )}
-          </div>
           {activeAppliedStrategy ? (
-            activeFreeNeedsKey ? (
-              <div>
-                <span className="text-olympus-text-dim">
-                  Active {activeAppliedStrategy} needs a{' '}
-                  {FREE_PROVIDERS.find(p => p.id === activeFreeNeedsKey)?.label} key —{' '}
-                </span>
-                {freeKeys[activeFreeNeedsKey] ? (
-                  <span className="text-olympus-green">✓ authorized</span>
-                ) : (
-                  <span className="text-olympus-red/60">✗ missing — apply another strategy or add the key</span>
-                )}
-              </div>
-            ) : activeAppliedStrategy.startsWith('custom-') ? (
-              <div className="text-olympus-text-dim">
-                Active {activeAppliedStrategy} — custom strategy (key requirements depend on its config).
-              </div>
-            ) : (
-              <div className="text-olympus-text-dim">
-                Active {activeAppliedStrategy} — no free-tier key required (GO / ZEN).
-              </div>
-            )
+            <div className="text-olympus-text-dim">
+              Active strategy: <span className="text-olympus-gold">{activeAppliedStrategy}</span>
+              {activeStrategy?.plan ? ` · ${activeStrategy.plan}` : ''}
+            </div>
           ) : (
-            <div className="text-olympus-amber-soft">No strategy applied yet — pick one from the strategy cards above.</div>
+            <div className="text-olympus-amber-soft">No strategy applied yet — pick one from the cards above.</div>
+          )}
+          {(activeAppliedStrategy?.startsWith('free-') ?? false) && (
+            <div className="text-olympus-red/80">
+              This is a RETIRED free-tier id. Apply go-*, zen-*, local, or a custom strategy.
+            </div>
           )}
         </div>
 
-	        {/* How to configure */}
+        {/* How to configure */}
         <div className="bg-olympus-bg border border-olympus-gold/10 rounded p-2.5">
           <div className="text-[9px] font-mono text-olympus-text-dim mb-1.5">
-            To add or change keys, configure them inside OpenCode:
+            To add or change providers, configure them inside OpenCode:
           </div>
           <pre className="text-[9px] font-mono text-olympus-gold bg-olympus-bg/50 px-2 py-1 rounded border border-olympus-gold/10 overflow-x-auto">
-{`olympus opencode  →  Settings  →  Add OpenRouter and/or NVIDIA Build as a provider`}
+{`olympus opencode  →  Settings  →  Providers  →  add a provider`}
           </pre>
           <div className="flex gap-2 mt-2 flex-wrap">
             <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer"
                className="text-[9px] font-mono text-olympus-gold hover:text-olympus-gold/80 border border-olympus-gold/20 rounded px-2 py-0.5">
-              Get OpenRouter key <ExternalLink size={8} className="inline" />
+              OpenRouter keys <ExternalLink size={8} className="inline" />
             </a>
             <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer"
                className="text-[9px] font-mono text-olympus-gold hover:text-olympus-gold/80 border border-olympus-gold/20 rounded px-2 py-0.5">
-              Get NVIDIA Build key <ExternalLink size={8} className="inline" />
+              NVIDIA Build <ExternalLink size={8} className="inline" />
             </a>
           </div>
         </div>
