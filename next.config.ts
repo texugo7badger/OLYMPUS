@@ -44,6 +44,17 @@ const nextConfig = {
       'Todas as estratégias*.md',
     ],
   },
+  // #STANDALONE-WS (v0.0.25, the boot crash): the instrumentation hook loads
+  // `ws` via eval('require("ws")'), so Turbopack's tracer never sees it and
+  // the standalone copy lost `ws/lib/websocket.js` — `ws/lib/stream.js`
+  // requires './websocket' at module load, so `next start` died with
+  // "Cannot find module './websocket'" (nondeterministic: a rebuild could
+  // "fix" it by copying one more file). `ws` is externalized so it is read
+  // from node_modules at runtime, and the whole package is force-traced into
+  // the standalone output. scripts/verify-standalone.mjs gates the build.
+  outputFileTracingIncludes: {
+    '/*': ['./node_modules/ws/**'],
+  },
   // No rewrites needed (Monaco editor removed — users edit in their preferred IDE).
   async rewrites() {
     return [];
@@ -56,7 +67,7 @@ const nextConfig = {
   // server-side bundle (postcss plugin dependencies, radix-ui primitives).
   // These packages are installed in node_modules but Turbopack may not resolve
   // them automatically due to missing "exports" fields in their package.json.
-  serverExternalPackages: ['@alloc/quick-lru', '@radix-ui/primitive'],
+  serverExternalPackages: ['@alloc/quick-lru', '@radix-ui/primitive', 'ws'],
 };
 
 export default nextConfig;

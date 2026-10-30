@@ -159,10 +159,12 @@ export default function GodDetail() {
  loadResonance();
 
  if (!docVisible) return () => {};
+ // v0.0.25 — 30s (was 10s): the pane is read-mostly, and a 3x lighter
+ // poll keeps the single server responsive for the other panes.
  const iv = setInterval(() => {
  loadDispatch();
  loadStats();
- }, 10000);
+ }, 30000);
  const onDemigodsChanged = () => { loadDispatch(); loadStats(); };
  window.addEventListener('olympus:demigods-changed', onDemigodsChanged);
 

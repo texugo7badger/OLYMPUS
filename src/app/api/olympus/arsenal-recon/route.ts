@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { arsenalRecon, arsenalResonanceByGod, computeTaskSignature } from '@/lib/symphony/arsenal-resolver';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+import { withTtl } from '@/lib/ttl-cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,7 +34,9 @@ export async function GET(req: NextRequest) {
     if (!godParam) {
       return NextResponse.json({ ok: false, error: 'Missing ?task= (or ?god= for the aggregate)' }, { status: 400, headers: NO_CACHE_HEADERS });
     }
-    return NextResponse.json({ ok: true, aggregate: true, ...arsenalResonanceByGod(god) }, { headers: NO_CACHE_HEADERS });
+    // v0.0.25 — the resonance log grows; the aggregate is cached per god.
+    const agg = await withTtl(`arsenal-recon:${god}`, () => arsenalResonanceByGod(god), { ttlMs: 15_000 });
+    return NextResponse.json({ ok: true, aggregate: true, ...agg }, { headers: NO_CACHE_HEADERS });
   }
 
   const result = arsenalRecon(task, god);

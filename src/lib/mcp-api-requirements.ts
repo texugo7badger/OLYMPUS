@@ -144,7 +144,7 @@ import type { McpServerRequirement } from './mcp-shape';
 const OPTIONAL = (label: string): McpServerRequirement => ({ kind: 'optional', label });
 const SERVICE = (label: string): McpServerRequirement => ({ kind: 'service', label });
 const APP = (label: string): McpServerRequirement => ({ kind: 'app', label });
-const BINARY = (label: string): McpServerRequirement => ({ kind: 'binary', label });
+const BINARY = (label: string, binary?: string): McpServerRequirement => ({ kind: 'binary', label, binary });
 
 const SERVICE_AND_APP: Record<string, McpServerRequirement> = {
   godot: APP('needs the Godot editor + a project'),
@@ -158,7 +158,7 @@ const SERVICE_AND_APP: Record<string, McpServerRequirement> = {
   'chrome-devtools': OPTIONAL('heavy browser automation (opt-in)'),
   playwright: OPTIONAL('heavy browser automation (opt-in)'),
   serena: OPTIONAL('LSP symbol editing — activate a project first'),
-  'mcp-gateway': BINARY('needs the `mcp-gateway` binary'),
+  'mcp-gateway': BINARY('needs the `mcp-gateway` binary', 'mcp-gateway'),
   tamp: OPTIONAL('output compression (opt-in)'),
   nakkas: OPTIONAL('animated SVG generation (opt-in)'),
   shadcn: OPTIONAL('shadcn component registry (opt-in)'),

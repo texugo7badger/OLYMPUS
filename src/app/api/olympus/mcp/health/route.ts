@@ -1,19 +1,23 @@
 /**
- * GET /api/olympus/mcp/health — PROBE EVERY ENABLED MCP (v0.0.24).
+ * GET /api/olympus/mcp/health — PROBE EVERY ENABLED MCP, HONESTLY (v0.0.25).
  *
- * The 2026-10-30 specimen: the panel spawned `npx` with no package (it sent
- * only `command[0]`), probed `.mcp.json` entries OpenCode never loads, and
- * reported every remote MCP dead via a HEAD request. The result was a wall
- * of red dots with vertical "timeout after 5000ms" tooltips.
+ * v0.0.24 fixed the probe itself (full command, environment, real remote
+ * POST). v0.0.25 fixes the CLASSIFICATION, the specimen being the user's
+ * panel: enabling `docker`, `postgres`, `kubernetes`, `mcp-gateway`, `rea`,
+ * `serena`, `tamp` … painted them RED as "dead" when their dependency was
+ * simply absent.
  *
- * Now:
- *   - the registry is DEDUPED (28 entries, not 50);
- *   - only ENABLED servers are spawned;
- *   - the FULL canonical command + environment + cwd are used;
- *   - remote servers get a real JSON-RPC POST;
- *   - a missing API key is `needs-auth`, not `dead`.
+ * Order of truth:
+ *   1. disabled            → `disabled` (never spawned);
+ *   2. dependency absent   → `needs-auth` / `needs-service` / `needs-binary` /
+ *                            `needs-app` (never spawned — the panel stays fast);
+ *   3. dependency present  → probe; `dead` is reserved for a REAL failure;
+ *   4. optional server that fails → `optional-unavailable` (amber, not red).
  *
- * Cached 60s; `?fresh=1` bypasses the cache (the panel's Probe all button).
+ * Also reports the tool budget: the provider registry caps at 128 tools, and
+ * an all-on arsenal (165+) silently truncates. The panel renders the meter.
+ *
+ * Cached 60s; `?fresh=1` bypasses (the panel's Probe all button).
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
@@ -23,10 +27,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 import { listMcpServers, type McpRegistryEntry } from '@/lib/mcp-registry';
 import { probeMcpBatch, readConfiguredMcpKeys, type McpProbeResult } from '@/lib/mcp-probe';
+import { checkMcpDependency } from '@/lib/mcp-deps';
 import { findOlympusRoot } from '@/lib/opencode-spawn';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/** The provider-side registry cap (OpenCode/Anthropic-style tool limit). */
+export const MCP_TOOL_BUDGET = 128;
 
 const CACHE_TTL_MS = 60_000;
 
@@ -41,6 +49,7 @@ export async function GET(req: NextRequest) {
       cached: true,
       checkedAt: cache.at,
       summary: summarize(cache.results),
+      toolBudget: MCP_TOOL_BUDGET,
     }, { headers: NO_CACHE_HEADERS });
   }
 
@@ -57,25 +66,36 @@ export async function GET(req: NextRequest) {
 
   const enabled = registry.servers.filter((s) => s.enabled);
   const toProbe: McpRegistryEntry[] = [];
-  const locked: McpProbeResult[] = [];
+  const unavailable: McpProbeResult[] = [];
+
   for (const s of enabled) {
-    const required = s.requires?.kind === 'key' ? (s.requires.envVars ?? []) : [];
-    const missing = required.filter((k) => !keys.has(k));
-    if (missing.length > 0) {
-      locked.push({
+    const dep = await checkMcpDependency(s, process.env, keys);
+    if (dep.status === 'ok') {
+      toProbe.push(s);
+    } else {
+      unavailable.push({
         name: s.name,
-        status: 'needs-auth',
+        status: dep.status,
         latencyMs: 0,
-        error: `needs ${missing.join(', ')} — register the key in API Keys`,
+        error: dep.detail,
         checkedAt: now,
       });
-    } else {
-      toProbe.push(s);
     }
   }
 
   const probed = await probeMcpBatch(toProbe, { cwd: root, timeoutMs: 12_000, concurrency: 4 });
-  const results = [...probed, ...locked, ...disabled];
+
+  // An OPTIONAL server that fails is not a bug — it is an opt-in lane that
+  // did not start. Red is reserved for a declared dependency that IS present
+  // and still fails.
+  const requiresBy = new Map(enabled.map((s) => [s.name, s.requires?.kind]));
+  for (const r of probed) {
+    if (r.status === 'dead' && requiresBy.get(r.name) === 'optional') {
+      r.status = 'optional-unavailable';
+    }
+  }
+
+  const results = [...probed, ...unavailable, ...disabled];
   cache = { results, at: now };
 
   return NextResponse.json({
@@ -83,17 +103,29 @@ export async function GET(req: NextRequest) {
     cached: false,
     checkedAt: now,
     summary: summarize(results),
+    toolBudget: MCP_TOOL_BUDGET,
   }, { headers: NO_CACHE_HEADERS });
 }
 
 function summarize(results: McpProbeResult[]) {
   const enabled = results.filter((r) => r.status !== 'disabled');
+  const unavailable = enabled.filter((r) =>
+    r.status === 'needs-auth' || r.status === 'needs-service' ||
+    r.status === 'needs-binary' || r.status === 'needs-app');
+  const tools = enabled.reduce((n, r) => n + (r.status === 'alive' ? (r.tools ?? 0) : 0), 0);
   return {
     total: results.length,
     enabled: enabled.length,
     alive: enabled.filter((r) => r.status === 'alive').length,
     dead: enabled.filter((r) => r.status === 'dead').length,
     needsAuth: enabled.filter((r) => r.status === 'needs-auth').length,
-    tools: enabled.reduce((n, r) => n + (r.status === 'alive' ? (r.tools ?? 0) : 0), 0),
+    needsService: enabled.filter((r) => r.status === 'needs-service').length,
+    needsBinary: enabled.filter((r) => r.status === 'needs-binary').length,
+    needsApp: enabled.filter((r) => r.status === 'needs-app').length,
+    unavailable: unavailable.length,
+    optionalUnavailable: enabled.filter((r) => r.status === 'optional-unavailable').length,
+    tools,
+    toolBudget: MCP_TOOL_BUDGET,
+    overBudget: tools > MCP_TOOL_BUDGET,
   };
 }

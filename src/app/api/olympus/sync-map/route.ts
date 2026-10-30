@@ -15,6 +15,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+import { withTtl } from '@/lib/ttl-cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,8 +38,8 @@ interface SyncEntry {
 export async function GET(req: NextRequest) {
   const limit = Math.min(200, Math.max(10, Number(req.nextUrl.searchParams.get('limit')) || 50));
   try {
-    const raw = fs.readFileSync(SYNC_MAP_PATH, 'utf-8');
-    const map = JSON.parse(raw);
+    // v0.0.25 — the map file is the heavy read; a 5s cache keeps re-opens instant.
+    const map: any = await withTtl('sync-map:file', () => JSON.parse(fs.readFileSync(SYNC_MAP_PATH, 'utf-8')), { ttlMs: 5_000 });
     const entries: Record<string, SyncEntry> = map.entries ?? {};
     const rows = Object.values(entries)
       .sort((a, b) => (b.updatedTs || b.ts).localeCompare(a.updatedTs || a.ts))

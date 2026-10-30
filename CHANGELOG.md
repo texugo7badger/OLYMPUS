@@ -2,6 +2,18 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.25] — 2026-10-30
+
+**"THE STABLE SURFACE"** — the boot crash is gone and gated, the MCP panel tells the truth about *why* a server cannot run, the tool budget is enforced, and the panes answer from cache instead of re-reading the vault.
+
+- **BOOT: the standalone `ws` crash is FIXED and GATED** — `olympus start` died with `Cannot find module './websocket'` because instrumentation loaded `ws` through `eval('require("ws")')`, so Turbopack never traced it and `.next/standalone/node_modules/ws` shipped 10 of 12 lib files (`lib/stream.js` requires `./websocket` at load). `ws` is now in `serverExternalPackages` + `outputFileTracingIncludes`, the instrumentation uses a traceable dynamic import, `scripts/sync-standalone-assets.mjs` completes the tree (`.next/static` + `public`), and `scripts/verify-standalone.mjs` **fails the build** if `ws` cannot be required from the standalone, `BUILD_ID` is stale, the static chunks are missing, or `server.js` does not boot. A rebuilt `node .next/standalone/server.js` now answers HTTP with no module errors.
+- **MCP: HONEST STATES, NOT A RED WALL** — enabling `docker`, `postgres`, `kubernetes`, `mcp-gateway`, `rea`, `serena`, `tamp` … painted them red as “dead” when the dependency was absent. A dependency preflight now runs BEFORE any spawn: `needs-auth` (key), `needs-service` (Docker daemon, DATABASE_URL, kubeconfig, ComfyUI), `needs-binary` (`mcp-gateway`), `needs-app` (Godot/Blender/REAPER). Absent dependencies are never spawned (faster panel, no 12s timeouts); `optional-unavailable` is amber, and **red is reserved for a real failure**.
+- **MCP: TOOL BUDGET + ONE-CLICK CURES** — the provider caps at 128 tools; an all-on arsenal (165) silently truncated. The panel now meters `tools N/128` (amber/red over budget) and offers **Reset to curated (6/44)**, **Disable unavailable**, **Enable available**, and a **Diagnostics** JSON (expanded command, cwd, dependency verdict, key presence, probe error — never secret values). The header names the registry source (`opencode.json · runtime · catalog`) and surfaces stale legacy toggles from older builds.
+- **PANES: CACHED, NOT RE-READ** — a shared TTL cache (stale-while-revalidate) backs `brain-stats`, `episodes`, `costs`, `sync-map`, `god/references` and `arsenal-recon`. Craft apps answers from a 30s probe cache (14 live probes with an 8s timeout were run on every open); the first sweep is check-only (no silent 13-app downloads) and runs after 10 minutes. The models fallback is async (no 30s `execSync` blocking the single event loop). God Detail polls at 30s.
+- **PERF GATE** — `npm run perf:routes` boots the production standalone and measures every pane endpoint (warm p95 ≤ 300ms). Measured: all endpoints p95 ≤ 69ms; Craft apps p50 9ms warm.
+- **Tests** — new suites: `standalone-boot` (config + build chain + artifact), `mcp-classification` (preflight verdicts + honest statuses + budget + cures), `pane-latency` (cache, craft, async models, poll); the MCP/health suites updated for the new states.
+- **Version**: `VERSION` + `package.json` → 0.0.25.
+
 ## [v0.0.24] — 2026-10-30
 
 **"THE HONEST SURFACE"** — the MCP panel finally matches OpenCode, every `data-tip` renders as one horizontal tooltip, the retired free tier is gone from the strategy UI, Athena proposes design choices inside the chat, the gods get their missing domain knowledge, every project lives in the vault, and the four open flow issues land.

@@ -3,6 +3,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { withTtl } from '@/lib/ttl-cache';
 import { costSummary } from '@/lib/olympus';
 
 export const runtime = 'nodejs';
@@ -24,7 +25,9 @@ export const dynamic = 'force-dynamic';
  *   - The dashboard client also passes `cache: 'no-store'` on its fetch.
  */
 export async function GET() {
-  const body = costSummary();
+  // v0.0.25 — the status bar polls this every 10s; a 5s cache absorbs the
+  // pane-open burst without serving the UI a stale minute.
+  const body = await withTtl('costs', () => costSummary(), { ttlMs: 5_000 });
   return NextResponse.json(body, {
     headers: {
       'Cache-Control': 'no-store, max-age=0, must-revalidate',

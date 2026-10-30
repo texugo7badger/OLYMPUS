@@ -9,6 +9,7 @@ import path from 'path';
 // Shared no-cache headers for live API routes.
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 import { getVaultRoot } from '@/lib/vault-root';
+import { withTtl } from '@/lib/ttl-cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -361,6 +362,15 @@ function readVaultEpisodes(): { eps: Episode[]; count: number } {
  */
 export async function GET(req?: Request) {
   const url = req ? new URL(req.url) : null;
+  // v0.0.25 — the activity pane polls; a 5s cache turns a remount into an
+  // instant read while the delta poll keeps its `since` semantics.
+  const key = `episodes:${url?.searchParams.toString() ?? 'default'}`;
+  const payload = await withTtl(key, () => computeEpisodes(req), { ttlMs: 5_000 });
+  return NextResponse.json(payload, { headers: NO_CACHE_HEADERS });
+}
+
+async function computeEpisodes(req?: Request) {
+  const url = req ? new URL(req.url) : null;
   const limitRaw = Number.parseInt(url?.searchParams.get('limit') ?? '60', 10);
   const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(limitRaw, 200)) : 60;
   const before = url?.searchParams.get('before') ?? null;
@@ -397,14 +407,12 @@ export async function GET(req?: Request) {
   const last = pageRows[pageRows.length - 1];
   const nextCursor = hasMore && last ? `${last.ts}|${last.id}` : null;
 
-  return NextResponse.json({
+  return {
     episodes: pageRows,
     total: all.length,
     filteredTotal: rows.length,
     vaultCount: vault.count,
     liveCount: live.length,
     page: { limit, total: rows.length, hasMore, nextCursor },
-  }, {
-    headers: NO_CACHE_HEADERS,
-  });
+  };
 }

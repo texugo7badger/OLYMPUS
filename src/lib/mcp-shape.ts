@@ -31,6 +31,8 @@ export interface McpServerRequirement {
   label: string;
   envVars?: string[];
   url?: string;
+  /** The executable the preflight looks for (kind: binary). */
+  binary?: string;
 }
 
 /** The canonical OpenCode MCP config — exactly the schema fields OpenCode reads. */

@@ -18,7 +18,16 @@ import path from 'node:path';
 import type { McpCanonicalEntry } from './mcp-shape';
 import { expandMcpPlaceholders } from './mcp-shape';
 
-export type McpProbeStatus = 'alive' | 'dead' | 'disabled' | 'needs-auth' | 'needs-service' | 'unprobed';
+export type McpProbeStatus =
+  | 'alive'
+  | 'dead'
+  | 'disabled'
+  | 'needs-auth'
+  | 'needs-service'
+  | 'needs-binary'
+  | 'needs-app'
+  | 'optional-unavailable'
+  | 'unprobed';
 
 export interface McpProbeResult {
   name: string;
@@ -101,6 +110,10 @@ function probeLocal(entry: McpCanonicalEntry, opts: ProbeOptions): Promise<McpPr
       finish('dead', `timeout after ${timeoutMs}ms (no initialize reply)${stderr ? ` — ${stderr.slice(-200)}` : ''}`);
     }, timeoutMs);
 
+    // The probe writes initialize + tools/list while the server may not be
+    // reading yet; each buffered write adds a `drain` listener to the socket
+    // and Node warns at 10 (the "MaxListenersExceededWarning" in the panel).
+    try { child.stdin?.setMaxListeners?.(0); } catch { /* older stream */ }
     child.on('error', (e: Error) => finish('dead', e.message));
     child.on('exit', (code) => {
       if (settled) return;

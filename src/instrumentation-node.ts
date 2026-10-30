@@ -7,14 +7,22 @@
  * Subsequent messages are forwarded to the OpenCode child's stdin so the
  * user can answer Apollo's clarifying questions inline.
  *
- * `eval()` is used for `require(...)` calls so Turbopack cannot statically
- * trace the dynamic CLI path (which would cause "Module not found" build
- * errors during `next build`).
+ * `eval()` is used for the built-in `require(...)` calls so Turbopack cannot
+ * statically trace the dynamic CLI path (which would cause "Module not found"
+ * build errors during `next build`).
+ *
+ * `ws` is a REAL top-level import (v0.0.25): the eval dodge hid it from the
+ * tracer and the standalone build shipped an incomplete ws package
+ * ("Cannot find module './websocket'" at boot). It is listed in
+ * `serverExternalPackages` + `outputFileTracingIncludes`, and
+ * scripts/verify-standalone.mjs fails the build if the package is incomplete.
  */
 
 export async function registerNode() {
+  // A literal dynamic import is TRACEABLE (unlike the old eval) and only
+  // runs in the Node runtime — the Edge pass never loads it.
+  const { WebSocketServer } = await import('ws');
   const http = eval('require("http")');
-  const { WebSocketServer } = eval('require("ws")');
   const path = eval('require("path")');
   const fs = eval('require("fs")');
   const os = eval('require("os")');

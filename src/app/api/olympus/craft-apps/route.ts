@@ -57,9 +57,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, probe, vendor }, { headers: NO_CACHE_HEADERS });
   }
 
+  // v0.0.25: the catalogue answers from the cached probe layer; `?check=1`
+  // forces a fresh sweep (the explicit refresh control), never a plain open.
+  const check = req.nextUrl.searchParams.get('check') === '1';
   const [probes, vendor] = await Promise.all([
-    probeAllCraftApps(),
-    getVendorStatus(req.nextUrl.searchParams.get('check') === '1'),
+    probeAllCraftApps({ force: check }),
+    getVendorStatus(check),
   ]);
   return NextResponse.json({ ok: true, apps: CRAFT_APPS, studio: ARTCRAFT_STUDIO, probes, vendor }, { headers: NO_CACHE_HEADERS });
 }

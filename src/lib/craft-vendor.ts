@@ -561,7 +561,16 @@ export async function autoUpdateSweep(force = false): Promise<{ updated: string[
   const statuses = await getVendorStatus(true);
   const updated: string[] = [];
   const skippedRunning: string[] = [];
+  // v0.0.25 — CHECK-ONLY by default. The old sweep downloaded and installed
+  // every vendored app 30s after the first Craft panel open; that turned a
+  // pane click into minutes of network + disk and starved every other pane.
+  // A visible "Update" action (or OLYMPUS_CRAFT_AUTO_INSTALL=1) installs.
+  const autoInstall = process.env.OLYMPUS_CRAFT_AUTO_INSTALL === '1';
   for (const s of statuses) {
+    if (!autoInstall) {
+      if (s.nativeRunning && s.nativeUpdateAvailable) skippedRunning.push(s.id);
+      continue;
+    }
     if (s.vendored && s.updateAvailable) {
       const job = createJob(s.id, 'web', true);
       const r = await installWebApp(s.id, job.id);
@@ -582,8 +591,9 @@ let autoTimer: ReturnType<typeof setInterval> | null = null;
 export function startVendorAutoUpdater(intervalMs = 6 * 60 * 60 * 1000): void {
   if (autoTimer) return;
   autoTimer = setInterval(() => { void autoUpdateSweep(true).catch(() => {}); }, intervalMs);
-  // The first sweep runs shortly after boot (give the network a beat).
-  setTimeout(() => { void autoUpdateSweep(true).catch(() => {}); }, 30_000);
+  // v0.0.25 — the first CHECK runs well after first paint (10 min), never
+  // 30s after the pane opens. It is check-only unless auto-install is opted in.
+  setTimeout(() => { void autoUpdateSweep(true).catch(() => {}); }, 10 * 60_000);
 }
 
 // ── The serve lane (the local origin the pane embeds) ────────────────────

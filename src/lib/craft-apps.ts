@@ -73,7 +73,7 @@ export interface CraftAppProbe {
 /** Probe one URL for reachability + iframe embedability (the honest
  *  gate: a frame-blocking header means the panel offers the external open
  *  instead of rendering a dead frame). */
-export async function probeCraftApp(url: string, timeoutMs = 8000): Promise<CraftAppProbe> {
+export async function probeCraftApp(url: string, timeoutMs = 3000): Promise<CraftAppProbe> {
   try {
     const r = await fetch(url, {
       method: 'GET',
@@ -98,8 +98,51 @@ export async function probeCraftApp(url: string, timeoutMs = 8000): Promise<Craf
   }
 }
 
-/** Probe the full catalog (parallel, bounded) — the live truth layer. */
-export async function probeAllCraftApps(): Promise<CraftAppProbe[]> {
+/**
+ * v0.0.25 — CACHED probes.
+ *
+ * THE SPECIMEN: every panel GET ran 14 live HTTP probes with an 8s timeout
+ * each. On an offline/slow network the pane waited seconds, and the probe
+ * storm competed with every other pane's requests. The catalogue answers
+ * from cache instantly; a background refresh updates it; `?refresh=1`
+ * forces the wait.
+ */
+const PROBE_TTL_MS = 30_000;
+let probeCache: { at: number; data: CraftAppProbe[] } | null = null;
+let probeInflight: Promise<CraftAppProbe[]> | null = null;
+
+async function probeAllUncached(): Promise<CraftAppProbe[]> {
   const urls = [ARTCRAFT_STUDIO.url, ...CRAFT_APPS.map((a) => a.url)];
-  return Promise.all(urls.map((u) => probeCraftApp(u)));
+  // The catalogue pass is a reachability hint, not a load test: 1.2s is
+  // enough on a healthy network and bounds the FIRST open (the cached opens
+  // are already instant). A single app click keeps the 3s budget.
+  return Promise.all(urls.map((u) => probeCraftApp(u, 1200)));
+}
+
+/** Kick a background refresh without awaiting it (stale-while-revalidate). */
+export function refreshCraftProbesInBackground(): void {
+  if (probeInflight) return;
+  probeInflight = probeAllUncached()
+    .then((data) => { probeCache = { at: Date.now(), data }; return data; })
+    .catch(() => probeCache?.data ?? [])
+    .finally(() => { probeInflight = null; });
+}
+
+/**
+ * Probe the full catalog (parallel, bounded) — the live truth layer.
+ * Cached for 30s; stale data is returned immediately while a refresh runs.
+ */
+export async function probeAllCraftApps(opts: { maxAgeMs?: number; force?: boolean } = {}): Promise<CraftAppProbe[]> {
+  const maxAge = opts.maxAgeMs ?? PROBE_TTL_MS;
+  const fresh = probeCache && Date.now() - probeCache.at < maxAge;
+  if (fresh && !opts.force) return probeCache!.data;
+  if (probeCache && !opts.force) {
+    refreshCraftProbesInBackground();
+    return probeCache.data;
+  }
+  if (probeInflight) return probeInflight;
+  probeInflight = probeAllUncached()
+    .then((data) => { probeCache = { at: Date.now(), data }; return data; })
+    .finally(() => { probeInflight = null; });
+  return probeInflight;
 }

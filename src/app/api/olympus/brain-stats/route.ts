@@ -8,6 +8,7 @@ import path from 'path';
 import os from 'os';
 import { GOD_IDS, DEFAULT_LLM_STRATEGY, type LLMStrategy } from '@/lib/model-strategies';
 import { getVaultRoot } from '@/lib/vault-root';
+import { withTtl } from '@/lib/ttl-cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -257,7 +258,17 @@ function recommendStrategy(
 
 export async function GET(req: NextRequest) {
   const brief = req.nextUrl.searchParams.get('brief') === 'true';
+  // v0.0.25 — the dashboard AND God Detail read this route; a short cache
+  // removes the repeated vault scans when panes are opened together.
+  const payload = await withTtl(
+    `brain-stats:${brief ? 'brief' : 'full'}`,
+    () => computeBrainStats(brief),
+    { ttlMs: 15_000 },
+  );
+  return NextResponse.json(payload);
+}
 
+async function computeBrainStats(brief: boolean) {
   const allEvents = readLiveFeed();
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
@@ -437,7 +448,7 @@ export async function GET(req: NextRequest) {
   })();
 
   if (brief) {
-    return NextResponse.json({
+    return {
       generated_at: new Date().toISOString(),
       vaultbrain_version: '3.0',
       shortCircuitHitRate: Math.round(aggregateShortCircuitHitRate * 1000) / 1000,
@@ -446,10 +457,10 @@ export async function GET(req: NextRequest) {
       currentStrategy,
       recommendedStrategy: recommended,
       strategyReasoning,
-    });
+    };
   }
 
-  return NextResponse.json({
+  return {
     generated_at: new Date().toISOString(),
     vaultbrain_version: '3.0',
     aggregate: {
@@ -464,5 +475,5 @@ export async function GET(req: NextRequest) {
     recommendedStrategy: recommended,
     strategyReasoning,
     perGod,
-  });
+  };
 }

@@ -17,7 +17,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { execSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -101,30 +101,38 @@ function readCache(registered: Set<string>): ModelEntry[] | null {
   return out.length ? out.sort((a, b) => a.id.localeCompare(b.id)) : null;
 }
 
-function readCli(registered: Set<string>): ModelEntry[] {
-  try {
-    const out = execSync('npx --no-install opencode models', {
-      encoding: 'utf-8',
-      timeout: 30_000,
-      stdio: ['ignore', 'pipe', 'ignore'],
+/**
+ * v0.0.25 — ASYNC fallback. The old `execSync` blocked the single Node event
+ * loop for up to 30s when the catalogue cache was missing, stalling every
+ * other pane. execFile yields the loop, and the result is memoized.
+ */
+let CLI_CACHE: { at: number; ids: string[] } | null = null;
+function readCli(registered: Set<string>): Promise<ModelEntry[]> {
+  const parse = (ids: string[]): ModelEntry[] => ids
+    .filter((l) => l.includes('/'))
+    .map((id) => {
+      const provider = id.split('/')[0];
+      return {
+        id,
+        provider,
+        name: id.split('/').slice(1).join('/'),
+        context: null, output: null, inputCost: null, outputCost: null,
+        toolCall: true, reasoning: false,
+        free: /:free$|-free$/.test(id),
+        registered: registered.has(provider),
+      };
     });
-    return String(out)
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.includes('/'))
-      .map((id) => {
-        const provider = id.split('/')[0];
-        return {
-          id,
-          provider,
-          name: id.split('/').slice(1).join('/'),
-          context: null, output: null, inputCost: null, outputCost: null,
-          toolCall: true, reasoning: false,
-          free: /:free$|-free$/.test(id),
-          registered: registered.has(provider),
-        };
-      });
-  } catch { return []; }
+  if (CLI_CACHE && Date.now() - CLI_CACHE.at < 5 * 60_000) {
+    return Promise.resolve(parse(CLI_CACHE.ids));
+  }
+  return new Promise((resolve) => {
+    execFile('npx', ['--no-install', 'opencode', 'models'], { encoding: 'utf-8', timeout: 30_000 }, (err, stdout) => {
+      if (err) { resolve([]); return; }
+      const ids = String(stdout || '').split('\n').map((l) => l.trim()).filter(Boolean);
+      CLI_CACHE = { at: Date.now(), ids };
+      resolve(parse(ids));
+    });
+  });
 }
 
 let CACHE: { at: number; models: ModelEntry[]; providers: ProviderSummary[] } | null = null;
@@ -145,7 +153,7 @@ export async function GET(req: Request) {
   }
 
   const registered = registeredProviders();
-  const models = readCache(registered) ?? readCli(registered);
+  const models = readCache(registered) ?? await readCli(registered);
 
   const byProvider = new Map<string, ProviderSummary>();
   for (const m of models) {

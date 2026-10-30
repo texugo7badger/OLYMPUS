@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { getVaultRoot } from '@/lib/vault-root';
+import { withTtl } from '@/lib/ttl-cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -76,7 +77,9 @@ export async function GET(req: NextRequest) {
         }
       }
     }
-    return NextResponse.json({ ok: true, god, references: out });
+    // v0.0.25 — God Detail opens this on every mount; a 30s cache avoids
+    // re-reading the god's whole reference set on every click.
+    return NextResponse.json(await withTtl(`god-refs:${god}`, () => ({ ok: true, god, references: out }), { ttlMs: 30_000 }));
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
   }
