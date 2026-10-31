@@ -6,7 +6,7 @@
   refresh it from the GitHub API (installer downloads only — the auto-update
   yml is not a human download).
 -->
-<svg width="840" height="36" viewBox="0 0 840 36" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OLYMPUS v0.0.26 — AGPL-3.0 — 70 downloads — 0 forks — 2 stars — last commit 2026-10-30 — ~8.9 MB — 2 contributors">
+<svg width="840" height="36" viewBox="0 0 840 36" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OLYMPUS v0.0.26 — AGPL-3.0 — 72 downloads — 0 forks — 2 stars — last commit 2026-10-30 — ~9.4 MB — 2 contributors">
   <rect x="1" y="1" width="838" height="34" rx="7" fill="#0F1419" stroke="#D4A574" stroke-opacity="0.16" />
 
   <g font-family="'SF Mono', Monaco, 'DejaVu Sans Mono', monospace" font-size="9.5" letter-spacing="0.3">
@@ -27,7 +27,7 @@
     <!-- downloads (installers only) -->
     <a href="https://github.com/texugo7badger/olympus/releases" target="_blank">
       <text x="274" y="23" fill="#7A7F88">downloads</text>
-      <text x="342" y="23" fill="#D4A574" font-weight="600" data-field="downloads">70</text>
+      <text x="342" y="23" fill="#D4A574" font-weight="600" data-field="downloads">72</text>
     </a>
     <line x1="364" y1="11" x2="364" y2="25" stroke="#D4A574" stroke-opacity="0.12" />
 
@@ -55,7 +55,7 @@
     <!-- size -->
     <a href="https://github.com/texugo7badger/olympus" target="_blank">
       <text x="688" y="23" fill="#7A7F88">size</text>
-      <text x="718" y="23" fill="#D4A574" font-weight="600" data-field="size">~8.9 MB</text>
+      <text x="718" y="23" fill="#D4A574" font-weight="600" data-field="size">~9.4 MB</text>
     </a>
     <line x1="762" y1="11" x2="762" y2="25" stroke="#D4A574" stroke-opacity="0.12" />
 
