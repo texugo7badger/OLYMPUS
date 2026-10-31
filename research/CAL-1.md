@@ -69,3 +69,36 @@ expand. The claim must carry its size threshold.
 | 7 | park/resume | **NOT-TESTED** | the walk was stopped manually, not parked |
 | 8 | warm first vs subsequent | **REFUTED in this environment** | the warm lane 405'd on session creation; every hop used spawn |
 | 9 | verify = 0 LLM tokens | **CONFIRMED BY DESIGN / PARTIAL** | deterministic-first verify; no model call in the verify path |
+
+
+## CAL-2 — the AIME live calibration (Phase A complete)
+
+AIME is the user's real project (`~/OLYMPUS-VAULT/02_Projects/aime`), nearly
+complete: **2 hops pending** (`f3-4` dashboard, `f3-7` E2E flow) plus the
+logo-driven brand pass. The AIME brand contract is in the project vault
+(`BRAND-CONTRACT.md`), derived from the supplied pixel-art mountain logo —
+night `#06071A`, blue `#1432A4/#2B4BD8/#6E82F0`, snow `#FDECEE`.
+
+### Phase A evidence (2026-10-31)
+
+| Instrument | State |
+|---|---|
+| Instinct pool | **55** (47 seed + empirical; per-god 4–9) |
+| Short-circuit log | **2,144 evaluations / 0 short-circuits (0.0%)** |
+| Backfill rows | 0 — no ≥3-sample demigod baseline exists yet |
+| Benchmark rows | 133, **0 attributed to a demigod** (pre-v0.0.26 history) |
+| AIME resonance rows | 0 |
+| Recording | ON, label `cal-2-aime-2026-10-31` |
+
+### Verdict updates
+
+| # | Promise | Verdict |
+|---|---|---|
+| 2 | 97% on short-circuits | **NOT-MEASURABLE-HERE** — 0 short-circuits in 2,144 evaluations, 0 attributed demigod rows |
+| 5 | >30% short-circuit rate | **REFUTED for the historical window** — 0/2,144; the gate has never fired on this box |
+| 8 | Warm removes cold start | **REFUTED** — 405 on POST /session; spawn carried every hop |
+
+The 0% rate is the campaign's most important finding: the instinct pool exists,
+but the gate's confidence threshold has never matched a real task. Promotion
+requires outcomes and short-circuit samples; both are downstream of a gate that
+does not fire. That is the v0.1.0 blocker the numbers now prove.
