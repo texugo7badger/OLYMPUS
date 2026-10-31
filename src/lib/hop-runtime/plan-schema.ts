@@ -114,7 +114,7 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
         } else if (h.verify.review !== undefined) review = h.verify.review;
         if (h.verify.checks !== undefined) {
           if (!Array.isArray(h.verify.checks) || h.verify.checks.some((c) => typeof c !== 'string')) {
-            errors.push(`${where}.verify.checks: must be an array of check strings ('file-exists:<rel>' | 'build' | 'lint')`);
+            errors.push(`${where}.verify.checks: must be an array of check strings ('file-exists:<rel>' | 'file-contains:<rel>::<text>' | 'file-omits:<rel>::<text>' | 'build' | 'lint')`);
           } else checks = [...h.verify.checks];
         }
       }

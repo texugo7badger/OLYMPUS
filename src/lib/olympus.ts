@@ -10,6 +10,7 @@ import os from 'os';
 import { isSkillVisible, isKnowledgeVisible, KNOWLEDGE_STACK_MAP } from './skill-stacks';
 import { LLM_STRATEGIES } from './model-strategies';
 import { getVaultRoot } from './vault-root';
+import { priceTokens } from './model-pricing';
 
 // OLYMPUS_ROOT is the project root (where package.json + opencode.json live).
 const _cwd = process.cwd();
@@ -1212,6 +1213,56 @@ function readCostRows(windowMs: number = COST_WINDOW_MS): any[] {
       } catch {}
     }
   } catch {}
+  // v0.0.29 — THE HOPS WERE INVISIBLE. The walk's children are spawn
+  // `opencode run` processes: their step-finish events never reached this
+  // file (the 2026-10-31 specimen: a 29-minute Athena hop with 5,766 output
+  // tokens produced ZERO cost rows, so the dashboard read Athena = 0 while
+  // the walk burned tokens). The append-only hop telemetry already carries
+  // (god, lane, tokensIn, tokensOut) — synthesize the same row shape here,
+  // tagged `hop-telemetry`, and skip any session that already reported
+  // (no double count when the child hook does fire).
+  try {
+    const seenSessions = new Set(rows.map((r) => r?.session_id).filter(Boolean));
+    const activeFile = path.join(os.homedir(), '.olympus', 'active-project.json');
+    let activeSlug = '';
+    try { activeSlug = String(JSON.parse(fs.readFileSync(activeFile, 'utf-8'))?.slug ?? ''); } catch { /* no pointer */ }
+    if (activeSlug) {
+      const telemetry = path.join(getVaultRoot(), '02_Projects', activeSlug, '.olympus-hop-telemetry.jsonl');
+      if (fs.existsSync(telemetry)) {
+        const cutoff = Date.now() - windowMs;
+        for (const line of fs.readFileSync(telemetry, 'utf-8').split('\n')) {
+          if (!line.trim()) continue;
+          try {
+            const h = JSON.parse(line);
+            const ts = new Date(h.ts).getTime();
+            if (!Number.isFinite(ts) || ts < cutoff) continue;
+            if (h.sessionId && seenSessions.has(h.sessionId)) continue;
+            const model = String(h.lane || 'unknown');
+            const input = Number(h.tokensIn) || 0;
+            const output = Number(h.tokensOut) || 0;
+            rows.push({
+              ts: h.ts,
+              god: String(h.god || 'global'),
+              model,
+              tool: '_step-finish_',
+              input_tokens: input,
+              output_tokens: output,
+              reasoning_tokens: 0,
+              cached_tokens: 0,
+              cache_write_tokens: 0,
+              spend_usd: 0,
+              spend_estimated_usd: priceTokens(model, { input, output }).spendUsd,
+              latency_ms: typeof h.durationMs === 'number' ? h.durationMs : null,
+              success: h.status === 'completed',
+              source: 'hop-telemetry',
+              session_id: h.sessionId || null,
+              message_id: null,
+            });
+          } catch { /* one malformed line never hides the rest */ }
+        }
+      }
+    }
+  } catch { /* telemetry is additive — never breaks the aggregate */ }
   return rows;
 }
 
@@ -1247,9 +1298,14 @@ function readRealCosts(rows: any[] = readCostRows()): RealCostAggregate {
   };
   for (const ev of rows) {
     const spend = typeof ev.spend_usd === 'number' ? ev.spend_usd : 0;
+    const listValue = typeof ev.spend_estimated_usd === 'number' ? ev.spend_estimated_usd : 0;
     if (isRealCostRow(ev)) {
       agg.requests++;
       agg.spendRealUsd += spend;
+      // v0.0.29: a subscription plan reports $0 provider cost but carries a
+      // real token count — its list-price value is an ESTIMATE, never mixed
+      // silently into the provider figure.
+      agg.spendEstimatedUsd += listValue;
       agg.tokens.input += ev.input_tokens || 0;
       agg.tokens.output += ev.output_tokens || 0;
       agg.tokens.reasoning += ev.reasoning_tokens || 0;
@@ -1259,8 +1315,10 @@ function readRealCosts(rows: any[] = readCostRows()): RealCostAggregate {
       agg.spendEstimatedUsd += spend;
     }
   }
-  agg.spendRealUsd = Math.round(agg.spendRealUsd * 100) / 100;
-  agg.spendEstimatedUsd = Math.round(agg.spendEstimatedUsd * 100) / 100;
+  // v0.0.29: cents-rounding hid sub-cent usage ($0.0016 → $0.00). Keep four
+  // decimals so the counter tells the truth on cheap lanes.
+  agg.spendRealUsd = Math.round(agg.spendRealUsd * 10000) / 10000;
+  agg.spendEstimatedUsd = Math.round(agg.spendEstimatedUsd * 10000) / 10000;
   return agg;
 }
 
@@ -1294,6 +1352,7 @@ function readGodCosts(rows: any[] = readCostRows()): GodCost[] {
     };
     const r = byGod[god];
     const spend = typeof ev.spend_usd === 'number' ? ev.spend_usd : 0;
+    const listValue = typeof ev.spend_estimated_usd === 'number' ? ev.spend_estimated_usd : 0;
     if (isRealCostRow(ev)) {
       r.requests++;
       r.input += ev.input_tokens || 0;
@@ -1302,6 +1361,7 @@ function readGodCosts(rows: any[] = readCostRows()): GodCost[] {
       r.cacheWrite += ev.cache_write_tokens || 0;
       r.reasoning += ev.reasoning_tokens || 0;
       r.spendReal += spend;
+      r.spendEstimated += listValue;
     } else {
       r.spendEstimated += spend;
     }
@@ -1324,9 +1384,10 @@ function readGodCosts(rows: any[] = readCostRows()): GodCost[] {
     c.cachedTokens = r.cached;
     c.cachedWriteTokens = r.cacheWrite;
     c.reasoningTokens = r.reasoning;
-    c.spendRealUsd = Math.round(r.spendReal * 100) / 100;
-    c.spendEstimatedUsd = Math.round(r.spendEstimated * 100) / 100;
-    c.spend = Math.round((r.spendReal + r.spendEstimated) * 100) / 100;
+    // v0.0.29: four decimals — sub-cent lanes must not read as $0.00.
+    c.spendRealUsd = Math.round(r.spendReal * 10000) / 10000;
+    c.spendEstimatedUsd = Math.round(r.spendEstimated * 10000) / 10000;
+    c.spend = Math.round((r.spendReal + r.spendEstimated) * 10000) / 10000;
     c.avgLatencyMs = r.latencies.length ? Math.round(r.latencies.reduce((s, l) => s + l, 0) / r.latencies.length) : 0;
     // Success rate rides every row (the step-finish rows never fail — the
     // per-tool rows carry the tool success/failure signal), over its own
@@ -1349,9 +1410,9 @@ function readGodCosts(rows: any[] = readCostRows()): GodCost[] {
       cachedTokens: globalRow.cached,
       cachedWriteTokens: globalRow.cacheWrite,
       reasoningTokens: globalRow.reasoning,
-      spendRealUsd: Math.round(globalRow.spendReal * 100) / 100,
-      spendEstimatedUsd: Math.round(globalRow.spendEstimated * 100) / 100,
-      spend: Math.round((globalRow.spendReal + globalRow.spendEstimated) * 100) / 100,
+      spendRealUsd: Math.round(globalRow.spendReal * 10000) / 10000,
+      spendEstimatedUsd: Math.round(globalRow.spendEstimated * 10000) / 10000,
+      spend: Math.round((globalRow.spendReal + globalRow.spendEstimated) * 10000) / 10000,
       cap5h: null, pctOfCap: 0,
       avgLatencyMs: globalRow.latencies.length
         ? Math.round(globalRow.latencies.reduce((s, l) => s + l, 0) / globalRow.latencies.length)
@@ -1460,7 +1521,7 @@ export function costSummary() {
   return {
     /** Mixed total (real + estimated) — kept for compatibility; the split
      *  figures below are the honest display pair. */
-    totalSpend: Math.round(totalSpend * 100) / 100,
+    totalSpend: Math.round(totalSpend * 10000) / 10000,
     /** #179: the split figures — Real is provider-reported spend (honestly
      *  $0.00 on free lanes), Estimated is the heuristic per-tool figure.
      *  Consumers show "Real $X · Est $Y", never a silent sum. */

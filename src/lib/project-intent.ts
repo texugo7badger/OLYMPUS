@@ -155,7 +155,7 @@ export function deriveProjectName(prompt: string): string {
  * (the fixture passes its own project table — listProjects() only when the
  * caller omits it).
  */
-export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): FirstPromptIntent {
+export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[], opts?: { activeSlug?: string | null }): FirstPromptIntent {
   const known = projects ?? listProjects();
   const cleanPrompt = stripUploadBlock(prompt);
   const promptWords = words(cleanPrompt);
@@ -175,6 +175,38 @@ export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): F
         reason: `the prompt names the project's path '${pathCand}' — routing to '${hit.slug}'`,
       };
     }
+  }
+
+  // v0.0.28 — A PASTED PLAN IS A CONTINUATION, NEVER A PROJECT NAME.
+  // The 2026-10-31 specimen: the CAL-2 prompt list created 'your taste' from
+  // the quoted phrase inside the dashboard prompt and stole the active
+  // pointer from AIME. THE v0.0.27 GUARD WAS UNREACHABLE: it sat AFTER the
+  // #144 distinct-name law, which returns NEW as soon as ANY quoted 2–6 word
+  // phrase exists — and plan pastes are full of quoted phrases, so the guard
+  // was dead code for the exact specimen it was written for. The guard now
+  // runs BEFORE extractProjectName, and its signal is deliberately narrow:
+  // 2+ markdown hop headings AND 2+ DONE: markers. A normal brief (one
+  // heading, one DONE, maybe a quoted criterion) falls through unchanged.
+  const headingCount = (cleanPrompt.match(/^##\s+\S+/gm) ?? []).length;
+  const doneCount = (cleanPrompt.match(/\bDONE:/g) ?? []).length;
+  const planPaste = headingCount >= 2 && doneCount >= 2;
+  if (planPaste) {
+    const active = opts?.activeSlug === undefined ? getActiveProjectSlug() : opts.activeSlug;
+    if (active && known.some((p) => p.slug === active)) {
+      return {
+        kind: 'existing',
+        slug: active,
+        score: 1,
+        reason: `continuation — the prompt is a plan/prompt list (${headingCount} hop headings, ${doneCount} DONE: blocks); routed to the active project '${active}' instead of minting a name from prose`,
+      };
+    }
+    return {
+      kind: 'ask',
+      candidates: known.slice(0, 3).map((p) => ({ slug: p.slug, score: 1 })),
+      reason: active
+        ? `plan paste — the active pointer '${active}' names no known project; asking instead of deriving a name from prose`
+        : 'plan paste with no active project — asking instead of deriving a name from prose',
+    };
   }
 
   const candidateName = extractProjectName(cleanPrompt);
@@ -303,28 +335,8 @@ export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): F
       reason: `${scored.length} projects match the prompt (>= ${INTENT_MATCH_THRESHOLD}) — ambiguous, asking instead of guessing`,
     };
   }
-  // v0.0.27 — A PASTED PLAN IS A CONTINUATION, NEVER A PROJECT NAME.
-  // The 2026-10-31 specimen: the CAL-2 prompt list (## blocks + DONE:)
-  // created 'your taste' from a phrase inside the dashboard prompt and stole
-  // the active-project pointer from AIME. Route a plan paste to the active
-  // project; with none active, ask — never mint a name from prose.
-  const planPaste = /^##\s/m.test(cleanPrompt) && /DONE:/.test(cleanPrompt);
-  if (planPaste) {
-    const active = getActiveProjectSlug();
-    if (active) {
-      return {
-        kind: 'existing',
-        slug: active,
-        score: 1,
-        reason: `continuation — the prompt is a plan/prompt list (DONE: blocks); routed to the active project '${active}' instead of creating one`,
-      };
-    }
-    return {
-      kind: 'ask',
-      candidates: known.slice(0, 3).map((p) => ({ slug: p.slug, score: 1 })),
-      reason: 'plan paste with no active project — asking instead of deriving a name from prose',
-    };
-  }
+  // (v0.0.28) The plan-paste guard lives ABOVE extractProjectName now —
+  // after the #144 return it could never fire. See the top of this function.
   const projectName = candidateName ?? deriveProjectName(cleanPrompt);
   return {
     kind: 'new',

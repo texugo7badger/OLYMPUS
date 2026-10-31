@@ -1000,7 +1000,11 @@ export default function InteractiveTerminal() {
     // cards, or feed panel logic.
     if (ev.type === 'classification' && ev.classification) {
       const c = ev.classification;
-      const line = `classified: ${c.domain} · ${c.complexity} → ${c.routeTo} · ~${Math.round(c.estimatedTokens / 1000)}k tok · planning=${c.needsPlanning ? 'yes' : 'no'}`;
+      // v0.0.28 — HONEST BUDGET. estimatedTokens is the CLASS CEILING from
+      // estimateComplexity() (150k for any architectural prompt, regardless
+      // of the actual text) — not a measurement of this prompt. The "~" read
+      // as an estimate and made a 6 KB paste look like 150k tokens.
+      const line = `classified: ${c.domain} · ${c.complexity} → ${c.routeTo} · class ≤${Math.round(c.estimatedTokens / 1000)}k tok · planning=${c.needsPlanning ? 'yes' : 'no'}`;
       removeThinking();
       addMessage({ type: 'system', text: line });
       ensureThinking();
@@ -1090,7 +1094,15 @@ export default function InteractiveTerminal() {
         addMessage({
           type: 'error',
           text: runLastError.current
-            ? `Task failed (exit code ${ev.code}) — last error: ${runLastError.current}. If the provider is rate-limited, simply resend — the warm session and its context are preserved.`
+            ? `Task failed (exit code ${ev.code}) — last error: ${runLastError.current}. ${
+                /(^|\s)HTTP 400\b|Missing key at|invalid[_ ]request|unrecognized key|schema/i.test(runLastError.current)
+                  // v0.0.28 — a 400 is a REJECTED BODY (dialect/schema), not
+                  // a throttled provider. Resending the same text cannot fix
+                  // it; the 21:51 specimen was told to "resend" on a schema
+                  // error and would have looped forever.
+                  ? 'The server rejected the request body (dialect/schema) — resending the same text will not help. The log carries the exact field; fix the transport first.'
+                  : 'If the provider is rate-limited, simply resend — the warm session and its context are preserved.'
+              }`
             : `Task failed (exit code ${ev.code})`,
         });
         // #105 (MADRUGA-SERVE-1 Batch B): when the failure smells like the

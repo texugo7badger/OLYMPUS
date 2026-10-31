@@ -35,6 +35,10 @@ interface CostSummary {
  totalSpend: number; totalReqs: number; totalInput: number; totalOutput: number;
  avgLatency: number; avgSuccess: number; cap5h: number | null; pctOfCap: number | null;
  activeGods: number; costs: GodCost[]; provider: ProviderInfo;
+ /** v0.0.29 — the split pair: provider-reported charge vs list-price value.
+  *  Optional so an older API response never crashes the pane. */
+ totalSpendRealUsd?: number;
+ totalSpendEstimatedUsd?: number;
 }
 
 /** Static demigod catalog per god (mirrors dispatch-graph route). */
@@ -271,8 +275,14 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  const prov = data.provider;
  const hasRealCosts = data.totalReqs > 0;
  const totalSubAgentRoutes = Object.values(dispatch).reduce((s: number, d: any) => s + (d?.subAgentCount ?? 0), 0);
+ // v0.0.29 — subscription plans report $0 provider cost but real tokens.
+ // Show the list-price VALUE when the provider charged nothing, and say so.
+ const chargedUsd = data.totalSpendRealUsd ?? 0;
+ const listValueUsd = data.totalSpendEstimatedUsd ?? 0;
+ const displaySpend = chargedUsd > 0 ? chargedUsd : listValueUsd;
+ const isSubscriptionZero = chargedUsd === 0 && listValueUsd > 0;
  // Burn rate: spend per hour over the 5h window (or since first event).
- const burnRate = hasRealCosts ? data.totalSpend / 5 : 0;
+ const burnRate = hasRealCosts ? displaySpend / 5 : 0;
  // Token usage — the free strategies have no spend, so the dashboard shows
  // tokens used instead of a dollar figure.
  const totalTokens = data.totalInput + data.totalOutput;
@@ -357,19 +367,19 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 	 ) : (
 	 <SummaryCard
 	 icon={DollarSign}
-	 label="Spend (5h)"
-	 value={`$${data.totalSpend.toFixed(2)}`}
-	 sub={hasRealCosts ? 'this window' : 'idle'}
+	 label={isSubscriptionZero ? 'List value (5h)' : 'Spend (5h)'}
+	 value={fmtUsd(displaySpend)}
+	 sub={isSubscriptionZero ? 'GO plan — $0 charged by provider' : hasRealCosts ? 'this window' : 'idle'}
 	 pct={data.pctOfCap ?? undefined}
 	 color="green"
 	 />
 	 )}
 	 <SummaryCard icon={Zap} label="Requests" value={fmt(data.totalReqs)} sub={`${data.activeGods} gods active`} color="gold" />
-	 <SummaryCard icon={Cpu} label="Sub-agent routes" value={String(totalSubAgentRoutes)} sub="total across all gods" color="teal" />
+	 <SummaryCard icon={Cpu} label="Sub-agent capacity" value={String(totalSubAgentRoutes)} sub="demigod catalog across all gods" color="teal" />
 	 {prov.isFree ? (
 	 <SummaryCard icon={CheckCircle2} label="Token rate" value={hasRealCosts ? `${fmt(tokenRate)}/h` : '—'} sub="5h avg" color="green" />
 	 ) : (
-	 <SummaryCard icon={CheckCircle2} label="Burn rate" value={hasRealCosts ? `$${burnRate.toFixed(3)}/h` : '—'} sub="5h avg" color="green" />
+	 <SummaryCard icon={CheckCircle2} label={isSubscriptionZero ? 'List value/h' : 'Burn rate'} value={hasRealCosts ? `${fmtUsd(burnRate)}/h` : '—'} sub={isSubscriptionZero ? 'GO plan — $0 charged' : '5h avg'} color="green" />
 	 )}
 	 </div>
 
@@ -394,8 +404,8 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  />
  </div>
  <div className="flex justify-between mt-1 text-[9px] font-mono text-olympus-text-dim">
- <span>${data.totalSpend.toFixed(2)} spent</span>
- <span>${(data.cap5h - data.totalSpend).toFixed(2)} remaining</span>
+ <span>{fmtUsd(chargedUsd)} charged</span>
+ <span>{fmtUsd(Math.max(0, data.cap5h - chargedUsd))} remaining</span>
  </div>
  </div>
  )}
@@ -407,7 +417,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 	 <span>Model</span>
 	 <span>Reqs</span>
 	 <span>{prov.isFree ? 'Tokens' : `Spend ${data.cap5h != null ? '/ Cap' : ''}`}</span>
-	 <span>Sub-agents</span>
+	 <span>Sub-agents (used/cap)</span>
 	 </div>
 	 {data.costs.map(c => (
 	 <GodRow
@@ -503,7 +513,7 @@ function GodRow({
 	 !hasData ? 'text-[#5A5A5A]' :
 	 (c.pctOfCap ?? 0) > 80 ? 'text-olympus-red' :
 	 (c.pctOfCap ?? 0) > 60 ? 'text-olympus-amber-soft' : 'text-olympus-green')}>
-	 ${c.spend.toFixed(2)}
+	 {fmtUsd(c.spend)}
 	 </span>
 	 {cap != null && <span className="text-olympus-text-dim text-[9px]">/ ${cap}</span>}
 	 </div>
@@ -622,6 +632,12 @@ function TokenStat({ label, value, color }: { label: string; value: number; colo
  <div className="text-[8px] font-mono text-olympus-text-dim">{(value / 1_000_000).toFixed(2)}M tokens</div>
  </div>
  );
+}
+
+/** v0.0.29 — money that is real but sub-cent must not read as $0.00. */
+function fmtUsd(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return '$0.00';
+  return n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
 }
 
 function fmt(n: number): string {

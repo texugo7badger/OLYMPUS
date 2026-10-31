@@ -1,7 +1,7 @@
 {
   "name": "olympus",
-  "version": "0.0.27",
-  "description": "Olympus — automated multi-agent operating system built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
+  "version": "0.0.29",
+  "description": "Olympus \u2014 automated multi-agent operating system built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
   "author": "OLYMPUS Contributors",
   "license": "AGPL-3.0-or-later",
   "type": "module",
@@ -86,8 +86,8 @@
     "@alloc/quick-lru": "^5.2.0",
     "@excalidraw/excalidraw": "^0.18.1",
     "@google/model-viewer": "^4.4.0",
-    "@opencode/cli": "^2.2.2",
-    "@opencode/plugin": "^2.2.2",
+    "@opencode/cli": "^2.2.5",
+    "@opencode/plugin": "^2.2.5",
     "@radix-ui/primitive": "^1.2.0",
     "better-sqlite3": "latest",
     "chokidar": "latest",
@@ -202,7 +202,8 @@
     "opencode-ai": true,
     "sharp": true,
     "unrs-resolver": true,
-    "@opencode/cli@2.0.32": true
+    "@opencode/cli@2.0.32": true,
+    "@opencode/cli": true
   },
   "optionalDependencies": {
     "@tarquinen/opencode-dcp": "latest",

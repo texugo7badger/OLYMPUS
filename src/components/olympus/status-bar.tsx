@@ -49,6 +49,12 @@ function shouldShowCustomWindowControls(): boolean {
  return true;
 }
 
+/** v0.0.29 — a real but sub-cent figure must not read as $0.00. */
+function fmtUsd(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return '$0.00';
+  return n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
+}
+
 export default function StatusBar({
   health }: { health: any }) {
   // #231 — the status bar is always mounted; never poll in a hidden tab.
@@ -162,7 +168,7 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.27'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.29'}
    </span>
 )}
  </div>
@@ -277,10 +283,25 @@ export default function StatusBar({
  >
 	 <DollarSign size={11} className={isFree ? 'text-olympus-green' : 'text-olympus-gold'} />
 	 <span className={cn('font-semibold', isFree ? 'text-olympus-green' : 'text-olympus-gold')}>
-	 {isFree ? `${(totalTokens >= 1000 ? (totalTokens / 1000).toFixed(1) + 'k' : String(totalTokens))} tok` : `$${realUsd.toFixed(2)}`}
+	 {isFree
+	   ? `${(totalTokens >= 1000 ? (totalTokens / 1000).toFixed(1) + 'k' : String(totalTokens))} tok`
+	   : fmtUsd(realUsd > 0 ? realUsd : estimatedUsd)}
 	 </span>
-	 <span className="text-olympus-text-dim text-[10px] hidden sm:inline" data-tip={estimatedUsd > 0 ? `Est. $${estimatedUsd.toFixed(2)} (heuristic) + real provider spend` : undefined}>
-	 {isFree && realUsd === 0 ? '(free)' : `· ${prov?.name ?? '-'}${estimatedUsd > 0 ? ` +~$${estimatedUsd.toFixed(2)} est` : ''}`}
+	 <span
+	   className="text-olympus-text-dim text-[10px] hidden sm:inline"
+	   data-tip={
+	     realUsd === 0 && estimatedUsd > 0
+	       ? `GO/ZEN subscription: the provider charged $0 — ${fmtUsd(estimatedUsd)} is the list-price value of the tokens in this 5h window`
+	       : estimatedUsd > 0
+	         ? `Provider-reported ${fmtUsd(realUsd)} + ${fmtUsd(estimatedUsd)} list-price estimate`
+	         : undefined
+	   }
+	 >
+	 {isFree && realUsd === 0
+	   ? '(free)'
+	   : realUsd === 0 && estimatedUsd > 0
+	     ? `· ${prov?.name ?? '-'} · $0 charged · list ${fmtUsd(estimatedUsd)}`
+	     : `· ${prov?.name ?? '-'}`}
 	 </span>
  </button>
  <div className="w-px h-3 bg-olympus-gold/15" />

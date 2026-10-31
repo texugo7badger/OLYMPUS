@@ -198,11 +198,18 @@ export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo>
     await new Promise((r) => setTimeout(r, 400));
   }
 
-  // The v1 /session + /session/:id/message API is present on OpenCode 2.x
-  // (verified 2026-10-30): it accepts `agent` + `model` per turn and returns
-  // the full assistant result. The v2 /api/session/:id/prompt only admits a
-  // prompt and has no agent/model fields — unusable for per-god hops.
-  const protocol: 'v1' = 'v1';
+  // v0.0.29 — #266 CURED. opencode 2.2.5 removed `POST /session` (405) and
+  // serves the v2 API instead: `POST /api/session` 200, and the per-session
+  // `/api/session/:id/agent` + `/model` selectors answer 204. The old
+  // assumption below ("v1 is present, v2 cannot select an agent/model") was
+  // true of an older build and kept every hop on the spawn fallback. Probe
+  // `GET /api/session` once (a 2xx read, no garbage session): that is the
+  // protocol. Older builds keep v1.
+  let protocol: 'v1' | 'v2' = 'v1';
+  try {
+    const api = await httpRequest(port, password, 'GET', '/api/session', undefined, 4_000);
+    if (api.status >= 200 && api.status < 300) protocol = 'v2';
+  } catch { /* older build — keep v1 */ }
 
   const server: WarmServerInfo = { port, password, protocol, child, laneRoot: key, lastUsed: Date.now(), activeTurns: 0, logFile };
   SERVERS.set(key, server);
@@ -445,15 +452,25 @@ export async function runWarmHop(opts: {
   let code: number | null = null;
   let raw = '';
   try {
-    // OpenCode 2.x: the v2 prompt body is `{ prompt: { text }, agent }`.
-    // A bare `{ text }` returns "Missing key at [prompt]".
+    // v0.0.28 — THE DIALECT IS PROBED, NOT ASSUMED (both lanes, one rule).
+    // opencode 2.2.2 has shipped BOTH v2 bodies: `{ text }` and
+    // `{ prompt: { text } }`. The 21:51 chat specimen died on
+    // `Missing key at ["text"]` with the wrapped form; THIS lane hardcoded
+    // the wrapped form and would die identically the moment the warm
+    // transport actually serves a hop (#266's 405 on POST /session forces
+    // the spawn fallback today, which masked it — a latent blocker).
     const modelRef = opts.model && opts.model.includes('/')
       ? { providerID: opts.model.slice(0, opts.model.indexOf('/')), modelID: opts.model.slice(opts.model.indexOf('/') + 1) }
       : undefined;
-    const body = server.protocol === 'v2'
-      ? { prompt: { text: opts.text } }
+    const body = (dialect: 'text' | 'wrapped') => server.protocol === 'v2'
+      ? (dialect === 'text' ? { text: opts.text } : { prompt: { text: opts.text } })
       : { parts: [{ type: 'text', text: opts.text }], agent: opts.agent, ...(modelRef ? { model: modelRef } : {}) };
-    const res = await httpRequest(server.port, server.password, 'POST', promptPath(server, sessionId), body, opts.timeoutMs);
+    let dialect: 'text' | 'wrapped' = 'text';
+    let res = await httpRequest(server.port, server.password, 'POST', promptPath(server, sessionId), body(dialect), opts.timeoutMs);
+    if (server.protocol === 'v2' && res.status === 400 && /Missing key[\s\S]{0,80}\["(prompt|text)"\]/.test(res.text)) {
+      dialect = dialect === 'text' ? 'wrapped' : 'text';
+      res = await httpRequest(server.port, server.password, 'POST', promptPath(server, sessionId), body(dialect), opts.timeoutMs);
+    }
     raw = res.text;
     code = res.status >= 200 && res.status < 300 ? 0 : 1;
     if (res.status === 401 || res.status === 403) errors.push(`auth: HTTP ${res.status}`);

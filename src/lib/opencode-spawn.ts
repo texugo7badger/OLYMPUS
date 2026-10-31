@@ -552,6 +552,24 @@ export function resolveWorkspaceLane(): WorkspaceLane {
     console.warn('[opencode-spawn] strategy sync failed:', e);
   }
 
+  // v0.0.29 — PRESERVE THE LANE'S MCP CHOICES. The force copy below syncs
+  // the root's agents/models/plugins, but it used to reset every per-lane
+  // MCP enabled flag (the AIME lane's playwright/nakkas ON + git OFF
+  // reverted on the next run). Capture the lane's flags first, re-apply
+  // them after the copy — the root wins on agents/models, the lane wins on
+  // which MCP servers it runs.
+  const laneMcpEnabled: Record<string, boolean> = {};
+  try {
+    const laneCfgPath = join(dir, 'opencode.json');
+    if (existsSync(laneCfgPath)) {
+      const prev = JSON.parse(readFileSync(laneCfgPath, 'utf-8'));
+      for (const [name, entry] of Object.entries(prev?.mcp ?? {})) {
+        const en = (entry as any)?.enabled;
+        if (typeof en === 'boolean') laneMcpEnabled[name] = en;
+      }
+    }
+  } catch { /* first run — the root config seeds it */ }
+
   // #LANE-DRIFT: refresh on drift (syncLaneFile) + force copy to be safe.
   // The tripwire test checks that syncLaneFile is called.
   for (const f of ['opencode.json', 'opencode.demigods.json']) {
@@ -569,6 +587,21 @@ export function resolveWorkspaceLane(): WorkspaceLane {
     } catch (e) {
       console.warn(`[lane-config] failed to refresh ${f}:`, e);
     }
+  }
+  // Re-apply the lane's MCP choices over the copied root config.
+  if (Object.keys(laneMcpEnabled).length > 0) {
+    try {
+      const laneCfgPath = join(dir, 'opencode.json');
+      const cfg = JSON.parse(readFileSync(laneCfgPath, 'utf-8'));
+      let changed = false;
+      for (const [name, enabled] of Object.entries(laneMcpEnabled)) {
+        if (cfg?.mcp?.[name] && cfg.mcp[name].enabled !== enabled) {
+          cfg.mcp[name].enabled = enabled;
+          changed = true;
+        }
+      }
+      if (changed) writeFileSync(laneCfgPath, JSON.stringify(cfg, null, 2) + '\n');
+    } catch { /* the lane still runs on the root config */ }
   }
   ensureProjectGitExclude(dir);
   return { dir, fresh };

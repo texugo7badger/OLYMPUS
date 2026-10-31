@@ -255,9 +255,27 @@ async function main() {
       'Build Something for me please',
       [lumina, petlove],
       (r) => (r.reason || '').includes('deriving')],
+    // v0.0.28 (the 2026-10-31 AIME specimen): the CAL-2 prompt list is a
+    // PLAN PASTE — 5 `## hop` headings, 5 `DONE:` blocks, and a quoted phrase
+    // ("your taste") inside the dashboard prompt. The old guard sat AFTER the
+    // #144 distinct-name law, so the quoted phrase won and a project named
+    // 'your taste' was minted. The guard now runs FIRST and the paste routes
+    // to the active project (or asks) — never a name from prose.
+    ['v0.0.28: plan paste with a quoted phrase routes to the ACTIVE project (the AIME specimen)',
+      '## aime-f3-4 — athena\nAIME project. Build a compact "your taste" dashboard.\nDONE: page exists.\n\n## aime-b1-brand — athena\nCreate the brand primitives.\nDONE: all three files exist.',
+      [proj('aime', 'AIME', 'anime discovery game'), lumina],
+      (r) => r.kind === 'existing' && r.slug === 'aime'],
+    ['v0.0.28: plan paste with NO valid active project ASKS — never mints the quoted phrase as a project',
+      '## aime-f3-4 — athena\nAIME project. Build a compact "your taste" dashboard.\nDONE: page exists.\n\n## aime-b1-brand — athena\nCreate the brand primitives.\nDONE: all three files exist.',
+      [lumina, petlove],
+      (r) => r.kind === 'ask' && !(r.kind === 'new' && /your taste/i.test(String(r.projectName)))],
+    ['v0.0.28: a brief with ONE heading and ONE DONE is NOT a plan paste (the guard is narrow)',
+      '## Requirements\nBuild a "Lumina CRM" with a settings page.\nDONE: settings page exists.',
+      [petlove],
+      (r) => r.kind === 'new' && r.projectName === 'Lumina CRM'],
   ];
   for (const [name, prompt, table, ok] of cases) {
-    const r = classifyFirstPrompt(prompt, table);
+    const r = classifyFirstPrompt(prompt, table, { activeSlug: 'aime' });
     check(`I: ${name}`, ok(r), JSON.stringify(r).slice(0, 160));
   }
   check('I: the threshold is a named export (tunable, honest)', typeof INTENT_MATCH_THRESHOLD === 'number' && INTENT_MATCH_THRESHOLD > 0 && INTENT_MATCH_THRESHOLD < 1, String(INTENT_MATCH_THRESHOLD));

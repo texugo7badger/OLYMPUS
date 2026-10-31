@@ -1748,6 +1748,12 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           }
         }
         const model = getGodModel(godId);
+        // v0.0.29 — THE MONEY COUNTER. The GO plan is a subscription: the
+        // provider reports cost 0 for every step, so `spend_usd` alone kept
+        // the dashboard at $0.00 forever even with 194k real tokens. Keep the
+        // provider figure in `spend_usd` and add the LIST-PRICE value in its
+        // own field — the consumer labels both ("$0 charged · $X list value").
+        const listPriceUsd = estimateSpendUsd(model, tokens.input || 0, tokens.output || 0);
 
         // Write to cost.jsonl. Schema matches tool-execute.after writes
         // + the new fields (reasoning, cache_read, cache_write, provider_cost).
@@ -1765,6 +1771,7 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           cached_tokens: tokens.cache?.read ?? tokens.cache_read ?? 0,  // cache hits = "cached_tokens" for compat with readRealCosts
           cache_write_tokens: tokens.cache?.write ?? tokens.cache_write ?? 0,
           spend_usd: cost,                        // ← REAL provider cost, never re-estimated
+          spend_estimated_usd: listPriceUsd,      // ← list-price value (GO/ZEN subscription: provider cost is 0)
           latency_ms: null,
           success: true,
           source: "sdk-event",                    // ← tag so cost-dashboard can show "live"

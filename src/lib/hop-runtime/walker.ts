@@ -523,7 +523,15 @@ async function attemptLane(
     // The per-hop runtime budget (#R3: env-tunable — OLYMPUS_HOP_TIMEOUT_MS;
     // the default stays 15 min).
     last = await ctx.transport.run({
-      args: ['run', '--model', lane, '--format', 'json', ...(resolveHopVariant() ? ['--variant', resolveHopVariant()!] : []), ctx.prompt],
+      // v0.0.28 — THE HOP RUNS AS ITS GOD, NOT AS APOLLO. The spawn lane
+      // used to pass only `--model`, so every hop ran the default agent
+      // (apollo, the planner) with the hop god's MODEL — a frontend hop got
+      // Apollo's plan-and-delegate system prompt instead of Athena's frontend
+      // rules. `--agent` is the CLI's own selector (probed on 2.2.2:
+      // `opencode run --agent athena` resolves; an unknown name errors
+      // "Agent not found"). The warm lane already selects the agent via
+      // `/api/session/:id/agent`; this makes both transports agree.
+      args: ['run', '--model', lane, '--agent', hop.god, '--format', 'json', ...(resolveHopVariant() ? ['--variant', resolveHopVariant()!] : []), ctx.prompt],
       prompt: ctx.prompt,
       agent: hop.god,
       model: lane,
@@ -628,7 +636,13 @@ async function attemptLane(
  * its cause, never `exit 1`.
  */
 export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
-  const applied = resolveGodModelLane(hop.god);
+  // v0.0.28 — THE LANE'S OWN CONFIG WINS. resolveGodModelLane() defaulted to
+  // the OLYMPUS repo's opencode.json, so a project lane that applied a
+  // different strategy still ran the repo's model for every hop. Prefer the
+  // lane config, fall back to the repo when the lane has none.
+  const laneConfig = join(ctx.laneRoot, 'opencode.json');
+  const applied = (existsSync(laneConfig) ? resolveGodModelLane(hop.god, laneConfig) : null)
+    ?? resolveGodModelLane(hop.god);
   if (!applied) {
     return {
       ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,

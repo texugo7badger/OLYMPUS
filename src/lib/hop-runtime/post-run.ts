@@ -20,7 +20,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { existsSync, readFileSync, writeFileSync, unlinkSync, rmSync, lstatSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync, statSync } from 'node:fs';
 
 /**
  * W-S PLAN-SANITIZE (the 23:32 specimen — 'Bad control character in
@@ -88,7 +88,7 @@ export function normalizePlanForWalk(plan: any): { plan: any; notes: string[] } 
     if (s === 'llm') return 'llm';
     return undefined;
   };
-  const SUPPORTED = /^(file-exists:|build$|lint$)/;
+  const SUPPORTED = /^(file-exists:|file-contains:|file-omits:|build$|lint$|design-score:)/;
   if (Array.isArray(plan?.hops)) {
     for (const hop of plan.hops) {
       if (hop?.verify?.review !== undefined) {
@@ -152,7 +152,7 @@ export function harvestPlanFromTurnText(turnText: string): { strict: string; not
 }
 import { join } from 'node:path';
 import { walkPlan, resolveGodModelLane, readHopTelemetry, type HopDispatcher, type HopWalkEvent } from './walker';
-import { acquireWalkLock } from './walk-lock';
+import { acquireWalkLock, readWalkLock } from './walk-lock';
 import { loadArsenal } from './arsenal';
 import { buildOvernightDigest, buildWaveReports, writeOvernightDigest } from './overnight';
 import { hopStatePath, saveHopState } from './hop-state';
@@ -351,6 +351,22 @@ export async function maybeWalkThePlan(opts: {
   /** #211: internal resume counter — bounds the auto-resume chain. */
   overnightAttempt?: number;
 }): Promise<PostRunWalkOutcome> {
+  // v0.0.29 — A LIVE CAMPAIGN OWNS THE LANE; CHAT STAYS OPEN. The lock check
+  // used to run only AFTER the plan read + the stale-plan refusal, so any
+  // message sent during a walk could be rejected with "the plan predates this
+  // turn" and the user got no answer (the 2026-10-31 23:17 specimen: a live
+  // b1 hop + a 4-minute Apollo turn that ended in a refusal, chat dead).
+  // If another walker holds a LIVE lock, this turn must not touch the plan
+  // and must not refuse: report the campaign on the log channel and return,
+  // so the assistant's answer still reaches the terminal.
+  const liveLock = readWalkLock(opts.laneRoot);
+  if (liveLock.holder && liveLock.alive) {
+    const who = liveLock.holder;
+    const msg = `Campaign already walking this lane (pid ${who.pid}, plan '${who.slug}', started ${who.startedAt}) — no second walk; chat stays available. Follow the hops in God Intelligence.`;
+    opts.send?.({ type: 'log', msg, ts: new Date().toISOString() });
+    return { walked: false, reason: 'already-walking', completed: 0, total: 0, parked: null, summaryLine: msg };
+  }
+
   // W-P/W-S TURN-SETTLE (the 23:31 specimen — the walk raced the planner):
   // the v2 prompt resolves after the FIRST step while Apollo's turn KEEPS
   // RUNNING server-side (the plan write lands minutes later). The old
@@ -779,17 +795,14 @@ export async function maybeWalkThePlan(opts: {
   }
 
   // #DESIGN-INTELLIGENCE: THE RESIDUE CLEANUP — after a FULLY COMPLETED
-  // walk, the machine removes its own runtime artifacts from the
-  // deliverable. The project root must contain ONLY deliverable files.
+  // walk the machine used to DELETE `.opencode`, `opencode.json` and
+  // `opencode.demigods.json` from the lane. v0.0.29: that is the lane's
+  // CONFIGURATION, not residue — deleting it forced the next run to
+  // re-copy the root config and silently reset every per-lane MCP choice
+  // (playwright/nakkas ON, git OFF → back to the root defaults). The
+  // deliverable purity is already guaranteed by `.gitignore` below; the
+  // files stay on disk and out of git.
   if (!parked && completed === totalHops) {
-    const runtimeArtifacts = [
-      join(opts.laneRoot, '.opencode'),
-      join(opts.laneRoot, 'opencode.json'),
-      join(opts.laneRoot, 'opencode.demigods.json'),
-    ];
-    for (const p of runtimeArtifacts) {
-      try { if (existsSync(p)) { const stat = lstatSync(p); if (stat.isDirectory()) rmSync(p, { recursive: true }); else unlinkSync(p); } } catch { /* never breaks the walk */ }
-    }
     // Ensure .gitignore covers the machine's runtime files
     const gitignorePath = join(opts.laneRoot, '.gitignore');
     const gitignoreEntries = ['.olympus-*', 'design-review.json', 'worklog/', '.opencode', 'opencode.json', 'opencode.demigods.json', 'node_modules/', '.next/', 'tsconfig.tsbuildinfo'];

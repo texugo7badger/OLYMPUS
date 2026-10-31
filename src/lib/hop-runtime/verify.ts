@@ -46,6 +46,45 @@ function fileExistsCheck(laneRoot: string, rel: string): HopCheckResult {
   };
 }
 
+/**
+ * v0.0.28 — CONTENT CHECKS (the false-DONE cure). File existence alone
+ * passed hops that changed nothing: the CAL-2 b2 hop declared three auth
+ * pages that ALREADY existed, so `file-exists` (and the artifact rescue)
+ * marked it green with zero work. These two checks let a plan assert what
+ * the file must (or must not) contain — still 0 LLM tokens.
+ *
+ * Syntax: `file-contains:<rel>::<text>` / `file-omits:<rel>::<text>`.
+ */
+function fileContentCheck(
+  laneRoot: string,
+  rel: string,
+  needle: string,
+  shouldContain: boolean,
+): HopCheckResult {
+  const kind = shouldContain ? 'file-contains' : 'file-omits';
+  const check = `${kind}:${rel}::${needle}`;
+  const abs = laneRelative(laneRoot, rel);
+  if (!abs) return { check, ok: false, detail: 'path escapes the lane root — refused' };
+  if (!existsSync(abs)) return { check, ok: false, detail: `MISSING — ${rel} does not exist` };
+  let text = '';
+  try {
+    text = readFileSync(abs, 'utf-8');
+  } catch (e: any) {
+    return { check, ok: false, detail: `unreadable: ${e?.message || e}` };
+  }
+  const found = text.includes(needle);
+  const ok = shouldContain ? found : !found;
+  return {
+    check,
+    ok,
+    detail: ok
+      ? shouldContain ? 'present' : 'absent (as required)'
+      : shouldContain
+        ? `MISSING "${needle}" — the hop declared this content and did not write it`
+        : `FOUND "${needle}" — the contract forbids it`,
+  };
+}
+
 function scriptCheck(laneRoot: string, script: 'build' | 'lint'): HopCheckResult {
   const pkgPath = join(laneRoot, 'package.json');
   if (!existsSync(pkgPath)) {
@@ -86,6 +125,15 @@ export function verifyHopDeterministic(hop: PlanHop, laneRoot: string): HopVerif
       if (!hop.artifacts.includes(rel)) checks.push(fileExistsCheck(laneRoot, rel));
     } else if (c === 'build' || c === 'lint') {
       checks.push(scriptCheck(laneRoot, c));
+    } else if (c.startsWith('file-contains:') || c.startsWith('file-omits:')) {
+      const prefix = c.startsWith('file-contains:') ? 'file-contains:' : 'file-omits:';
+      const spec = c.slice(prefix.length);
+      const sep = spec.indexOf('::');
+      if (sep <= 0 || sep + 2 >= spec.length) {
+        checks.push({ check: c, ok: false, detail: 'invalid spec — expected file-contains:<rel>::<text> or file-omits:<rel>::<text>' });
+      } else {
+        checks.push(fileContentCheck(laneRoot, spec.slice(0, sep), spec.slice(sep + 2), prefix === 'file-contains:'));
+      }
     } else if (c.startsWith('design-score:')) {
       // #DESIGN-INTELLIGENCE D2: the design-review gate — reads
       // design-review.json and checks the overall score against the
@@ -109,7 +157,7 @@ export function verifyHopDeterministic(hop: PlanHop, laneRoot: string): HopVerif
         }
       }
     } else {
-      checks.push({ check: c, ok: false, detail: 'unknown check (supported: file-exists:<rel> | build | lint)' });
+      checks.push({ check: c, ok: false, detail: 'unknown check (supported: file-exists:<rel> | file-contains:<rel>::<text> | file-omits:<rel>::<text> | build | lint | design-score:<n>)' });
     }
   }
   const review = hop.verify?.review ?? 'deterministic';

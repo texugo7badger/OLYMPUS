@@ -684,9 +684,12 @@ async function main() {
   expect('D3: the self-correction loop (the fix hops from the review)',
     /fixInstructions/.test(postRunSrc) && /design-fix-/.test(postRunSrc) && /_designIterations/.test(postRunSrc),
     'the design review parks but nobody repairs — the anti-slop gate has no teeth');
-  expect('D3: the residue cleanup (the deliverable contains ONLY deliverable files)',
-    /runtimeArtifacts/.test(postRunSrc) && /\.gitignore/.test(postRunSrc),
-    'opencode.json and .opencode symlinks pollute the deliverable');
+  // v0.0.29: the config is CONFIGURATION, not residue. It must survive the
+  // campaign (the next run needs it, and the lane's MCP choices live there)
+  // and stay out of git via .gitignore — never be deleted.
+  expect('D3: the residue cleanup (runtime config is gitignored, not deleted)',
+    /gitignoreEntries/.test(postRunSrc) && /\.gitignore/.test(postRunSrc) && !/runtimeArtifacts/.test(postRunSrc),
+    'the cleanup must keep opencode.json/opencode.demigods.json on disk and out of git');
   expect('D1: the plan template includes the design-review hop instruction',
     /design-review hop/.test(routeSrc) && /design-score:7/.test(routeSrc),
     'no design review fires — the machine never critiques its own work');

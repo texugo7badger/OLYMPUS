@@ -110,12 +110,10 @@
       "_comment": "Container management (build, run, inspect). Used by Prometheus."
     },
     "nakkas": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "nakkas@latest"
+        "/home/texugo/Projects/olympus/scripts/mcp-nakkas.mjs"
       ],
-      "env": {},
       "_comment": "AI-driven animated SVG generation with PNG-preview self-critique loop. Used by Athena for artwork creation."
     },
     "filesystem": {

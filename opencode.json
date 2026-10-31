@@ -1276,9 +1276,8 @@
       "type": "local",
       "enabled": false,
       "command": [
-        "npx",
-        "-y",
-        "nakkas@latest"
+        "node",
+        "/home/texugo/Projects/olympus/scripts/mcp-nakkas.mjs"
       ]
     },
     "filesystem": {
