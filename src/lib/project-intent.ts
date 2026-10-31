@@ -303,6 +303,28 @@ export function classifyFirstPrompt(prompt: string, projects?: ProjectNote[]): F
       reason: `${scored.length} projects match the prompt (>= ${INTENT_MATCH_THRESHOLD}) — ambiguous, asking instead of guessing`,
     };
   }
+  // v0.0.27 — A PASTED PLAN IS A CONTINUATION, NEVER A PROJECT NAME.
+  // The 2026-10-31 specimen: the CAL-2 prompt list (## blocks + DONE:)
+  // created 'your taste' from a phrase inside the dashboard prompt and stole
+  // the active-project pointer from AIME. Route a plan paste to the active
+  // project; with none active, ask — never mint a name from prose.
+  const planPaste = /^##\s/m.test(cleanPrompt) && /DONE:/.test(cleanPrompt);
+  if (planPaste) {
+    const active = getActiveProjectSlug();
+    if (active) {
+      return {
+        kind: 'existing',
+        slug: active,
+        score: 1,
+        reason: `continuation — the prompt is a plan/prompt list (DONE: blocks); routed to the active project '${active}' instead of creating one`,
+      };
+    }
+    return {
+      kind: 'ask',
+      candidates: known.slice(0, 3).map((p) => ({ slug: p.slug, score: 1 })),
+      reason: 'plan paste with no active project — asking instead of deriving a name from prose',
+    };
+  }
   const projectName = candidateName ?? deriveProjectName(cleanPrompt);
   return {
     kind: 'new',

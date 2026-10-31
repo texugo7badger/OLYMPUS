@@ -2908,35 +2908,43 @@ async function runWarmMessageAttempt(
           json: async () => ({ info: watched.info, parts: watched.parts }),
         };
       } else {
-        res = await apiFetch(
+        // v0.0.27 — THE PROMPT DIALECT IS PROBED, NOT ASSUMED. opencode
+        // 2.2.2 has shipped BOTH v2 bodies: `{ prompt: { text } }` and the
+        // bare `{ text }`. The wrong one returns 400 "Missing key at
+        // [\"prompt\"]" / "[\"text\"]" — the user's 21:51 dispatch died
+        // there. Try `{ text }` first, flip once on that exact 400, and keep
+        // the response usable when the error is something else.
+        const promptText = `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}`;
+        const promptPath = server.protocol === 'v2'
+          ? `/api/session/${opts.sessionId}/prompt`
+          : `/session/${opts.sessionId}/message`;
+        const postBody = (dialect: 'text' | 'wrapped'): string => {
+          if (server.protocol !== 'v2') {
+            return JSON.stringify({ parts: [{ type: 'text', text: promptText }], ...(opts.agent ? { agent: opts.agent } : {}) });
+          }
+          return dialect === 'text'
+            ? JSON.stringify({ text: promptText, ...(opts.agent ? { agent: opts.agent } : {}) })
+            : JSON.stringify({ prompt: { text: promptText }, ...(opts.agent ? { agent: opts.agent } : {}) });
+        };
+        let dialect: 'text' | 'wrapped' = 'text';
+        const postPrompt = () => apiFetch(
           server.port,
           auth,
-          server.protocol === 'v2'
-            ? `/api/session/${opts.sessionId}/prompt`
-            : `/session/${opts.sessionId}/message`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(server.protocol === 'v2' ? {
-              // OpenCode 2.x v2 prompt body: `{ prompt: { text } }`.
-              // (A bare `{ text }` returns "Missing key at [prompt]".)
-              prompt: {
-                text: `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}`,
-              },
-              ...(opts.agent ? { agent: opts.agent } : {}),
-            } : {
-              // Prepend the authoritative strategy block so the model never has
-              // to infer the active strategy from model IDs (it hallucinated
-              // "free-nvidia-build" / "via OpenRouter" before this existed).
-              parts: [{ type: 'text', text: `${buildStrategyContextBlock({ sessionId: opts.sessionId, userText: opts.text })}\n\n${opts.text}` }],
-              ...(opts.agent ? { agent: opts.agent } : {}),
-            }),
-          },
-          // The message itself can legitimately take minutes; the maxTimer
-          // above is the real bound. Use a generous per-call timeout.
+          promptPath,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: postBody(dialect) },
           (opts.maxRuntimeMs ?? 10 * 60_000) + 15_000,
           postCtrl.signal,
         );
+        res = await postPrompt();
+        if (server.protocol === 'v2' && res.status === 400) {
+          const errText = await res.text();
+          if (/Missing key[\s\S]{0,80}\["(prompt|text)"\]/.test(errText)) {
+            dialect = dialect === 'text' ? 'wrapped' : 'text';
+            res = await postPrompt();
+          } else {
+            res = new Response(errText, { status: res.status, headers: res.headers });
+          }
+        }
       }
 
       let info: any = null;

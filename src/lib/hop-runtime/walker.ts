@@ -990,6 +990,16 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           concurrency = nextConcurrency(concurrency, result.ok
             ? 'ok'
             : (/overload|429|rate.?limit/i.test(result.error ?? '') ? 'overload' : 'hang'));
+          // v0.0.27 — ARTIFACT RESCUE. The 21:47 specimen: the hop wrote
+          // dashboard/page.tsx, then the stream hung to the ceiling and the
+          // walker parked a FINISHED hop for 10 minutes. Verify BEFORE
+          // parking: an artifact that passes is a completed hop.
+          if (!result.ok) {
+            const rescue = verifyHopDeterministic(next, laneRoot);
+            if (rescue.ok) {
+              result = { ...result, ok: true, error: `artifact rescue: ${result.error ?? 'dispatch failed after writing the artifacts'}` };
+            }
+          }
           if (result.ok) {
             const verify = verifyHopDeterministic(next, laneRoot);
             if (verify.ok) {

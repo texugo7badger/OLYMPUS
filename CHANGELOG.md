@@ -2,6 +2,17 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.27] — 2026-10-31
+
+**"THE LIVE FLOOR"** — three defects found by the real AIME continuation, fixed before the manual test.
+
+- **PROMPT DIALECT PROBE (blocker)** — the chat dispatch died with `Missing key at ["text"]`: opencode 2.2.2 has shipped BOTH v2 bodies (`{ text }` and `{ prompt: { text } }`), and the code hard-coded one. The chat now tries `{ text }`, flips once on the exact `Missing key at ["prompt"|"text"]` 400, and keeps other errors intact. The warm hop lane keeps its fallback.
+- **PLAN-PASTE CONTINUATION GUARD** — pasting the CAL-2 prompt list created a project named `your taste` from a phrase in the dashboard prompt and stole the active pointer from AIME. A message with `##` blocks + `DONE:` is now a continuation: route to the active project, or ask — never derive a name from prose. The empty `your-taste` scaffold was archived and the active project restored to **AIME**.
+- **ARTIFACT RESCUE (park-verify-first)** — a hop that wrote `dashboard/page.tsx` then hung to the ceiling was parked as failed for 10 minutes. The walker now runs deterministic verification BEFORE parking; an artifact that passes is a completed hop.
+- **AIME STATE RESTORED** — the CAL-2 runner overwrote the lane state. `completed` is rebuilt from the append-only telemetry (29 hops, including the rescued `f3-4`); `f3-7` + the brand pass remain.
+- **CAL-2 Phase A evidence** — 55 instincts, 2,144 short-circuit evaluations / **0 firings**, 133 benchmark rows / 0 attributed (pre-v0.0.26 history). Verdicts: #2 NOT-MEASURABLE, #5 REFUTED (historical), #8 REFUTED (warm 405).
+- **Version**: 0.0.27.
+
 ## [v0.0.26] — 2026-10-30
 
 **"THE MEASURED FLOOR"** — the instruments come first: `tokens_saved` is grounded from measured demigod deltas, benchmark rows finally attribute to a god and a demigod, the classifier gets an automated agreement loop, and the docs stop claiming rosters that no longer ship. CAL-1 then runs the engine on a real medium build and publishes verdicts — including a refuted claim.
