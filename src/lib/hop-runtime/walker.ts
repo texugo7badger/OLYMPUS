@@ -123,6 +123,8 @@ export interface HopTelemetryRow {
   sessionId?: string | null;
   /** v0.0.24 (#241): warm | spawn. */
   transport?: 'warm' | 'spawn';
+  /** R31-08: the script's bounded stdout/stderr tail (deterministic steps). */
+  outputTail?: string;
 }
 
 export function hopTelemetryPath(stateDir: string): string {
@@ -459,6 +461,63 @@ export { isLaneDeadClass } from '@/lib/lane-health';
  * with the #107 crescendo INSIDE the dispatcher: an overload burst is
  * absorbed per resolveRetryPlan(), exhaustion reported for the PARK.
  */
+/**
+ * R31-08 — DETERMINISTIC SCRIPT STEP.
+ *
+ * A script hop runs a bounded shell command in the lane with ZERO LLM tokens;
+ * the exit code is the gate. Ingestion, seed, build, lint and test work stop
+ * burning a 25-minute god turn. The output tail is persisted in telemetry.
+ */
+function runScriptHop(hop: PlanHop, laneRoot: string): Promise<HopDispatchResult> {
+  const command = hop.command ?? '';
+  const timeoutMs = hop.timeoutMs ?? 10 * 60_000;
+  return new Promise((resolve) => {
+    let out = '';
+    let err = '';
+    const cap = (s: string, v: string) => (s + v).slice(-8_000);
+    let settled = false;
+    const done = (r: HopDispatchResult) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(r);
+    };
+    const child = spawn('bash', ['-lc', command], {
+      cwd: laneRoot,
+      env: { ...process.env, OLYMPUS_HOP_ID: hop.id, OLYMPUS_HOP_KIND: 'script' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const timer = setTimeout(() => {
+      try { child.kill('SIGKILL'); } catch { /* gone */ }
+      done({
+        ok: false, exitCode: null, output: out, tokensIn: 0, tokensOut: 0,
+        retriesAbsorbed: 0, exhausted: false,
+        error: `script-timeout (${timeoutMs}ms): ${(err || out).slice(-800)}`,
+        errorClass: 'script-timeout',
+      });
+    }, timeoutMs);
+    child.stdout?.on('data', (d) => { out = cap(out, String(d)); });
+    child.stderr?.on('data', (d) => { err = cap(err, String(d)); });
+    child.on('error', (e) => done({
+      ok: false, exitCode: null, output: out, tokensIn: 0, tokensOut: 0,
+      retriesAbsorbed: 0, exhausted: false, error: `script spawn failed: ${e.message}`,
+    }));
+    child.on('close', (code) => {
+      const output = err ? `${out}\n[stderr]\n${err}` : out;
+      if (code === 0) {
+        done({ ok: true, exitCode: 0, output, tokensIn: 0, tokensOut: 0, retriesAbsorbed: 0, exhausted: false });
+      } else {
+        done({
+          ok: false, exitCode: code, output, tokensIn: 0, tokensOut: 0,
+          retriesAbsorbed: 0, exhausted: false,
+          error: `script exit ${code}: ${(err || out).slice(-800)}`,
+          errorClass: 'script-failed',
+        });
+      }
+    });
+  });
+}
+
 /** One lane's attempt loop — the #107 crescendo, unchanged in behaviour. */
 type LaneOutcome =
   | { kind: 'ok'; result: HopDispatchResult }
@@ -1016,6 +1075,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       reasoning: r?.reasoning ?? undefined,
       sessionId: r?.sessionId ?? undefined,
       transport: r?.transport,
+      ...(r?.output ? { outputTail: String(r.output).slice(-2_000) } : {}),
     };
     appendHopTelemetry(stateDir, row);
     rows.push(row);
@@ -1113,7 +1173,9 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           try {
           let result: HopDispatchResult;
           try {
-            result = await dispatch(next, { laneRoot, prompt: await composeHopPromptWithRag(next, laneRoot) });
+            result = next.kind === 'script'
+              ? await runScriptHop(next, laneRoot)
+              : await dispatch(next, { laneRoot, prompt: await composeHopPromptWithRag(next, laneRoot) });
           } catch (e) {
             result = {
               ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,
@@ -1129,7 +1191,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           // dashboard/page.tsx, then the stream hung to the ceiling and the
           // walker parked a FINISHED hop for 10 minutes. Verify BEFORE
           // parking: an artifact that passes is a completed hop.
-          if (!result.ok) {
+          if (!result.ok && next.kind !== 'script') {
             const rescue = verifyHopDeterministic(next, laneRoot);
             if (rescue.ok) {
               result = { ...result, ok: true, error: `artifact rescue: ${result.error ?? 'dispatch failed after writing the artifacts'}` };
@@ -1150,6 +1212,9 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
               parkHop(next, 'verify-failed', verify.checks.find((c) => !c.ok)?.detail, verify);
               telemetryRow(next, result, 'parked-verify-failed', startedAt);
             }
+          } else if (next.kind === 'script') {
+            parkHop(next, 'script-failed', result.error);
+            telemetryRow(next, result, 'parked-script-failed', startedAt);
           } else if (result.exhausted) {
             parkHop(next, 'retry-exhausted', result.error);
             telemetryRow(next, result, 'parked-retry-exhausted', startedAt);
@@ -1187,6 +1252,8 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       } catch { /* the armor: settle NEVER rejects */ }
       // In-flight drained: either every hop completed, or a park stopped
       // the campaign. The result tells the truth.
+      const stopWalkHeartbeat = (inFlight as any).__stopHeartbeat as (() => void) | undefined;
+      if (stopWalkHeartbeat) stopWalkHeartbeat();
       resolveWalk();
     };
     const stopHeartbeat = (inFlight as any).__stopHeartbeat as (() => void) | undefined;

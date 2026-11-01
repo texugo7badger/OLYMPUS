@@ -22,10 +22,20 @@ export type HopReview = 'deterministic' | 'llm';
 export interface PlanHop {
   /** Unique, non-empty hop id (the resume + telemetry key). */
   id: string;
-  /** The god that executes this hop (one of the pantheon). */
+  /**
+   * v0.0.31 (R31-08): `llm` (default) dispatches to a god; `script` runs a
+   * deterministic shell command with ZERO LLM tokens and uses the exit code
+   * as the gate.
+   */
+  kind?: 'llm' | 'script';
+  /** The god that executes this hop. Script hops default to 'system'. */
   god: string;
   /** The spec SLICE for this hop — never the full campaign context. */
   prompt: string;
+  /** Script hops only: the command (run with bash -lc in the lane root). */
+  command?: string;
+  /** Script hops only: wall-clock ceiling (default 10 min, max 30 min). */
+  timeoutMs?: number;
   /** The artifacts this hop contracts to write (relative to laneRoot). */
   artifacts: string[];
   /** Optional skill invoked by this hop (for UI visibility, #225). */
@@ -89,8 +99,33 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
     if (!id || !ID_RE.test(id)) errors.push(`${where}.id: required, matching ${ID_RE.source}`);
     else if (ids.has(id)) errors.push(`${where}.id: duplicate hop id '${id}'`);
     else ids.add(id);
-    if (typeof h.god !== 'string' || !h.god.trim()) errors.push(`${where}.god: required non-empty string`);
-    if (typeof h.prompt !== 'string' || !h.prompt.trim()) errors.push(`${where}.prompt: required non-empty string (the spec slice)`);
+    const kind: 'llm' | 'script' = h.kind === 'script' ? 'script' : 'llm';
+    if (h.kind !== undefined && h.kind !== 'llm' && h.kind !== 'script') {
+      errors.push(`${where}.kind: 'llm' | 'script' (got ${JSON.stringify(h.kind)})`);
+    }
+    let scriptTimeout = 10 * 60_000;
+    if (kind === 'script') {
+      if (typeof h.command !== 'string' || !h.command.trim()) {
+        errors.push(`${where}.command: required non-empty string for a script hop`);
+      } else if (h.command.length > 8_000) {
+        errors.push(`${where}.command: ${h.command.length} chars exceeds 8000 — keep the script small and put the work in a repo script`);
+      }
+      if (h.timeoutMs !== undefined) {
+        if (typeof h.timeoutMs !== 'number' || !Number.isInteger(h.timeoutMs) || h.timeoutMs < 1_000 || h.timeoutMs > 30 * 60_000) {
+          errors.push(`${where}.timeoutMs: integer 1000..1800000`);
+        } else scriptTimeout = h.timeoutMs;
+      }
+      // god/prompt are optional for scripts; the defaults keep telemetry/UI honest.
+      if (h.god !== undefined && (typeof h.god !== 'string' || !h.god.trim())) {
+        errors.push(`${where}.god: when present, a non-empty string`);
+      }
+      if (h.prompt !== undefined && (typeof h.prompt !== 'string' || !h.prompt.trim())) {
+        errors.push(`${where}.prompt: when present, a non-empty string`);
+      }
+    } else {
+      if (typeof h.god !== 'string' || !h.god.trim()) errors.push(`${where}.god: required non-empty string`);
+      if (typeof h.prompt !== 'string' || !h.prompt.trim()) errors.push(`${where}.prompt: required non-empty string (the spec slice)`);
+    }
     if (!Array.isArray(h.artifacts) || h.artifacts.some((a) => typeof a !== 'string')) {
       errors.push(`${where}.artifacts: required array of relative path strings`);
     }
@@ -126,7 +161,14 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
       } else after = [...h.after];
     }
     hops.push({
-      id, god: h.god as string, prompt: h.prompt as string,
+      id, kind,
+      god: kind === 'script'
+        ? (typeof h.god === 'string' && h.god.trim() ? h.god : 'system')
+        : (h.god as string),
+      prompt: kind === 'script'
+        ? (typeof h.prompt === 'string' && h.prompt.trim() ? h.prompt : `Run the deterministic script: ${String(h.command).slice(0, 200)}`)
+        : (h.prompt as string),
+      ...(kind === 'script' ? { command: String(h.command), timeoutMs: scriptTimeout } : {}),
       artifacts: Array.isArray(h.artifacts) ? [...(h.artifacts as string[])] : [],
       skill: typeof h.skill === 'string' ? h.skill : undefined,
       mcp: typeof h.mcp === 'string' ? h.mcp : undefined,

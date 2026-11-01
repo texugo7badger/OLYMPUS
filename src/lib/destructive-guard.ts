@@ -123,9 +123,9 @@ export function backupProjectDatabases(laneRoot: string, now = new Date()): Data
  */
 export function backupBeforeDestructiveHop(
   laneRoot: string,
-  hop: { id?: string; prompt?: string; verify?: unknown },
+  hop: { id?: string; prompt?: string; command?: string; verify?: unknown },
 ): { needed: boolean; verdict: DestructiveVerdict; backup: DatabaseBackupResult | null; error?: string } {
-  const text = [hop.prompt ?? '', JSON.stringify(hop.verify ?? {})].join('\n');
+  const text = [hop.prompt ?? '', hop.command ?? '', JSON.stringify(hop.verify ?? {})].join('\n');
   const verdict = classifyDestructiveCommand(text);
   if (!verdict.destructive) return { needed: false, verdict, backup: null };
   const dbs = findProjectDatabases(laneRoot);
