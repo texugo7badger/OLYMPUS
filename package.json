@@ -83,7 +83,8 @@
     "local:probe": "node scripts/local-llm-probe.js",
     "badges:update": "node scripts/update-badges.mjs",
     "measure:close": "npx tsx scripts/measure-close.test.mjs",
-    "opencode:gate": "node scripts/opencode-gate.mjs"
+    "opencode:gate": "node scripts/opencode-gate.mjs",
+    "repo:privacy": "node scripts/check-repo-privacy.mjs"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
