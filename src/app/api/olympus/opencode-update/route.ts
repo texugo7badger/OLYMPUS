@@ -18,6 +18,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { checkOpencodeUpdate, resetOpencodeUpdateCache } from '@/lib/opencode-update';
 import { findOlympusRoot } from '@/lib/opencode-spawn';
@@ -59,10 +60,36 @@ function cliBinIsStub(root: string): boolean {
   }
 }
 
+/**
+ * Epic L — the gate report for one candidate version. `approved` only when
+ * the report exists, names the same version and passed every check.
+ */
+function readGateReport(version: string | null): {
+  approved: boolean;
+  version: string | null;
+  checkedAt?: string;
+  reportPath: string;
+} | null {
+  if (!version) return null;
+  const reportPath = path.join(os.homedir(), '.olympus', 'opencode-updates', version, 'report.json');
+  try {
+    const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+    return {
+      approved: report?.approved === true && report?.version === version,
+      version,
+      checkedAt: typeof report?.checkedAt === 'string' ? report.checkedAt : undefined,
+      reportPath,
+    };
+  } catch {
+    return { approved: false, version, reportPath };
+  }
+}
+
 export async function GET(req: NextRequest) {
   const force = new URL(req.url).searchParams.get('force') === '1';
   const status = await checkOpencodeUpdate({ force });
-  return NextResponse.json(status, {
+  const gate = readGateReport(status.latest);
+  return NextResponse.json({ ...status, gate }, {
     headers: { 'Cache-Control': 'no-store, max-age=0, must-revalidate' },
   });
 }
@@ -74,8 +101,35 @@ export async function POST(req: NextRequest) {
   if (applying) {
     return NextResponse.json({ ok: false, error: 'An update is already running.' }, { status: 409 });
   }
-  applying = true;
   const root = findOlympusRoot();
+  const status = await checkOpencodeUpdate({ force: true, root });
+  if (!status.latest) {
+    return NextResponse.json({
+      ok: false,
+      error: 'The npm registry could not be reached — refusing to update blind.',
+      installed: status.installed,
+    }, { status: 503 });
+  }
+  if (!status.updateAvailable) {
+    return NextResponse.json({
+      ok: true,
+      installed: status.installed,
+      latest: status.latest,
+      updateAvailable: false,
+      restartRequired: false,
+      message: 'Already on the latest OpenCode CLI.',
+    });
+  }
+  const gate = readGateReport(status.latest);
+  if (!gate?.approved) {
+    return NextResponse.json({
+      ok: false,
+      error: `OpenCode ${status.latest} has not passed the conformance gate. Run the gate first; an untested CLI update can break sessions, the v2 API, MCP and the DB schema.`,
+      gate,
+      gateCommand: `npm run opencode:gate -- --version ${status.latest} --install`,
+    }, { status: 409 });
+  }
+  applying = true;
   try {
     const install = await run(
       'npm',
