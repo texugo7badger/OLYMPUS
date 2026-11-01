@@ -434,6 +434,9 @@ function waitForNext(): Promise<void> {
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let hibernating = false;
+let hibernationWatch: ReturnType<typeof setInterval> | null = null;
+const HIBERNATION_MARKER = join(nodeOs.homedir(), '.olympus', 'hibernation.json');
 // Extend the app type to track quitting state.
 declare global {
   // Declaration merging requires a namespace (the Electron App type).
@@ -611,7 +614,105 @@ function notifyDesktop(title: string, body: string): void {
   } catch { /* notifications are optional */ }
 }
 
+
+function writeHibernationMarker(active: boolean): void {
+  try {
+    mkdirSync(dirname(HIBERNATION_MARKER), { recursive: true });
+    writeFileSync(HIBERNATION_MARKER, JSON.stringify({ active, at: new Date().toISOString() }, null, 2) + '\n', 'utf-8');
+  } catch { /* diagnostics only */ }
+}
+
+function getJson(pathname: string): Promise<any> {
+  return new Promise((resolve) => {
+    const req = http.get(`${BASE_URL}${pathname}`, { timeout: 5_000 }, (res) => {
+      let text = '';
+      res.on('data', (d) => { text += String(d); });
+      res.on('end', () => { try { resolve(JSON.parse(text)); } catch { resolve(null); } });
+    });
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.on('error', () => resolve(null));
+  });
+}
+
+function postJson(pathname: string, body: unknown): Promise<any> {
+  return new Promise((resolve) => {
+    const payload = JSON.stringify(body ?? {});
+    const req = http.request(`${BASE_URL}${pathname}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+      timeout: 5_000,
+    }, (res) => {
+      let text = '';
+      res.on('data', (d) => { text += String(d); });
+      res.on('end', () => { try { resolve(JSON.parse(text)); } catch { resolve(null); } });
+    });
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.on('error', () => resolve(null));
+    req.write(payload);
+    req.end();
+  });
+}
+
+/**
+ * Hibernation: keep the campaign worker (Next/opencode hop lane) alive and
+ * notifications on, but free the UI. The renderer is DESTROYED (not hidden);
+ * the app chat server on :3777 is stopped. The live preview stays up unless
+ * the user stops it (a visual hop may need it).
+ */
+function hibernateNow(): void {
+  if (hibernating) return;
+  hibernating = true;
+  writeHibernationMarker(true);
+  try { tray?.setToolTip('OLYMPUS — hibernating (campaign running; notifications on)'); } catch { /* tray gone */ }
+  void postJson('/api/olympus/chat/hibernate', {});
+  if (mainWindow) {
+    try { mainWindow.destroy(); } catch { /* already gone */ }
+    mainWindow = null;
+  }
+  startHibernationWatch();
+  notifyDesktop('OLYMPUS hibernating', 'The window is closed; the campaign keeps running and you will be notified on done/park.');
+  console.log('[olympus:hibernate] renderer destroyed, chat server stopped, campaign stays alive');
+}
+
+function startHibernationWatch(): void {
+  if (hibernationWatch) return;
+  let baseline = true;
+  let lastKey = '';
+  hibernationWatch = setInterval(async () => {
+    const d = await getJson('/api/olympus/run-state');
+    if (!d) return;
+    const completed = d?.hops?.completed ?? 0;
+    const total = d?.hops?.completed != null ? undefined : undefined;
+    const parked = d?.hops?.parked ?? null;
+    const key = `${d?.verdict ?? ''}|${completed}|${parked?.hopId ?? ''}`;
+    if (baseline) { baseline = false; lastKey = key; return; }
+    if (key === lastKey) return;
+    const prev = lastKey.split('|');
+    lastKey = key;
+    if (parked && parked.hopId !== prev[2]) {
+      notifyDesktop('OLYMPUS — hop parked', `${parked.hopId} (${parked.reason ?? 'parked'}). The campaign continues; open OLYMPUS to resume.`);
+    } else if (completed > Number(prev[1] ?? 0)) {
+      notifyDesktop('OLYMPUS — hop done', `${completed} hop(s) ok.`);
+    } else {
+      notifyDesktop('OLYMPUS', d?.line ?? 'Campaign state changed.');
+    }
+  }, 15_000);
+  hibernationWatch.unref?.();
+}
+
+function stopHibernationWatch(): void {
+  if (hibernationWatch) clearInterval(hibernationWatch);
+  hibernationWatch = null;
+}
+
 function createWindow() {
+  if (hibernating) {
+    hibernating = false;
+    writeHibernationMarker(false);
+    stopHibernationWatch();
+    try { tray?.setToolTip('OLYMPUS — click to restore'); } catch { /* tray gone */ }
+    console.log('[olympus:hibernate] waking — window recreated');
+  }
   mainWindow = new BrowserWindow(buildWindowOptions());
 
   mainWindow.once('ready-to-show', () => {
@@ -758,6 +859,7 @@ button:hover{background:#D4A57433}
       const contextMenu = Menu.buildFromTemplate([
         { label: 'Show OLYMPUS', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } else createWindow(); } },
         { label: 'Hide to tray', click: () => { if (mainWindow) mainWindow.hide(); } },
+        { label: 'Hibernate (low memory)', click: () => hibernateNow() },
         { type: 'separator' },
         { label: 'Quit OLYMPUS', click: () => { app.isQuitting = true; app.quit(); } },
       ]);
@@ -1289,6 +1391,8 @@ if (!gotLock) {
       mainWindow.focus();
     }
   });
+
+  app.on('before-quit', () => { writeHibernationMarker(false); stopHibernationWatch(); });
 
   app.whenReady().then(async () => {
     // #V0.0.20: Auto-heal on boot — reconcile llm-providers.json with
