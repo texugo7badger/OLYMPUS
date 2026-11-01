@@ -35,7 +35,7 @@ import { composeRagContext } from '../rag-inject';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
-import { spawnOpencode, findOlympusRoot } from '@/lib/opencode-spawn';
+import { findOlympusRoot } from '@/lib/opencode-spawn';
 import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencode-session';
 import { markLaneAlive, markLaneDead, laneChain, isLaneDeadClass } from '@/lib/lane-health';
 import { FREE_HYBRID_ROSTER } from '@/lib/model-strategies';
@@ -379,55 +379,6 @@ export const HOP_FIRST_BYTE_MARKER = 'hop-first-byte-timeout';
 export function resolveHopFirstByteMs(env: NodeJS.ProcessEnv = process.env): number {
   const n = Number.parseInt(env.OLYMPUS_HOP_FIRST_BYTE_MS ?? '', 10);
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_HOP_FIRST_BYTE_MS;
-}
-
-function runSpawn(args: string[], hopCwd: string, timeoutMs: number, laneGod?: string): Promise<{ code: number | null; stdout: string; stderr: string }> {
-  return new Promise((resolveP) => {
-    // #81 (D17/D20): the deterministic-spawn COST STAMP — the hop's god rides
-    // the child's environment, so every cost row from this session resolves
-    // its god WITHOUT the in-band agent or event ordering (the agent-less
-    // one-shot rows that fell to 'global').
-    const child = spawnOpencode(args, { cwd: hopCwd, extraEnv: laneGod ? { OLYMPUS_LANE_GOD: laneGod } : undefined });
-    let stdout = '';
-    let stderr = '';
-    let firstByteAt: number | null = null;
-    const timer = setTimeout(() => {
-      try { child.kill('SIGKILL'); } catch { /* already gone */ }
-    }, timeoutMs);
-    // #FIRST-BYTE: a mute child is a stalled pool, not a slow hop — kill at
-    // the deadline and NAME the class on stderr (the classifier reads it).
-    const firstByteTimer = setTimeout(() => {
-      if (firstByteAt !== null) return;
-      try { child.kill('SIGKILL'); } catch { /* already gone */ }
-      stderr += `\n${HOP_FIRST_BYTE_MARKER} (OLYMPUS_HOP_FIRST_BYTE_MS ${resolveHopFirstByteMs()}ms): the turn produced ZERO output — the provider pool stalled before the first token (the empty-reasoning stall class; transient pool contention — retries absorb it)`;
-    }, resolveHopFirstByteMs());
-    // #ROLLING-SILENCE (the fixtures specimen, 05:28→05:42): the MID-RUN
-    // stall class — the child EMITTED its first bytes (first-byte is happy)
-    // then froze on a step-2 provider request for the rest of the ceiling.
-    // The rolling deadline resets on every stdout chunk: a live hop is
-    // never silent for long (its json events stream per turn); a stalled
-    // one dies at the deadline, NAMED, retried. 600s default — above the
-    // longest legitimate silent window (a cold `npm install` can take 2-4
-    // quiet minutes; the deadline must never kill live work).
-    const silenceMs = resolveHopSilenceMs();
-    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
-    const armSilence = () => {
-      if (silenceTimer) clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(() => {
-        try { child.kill('SIGKILL'); } catch { /* already gone */ }
-        stderr += `\n${HOP_FIRST_BYTE_MARKER} (OLYMPUS_HOP_SILENCE_MS ${silenceMs}ms rolling): the turn went SILENT mid-run after producing output — a step's provider request stalled (the fixtures step-2 class; transient pool contention — retries absorb it)`;
-      }, silenceMs);
-    };
-    child.stdout?.on('data', (d) => {
-      if (firstByteAt === null && String(d).trim()) firstByteAt = Date.now();
-      stdout += String(d);
-      if (String(d).trim()) armSilence();
-    });
-    child.stderr?.on('data', (d) => { stderr += String(d); });
-    child.on('error', (e) => { clearTimeout(timer); clearTimeout(firstByteTimer); if (silenceTimer) clearTimeout(silenceTimer); resolveP({ code: -1, stdout, stderr: stderr + String(e) }); });
-    child.on('close', (code) => { clearTimeout(timer); clearTimeout(firstByteTimer); if (silenceTimer) clearTimeout(silenceTimer); resolveP({ code, stdout, stderr }); });
-    armSilence();
-  });
 }
 
 /**
