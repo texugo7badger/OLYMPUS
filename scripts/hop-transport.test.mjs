@@ -118,6 +118,60 @@ function fakeServer(opts = { failCreate: false }) {
   __clearHopServersForTest();
 }
 
+// T3b — a v2 ACK that stalls MUST be a failure (R31-01).
+//
+// The v2 prompt POST returns 200 as soon as the turn is queued. The old
+// client kept code 0 after the SSE watchdog aborted for silence, so
+// AutoTransport never failed over to spawn (the AIME v8-back-nav double
+// park). This pins the contract: a stall returns code null + the marker.
+function v2StallServer() {
+  const srv = http.createServer((req, res) => {
+    const url = req.url || '';
+    if (req.method === 'GET' && url === '/config') { res.writeHead(200); res.end('{}'); return; }
+    if (req.method === 'GET' && url === '/api/session') { res.writeHead(200); res.end('{"data":[]}'); return; }
+    if (req.method === 'GET' && url === '/api/event') {
+      res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
+      res.write(`data: ${JSON.stringify({ type: 'step-start' })}\n\n`);
+      // Go silent: the turn stalls after the first byte.
+      return;
+    }
+    if (req.method === 'POST' && url === '/api/session') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ id: 'ses_stall' }));
+      return;
+    }
+    if (req.method === 'POST' && /^\/api\/session\/ses_stall\/(agent|model)$/.test(url)) {
+      res.writeHead(204); res.end(); return;
+    }
+    if (req.method === 'POST' && url === '/api/session/ses_stall/prompt') {
+      res.writeHead(200, { 'content-type': 'application/json' }); res.end('{}'); return;
+    }
+    if (req.method === 'GET' && url === '/api/session/ses_stall/message') {
+      res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"data":[]}'); return;
+    }
+    res.writeHead(404); res.end('nope');
+  });
+  return new Promise((resolve) => srv.listen(0, '127.0.0.1', () => resolve({ srv, port: srv.address().port })));
+}
+
+{
+  __clearHopServersForTest();
+  const { srv, port } = await v2StallServer();
+  __registerHopServerForTest(ROOT, { port, password: 'pw', protocol: 'v2' });
+  const r = await runWarmHop({
+    laneRoot: ROOT,
+    agent: 'athena',
+    text: 'hello',
+    timeoutMs: 8_000,
+    firstByteMs: 4_000,
+    silenceMs: 400,
+  });
+  expect('T3b a v2 stall returns code null (ACK is not success)', r.code === null, `code=${r.code} ${r.stderr.slice(0, 200)}`);
+  expect('T3b the stall names the silence class', /hop-first-byte-timeout|SILENT/i.test(r.stderr), r.stderr.slice(0, 200));
+  srv.close();
+  __clearHopServersForTest();
+}
+
 // T4 — fallback.
 {
   __clearHopServersForTest();

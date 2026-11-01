@@ -324,6 +324,50 @@ export interface WarmHopResult {
   sessionId: string | null;
 }
 
+/**
+ * Read the session's cumulative token totals from the hop DB (R31-07).
+ *
+ * The synthesized stdout only carried the LAST assistant step's tokens, and
+ * the v2 assistant message has no `step-finish` part at all — so every warm
+ * hop reported null. The truth is in `session_v2.tokens_*` (cumulative for
+ * the session). Read-only; never blocks the turn.
+ */
+async function readSessionTotals(
+  sessionId: string | null,
+): Promise<{ input: number; output: number; cacheRead: number; reasoning: number } | null> {
+  if (!sessionId) return null;
+  const dbPath = path.join(olympusHome(), 'hop-data', 'opencode', 'opencode.db');
+  if (!fs.existsSync(dbPath)) return null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const mod: any = await import('better-sqlite3');
+      const Database = mod?.default ?? mod;
+      const db = new Database(dbPath, { readonly: true });
+      try {
+        const row = db
+          .prepare('SELECT tokens_input, tokens_output, tokens_cache_read, tokens_reasoning FROM session_v2 WHERE id = ?')
+          .get(sessionId) as any;
+        if (row) {
+          const input = Number(row.tokens_input) || 0;
+          const output = Number(row.tokens_output) || 0;
+          if (input > 0 || output > 0) {
+            return {
+              input,
+              output,
+              cacheRead: Number(row.tokens_cache_read) || 0,
+              reasoning: Number(row.tokens_reasoning) || 0,
+            };
+          }
+        }
+      } finally {
+        db.close();
+      }
+    } catch { /* native module or lock — retry, then give up honestly */ }
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  return null;
+}
+
 /** Read the session message list (v2 envelope normalized). */
 async function readMessages(server: WarmServerInfo, sessionId: string): Promise<any[]> {
   const pathname = v2Path(server, `/session/${sessionId}/message`);
@@ -535,13 +579,38 @@ export async function runWarmHop(opts: {
     server.lastUsed = Date.now();
   }
 
+  // 3b) A STALL IS A FAILURE, EVEN WHEN THE POST RETURNED 200 (R31-01).
+  //
+  // The v2 prompt POST is an ACK: it returns 200 as soon as the message is
+  // queued. When the SSE watcher later aborts the turn for first-byte/silence
+  // (or the poll hits the ceiling), `code` was still 0 — so AutoTransport never
+  // saw a failure and never failed over to spawn. The AIME `v8-back-nav` hop
+  // parked twice on exactly this path (20m43s + 10m28s) while the spawn lane
+  // was healthy. A typed stall now clears the ACK.
+  const stalled = [...errors, ...sse.errors].some((e) =>
+    /hop-first-byte-timeout|ceiling-kill|provider\.|SILENT/i.test(String(e)));
+  if (stalled) code = null;
+
   // 4) synthetic stdout (the walker's existing parser reads this dialect)
   const acc = { text: '', reasoning: '', tokensIn: 0, tokensOut: 0, sessionId };
   try { collectParts(JSON.parse(raw), acc); } catch { /* not JSON */ }
+  // The session row is the only truthful token source on v2 (R31-07).
+  const totals = await readSessionTotals(sessionId);
+  const cacheRead = totals?.cacheRead ?? 0;
+  if (totals) { acc.tokensIn = totals.input; acc.tokensOut = totals.output; }
   const lines: string[] = [];
   if (acc.text) lines.push(JSON.stringify({ type: 'text', text: acc.text }));
   if (acc.reasoning) lines.push(JSON.stringify({ type: 'reasoning', text: acc.reasoning }));
-  if (acc.tokensIn || acc.tokensOut) lines.push(JSON.stringify({ type: 'step-finish', tokens: { input: acc.tokensIn, output: acc.tokensOut } }));
+  if (acc.tokensIn || acc.tokensOut) {
+    lines.push(JSON.stringify({
+      type: 'step-finish',
+      tokens: {
+        input: acc.tokensIn,
+        output: acc.tokensOut,
+        ...(cacheRead ? { cache: { read: cacheRead } } : {}),
+      },
+    }));
+  }
   if (sessionId) lines.push(JSON.stringify({ sessionID: sessionId }));
   for (const err of [...new Set([...errors, ...sse.errors])]) lines.push(JSON.stringify({ type: 'error', error: { type: 'warm-transport', message: err } }));
 
