@@ -928,17 +928,34 @@ async function dispatchExecuteInner(args: {
           const equipPath = path.join(os.homedir(), '.olympus', 'equipped-mcps.json');
           const equipDir = path.dirname(equipPath);
           if (!fs.existsSync(equipDir)) fs.mkdirSync(equipDir, { recursive: true });
-          let existing: string[] = [];
+          // v0.0.30 — the equip is scoped to the god and the session. The
+          // old global array let Athena unlock an MCP for Hephaestus (and
+          // vice versa) for the rest of the process lifetime.
+          const state: { byGod: Record<string, string[]>; bySession: Record<string, string[]> } = {
+            byGod: {}, bySession: {},
+          };
           if (fs.existsSync(equipPath)) {
             try {
               const raw = JSON.parse(fs.readFileSync(equipPath, 'utf-8'));
-              if (Array.isArray(raw)) existing = raw.map(String);
+              if (Array.isArray(raw)) {
+                // Migrate a legacy global array into the owning god's bucket.
+                state.byGod[String(parentGod || args.godId || 'apollo').toLowerCase()] = raw.map(String);
+              } else if (raw && typeof raw === 'object') {
+                for (const [g, list] of Object.entries(raw.byGod ?? {})) {
+                  if (Array.isArray(list)) state.byGod[g] = list.map(String);
+                }
+                for (const [s, list] of Object.entries(raw.bySession ?? {})) {
+                  if (Array.isArray(list)) state.bySession[s] = list.map(String);
+                }
+              }
             } catch {}
           }
-          if (!existing.includes(mcp)) {
-            existing.push(mcp);
-            fs.writeFileSync(equipPath, JSON.stringify(existing, null, 2), 'utf-8');
-          }
+          const godKey = String(parentGod || args.godId || 'apollo').toLowerCase();
+          const sid = String(context.sessionID || '');
+          const add = (bucket: string[]) => { if (!bucket.includes(mcp)) bucket.push(mcp); };
+          add((state.byGod[godKey] ||= []));
+          if (sid) add((state.bySession[sid] ||= []));
+          fs.writeFileSync(equipPath, JSON.stringify(state, null, 2), 'utf-8');
         } catch {
           // Non-fatal — the MCP equip is an auxiliary convenience, not a
           // dispatch record; the god may have to re-equip the MCP on the

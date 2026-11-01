@@ -83,6 +83,17 @@ async function main() {
 
   const lane = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-tasks-'));
   const NOW = Date.now();
+  // v0.0.30 — running requires LIVE evidence, not just an inFlight row. The
+  // fixture is a live campaign: write the walk lock with this process's pid
+  // and the current boot id, exactly as the walker does.
+  const bootId = fs.readFileSync('/proc/sys/kernel/random/boot_id', 'utf-8').trim();
+  fs.writeFileSync(path.join(lane, '.olympus-walk.lock'), JSON.stringify({
+    pid: process.pid,
+    bootId,
+    campaignId: 'cmp_fixture',
+    slug: 'fixture',
+    startedAt: new Date(NOW - 60_000).toISOString(),
+  }));
   // The plan: 5 hops — h1/h2 done (hephaestus), h3 RUNNING (hephaestus,
   // started 60s ago), h4/h5 pending (athena).
   fs.writeFileSync(path.join(lane, 'dispatch-plan.json'), JSON.stringify({

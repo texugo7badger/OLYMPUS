@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { McpCanonicalEntry } from './mcp-shape';
 import { expandMcpPlaceholders } from './mcp-shape';
+import { loadIntegrationEnv } from './integration-env';
 
 export type McpProbeStatus =
   | 'alive'
@@ -45,6 +46,8 @@ export interface ProbeOptions {
   timeoutMs?: number;
   /** Expand {env:}/{${}} placeholders before spawning. Default true. */
   expand?: boolean;
+  /** The merged env for placeholder expansion + the child process. */
+  env?: NodeJS.ProcessEnv;
 }
 
 const INIT = {
@@ -70,9 +73,17 @@ function probeLocal(entry: McpCanonicalEntry, opts: ProbeOptions): Promise<McpPr
   if (command.length === 0) {
     return Promise.resolve({ name, status: 'dead', latencyMs: 0, error: 'no command', checkedAt: Date.now() });
   }
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  for (const [k, v] of Object.entries(entry.environment ?? {})) env[k] = expanded(v, opts);
-  const cwd = entry.cwd ? expanded(entry.cwd, opts) : opts.cwd;
+  // v0.0.30 — the probe must see the SAME keys the spawned MCP will see.
+  // `probeMcp` merges api-configs.json + .env + process.env; entry.environment
+  // wins over both.
+  const baseEnv: NodeJS.ProcessEnv = opts.env ?? {
+    ...loadIntegrationEnv({ root: opts.cwd, processEnv: {} }),
+    ...process.env,
+  };
+  const env: NodeJS.ProcessEnv = { ...baseEnv };
+  const localOpts: ProbeOptions = { ...opts, env };
+  for (const [k, v] of Object.entries(entry.environment ?? {})) env[k] = expanded(v, localOpts);
+  const cwd = entry.cwd ? expanded(entry.cwd, localOpts) : opts.cwd;
 
   return new Promise((resolve) => {
     let settled = false;
@@ -224,7 +235,12 @@ export async function probeMcp(entry: McpCanonicalEntry, opts: ProbeOptions = {}
   if (!entry.enabled) {
     return { name: entry.name, status: 'disabled', latencyMs: 0, checkedAt: Date.now() };
   }
-  return entry.type === 'remote' ? probeRemote(entry, opts) : probeLocal(entry, opts);
+  const env = opts.env ?? {
+    ...loadIntegrationEnv({ root: opts.cwd, processEnv: {} }),
+    ...process.env,
+  };
+  const next: ProbeOptions = opts.env ? opts : { ...opts, env };
+  return entry.type === 'remote' ? probeRemote(entry, next) : probeLocal(entry, next);
 }
 
 /** Probe a batch with bounded concurrency (the panel never spawns 28 at once). */

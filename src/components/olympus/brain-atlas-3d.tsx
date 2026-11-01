@@ -96,9 +96,9 @@ import { buildOlympusBrainGraph, emptyOlympusBrainGraph } from '@/lib/olympus-br
 /* Constants.                                                          */
 /* ------------------------------------------------------------------ */
 const GOD_NAMES: Record<string, string> = {
-  apollo: 'Apollo', hephaestus: 'Hephaestus', athena: 'Athena', hermes: 'Hermes',
+  apollo: 'Apollo', atlas: 'Atlas', hephaestus: 'Hephaestus', athena: 'Athena', hermes: 'Hermes',
   artemis: 'Artemis', dionysus: 'Dionysus', persephone: 'Persephone', prometheus: 'Prometheus',
-  // Callimachus (9th god, background vault curator) added.
+  // Callimachus (vault curator) added.
   callimachus: 'Callimachus',
 };
 

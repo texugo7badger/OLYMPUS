@@ -1,6 +1,16 @@
 # OLYMPUS Agents
 
 > AGPL-3.0-or-later · GO-primary · Apollo-primary · OpenCode-based · 10 gods · 122 demigods · Symphony protocol · Standalone Electron desktop app
+>
+> **v0.0.30 truth notes.** Atlas is counted as a god everywhere (10 gods +
+> 122 demigods = 132 agents; the old header said 131 because three
+> `GOD_NAMES` lists omitted Atlas). The committed MCP default is the curated
+> six (44 tools); a campaign's `hop.mcp` + the curated baseline now filter
+> the lane config (`src/lib/mcp-run-manifest.ts`), so a walk no longer
+> spawns the full 16-server fleet. The context indicator reads the OpenCode
+> v2 SQLite tables and shows "—" when it cannot verify; never a fake 0%.
+> Cost is shown as **step cost / list value / invoice unknown**, never a
+> silent sum.
 
 ## The 10 Gods
 
@@ -46,7 +56,7 @@ Demigods are **unprefixed** — a demigod is `build-resolver`, not `hephaestus-b
 
 > **Editor Bridge:** OLYMPUS does not ship a built-in code editor. Gods edit code by launching the user's preferred external editor (Zed, VSCode, VSCodium, Cursor) on the active project via the Editor Bridge tab. The live terminal is shared between the Electron app and the user's IDE via the Terminal Bridge (port 3740) — see [EDITORS.md](EDITORS.md). Agent dispatch + Symphony + instinct system are unchanged.
 
-> **Strategy engine + teams (v0.0.23):** DeepSeek V4.1 Flash (1017) is the preferred lane across the GO strategies — it replaced DeepSeek V4 Pro and GLM-5.3-Flash on the quality roles; BYOK is deleted (every provider, OpenRouter and NVIDIA included, is registered in OpenCode and chosen in the Strategy Builder). A hop's god leads a TEAM: the arsenal directive requires 2–5 independent demigods in one parallel wave, artifact verification, and a synthesis that reports the chain — trivial hops work alone. The MCP arsenal is measured (`scripts/mcp-audit.ts`) and curated to 44 tools by default (filesystem, memory, git, context7, sequential-thinking, olympus-craft); heavy servers (rea 207 tools, grafana 79, comfyui 41) are opt-in.
+> **Strategy engine + teams (v0.0.23):** DeepSeek V4.1 Flash (1017) is the preferred lane across the GO strategies — it replaced DeepSeek V4 Pro and GLM-5.3-Flash on the quality roles; BYOK is deleted (every provider, OpenRouter and NVIDIA included, is registered in OpenCode and chosen in the Strategy Builder). A hop's god leads a TEAM: the arsenal directive requires 2–5 independent demigods in one parallel wave, artifact verification, and a synthesis that reports the chain — trivial hops work alone. The MCP arsenal is measured (`scripts/mcp-audit.ts`) and curated to 44 tools by default (filesystem, memory, git, context7, sequential-thinking, olympus-craft); heavy servers (rea 207 tools, grafana 79, comfyui 41) are opt-in. A campaign's plan declares `hop.mcp`; the run manifest adds the curated baseline, drops known-broken servers, and filters the lane's `opencode.json` before the warm server starts. The old "44 tools" line is the committed default, not a claim about a local working tree.
 
 > **Local lane + telemetry (v0.0.22):** the free tier is **retired**. The zero-cost path is **`local`** — the user's own hardware (Ollama `:11434`, LM Studio `:1234`, vLLM `:8000`, llama.cpp `:8080`, or any OpenAI-compatible endpoint). `scripts/local-llm-probe.js` probes all five; `apply-strategy local` wires the `local/<model>` ids into the full 132-agent config and REFUSES with the probe table when nothing answers (see [LOCAL-LLM.md](LOCAL-LLM.md)). Paid paths: the GO strategies (`go-max-quality`, `go-balanced`, `go-budget`), and the Zen strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`). **Models are lanes; the cable carries context** — the gods share context through Symphony regardless of which pool each god rides. **Sessions are lanes; the disk carries the campaign** (#109's hop runtime) — an architectural task is a DETERMINISTIC SPINE (a script, zero LLM tokens) walking SMALL LLM HOPS (`src/lib/hop-runtime/`): Apollo emits `dispatch-plan.json` (a DAG of ≤16k-token hops, one god each, artifacts on disk), the walker dispatches per hop on the god's lane, verifies deterministic-first (0 tokens), and PARKS on exhaustion with resume — a burst kills one hop, never a 5-minute run. Every instinct gate evaluation is logged to `~/OLYMPUS-VAULT/05_Auto_Learning/shortcircuit-log.jsonl` for live telemetry (see the Short-Circuit Health panel in the God Intelligence Dashboard). Vault TTL pruning prevents unbounded growth (see [BENCHMARKS.md](BENCHMARKS.md)).
 

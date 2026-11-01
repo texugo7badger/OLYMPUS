@@ -8,7 +8,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 export declare const CONFIDENCE_THRESHOLD = 0.85;
-export declare function registerSessionAgent(sessionID: string, agent: string): void;
+export declare function registerSessionAgent(sessionID: string, agent: string, god?: string): void;
 /**
  * W-A RAG-CERT A5: the un-stub. The old form hardcoded
  * {scope:'god', agent:'apollo'} for every session — every god's interactive
@@ -20,6 +20,7 @@ export declare function registerSessionAgent(sessionID: string, agent: string): 
 export declare function getActiveScopeAndAgent(sessionID: string): {
     scope: "god" | "sub-agent";
     agent: string;
+    god: string;
 };
 /**
  * W-A RAG-CERT A5: the shortcircuit-log.jsonl WRITER — the telemetry row the

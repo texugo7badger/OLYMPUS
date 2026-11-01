@@ -233,14 +233,22 @@ function readUsageFromDb(sessionId?: string): {
   try {
     const db = new Database(dbPath, { readonly: true });
     try {
+      // v0.0.30 — THE TABLE NAME MOVED. OpenCode 2.2.5 stores sessions in
+      // `session_v2` / `session_message`; the old code queried `session` /
+      // `message`, which do not exist, so the query threw and the route fell
+      // back to JSON files (also absent) → a permanent "ctx 0%". Detect the
+      // schema once and use the right pair.
+      const hasV2 = !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='session_v2'").get();
+      const sessionTable = hasV2 ? 'session_v2' : 'session';
+      const messageTable = hasV2 ? 'session_message' : 'message';
       let row: any = null;
       if (sessionId) {
-        row = db.prepare('SELECT * FROM session WHERE id = ? LIMIT 1').get(sessionId);
+        row = db.prepare(`SELECT * FROM ${sessionTable} WHERE id = ? LIMIT 1`).get(sessionId);
       }
       if (!row) {
         // Fall back to the most recently-updated session (matches the old
         // "newest session file" behavior).
-        row = db.prepare('SELECT * FROM session ORDER BY time_updated DESC LIMIT 1').get();
+        row = db.prepare(`SELECT * FROM ${sessionTable} ORDER BY time_updated DESC LIMIT 1`).get();
       }
       if (!row) return null;
 
@@ -257,12 +265,21 @@ function readUsageFromDb(sessionId?: string): {
       let used: number | null = null;
       try {
         const msgs = db
-          .prepare('SELECT data FROM message WHERE session_id = ? ORDER BY time_created DESC LIMIT 5')
+          .prepare(`SELECT data FROM ${messageTable} WHERE session_id = ? ORDER BY time_created DESC LIMIT 5`)
           .all(row.id) as Array<{ data: string }>;
         for (const m of msgs) {
           const d = JSON.parse(m.data);
           const t = Number(d?.tokens?.total);
           if (Number.isFinite(t) && t > 0) { used = t; break; }
+          // v2 assistant rows carry { input, output, reasoning, cache:{read,write} }
+          // and no `total`. The context as it stood on the last turn is the
+          // sum of those fields (cache.read is the cached prompt prefix).
+          const tk = d?.tokens;
+          if (tk && typeof tk === 'object') {
+            const calc = Number(tk.input || 0) + Number(tk.output || 0)
+              + Number(tk.reasoning || 0) + Number(tk.cache?.read || 0);
+            if (Number.isFinite(calc) && calc > 0) { used = calc; break; }
+          }
         }
       } catch {}
       if (used == null) {
@@ -351,6 +368,8 @@ export interface ContextUsageResponse {
   model?: string;
   /** ISO mtime of the session file we read (for client-side freshness checks). */
   sessionMtime?: string;
+  /** v0.0.30 — true when there is no readable session; the UI shows "—". */
+  unknown?: boolean;
 }
 
 /**
@@ -535,6 +554,9 @@ function emptyResponse(): ContextUsageResponse {
     limit: DEFAULT_CONTEXT_LIMIT,
     percentage: 0,
     quality: 'good',
+    // The old shape told the UI "0%" — a lie when the session source is
+    // unreadable. "unknown" renders "—" instead.
+    unknown: true,
   };
 }
 

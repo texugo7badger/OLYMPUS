@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.29, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.30, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -23,7 +23,7 @@ OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencod
 - **Three ways to run.** The GO plan (flat monthly, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps), or **Local** — your own hardware (Ollama, LM Studio, vLLM, llama.cpp, or any OpenAI-compatible endpoint). The zero-cost path is the local lane, and it tells you exactly what it found (see [LOCAL-LLM.md](LOCAL-LLM.md)).
 - **10 gods + 122 demigods (132 agents).** Apollo is the only god who talks to you; the other 9 are dispatched by Apollo via Symphony.
 - **The Craft Apps inside (v0.0.8).** The thirteen open-source ArtCraft apps (image editor, vector illustration, video, PDF, word processing, CAD, spreadsheets) are DOWNLOADED INTO OLYMPUS — the self-hosted web builds run embedded from your own disk (no login, ever; auto-update ON), the native portable builds open as real OS windows, and the `olympus-craft` MCP gives the agents headless CLI/JSON control. The AI crafting Studio rides the live lane.
-- **Self-curating brain.** Each god maintains an instinct pool — empirical patterns that, at confidence ≥ 0.85, **short-circuit** deliberation. OLYMPUS gets faster and cheaper with use. Live telemetry in the God Intelligence Dashboard shows the short-circuit hit rate + tokens saved.
+- **Self-curating brain.** Each god maintains an instinct pool — empirical patterns that, at confidence ≥ 0.85, **short-circuit** deliberation. The design intent is that OLYMPUS gets faster and cheaper with use; the 2026-10-31 measured baseline shows the gate is still **0/2,999** and the campaign is slower than intended, so treat the improvement as a target, not a shipped claim. Live telemetry in the God Intelligence Dashboard shows the hit rate + tokens saved; see [BENCHMARKS.md](BENCHMARKS.md) for the honest numbers.
 - **Always open.** AGPL-3.0-or-later. The public code is the most up-to-date and best version — forever.
 
 ## Quick Start
@@ -37,7 +37,7 @@ OLYMPUS runs as a **standalone desktop application** — it opens its own window
 ```bash
 # 1. Download the latest AppImage from GitHub Releases:
 #    https://github.com/texugo7badger/olympus/releases
-#    OLYMPUS-0.0.29-linux-x86_64.AppImage (~457 MB)
+#    OLYMPUS-0.0.30-linux-x86_64.AppImage (~457 MB)
 
 # 2. Make it executable and run:
 chmod +x OLYMPUS-*.AppImage

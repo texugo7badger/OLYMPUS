@@ -32,11 +32,24 @@ const GOD_IDS = new Set([
  * lanes inside the serve process; a restart re-registers on the first turn).
  */
 const sessionAgentMap = new Map<string, string>();
+/** v0.0.30 — the parent god for each session. A demigod child inherits the
+ *  god of the last registered session; a god session is its own god. */
+const sessionGodMap = new Map<string, string>();
+/** The last session registered by chat.params — the session-less hooks
+ *  (permission.ask) consult it instead of hardcoding Apollo. */
+let lastSessionID: string | null = null;
+let lastGod: string = "apollo";
 
-export function registerSessionAgent(sessionID: string, agent: string): void {
+export function registerSessionAgent(sessionID: string, agent: string, god?: string): void {
   const sid = String(sessionID ?? "").trim();
   const a = String(agent ?? "").trim().toLowerCase();
-  if (sid && a) sessionAgentMap.set(sid, a);
+  if (!sid || !a) return;
+  sessionAgentMap.set(sid, a);
+  const parent = String(god ?? "").trim().toLowerCase();
+  const resolved = parent || (GOD_IDS.has(a) ? a : lastGod) || "apollo";
+  sessionGodMap.set(sid, resolved);
+  lastSessionID = sid;
+  lastGod = resolved;
 }
 
 /**
@@ -47,11 +60,17 @@ export function registerSessionAgent(sessionID: string, agent: string): void {
  * iff one of the 10 GOD_IDS, else sub-agent); an unknown session keeps the
  * honest apollo legacy default.
  */
-export function getActiveScopeAndAgent(sessionID: string): { scope: "god" | "sub-agent"; agent: string } {
-  const sid = String(sessionID ?? "").trim();
+export function getActiveScopeAndAgent(sessionID: string): { scope: "god" | "sub-agent"; agent: string; god: string } {
+  // v0.0.30 — the session-less permission.ask hook used to pass "" and
+  // ALWAYS got Apollo. That made every MCP call in a hop evaluate Apollo's
+  // allowlist (github + mcp-gateway, both dead), so Athena/Hephaestus could
+  // not use the MCP the plan assigned them. Fall back to the last session
+  // registered by chat.params, never to a hardcoded god.
+  const sid = String(sessionID ?? "").trim() || lastSessionID || "";
   const known = sid ? sessionAgentMap.get(sid) : undefined;
-  if (!known) return { scope: "god", agent: "apollo" };
-  return { scope: GOD_IDS.has(known) ? "god" : "sub-agent", agent: known };
+  if (!known) return { scope: "god", agent: "apollo", god: "apollo" };
+  const god = sessionGodMap.get(sid) || (GOD_IDS.has(known) ? known : "apollo");
+  return { scope: GOD_IDS.has(known) ? "god" : "sub-agent", agent: known, god };
 }
 
 /**

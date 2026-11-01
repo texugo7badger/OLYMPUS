@@ -25,6 +25,10 @@ const BENCHMARK_CONFIG_FILE = join(homedir(), '.olympus', 'benchmark-config.json
 // so a Settings-switched vault recorded nothing. Use the canonical root.
 const VAULT_ROOT = getVaultRoot();
 const BENCHMARK_LOG = join(VAULT_ROOT, '07_Reviews', 'benchmarks', 'dispatches.jsonl');
+/** v0.0.30 — sessions that never started (0 tokens, 0 tools) are NOT
+ *  work failures. They get their own ledger so the success rate stops
+ *  reading 4.4% when 130/138 rows are empty session starts. */
+const NO_START_LOG = join(VAULT_ROOT, '07_Reviews', 'benchmarks', 'no-start.jsonl');
 
 export interface BenchmarkConfig {
   recordingEnabled: boolean;
@@ -85,6 +89,9 @@ export interface BenchmarkStats {
   avg_duration_ms: number;
   success_rate: number;
   error_count: number;
+  /** v0.0.30 — empty session starts, excluded from the work success rate. */
+  no_start_events: number;
+  no_start_recent: Array<{ ts: string; god: string; duration_ms: number | null; strategy: string | null }>;
   per_god: Record<string, {
     dispatches: number;
     short_circuits: number;
@@ -168,20 +175,42 @@ export interface BenchmarkSessionRow {
  *    throw here would kill an in-flight run over a telemetry write.
  *  - Rollover is handled by the vault-policy pruner, not inline.
  */
+/** Record a session that never started (no tokens, no tools). */
+export function appendNoStartEntry(row: BenchmarkSessionRow, ts?: string): boolean {
+  try {
+    mkdirSync(dirname(NO_START_LOG), { recursive: true });
+    appendFileSync(NO_START_LOG, JSON.stringify({
+      ts: ts ?? new Date().toISOString(),
+      session_label: loadBenchmarkConfig().sessionLabel ?? null,
+      god: row.god,
+      duration_ms: Math.round(row.duration_ms),
+      strategy: row.strategy,
+      reason: 'no-activity',
+    }) + '\n', { mode: 0o600 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function appendBenchmarkEntry(row: BenchmarkSessionRow, ts?: string): boolean {
   try {
     // Read config fresh: a toggle-off must take effect on the very next flush.
     if (!loadBenchmarkConfig().recordingEnabled) return false;
 
-    // Issue #35 invariant: all-zero rows are forbidden. A zero-activity row
-    // that claims success is ghost noise (late re-flush of a re-created empty
-    // bucket after an error-second flush). True error rows are kept even at
-    // zero activity — the failure signal must survive.
+    // v0.0.30 — THE 4.4% MIRAGE. A zero-activity row (0 tokens, 0 tools) is
+    // a session that never started, not a failed task. The old code kept
+    // those rows when had_error was true, so 130 empty starts became "129
+    // errors / 4.4% success". Record them in their own ledger and keep them
+    // out of the work denominator.
     const zeroActivity = row.tokens_input === 0
       && row.tokens_output === 0
       && row.tokens_reasoning === 0
       && row.tool_call_count === 0;
-    if (zeroActivity && !row.had_error) return false;
+    if (zeroActivity) {
+      if (row.had_error) appendNoStartEntry(row);
+      return false;
+    }
 
     const entry: BenchmarkEntry = {
       ts: ts ?? new Date().toISOString(),
@@ -359,6 +388,30 @@ export function getBenchmarkStats(maxLines: number = 100_000): BenchmarkStats {
     }))
     .sort((a, b) => b.last_ts.localeCompare(a.last_ts));
 
+  // v0.0.30 — the no-start ledger. These are not work failures; they are
+  // reported separately so the headline success rate is honest.
+  let noStartEvents = 0;
+  let noStartRecent: BenchmarkStats['no_start_recent'] = [];
+  try {
+    if (existsSync(NO_START_LOG)) {
+      const lines = readFileSync(NO_START_LOG, 'utf-8').split('\n').filter(Boolean);
+      noStartEvents = lines.length;
+      noStartRecent = lines.slice(-5).map((line) => {
+        try {
+          const e = JSON.parse(line);
+          return {
+            ts: String(e.ts ?? ''),
+            god: String(e.god ?? 'multi'),
+            duration_ms: typeof e.duration_ms === 'number' ? e.duration_ms : null,
+            strategy: typeof e.strategy === 'string' ? e.strategy : null,
+          };
+        } catch {
+          return { ts: '', god: 'multi', duration_ms: null, strategy: null };
+        }
+      });
+    }
+  } catch { /* the ledger is additive */ }
+
   return {
     config,
     total_dispatches: totalDispatches,
@@ -371,6 +424,8 @@ export function getBenchmarkStats(maxLines: number = 100_000): BenchmarkStats {
     avg_duration_ms: avgDurationMs,
     success_rate: successRate,
     error_count: errorCount,
+    no_start_events: noStartEvents,
+    no_start_recent: noStartRecent,
     per_god: perGod,
     per_demigod_top: perDemigodTop,
     sparkline,

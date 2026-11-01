@@ -135,8 +135,14 @@ const plugin: Plugin = async (input, options) => {
         const permStr = typeof permission === "string" ? permission : (permission as { key?: string }).key ?? "";
         if (!isMcpTool(permStr)) return;
         const server = getMcpServer(permStr);
-        const { scope, agent } = getActiveScopeAndAgent("");
-        const activeGod = scope === "god" ? agent : "apollo";
+        // v0.0.30 — the permission payload may name its session; when it
+        // does not, the last session registered by chat.params is the truth.
+        // The old code passed "" and always resolved Apollo, which made every
+        // hop's MCP call evaluate Apollo's dead allowlist.
+        const permSessionID = typeof permission === 'object' && permission
+          ? String((permission as any).sessionID ?? (permission as any).properties?.sessionID ?? '')
+          : '';
+        const { god: activeGod } = getActiveScopeAndAgent(permSessionID);
 
         // Tier-aware MCP permission check.
         //
@@ -164,8 +170,16 @@ const plugin: Plugin = async (input, options) => {
         try {
           const equipPath = join(homedir(), '.olympus', 'equipped-mcps.json');
           if (existsSync(equipPath)) {
-            const arr = JSON.parse(readFileSync(equipPath, 'utf-8'));
-            if (Array.isArray(arr)) for (const s of arr) explicitlyEquipped.add(String(s));
+            const raw = JSON.parse(readFileSync(equipPath, 'utf-8'));
+            // v0.0.30 — per-god + per-session equip. The old global array
+            // let any god's equip unlock the MCP for every other god; it is
+            // read only for backward compatibility with an existing file.
+            if (Array.isArray(raw)) {
+              for (const s of raw) explicitlyEquipped.add(String(s));
+            } else if (raw && typeof raw === 'object') {
+              for (const s of (raw.byGod?.[activeGod] ?? [])) explicitlyEquipped.add(String(s));
+              if (permSessionID) for (const s of (raw.bySession?.[permSessionID] ?? [])) explicitlyEquipped.add(String(s));
+            }
           }
         } catch {}
 

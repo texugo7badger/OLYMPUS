@@ -30,7 +30,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync, copyFi
 import { basename, dirname, join, resolve } from 'node:path';
 import { syncLaneFile } from './lane-config';
 import { platform, homedir } from 'node:os';
-import { decryptValue } from './env-crypto';
+import { loadIntegrationEnv } from './integration-env';
 import { getVaultRoot } from './vault-root';
 
 const isWindows = platform() === 'win32';
@@ -279,41 +279,13 @@ export function buildOpencodeEnv(
   root: string = findOlympusRoot(),
   extraEnv: Record<string, string> = {},
 ): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-
-  // Load .env files (same logic as electron/native-terminal.ts buildEnv).
-  // Duplicated here because the Next.js server doesn't go through the
-  // Electron main process — it has its own env. API routes that spawn
-  // opencode need the same API keys.
-  const envFiles = [
-    join(homedir(), '.olympus', '.env'),
-    join(root, '.env'),
-  ];
-
-  for (const f of envFiles) {
-    try {
-      if (!existsSync(f)) continue;
-      const content = readFileSync(f, 'utf-8');
-      for (const line of content.split('\n')) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) continue;
-        const eqIdx = trimmed.indexOf('=');
-        if (eqIdx < 0) continue;
-        const key = trimmed.slice(0, eqIdx).trim();
-        const value = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
-        if (key) {
-          // Decrypt encrypted values (stored as enc:base64...)
-          // If decryption fails, fall back to the raw value (plaintext
-          // or encrypted — either way it's better than silently dropping it).
-          const decrypted = decryptValue(value);
-          env[key] = decrypted !== null ? decrypted : value;
-          if (decrypted === null && value.startsWith('enc:')) {
-            console.log('[opencode-spawn] WARNING: failed to decrypt ' + key + ', using raw value (may be invalid)');
-          }
-        }
-      }
-    } catch {}
-  }
+  // ONE env loader for every spawn (v0.0.30). The old path read only
+  // ~/.olympus/.env and <root>/.env — the API Keys dialog writes
+  // ~/.olympus/api-configs.json, so a key saved in the UI never reached
+  // `opencode run` / `opencode serve` / any hop (the originkit 401 specimen).
+  // Precedence: process.env (shell) > api-configs.json (UI) > .env files.
+  const integration = loadIntegrationEnv({ root, processEnv: {} });
+  const env: NodeJS.ProcessEnv = { ...integration, ...process.env };
 
   // Prepend node_modules/.bin to PATH (project-local binaries take
   // precedence over any global opencode install).

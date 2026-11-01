@@ -9,7 +9,7 @@ import {
   Send, Loader2, CornerDownLeft, ChevronRight,
   Zap, CheckCircle2, AlertCircle, Users, Sun, Hammer, Bird,
   Compass, Target, Wine, Flower2, Flame, Square, RefreshCw, Paperclip, type LucideIcon,
-  Landmark, Terminal as TerminalIcon, ImageIcon, Globe, X, Pencil,
+  Landmark, Terminal as TerminalIcon, ImageIcon, Globe, X, Pencil, GitFork,
 } from 'lucide-react';
 import { marked } from 'marked';
 import { useOlympus } from '@/lib/olympus-store';
@@ -69,12 +69,12 @@ const NEAR_BOTTOM_PX = 80;
 const PERMISSION_TIMEOUT_MS = 120_000; // 2 minutes
 // Callimachus uses Landmark icon (Library of Alexandria).
 const GOD_ICONS: Record<string, LucideIcon> = {
-  apollo: Sun, hephaestus: Hammer, athena: Bird, hermes: Compass,
+  apollo: Sun, atlas: GitFork, hephaestus: Hammer, athena: Bird, hermes: Compass,
   artemis: Target, dionysus: Wine, persephone: Flower2, prometheus: Flame,
   callimachus: Landmark, global: Globe,
 };
 const GOD_NAMES: Record<string, string> = {
-  apollo: 'Apollo', hephaestus: 'Hephaestus', athena: 'Athena', hermes: 'Hermes',
+  apollo: 'Apollo', atlas: 'Atlas', hephaestus: 'Hephaestus', athena: 'Athena', hermes: 'Hermes',
   artemis: 'Artemis', dionysus: 'Dionysus', persephone: 'Persephone', prometheus: 'Prometheus',
   callimachus: 'Callimachus',
 };
@@ -298,14 +298,18 @@ export default function InteractiveTerminal() {
         const d = await r.json();
         if (cancelled) return;
         if (d.verdict === 'RUNNING' && d.hops?.inFlight > 0) {
-          // The hop id comes from the hop-state on disk.
-          const hopId = d.hops?.parked?.hopId ?? null;
+          // v0.0.30 — THE CARD NAMED THE WRONG THING. It used the PARKED hop
+          // and the PROJECT SLUG as the god ("walking" / "aime"), so the user
+          // could never tell who was building what. Use the first in-flight
+          // record (hopId, god, startedAt, artifacts) from the hop state.
+          const inf = Array.isArray(d.hops?.inFlightList) ? d.hops.inFlightList[0] : null;
+          const started = inf?.startedAt ? Date.parse(inf.startedAt) : NaN;
           setCurrentHop({
-            hopId: hopId ?? 'walking',
-            god: d.campaign?.slug ?? 'apollo',
-            lane: d.lane ?? '',
-            artifacts: [],
-            elapsedMs: 0,
+            hopId: String(inf?.hopId ?? 'walking'),
+            god: String(inf?.god ?? d.provenance?.god ?? 'apollo'),
+            lane: String(d.provenance?.model ?? d.lane ?? ''),
+            artifacts: Array.isArray(inf?.artifacts) ? inf.artifacts.map(String) : [],
+            elapsedMs: Number.isFinite(started) ? Math.max(0, Date.now() - started) : 0,
           });
         } else {
           setCurrentHop(null);
@@ -2013,6 +2017,24 @@ export default function InteractiveTerminal() {
             <span className="text-olympus-gold font-semibold">{currentHop.god}</span>
             <span className="text-olympus-text-dim">·</span>
             <span className="text-olympus-text">{currentHop.hopId}</span>
+            {currentHop.elapsedMs > 0 && (
+              <>
+                <span className="text-olympus-text-dim">·</span>
+                <span className="text-olympus-text-dim tabular-nums">
+                  {currentHop.elapsedMs >= 60_000
+                    ? `${Math.floor(currentHop.elapsedMs / 60_000)}m`
+                    : `${Math.round(currentHop.elapsedMs / 1000)}s`}
+                </span>
+              </>
+            )}
+            {currentHop.artifacts.length > 0 && (
+              <>
+                <span className="text-olympus-text-dim">·</span>
+                <span className="text-olympus-cyan truncate" data-tip={currentHop.artifacts.join('\n')}>
+                  {currentHop.artifacts.length} artifact{currentHop.artifacts.length === 1 ? '' : 's'}
+                </span>
+              </>
+            )}
             <span className="text-olympus-text-dim">·</span>
             <span className="text-olympus-text-dim truncate">{currentHop.lane}</span>
           </div>

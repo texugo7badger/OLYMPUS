@@ -31,6 +31,7 @@ import fs from 'fs';
 import path from 'path';
 import { getVaultRoot } from './vault-root';
 import { getProviderInfo } from './olympus';
+import { readWalkLock } from './hop-runtime/walk-lock';
 
 /** The walker's concurrency law (the projection's honesty bound). */
 const MAX_HOP_CONCURRENCY = 3;
@@ -89,12 +90,13 @@ export interface TasksSheet {
   project: string;
   updatedAt: string;
   tasks: TaskRecord[];
-  gods: Record<string, { total: number; completed: number; running: number; tokensIn: number; tokensOut: number; demigods: DemigodLive[] }>;
+  gods: Record<string, { total: number; completed: number; running: number; lost?: number; tokensIn: number; tokensOut: number; demigods: DemigodLive[] }>;
   stats: {
     total: number;
     completed: number;
     parked: number;
     running: number;
+    lost: number;
     pending: number;
     tokensIn: number;
     tokensOut: number;
@@ -245,7 +247,7 @@ export function buildTasksSheet(opts: {
   const empty: TasksSheet = {
     lane: '', project: '', updatedAt: '',
     tasks: [], gods: {},
-    stats: { total: 0, completed: 0, parked: 0, running: 0, pending: 0, tokensIn: 0, tokensOut: 0, projectedRemainingMs: 0 },
+    stats: { total: 0, completed: 0, parked: 0, running: 0, lost: 0, pending: 0, tokensIn: 0, tokensOut: 0, projectedRemainingMs: 0 },
   };
   if (!active) return empty;
   const lane = active.lane;
@@ -254,6 +256,10 @@ export function buildTasksSheet(opts: {
   const state = safeJson<any>(path.join(lane, '.olympus-hop-state.json'), { completed: [], parked: null, inFlight: [] });
   const completed: string[] = Array.isArray(state.completed) ? state.completed : [];
   const inFlight: Array<{ hopId: string; startedAt: string }> = Array.isArray(state.inFlight) ? state.inFlight : [];
+  // v0.0.30 — running != lost. The 30-minute heuristic below marked a dead
+  // walker's hop as "running" for half an hour. The lock is the liveness
+  // evidence; when it is dead, the inFlight records are LOST, not running.
+  const lock = readWalkLock(lane);
 
   // Telemetry: the LAST row per hop wins (retries append rows).
   const telemetry = new Map<string, any>();
@@ -312,8 +318,8 @@ export function buildTasksSheet(opts: {
     let status = 'pending';
     if (isCompleted) status = 'completed';
     else if (isParked) status = 'parked';
-    else if (startRec) status = 'running';
-    const startedAt = status === 'running' && startRec ? String(startRec.startedAt) : undefined;
+    else if (startRec) status = lock.alive ? 'running' : 'lost';
+    const startedAt = (status === 'running' || status === 'lost') && startRec ? String(startRec.startedAt) : undefined;
     const prompt = typeof h?.prompt === 'string' ? h.prompt : '';
     const files: TaskFile[] = tel
       ? filesInWindow(
@@ -355,15 +361,9 @@ export function buildTasksSheet(opts: {
     return t;
   });
 
-  // The legacy heuristic (walks from before the inFlight field): the most
-  // recent telemetry within 30 min implies the first pending hop is running.
-  if (inFlight.length === 0) {
-    const lastTelTs = Math.max(0, ...[...telemetry.values()].map((r: any) => { try { return new Date(r.ts).getTime(); } catch { return 0; } }));
-    for (const t of tasks) {
-      if (t.status !== 'pending') continue;
-      if (!telemetry.has(t.id) && Date.now() - lastTelTs < 30 * 60_000) { t.status = 'running'; break; }
-    }
-  }
+  // v0.0.30 — the 30-minute heuristic is GONE. A telemetry row's timestamp
+  // is not process evidence. Running comes from inFlight + a live walk lock;
+  // a dead lock marks the hop lost (above), never a fake "running".
 
   const demigods = demigodsByGod(feedPath, now);
 
@@ -373,6 +373,7 @@ export function buildTasksSheet(opts: {
     g.total++;
     if (t.status === 'completed') g.completed++;
     if (t.status === 'running') g.running++;
+    if (t.status === 'lost') g.lost = (g.lost || 0) + 1;
     g.tokensIn += t.tokensIn ?? 0;
     g.tokensOut += t.tokensOut ?? 0;
     g.demigods = demigods[t.god] || [];
@@ -399,6 +400,7 @@ export function buildTasksSheet(opts: {
     completed: tasks.filter(t => t.status === 'completed').length,
     parked: tasks.filter(t => t.status === 'parked').length,
     running: tasks.filter(t => t.status === 'running').length,
+    lost: tasks.filter(t => t.status === 'lost').length,
     pending: tasks.filter(t => t.status === 'pending').length,
     tokensIn: tasks.reduce((n, t) => n + (t.tokensIn ?? 0), 0),
     tokensOut: tasks.reduce((n, t) => n + (t.tokensOut ?? 0), 0),

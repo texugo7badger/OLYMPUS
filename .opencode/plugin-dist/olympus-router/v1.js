@@ -133,8 +133,14 @@ const plugin = async (input, options) => {
                 if (!isMcpTool(permStr))
                     return;
                 const server = getMcpServer(permStr);
-                const { scope, agent } = (0, instinct_gate_js_1.getActiveScopeAndAgent)("");
-                const activeGod = scope === "god" ? agent : "apollo";
+                // v0.0.30 — the permission payload may name its session; when it
+                // does not, the last session registered by chat.params is the truth.
+                // The old code passed "" and always resolved Apollo, which made every
+                // hop's MCP call evaluate Apollo's dead allowlist.
+                const permSessionID = typeof permission === 'object' && permission
+                    ? String(permission.sessionID ?? permission.properties?.sessionID ?? '')
+                    : '';
+                const { god: activeGod } = (0, instinct_gate_js_1.getActiveScopeAndAgent)(permSessionID);
                 // Tier-aware MCP permission check.
                 //
                 // Parse the task classification from the env var (set by
@@ -161,10 +167,21 @@ const plugin = async (input, options) => {
                 try {
                     const equipPath = (0, node_path_1.join)((0, node_os_1.homedir)(), '.olympus', 'equipped-mcps.json');
                     if ((0, node_fs_1.existsSync)(equipPath)) {
-                        const arr = JSON.parse((0, node_fs_1.readFileSync)(equipPath, 'utf-8'));
-                        if (Array.isArray(arr))
-                            for (const s of arr)
+                        const raw = JSON.parse((0, node_fs_1.readFileSync)(equipPath, 'utf-8'));
+                        // v0.0.30 — per-god + per-session equip. The old global array
+                        // let any god's equip unlock the MCP for every other god; it is
+                        // read only for backward compatibility with an existing file.
+                        if (Array.isArray(raw)) {
+                            for (const s of raw)
                                 explicitlyEquipped.add(String(s));
+                        }
+                        else if (raw && typeof raw === 'object') {
+                            for (const s of (raw.byGod?.[activeGod] ?? []))
+                                explicitlyEquipped.add(String(s));
+                            if (permSessionID)
+                                for (const s of (raw.bySession?.[permSessionID] ?? []))
+                                    explicitlyEquipped.add(String(s));
+                        }
                     }
                 }
                 catch { }
@@ -269,7 +286,13 @@ const plugin = async (input, options) => {
                     : hookInput.message?.text ?? "";
                 if (messageText.length === 0)
                     return;
-                const result = (0, instinct_gate_js_1.queryInstincts)("god", agent, messageText, 3);
+                // v0.0.26 — MEASUREMENT CONTROL LANE. OLYMPUS_INSTINCT_GATE=off makes
+                // the classifier's confidence inert (no short-circuit) so a calibration
+                // run can compare the gate ON vs OFF without editing instincts.
+                const gateDisabled = process.env.OLYMPUS_INSTINCT_GATE === "off";
+                const result = gateDisabled
+                    ? { confidence: 0, matching_instinct: null, alternatives: [], scope: "god", agent_name: agent, short_circuit: false }
+                    : (0, instinct_gate_js_1.queryInstincts)("god", agent, messageText, 3);
                 // W-A RAG-CERT A5: the evaluation is LOGGED — the Short-Circuit
                 // Health panel's data file finally has a writer (AGENTS.md's claim
                 // made true). Non-fatal by contract.

@@ -41,6 +41,8 @@ export interface ContextUsage {
   quality: 'good' | 'warning' | 'critical';
   sessionId?: string;
   model?: string;
+  /** v0.0.30 — true when the session source is unreadable; render "—". */
+  unknown?: boolean;
 }
 
 export interface ContextIndicatorProps {
@@ -207,18 +209,19 @@ export default function ContextIndicator({
   // Color falls back to a dim gray when we have no data yet — the
   // indicator is present but unobtrusive, which is the desired behavior
   // before the first poll completes.
-  const color = usage ? QUALITY_COLOR[usage.quality] : '#5A5A5A';
+  const unknown = usage?.unknown === true;
+  const color = usage && !unknown ? QUALITY_COLOR[usage.quality] : '#5A5A5A';
   const pct = usage?.percentage ?? 0;
-  const filled = Math.min(BAR_WIDTH, Math.round((pct / 100) * BAR_WIDTH));
+  const filled = unknown ? 0 : Math.min(BAR_WIDTH, Math.round((pct / 100) * BAR_WIDTH));
   const bar = '█'.repeat(filled) + '░'.repeat(BAR_WIDTH - filled);
 
-  const tooltipContent = usage
-    ? `Context window: ${usage.used.toLocaleString()} / ${usage.limit.toLocaleString()} tokens (${pct}%)` +
+  const tooltipContent = unknown || !usage
+    ? fetchError
+      ? 'Context window: unverified — the session source is unreadable (showing "—", never a fake 0%)'
+      : 'Context window: no active session (showing "—", never a fake 0%)'
+    : `Context window: ${usage.used.toLocaleString()} / ${usage.limit.toLocaleString()} tokens (${pct}%)` +
       (usage.model ? `\nModel: ${usage.model}` : '') +
-      (usage.sessionId ? `\nSession: ${usage.sessionId.slice(0, 8)}` : '')
-    : fetchError
-      ? 'Context window: unable to read session (will retry)'
-      : 'Context window: no active session';
+      (usage.sessionId ? `\nSession: ${usage.sessionId.slice(0, 8)}` : '');
 
   return (
     <div className="flex items-center gap-1 text-[9px] font-mono">
@@ -238,9 +241,9 @@ export default function ContextIndicator({
           <span
             className="tabular-nums font-semibold"
             style={{ color }}
-            aria-label={`Context window ${pct}% used`}
+            aria-label={unknown ? 'Context window unverified' : `Context window ${pct}% used`}
           >
-            {pct}%
+            {unknown ? '—' : `${pct}%`}
           </span>
           {/* Monospace block bar — colored by quality, faint when empty. */}
           <span

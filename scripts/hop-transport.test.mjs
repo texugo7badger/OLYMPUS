@@ -161,12 +161,14 @@ function fakeServer(opts = { failCreate: false }) {
   expect('T5 spawn labels its transport', r.transport === 'spawn');
 }
 
-// T6 — the chat's v2 prompt body (2.2.2) must be top-level `{text}`.
+// T6 — the chat's v2 prompt body (2.2.5) must be top-level `{text}` first,
+// with the wrapped form kept as the one-shot 400 fallback. The old test
+// asserted the wrapper as the PRIMARY body; 2.2.5 made that the 400 dialect.
 {
   const fs = await import('node:fs');
   const session = fs.readFileSync(path.join(ROOT, 'src/lib/opencode-session.ts'), 'utf-8');
-  const region = session.slice(session.indexOf("server.protocol === 'v2' ?"), session.indexOf("server.protocol === 'v2' ?") + 1200);
-  expect('T6 chat v2 body uses the prompt wrapper', /prompt:\s*\{\s*\n?\s*text:/.test(region), region.slice(0, 200));
+  expect('T6 chat v2 body uses the bare {text} body first', /JSON\.stringify\(\{\s*text:\s*promptText/.test(session), 'no bare {text} body found in opencode-session.ts');
+  expect('T6 chat keeps the wrapped {prompt:{text}} fallback', /JSON\.stringify\(\{\s*prompt:\s*\{\s*text:\s*promptText/.test(session), 'no wrapped fallback found in opencode-session.ts');
 }
 
 

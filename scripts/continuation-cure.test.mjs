@@ -143,7 +143,7 @@ async function main() {
   expect('S11: the freshness gate HARVESTS the narrated plan before refusing',
     prSrc.includes('W-U PLAN-HARVEST') && prSrc.includes('harvestPlanFromTurnText'),
     'the 01:56 loop: four turns of REESCREVENDO claims with the mtime frozen — the prose never became the file');
-  const narrated = `Pronto! O plano está aqui:\n\n\`\`\`json\n{"version":1,"hops":[{"id":"a","god":"athena","prompt":"fa\u00e7a o layout","artifacts":["dashboard.html"],"verify":{"review":"determin\u00edstico","checks":["design-score:7"]},"budgetTokens":8192}]}\n\`\`\`\nPronto, execu\u00e7\u00e3o agendada.`;
+  const narrated = `Pronto! O plano está aqui:\n\n\`\`\`json\n{"version":1,"hops":[{"id":"a","god":"athena","prompt":"fa\u00e7a o layout","artifacts":["dashboard.html"],"verify":{"review":"determin\u00edstico","checks":["invented-check:7"]},"budgetTokens":8192}]}\n\`\`\`\nPronto, execu\u00e7\u00e3o agendada.`;
   const harvested = postRun.harvestPlanFromTurnText(narrated);
   expect('S11: the narrated fenced plan IS harvested (fenced-json extraction)',
     !!harvested, 'a complete narrated plan slipped through');

@@ -62,6 +62,8 @@ interface BenchmarkStats {
   avg_duration_ms: number;
   success_rate: number;
   error_count: number;
+  no_start_events: number;
+  no_start_recent: Array<{ ts: string; god: string; duration_ms: number | null; strategy: string | null }>;
   per_god: Record<string, {
     dispatches: number;
     short_circuits: number;
@@ -231,9 +233,9 @@ export default function BenchmarksPanel() {
         <>
           {/* Aggregate KPIs */}
           <div className="grid grid-cols-4 gap-2 mb-4">
-            <KpiCard label="Dispatches" value={stats.total_dispatches} icon={Activity} color="text-olympus-cyan" bg="bg-olympus-cyan/10" ring="ring-olympus-cyan/20" />
+            <KpiCard label="Work runs" value={stats.total_dispatches} icon={Activity} color="text-olympus-cyan" bg="bg-olympus-cyan/10" ring="ring-olympus-cyan/20" />
             <KpiCard label="Tokens" value={stats.total_tokens} icon={Coins} color="text-olympus-gold" bg="bg-olympus-gold/10" ring="ring-olympus-gold/20" />
-            <KpiCard label="Success" value={stats.success_rate * 100} suffix="%" decimals={1} icon={CheckCircle2} color="text-olympus-green" bg="bg-olympus-green/10" ring="ring-olympus-green/20" />
+            <KpiCard label="Work success" value={stats.success_rate * 100} suffix="%" decimals={1} icon={CheckCircle2} color="text-olympus-green" bg="bg-olympus-green/10" ring="ring-olympus-green/20" />
             <KpiCard label="Short-Circuit" value={stats.short_circuit_rate * 100} suffix="%" decimals={1} icon={Zap} color="text-olympus-gold" bg="bg-olympus-gold/10" ring="ring-olympus-gold/20" />
           </div>
 
@@ -242,7 +244,7 @@ export default function BenchmarksPanel() {
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-semibold text-olympus-text">14-day dispatch volume</span>
               <span className="text-[10px] text-olympus-text-dim font-mono">
-                avg {(stats.avg_duration_ms / 1000).toFixed(1)}s · {stats.error_count} errors
+                avg {(stats.avg_duration_ms / 1000).toFixed(1)}s · {stats.error_count} work errors · {stats.no_start_events} no-start (excluded)
               </span>
             </div>
             <div className="flex items-end gap-[2px] h-[60px]">

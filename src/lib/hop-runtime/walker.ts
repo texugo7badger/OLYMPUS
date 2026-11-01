@@ -39,6 +39,8 @@ import { spawnOpencode, findOlympusRoot } from '@/lib/opencode-spawn';
 import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencode-session';
 import { markLaneAlive, markLaneDead, laneChain, isLaneDeadClass } from '@/lib/lane-health';
 import { FREE_HYBRID_ROSTER } from '@/lib/model-strategies';
+import { backupBeforeDestructiveHop } from '@/lib/destructive-guard';
+import { applyRunManifestFile, buildRunMcpManifest, getRunMcpManifest, setRunMcpManifest } from '@/lib/mcp-run-manifest';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
 export const MAX_HOP_CONCURRENCY = 3;
@@ -365,7 +367,10 @@ function parseJsonEvents(raw: string): JsonEventParse {
  * above the slowest measured legitimate TTFT: gemma-4-31b at 111s).
  */
 export const DEFAULT_HOP_FIRST_BYTE_MS = 240_000;
-export const DEFAULT_HOP_SILENCE_MS = 600_000;
+// v0.0.30 — 10 minutes of silence was a blind wait (the d3-media specimen).
+// Detect a stalled step in 5 minutes; the auto transport then retries on
+// spawn before the hop parks. Env-tunable as before.
+export const DEFAULT_HOP_SILENCE_MS = 300_000;
 export function resolveHopSilenceMs(env: NodeJS.ProcessEnv = process.env): number {
   const n = Number.parseInt(env.OLYMPUS_HOP_SILENCE_MS ?? '', 10);
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_HOP_SILENCE_MS;
@@ -793,6 +798,14 @@ export function ensureLaneConfig(laneRoot: string): void {
         }
       }
     } catch { /* the MCP lane is best-effort — the dispatch names the failure */ }
+    // v0.0.30 (#B3) — re-apply the campaign manifest AFTER the root config
+    // refresh. The refresh copies the root over the lane; without this the
+    // 16-server fleet would be back before the next hop.
+    const manifest = getRunMcpManifest(laneRoot);
+    if (manifest) {
+      const applied = applyRunManifestFile(laneRoot, manifest);
+      if (!applied.ok) console.log(`[lane-config] MCP manifest not applied: ${applied.error}`);
+    }
   } catch { /* the dispatch itself will name the failure */ }
 }
 
@@ -863,6 +876,21 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   // must carry the config copy the #99 lanes always had, or every hop dies
   // ProviderModelNotFound (the B7 live specimen).
   ensureLaneConfig(laneRoot);
+  // v0.0.30 (#B3) — the campaign's MCP manifest, derived from the plan's
+  // own `hop.mcp` fields + the curated baseline. Applied to the lane before
+  // the first dispatch; ensureLaneConfig re-applies it after every refresh.
+  const runManifest = buildRunMcpManifest(plan, laneRoot);
+  setRunMcpManifest(laneRoot, runManifest);
+  try {
+    const applied = applyRunManifestFile(laneRoot, runManifest);
+    if (applied.ok) {
+      console.log(`[hop-runtime] MCP manifest for ${laneRoot}: ${applied.enabled.join(', ') || '(none)'} (${applied.changed} flag(s) changed)`);
+    } else {
+      console.log(`[hop-runtime] MCP manifest not applied: ${applied.error}`);
+    }
+  } catch (e: any) {
+    console.log(`[hop-runtime] MCP manifest failed: ${e?.message || String(e)}`);
+  }
 
   // State: resume honors the disk; a fresh walk resets it. The parked hop
   // (if any) is NOT in `completed`, so the DAG naturally re-runs it.
@@ -974,6 +1002,25 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         // NEXT hop with "Model not found"). Re-assert the lane config before
         // every dispatch: config, demigods, symlink — idempotent, cheap.
         try { ensureLaneConfig(laneRoot); } catch { /* the dispatch names the failure */ }
+        // v0.0.30 (#C6/#H9) — THE DATA GATE. The AIME `g2-profile` hop wiped
+        // a 226-work live database at 23:01:10Z because nothing copied it
+        // before the destructive prompt ran. A destructive hop with a lane
+        // database MUST back it up first; a failed backup parks the hop
+        // before a single token is spent.
+        const dataGuard = backupBeforeDestructiveHop(laneRoot, next);
+        if (dataGuard.error) {
+          stopped = true;
+          parkedHop = {
+            hopId: next.id, reason: 'destructive-backup-failed',
+            ts: new Date().toISOString(), error: dataGuard.error,
+          };
+          emit({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'destructive-backup-failed', error: dataGuard.error });
+          persistState();
+          return;
+        }
+        if (dataGuard.needed && dataGuard.backup?.dir) {
+          console.log(`[hop-guard] destructive hop '${next.id}' — database backed up to ${dataGuard.backup.dir} (${dataGuard.backup.files.join(', ')})`);
+        }
         const startedAt = Date.now();
         const task: WalkTask = { hop: next, startedAt, done: false, promise: Promise.resolve() };
         inFlight.set(next.id, task);

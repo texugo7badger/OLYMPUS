@@ -120,7 +120,19 @@ export class AutoTransport implements HopTransport {
 
   async run(req: HopTransportRequest): Promise<HopTransportResult> {
     try {
-      return await this.warm.run(req);
+      const warm = await this.warm.run(req);
+      // v0.0.30 — A WARM TURN THAT STALLS IS NOT A HOP FAILURE YET.
+      // The d3-media specimen (22:07/22:34/22:52) parked three times on a
+      // warm silence/ceiling while the spawn lane was healthy. The old
+      // fallback only covered SETUP failures; a stalled turn returned
+      // `code:null` and parked. Retry the SAME hop once on spawn, with a
+      // bounded budget, before the walker parks it.
+      const stalled = warm.code === null && /ceiling-kill|hop-first-byte-timeout|SILENT|socket hang up|timed out/i.test(warm.stderr || '');
+      if (stalled) {
+        req.onNotice?.('warm turn stalled — retrying the same hop on the spawn transport (bounded)');
+        return this.spawn.run({ ...req, timeoutMs: Math.min(req.timeoutMs, 10 * 60_000) });
+      }
+      return warm;
     } catch (e: any) {
       const reason = e instanceof WarmTransportUnavailable ? e.message : (e?.message || String(e));
       req.onNotice?.(`warm transport unavailable — falling back to spawn: ${reason}`);

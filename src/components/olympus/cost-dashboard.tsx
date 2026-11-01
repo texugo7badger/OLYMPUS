@@ -20,6 +20,8 @@ interface GodCost {
  outputTokens: number;
  cachedTokens: number;
  spend: number;
+ spendRealUsd?: number;
+ spendEstimatedUsd?: number;
  cap5h: number | null;
  pctOfCap: number | null;
  avgLatencyMs: number;
@@ -277,12 +279,17 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  const totalSubAgentRoutes = Object.values(dispatch).reduce((s: number, d: any) => s + (d?.subAgentCount ?? 0), 0);
  // v0.0.29 — subscription plans report $0 provider cost but real tokens.
  // Show the list-price VALUE when the provider charged nothing, and say so.
- const chargedUsd = data.totalSpendRealUsd ?? 0;
+ const stepUsd = data.totalSpendRealUsd ?? 0;
  const listValueUsd = data.totalSpendEstimatedUsd ?? 0;
- const displaySpend = chargedUsd > 0 ? chargedUsd : listValueUsd;
- const isSubscriptionZero = chargedUsd === 0 && listValueUsd > 0;
- // Burn rate: spend per hour over the 5h window (or since first event).
- const burnRate = hasRealCosts ? displaySpend / 5 : 0;
+ // v0.0.30 — TWO LABELED FIGURES, NEVER A SILENT SUM.
+ // `stepUsd` is OpenCode's per-step `cost` field (its own model-price
+ // calculation, not an invoice). `listValueUsd` is the heuristic list-price
+ // estimate. The provider's invoice is not exposed to OLYMPUS; the UI says
+ // so instead of calling either one "charged".
+ const displaySpend = stepUsd;
+ const hasListValue = listValueUsd > 0;
+ // Step-cost burn rate over the 5h window.
+ const burnRate = hasRealCosts ? stepUsd / 5 : 0;
  // Token usage — the free strategies have no spend, so the dashboard shows
  // tokens used instead of a dollar figure.
  const totalTokens = data.totalInput + data.totalOutput;
@@ -367,9 +374,9 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 	 ) : (
 	 <SummaryCard
 	 icon={DollarSign}
-	 label={isSubscriptionZero ? 'List value (5h)' : 'Spend (5h)'}
+	 label="Step cost (5h)"
 	 value={fmtUsd(displaySpend)}
-	 sub={isSubscriptionZero ? 'GO plan — $0 charged by provider' : hasRealCosts ? 'this window' : 'idle'}
+	 sub={hasListValue ? `list ${fmtUsd(listValueUsd)} · invoice unknown` : 'invoice unknown'}
 	 pct={data.pctOfCap ?? undefined}
 	 color="green"
 	 />
@@ -379,7 +386,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 	 {prov.isFree ? (
 	 <SummaryCard icon={CheckCircle2} label="Token rate" value={hasRealCosts ? `${fmt(tokenRate)}/h` : '—'} sub="5h avg" color="green" />
 	 ) : (
-	 <SummaryCard icon={CheckCircle2} label={isSubscriptionZero ? 'List value/h' : 'Burn rate'} value={hasRealCosts ? `${fmtUsd(burnRate)}/h` : '—'} sub={isSubscriptionZero ? 'GO plan — $0 charged' : '5h avg'} color="green" />
+	 <SummaryCard icon={CheckCircle2} label="Step cost/h" value={hasRealCosts ? `${fmtUsd(burnRate)}/h` : '—'} sub={hasListValue ? `list ${fmtUsd(listValueUsd / 5)}/h` : '5h avg'} color="green" />
 	 )}
 	 </div>
 
@@ -404,8 +411,8 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  />
  </div>
  <div className="flex justify-between mt-1 text-[9px] font-mono text-olympus-text-dim">
- <span>{fmtUsd(chargedUsd)} charged</span>
- <span>{fmtUsd(Math.max(0, data.cap5h - chargedUsd))} remaining</span>
+ <span>{fmtUsd(stepUsd)} step cost</span>
+ <span>{fmtUsd(listValueUsd)} list value · invoice unknown</span>
  </div>
  </div>
  )}
@@ -416,7 +423,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 	 <span>God</span>
 	 <span>Model</span>
 	 <span>Reqs</span>
-	 <span>{prov.isFree ? 'Tokens' : `Spend ${data.cap5h != null ? '/ Cap' : ''}`}</span>
+	 <span>{prov.isFree ? 'Tokens' : 'Step + list'}</span>
 	 <span>Sub-agents (used/cap)</span>
 	 </div>
 	 {data.costs.map(c => (
@@ -509,10 +516,13 @@ function GodRow({
 	 ) : (
 	 <>
 	 <div className="flex items-center gap-1.5">
-	 <span className={cn('font-bold',
+	 <span
+	 className={cn('font-bold',
 	 !hasData ? 'text-[#5A5A5A]' :
 	 (c.pctOfCap ?? 0) > 80 ? 'text-olympus-red' :
-	 (c.pctOfCap ?? 0) > 60 ? 'text-olympus-amber-soft' : 'text-olympus-green')}>
+	 (c.pctOfCap ?? 0) > 60 ? 'text-olympus-amber-soft' : 'text-olympus-green')}
+	 data-tip={`step ${fmtUsd(c.spendRealUsd ?? 0)} · list ${fmtUsd(c.spendEstimatedUsd ?? 0)} · invoice unknown`}
+	 >
 	 {fmtUsd(c.spend)}
 	 </span>
 	 {cap != null && <span className="text-olympus-text-dim text-[9px]">/ ${cap}</span>}

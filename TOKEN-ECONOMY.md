@@ -1,5 +1,16 @@
 # OLYMPUS Token Economy
 
+> **Measured reality — v0.0.30 (2026-10-31).** The compression claims below
+> are **design intent**, not measured wins. The live audit found: short-circuit
+> gate **0/2,999** evaluations (the tag-similarity × confidence math cannot
+> reach 0.85 except on near-identical tags); 5h cache read **89.7M** vs 1.04M
+> output (**86:1**); 107 MCP tools loaded while the AIME plan declared four.
+> MCP tiering today is **permission-only**; v0.0.30 adds a campaign manifest
+> that filters the lane config, but the hot/warm/cold **loading** described
+> below is still not a measured input reduction. Treat every percentage in
+> this file as `[DESIGN-MATH]` until the next benchmark says otherwise.
+
+
 > How OLYMPUS achieves high quality at low cost — from zero (your own hardware) to the GO plan. 5-layer compression · Hot/Warm/Cold tiers · Instinct short-circuits · Symphony Layer 5 · Zero-cost economics.
 
 ## 5-layer compression stack
@@ -37,6 +48,15 @@ The `olympus-dynamic-context` plugin filters which skills load into a god's syst
 Without tiering, all 330 skill descriptions would load (~72,000 tokens per request). With tiering, a non-trivial request loads ~22,000 tokens — an **81% input reduction**.
 
 MCPs are also tiered: hot MCPs always load, warm MCPs load for domain-relevant tasks, and cold MCPs require explicit equip. This prevents unused MCP tool schemas from inflating the system prompt.
+
+> **v0.0.30 correction.** The original tier map was a **permission** policy
+> only: every enabled server still spawned and every tool schema still rode
+> the request. The AIME lane spawned 16 servers / 107 tools while the plan
+> declared four. v0.0.30 adds `src/lib/mcp-run-manifest.ts`: the campaign's
+> `hop.mcp` + the curated baseline filter the lane's `opencode.json`, so the
+> warm server loads only that set. The hot/warm/cold loading claim becomes
+> true only when the manifest is the only path; do not cite the old 81%
+> number until it is re-measured.
 
 ---
 

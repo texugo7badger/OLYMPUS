@@ -120,7 +120,10 @@ export default function LivePreview() {
     }
   }, [pendingMark, instruction, pushEvent, activeProject]);
 
-  const isRunning = status?.running ?? false;
+  // v0.0.30 — the manager is a second source of truth. The 20:12 specimen
+  // showed "Code in progress" while the probe/manager were green; the panel
+  // only trusted its own probe. Either green means the server is up.
+  const isRunning = Boolean(status?.running || status?.manager?.running);
   // #102: the server-verified REACHABLE url once probing settles; the local
   // guess is only the pre-first-probe fallback.
   const effectiveUrl = status?.url ?? previewUrl;

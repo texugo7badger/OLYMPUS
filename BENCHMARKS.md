@@ -1,5 +1,34 @@
 # OLYMPUS Benchmarks + Eval Harness
 
+## Measured baseline — 2026-10-31 (v0.0.29 working tree) [MEASURED]
+
+These are the numbers v0.0.30 is fixing, published before the fixes so the
+next release can be compared honestly — not a success claim.
+
+| Surface | Measured |
+|---|---|
+| AIME hop attempts | 84: 63 completed, 17 dispatch-failed, 4 verify-failed; 998.8 min total; median 9.9 min; p90 25.0 min; 18/84 at the 25-min ceiling |
+| Current campaign (at audit) | 42-hop plan, 9 completed, 2 in flight, 31 pending |
+| Benchmark rows | 138: **8 work rows, 130 no-start rows** (all 130 have 0 tokens and 0 tool calls) |
+| Benchmark work success | 8/8 work rows succeeded; the old "4.4%" headline counted empty session starts as failures |
+| Short-circuit gate | 2,999 valid evaluations, **0 short-circuits**, confidence 0 (not cold start — the similarity × confidence math cannot reach 0.85) |
+| Cost (5h) | 893 step-finish rows; input 2.92M, output 1.04M, cache read 89.7M, reasoning 329k; OpenCode step cost **$1.7272**; heuristic list value **$1.7480**; provider invoice **not exposed** |
+| Cache ratio | **86:1** cache read / output |
+| MCP | 28 configured: **10 alive, 107 tools, 5 enabled-but-dead, 1 auth, 12 disabled**; 7 servers failed on every AIME run (tamp, serena, opendesign, git, postgres, docker, originkit) |
+| Context indicator | 0% was a schema bug (`session`/`message` vs `session_v2`/`session_message`), not an empty session; v0.0.30 reads the v2 tables and shows "—" when unknown |
+| Sync Map | 731 entries, **669 marked "prompt died mid-flight"** at process exit (false failures) |
+| Visual truth | 4/6 landing sections rendered at `opacity: 0`; the login form made zero requests to `/api/auth`; the work card was "GREEN" but not mounted |
+
+### What this means
+
+The product delivered real artifacts, but the dashboard's error rate, context
+percentage, and per-god dispatch counts were not measuring what they claimed.
+The v0.0.30 work is **truth first**: split cost currencies, exclude no-start
+rows, read the v2 session DB, attribute the real god, and gate destructive
+data hops. The performance is still poor: 9/42 hops at the audit, 25% park
+rate, 25-min p90. v0.0.31 targets the design loop and the full per-god chats.
+
+
 > **Provenance convention (v0.0.26).** Every number carries one tag: `[MEASURED]` (live run on this machine), `[COUNTERFACTUAL]` (computed from live data for a payload that did not go out), `[DESIGN-MATH]` (unverified projection). The CAL-1 calibration (`research/CAL-1.md`) converts the target tables below to MEASURED — or refutes them. An untagged number is a bug.
 
 > How to measure OLYMPUS's performance — both in CI (golden tasks) and in real-world use (always-on opt-in recording).

@@ -2,6 +2,23 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.30] — 2026-11-01
+
+**"TRUTH FIRST"** — the AIME day-of-build exposed the measurement layer, the MCP delivery path, and one data-loss event. This release makes the numbers honest and closes the destructive gap; it does not claim the campaign is fast.
+
+- **MCP keys reach the process.** `src/lib/integration-env.ts` loads `api-configs.json` + `.env` + `process.env`; `buildOpencodeEnv` and every MCP probe use it. Originkit/brave no longer say "configured" while returning 401.
+- **The real god owns the MCP.** `permission.ask` resolves the last session registered by `chat.params` (never hardcoded Apollo); the equip ledger is per god/session. The Athena/Hephaestus MCP path is reachable.
+- **Campaign MCP manifest.** `src/lib/mcp-run-manifest.ts` filters the lane config to the plan's `hop.mcp` + curated baseline; known-broken servers are excluded; `git` only in a git lane. 16 servers/107 tools → the plan's set.
+- **Destructive data gate.** `src/lib/destructive-guard.ts` denies destructive commands in unattended hops and backs up project databases before a destructive hop. The AIME 226→0 wipe is the regression fixture.
+- **Context truth.** `session_v2`/`session_message` support; "—" when unknown; the live session reads ~52%, not a fake 0%.
+- **Benchmark truth.** Zero-activity starts go to `no-start.jsonl`, excluded from work success; the panel labels "Work runs"/"Work success" and reports no-start separately.
+- **Cost truth.** Step cost / list value / invoice unknown; the aggregate $12/5h fiction is hidden; per-god rows carry a step+list tooltip.
+- **Counts.** Atlas is a god in every list (132 agents); army counts from disk; the 30-minute "running" heuristic is gone; dead-lock hops are lost.
+- **Hop resilience.** 5-minute rolling silence; a warm stall retries on spawn once before parking; the mini "building now" card names the real hop/god/artifacts.
+- **Docs.** Measured baseline in `BENCHMARKS.md`; corrections in `TOKEN-ECONOMY.md`, `MODEL-STRATEGIES.md`, `ARCHITECTURE.md`, `BUILD-AND-PUBLISH.md`, `README.md`; audit at `reports/audit-2026-10-31/REPORT.md`; backlog at `docs/plans/v0.0.30-truth-first.md`.
+- **Tests.** New `integration-env`, `destructive-guard`, `mcp-run-manifest`; the stale hop-transport T6 dialect and the tasks-telemetry live-lock fixture are fixed.
+- **Version:** `VERSION` + `package.json` → 0.0.30.
+
 ## [v0.0.29] — 2026-10-31
 
 **"THE LIVING FLOOR"** — the AIME walk ran to completion (6/6) and exposed the accounting and interactivity seams: the plan normalizer silently destroyed every content gate, chat went mute while a campaign held the lane, the hop ledger was invisible, and Nakkas could not boot. Plus the OpenCode 2.2.5 update that cures #266.

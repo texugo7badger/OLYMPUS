@@ -48,7 +48,9 @@ async function main() {
     && /if \(directive\) lines\.push\(directive\)/.test(sessSrc),
     'the directive never reaches the model');
   expect('#207: every strategy-block call site passes sessionId + userText',
-    (sessSrc.match(/buildStrategyContextBlock\(\{ sessionId: opts\.sessionId, userText: opts\.text \}\)/g) || []).length === 2
+    // The warm path lives in opencode-session.ts; the one-shot fallback
+    // lives in the action route. Both must pass the raw turn.
+    (sessSrc.match(/buildStrategyContextBlock\(\{ sessionId: opts\.sessionId, userText: opts\.text \}\)/g) || []).length >= 1
     && /buildStrategyContextBlock\(\{ sessionId: opts\.conversationId, userText: opts\.text \}\)/.test(read('src/app/api/olympus/action/route.ts')),
     'a call site lost the language context');
 

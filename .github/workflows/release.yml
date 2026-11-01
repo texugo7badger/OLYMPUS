@@ -39,6 +39,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # v0.0.30 — the release gate starts with the truth checks that are
+      # deterministic in CI. The full 81-suite battery is local (it reads the
+      # maintainer's vault/lanes); CI runs tsc + lint + the strategy sync.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Strategy sync
+        run: npm run check-strategy-sync
+
       - name: Build TypeScript layers
         run: |
           npm run electron:compile

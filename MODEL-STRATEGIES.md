@@ -1,5 +1,16 @@
 # OLYMPUS Model Strategies
 
+> **v0.0.30 correction (read this first).** The "GO Plan Limits & Sustainable
+> Usage" table below is the source of truth: GO limits are **per model**
+> monthly dollar caps, with 5h = 20%, weekly = 50%, monthly = 100% of that
+> model's cap. There is **no single $12/5h global cap**; the Cost dashboard
+> no longer shows one. Apollo rides **DeepSeek V4.1 Flash** and Atlas **Hy3**
+> in every GO strategy; the "GLM-5.3 sacred / 2026-10-16 upgrade" sections
+> below are historical and are superseded by `src/lib/model-strategies.ts`.
+> The `$10/mo` (Go) / `$40/mo` (Go Plus) plan price is the subscription, not
+> the per-model usage cap.
+
+
 > How OLYMPUS picks which LLM each god uses — GO (open-weight), ZEN (private), and LOCAL (your hardware).
 
 > **Source of truth:** Model IDs are canonical in `src/lib/model-strategies.ts`.

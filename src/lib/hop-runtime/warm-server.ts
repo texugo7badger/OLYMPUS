@@ -25,6 +25,7 @@ import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { spawnOpencode } from '@/lib/opencode-spawn';
 import { symlinkSync, mkdirSync as mkdirSyncFs, existsSync as existsSyncFs } from 'node:fs';
+import { classifyDestructiveCommand } from '@/lib/destructive-guard';
 
 export interface WarmServerInfo {
   port: number;
@@ -403,7 +404,9 @@ export async function runWarmHop(opts: {
 
   // 2) SSE watch (first-byte, silence, errors, permissions)
   const errors: string[] = [];
-  const permissions = new Set<string>();
+  // v0.0.30 — pid -> the permission payload. The auto-approve must READ the
+  // ask before saying yes; a destructive bash command is not a "once" yes.
+  const permissions = new Map<string, string>();
   let sawFirstByte = false;
   let lastEventAt = Date.now();
   const sse = openSse(server, (ev) => {
@@ -414,13 +417,26 @@ export async function runWarmHop(opts: {
       errors.push(typeof ev.error === 'string' ? ev.error : JSON.stringify(ev.error ?? ev).slice(0, 400));
     }
     const pid = ev?.properties?.permissionID ?? ev?.permissionID ?? ev?.properties?.id;
-    if ((ev?.type === 'permission.updated' || ev?.type === 'permission.asked') && pid) permissions.add(String(pid));
+    if ((ev?.type === 'permission.updated' || ev?.type === 'permission.asked') && pid) {
+      permissions.set(String(pid), JSON.stringify(ev).slice(0, 8000));
+    }
   });
 
   // Auto-approve permission asks for hop sessions (unattended by design).
   const permissionTimer = setInterval(async () => {
-    for (const pid of [...permissions]) {
+    for (const [pid, payload] of [...permissions]) {
       permissions.delete(pid);
+      // v0.0.30 (#C6) — a destructive ask is NEVER auto-approved in an
+      // unattended hop. Abort the turn with a typed error the walker parks.
+      const verdict = classifyDestructiveCommand(payload);
+      if (verdict.destructive) {
+        errors.push(`destructive-command-denied (${verdict.reason}): ${verdict.pattern ?? 'matched pattern'} — a hop may not run this unattended; the walker backs up first and parks for human approval`);
+        try {
+          await httpRequest(server.port, server.password, 'POST', v2Path(server, `/session/${sessionId}/abort`), undefined, 5_000);
+        } catch { /* the ceiling still bounds the turn */ }
+        opts.onNotice?.(`permission ${pid} DENIED (destructive: ${verdict.reason})`);
+        continue;
+      }
       try {
         const v1 = await httpRequest(server.port, server.password, 'POST', `/session/${sessionId}/permissions/${encodeURIComponent(pid)}`, { response: 'once' }, 5_000);
         if (v1.status < 200 || v1.status >= 300) {

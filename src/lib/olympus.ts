@@ -141,14 +141,14 @@ function parseFrontmatter(file: string): Record<string, any> {
 const GOD_META: Record<string, { icon: string; domain: string; model: string; caveman: string; army: number }> = {
   apollo: { icon: 'apollo', domain: 'Planner — Architecture, Spec', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'never', army: 8 },
   atlas: { icon: 'git-fork', domain: 'Orchestrator — Dispatch, Execution', model: 'opencode-go/hy3', caveman: 'never', army: 6 },
-  hephaestus: { icon: 'hephaestus', domain: 'Backend / Infrastructure', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full', army: 30 },
-  athena: { icon: 'athena', domain: 'Frontend / UX-UI / Design', model: 'opencode-go/qwen3.7-plus', caveman: 'never', army: 7 },
-  hermes: { icon: 'hermes', domain: 'Integrations / APIs / MCPs', model: 'opencode-go/qwen3.7-plus', caveman: 'full', army: 2 },
-  artemis: { icon: 'artemis', domain: 'Security / Auditing', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'lite', army: 3 },
-  dionysus: { icon: 'dionysus', domain: 'QA / Testing / Edge Cases', model: 'opencode-go/qwen3.7-plus', caveman: 'full', army: 6 },
-  persephone: { icon: 'persephone', domain: 'Database / Persistence', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full', army: 2 },
-  prometheus: { icon: 'prometheus', domain: 'DevOps / CI-CD / Deploy', model: 'opencode-go/minimax-m3', caveman: 'full', army: 6 },
-  callimachus: { icon: 'callimachus', domain: 'Vault curator — Instincts, Compaction', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full', army: 0 },
+  hephaestus: { icon: 'hephaestus', domain: 'Backend / Infrastructure', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full', army: 20 },
+  athena: { icon: 'athena', domain: 'Frontend / UX-UI / Design', model: 'opencode-go/qwen3.7-plus', caveman: 'never', army: 14 },
+  hermes: { icon: 'hermes', domain: 'Integrations / APIs / MCPs', model: 'opencode-go/qwen3.7-plus', caveman: 'full', army: 16 },
+  artemis: { icon: 'artemis', domain: 'Security / Auditing', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'lite', army: 12 },
+  dionysus: { icon: 'dionysus', domain: 'QA / Testing / Edge Cases', model: 'opencode-go/qwen3.7-plus', caveman: 'full', army: 13 },
+  persephone: { icon: 'persephone', domain: 'Database / Persistence', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full', army: 11 },
+  prometheus: { icon: 'prometheus', domain: 'DevOps / CI-CD / Deploy', model: 'opencode-go/minimax-m3', caveman: 'full', army: 13 },
+  callimachus: { icon: 'callimachus', domain: 'Vault curator — Instincts, Compaction', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full', army: 9 },
 };
 
 const GOD_SKILLS: Record<string, string[]> = {
@@ -856,7 +856,7 @@ export function brainHealth() {
  * 'verifier-code', 'sast-scanner').
  */
 function countGods(): number {
-  const GOD_NAMES = ['apollo', 'artemis', 'athena', 'dionysus', 'hephaestus',
+  const GOD_NAMES = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus',
                       'hermes', 'persephone', 'prometheus', 'callimachus'];
   try {
     const cfgPath = path.join(OLYMPUS_ROOT, 'opencode.json');
@@ -945,7 +945,7 @@ function countAgentsFromConfig(): number {
     if (!agents || typeof agents !== 'object') return 0;
 
     const GOD_NAMES_SET = new Set([
-      'apollo', 'artemis', 'athena', 'dionysus', 'hephaestus',
+      'apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus',
       'hermes', 'persephone', 'prometheus', 'callimachus',
     ]);
 
@@ -1490,7 +1490,7 @@ export function getProviderInfo(): ProviderInfo {
     cost_per_1m_tokens: prov.cost_per_1m_tokens || { input: 0.14, output: 0.28 },
     isFree: false,
     displayName: 'Provider: opencode-go (GO plan)',
-    capsDisplay: '$12/5h · $30/week · $60/month caps',
+    capsDisplay: 'per-model caps (5h = 20% of the model monthly cap) · invoice not exposed',
   };
 }
 
@@ -1510,10 +1510,13 @@ export function costSummary() {
   const activeCosts = costs.filter(c => c.requests > 0);
   const avgLatency = activeCosts.length ? Math.round(activeCosts.reduce((s, c) => s + c.avgLatencyMs, 0) / activeCosts.length) : 0;
   const avgSuccess = activeCosts.length ? Math.round((activeCosts.reduce((s, c) => s + c.successRate, 0) / activeCosts.length) * 100) / 100 : 0;
-  // Only the GO plan carries a 5h spend cap. ZEN is pay-as-you-go (no caps)
-  // and the free strategies cost nothing — their dashboards show token
-  // usage instead of spend.
-  const cap5hTotal = prov.name === 'opencode-go' ? 12 : null;
+  // v0.0.30 — THE $12/5h AGGREGATE WAS FICTION. The GO plan's documented
+  // limits are PER MODEL (5h = 20% of that model's monthly dollar cap; the
+  // monthly caps differ: $80 for DeepSeek V4.1 Flash, $60 for Kimi/Qwen, …).
+  // A single $12 bar across a mixed roster was neither an invoice nor a cap.
+  // Hide the aggregate until the per-model table lands (issue A2); the
+  // per-god rows still show step cost + list value with their own labels.
+  const cap5hTotal = null;
   // #179 + #181: the cap tracks REAL provider-reported spend (the metered
   // figure the step-finish rows carry) — heuristic estimates never count
   // against the cap.
@@ -1546,7 +1549,7 @@ export function costSummary() {
  * only `mode: "primary"`) from the rest.
  */
 export function listAgents() {
-  const GOD_NAMES = ['apollo', 'artemis', 'athena', 'dionysus', 'hephaestus',
+  const GOD_NAMES = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus',
                       'hermes', 'persephone', 'prometheus', 'callimachus'];
   const gods: any[] = [];
   const subagents: any[] = [];
