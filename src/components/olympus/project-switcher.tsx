@@ -45,6 +45,16 @@ export default function ProjectSwitcher() {
  setActiveProject(p); setDropdownOpen(false);
  }
 
+ // v0.0.31 (R31-13) — THE AIME/aime SPECIMEN. The project note carried the
+ // legacy uppercase name while the slug (and the folder the user renamed)
+ // is lowercase. When the two only differ by case, the slug is canonical.
+ const displayName = (p: ProjectNote | null | undefined): string => {
+ if (!p) return 'No Project';
+ const name = (p.name || '').trim();
+ if (!name) return p.slug;
+ return name.toLowerCase() === p.slug.toLowerCase() ? p.slug : name;
+ };
+
  return (
  <div className="relative" ref={dropdownRef}>
  <button
@@ -53,7 +63,7 @@ export default function ProjectSwitcher() {
  className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-olympus-gold/10 transition-colors group"
  >
  <Folder size={11} style={{ color: GOD_COLOR }} />
- <span className="text-olympus-gold font-semibold max-w-[120px] truncate">{activeProject?.name || 'No Project'}</span>
+ <span className="text-olympus-gold font-semibold max-w-[120px] truncate">{displayName(activeProject)}</span>
  <ChevronDown size={10} className={cn('text-olympus-text-dim transition-transform', dropdownOpen && 'rotate-180')} />
  </button>
  {dropdownOpen && (
@@ -65,7 +75,7 @@ export default function ProjectSwitcher() {
  <div className="max-h-64 overflow-y-auto custom-scroll">
  {projects.length === 0 ? <div className="px-3 py-6 text-center text-[11px] font-mono text-olympus-text-dim">No projects yet.<br />Click "New" to create one.</div> : projects.map(p => (
  <div key={p.slug} className={cn('relative px-3 py-2 transition-colors group', activeProject?.slug === p.slug ? 'bg-olympus-gold/10' : 'hover:bg-olympus-gold/5')} onClick={() => switchProject(p)} onMouseEnter={() => setHoveredProject(p.slug)} onMouseLeave={() => setHoveredProject(null)}>
- <div className="flex items-center gap-2"><Folder size={12} style={{ color: activeProject?.slug === p.slug ? GOD_COLOR : '#8B8B8B' }} /><span className="text-[11px] font-mono font-semibold flex-1 truncate" style={{ color: activeProject?.slug === p.slug ? GOD_COLOR : '#B8B8B8' }}>{p.name}</span>{activeProject?.slug === p.slug && <span className="text-[9px] font-mono text-olympus-green">ACTIVE</span>}</div>
+ <div className="flex items-center gap-2"><Folder size={12} style={{ color: activeProject?.slug === p.slug ? GOD_COLOR : '#8B8B8B' }} /><span className="text-[11px] font-mono font-semibold flex-1 truncate" style={{ color: activeProject?.slug === p.slug ? GOD_COLOR : '#B8B8B8' }}>{displayName(p)}</span>{activeProject?.slug === p.slug && <span className="text-[9px] font-mono text-olympus-green">ACTIVE</span>}</div>
  <div className="text-[10px] font-mono text-olympus-text-dim truncate ml-5">{p.description || '(no description)'}</div>
  {hoveredProject === p.slug && p.stacks.length > 0 && (<div className="absolute top-full left-0 mt-1 w-full bg-olympus-bg border border-olympus-gold/30 rounded-lg p-2 z-10 shadow-md"><div className="text-[9px] font-mono text-olympus-text-dim mb-1.5 flex items-center gap-1"><Layers size={9} style={{ color: GOD_COLOR }} /> STACKS</div><div className="flex flex-wrap gap-1">{p.stacks.map(s => <span key={s} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 ring-1 ring-olympus-gold/20" style={{ color: GOD_COLOR }}>{STACK_ICONS[s.toLowerCase()] || s}</span>)}</div></div>)}
  </div>))}

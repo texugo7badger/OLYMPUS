@@ -51,6 +51,18 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    // v0.0.31 (R31-10) — PRUNE THE LEGACY GATE STORE.
+    // The panel's "reset" used to run the curated bulk action, which changed
+    // real toggles. This rewrites mcp-state.json from the canonical registry
+    // (opencode.json) without touching a single server.
+    if (body?.pruneLegacy === true) {
+      const { servers } = listMcpServers();
+      const enabled: Record<string, boolean> = {};
+      for (const s of servers) enabled[s.name] = s.enabled;
+      const stateFile = path.join(process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus'), 'mcp-state.json');
+      fs.writeFileSync(stateFile, JSON.stringify({ enabled }, null, 2) + '\n', 'utf-8');
+      return NextResponse.json({ ok: true, pruned: true, enabled, stateFile }, { headers: NO_CACHE_HEADERS });
+    }
     const { name, enabled } = body;
     if (typeof name !== 'string' || typeof enabled !== 'boolean') {
       return NextResponse.json({ ok: false, error: 'Missing or invalid { name, enabled }' }, { status: 400, headers: NO_CACHE_HEADERS });

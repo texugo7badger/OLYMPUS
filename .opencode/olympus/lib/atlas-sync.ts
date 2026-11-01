@@ -51,7 +51,7 @@ const STATE_FILE = path.join(OLYMPUS_HOME, "sync-map.json");
 const LIVE_FEED = path.join(getVaultRoot(), "06_Activity_Feed", "live.jsonl");
 
 export type SyncOrigin = "project" | "dispatch";
-export type SyncStatus = "received" | "routed" | "done" | "failed";
+export type SyncStatus = "received" | "routed" | "done" | "failed" | "unknown";
 
 export interface SyncMapEntry {
   /** Unique entry id (sync-<uuid>). */
@@ -505,22 +505,22 @@ export function finalizeAtlasOnProcessExit(): ExitFinalizeReport {
         // no finalized record for it — failed, never vanished.
         atlasWrite({
           id: e.id, origin: e.origin, source: e.source, ts: e.ts,
-          intent: e.intent, status: "failed",
+          intent: e.intent, status: "unknown",
           meta: e.meta,
           updatedTs: new Date().toISOString(),
-          updatedReason: "process exit — died mid-flight",
+          updatedReason: "process exit — dispatch outcome unknown (the process ended before the tracker settled; this is not a failure)",
         } as SyncMapEntryInput);
-        report.syncEntriesTransitioned.push({ id: e.id, from: e.status, to: "failed" });
+        report.syncEntriesTransitioned.push({ id: e.id, from: e.status, to: "unknown" });
       }
     } else if (e.origin === "project" && e.status === "received") {
       atlasWrite({
         id: e.id, origin: e.origin, source: e.source, ts: e.ts,
-        intent: e.intent, status: "failed",
+        intent: e.intent, status: "unknown",
         meta: e.meta,
         updatedTs: new Date().toISOString(),
-        updatedReason: "process exit — prompt died mid-flight",
+        updatedReason: "process exit — prompt outcome unknown (the process ended before the idle signal; this is not a failure)",
       } as SyncMapEntryInput);
-      report.syncEntriesTransitioned.push({ id: e.id, from: "received", to: "failed" });
+      report.syncEntriesTransitioned.push({ id: e.id, from: "received", to: "unknown" });
     }
   }
 

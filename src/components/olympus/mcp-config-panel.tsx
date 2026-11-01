@@ -174,9 +174,20 @@ export default function MCPConfigPanel() {
     const server = servers.find((s) => s.name === name);
     if (!server) return;
     if (server.requires?.kind === 'key' && !server.apiKeysConfigured) return;
+    const newEnabled = !server.enabled;
+    // v0.0.31 (R31-10) — NEVER ENABLE A KNOWN-DEAD SERVER.
+    // The 2026-11-01 panel had 23 enabled but only 9 healthy; every hop paid
+    // the spawn cost of dead servers. An unavailable/dead row must be fixed
+    // first (or explicitly probed), not toggled on.
+    if (newEnabled) {
+      const st = statusOf(server);
+      if (st === 'dead' || isUnavailable(st) || st === 'needs-auth') {
+        setError(`${name} cannot be enabled: ${server.health?.error || st}. Fix the dependency first (Diagnostics) — enabling a dead server only poisons the next session.`);
+        return;
+      }
+    }
 
     setToggling(name);
-    const newEnabled = !server.enabled;
     setServers((prev) => prev.map((s) => (s.name === name ? { ...s, enabled: newEnabled } : s)));
 
     try {
@@ -195,6 +206,23 @@ export default function MCPConfigPanel() {
     } finally {
       setToggling(null);
     }
+  };
+
+  // v0.0.31 (R31-10) — prune the legacy gate store WITHOUT touching real
+  // toggles. The old "reset" link ran the curated bulk action (a lie).
+  const pruneLegacy = async () => {
+    try {
+      const res = await fetch('/api/olympus/mcp/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pruneLegacy: true }),
+      });
+      if (!res.ok) throw new Error('prune failed');
+      setStaleState([]);
+      setDismissedStale(true);
+      setSyncNote('Legacy toggles pruned — opencode.json is the only authority.');
+      await load();
+    } catch (e: any) { setError(e?.message || 'prune failed'); }
   };
 
   const bulk = async (action: 'reset-curated' | 'disable-unavailable' | 'enable-available') => {
@@ -243,11 +271,20 @@ export default function MCPConfigPanel() {
   };
 
   const statusOf = (s: McpServerInfo): HealthStatus => s.health?.status ?? (s.enabled ? 'unprobed' : 'disabled');
-  const enabledCount = servers.filter((s) => s.enabled).length;
-  const lockedCount = servers.filter((s) => s.enabled && statusOf(s) === 'needs-auth').length;
-  const unavailableCount = servers.filter((s) => s.enabled && isUnavailable(statusOf(s))).length;
-  const deadCount = servers.filter((s) => statusOf(s) === 'dead').length;
-  const offCount = Math.max(0, servers.length - enabledCount);
+  // v0.0.31 (R31-10) — THE COUNTERS ARE A PARTITION, NOT OVERLAPPING SETS.
+  // The 2026-11-01 header read "23 enabled · 1 locked · 13 unavailable ·
+  // 1 dead · 5 off / 28" — four overlapping buckets. Every enabled row now
+  // lands in exactly one bucket, so the sum is the total.
+  const enabledServers = servers.filter((s) => s.enabled);
+  const aliveCount = enabledServers.filter((s) => statusOf(s) === 'alive').length;
+  const lockedCount = enabledServers.filter((s) => statusOf(s) === 'needs-auth').length;
+  const unavailableCount = enabledServers.filter((s) => {
+    const st = statusOf(s);
+    return st === 'needs-service' || st === 'needs-binary' || st === 'needs-app' || st === 'optional-unavailable';
+  }).length;
+  const deadCount = enabledServers.filter((s) => statusOf(s) === 'dead').length;
+  const unprobedCount = enabledServers.filter((s) => statusOf(s) === 'unprobed').length;
+  const offCount = servers.filter((s) => !s.enabled).length;
 
   const tools = summary?.tools ?? 0;
   const budget = summary?.toolBudget ?? 128;
@@ -260,10 +297,11 @@ export default function MCPConfigPanel() {
         <Plug size={14} className="text-olympus-gold shrink-0" />
         <span className="text-[11px] font-mono font-semibold text-olympus-gold">MCP Configuration</span>
         <span className="text-[9px] font-mono text-olympus-text-dim ml-auto">
-          {enabledCount} enabled
+          {aliveCount} alive
           {lockedCount > 0 && <span className="text-olympus-amber-soft ml-1">· {lockedCount} locked</span>}
           {unavailableCount > 0 && <span className="text-olympus-amber-soft ml-1">· {unavailableCount} unavailable</span>}
           {deadCount > 0 && <span className="text-olympus-red ml-1">· {deadCount} dead</span>}
+          {unprobedCount > 0 && <span className="text-olympus-text-dim ml-1">· {unprobedCount} unprobed</span>}
           {offCount > 0 && <span className="text-olympus-text-dim/60 ml-1">· {offCount} off</span>}
           <span className="text-[#5A5A5A] ml-1">/ {servers.length}</span>
         </span>
@@ -386,7 +424,7 @@ export default function MCPConfigPanel() {
               {staleState.length} stale “on” toggle{staleState.length === 1 ? '' : 's'} from an older build are no longer applied
               (v0.0.24 made opencode.json authoritative).
             </span>
-            <button onClick={() => bulk('reset-curated')} className="hover:text-olympus-gold">reset</button>
+            <button onClick={pruneLegacy} className="hover:text-olympus-gold">reset</button>
             <button onClick={() => setDismissedStale(true)} className="text-olympus-text-dim hover:text-olympus-amber-soft">dismiss</button>
           </div>
         )}

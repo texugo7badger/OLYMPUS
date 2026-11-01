@@ -94,8 +94,18 @@ export function useHopLive() {
   const { inFlight, campaign } = useMemo(() => {
     const byHop = new Map<string, LiveHop>();
     let current: LiveCampaign | null = null;
+    // v0.0.31 (R31-12) — THE 1302-MINUTE LIE.
+    //
+    // The replay reconstructs in-flight from hop_start without a later
+    // hop_done/hop_parked. Because it walked the WHOLE 500-event window, hops
+    // from dead campaigns (2026-10-31, 127m/1302m old) were reported as "live"
+    // forever. A new campaign starts with a clean slate, an ended campaign
+    // clears its hops, foreign-campaign hops are ignored, and anything older
+    // than 90 minutes is never shown as live (the walk would have parked it).
+    const ACTIVE_WINDOW_MS = 90 * 60_000;
     for (const ev of events) {
       if (ev.type === 'campaign_start') {
+        byHop.clear();
         current = {
           campaignId: ev.campaignId,
           project: ev.project ?? null,
@@ -107,6 +117,7 @@ export function useHopLive() {
         continue;
       }
       if (ev.type === 'campaign_end' && current && (ev.campaignId == null || ev.campaignId === current.campaignId)) {
+        byHop.clear();
         current = {
           ...current,
           completed: ev.completed ?? current.completed,
@@ -115,6 +126,8 @@ export function useHopLive() {
         continue;
       }
       if (!ev.hop) continue;
+      // A hop from a campaign that is not the current one is history, not live.
+      if (ev.campaignId && current?.campaignId && ev.campaignId !== current.campaignId) continue;
       if (ev.type === 'hop_start') {
         byHop.set(ev.hop, {
           hopId: ev.hop,
@@ -128,7 +141,6 @@ export function useHopLive() {
           transport: ev.transport ?? null,
           elapsedMs: 0,
         });
-        if (current) current = { ...current, completed: current.completed };
       } else if (ev.type === 'hop_done' || ev.type === 'hop_parked') {
         byHop.delete(ev.hop);
         if (current) current = { ...current, completed: current.completed + (ev.type === 'hop_done' ? 1 : 0) };
@@ -137,10 +149,12 @@ export function useHopLive() {
         if (cur) byHop.set(ev.hop, { ...cur, elapsedMs: ev.elapsedMs ?? 0 });
       }
     }
-    const list = [...byHop.values()].map((h) => ({
-      ...h,
-      elapsedMs: Math.max(h.elapsedMs, now - new Date(h.startedAt).getTime()),
-    }));
+    const list = [...byHop.values()]
+      .map((h) => ({
+        ...h,
+        elapsedMs: Math.max(h.elapsedMs, now - new Date(h.startedAt).getTime()),
+      }))
+      .filter((h) => Number.isFinite(h.elapsedMs) && h.elapsedMs <= ACTIVE_WINDOW_MS);
     return { inFlight: list, campaign: current as LiveCampaign | null };
   }, [events, now]);
 

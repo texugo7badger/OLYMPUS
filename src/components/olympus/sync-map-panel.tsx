@@ -41,6 +41,7 @@ const STATUS_COLOR: Record<string, string> = {
   success: 'text-olympus-green',
   routed: 'text-olympus-green',
   failed: 'text-olympus-red',
+  unknown: 'text-olympus-amber-soft',
   pending: 'text-olympus-gold',
   working: 'text-olympus-gold',
 };

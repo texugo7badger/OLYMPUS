@@ -55,7 +55,14 @@ export async function GET(req: NextRequest) {
         god: String(e.meta?.godId ?? e.meta?.parentGod ?? e.meta?.agent ?? 'apollo').toLowerCase(),
         demigod: typeof e.meta?.demigod === 'string' ? e.meta.demigod : null,
         intent: String(e.intent ?? '').replace(/\s+/g, ' ').slice(0, 160),
-        status: String(e.status ?? 'unknown'),
+        // v0.0.31 (R31-13) — THE 775 FALSE FAILURES.
+        // The old exit path marked every still-open prompt "failed" (process
+        // exit ≠ the work failed). Forward, the writer uses `unknown`; for
+        // history, an exit-attributed failure is presented for what it is.
+        status: (String(e.status ?? 'unknown') === 'failed'
+          && /(process exit|died mid-flight)/i.test(String(e.updatedReason ?? '')))
+          ? 'unknown'
+          : String(e.status ?? 'unknown'),
         error: typeof e.meta?.error === 'string' ? e.meta.error.slice(0, 160) : null,
       }));
     return NextResponse.json({
