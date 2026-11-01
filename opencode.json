@@ -1084,7 +1084,8 @@
       "enabled": false,
       "command": [
         "npx",
-        "@coding-solo/godot-mcp"
+        "-y",
+        "@coding-solo/godot-mcp@0.1.1"
       ]
     },
     "blender": {
@@ -1100,7 +1101,8 @@
       "enabled": false,
       "command": [
         "npx",
-        "comfyui-mcp"
+        "-y",
+        "comfyui-mcp@0.52.206"
       ]
     },
     "rea": {
@@ -1109,7 +1111,7 @@
       "command": [
         "npx",
         "-y",
-        "rea-agents@6.7.0",
+        "rea-agents@6.8.0",
         "mcp"
       ]
     },
@@ -1136,7 +1138,7 @@
       "enabled": true,
       "command": [
         "uvx",
-        "mcp-server-git",
+        "mcp-server-git@2026.10.28",
         "--repository",
         "."
       ]
@@ -1145,8 +1147,9 @@
       "type": "local",
       "enabled": false,
       "command": [
-        "uvx",
-        "mcp-server-kubernetes"
+        "npx",
+        "-y",
+        "mcp-server-kubernetes@4.2.1"
       ]
     },
     "grafana": {
@@ -1154,7 +1157,7 @@
       "enabled": false,
       "command": [
         "uvx",
-        "mcp-grafana"
+        "mcp-grafana@2.1.1"
       ],
       "environment": {
         "GRAFANA_URL": "{env:GRAFANA_URL}",
@@ -1184,7 +1187,7 @@
       "command": [
         "npx",
         "-y",
-        "tamp@latest"
+        "tamp@0.0.3"
       ]
     },
     "chrome-devtools": {
@@ -1193,7 +1196,7 @@
       "command": [
         "npx",
         "-y",
-        "chrome-devtools-mcp@latest"
+        "chrome-devtools-mcp@1.12.0"
       ]
     },
     "playwright": {
@@ -1202,22 +1205,22 @@
       "command": [
         "npx",
         "-y",
-        "@playwright/mcp@latest"
+        "@playwright/mcp@0.0.84"
       ]
     },
     "serena": {
       "type": "local",
       "enabled": false,
       "command": [
-        "npx",
-        "-y",
-        "@atlassian/mcp-compressor",
-        "-c",
-        "medium",
-        "--",
-        "npx",
-        "-y",
-        "serena-mcp@latest"
+        "uvx",
+        "--from",
+        "serena-agent@2.1.0",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "{env:PROJECT_ROOT}"
       ]
     },
     "sequential-thinking": {
@@ -1234,13 +1237,13 @@
       "command": [
         "npx",
         "-y",
-        "@atlassian/mcp-compressor",
+        "@atlassian/mcp-compressor@0.40.0",
         "-c",
         "medium",
         "--",
         "npx",
         "-y",
-        "@modelcontextprotocol/server-github@latest"
+        "@modelcontextprotocol/server-github@2025.4.8"
       ],
       "environment": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}"
@@ -1252,7 +1255,7 @@
       "command": [
         "npx",
         "-y",
-        "@modelcontextprotocol/server-postgres@latest"
+        "@modelcontextprotocol/server-postgres@0.6.2"
       ]
     },
     "docker": {
@@ -1261,7 +1264,7 @@
       "command": [
         "npx",
         "-y",
-        "docker-mcp@latest"
+        "docker-mcp@1.0.0"
       ]
     },
     "nakkas": {
@@ -1307,8 +1310,9 @@
       "command": [
         "npx",
         "-y",
-        "figma-developer-mcp@latest",
-        "--figma-api-key={env:FIGMA_API_KEY}"
+        "figma-developer-mcp@0.13.2",
+        "--figma-api-key",
+        "{env:FIGMA_API_KEY}"
       ],
       "environment": {
         "FIGMA_API_KEY": "{env:FIGMA_API_KEY}"
@@ -1320,7 +1324,7 @@
       "command": [
         "npx",
         "-y",
-        "shadcn-mcp@latest"
+        "shadcn-mcp@1.0.0"
       ]
     },
     "opendesign": {
@@ -1329,7 +1333,7 @@
       "command": [
         "npx",
         "-y",
-        "open-design-mcp@latest"
+        "open-design-mcp@0.16.1"
       ]
     },
     "olympus-craft": {

@@ -20,7 +20,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "tamp@latest"
+        "tamp@0.0.3"
       ],
       "env": {},
       "_comment": "Token compression for MCP tool OUTPUT (orthogonal to mcp-compressor which compresses tool DESCRIPTIONS). Lossless."
@@ -29,7 +29,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "chrome-devtools-mcp@latest"
+        "chrome-devtools-mcp@1.12.0"
       ],
       "env": {},
       "_comment": "Browser inspection. ECC ships this. Used for debugging web apps."
@@ -38,22 +38,22 @@
       "command": "npx",
       "args": [
         "-y",
-        "@playwright/mcp@latest"
+        "@playwright/mcp@0.0.84"
       ],
       "env": {},
       "_comment": "E2E browser automation. Used by Dionysus (QA) + Athena (frontend)."
     },
     "serena": {
-      "command": "npx",
+      "command": "uvx",
       "args": [
-        "-y",
-        "@atlassian/mcp-compressor",
-        "-c",
-        "medium",
-        "--",
-        "npx",
-        "-y",
-        "serena-mcp@latest"
+        "--from",
+        "serena-agent@2.1.0",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "${PROJECT_ROOT}"
       ],
       "env": {},
       "_comment": "Semantic code edits by symbol (LSP-powered) — wrapped with mcp-compressor (medium). Reduces edit errors on large codebases. Used by Hephaestus."
@@ -70,13 +70,13 @@
       "command": "npx",
       "args": [
         "-y",
-        "@atlassian/mcp-compressor",
+        "@atlassian/mcp-compressor@0.40.0",
         "-c",
         "medium",
         "--",
         "npx",
         "-y",
-        "@modelcontextprotocol/server-github@latest"
+        "@modelcontextprotocol/server-github@2025.4.8"
       ],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
@@ -87,7 +87,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-postgres@latest"
+        "@modelcontextprotocol/server-postgres@0.6.2"
       ],
       "env": {},
       "_comment": "Read-only Postgres EXPLAIN ANALYZE. Used by Persephone. WARNING: gate writes behind permission.ask."
@@ -96,7 +96,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "docker-mcp@latest"
+        "docker-mcp@1.0.0"
       ],
       "env": {},
       "_comment": "Container management (build, run, inspect). Used by Prometheus."
@@ -128,9 +128,9 @@
     "git": {
       "command": "uvx",
       "args": [
-        "mcp-server-git@latest",
+        "mcp-server-git@2026.10.28",
         "--repository",
-        "${PROJECT_ROOT}"
+        "."
       ],
       "env": {}
     },
@@ -138,14 +138,14 @@
       "command": "npx",
       "args": [
         "-y",
-        "mcp-server-kubernetes@latest"
+        "mcp-server-kubernetes@4.2.1"
       ],
       "env": {}
     },
     "grafana": {
       "command": "uvx",
       "args": [
-        "mcp-grafana@latest"
+        "mcp-grafana@2.1.1"
       ],
       "env": {
         "GRAFANA_URL": "${GRAFANA_URL}",
@@ -164,8 +164,9 @@
       "command": "npx",
       "args": [
         "-y",
-        "figma-developer-mcp@latest",
-        "--figma-api-key=${FIGMA_API_KEY}"
+        "figma-developer-mcp@0.13.2",
+        "--figma-api-key",
+        "${FIGMA_API_KEY}"
       ],
       "env": {}
     },
@@ -173,7 +174,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "shadcn-mcp@latest"
+        "shadcn-mcp@1.0.0"
       ],
       "env": {}
     },
@@ -181,7 +182,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "open-design-mcp@latest"
+        "open-design-mcp@0.16.1"
       ],
       "env": {},
       "_comment": "OpenDesign MCP -- 71+ production design systems (Linear, Stripe, Vercel, Apple, etc.). Free, open-source, BYOK. Queries on-demand via od_list_projects + od_get_project to keep input tokens low. Used by Athena (frontend/design). Replaces magic-mcp (paid)."
