@@ -41,6 +41,12 @@ export interface HopStateFile {
   parked: HopPark | null;
   /** v0.0.24 (#226): the campaign this state belongs to. */
   campaignId?: string;
+  /**
+   * v0.0.31 (R31-02): hops that failed twice in the same walk. A quarantined
+   * hop is never retried automatically; independent hops keep running. A
+   * manual resume clears the list (the human explicitly retries).
+   */
+  quarantined?: string[];
   /** W-D2 (v0.0.6 MISSION-CONTROL-TRUE): the hops RUNNING right now —
    *  written at every launch/settle so the tasks sheet has GROUND TRUTH
    *  (telemetry rows land only at hop settle; before this, a running hop
@@ -73,6 +79,9 @@ export function loadHopState(stateDir: string): HopStateFile | null {
     completed: [...s.completed],
     parked: s.parked ?? null,
     campaignId: typeof s.campaignId === 'string' ? s.campaignId : undefined,
+    quarantined: Array.isArray(s.quarantined)
+      ? s.quarantined.filter((q): q is string => typeof q === 'string')
+      : [],
     inFlight: Array.isArray(s.inFlight) ? s.inFlight.map((f) => ({
       hopId: String(f?.hopId ?? ''),
       startedAt: String(f?.startedAt ?? new Date().toISOString()),

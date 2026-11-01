@@ -855,9 +855,11 @@ interface WalkTask {
 
 /**
  * Walk the dispatch-plan DAG. Small hops, deterministic verify, park on
- * failure, resume from the state file. The walk STOPS at the first park
- * (in-flight hops settle + record first) — the campaign never dies, it
- * parks; --resume continues from the state file.
+ * failure, resume from the state file. A dispatch that fails after both
+ * transports is QUARANTINED (v0.0.31): independent hops keep running, the
+ * quarantined hop is never retried automatically, and a systemic park rate
+ * stops the campaign named. A manual resume clears the quarantine and
+ * retries — the human's explicit decision.
  */
 export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   const v = validateDispatchPlan(opts.plan);
@@ -916,6 +918,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     version: 1,
     completed: [...completed],
     parked: null,
+    quarantined: [],
     inFlight: [],
     updatedAt: new Date().toISOString(),
   });
@@ -925,6 +928,40 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   const ready = (h: PlanHop) => (h.after ?? []).every((dep) => completed.has(dep));
 
   let stopped = false;
+  /**
+   * v0.0.31 (R31-02) — THE PARK CIRCUIT BREAKER.
+   *
+   * Before this, the FIRST park stopped the whole campaign, and a resume
+   * re-ran the same hop into the same stall (AIME: v8-back-nav parked twice,
+   * 20m43s + 10m28s). A dispatch that fails after both transports is now
+   * quarantined: independent hops keep running, the quarantined hop is never
+   * retried automatically, and a systemic park rate stops the walk named.
+   */
+  const quarantined = new Set<string>();
+  let attempts = 0;
+  let parks = 0;
+  const parkHop = (hop: PlanHop, reason: string, error?: string, verify?: HopVerifyResult): void => {
+    parks += 1;
+    quarantined.add(hop.id);
+    parkedHop = {
+      hopId: hop.id,
+      reason,
+      ts: new Date().toISOString(),
+      error,
+      ...(verify ? { verify } : {}),
+    };
+    emit({ type: 'hop_parked', hop: hop.id, god: hop.god, reason, error });
+    // ≥50% of attempts parked after at least 4 attempts = the lane/system is
+    // sick, not the hop. Stop named instead of burning the remaining hops.
+    if (attempts >= 4 && parks / Math.max(1, attempts) >= 0.5) {
+      stopped = true;
+      parkedHop = { ...parkedHop, reason: 'systemic-failure' };
+      emit({
+        type: 'hop_parked', hop: hop.id, god: hop.god, reason: 'systemic-failure',
+        error: `${parks}/${attempts} attempts parked — stopping the campaign instead of retrying every hop`,
+      });
+    }
+  };
   const telemetryRow = (hop: PlanHop, r: HopDispatchResult | null, status: string, startedAt: number): HopTelemetryRow => {
     // `lane` is the MODEL lane (the pool the hop actually ran on), not the
     // project directory. The dir is already in every other row/event and the
@@ -964,6 +1001,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           completed: [...completed],
           parked: parkedHop,
           campaignId: opts.campaignId,
+          quarantined: [...quarantined],
           inFlight: [...inFlight.values()].map((t) => ({
             hopId: t.hop.id,
             startedAt: new Date(t.startedAt).toISOString(),
@@ -990,7 +1028,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           perPool.set(lane, (perPool.get(lane) ?? 0) + 1);
         }
         const next = pending.find((h) => {
-          if (!ready(h) || inFlight.has(h.id) || completed.has(h.id)) return false;
+          if (!ready(h) || inFlight.has(h.id) || completed.has(h.id) || quarantined.has(h.id)) return false;
           const lane = resolveGodModelLane(h.god) ?? 'unknown';
           // #LANE-CAP: the cap depends on the LANE CLASS (a free NVIDIA pool
           // tolerates 2; a paid/plan lane rides the full global cap).
@@ -1022,6 +1060,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           console.log(`[hop-guard] destructive hop '${next.id}' — database backed up to ${dataGuard.backup.dir} (${dataGuard.backup.files.join(', ')})`);
         }
         const startedAt = Date.now();
+        attempts += 1;
         const task: WalkTask = { hop: next, startedAt, done: false, promise: Promise.resolve() };
         inFlight.set(next.id, task);
         // #PANTHEON-RAIL: the hop's ARTIFACTS ride the start event — the
@@ -1073,53 +1112,23 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
                 transport: result.transport,
               });
             } else {
-              if (!stopped) {
-                stopped = true;
-                parkedHop = {
-                  hopId: next.id, reason: 'verify-failed',
-                  ts: new Date().toISOString(), error: verify.checks.find((c) => !c.ok)?.detail,
-                  verify,
-                };
-              }
+              parkHop(next, 'verify-failed', verify.checks.find((c) => !c.ok)?.detail, verify);
               telemetryRow(next, result, 'parked-verify-failed', startedAt);
-              emit({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'verify-failed', error: verify.checks.find((c) => !c.ok)?.detail });
             }
           } else if (result.exhausted) {
-            if (!stopped) {
-              stopped = true;
-              parkedHop = {
-                hopId: next.id, reason: 'retry-exhausted',
-                ts: new Date().toISOString(), error: result.error,
-              };
-            }
+            parkHop(next, 'retry-exhausted', result.error);
             telemetryRow(next, result, 'parked-retry-exhausted', startedAt);
-            emit({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'retry-exhausted', error: result.error });
           } else {
-            if (!stopped) {
-              stopped = true;
-              parkedHop = {
-                hopId: next.id, reason: 'dispatch-failed',
-                ts: new Date().toISOString(), error: result.error,
-              };
-            }
+            parkHop(next, 'dispatch-failed', result.error);
             telemetryRow(next, result, 'parked-dispatch-failed', startedAt);
-            emit({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'dispatch-failed', error: result.error });
           }
           task.done = true;
           } catch (e) {
             // The armor: post-dispatch failures (verify, telemetry, the
             // event bridge) park NAMED instead of rejecting the promise.
-            if (!stopped) {
-              stopped = true;
-              parkedHop = {
-                hopId: next.id, reason: 'walker-internal-error',
-                ts: new Date().toISOString(),
-                error: e instanceof Error ? e.message : String(e),
-              };
-            }
+            parkHop(next, 'walker-internal-error', e instanceof Error ? e.message : String(e));
             try {
               telemetryRow(next, null, 'parked-walker-internal-error', startedAt);
-              emit({ type: 'hop_parked', hop: next.id, god: next.god, reason: 'walker-internal-error', error: e instanceof Error ? e.message : String(e) });
             } catch { /* never again */ }
             task.done = true;
           }
@@ -1170,6 +1179,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     completed: [...completed],
     parked: parkedHop,
     campaignId: opts.campaignId,
+    quarantined: [...quarantined],
     inFlight: [],
     updatedAt: new Date().toISOString(),
   });

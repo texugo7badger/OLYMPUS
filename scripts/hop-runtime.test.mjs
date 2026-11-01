@@ -370,6 +370,66 @@ async function main() {
     calls.includes('h2') && calls.includes('h3') && calls.indexOf('h2') < calls.indexOf('h3'), JSON.stringify(calls));
   expect('P: the resumed walk completes everything', walk3.completed.length === 3 && !walk3.parked, JSON.stringify(walk3).slice(0, 240));
 
+  // ── 3b. v0.0.31 (R31-02): the park circuit breaker ──────────────────────
+  // A dispatched hop that fails after both transports is QUARANTINED:
+  // independent hops keep running instead of the whole campaign stopping on
+  // the first park (the AIME v8-back-nav double park).
+  {
+    const cbLane = tempLane();
+    const cbPlan = {
+      version: 1,
+      laneRoot: cbLane,
+      hops: [
+        { id: 'a', god: 'apollo', prompt: 'a', artifacts: ['a.txt'] },
+        { id: 'b', god: 'apollo', prompt: 'b', artifacts: ['b.txt'] },
+        { id: 'c', god: 'apollo', prompt: 'c', artifacts: ['c.txt'] },
+      ],
+    };
+    const cbDisp = async (hop) => {
+      if (hop.id === 'b') {
+        return { ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null, retriesAbsorbed: 1, exhausted: false, error: 'hop-first-byte-timeout (silence)' };
+      }
+      fs.writeFileSync(path.join(cbLane, hop.artifacts[0]), 'done');
+      return { ok: true, exitCode: 0, output: 'ok', tokensIn: 10, tokensOut: 20, retriesAbsorbed: 0, exhausted: false };
+    };
+    const cbState = tempLane();
+    const cb = await walkPlan({ plan: cbPlan, dispatcher: cbDisp, stateDir: cbState });
+    expect('CB: independent hops keep running after a park',
+      cb.completed.includes('a') && cb.completed.includes('c') && cb.parked?.hopId === 'b',
+      JSON.stringify(cb).slice(0, 240));
+    const cbFile = JSON.parse(fs.readFileSync(path.join(cbState, '.olympus-hop-state.json'), 'utf-8'));
+    expect('CB: the parked hop is quarantined on disk',
+      Array.isArray(cbFile.quarantined) && cbFile.quarantined.includes('b'),
+      JSON.stringify(cbFile).slice(0, 240));
+  }
+
+  // ── 3c. Systemic park rate stops the campaign, named ─────────────────────
+  {
+    const sysLane = tempLane();
+    const sysPlan = {
+      version: 1,
+      laneRoot: sysLane,
+      hops: ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({ id, god: 'apollo', prompt: id, artifacts: [`${id}.txt`] })),
+    };
+    const attempted = [];
+    const sysDisp = async (hop) => {
+      attempted.push(hop.id);
+      if (hop.id === 'b' || hop.id === 'd') {
+        return { ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null, retriesAbsorbed: 0, exhausted: false, error: 'provider stall' };
+      }
+      fs.writeFileSync(path.join(sysLane, hop.artifacts[0]), 'done');
+      return { ok: true, exitCode: 0, output: 'ok', tokensIn: 10, tokensOut: 20, retriesAbsorbed: 0, exhausted: false };
+    };
+    const sysState = tempLane();
+    const sys = await walkPlan({ plan: sysPlan, dispatcher: sysDisp, stateDir: sysState });
+    expect('CB: ≥50% parks after 4 attempts stops named (systemic-failure)',
+      sys.parked?.reason === 'systemic-failure',
+      JSON.stringify(sys.parked));
+    expect('CB: the systemic stop does not burn the remaining hops',
+      !attempted.includes('e') && !attempted.includes('f'),
+      JSON.stringify(attempted));
+  }
+
   // ── 4. Telemetry rows ────────────────────────────────────────────────────
   const telemetryPath = path.join(parkState, '.olympus-hop-telemetry.jsonl');
   const rows = fs.readFileSync(telemetryPath, 'utf-8').trim().split('\n').map((l) => JSON.parse(l));
