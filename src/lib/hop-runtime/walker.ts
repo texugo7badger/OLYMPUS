@@ -475,6 +475,8 @@ async function attemptLane(
   let retriesAbsorbed = retriesAbsorbedStart;
   let last: { code: number | null; stdout: string; stderr: string; transport?: 'warm' | 'spawn' } = { code: null, stdout: '', stderr: '' };
   const startedAt = Date.now();
+  // R31-09 — the hop runs as its lean variant (no olympus/symphony tools).
+  const hopAgent = resolveHopAgentId(hop.god, ctx.laneRoot);
   for (let attempt = 0; ; attempt++) {
     // The per-hop runtime budget (#R3: env-tunable — OLYMPUS_HOP_TIMEOUT_MS;
     // the default stays 15 min).
@@ -487,9 +489,9 @@ async function attemptLane(
       // `opencode run --agent athena` resolves; an unknown name errors
       // "Agent not found"). The warm lane already selects the agent via
       // `/api/session/:id/agent`; this makes both transports agree.
-      args: ['run', '--model', lane, '--agent', hop.god, '--format', 'json', ...(resolveHopVariant() ? ['--variant', resolveHopVariant()!] : []), ctx.prompt],
+      args: ['run', '--model', lane, '--agent', hopAgent, '--format', 'json', ...(resolveHopVariant() ? ['--variant', resolveHopVariant()!] : []), ctx.prompt],
       prompt: ctx.prompt,
-      agent: hop.god,
+      agent: hopAgent,
       model: lane,
       cwd: ctx.laneRoot,
       timeoutMs: resolveHopTimeoutMs(),
@@ -646,6 +648,82 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
 };
 
 /**
+ * R31-09 — THE LEAN HOP AGENT.
+ *
+ * A hop used to run as the full god: 22 orchestration tools
+ * (olympus-…, symphony-…, task) plus the lane's plugins. The 2026-11-01
+ * measurement: 125k input tokens for a 10–15 KB prompt, 27 steps for one
+ * component, and three "Code Mode tool catalog changed" system messages per
+ * hop. A hop is a single-artifact executor; it needs file/shell tools, not
+ * the Symphony arsenal.
+ *
+ * The variant keeps the god's prompt + model, and exposes only the tools a
+ * hop actually uses. The base god is untouched (the app's chat still uses
+ * the full arsenal).
+ */
+export const HOP_TOOL_ALLOWLIST = [
+  'read', 'write', 'edit', 'bash', 'list', 'glob', 'grep',
+  'todowrite', 'webfetch', 'websearch',
+] as const;
+
+export function buildHopAgent(god: string, base: Record<string, any> | undefined): Record<string, any> | null {
+  if (!base) return null;
+  const tools: Record<string, boolean> = {};
+  // Turn every inherited tool OFF, then enable the hop allowlist.
+  for (const name of Object.keys(base.tools ?? {})) tools[name] = false;
+  for (const name of HOP_TOOL_ALLOWLIST) tools[name] = true;
+  // `task` is orchestration (it spawns sub-agents and doubles the cost).
+  tools.task = false;
+  return {
+    ...base,
+    description: `Hop executor for ${god} (lean toolset: file/shell only; no orchestration tools)`,
+    mode: 'subagent',
+    tools,
+  };
+}
+
+/** Apply the `${god}-hop` variants to a lane config file. Write only on change. */
+const HOP_GODS = new Set(['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus']);
+
+export function applyHopAgentVariants(configPath: string): { created: number; changed: boolean } {
+  try {
+    const cfg = JSON.parse(readFileSync(configPath, 'utf-8'));
+    if (!cfg || typeof cfg !== 'object' || !cfg.agent || typeof cfg.agent !== 'object') {
+      return { created: 0, changed: false };
+    }
+    let created = 0;
+    for (const god of Object.keys(cfg.agent)) {
+      // Only the 10 gods get a hop variant — never a demigod, never a variant.
+      if (!HOP_GODS.has(god) || god.endsWith('-hop')) continue;
+      const base = cfg.agent[god];
+      const variant = buildHopAgent(god, base);
+      if (!variant) continue;
+      const id = `${god}-hop`;
+      const next = JSON.stringify(variant);
+      if (JSON.stringify(cfg.agent[id]) !== next) {
+        cfg.agent[id] = variant;
+        created++;
+      }
+    }
+    if (created === 0) return { created: 0, changed: false };
+    writeFileSync(configPath, JSON.stringify(cfg, null, 2) + '\n', 'utf-8');
+    return { created, changed: true };
+  } catch {
+    return { created: 0, changed: false };
+  }
+}
+
+/** The agent id a hop runs as: the lean variant when the lane has it. */
+export function resolveHopAgentId(god: string, laneRoot: string): string {
+  try {
+    const cfg = JSON.parse(readFileSync(join(laneRoot, 'opencode.json'), 'utf-8'));
+    return cfg?.agent?.[`${god}-hop`] ? `${god}-hop` : god;
+  } catch {
+    return god;
+  }
+}
+
+/**
  * #121 (PLANO-MASTER-1 B7) + UAT-4-FIX (E1): the lane config bootstrap —
  * the #99 lane doctrine EXTENDED to the intake home. opencode resolves its
  * config from the CWD; a hop spawned in an intake-created 02_Projects home
@@ -756,6 +834,12 @@ export function ensureLaneConfig(laneRoot: string): void {
     if (manifest) {
       const applied = applyRunManifestFile(laneRoot, manifest);
       if (!applied.ok) console.log(`[lane-config] MCP manifest not applied: ${applied.error}`);
+    }
+    // v0.0.31 (R31-09) — lean hop agents + no overlay plugins in the lane.
+    // Runs AFTER the manifest so the config is already the hop shape.
+    const variants = applyHopAgentVariants(dst);
+    if (variants.changed) {
+      console.log(`[lane-config] hop agent variants refreshed (${variants.created} change(s)) — lean toolset, no overlay plugins`);
     }
   } catch { /* the dispatch itself will name the failure */ }
 }
