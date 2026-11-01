@@ -26,7 +26,7 @@
  */
 
 import { spawn, execFileSync, type ChildProcess, type SpawnOptions } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync, copyFileSync, unlinkSync, readdirSync, appendFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, symlinkSync, copyFileSync, unlinkSync, readdirSync, appendFileSync, renameSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { syncLaneFile } from './lane-config';
 import { platform, homedir } from 'node:os';
@@ -1085,66 +1085,104 @@ export function isOpencodeInstalled(): boolean {
 }
 
 /**
- * #DB-HEALTH (2026-10-25): the opencode SQLite DB can end up with a
- * partial migration — the `session_input` table is recorded as applied in
- * the `migration` table but does not actually exist. Every prompt then fails
- * with `SQLiteError: no such table: session_input` → "Unexpected server
- * error", breaking ALL strategies identically.
+ * #DB-HEALTH (rewritten 2026-11-01 — the history-loss cure).
  *
- * This helper checks that the DB has the `session_input` table. If it
- * doesn't, it backs up the DB (`opencode.db.bak-<ts>`) and removes it (+
- * -shm / -wal) so opencode recreates a clean schema on next boot. Keeps
- * the 3 most recent backups, pruning older ones.
+ * The original helper (2026-10-25) repaired a LEGACY partial migration: the
+ * `session_input` table was recorded as applied but did not exist, so every
+ * prompt failed with `no such table: session_input`. It "repaired" by
+ * deleting the live DB after a copy — which was correct for that legacy
+ * schema, and catastrophic for OpenCode v2.
  *
- * Returns true if a repair was performed.
+ * OpenCode 2.2.5 stores sessions in `session_v2` / `session_message` /
+ * `session_part` and does NOT have `session_input`. The old check therefore
+ * matched EVERY v2 database and deleted the maintainer's history on every
+ * app start (2026-11-01: a 344-message conversation survived only in a
+ * `.bak`). This rewrite:
+ *
+ *   1. treats any v2 table as HEALTHY — never touches it;
+ *   2. only acts on the exact legacy partial-migration shape;
+ *   3. archives by RENAME (atomic, no 1.7 GB copy) instead of delete;
+ *   4. writes `opencode.db-recovery.json` so the UI can offer a restore;
+ *   5. keeps the 5 newest archives and never prunes one younger than 30 days.
+ *
+ * Returns true only when an archive actually happened.
  */
+const V2_TABLES = ['session_v2', 'session_message', 'session_part'];
+const LEGACY_TABLES = ['session', 'message', 'part'];
+
+export type DbHealthDecision = 'healthy' | 'archive-legacy' | 'ignore';
+
+/**
+ * Pure classifier for the DB health decision (test seam).
+ * - `healthy`: a modern v2 schema (or a legacy schema that still has
+ *   `session_input`) — never touch it.
+ * - `archive-legacy`: the exact 2026-10-25 partial migration — archive, never
+ *   delete.
+ * - `ignore`: empty/unknown shape — do not risk data loss.
+ */
+export function classifyOpencodeDb(tables: string[]): DbHealthDecision {
+  if (tables.length === 0) return 'ignore';
+  if (tables.some((t) => V2_TABLES.includes(t))) return 'healthy';
+  const hasLegacy = tables.some((t) => LEGACY_TABLES.includes(t));
+  const hasSessionInput = tables.includes('session_input');
+  if (!hasLegacy || !tables.includes('session')) return 'ignore';
+  return hasSessionInput ? 'healthy' : 'archive-legacy';
+}
+
 export function ensureOpencodeDbHealthy(): boolean {
   const dbPath = join(homedir(), '.local', 'share', 'opencode', 'opencode.db');
-  if (!existsSync(dbPath)) return false; // nothing to repair; opencode creates it
-  let needsRepair = false;
+  if (!existsSync(dbPath)) return false; // nothing to inspect; opencode creates it
+
+  let tables: string[] = [];
   try {
-    // Use a child process? No — use node's better-sqlite3 if available, else
-    // fall back to probing via the opencode binary's own check. We use a
-    // lightweight probe: open with sqlite3 CLI if present.
-    let tables = '';
-    try {
-      tables = execFileSync('python3', ['-c',
-        `import sqlite3,sys; c=sqlite3.connect('${dbPath}'); print(' '.join(r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()))`
-      ], { encoding: 'utf-8', timeout: 5000 });
-    } catch {
-      // python3 unavailable — assume healthy (don't risk data loss)
-      return false;
-    }
-    if (!tables.split(/\s+/).includes('session_input')) {
-      needsRepair = true;
-    }
+    const raw = execFileSync('python3', ['-c',
+      `import sqlite3; c=sqlite3.connect('${dbPath}'); print(' '.join(r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()))`
+    ], { encoding: 'utf-8', timeout: 5000 });
+    tables = String(raw).split(/\s+/).filter(Boolean);
   } catch {
+    // python3 unavailable (or the DB is locked) — NEVER risk data loss.
     return false;
   }
-  if (!needsRepair) return false;
+  if (tables.length === 0) return false;
 
-  // Back up + remove
+  const decision = classifyOpencodeDb(tables);
+  if (decision !== 'archive-legacy') return false;
+
+  // Archive by rename — atomic, no copy, no delete.
   try {
     const ts = Date.now();
-    const backup = `${dbPath}.bak-${ts}`;
-    copyFileSync(dbPath, backup);
-    // prune older backups (keep 3 newest)
+    const archive = `${dbPath}.broken-${ts}`;
+    renameSync(dbPath, archive);
+    for (const suffix of ['-shm', '-wal']) {
+      if (existsSync(dbPath + suffix)) {
+        try { renameSync(dbPath + suffix, archive + suffix); } catch { /* best effort */ }
+      }
+    }
+    try {
+      writeFileSync(`${dbPath}-recovery.json`, JSON.stringify({
+        ts: new Date(ts).toISOString(),
+        archive,
+        reason: 'legacy partial migration (session_input missing)',
+        tables,
+        note: 'The previous database was archived, never deleted. Restore by moving the archive back to opencode.db while the app is stopped.',
+      }, null, 2) + '\n', 'utf-8');
+    } catch { /* the archive is the source of truth */ }
+
+    // Retention: keep the 5 newest archives; never prune a young one.
     const dir = dirname(dbPath);
-    const backups = readdirSync(dir)
-      .filter((f) => f.startsWith('opencode.db.bak-'))
+    const archives = readdirSync(dir)
+      .filter((f) => f.startsWith('opencode.db.broken-'))
       .sort()
       .reverse();
-    for (const old of backups.slice(3)) {
-      try { unlinkSync(join(dir, old)); } catch {}
+    for (const old of archives.slice(5)) {
+      const stamp = Number(old.split('broken-')[1]);
+      if (Number.isFinite(stamp) && Date.now() - stamp < 30 * 24 * 3600_000) continue;
+      try { unlinkSync(join(dir, old)); } catch { /* best effort */ }
     }
-    unlinkSync(dbPath);
-    for (const suffix of ['-shm', '-wal']) {
-      try { unlinkSync(dbPath + suffix); } catch {}
-    }
-    console.log(`[opencode-spawn] Repaired OpenCode database (missing session_input table). Previous saved as ${backup}`);
+    console.log(`[opencode-spawn] Archived the legacy OpenCode database (missing session_input) to ${archive} — history preserved.`);
     return true;
   } catch (err) {
-    console.error('[opencode-spawn] DB repair failed:', err);
+    console.error('[opencode-spawn] DB archive failed (nothing was deleted):', err);
     return false;
   }
 }
