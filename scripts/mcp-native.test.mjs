@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const CACHE = path.join(homedir(), '.olympus', 'mcp-cache');
-const BASELINE = ['filesystem', 'memory', 'sequential-thinking', 'context7'];
+const BASELINE = ['filesystem', 'memory', 'sequential-thinking', 'context7', 'brave-search'];
 
 const runtime = JSON.parse(readFileSync(path.join(ROOT, 'opencode.json'), 'utf-8'));
 const catalog = JSON.parse(readFileSync(path.join(ROOT, '.mcp.json'), 'utf-8'));

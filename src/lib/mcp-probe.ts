@@ -62,7 +62,9 @@ const INIT = {
 };
 
 function expanded(value: string, opts: ProbeOptions): string {
-  return opts.expand === false ? value : expandMcpPlaceholders(value, { lane: opts.cwd });
+  // The probe must expand with the SAME env the MCP will receive
+  // (api-configs.json + .env + process.env), never process.env alone.
+  return opts.expand === false ? value : expandMcpPlaceholders(value, { lane: opts.cwd, env: opts.env });
 }
 
 function probeLocal(entry: McpCanonicalEntry, opts: ProbeOptions): Promise<McpProbeResult> {

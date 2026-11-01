@@ -39,6 +39,7 @@ const PINNED = [
   { name: 'memory', pkg: '@modelcontextprotocol/server-memory', version: '0.6.2', args: [] },
   { name: 'sequential-thinking', pkg: '@modelcontextprotocol/server-sequential-thinking', version: '0.6.2', args: [] },
   { name: 'context7', pkg: '@upstash/context7-mcp', version: '4.4.4', args: [] },
+  { name: 'brave-search', pkg: '@brave/brave-search-mcp-server', version: '2.1.4', args: [] },
 ];
 
 function pkgDir(pkg) {
