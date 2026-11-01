@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import {
   buildHopAgent,
   applyHopAgentVariants,
+  isConfigSelectionError,
   resolveHopAgentId,
   HOP_TOOL_ALLOWLIST,
 } from '../src/lib/hop-runtime/walker.ts';
@@ -82,5 +83,28 @@ ok('the overlay plugins stay in the lane (permission + router contract)', () => 
 ok('a second apply is a no-op', () => assert.equal(applyHopAgentVariants(cfgPath).changed, false));
 ok('resolveHopAgentId returns the variant', () => assert.equal(resolveHopAgentId('athena', lane), 'athena-hop'));
 ok('an unknown god falls back to itself', () => assert.equal(resolveHopAgentId('callimachus', lane), 'callimachus'));
+
+// ── R31-09: a config error is never rescued as a finished hop ────────────
+ok('Agent not found is a config-selection error', () => {
+  assert.equal(isConfigSelectionError({ error: 'Agent not found: "athena-hop"' }), true);
+  assert.equal(isConfigSelectionError({ output: '{"type":"error","error":{"message":"Agent not found: \\"hermes-hop\\""}}' }), true);
+});
+ok('Model not found and unknown agent count too', () => {
+  assert.equal(isConfigSelectionError({ error: 'Model not found: opencode-go/x' }), true);
+  assert.equal(isConfigSelectionError({ error: 'unknown agent "nope"' }), true);
+});
+ok('an ordinary stream failure is not a config error', () => {
+  assert.equal(isConfigSelectionError({ error: 'ceiling-kill (OLYMPUS_HOP_TIMEOUT_MS 1500000ms)' }), false);
+  assert.equal(isConfigSelectionError({ error: '' }), false);
+});
+ok('the walker never artifact-rescues a config error (source pin)', () => {
+  const src = readFileSync(new URL('../src/lib/hop-runtime/walker.ts', import.meta.url), 'utf-8');
+  assert.match(src, /next\.kind !== 'script' && !isConfigSelectionError\(result\)/);
+});
+ok('the warm server reloads when the lane config mtime changes (source pin)', () => {
+  const src = readFileSync(new URL('../src/lib/hop-runtime/warm-server.ts', import.meta.url), 'utf-8');
+  assert.match(src, /currentMtime !== cached\.configMtimeMs/);
+  assert.match(src, /configError[\s\S]{0,400}invalidateHopServer\(server\)/);
+});
 
 console.log(`\nhop-agent: ${passed} passed`);

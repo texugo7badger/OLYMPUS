@@ -24,7 +24,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { spawnOpencode } from '@/lib/opencode-spawn';
-import { symlinkSync, mkdirSync as mkdirSyncFs, existsSync as existsSyncFs } from 'node:fs';
+import { symlinkSync, mkdirSync as mkdirSyncFs, existsSync as existsSyncFs, statSync } from 'node:fs';
 import { classifyDestructiveCommand } from '@/lib/destructive-guard';
 import { suspendCovers } from '@/lib/power-suspend';
 
@@ -38,6 +38,13 @@ export interface WarmServerInfo {
   /** Turns currently running on this server — the idle sweeper must not kill it. */
   activeTurns: number;
   logFile: string;
+  /**
+   * `opencode.json` mtime when this server was spawned. The server loads its
+   * config ONCE; a lane rewrite (strategy change, new `<god>-hop` agents) left
+   * a warm server that answered `Agent not found: "athena-hop"` for 13 minutes
+   * (AIME r2/q1/r1, 2026-11-01) while the file on disk was correct.
+   */
+  configMtimeMs: number;
 }
 
 export class WarmTransportUnavailable extends Error {
@@ -286,22 +293,46 @@ function startSweeper(): void {
   sweeper.unref?.();
 }
 
+/** The lane config mtime (`opencode.json`), or 0 when the lane has none. */
+function laneConfigMtime(laneRoot: string): number {
+  try {
+    return statSync(path.join(laneRoot, 'opencode.json')).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+/** Kill a cached server and forget it (pid-safe: only the child we spawned). */
+function invalidateHopServer(info: WarmServerInfo): void {
+  try { info.child.kill('SIGTERM'); } catch { /* gone */ }
+  unregisterHopServer(info.child.pid);
+  SERVERS.delete(path.resolve(info.laneRoot));
+}
+
 /** Ensure one warm server for the lane; throws WarmTransportUnavailable on failure. */
 export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo> {
   const key = path.resolve(laneRoot);
   const cached = SERVERS.get(key);
   if (cached) {
-    try {
-      const probe = await httpRequest(cached.port, cached.password, 'GET', '/config', undefined, 5_000);
-      if (probe.status > 0 && probe.status < 500) {
-        cached.lastUsed = Date.now();
-        touchHopServer(cached.child.pid);
-        return cached;
-      }
-    } catch { /* dead — respawn below */ }
-    try { cached.child.kill('SIGTERM'); } catch { /* gone */ }
-    unregisterHopServer(cached.child.pid);
-    SERVERS.delete(key);
+    // R31-09 — THE SERVER LOADS `opencode.json` ONCE. A lane rewrite (new
+    // strategy, new `<god>-hop` agents) must invalidate the cached server,
+    // or it keeps answering `Agent not found: "athena-hop"` for the whole
+    // campaign. The config mtime is the cheap, truthful signal.
+    const currentMtime = laneConfigMtime(key);
+    if (currentMtime !== cached.configMtimeMs) {
+      console.log(`[hop-runtime] lane config changed (was ${cached.configMtimeMs}, now ${currentMtime}) — respawning the warm server`);
+      invalidateHopServer(cached);
+    } else {
+      try {
+        const probe = await httpRequest(cached.port, cached.password, 'GET', '/config', undefined, 5_000);
+        if (probe.status > 0 && probe.status < 500) {
+          cached.lastUsed = Date.now();
+          touchHopServer(cached.child.pid);
+          return cached;
+        }
+      } catch { /* dead — respawn below */ }
+      invalidateHopServer(cached);
+    }
   }
 
   installExitHook();
@@ -332,6 +363,7 @@ export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo>
   fs.mkdirSync(path.dirname(logFile), { recursive: true });
   const logFd = fs.openSync(logFile, 'a');
   let child: ReturnType<typeof spawnOpencode>;
+  const spawnConfigMtime = laneConfigMtime(key);
   try {
     child = spawnOpencode(['serve', '--port', String(port)], {
       cwd: key,
@@ -380,7 +412,7 @@ export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo>
     if (api.status >= 200 && api.status < 300) protocol = 'v2';
   } catch { /* older build — keep v1 */ }
 
-  const server: WarmServerInfo = { port, password, protocol, child, laneRoot: key, lastUsed: Date.now(), activeTurns: 0, logFile };
+  const server: WarmServerInfo = { port, password, protocol, child, laneRoot: key, lastUsed: Date.now(), activeTurns: 0, logFile, configMtimeMs: spawnConfigMtime };
   SERVERS.set(key, server);
   registerHopServer(server);
   return server;
@@ -767,6 +799,20 @@ export async function runWarmHop(opts: {
     /hop-first-byte-timeout|ceiling-kill|provider\.|SILENT/i.test(String(e)));
   if (stalled) code = null;
 
+  // R31-09 — an unknown agent/model is a CONFIG error, not a hop failure.
+  // The server cached the lane config from before the `<god>-hop` agents
+  // existed and answered `Agent not found` while the file on disk was right.
+  // Invalidate the server and let AutoTransport run the hop on spawn (which
+  // reads the current config); never let it become an artifact rescue.
+  const configError = [...errors, ...sse.errors].find((e) =>
+    /agent not found|model not found/i.test(String(e)));
+  if (configError) {
+    invalidateHopServer(server);
+    throw new WarmTransportUnavailable(
+      `warm server rejected the lane selection (${String(configError).slice(0, 160)}) — respawning on the spawn transport`,
+    );
+  }
+
   // 4) synthetic stdout (the walker's existing parser reads this dialect)
   const acc = { text: '', reasoning: '', tokensIn: 0, tokensOut: 0, sessionId };
   try { collectParts(JSON.parse(raw), acc); } catch { /* not JSON */ }
@@ -821,14 +867,18 @@ export function hopServerCount(): number {
 }
 
 /** Test seam: register a fake server without spawning opencode. */
-export function __registerHopServerForTest(laneRoot: string, info: Omit<WarmServerInfo, 'lastUsed' | 'child' | 'laneRoot' | 'logFile'>): void {
-  SERVERS.set(path.resolve(laneRoot), {
+export function __registerHopServerForTest(laneRoot: string, info: Omit<WarmServerInfo, 'lastUsed' | 'child' | 'laneRoot' | 'logFile' | 'configMtimeMs'>): void {
+  const resolved = path.resolve(laneRoot);
+  SERVERS.set(resolved, {
     ...info,
-    laneRoot: path.resolve(laneRoot),
+    laneRoot: resolved,
     lastUsed: Date.now(),
     activeTurns: 0,
     child: { kill: () => true, exitCode: null, signalCode: null } as any,
     logFile: '(test)',
+    // The fake server is "current" for the lane; otherwise the new mtime
+    // guard would respawn a real opencode and the test would lose its fixture.
+    configMtimeMs: laneConfigMtime(resolved),
   });
 }
 

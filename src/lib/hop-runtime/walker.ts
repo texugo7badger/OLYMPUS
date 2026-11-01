@@ -419,6 +419,17 @@ export interface CeilingKillClassification {
 }
 
 /**
+ * A config-selection failure (`Agent not found`, `Model not found`) means the
+ * turn NEVER RAN. It must never be artifact-rescued: pre-existing files are
+ * not evidence of work (AIME r1 was marked complete with zero turns). Pure so
+ * the suite can pin it.
+ */
+export function isConfigSelectionError(result: { error?: string | null; output?: string | null }): boolean {
+  const text = `${result.error ?? ''}\n${result.output ?? ''}`;
+  return /agent not found|model not found|no such agent|unknown agent/i.test(text);
+}
+
+/**
  * #111: the ceiling-kill classifier — the SMOKE-1 forensics finding
  * (reports/smoke-1/s2/429-forensics.md): the per-hop ceiling's SIGKILL
  * surfaced as a classless `exit null` park, and FLUENCY-1's 900s specimen
@@ -1191,7 +1202,12 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           // dashboard/page.tsx, then the stream hung to the ceiling and the
           // walker parked a FINISHED hop for 10 minutes. Verify BEFORE
           // parking: an artifact that passes is a completed hop.
-          if (!result.ok && next.kind !== 'script') {
+          //
+          // v0.0.31 — BUT NEVER FOR A CONFIG ERROR. `Agent not found` means
+          // the turn never ran; rescuing on pre-existing artifacts marked a
+          // hop complete with zero work (AIME r1, 2026-11-01). The transport
+          // now respawns and retries on spawn; if it still fails, park named.
+          if (!result.ok && next.kind !== 'script' && !isConfigSelectionError(result)) {
             const rescue = verifyHopDeterministic(next, laneRoot);
             if (rescue.ok) {
               result = { ...result, ok: true, error: `artifact rescue: ${result.error ?? 'dispatch failed after writing the artifacts'}` };
