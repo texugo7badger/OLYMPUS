@@ -6,7 +6,7 @@
  * Responsibilities:
  *   1. Spawn the Next.js dev server (`next dev -p 3737`) as a child process.
  *      In production mode we spawn `next start -p 3737` (after `next build`).
- *   2. Poll `http://localhost:3737` until the server is ready.
+ *   2. Poll `http://127.0.0.1:3737` until the server is ready.
  *   3. Create a BrowserWindow pointing at the Next.js URL.
  *   4. Wire up `<webview>` tag support so external HTTPS sites (GitHub, etc.)
  *      load directly — bypassing `X-Frame-Options` and `CSP: frame-ancestors`.
@@ -48,7 +48,7 @@ import { ensureLinuxSandboxReady } from './linux-sandbox.js';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PORT = 3737;
-const BASE_URL = `http://localhost:${PORT}`;
+const BASE_URL = `http://127.0.0.1:${PORT}`;
 const POLL_INTERVAL_MS = 400;
 const POLL_TIMEOUT_MS = 60_000; // 1 minute to start (Next.js dev cold start)
 
@@ -175,7 +175,7 @@ function safeConsole(kind: 'log' | 'error', ...args: any[]): void {
 let gpuCrashCount = 0;
 
 /**
- * Check whether a Next.js server is ALREADY listening on localhost:3737.
+ * Check whether a Next.js server is ALREADY listening on 127.0.0.1:3737.
  */
 async function isNextAlreadyRunning(): Promise<boolean> {
   const CHECK_TIMEOUT_MS = 8000; // 8 seconds max wait for external Next.js
@@ -584,7 +584,7 @@ function createWindow() {
     // Force-show the window so the user sees the recovery/error page.
     mainWindow?.show();
 
-    if (errorCode === -102 && loadFailCount < 8) {
+    if ((errorCode === -102 || errorCode === -3) && loadFailCount < 8) {
       loadFailCount++;
       const attempt = loadFailCount;
       const reconnectHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reconnecting</title>
@@ -634,7 +634,7 @@ button{margin-top:20px;padding:8px 16px;background:#D4A57422;color:#D4A574;borde
 button:hover{background:#D4A57433}
 </style></head><body>
 <h1>OLYMPUS — Failed to load the workspace</h1>
-<p>The Next.js dev server at <code>http://localhost:${PORT}</code> could not be loaded.</p>
+<p>The Next.js dev server at <code>${BASE_URL}</code> could not be loaded.</p>
 <p>Error <span class="code">${errorCode}</span>: ${errorDescription}</p>
 <p>This usually means the dev server crashed or is still compiling. Check the console output for details.</p>
 <div class="hint">
