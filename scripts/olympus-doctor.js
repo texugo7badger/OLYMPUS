@@ -35,6 +35,7 @@
  *  28. olympus-dispatch tool FORBIDS ecc-/olympus-/volt- prefixes (Symphony-native)
  *
  * Usage: node scripts/olympus-doctor.js
+ *        node scripts/olympus-doctor.js --fix   (apply retention; dry-run otherwise)
  *        olympus doctor  (if installed globally)
  *
  * Exit codes:
@@ -1319,6 +1320,118 @@ try {
   }
 } catch (e) {
   check("Model-catalogue drift detector", "warn", `could not run: ${e?.message || e}`);
+}
+
+// --- R31-05: retention (dry-run by default; --fix applies) ---
+// The 2026-11-01 specimen: ~/.olympus was 11 GB (8.9 GB of one stale build
+// archive + a 1.7 GB pre-v2 DB backup) and ~/.local/share/opencode kept
+// every backup forever. Retention is opt-in: `doctor` shows the plan,
+// `doctor --fix` removes only what the plan listed, inside known roots.
+const RETENTION_FIX = process.argv.includes("--fix");
+const RETENTION_ROOTS = [
+  path.join(OLYMPUS_HOME, "build-archive"),
+  path.join(OLYMPUS_HOME, "backups"),
+  path.join(os.homedir(), ".local", "share", "opencode"),
+];
+
+function readAppVersion() {
+  try {
+    return fs.readFileSync(path.join(OLYMPUS_ROOT, "VERSION"), "utf-8").trim();
+  } catch {
+    return null;
+  }
+}
+
+function dirSizeBytes(dir) {
+  let total = 0;
+  const stack = [dir];
+  while (stack.length) {
+    const current = stack.pop();
+    let items = [];
+    try { items = fs.readdirSync(current, { withFileTypes: true }); } catch { continue; }
+    for (const item of items) {
+      const full = path.join(current, item.name);
+      try {
+        if (item.isSymbolicLink()) continue;
+        if (item.isDirectory()) stack.push(full);
+        else total += fs.statSync(full).size;
+      } catch { /* raced away */ }
+    }
+  }
+  return total;
+}
+
+function retentionEntries(dir, filter = () => true) {
+  if (!fs.existsSync(dir)) return [];
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true })
+      .filter((d) => filter(d))
+      .map((d) => {
+        const full = path.join(dir, d.name);
+        let stat;
+        try { stat = fs.lstatSync(full); } catch { return null; }
+        return {
+          name: d.name,
+          path: full,
+          mtimeMs: stat.mtimeMs,
+          bytes: d.isDirectory() ? dirSizeBytes(full) : stat.size,
+        };
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+try {
+  const retention = await import("./retention-plan.mjs");
+  const buildRoot = path.join(OLYMPUS_HOME, "build-archive");
+  const backupRoot = path.join(OLYMPUS_HOME, "backups");
+  const opencodeData = path.join(os.homedir(), ".local", "share", "opencode");
+
+  const plans = [
+    retention.planBuildArchive(
+      retentionEntries(buildRoot, (d) => d.isDirectory()),
+      retention.DEFAULT_POLICY,
+      { currentVersion: readAppVersion() },
+    ),
+    retention.planDbBackups(retentionEntries(opencodeData, (d) => d.isFile())),
+    retention.planConfigBackups(retentionEntries(backupRoot, (d) => d.isFile())),
+  ];
+  const report = retention.combinePlans(plans);
+
+  const reportPath = path.join(OLYMPUS_HOME, "retention-report.json");
+  try {
+    fs.writeFileSync(reportPath, JSON.stringify({ ...report, fix: RETENTION_FIX }, null, 2) + "\n", "utf-8");
+  } catch { /* diagnostics only */ }
+
+  if (RETENTION_FIX) {
+    const applied = retention.applyPlan(report, {
+      roots: RETENTION_ROOTS,
+      removePath: (target) => fs.rmSync(target, { recursive: true, force: true }),
+    });
+    check(
+      "Retention --fix",
+      "ok",
+      `${applied.removed.length} item(s) removed, ${applied.removedHuman} reclaimed`,
+    );
+  } else if (report.remove.length > 0) {
+    check(
+      "Retention (dry-run)",
+      "warn",
+      `${report.remove.length} stale item(s) = ${report.reclaimHuman} reclaimable — run: node scripts/olympus-doctor.js --fix`,
+    );
+    for (const item of report.remove.slice(0, 8)) {
+      console.log(`       ${c.gray}${retention.formatBytes(item.bytes).padStart(9)}  ${item.path}${c.reset}`);
+    }
+    if (report.remove.length > 8) {
+      console.log(`       ${c.gray}… ${report.remove.length - 8} more (see ${reportPath})${c.reset}`);
+    }
+  } else {
+    check("Retention", "ok", "nothing stale to collect");
+  }
+} catch (e) {
+  check("Retention", "warn", `could not compute: ${e?.message || e}`);
 }
 
 // --- Summary ---
