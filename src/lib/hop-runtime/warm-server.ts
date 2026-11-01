@@ -72,6 +72,10 @@ interface HopServerRegistryEntry {
   lane: string;
   appPid: number;
   startedAt: string;
+  /** Last time the owner touched this server (ISO). Missing on legacy rows. */
+  lastUsed?: string;
+  /** Turns currently running on this server (0 = idle). */
+  activeTurns?: number;
 }
 
 function hopRegistryPath(): string {
@@ -104,6 +108,8 @@ function registerHopServer(info: WarmServerInfo): void {
     lane: info.laneRoot,
     appPid: process.pid,
     startedAt: new Date().toISOString(),
+    lastUsed: new Date().toISOString(),
+    activeTurns: 0,
   });
   writeHopRegistry(entries);
 }
@@ -129,8 +135,50 @@ function looksLikeOpencodeServe(pid: number): boolean {
 }
 
 /**
- * Kill every hop server whose owner is gone, whose pid is gone, or that is
- * older than the hard cap. Returns the reaped pids (for logs/doctor).
+ * Pure decision (test seam). A hop server is reaped when:
+ *   - its pid is gone;
+ *   - its owner is gone; or
+ *   - it is IDLE (no active turn) for longer than the grace window, even if
+ *     the owner is alive — the Next dev HMR can drop the in-memory SERVERS
+ *     map and leave detached children behind (the 2026-11-01 3-orphan
+ *     specimen: 27/13 minutes idle, ports 33553/46651).
+ * A live pid that is NOT an opencode serve is never killed (pid reuse).
+ */
+export function shouldReapHopServer(
+  entry: HopServerRegistryEntry,
+  now: number,
+  opts: { alive: (pid: number) => boolean; looksLikeServe: (pid: number) => boolean; idleGraceMs?: number },
+): boolean {
+  const idleGrace = opts.idleGraceMs ?? 5 * 60_000;
+  if (!opts.alive(entry.pid)) return true;
+  if (!opts.alive(entry.appPid)) return true;
+  if ((entry.activeTurns ?? 0) > 0) return false;
+  const last = Date.parse(entry.lastUsed ?? entry.startedAt);
+  if (!Number.isFinite(last)) return true;
+  if (now - last <= idleGrace) return false;
+  return opts.looksLikeServe(entry.pid);
+}
+
+/** Kill the server AND its MCP children (the detached group). */
+function killHopServerGroup(pid: number): void {
+  try { process.kill(-pid, 'SIGTERM'); return; } catch { /* not a group */ }
+  try { process.kill(pid, 'SIGTERM'); } catch { /* gone */ }
+}
+
+/** Refresh lastUsed/activeTurns in the registry for one server. */
+function touchHopServer(pid: number | undefined, patch: { activeTurns?: number } = {}): void {
+  if (!pid) return;
+  const entries = readHopRegistry();
+  const entry = entries.find((e) => e.pid === pid);
+  if (!entry) return;
+  entry.lastUsed = new Date().toISOString();
+  if (patch.activeTurns !== undefined) entry.activeTurns = patch.activeTurns;
+  writeHopRegistry(entries);
+}
+
+/**
+ * Kill every hop server whose owner is gone, whose pid is gone, that is idle
+ * beyond the grace, or that is older than the hard cap.
  */
 export function reapOrphanHopServers(now = Date.now()): number[] {
   const entries = readHopRegistry();
@@ -138,14 +186,17 @@ export function reapOrphanHopServers(now = Date.now()): number[] {
   const reaped: number[] = [];
   for (const e of entries) {
     const age = Number.isFinite(Date.parse(e.startedAt)) ? now - Date.parse(e.startedAt) : Infinity;
-    const ownerAlive = e.appPid === process.pid ? true : isPidAlive(e.appPid);
     const pidAlive = isPidAlive(e.pid);
-    const stale = !pidAlive || !ownerAlive || age > MAX_SERVER_AGE_MS;
-    if (!stale) { keep.push(e); continue; }
+    const reap = age > MAX_SERVER_AGE_MS || shouldReapHopServer(e, now, {
+      alive: isPidAlive,
+      looksLikeServe: looksLikeOpencodeServe,
+    });
+    if (!reap) { keep.push(e); continue; }
     if (pidAlive && looksLikeOpencodeServe(e.pid)) {
-      try { process.kill(e.pid, 'SIGTERM'); reaped.push(e.pid); } catch { /* gone */ }
+      killHopServerGroup(e.pid);
+      reaped.push(e.pid);
       const killTimer = setTimeout(() => {
-        try { if (isPidAlive(e.pid)) process.kill(e.pid, 'SIGKILL'); } catch { /* gone */ }
+        try { if (isPidAlive(e.pid)) process.kill(-e.pid, 'SIGKILL'); } catch { try { if (isPidAlive(e.pid)) process.kill(e.pid, 'SIGKILL'); } catch { /* gone */ } }
       }, 1_500);
       killTimer.unref?.();
     } else if (pidAlive) {
@@ -244,6 +295,7 @@ export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo>
       const probe = await httpRequest(cached.port, cached.password, 'GET', '/config', undefined, 5_000);
       if (probe.status > 0 && probe.status < 500) {
         cached.lastUsed = Date.now();
+        touchHopServer(cached.child.pid);
         return cached;
       }
     } catch { /* dead — respawn below */ }
@@ -529,6 +581,7 @@ export async function runWarmHop(opts: {
   const server = await ensureHopServer(opts.laneRoot);
   server.lastUsed = Date.now();
   server.activeTurns += 1;
+  touchHopServer(server.child.pid, { activeTurns: server.activeTurns });
   try {
 
   // 1) session
@@ -747,6 +800,7 @@ export async function runWarmHop(opts: {
   } finally {
     server.activeTurns = Math.max(0, server.activeTurns - 1);
     server.lastUsed = Date.now();
+    touchHopServer(server.child.pid, { activeTurns: server.activeTurns });
   }
 }
 

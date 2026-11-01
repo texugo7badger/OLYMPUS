@@ -22,7 +22,7 @@ import assert from 'node:assert/strict';
 const home = mkdtempSync(join(tmpdir(), 'olympus-hopreg-'));
 process.env.OLYMPUS_HOME = home;
 
-const { reapOrphanHopServers } = await import('../src/lib/hop-runtime/warm-server.ts');
+const { reapOrphanHopServers, shouldReapHopServer } = await import('../src/lib/hop-runtime/warm-server.ts');
 
 let passed = 0;
 function ok(name, fn) {
@@ -52,5 +52,15 @@ ok('a reused pid stays in the registry for a human', () => assert.equal(read().l
 write([{ pid: 999997, port: 4446, lane: '/tmp/lane', appPid: process.pid, startedAt: new Date().toISOString() }]);
 reapOrphanHopServers();
 ok('a dead hop pid is dropped even with a live owner', () => assert.deepEqual(read(), []));
+
+// 4. The idle decision (the 2026-11-01 3-orphan HMR specimen).
+const base = { pid: 500, port: 1, lane: '/tmp/lane', appPid: 600, startedAt: '2026-11-01T10:00:00Z' };
+const opts = (looks = true) => ({ alive: () => true, looksLikeServe: () => looks, idleGraceMs: 5 * 60_000 });
+ok('a dead pid is reaped', () => assert.equal(shouldReapHopServer({ ...base }, Date.now(), { alive: (pid) => pid !== 500, looksLikeServe: () => true }), true));
+ok('a dead owner is reaped', () => assert.equal(shouldReapHopServer({ ...base }, Date.now(), { alive: (pid) => pid !== 600, looksLikeServe: () => true }), true));
+ok('an active turn is never reaped as idle', () => assert.equal(shouldReapHopServer({ ...base, activeTurns: 1, lastUsed: '2026-11-01T10:00:00Z' }, Date.parse('2026-11-01T12:00:00Z'), opts()), false));
+ok('a recently used idle server is kept', () => assert.equal(shouldReapHopServer({ ...base, activeTurns: 0, lastUsed: '2026-11-01T11:59:00Z' }, Date.parse('2026-11-01T12:00:00Z'), opts()), false));
+ok('an idle server past the grace is reaped even with a live owner', () => assert.equal(shouldReapHopServer({ ...base, activeTurns: 0, lastUsed: '2026-11-01T11:00:00Z' }, Date.parse('2026-11-01T12:00:00Z'), opts()), true));
+ok('a reused pid that is not an opencode serve is kept', () => assert.equal(shouldReapHopServer({ ...base, activeTurns: 0, lastUsed: '2026-11-01T11:00:00Z' }, Date.parse('2026-11-01T12:00:00Z'), opts(false)), false));
 
 console.log(`\nhop-registry: ${passed} passed`);
