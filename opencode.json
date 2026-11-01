@@ -1174,15 +1174,8 @@
       "type": "local",
       "enabled": true,
       "command": [
-        "npx",
-        "-y",
-        "@atlassian/mcp-compressor",
-        "-c",
-        "medium",
-        "--",
-        "npx",
-        "-y",
-        "@upstash/context7-mcp@latest"
+        "node",
+        "{env:HOME}/.olympus/mcp-cache/node_modules/@upstash/context7-mcp/dist/index.js"
       ]
     },
     "tamp": {
@@ -1231,9 +1224,8 @@
       "type": "local",
       "enabled": true,
       "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking@latest"
+        "node",
+        "{env:HOME}/.olympus/mcp-cache/node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js"
       ]
     },
     "github": {
@@ -1284,9 +1276,8 @@
       "type": "local",
       "enabled": true,
       "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-filesystem@latest",
+        "node",
+        "{env:HOME}/.olympus/mcp-cache/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
         "."
       ]
     },
@@ -1294,9 +1285,8 @@
       "type": "local",
       "enabled": true,
       "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-memory@latest"
+        "node",
+        "{env:HOME}/.olympus/mcp-cache/node_modules/@modelcontextprotocol/server-memory/dist/index.js"
       ],
       "environment": {
         "MEMORY_FILE_PATH": "{env:HOME}/OLYMPUS-VAULT/05_Auto_Learning/kg-memory.json"

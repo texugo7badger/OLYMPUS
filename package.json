@@ -73,6 +73,7 @@
     "prebuild:app": "node scripts/invalidate-build-stamp.js",
     "prebuild:linux": "node scripts/invalidate-build-stamp.js",
     "gods:check": "node scripts/gods-check.mjs",
+    "mcp:vendor": "node scripts/mcp-vendor.mjs",
     "mcp:audit": "npx tsx scripts/mcp-audit.ts",
     "mcp:sync": "npx tsx scripts/mcp-sync.ts",
     "verify:standalone": "node scripts/verify-standalone.mjs",

@@ -9,16 +9,9 @@
       "_comment": "v0.0.6 IMAGE-GEN W-B (@pinkpixel/mcpollinations, MIT): the Pollinations image/text/audio MCP for the agent lane. Probe-green 2026-10-19 (initialize handshake 1.3.1). Free, no key; version pinned. Generation parity with Pygmalion's routes; the honest price is $0."
     },
     "context7": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "@atlassian/mcp-compressor",
-        "-c",
-        "medium",
-        "--",
-        "npx",
-        "-y",
-        "@upstash/context7-mcp@latest"
+        "{env:HOME}/.olympus/mcp-cache/node_modules/@upstash/context7-mcp/dist/index.js"
       ],
       "env": {},
       "_comment": "Library docs — wrapped with mcp-compressor (medium) to compress tool schemas (70-97% token reduction). Used by Hermes, Hephaestus, Athena. ECC's docs-lookup agent hard-codes this."
@@ -66,10 +59,9 @@
       "_comment": "Semantic code edits by symbol (LSP-powered) — wrapped with mcp-compressor (medium). Reduces edit errors on large codebases. Used by Hephaestus."
     },
     "sequential-thinking": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking@latest"
+        "{env:HOME}/.olympus/mcp-cache/node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js"
       ],
       "env": {},
       "_comment": "Portable multi-step reasoning primitive. Survives model swaps. Small tool surface — no mcp-compressor needed."
@@ -117,19 +109,17 @@
       "_comment": "AI-driven animated SVG generation with PNG-preview self-critique loop. Used by Athena for artwork creation."
     },
     "filesystem": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem@latest",
-        "${PROJECT_ROOT}"
+        "{env:HOME}/.olympus/mcp-cache/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
+        "."
       ],
       "env": {}
     },
     "memory": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory@latest"
+        "{env:HOME}/.olympus/mcp-cache/node_modules/@modelcontextprotocol/server-memory/dist/index.js"
       ],
       "env": {
         "MEMORY_FILE_PATH": "${HOME}/OLYMPUS-VAULT/05_Auto_Learning/kg-memory.json"
