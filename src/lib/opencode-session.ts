@@ -51,6 +51,8 @@ import { getVaultRoot } from '@/lib/vault-root';
 // constant the user cannot see or revoke.
 import { loadPermissions, decidePermission } from '@/lib/permissions';
 
+import { suspendCovers } from './power-suspend';
+
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
 // Vault root — mirrors src/app/api/olympus/upload/route.ts. Used by the
 // permission auto-approval allowlist below.
@@ -2815,6 +2817,8 @@ async function runWarmMessageAttempt(
     let aliveNarrationAt = 0;
     const silenceTimer = setInterval(() => {
       if (postStarted === false || eventCtrl.signal.aborted) return;
+      // Epic N: an OS suspend freezes the frame pump; it is not a stall.
+      if (suspendCovers(state.lastFrameAt, Date.now())) { state.lastFrameAt = Date.now(); return; }
       const decision = watchdogDecision({
         silentForMs: Date.now() - state.lastFrameAt,
         warnMs: SILENCE_WARN_MS,

@@ -14,6 +14,7 @@
 import { spawn } from 'node:child_process';
 import { spawnOpencode } from '@/lib/opencode-spawn';
 import { runWarmHop, WarmTransportUnavailable } from './warm-server';
+import { suspendCovers } from '@/lib/power-suspend';
 
 export type HopTransportMode = 'auto' | 'spawn' | 'warm';
 
@@ -54,22 +55,45 @@ export class SpawnTransport implements HopTransport {
       let stdout = '';
       let stderr = '';
       let firstByteAt: number | null = null;
-      const timer = setTimeout(() => {
-        try { child.kill('SIGKILL'); } catch { /* gone */ }
-      }, req.timeoutMs);
-      const firstByteTimer = setTimeout(() => {
-        if (firstByteAt !== null) return;
-        try { child.kill('SIGKILL'); } catch { /* gone */ }
-        stderr += `\nhop-first-byte-timeout (OLYMPUS_HOP_FIRST_BYTE_MS ${req.firstByteMs}ms): the turn produced ZERO output — the provider pool stalled before the first token (the empty-reasoning stall class; transient pool contention — retries absorb it)`;
-      }, req.firstByteMs);
+      let runStart = Date.now();
+      let lastOutputAt = Date.now();
+      let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
+      let firstByteTimer: ReturnType<typeof setTimeout> | null = null;
       let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+      const clearAll = () => {
+        if (ceilingTimer) clearTimeout(ceilingTimer);
+        if (firstByteTimer) clearTimeout(firstByteTimer);
+        if (silenceTimer) clearTimeout(silenceTimer);
+        ceilingTimer = firstByteTimer = silenceTimer = null;
+      };
+      // Epic N: a frozen machine is not a stalled provider. Each deadline
+      // re-arms when its window overlaps an OS suspend; the next window starts
+      // after the resume, so a healthy turn is never killed by the freeze.
+      const armCeiling = () => {
+        ceilingTimer = setTimeout(() => {
+          if (suspendCovers(runStart, Date.now())) { runStart = Date.now(); armCeiling(); return; }
+          try { child.kill('SIGKILL'); } catch { /* gone */ }
+        }, req.timeoutMs);
+      };
+      const armFirstByte = () => {
+        firstByteTimer = setTimeout(() => {
+          if (firstByteAt !== null) return;
+          if (suspendCovers(runStart, Date.now())) { runStart = Date.now(); armFirstByte(); return; }
+          try { child.kill('SIGKILL'); } catch { /* gone */ }
+          stderr += `\nhop-first-byte-timeout (OLYMPUS_HOP_FIRST_BYTE_MS ${req.firstByteMs}ms): the turn produced ZERO output — the provider pool stalled before the first token (the empty-reasoning stall class; transient pool contention — retries absorb it)`;
+        }, req.firstByteMs);
+      };
       const armSilence = () => {
         if (silenceTimer) clearTimeout(silenceTimer);
+        lastOutputAt = Date.now();
         silenceTimer = setTimeout(() => {
+          if (suspendCovers(lastOutputAt, Date.now())) { armSilence(); return; }
           try { child.kill('SIGKILL'); } catch { /* gone */ }
           stderr += `\nhop-first-byte-timeout (OLYMPUS_HOP_SILENCE_MS ${req.silenceMs}ms rolling): the turn went SILENT mid-run after producing output — a step's provider request stalled (transient pool contention — retries absorb it)`;
         }, req.silenceMs);
       };
+      armCeiling();
+      armFirstByte();
       child.stdout?.on('data', (d) => {
         if (firstByteAt === null && String(d).trim()) firstByteAt = Date.now();
         stdout += String(d);
@@ -77,15 +101,11 @@ export class SpawnTransport implements HopTransport {
       });
       child.stderr?.on('data', (d) => { stderr += String(d); });
       child.on('error', (e) => {
-        clearTimeout(timer);
-        clearTimeout(firstByteTimer);
-        if (silenceTimer) clearTimeout(silenceTimer);
+        clearAll();
         resolve({ code: -1, stdout, stderr: stderr + String(e), transport: 'spawn' });
       });
       child.on('close', (code) => {
-        clearTimeout(timer);
-        clearTimeout(firstByteTimer);
-        if (silenceTimer) clearTimeout(silenceTimer);
+        clearAll();
         resolve({ code, stdout, stderr, transport: 'spawn' });
       });
       armSilence();

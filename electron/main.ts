@@ -31,7 +31,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage, Tray, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage, Tray, Menu, powerMonitor, Notification } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync, cpSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -555,6 +555,60 @@ function buildWindowOptions(): Electron.BrowserWindowConstructorOptions {
     },
   };
   return options;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Epic N — OS suspend/resume (v0.0.32).
+ *
+ * The main process must write the marker BEFORE the freeze (a Next request
+ * would be frozen with it). The Next side reads the same file to tell a
+ * provider stall from a sleeping machine; on resume it reconciles and the
+ * tray notification names the campaign state.
+ * ────────────────────────────────────────────────────────────────────────── */
+const SUSPEND_MARKER = join(nodeOs.homedir(), '.olympus', 'suspend.json');
+
+function writePowerMarker(phase: 'suspend' | 'resume'): void {
+  try {
+    mkdirSync(dirname(SUSPEND_MARKER), { recursive: true });
+    let prev: any = {};
+    try { prev = JSON.parse(readFileSync(SUSPEND_MARKER, 'utf-8')); } catch { /* first run */ }
+    const now = new Date().toISOString();
+    const next = phase === 'suspend'
+      ? { suspendedAt: now, resumedAt: null, active: true }
+      : { suspendedAt: typeof prev?.suspendedAt === 'string' ? prev.suspendedAt : null, resumedAt: now, active: false };
+    writeFileSync(SUSPEND_MARKER, JSON.stringify(next, null, 2) + '\n', 'utf-8');
+  } catch (e) {
+    console.error('[olympus:power] marker write failed:', e);
+  }
+}
+
+function postPower(action: 'suspend' | 'resume'): Promise<any> {
+  return new Promise((resolve) => {
+    const payload = JSON.stringify({ action });
+    const req = http.request(`${BASE_URL}/api/olympus/power`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+      timeout: 5_000,
+    }, (res) => {
+      let text = '';
+      res.on('data', (d) => { text += String(d); });
+      res.on('end', () => { try { resolve(JSON.parse(text)); } catch { resolve(null); } });
+    });
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.on('error', () => resolve(null));
+    req.write(payload);
+    req.end();
+  });
+}
+
+function notifyDesktop(title: string, body: string): void {
+  try {
+    if (!Notification.isSupported()) return;
+    const iconPath = join(appRoot, 'public', 'logo-256x256.png');
+    const n = new Notification({ title, body, ...(existsSync(iconPath) ? { icon: iconPath } : {}) });
+    n.on('click', () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } });
+    n.show();
+  } catch { /* notifications are optional */ }
 }
 
 function createWindow() {
@@ -1295,6 +1349,33 @@ if (!gotLock) {
     // same live terminal from inside their editor. Token-gated — only
     // local clients holding ~/.olympus/terminal-bridge-token can connect.
     registerTerminalBridge();
+
+    // Epic N — OS suspend/resume. The marker lands before the freeze; the
+    // resume call reconciles the campaign view and notifies the tray.
+    try {
+      powerMonitor.on('suspend', () => {
+        console.log('[olympus:power] OS suspend — marker written');
+        writePowerMarker('suspend');
+        void postPower('suspend');
+      });
+      powerMonitor.on('resume', () => {
+        console.log('[olympus:power] OS resume — reconciling');
+        writePowerMarker('resume');
+        setTimeout(async () => {
+          const d = await postPower('resume');
+          const c = d?.campaign;
+          notifyDesktop(
+            'OLYMPUS resumed',
+            c
+              ? `Campaign ${c.project}: ${c.completed}/${c.total} hops${c.parked ? ` — parked at ${c.parked}` : ''}. Nothing was lost.`
+              : 'No campaign running. Nothing was lost.',
+          );
+        }, 1_500);
+      });
+    } catch (e) {
+      console.error('[olympus:power] powerMonitor unavailable:', e);
+    }
+
 
     // Session defaults — allow webviews to load any origin.
     session.defaultSession.webRequest.onHeadersReceived((details, cb) => {

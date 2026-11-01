@@ -26,6 +26,7 @@ import { randomBytes } from 'node:crypto';
 import { spawnOpencode } from '@/lib/opencode-spawn';
 import { symlinkSync, mkdirSync as mkdirSyncFs, existsSync as existsSyncFs } from 'node:fs';
 import { classifyDestructiveCommand } from '@/lib/destructive-guard';
+import { suspendCovers } from '@/lib/power-suspend';
 
 export interface WarmServerInfo {
   port: number;
@@ -608,9 +609,11 @@ export async function runWarmHop(opts: {
   }, 500);
   permissionTimer.unref?.();
 
-  const startedAt = Date.now();
+  let startedAt = Date.now();
   const firstByteTimer = setInterval(() => {
     if (sawFirstByte) return;
+    // Epic N: the machine was asleep, not the provider.
+    if (suspendCovers(startedAt, Date.now())) { startedAt = Date.now(); return; }
     if (Date.now() - startedAt > opts.firstByteMs) {
       errors.push(`hop-first-byte-timeout (OLYMPUS_HOP_FIRST_BYTE_MS ${opts.firstByteMs}ms): the turn produced ZERO output — the provider pool stalled before the first token`);
       try { void httpRequest(server.port, server.password, 'POST', v2Path(server, `/session/${sessionId}/abort`), undefined, 5_000); } catch { /* gone */ }
@@ -618,6 +621,7 @@ export async function runWarmHop(opts: {
   }, 1_000);
   const silenceTimer = setInterval(() => {
     if (!sawFirstByte) return;
+    if (suspendCovers(lastEventAt, Date.now())) { lastEventAt = Date.now(); return; }
     if (Date.now() - lastEventAt > opts.silenceMs) {
       errors.push(`hop-first-byte-timeout (OLYMPUS_HOP_SILENCE_MS ${opts.silenceMs}ms rolling): the turn went SILENT mid-run after producing output — a step's provider request stalled`);
       try { void httpRequest(server.port, server.password, 'POST', v2Path(server, `/session/${sessionId}/abort`), undefined, 5_000); } catch { /* gone */ }
@@ -656,9 +660,12 @@ export async function runWarmHop(opts: {
       // v2 POST is an ACK (the user message is queued); the assistant turn
       // arrives asynchronously. Poll the session until it completes, while
       // the SSE watcher keeps first-byte/silence/error truth.
-      const deadline = startedAt + opts.timeoutMs;
+      let deadline = startedAt + opts.timeoutMs;
       let done = false;
-      while (!done && Date.now() < deadline) {
+      while (!done) {
+        // Epic N: a resume extends the budget; the freeze was not the hop's fault.
+        if (suspendCovers(startedAt, Date.now())) { startedAt = Date.now(); deadline = startedAt + opts.timeoutMs; }
+        if (Date.now() >= deadline) break;
         await new Promise((r) => setTimeout(r, 1000));
         if (errors.length > 0 && errors.some((e) => /hop-first-byte-timeout|provider\.|auth:/i.test(e))) break;
         server.lastUsed = Date.now();

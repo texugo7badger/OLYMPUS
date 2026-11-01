@@ -205,6 +205,24 @@ for (; Date.now() - startedAt < 60_000; ) {
 }
 add('serve-boot', ready, ready ? `ready in ${Date.now() - startedAt}ms on :${port}` : `no /config answer; exit=${child.exitCode}`);
 
+// R-N-07: freeze the candidate like an OS suspend, thaw it, and prove the
+// server answers again. The live app is never touched.
+if (ready) {
+  const freezeStart = Date.now();
+  let recovered = false;
+  try {
+    process.kill(child.pid, 'SIGSTOP');
+    await new Promise((r) => setTimeout(r, 2_000));
+    process.kill(child.pid, 'SIGCONT');
+  } catch { /* gone */ }
+  for (let i = 0; i < 25; i++) {
+    const probe = await request('GET', '/config', undefined, 1_000);
+    if (probe.status > 0 && probe.status < 500) { recovered = true; break; }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  add('survives-suspend', recovered, recovered ? `recovered after ${Date.now() - freezeStart}ms freeze` : 'no /config answer after SIGCONT');
+}
+
 let sessionId = null;
 if (ready) {
   const list = await request('GET', '/api/session');

@@ -25,7 +25,7 @@ function ok(name, fn) {
   catch (e) { console.log('FAIL ', name, '—', e?.message || e); process.exitCode = 1; }
 }
 
-const CHECKS = ['serve-boot', 'v2-session-list', 'session-create', 'agent-select', 'model-select', 'prompt-ack', 'sse-first-event', 'turn-completes', 'tokens-present', 'schema-v2', 'abort', 'clean-exit'];
+const CHECKS = ['serve-boot', 'v2-session-list', 'session-create', 'agent-select', 'model-select', 'prompt-ack', 'sse-first-event', 'turn-completes', 'tokens-present', 'schema-v2', 'survives-suspend', 'abort', 'clean-exit'];
 for (const c of CHECKS) ok(`gate runs ${c}`, () => assert.ok(gate.includes(`'${c}'`), c));
 
 ok('the gate installs into the isolated candidates prefix', () => assert.ok(/opencode-candidates/.test(gate)));
