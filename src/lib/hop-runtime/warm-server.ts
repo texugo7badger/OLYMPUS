@@ -48,8 +48,113 @@ export class WarmTransportUnavailable extends Error {
 
 const SERVERS = new Map<string, WarmServerInfo>();
 const IDLE_MS = 2 * 60_000;
+const MAX_SERVER_AGE_MS = 2 * 60 * 60_000;
 let sweeper: ReturnType<typeof setInterval> | null = null;
 let exitHookInstalled = false;
+
+/**
+ * v0.0.31 (R31-03) — THE HOP-SERVER REGISTRY.
+ *
+ * Hop servers are spawned `detached` so a Next request cannot kill them
+ * mid-hop. The cost: when the owning process dies (or the walk is abandoned),
+ * the child survives forever with a full MCP fleet — the 2026-11-01 specimen
+ * was a 57-minute-old `opencode serve` on :41741 holding 8 MCP servers.
+ *
+ * Every hop server registers `{pid, port, lane, appPid, startedAt}`; the app
+ * reaps entries whose owner is dead, whose pid is gone, or that outlive the
+ * hard age. The reaper verifies the target is an `opencode serve` before
+ * killing (no pid-reuse accidents).
+ */
+interface HopServerRegistryEntry {
+  pid: number;
+  port: number;
+  lane: string;
+  appPid: number;
+  startedAt: string;
+}
+
+function hopRegistryPath(): string {
+  return path.join(olympusHome(), 'hop-servers.json');
+}
+
+function readHopRegistry(): HopServerRegistryEntry[] {
+  try {
+    const raw = fs.readFileSync(hopRegistryPath(), 'utf-8');
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((e) => Number.isFinite(Number(e?.pid))) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeHopRegistry(entries: HopServerRegistryEntry[]): void {
+  try {
+    fs.mkdirSync(olympusHome(), { recursive: true });
+    fs.writeFileSync(hopRegistryPath(), JSON.stringify(entries, null, 2) + '\n', 'utf-8');
+  } catch { /* diagnostics only — never kill a hop for a registry write */ }
+}
+
+function registerHopServer(info: WarmServerInfo): void {
+  if (!info.child.pid) return;
+  const entries = readHopRegistry().filter((e) => e.pid !== info.child.pid);
+  entries.push({
+    pid: info.child.pid,
+    port: info.port,
+    lane: info.laneRoot,
+    appPid: process.pid,
+    startedAt: new Date().toISOString(),
+  });
+  writeHopRegistry(entries);
+}
+
+function unregisterHopServer(pid: number | undefined): void {
+  if (!pid) return;
+  writeHopRegistry(readHopRegistry().filter((e) => e.pid !== pid));
+}
+
+function isPidAlive(pid: number): boolean {
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
+
+/** Linux-only cmdline guard against pid reuse; permissive elsewhere. */
+function looksLikeOpencodeServe(pid: number): boolean {
+  if (process.platform !== 'linux') return true;
+  try {
+    const cmd = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf-8');
+    return /opencode/i.test(cmd) && /serve/i.test(cmd);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Kill every hop server whose owner is gone, whose pid is gone, or that is
+ * older than the hard cap. Returns the reaped pids (for logs/doctor).
+ */
+export function reapOrphanHopServers(now = Date.now()): number[] {
+  const entries = readHopRegistry();
+  const keep: HopServerRegistryEntry[] = [];
+  const reaped: number[] = [];
+  for (const e of entries) {
+    const age = Number.isFinite(Date.parse(e.startedAt)) ? now - Date.parse(e.startedAt) : Infinity;
+    const ownerAlive = e.appPid === process.pid ? true : isPidAlive(e.appPid);
+    const pidAlive = isPidAlive(e.pid);
+    const stale = !pidAlive || !ownerAlive || age > MAX_SERVER_AGE_MS;
+    if (!stale) { keep.push(e); continue; }
+    if (pidAlive && looksLikeOpencodeServe(e.pid)) {
+      try { process.kill(e.pid, 'SIGTERM'); reaped.push(e.pid); } catch { /* gone */ }
+      const killTimer = setTimeout(() => {
+        try { if (isPidAlive(e.pid)) process.kill(e.pid, 'SIGKILL'); } catch { /* gone */ }
+      }, 1_500);
+      killTimer.unref?.();
+    } else if (pidAlive) {
+      keep.push(e); // pid reused by something else — never kill it
+      continue;
+    }
+  }
+  if (keep.length !== entries.length) writeHopRegistry(keep);
+  return reaped;
+}
 
 function olympusHome(): string {
   return process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
@@ -119,8 +224,12 @@ function startSweeper(): void {
       if (info.activeTurns > 0) continue;
       if (now - info.lastUsed < IDLE_MS) continue;
       try { info.child.kill('SIGTERM'); } catch { /* gone */ }
+      unregisterHopServer(info.child.pid);
       SERVERS.delete(key);
     }
+    // R31-03 — the registry also catches servers this process no longer
+    // tracks (a dead owner, a crashed map, an app restart).
+    try { reapOrphanHopServers(now); } catch { /* never kill the sweeper */ }
   }, 60_000);
   sweeper.unref?.();
 }
@@ -138,11 +247,17 @@ export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo>
       }
     } catch { /* dead — respawn below */ }
     try { cached.child.kill('SIGTERM'); } catch { /* gone */ }
+    unregisterHopServer(cached.child.pid);
     SERVERS.delete(key);
   }
 
   installExitHook();
   startSweeper();
+  // R31-03 — clear hop servers whose owner died before spawning a new one.
+  try {
+    const reaped = reapOrphanHopServers();
+    if (reaped.length) console.log(`[hop-runtime] reaped ${reaped.length} orphan hop server(s): ${reaped.join(', ')}`);
+  } catch { /* the spawn below is the source of truth */ }
 
   const port = await freePort();
   const password = randomBytes(16).toString('hex');
@@ -214,6 +329,7 @@ export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo>
 
   const server: WarmServerInfo = { port, password, protocol, child, laneRoot: key, lastUsed: Date.now(), activeTurns: 0, logFile };
   SERVERS.set(key, server);
+  registerHopServer(server);
   return server;
 }
 
@@ -631,6 +747,7 @@ export async function runWarmHop(opts: {
 export function shutdownHopServers(): void {
   for (const info of SERVERS.values()) {
     try { info.child.kill('SIGTERM'); } catch { /* gone */ }
+    unregisterHopServer(info.child.pid);
   }
   SERVERS.clear();
   if (sweeper) clearInterval(sweeper);

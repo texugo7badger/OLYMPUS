@@ -859,6 +859,14 @@ export async function ensureServer(): Promise<ServerInfo> {
     return serverPromise.then((info) => ({ ...info, warm: true, workspaceFresh: false }));
   }
   serverPromise = (async (): Promise<ServerInfo> => {
+    // v0.0.31 (R31-03) — reap orphan hop servers once per app process. A hop
+    // server is detached so it can outlive a request; without this it can
+    // outlive the APP (the 2026-11-01 :41741 specimen: 57 min, 8 MCPs).
+    try {
+      const { reapOrphanHopServers } = await import('./hop-runtime/warm-server');
+      const reaped = reapOrphanHopServers();
+      if (reaped.length) console.log(`[opencode-session] reaped ${reaped.length} orphan hop server(s): ${reaped.join(', ')}`);
+    } catch { /* the registry is diagnostics; never block the chat server */ }
     const configured = parseInt(process.env.OLYMPUS_OPENCODE_PORT || '', 10);
     const startPort = Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_PORT;
 
