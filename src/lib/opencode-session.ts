@@ -70,6 +70,7 @@ const AUTO_APPROVE_PREFIXES: string[] = (
     : DEFAULT_AUTO_APPROVE_PREFIXES.join(',')
 ).split(',').map(s => s.trim()).filter(Boolean);
 const PID_FILE = path.join(OLYMPUS_HOME, 'opencode-server.pid');
+const SERVER_LOCK_FILE = path.join(OLYMPUS_HOME, 'opencode-server.lock');
 const LOG_FILE = path.join(OLYMPUS_HOME, 'opencode-server.log');
 const SESSION_MAP_FILE = path.join(OLYMPUS_HOME, 'opencode-sessions.json');
 const PROVIDERS_FILE = path.join(OLYMPUS_HOME, 'llm-providers.json');
@@ -707,6 +708,148 @@ function sleep(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+ * v0.0.31 (R31-03) — THE SINGLE-OWNER LOCK.
+ *
+ * serverPromise only serialises callers INSIDE one process. Two processes
+ * (the Electron main's Next and a route worker, or a second app instance)
+ * could both pass the pid-file check and spawn a second `opencode serve`
+ * against the same SQLite DB — the 2026-11-01 duplicate (:3777 + :41741).
+ *
+ * The lock is an atomic create (`wx`). The owner keeps it while it starts the
+ * server; a waiter reuses the owner's pid-file server when it is ready. A
+ * dead owner's lock is removed on the next attempt. The lock is released on
+ * spawn failure and on a clean shutdown, never on a mere cache invalidation
+ * (the server is still alive and must stay reusable).
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export interface ServerLockInfo {
+  pid: number;
+  startedAt: string;
+  port?: number;
+  password?: string | null;
+}
+
+export type ServerLockState = 'free' | 'self' | 'live-owner' | 'stale';
+
+/** Pure classifier (test seam): who owns the lock, and is that owner alive? */
+export function classifyServerLock(
+  lock: Partial<ServerLockInfo> | null | undefined,
+  alive: (pid: number) => boolean,
+  selfPid: number = process.pid,
+): ServerLockState {
+  if (!lock || !Number.isFinite(Number(lock.pid)) || Number(lock.pid) <= 0) return 'free';
+  const pid = Number(lock.pid);
+  if (pid === selfPid) return 'self';
+  return alive(pid) ? 'live-owner' : 'stale';
+}
+
+function readServerLock(): ServerLockInfo | null {
+  try {
+    const raw = JSON.parse(fs.readFileSync(SERVER_LOCK_FILE, 'utf-8'));
+    if (raw && Number.isFinite(Number(raw.pid))) {
+      return {
+        pid: Number(raw.pid),
+        startedAt: typeof raw.startedAt === 'string' ? raw.startedAt : new Date(0).toISOString(),
+        port: typeof raw.port === 'number' ? raw.port : undefined,
+        password: typeof raw.password === 'string' ? raw.password : null,
+      };
+    }
+  } catch { /* absent or malformed = free */ }
+  return null;
+}
+
+function writeServerLock(extra: { port?: number; password?: string | null } = {}): boolean {
+  try {
+    fs.mkdirSync(OLYMPUS_HOME, { recursive: true });
+    const fd = fs.openSync(SERVER_LOCK_FILE, 'wx');
+    fs.writeSync(fd, JSON.stringify({
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      ...(extra.port ? { port: extra.port } : {}),
+      ...(extra.password ? { password: extra.password } : {}),
+    }, null, 2));
+    fs.closeSync(fd);
+    return true;
+  } catch (e: any) {
+    if (e?.code === 'EEXIST') return false;
+    // A read-only home must not block the app; the pid file still guards.
+    return true;
+  }
+}
+
+function updateServerLock(port: number, password: string | null): void {
+  try {
+    const lock = readServerLock();
+    if (!lock || lock.pid !== process.pid) return; // never touch another owner's lock
+    fs.writeFileSync(SERVER_LOCK_FILE, JSON.stringify({
+      pid: process.pid,
+      startedAt: lock.startedAt,
+      port,
+      password,
+    }, null, 2), 'utf-8');
+  } catch { /* diagnostics only */ }
+}
+
+/** Remove the lock only when THIS process owns it. */
+export function releaseServerLock(): void {
+  try {
+    const lock = readServerLock();
+    if (lock && lock.pid === process.pid) fs.unlinkSync(SERVER_LOCK_FILE);
+  } catch { /* already gone */ }
+}
+
+type LockAcquisition =
+  | { kind: 'acquired' }
+  | { kind: 'reuse'; info: ServerInfo }
+  | { kind: 'timeout'; owner: number };
+
+/**
+ * Acquire the start lock, or reuse the server the current owner has ready.
+ * Bounded patience (45 s): a wedged starter must not hang the first prompt
+ * forever — the caller gets a named error instead of a silent second spawn.
+ */
+async function acquireServerLockOrReuse(): Promise<LockAcquisition> {
+  const deadline = Date.now() + 45_000;
+  for (;;) {
+    if (writeServerLock()) return { kind: 'acquired' };
+
+    const lock = readServerLock();
+    const state = classifyServerLock(lock, isProcessAlive);
+    if (state === 'self') return { kind: 'acquired' }; // serverPromise serialises us
+    if (state !== 'live-owner') {
+      // Dead or malformed owner — take over.
+      try { fs.unlinkSync(SERVER_LOCK_FILE); } catch { /* raced */ }
+      continue;
+    }
+
+    // A live owner is starting (or already started) the server. Reuse it as
+    // soon as the pid file answers; never spawn a second one.
+    const pidFile = readPidFile();
+    if (pidFile && isProcessAlive(pidFile.pid)) {
+      const probe = await probeServer(pidFile.port, pidFile.password);
+      if (probe.ok) {
+        return {
+          kind: 'reuse',
+          info: {
+            port: pidFile.port,
+            warm: true,
+            password: pidFile.password,
+            authed: probe.authed,
+            protocol: await resolveProtocol(pidFile.port, pidFile.password),
+          },
+        };
+      }
+    }
+
+    if (Date.now() > deadline) return { kind: 'timeout', owner: lock!.pid };
+    await sleep(300);
+  }
+}
+
+// A clean process exit must not leave the next launch waiting on a dead lock.
+try { process.once('exit', () => releaseServerLock()); } catch { /* non-node host */ }
+
 /**
  * Drop the cached server state so the next ensureServer() re-probes and
  * (re)spawns. Used when a run fails at the server level (before the message
@@ -867,6 +1010,20 @@ export async function ensureServer(): Promise<ServerInfo> {
       const reaped = reapOrphanHopServers();
       if (reaped.length) console.log(`[opencode-session] reaped ${reaped.length} orphan hop server(s): ${reaped.join(', ')}`);
     } catch { /* the registry is diagnostics; never block the chat server */ }
+
+    // R31-03 — ONE OWNER PER SERVE. Two processes must never both spawn.
+    const lock = await acquireServerLockOrReuse();
+    if (lock.kind === 'reuse') {
+      console.log(`[opencode-session] another OLYMPUS process owns the start lock — reusing its server on :${lock.info.port}`);
+      return lock.info;
+    }
+    if (lock.kind === 'timeout') {
+      throw new Error(
+        `another OLYMPUS process (pid ${lock.owner}) is starting the OpenCode server but did not become ready in 45s. ` +
+        `Close the other OLYMPUS window and retry, or remove ${SERVER_LOCK_FILE} if no OLYMPUS process is alive.`,
+      );
+    }
+
     const configured = parseInt(process.env.OLYMPUS_OPENCODE_PORT || '', 10);
     const startPort = Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_PORT;
 
@@ -881,6 +1038,7 @@ export async function ensureServer(): Promise<ServerInfo> {
       console.log(`[opencode-session] pidfile probe: pid=${pidFile.pid} port=${pidFile.port} ok=${probe.ok} authed=${probe.authed} status=${probe.status ?? '-'}`);
       if (probe.ok) {
         console.log(`[opencode-session] Reusing warm OpenCode server on port ${pidFile.port} (pid ${pidFile.pid})`);
+        releaseServerLock(); // a previous owner started it; we only reuse it
         return { port: pidFile.port, warm: true, password: pidFile.password, authed: probe.authed, protocol: await resolveProtocol(pidFile.port, pidFile.password) };
       }
       await killStaleServe(pidFile.pid, `pid file stale (API unreachable on port ${pidFile.port})`);
@@ -901,6 +1059,7 @@ export async function ensureServer(): Promise<ServerInfo> {
       const probe = await probeServer(port, null);
       if (probe.ok) {
         console.log(`[opencode-session] Found running OpenCode server on port ${port} — reusing (no cold start)`);
+        releaseServerLock(); // not our server; never hold the start lock for it
         return { port, warm: true, password: null, authed: false, protocol: await resolveProtocol(port, null) };
       }
       if (probe.status === 401) {
@@ -925,6 +1084,7 @@ export async function ensureServer(): Promise<ServerInfo> {
         if (attempt < PORT_SCAN) port = nextPort(port);
       }
     }
+    releaseServerLock();
     throw new Error(`failed to start opencode serve: ${lastError || 'unknown error'}`);
   })();
   return serverPromise;
@@ -1006,6 +1166,7 @@ async function spawnServer(port: number): Promise<ServerInfo> {
     const probe = await probeServer(port, password);
     if (probe.ok) {
       writePidFile(port, password, child.pid ?? process.pid);
+      updateServerLock(port, password);
       console.log(`[opencode-session] OpenCode server ready on port ${port} (pid ${child.pid})`);
       return { port, warm: false, password, authed: probe.authed, workspaceDir: lane.dir, workspaceFresh: lane.fresh, protocol: await resolveProtocol(port, password) };
     }
@@ -1081,6 +1242,7 @@ export function cleanupServer() {
     try { serverChild.kill('SIGTERM'); } catch {}
   }
   removePidFile();
+  releaseServerLock();
   if (serverLogFd !== null) {
     try { fs.closeSync(serverLogFd); } catch {}
     serverLogFd = null;
