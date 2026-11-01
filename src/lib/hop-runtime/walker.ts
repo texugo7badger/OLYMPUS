@@ -839,7 +839,7 @@ export function ensureLaneConfig(laneRoot: string): void {
     // Runs AFTER the manifest so the config is already the hop shape.
     const variants = applyHopAgentVariants(dst);
     if (variants.changed) {
-      console.log(`[lane-config] hop agent variants refreshed (${variants.created} change(s)) — lean toolset, no overlay plugins`);
+      console.log(`[lane-config] hop agent variants refreshed (${variants.created} change(s)) — lean toolset, overlay plugins intact`);
     }
   } catch { /* the dispatch itself will name the failure */ }
 }

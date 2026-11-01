@@ -16,7 +16,8 @@
  * THE DOCTRINE (this suite's law): lane copies MIRROR the root.
  *   1. syncLaneFile: created / refreshed-on-drift / in-sync — byte-exact.
  *   2. ensureLaneConfig (the walker lane): a stale lane copy is REFRESHED,
- *      never ridden.
+ *      never ridden. Two intentional derived layers are allowed: the
+ *      <god>-hop lean agents and the campaign manifest's enabled flags.
  *   3. resolveWorkspaceLane (the interactive lane): both copies flow
  *      through the same sync — the created-if-missing loop is GONE.
  *   4. The call-site tripwires: both call sites USE syncLaneFile (a revert
@@ -44,6 +45,27 @@ function check(name, ok, detail = '') {
 }
 
 const sha = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
+
+/**
+ * v0.0.31 (R31-09/#B3): the lane is the root PLUS two derived layers —
+ * the `<god>-hop` lean agents and the campaign MCP manifest's `enabled`
+ * flags. Everything else must mirror the root.
+ */
+function normalizeLaneConfig(file) {
+  const cfg = JSON.parse(readFileSync(file, 'utf-8'));
+  const agent = {};
+  for (const [name, value] of Object.entries(cfg.agent || {})) {
+    if (!name.endsWith('-hop')) agent[name] = value;
+  }
+  const mcp = {};
+  for (const [name, value] of Object.entries(cfg.mcp || {})) {
+    if (value && typeof value === 'object') {
+      const { enabled, ...rest } = value;
+      mcp[name] = rest;
+    } else mcp[name] = value;
+  }
+  return JSON.stringify({ ...cfg, agent, mcp });
+}
 
 // ── 1. syncLaneFile: the verdict table ───────────────────────────────────────
 const { syncLaneFile } = await import(join(ROOT, 'src', 'lib', 'lane-config.ts'));
@@ -78,10 +100,8 @@ const { syncLaneFile } = await import(join(ROOT, 'src', 'lib', 'lane-config.ts')
   // THE SPECIMEN: a lane bootstrapped in an earlier era, never refreshed.
   writeFileSync(join(lane, 'opencode.json'), '{"agent":{"apollo":{"model":"nvidia/nvidia/nemotron-3-ultra-550b-a55b"}}}');
   ensureLaneConfig(lane);
-  const rootCfg = sha(join(ROOT, 'opencode.json'));
-  const laneCfg = sha(join(lane, 'opencode.json'));
-  check('ensureLaneConfig: a stale walker lane opencode.json is REFRESHED to the root\'s',
-    laneCfg === rootCfg,
+  check('ensureLaneConfig: a stale walker lane opencode.json is REFRESHED to the root\'s base',
+    normalizeLaneConfig(join(lane, 'opencode.json')) === normalizeLaneConfig(join(ROOT, 'opencode.json')),
     'lane still carries a fossil config');
   check('ensureLaneConfig: the demigods registry is in sync',
     sha(join(lane, 'opencode.demigods.json')) === sha(join(ROOT, 'opencode.demigods.json')),
@@ -121,8 +141,8 @@ const { syncLaneFile } = await import(join(ROOT, 'src', 'lib', 'lane-config.ts')
 {
   const { resolveWorkspaceLane } = await import(join(ROOT, 'src', 'lib', 'opencode-spawn.ts'));
   const lane = resolveWorkspaceLane();
-  check('live: the workspace lane opencode.json is byte-identical to the root\'s',
-    sha(join(lane.dir, 'opencode.json')) === sha(join(ROOT, 'opencode.json')),
+  check('live: the workspace lane opencode.json matches the root\'s base (derived layers allowed)',
+    normalizeLaneConfig(join(lane.dir, 'opencode.json')) === normalizeLaneConfig(join(ROOT, 'opencode.json')),
     'the interactive lane still carries a drifted config — the next dispatch rides a fossil');
   check('live: the workspace lane demigods registry is byte-identical to the root\'s',
     sha(join(lane.dir, 'opencode.demigods.json')) === sha(join(ROOT, 'opencode.demigods.json')),
