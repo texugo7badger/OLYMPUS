@@ -40,6 +40,25 @@ references with real component previews; benchmark sessions; a notification
 center with hibernate-on-lock; and the Pattern Studio.
 
 
+
+## Themes — twelve families and a palette lab
+
+Every theme repaints the app, the terminal, the brain, the loader, the tray and
+the system icon. The full gallery lives in [screenshots/THEMES.md](screenshots/THEMES.md);
+click a card to open it.
+
+| | | |
+|---|---|---|
+| [<img src="screenshots/themes/olympus.svg" width="220" alt="Olympus" />](screenshots/themes/olympus.svg) | [<img src="screenshots/themes/obsidian.svg" width="220" alt="Obsidian" />](screenshots/themes/obsidian.svg) | [<img src="screenshots/themes/ember.svg" width="220" alt="Ember" />](screenshots/themes/ember.svg) |
+| [<img src="screenshots/themes/violet.svg" width="220" alt="Violet" />](screenshots/themes/violet.svg) | [<img src="screenshots/themes/forest.svg" width="220" alt="Forest" />](screenshots/themes/forest.svg) | [<img src="screenshots/themes/ice.svg" width="220" alt="Ice" />](screenshots/themes/ice.svg) |
+| [<img src="screenshots/themes/parchment.svg" width="220" alt="Parchment" />](screenshots/themes/parchment.svg) | [<img src="screenshots/themes/paper.svg" width="220" alt="Paper" />](screenshots/themes/paper.svg) | [<img src="screenshots/themes/mist.svg" width="220" alt="Mist" />](screenshots/themes/mist.svg) |
+| [<img src="screenshots/themes/blossom.svg" width="220" alt="Blossom" />](screenshots/themes/blossom.svg) | [<img src="screenshots/themes/sand.svg" width="220" alt="Sand" />](screenshots/themes/sand.svg) | [<img src="screenshots/themes/mint.svg" width="220" alt="Mint" />](screenshots/themes/mint.svg) |
+
+Beyond the presets, the **palette lab** generates all 14 colors of a family
+from a hue + harmony, with contrast floors (text ≥ 7:1, dim ≥ 4.5:1, accent
+≥ 3:1). Apply it and every surface follows — including the OS icon.
+
+
 ## What is OLYMPUS?
 
 OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencode.ai). It runs as a standalone **Electron desktop app** on Linux. Other platforms should use WSL. OLYMPUS routes each task to the cheapest LLM that can handle it, cascades token compression across five layers (including the Symphony latent protocol), and learns from every action via a self-curating **VaultBrain**.
