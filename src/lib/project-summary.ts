@@ -90,6 +90,14 @@ function cleanReadme(text: string): string {
  *   2. the README's opening prose (the project's own words);
  *   3. a generated identity line from the detected stacks and file count.
  */
+/** The folder name leads the summary in the folder's own casing (aime, not AIME). */
+function lowerLeadingSlug(summary: string, slug: string): string {
+  const clean = summary.trim();
+  if (!clean || !slug) return clean;
+  if (clean.toLowerCase().startsWith(slug.toLowerCase())) return slug + clean.slice(slug.length);
+  return clean;
+}
+
 export function projectSummary(input: {
   slug: string;
   pkg: any;
@@ -101,7 +109,7 @@ export function projectSummary(input: {
   const { slug, pkg, root, stacks, files, port } = input;
   const pkgDescription = typeof pkg?.description === 'string' ? pkg.description.trim() : '';
   if (pkgDescription && !/^(a|an|the)?\s*(project|app|application|todo|test|sample)$/i.test(pkgDescription)) {
-    return pkgDescription.slice(0, 260);
+    return lowerLeadingSlug(pkgDescription.slice(0, 260), slug);
   }
 
   if (root) {
@@ -120,7 +128,7 @@ export function projectSummary(input: {
         summary = next;
         if (summary.length >= 80) break;
       }
-      if (summary) return summary.replace(/\s+/g, ' ').slice(0, 300);
+      if (summary) return lowerLeadingSlug(summary.replace(/\s+/g, ' ').slice(0, 300), slug);
     }
   }
 

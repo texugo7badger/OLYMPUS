@@ -114,7 +114,7 @@ export default function ProjectSwitcher() {
                   {p.stacks.length > 0 && (
                     <div className="flex items-center gap-1.5 mt-1.5 ml-5 flex-wrap">
                       <Layers size={8} className="text-olympus-gold/70 shrink-0" />
-                      <StackShelf stacks={p.stacks} size={11} max={7} />
+                      <StackShelf stacks={p.stacks} size={14} max={7} />
                     </div>
                   )}
                 </button>
