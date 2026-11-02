@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process';
 import { spawnOpencode } from '@/lib/opencode-spawn';
 import { runWarmHop, WarmTransportUnavailable } from './warm-server';
 import { suspendCovers } from '@/lib/power-suspend';
+import { decideCeiling, hardCeilingMs } from './progress';
 
 export type HopTransportMode = 'auto' | 'spawn' | 'warm';
 
@@ -57,6 +58,8 @@ export class SpawnTransport implements HopTransport {
       let firstByteAt: number | null = null;
       let runStart = Date.now();
       let lastOutputAt = Date.now();
+      let ceilingDeadline = runStart + req.timeoutMs;
+      const hardDeadline = runStart + hardCeilingMs(req.timeoutMs);
       let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
       let firstByteTimer: ReturnType<typeof setTimeout> | null = null;
       let silenceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -71,9 +74,24 @@ export class SpawnTransport implements HopTransport {
       // after the resume, so a healthy turn is never killed by the freeze.
       const armCeiling = () => {
         ceilingTimer = setTimeout(() => {
-          if (suspendCovers(runStart, Date.now())) { runStart = Date.now(); armCeiling(); return; }
+          const now = Date.now();
+          if (suspendCovers(runStart, now)) { runStart = now; ceilingDeadline = now + req.timeoutMs; armCeiling(); return; }
+          // A long turn that is still producing output is not a stuck turn
+          // (the 2026-11-01 AIME v8/p3 specimen). Extend to the hard cap.
+          const decision = decideCeiling({
+            deadline: ceilingDeadline,
+            hardDeadline,
+            lastProgressAt: lastOutputAt,
+            now,
+          });
+          if (decision.extended) {
+            ceilingDeadline = decision.deadline;
+            stderr += `\nhop-ceiling-extended: still producing output ${Math.round(decision.idleMs / 1000)}s ago; new deadline +${Math.round((decision.deadline - now) / 1000)}s (hard cap ${Math.round(hardDeadline / 1000)}s)`;
+            armCeiling();
+            return;
+          }
           try { child.kill('SIGKILL'); } catch { /* gone */ }
-        }, req.timeoutMs);
+        }, Math.max(0, ceilingDeadline - Date.now()));
       };
       const armFirstByte = () => {
         firstByteTimer = setTimeout(() => {

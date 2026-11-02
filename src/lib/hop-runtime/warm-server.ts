@@ -27,6 +27,7 @@ import { spawnOpencode } from '@/lib/opencode-spawn';
 import { symlinkSync, mkdirSync as mkdirSyncFs, existsSync as existsSyncFs, statSync } from 'node:fs';
 import { classifyDestructiveCommand } from '@/lib/destructive-guard';
 import { suspendCovers } from '@/lib/power-suspend';
+import { decideCeiling, hardCeilingMs } from './progress';
 
 export interface WarmServerInfo {
   port: number;
@@ -746,11 +747,32 @@ export async function runWarmHop(opts: {
       // arrives asynchronously. Poll the session until it completes, while
       // the SSE watcher keeps first-byte/silence/error truth.
       let deadline = startedAt + opts.timeoutMs;
+      let hardDeadline = startedAt + hardCeilingMs(opts.timeoutMs);
       let done = false;
       while (!done) {
         // Epic N: a resume extends the budget; the freeze was not the hop's fault.
-        if (suspendCovers(startedAt, Date.now())) { startedAt = Date.now(); deadline = startedAt + opts.timeoutMs; }
-        if (Date.now() >= deadline) break;
+        if (suspendCovers(startedAt, Date.now())) {
+          startedAt = Date.now();
+          deadline = startedAt + opts.timeoutMs;
+          hardDeadline = startedAt + hardCeilingMs(opts.timeoutMs);
+        }
+        if (Date.now() >= deadline) {
+          // A turn that keeps emitting events is WORKING, not stuck — the
+          // 2026-11-01 AIME v8/p3 specimen died at 25 min while listing
+          // files. Extend toward the hard cap; a real stall is caught by the
+          // first-byte/silence timers above.
+          const decision = decideCeiling({
+            deadline,
+            hardDeadline,
+            lastProgressAt: lastEventAt,
+            now: Date.now(),
+          });
+          if (decision.kill) break;
+          if (decision.extended) {
+            deadline = decision.deadline;
+            opts.onNotice?.(`hop still progressing (last event ${Math.round(decision.idleMs / 1000)}s ago) — ceiling extended +${Math.round((decision.deadline - Date.now()) / 1000)}s (hard cap ${Math.round(hardDeadline / 1000)}s)`);
+          }
+        }
         await new Promise((r) => setTimeout(r, 1000));
         if (errors.length > 0 && errors.some((e) => /hop-first-byte-timeout|provider\.|auth:/i.test(e))) break;
         server.lastUsed = Date.now();
