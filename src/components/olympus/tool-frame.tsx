@@ -76,7 +76,7 @@ export function DiffPreview({ path, input, kind }: DiffPreviewProps) {
         {open ? 'hide change' : 'show change'}
         <span className="text-olympus-green">+{added}</span>
         {removed > 0 && <span className="text-olympus-red">-{removed}</span>}
-        <span className="text-[#5A5A5A]">· first {PREVIEW_LINES} lines</span>
+        <span className="text-olympus-text-dim">· first {PREVIEW_LINES} lines</span>
       </button>
 
       {open && (
@@ -92,9 +92,9 @@ export function DiffPreview({ path, input, kind }: DiffPreviewProps) {
                 <span className="select-none opacity-60">+ </span>{line || ' '}
               </div>
             ))
-            : <div className="text-[9px] font-mono text-[#5A5A5A]">(no inline content in args)</div>}
+            : <div className="text-[9px] font-mono text-olympus-text-dim">(no inline content in args)</div>}
           {(oldText.split('\n').length > PREVIEW_LINES || newText.split('\n').length > PREVIEW_LINES) && (
-            <div className="text-[8px] font-mono text-[#5A5A5A]">… truncated</div>
+            <div className="text-[8px] font-mono text-olympus-text-dim">… truncated</div>
           )}
         </div>
       )}

@@ -238,7 +238,7 @@ export default function ApiConfigDialog({ open, onClose }: { open: boolean; onCl
               {/* ── Multi-field MCPs (grouped cards) ──────────────────── */}
               {multiFieldMcps.length > 0 && (
                 <div className="space-y-3 pt-2">
-                  <div className="flex items-center gap-1.5 px-1 text-[9px] text-[#5A5A5A] font-mono uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 px-1 text-[9px] text-olympus-text-dim font-mono uppercase tracking-wider">
                     <Server size={10} /> Multi-field MCPs
                   </div>
                   {multiFieldMcps.map(req => (

@@ -227,7 +227,7 @@ export default function AtelierPanel() {
             onChange={(e) => setGenSeed(e.target.value.replace(/[^0-9]/g, ''))}
             placeholder="seed"
             aria-label="Seed"
-            className="w-16 bg-olympus-bg border border-olympus-gold/20 rounded px-1.5 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-cyan/50"
+            className="w-16 bg-olympus-bg border border-olympus-gold/20 rounded px-1.5 py-1 text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-cyan/50"
           />
         </div>
         <div className="flex gap-1.5">
@@ -236,7 +236,7 @@ export default function AtelierPanel() {
             onChange={(e) => setGenPrompt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && generate()}
             placeholder="a gold-and-dark robot mascot, studio lighting…"
-            className="flex-1 bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1.5 text-[11px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-cyan/50"
+            className="flex-1 bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1.5 text-[11px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-cyan/50"
           />
           <button onClick={generate} disabled={busy === 'generate'}
             className="px-3 py-1.5 rounded bg-olympus-cyan/15 text-olympus-cyan ring-1 ring-olympus-cyan/30 text-[10px] font-mono hover:bg-olympus-cyan/25 disabled:opacity-40">
@@ -252,7 +252,7 @@ export default function AtelierPanel() {
           value={query}
           onChange={(e) => { setQuery(e.target.value); load(e.target.value || undefined); }}
           placeholder="search the vault — style, subject, mood…"
-          className="flex-1 bg-olympus-card border border-olympus-gold/15 rounded px-2 py-1 text-[11px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/40"
+          className="flex-1 bg-olympus-card border border-olympus-gold/15 rounded px-2 py-1 text-[11px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-gold/40"
         />
         {/* W-A RAG-CERT A2: the re-index action — reindexVault's front door.
             Honest result flash: keyed lane embeds, keyless lane says so. */}
@@ -355,7 +355,7 @@ export default function AtelierPanel() {
                         onChange={(e) => setEditPrompt({ ...editPrompt, value: e.target.value })}
                         onKeyDown={(e) => { if (e.key === 'Enter') editAsset(selected.id, editPrompt.value); if (e.key === 'Escape') setEditPrompt(null); }}
                         placeholder="make it dusk, add neon rim light…"
-                        className="flex-1 bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50"
+                        className="flex-1 bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-gold/50"
                       />
                       <button onClick={() => editAsset(selected.id, editPrompt.value)} disabled={busy === 'edit'}
                         className="px-2 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 text-[10px] font-mono hover:bg-olympus-gold/25 disabled:opacity-40">
@@ -363,7 +363,7 @@ export default function AtelierPanel() {
                       </button>
                       <button onClick={() => setEditPrompt(null)} className="text-olympus-text-dim hover:text-olympus-red text-[10px] font-mono px-1">✕</button>
                     </div>
-                    <div className="text-[8px] font-mono text-[#5A5A5A] mt-1">
+                    <div className="text-[8px] font-mono text-olympus-text-dim mt-1">
                       {models.filter(m => m.supportsEdit).map(m => `${m.label}${m.available ? '' : ` (${m.needsKey})`}`).join(' · ') || 'no editing rung available'}
                     </div>
                   </div>

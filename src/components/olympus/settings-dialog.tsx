@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -14,9 +14,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOlympus, GOD_ICONS, GOD_IDS, type LLMStrategy } from '@/lib/olympus-store';
-import { Settings, Save, Loader2, Check, AlertCircle, AlertTriangle, Zap, BarChart3, Lock, Plus, X, Trash2, Calculator, Palette, Sun, Moon } from 'lucide-react';
+import { Settings, Save, Loader2, Check, AlertCircle, AlertTriangle, Zap, BarChart3, Lock, Plus, X, Trash2, Calculator, Palette, Sun, Moon, RefreshCw } from 'lucide-react';
 import { THEME_ICONS, THEME_PRESETS, resolvePalette } from '@/lib/theme';
 import { MoonModeIcon, SunModeIcon } from './theme-mode-icons';
+import { generateThemePalette, randomSeed, type PaletteLabSeed } from '@/lib/theme-generator';
 import { useTheme } from '@/lib/theme-store';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -428,6 +429,9 @@ export default function SettingsDialog() {
   const [newSessionName, setNewSessionName] = useState('');
   const [newSessionBusy, setNewSessionBusy] = useState(false);
   const activeProject = useOlympus((st) => st.activeProject);
+  // v0.0.32 — the palette LAB: a full 14-key family, not one accent.
+  const [labSeed, setLabSeed] = useState<PaletteLabSeed>({ hue: 32, scheme: 'analogous', mode: 'dark' });
+  const labPalette = useMemo(() => generateThemePalette(labSeed), [labSeed]);
   const [benchSaving, setBenchSaving] = useState(false);
   // v0.0.23 — the interactive Strategy Builder (search by model/provider).
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -839,17 +843,7 @@ export default function SettingsDialog() {
                   onClick={() => setTheme({ mode: 'light', presetId: THEME_PRESETS.find((p) => p.mode === 'light')!.id })}
                   className={cn('flex items-center gap-1 px-2 py-1 rounded border text-[9px] font-mono uppercase', theme.mode === 'light' ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text')}
                 ><SunModeIcon active={theme.mode === 'light'} /> light</button>
-                <label className="ml-auto flex items-center gap-1.5 text-[9px] font-mono text-olympus-text-dim uppercase">
-                  accent
-                  <input
-                    type="color"
-                    value={theme.accent ?? resolvePalette(theme).gold}
-                    onChange={(e) => setTheme({ accent: e.target.value })}
-                    className="w-7 h-6 bg-transparent border border-olympus-gold/20 rounded cursor-pointer"
-                    aria-label="accent color"
-                  />
-                  {theme.accent && <button onClick={() => setTheme({ accent: null })} className="normal-case text-olympus-cyan hover:underline">reset</button>}
-                </label>
+                <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">colors come from the preset or the palette lab</span>
               </div>
 
               <div className="grid grid-cols-3 gap-1.5">
@@ -893,6 +887,71 @@ export default function SettingsDialog() {
                     onCheckedChange={(v) => setTheme({ motion: v ? 'stable' : 'full' })}
                     aria-label="Stable mode"
                   />
+                </div>
+              </div>
+
+              {/* v0.0.32 — the palette lab: combinations across ALL keys. */}
+              <div className="mt-2 rounded border border-olympus-gold/20 bg-olympus-bg/50 p-2">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Palette size={10} className="text-olympus-gold" />
+                  <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">palette lab</span>
+                  <span className="text-[8px] font-mono text-olympus-text-dim">full family · contrast enforced</span>
+                  <button
+                    onClick={() => setLabSeed(randomSeed(labSeed.mode))}
+                    className="ml-auto flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded border border-olympus-gold/25 text-olympus-gold hover:bg-olympus-gold/10"
+                  >
+                    <RefreshCw size={9} /> shuffle
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="range"
+                    min={0}
+                    max={359}
+                    value={labSeed.hue}
+                    onChange={(e) => setLabSeed({ ...labSeed, hue: Number(e.target.value) })}
+                    className="flex-1 accent-[#D4A574]"
+                    aria-label="Palette hue"
+                  />
+                  <select
+                    value={labSeed.scheme}
+                    onChange={(e) => setLabSeed({ ...labSeed, scheme: e.target.value as PaletteLabSeed['scheme'] })}
+                    className="bg-olympus-bg border border-olympus-gold/20 rounded px-1 py-0.5 text-[8px] font-mono text-olympus-text outline-none"
+                    aria-label="Palette scheme"
+                  >
+                    {['analogous', 'complementary', 'triadic', 'split', 'mono'].map((x) => <option key={x} value={x}>{x}</option>)}
+                  </select>
+                  <button
+                    onClick={() => setLabSeed({ ...labSeed, mode: labSeed.mode === 'dark' ? 'light' : 'dark' })}
+                    className="text-[8px] font-mono px-1.5 py-0.5 rounded border border-olympus-gold/25 text-olympus-text-dim hover:text-olympus-text"
+                  >
+                    {labSeed.mode}
+                  </button>
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {(Object.keys(labPalette) as Array<keyof typeof labPalette>).map((k) => (
+                    <span
+                      key={k}
+                      className="w-4 h-4 rounded-sm ring-1 ring-black/30"
+                      style={{ background: labPalette[k] }}
+                      data-tip={`${k}: ${labPalette[k]}`}
+                    />
+                  ))}
+                </div>
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <button
+                    onClick={() => { setTheme({ custom: labPalette, mode: labSeed.mode }); toast.success('Palette applied — every surface follows'); }}
+                    className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25"
+                  >
+                    apply + make default
+                  </button>
+                  <button
+                    onClick={() => setTheme({ custom: undefined })}
+                    className="text-[8px] font-mono text-olympus-text-dim hover:text-olympus-text"
+                  >
+                    reset to preset
+                  </button>
+                  <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">{theme.custom ? 'custom palette active' : 'preset active'}</span>
                 </div>
               </div>
             </section>

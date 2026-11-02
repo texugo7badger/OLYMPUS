@@ -494,7 +494,7 @@ function TimelineItem({ ep, isLast, onClick, hopId, hopTask }: { ep: Episode; is
         </div>
         <div className="shrink-0 text-right">
           <div className="text-[9px] font-mono text-olympus-text-dim">{formatTime(ep.ts)}</div>
-          <div className="text-[9px] font-mono text-[#5A5A5A]">{timeAgo(ep.ts)}</div>
+          <div className="text-[9px] font-mono text-olympus-text-dim">{timeAgo(ep.ts)}</div>
           <div className={cn('text-[9px] font-mono font-bold mt-0.5',
             ep.confidence >= 0.85 ? 'text-olympus-green' : ep.confidence >= 0.7 ? 'text-olympus-amber-soft' : 'text-olympus-text-dim')}>
             {ep.confidence.toFixed(2)}

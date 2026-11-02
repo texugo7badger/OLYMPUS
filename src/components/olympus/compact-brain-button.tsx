@@ -250,8 +250,8 @@ export default function CompactBrainButton() {
  className={cn(
  'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all',
  compactState === 'idle' && !midTaskBlocked && 'bg-olympus-gold/15 text-olympus-gold hover:bg-olympus-gold/25 ring-1 ring-olympus-gold/30',
- compactState === 'idle' && midTaskBlocked && 'bg-olympus-card text-[#5A5A5A] cursor-not-allowed ring-1 ring-olympus-red/20',
- compactState === 'cooldown' && 'bg-olympus-card text-[#5A5A5A] cursor-not-allowed ring-1 ring-olympus-gold/10',
+ compactState === 'idle' && midTaskBlocked && 'bg-olympus-card text-olympus-text-dim cursor-not-allowed ring-1 ring-olympus-red/20',
+ compactState === 'cooldown' && 'bg-olympus-card text-olympus-text-dim cursor-not-allowed ring-1 ring-olympus-gold/10',
  compactState === 'in-progress' && 'bg-olympus-gold/25 text-olympus-gold cursor-wait ring-1 ring-olympus-gold/40',
  compactState === 'undo-window' && 'bg-olympus-red/15 text-olympus-red hover:bg-olympus-red/25 ring-1 ring-olympus-red/30 animate-pulse',
  )}
@@ -285,7 +285,7 @@ export default function CompactBrainButton() {
  'w-4 h-4 rounded-full flex items-center justify-center text-[9px] shrink-0',
  p.status === 'done' && 'bg-olympus-green/20 text-olympus-green',
  p.status === 'start' && 'bg-olympus-gold/20 text-olympus-gold',
- p.status === 'pending' && 'bg-olympus-bg text-[#5A5A5A]',
+ p.status === 'pending' && 'bg-olympus-bg text-olympus-text-dim',
  )}>
  {p.status === 'done' ? <Check size={8} /> : p.status === 'start' ? <Loader2 size={8} className="animate-spin" /> : p.id}
  </span>
@@ -301,7 +301,7 @@ export default function CompactBrainButton() {
  </div>
  ))}
  </div>
- <div className="mt-2.5 pt-2 border-t border-olympus-gold/10 text-[9px] text-[#5A5A5A] font-mono">
+ <div className="mt-2.5 pt-2 border-t border-olympus-gold/10 text-[9px] text-olympus-text-dim font-mono">
  soft-delete · 5-min undo window · 60s cooldown · mid-task guarded
  </div>
  </div>

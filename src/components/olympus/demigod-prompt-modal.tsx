@@ -139,7 +139,7 @@ export default function DemigodPromptModal({
  No prompt file found for <code className="text-olympus-gold">{agent}</code> under{' '}
  <code className="text-olympus-cyan">{god}</code>.
  </p>
- <p className="text-[10px] font-mono text-[#5A5A5A]">
+ <p className="text-[10px] font-mono text-olympus-text-dim">
  Expected at .opencode/prompts/agents/demigods/{god}/{agent.replace(/-/g, '_')}.txt
  </p>
  </div>
@@ -155,7 +155,7 @@ export default function DemigodPromptModal({
  {/* Footer — file path hint */}
  {!loading && !notFound && (
  <div className="px-4 py-2 border-t border-olympus-gold/10 bg-olympus-panel shrink-0">
- <div className="text-[9px] font-mono text-[#5A5A5A] truncate">
+ <div className="text-[9px] font-mono text-olympus-text-dim truncate">
  source: .opencode/prompts/agents/demigods/{god}/{agent.replace(/-/g, '_')}.txt
  </div>
  </div>

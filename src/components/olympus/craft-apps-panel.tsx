@@ -371,7 +371,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                     value={refSearch}
                     onChange={(e) => setRefSearch(e.target.value)}
                     placeholder="search references — black hole, smoky text, carousel, tooltip…"
-                    className="w-full bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50"
+                    className="w-full bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-gold/50"
                   />
                   <div className="flex items-center gap-1 mt-1.5 overflow-x-auto custom-scroll pb-0.5">
                     {refCats.map((cat) => (
@@ -385,7 +385,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                     ))}
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-1">
-                    <p className="text-[8px] font-mono text-[#5A5A5A]">OriginKit (free key MCP) + Skiper UI (shadcn registry) — curated inspiration; the [OLYMPUS-DESIGN] marker carries the marquee list to the gods.</p>
+                    <p className="text-[8px] font-mono text-olympus-text-dim">OriginKit (free key MCP) + Skiper UI (shadcn registry) — curated inspiration; the [OLYMPUS-DESIGN] marker carries the marquee list to the gods.</p>
                     {originkitBudget && (
                       <span
                         data-tip={originkitBudget.exhausted
@@ -499,14 +499,14 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                             {v.nativeRunning ? '● native' : 'launch'}
                           </button>
                         )}
-                        <span className="text-[8px] font-mono text-[#5A5A5A] truncate">{a.status}</span>
+                        <span className="text-[8px] font-mono text-olympus-text-dim truncate">{a.status}</span>
                       </div>
                     )}
                   </div>
                 );
               })}
             </div>
-            <p className="text-[9px] font-mono text-[#5A5A5A] mt-3 leading-relaxed">
+            <p className="text-[9px] font-mono text-olympus-text-dim mt-3 leading-relaxed">
               The apps download into OLYMPUS (~/.olympus/craft-apps) and run from there — self-hosted web builds, no login, auto-updated on every release. Apache-2.0 (github.com/storytold/*); the agents drive them via the olympus-craft MCP (docs/research/craft-apps.md).
             </p>
           </div>

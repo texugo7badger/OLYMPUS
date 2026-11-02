@@ -66,8 +66,10 @@ ok('applyTheme writes every CSS variable + data attributes', () => {
     setAttribute: (n, v) => attrs.set(n, v),
     style: { setProperty: (n, v) => props.set(n, v) },
   });
-  assert.equal(props.get('--color-olympus-gold'), '#8A6A3B');
-  assert.equal(props.get('--color-olympus-amber-soft'), '#9A7A48');
+  // The paper preset's own gold/amberSoft (the palette lab can override them).
+  const paper = THEME_PRESETS.find((p) => p.id === 'paper');
+  assert.equal(props.get('--color-olympus-gold'), paper.colors.gold);
+  assert.equal(props.get('--color-olympus-amber-soft'), paper.colors.amberSoft);
   assert.equal(attrs.get('data-theme'), 'paper');
   assert.equal(attrs.get('data-mode'), 'light');
   assert.equal(attrs.get('data-motion'), 'stable');

@@ -320,7 +320,7 @@ export default function GodDetail() {
        onChange={(e) => setNoteText(e.target.value)}
        onKeyDown={(e) => { if (e.key === 'Enter') void addNote(); }}
        placeholder="e.g. the next plan must land the login before the deck"
-       className="flex-1 min-w-0 bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50"
+       className="flex-1 min-w-0 bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-gold/50"
      />
      <button
        onClick={() => void addNote()}
@@ -548,7 +548,7 @@ export default function GodDetail() {
  <div key={i} className="text-[10px] font-mono text-olympus-text-dim flex items-center gap-2">
  <Zap size={9} className="text-olympus-gold shrink-0" />
  <span className="truncate flex-1">{sc.task_signature || sc.task || '—'}</span>
- <span className="text-[#5A5A5A] shrink-0">{new Date(sc.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+ <span className="text-olympus-text-dim shrink-0">{new Date(sc.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
  </div>
  ))}
  </div>

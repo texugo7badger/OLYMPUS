@@ -261,19 +261,19 @@ export default function StatusBar({
  <span>{health?.total_instincts ?? 0}</span>
  {!compact && <span className="text-olympus-text-dim text-[10px]">instincts</span>}
  </span>
- <span className="text-[#5A5A5A]">·</span>
+ <span className="text-olympus-text-dim">·</span>
  <span className="flex items-center gap-1 text-olympus-green" data-tip="Average instinct confidence (0.00 – 1.00)">
  <Gauge size={11} />
  <span>{(health?.avg_confidence ?? 0).toFixed(2)}</span>
  {!compact && <span className="text-olympus-text-dim text-[10px]">conf</span>}
  </span>
- <span className="text-[#5A5A5A]">·</span>
+ <span className="text-olympus-text-dim">·</span>
  <span className="flex items-center gap-1 text-olympus-cyan" data-tip="Total installed skills">
  <Layers size={11} />
  <span>{health?.total_skills ?? 0}</span>
  {!compact && <span className="text-olympus-text-dim text-[10px]">skills</span>}
  </span>
- <span className="text-[#5A5A5A]">·</span>
+ <span className="text-olympus-text-dim">·</span>
  <span className="flex items-center gap-1 text-olympus-purple" data-tip="Total gods + demigods">
  <Users size={11} />
  <span>{health?.total_agents ?? 0}</span>

@@ -80,7 +80,7 @@ export default function ProjectSwitcher() {
  {hoveredProject === p.slug && p.stacks.length > 0 && (<div className="absolute top-full left-0 mt-1 w-full bg-olympus-bg border border-olympus-gold/30 rounded-lg p-2 z-10 shadow-md"><div className="text-[9px] font-mono text-olympus-text-dim mb-1.5 flex items-center gap-1"><Layers size={9} style={{ color: GOD_COLOR }} /> STACKS</div><div className="flex flex-wrap gap-1">{p.stacks.map(s => <span key={s} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 ring-1 ring-olympus-gold/20" style={{ color: GOD_COLOR }}>{STACK_ICONS[s.toLowerCase()] || s}</span>)}</div></div>)}
  </div>))}
  </div>
- <div className="px-3 py-1.5 border-t border-olympus-gold/10 text-[9px] font-mono text-[#5A5A5A]">Brain is global — instincts accumulate across all projects</div>
+ <div className="px-3 py-1.5 border-t border-olympus-gold/10 text-[9px] font-mono text-olympus-text-dim">Brain is global — instincts accumulate across all projects</div>
  </div>
  )}
  </div>

@@ -482,12 +482,12 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  />
  </div>
  {s.vaultHealth.last_compaction && (
- <div className="text-[9px] font-mono text-[#5A5A5A] mt-2 pt-2 border-t border-olympus-gold/5 flex items-center gap-1">
+ <div className="text-[9px] font-mono text-olympus-text-dim mt-2 pt-2 border-t border-olympus-gold/5 flex items-center gap-1">
  <Clock size={9} /> last curation: {timeAgo(s.vaultHealth.last_compaction)}
  </div>
  )}
  {!s.vaultHealth.last_compaction && (
- <div className="text-[9px] font-mono text-[#5A5A5A] mt-2 pt-2 border-t border-olympus-gold/5">
+ <div className="text-[9px] font-mono text-olympus-text-dim mt-2 pt-2 border-t border-olympus-gold/5">
  Calimachus will run the first curation on the next idle session.
  </div>
  )}
@@ -535,7 +535,7 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  <div key={`${r.path}-${i}`} className="flex items-center gap-2 text-[10px] font-mono">
  <span className="w-1.5 h-1.5 rounded-full bg-olympus-green shrink-0" />
  <span className="flex-1 truncate text-olympus-text">{r.name}</span>
- <span className="text-[#5A5A5A] shrink-0">{timeAgo(r.ts)}</span>
+ <span className="text-olympus-text-dim shrink-0">{timeAgo(r.ts)}</span>
  </div>
  ))}
  </div>
@@ -552,7 +552,7 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  <CompactInstinctTable brainStats={brainStats} healthData={healthData} masteredSkillCount={healthData?.mastered_skills ?? 0} />
 
  {/* Footer note */}
- <div className="text-[9px] font-mono text-[#5A5A5A] leading-relaxed pt-1">
+ <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed pt-1">
  Callimachus curates the vault automatically — instinct merges, dedup, and link repair
  run on the 7-stage brain maintenance loop. Use <code className="text-olympus-gold">Compact Brain</code> in the
  status bar for on-demand deep cleanup.
@@ -609,7 +609,7 @@ function HealthStat({
  warning ? 'text-olympus-amber-soft' : 'text-olympus-green',
  )}>{value}</div>
  {hint && (
- <div className="text-[8px] font-mono text-[#5A5A5A] mt-0.5 leading-tight">{hint}</div>
+ <div className="text-[8px] font-mono text-olympus-text-dim mt-0.5 leading-tight">{hint}</div>
  )}
  </div>
  );
@@ -708,7 +708,7 @@ function CompactInstinctTable({
  <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">
  Mastered / Learning / Quick Circuits
  </span>
- <span className="text-[9px] font-mono text-[#5A5A5A] ml-auto">
+ <span className="text-[9px] font-mono text-olympus-text-dim ml-auto">
 	 {/* Was `{totalSkills} mastered` referring
  to the 37 mastered skills. Now shows the total instinct count
  (41 in the base set) to match the Brain's new instinct-centric
@@ -786,10 +786,10 @@ function CompactInstinctTable({
  {Icon && <Icon size={11} className="text-olympus-gold shrink-0" />}
  <span className="truncate">{godName}</span>
  </span>
- <span className={cn('text-right', seed > 0 ? 'text-olympus-gold' : 'text-[#5A5A5A]')}>{seed}</span>
- <span className={cn('text-right', empirical > 0 ? 'text-olympus-green' : 'text-[#5A5A5A]')}>{empirical}</span>
- <span className={cn('text-right', archived > 0 ? 'text-olympus-purple' : 'text-[#5A5A5A]')}>{archived}</span>
- <span className={cn('text-right font-bold', total > 0 ? 'text-olympus-text' : 'text-[#5A5A5A]')}>{total}</span>
+ <span className={cn('text-right', seed > 0 ? 'text-olympus-gold' : 'text-olympus-text-dim')}>{seed}</span>
+ <span className={cn('text-right', empirical > 0 ? 'text-olympus-green' : 'text-olympus-text-dim')}>{empirical}</span>
+ <span className={cn('text-right', archived > 0 ? 'text-olympus-purple' : 'text-olympus-text-dim')}>{archived}</span>
+ <span className={cn('text-right font-bold', total > 0 ? 'text-olympus-text' : 'text-olympus-text-dim')}>{total}</span>
  </div>
 	 {/* Expanded panel: lists the instinct file
  names grouped by tier. Each name is a clickable button
@@ -831,7 +831,7 @@ function CompactInstinctTable({
  </div>
 
  {/* Help text */}
- <div className="text-[9px] font-mono text-[#5A5A5A] leading-relaxed mt-2 pt-2 border-t border-olympus-gold/5">
+ <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mt-2 pt-2 border-t border-olympus-gold/5">
  Mastered = seed instincts (immutable baselines) · Learning = empirical instincts (live, from dispatch outcomes) · Quick Circuits = archived (stale, kept for pattern matching).
 	 {/* Hint that god rows are now clickable. */}
  <br />
@@ -985,7 +985,7 @@ function LearnedSkillsSection({
  <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">
  Mastered / Learning / Quick Circuits
  </span>
- <span className="text-[9px] font-mono text-[#5A5A5A] ml-auto">
+ <span className="text-[9px] font-mono text-olympus-text-dim ml-auto">
 	 {/* Was `{totalSkills} mastered`; now shows instincts. */}
  {healthData?.total_instincts ?? 0} instincts
  </span>
@@ -1058,7 +1058,7 @@ function LearnedSkillsSection({
  <LiveStat label="7d velocity" value={String(selectedStats.learningVelocity)} />
  </div>
 
- <div className="text-[9px] font-mono text-[#5A5A5A] leading-relaxed">
+ <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed">
  Live data from <code className="text-olympus-gold">/api/olympus/brain-stats</code> — reads
  <code className="text-olympus-cyan">~/OLYMPUS-VAULT/05_Auto_Learning/instincts/{selectedGod}/</code>
  every 30s. Mastered = seed, Learning = empirical, Quick Circuits = _archive.
@@ -1068,7 +1068,7 @@ function LearnedSkillsSection({
  <div className="text-[10px] font-mono text-olympus-text-dim/50 py-3 text-center">
  No instinct data yet for {selectedGod.charAt(0).toUpperCase() + selectedGod.slice(1)}.
  <br />
- <span className="text-[9px] text-[#5A5A5A]">
+ <span className="text-[9px] text-olympus-text-dim">
  Run <code className="text-olympus-gold">python3 scripts/seed-vault.py</code> to seed initial instincts,
  or dispatch a task to this god to start empirical learning.
  </span>
@@ -1102,8 +1102,8 @@ function InstinctCard({ label, sublabel, value, color, dotColor }: {
  <span className={cn('w-1.5 h-1.5 rounded-full', dotColor)} />
  <span className="text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide">{label}</span>
  </div>
- <div className={cn('text-base font-bold font-mono leading-tight', value > 0 ? color : 'text-[#5A5A5A]')}>{value}</div>
- <div className="text-[8px] text-[#5A5A5A] mt-0.5">{sublabel}</div>
+ <div className={cn('text-base font-bold font-mono leading-tight', value > 0 ? color : 'text-olympus-text-dim')}>{value}</div>
+ <div className="text-[8px] text-olympus-text-dim mt-0.5">{sublabel}</div>
  </div>
  );
 }

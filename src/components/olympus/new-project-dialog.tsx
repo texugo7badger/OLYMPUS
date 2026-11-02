@@ -216,7 +216,7 @@ export default function NewProjectDialog() {
  placeholder="my-rust-app"
  className="bg-olympus-bg border-olympus-gold/20 text-olympus-text font-mono text-[12px]"
  />
- <span className="text-[10px] text-[#5A5A5A] font-mono">
+ <span className="text-[10px] text-olympus-text-dim font-mono">
  {name ? `slug: ${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64)}` : ' '}
  </span>
  </div>
@@ -251,7 +251,7 @@ export default function NewProjectDialog() {
  </div>
  )}
  {markers.length > 0 && (
- <div className="text-[10px] text-[#5A5A5A] font-mono">
+ <div className="text-[10px] text-olympus-text-dim font-mono">
  Found: {markers.filter(m => m.found).map(m => m.file).join(', ') || '(no markers)'}
  </div>
  )}
@@ -264,7 +264,7 @@ export default function NewProjectDialog() {
  </Label>
  <div className="flex flex-wrap gap-1.5 min-h-[28px] p-2 rounded border border-olympus-gold/15 bg-olympus-bg">
  {stacks.length === 0 && (
- <span className="text-[10px] text-[#5A5A5A] font-mono italic">
+ <span className="text-[10px] text-olympus-text-dim font-mono italic">
  Click “Detect” or add manually below
  </span>
  )}
@@ -324,7 +324,7 @@ export default function NewProjectDialog() {
  {/* Description */}
  <div className="flex flex-col gap-1.5">
  <Label htmlFor="np-desc" className="text-[11px] text-olympus-text-dim uppercase tracking-wide">
- Description <span className="text-[#5A5A5A] normal-case">(optional)</span>
+ Description <span className="text-olympus-text-dim normal-case">(optional)</span>
  </Label>
  <Textarea
  id="np-desc"

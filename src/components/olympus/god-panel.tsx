@@ -212,11 +212,11 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                   {DISPLAY_NAMES[s.god] || s.god}
                 </span>
                 {s.steps > 0 && (
-                  <span className="text-[8px] font-mono text-[#5A5A5A]">
+                  <span className="text-[8px] font-mono text-olympus-text-dim">
                     {s.steps} step{s.steps === 1 ? '' : 's'}
                   </span>
                 )}
-                <span className="text-[8px] font-mono text-[#5A5A5A] ml-auto shrink-0">
+                <span className="text-[8px] font-mono text-olympus-text-dim ml-auto shrink-0">
                   {STATUS_LABEL[s.status]}
                 </span>
               </div>
@@ -236,7 +236,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                     <div key={f} className="truncate">↳ {f}</div>
                   ))}
                   {s.artifacts.length > 3 && (
-                    <div className="text-[#5A5A5A]">↳ +{s.artifacts.length - 3} more</div>
+                    <div className="text-olympus-text-dim">↳ +{s.artifacts.length - 3} more</div>
                   )}
                 </div>
               )}
@@ -280,7 +280,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                         <span className="w-1 h-1 rounded-full shrink-0" style={{ background: dot }} />
                         <span className="text-[9px] font-mono truncate flex-1" style={{ color: dot }}>{t.id}</span>
                         {dur && <span className="text-[8px] font-mono text-[#6B8F71] shrink-0">{dur}</span>}
-                        {tok && <span className="text-[8px] font-mono text-[#5A5A5A] shrink-0">{tok}</span>}
+                        {tok && <span className="text-[8px] font-mono text-olympus-text-dim shrink-0">{tok}</span>}
                         {(t.status === 'running' || t.status === 'completed') && (
                           <span className="block w-full h-0.5 rounded-full bg-olympus-text-dim/20 overflow-hidden">
                             <span
@@ -293,7 +293,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                     );
                   })}
                   {tasks[s.god].length > 5 && (
-                    <div className="text-[8px] font-mono text-[#5A5A5A] px-1">+{tasks[s.god].length - 5} more</div>
+                    <div className="text-[8px] font-mono text-olympus-text-dim px-1">+{tasks[s.god].length - 5} more</div>
                   )}
                   {(demigods[s.god] || []).length > 0 && (
                     <div className="grid grid-cols-2 gap-1 mt-1">
@@ -403,7 +403,7 @@ export function ParthenonRailCollapsed({ states, focusedGod, onFocus, onExpand }
           );
         })}
       </div>
-      <div className="shrink-0 py-1 text-center text-[8px] font-mono text-[#5A5A5A] border-t border-olympus-gold/10">
+      <div className="shrink-0 py-1 text-center text-[8px] font-mono text-olympus-text-dim border-t border-olympus-gold/10">
         {active}
       </div>
     </div>

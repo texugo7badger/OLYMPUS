@@ -143,7 +143,7 @@ export default function SyncMapPanel() {
               <p className="text-[10px] font-mono text-olympus-text-dim mt-1 leading-relaxed line-clamp-2" data-tip={r.intent}>
                 {r.intent || '(no intent recorded)'}
               </p>
-              <div className="flex items-center gap-1.5 mt-1 text-[9px] font-mono text-[#5A5A5A]">
+              <div className="flex items-center gap-1.5 mt-1 text-[9px] font-mono text-olympus-text-dim">
                 <span>{relTime(r.updatedTs || r.ts)}</span>
                 {r.updatedReason && <span data-tip={r.updatedReason}>· {r.updatedReason.slice(0, 40)}</span>}
                 {r.error && <span className="text-olympus-red/70 truncate max-w-[50%]" data-tip={r.error}>· {r.error.slice(0, 60)}</span>}

@@ -224,7 +224,7 @@ export default function CustomFrames() {
  <div className="py-1">
  {enabledFrames.length === 0 ? (
  <div className="px-3 py-4 text-center">
- <Globe size={18} className="text-[#5A5A5A] mx-auto mb-2" />
+ <Globe size={18} className="text-olympus-text-dim mx-auto mb-2" />
  <p className="text-[10px] text-[#8B8B8B] font-mono leading-relaxed">
  No frames yet.<br />Click + to add a URL.
  </p>
@@ -468,9 +468,9 @@ function ManageFramesDialog({ open, onOpenChange, frames, disabledIds, onToggle,
  const enabled = !disabledIds.has(f.id);
  return (
  <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#D4A574]/5 group">
- <Globe size={12} className={cn('shrink-0', enabled ? 'text-[#8B8B8B]' : 'text-[#5A5A5A]')} />
- <span className={cn('text-[11px] font-mono truncate flex-1', enabled ? 'text-[#B8B8B8]' : 'text-[#5A5A5A] line-through')}>{f.displayName}</span>
- <span className="text-[9px] font-mono text-[#5A5A5A] truncate max-w-[120px]">{f.url}</span>
+ <Globe size={12} className={cn('shrink-0', enabled ? 'text-[#8B8B8B]' : 'text-olympus-text-dim')} />
+ <span className={cn('text-[11px] font-mono truncate flex-1', enabled ? 'text-[#B8B8B8]' : 'text-olympus-text-dim line-through')}>{f.displayName}</span>
+ <span className="text-[9px] font-mono text-olympus-text-dim truncate max-w-[120px]">{f.url}</span>
  {/* Toggle switch */}
  <button
  onClick={() => onToggle(f.id)}

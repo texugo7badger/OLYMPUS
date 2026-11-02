@@ -1903,7 +1903,7 @@ export default function InteractiveTerminal() {
         <div className="flex items-center gap-1.5 text-[10px] font-mono">
           <Landmark size={11} style={{ color: GOD_COLOR }} />
           <span style={{ color: GOD_COLOR }} className="font-semibold">Olympus Terminal</span>
-          <span className="text-[#5A5A5A]">-</span>
+          <span className="text-olympus-text-dim">-</span>
           {/* Only one mode now. Always "Interactive Mode" (green). */}
           <span className="text-[9px] text-olympus-green">
             Interactive Mode
@@ -1924,7 +1924,7 @@ export default function InteractiveTerminal() {
             />
           </div>
         </div>
-        <div className="flex items-center gap-1 text-[9px] font-mono text-[#5A5A5A]">
+        <div className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim">
           {/* Active CLI badge */}
           <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-olympus-gold/10 ring-1 ring-olympus-gold/20 mr-1">
             <span style={{ color: GOD_COLOR }}>CLI:</span>
@@ -1938,7 +1938,7 @@ export default function InteractiveTerminal() {
           <span>{godStateList.filter(s => s.status !== 'idle').length} gods</span>
           {todos.length > 0 && (
             <>
-              <span className="text-[#5A5A5A]">-</span>
+              <span className="text-olympus-text-dim">-</span>
               <span>{todos.filter(t => t.status !== 'done').length}/{todos.length} todos</span>
             </>
           )}
@@ -2154,7 +2154,7 @@ export default function InteractiveTerminal() {
                 >
                   <X size={10} />
                 </button>
-                <span className="text-[9px] font-mono text-[#5A5A5A]">attached — sends with your next message</span>
+                <span className="text-[9px] font-mono text-olympus-text-dim">attached — sends with your next message</span>
               </div>
             )}
             <div className="flex items-end gap-2">
@@ -2173,7 +2173,7 @@ export default function InteractiveTerminal() {
               }}
               disabled={awaitingAnswer || awaitingContext}
               placeholder={awaitingAnswer ? 'click a choice above (or type optional context in the box under the question)...' : awaitingContext ? 'type context below (Cmd+Enter)...' : submitting ? 'Type to queue the next message (posts when this run idles)…' : 'Ask Apollo anything...'}
-              className="flex-1 bg-transparent border-0 outline-none resize-none text-[12px] font-mono leading-relaxed text-olympus-text placeholder:text-[#5A5A5A] disabled:opacity-50 max-h-48 overflow-y-auto py-1"
+              className="flex-1 bg-transparent border-0 outline-none resize-none text-[12px] font-mono leading-relaxed text-olympus-text placeholder:text-olympus-text-dim disabled:opacity-50 max-h-48 overflow-y-auto py-1"
             />
             {/* Task 3 — the always-visible "ctx" toggle button is gone.
                 Additional context is now collected inline under each
@@ -2196,7 +2196,7 @@ export default function InteractiveTerminal() {
                 disabled={uploading}
                 className={cn(
                   'flex items-center gap-1 px-1.5 py-1 rounded text-[9px] font-mono transition-all shrink-0',
-                  uploading ? 'text-olympus-gold animate-pulse' : 'text-[#5A5A5A] hover:text-olympus-gold',
+                  uploading ? 'text-olympus-gold animate-pulse' : 'text-olympus-text-dim hover:text-olympus-gold',
                 )}
               >
                 {uploading ? <Loader2 size={10} className="animate-spin" /> : <Paperclip size={10} />}
@@ -2233,12 +2233,12 @@ export default function InteractiveTerminal() {
                   uploadingImage
                     ? 'text-olympus-cyan animate-pulse cursor-pointer'
                     : activeProject?.path
-                      ? 'text-[#5A5A5A] hover:text-olympus-cyan cursor-pointer'
+                      ? 'text-olympus-text-dim hover:text-olympus-cyan cursor-pointer'
                       // No-project case: keep the ImageIcon (do NOT swap to Ban),
                       // dim it, and apply the custom OLYMPUS ban cursor. The
                       // native Windows red-circle-slash cursor is replaced by
                       // the SVG ban overlay (.olympus-ban-cursor in globals.css).
-                      : 'text-[#5A5A5A]/40 olympus-ban-cursor',
+                      : 'text-olympus-text-dim/40 olympus-ban-cursor',
                 )}
               >
                 {uploadingImage ? (
@@ -2290,7 +2290,7 @@ export default function InteractiveTerminal() {
                 </button>
               </OlympusTooltip>
             )}
-            <span className="hidden sm:flex items-center gap-1 text-[9px] font-mono text-[#5A5A5A] pb-1">
+            <span className="hidden sm:flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim pb-1">
               <CornerDownLeft size={9} /> enter · shift+enter
             </span>
             </div>
@@ -2394,7 +2394,7 @@ const MessageRenderer = memo(function MessageRenderer({
   if (message.type === 'user') {
     return (
       <div className="flex items-start gap-2 mt-2">
-        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <div className="flex-1 min-w-0">
           {message.imagePath && (
             <div
@@ -2436,7 +2436,7 @@ const MessageRenderer = memo(function MessageRenderer({
   if (message.type === 'system') {
     return (
       <div className="flex items-start gap-2">
-        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <div className="flex-1 min-w-0">
           {markdownHtml ? (
             <div
@@ -2454,7 +2454,7 @@ const MessageRenderer = memo(function MessageRenderer({
   if (message.type === 'error') {
     return (
       <div className="flex items-start gap-2">
-        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <div className="flex items-start gap-1.5 flex-1 min-w-0">
           <AlertCircle size={11} className="text-olympus-red shrink-0 mt-0.5" />
           <span className="text-olympus-red wrap-break-word flex-1 min-w-0">{message.text}</span>
@@ -2468,7 +2468,7 @@ const MessageRenderer = memo(function MessageRenderer({
     // auto-open while it streams (closes to a one-line summary when done).
     return (
       <div className="flex items-start gap-2">
-        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <details open={message.streaming} className="flex-1 min-w-0 group">
           <summary className="flex items-center gap-1.5 cursor-pointer list-none select-none">
             <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/25">
@@ -2493,7 +2493,7 @@ const MessageRenderer = memo(function MessageRenderer({
     const Icon = message.god ? GOD_ICONS[message.god] : null;
     return (
       <div className="flex items-start gap-2">
-        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <Zap size={11} style={{ color: '#9B7BAE' }} className="shrink-0 mt-0.5" />
           <span className="text-olympus-purple wrap-break-word flex-1 min-w-0">{message.text}</span>
@@ -2511,7 +2511,7 @@ const MessageRenderer = memo(function MessageRenderer({
     // other tool keeps exactly the single compact line it had.
     return (
       <div className="flex items-start gap-2">
-        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <div className="flex-1 min-w-0">
           <ToolFrame toolName={message.toolName || ''} input={message.toolInput} text={message.text} />
         </div>
@@ -2523,7 +2523,7 @@ const MessageRenderer = memo(function MessageRenderer({
     const Icon = message.god ? GOD_ICONS[message.god] : null;
     return (
       <div className="flex items-start gap-2 mt-2">
-        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <div className="flex items-start gap-1.5 flex-1 min-w-0">
           {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5 animate-pulse" />}
           <div className="flex-1 min-w-0">
@@ -2531,7 +2531,7 @@ const MessageRenderer = memo(function MessageRenderer({
               {GOD_NAMES[message.god!] || 'Apollo'} asks:
             </div>
             <div className="text-olympus-text">{message.text}</div>
-            <div className="text-[9px] text-[#5A5A5A] mt-1">type in the context box below (Cmd+Enter to send, empty = skip)</div>
+            <div className="text-[9px] text-olympus-text-dim mt-1">type in the context box below (Cmd+Enter to send, empty = skip)</div>
           </div>
         </div>
       </div>
@@ -2573,7 +2573,7 @@ const MessageRenderer = memo(function MessageRenderer({
       : message.permissionState === 'denied' ? (message.permissionTimedOut ? '✗ denied (timeout)' : '✗ denied') : '';
     return (
       <div className="flex items-start gap-2 mt-2">
-        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <div className="flex-1 min-w-0 rounded-md border border-olympus-amber-soft/40 bg-olympus-amber-soft/5 p-2">
           <div className="text-[10px] font-mono font-semibold text-olympus-amber-soft mb-1">
             {message.permissionAction} permission required
@@ -2626,7 +2626,7 @@ const MessageRenderer = memo(function MessageRenderer({
     const Icon = message.god ? GOD_ICONS[message.god] : null;
     return (
       <div className="flex items-start gap-2">
-        <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+        <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <div className="flex items-start gap-1.5 flex-1 min-w-0">
           <CheckCircle2 size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5" />
           {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5" />}
@@ -2652,7 +2652,7 @@ const MessageRenderer = memo(function MessageRenderer({
   const Icon = message.god ? GOD_ICONS[message.god] : null;
   return (
     <div className="flex items-start gap-2">
-      <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+      <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
       <div className="flex items-start gap-1.5 flex-1 min-w-0">
         {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5" />}
         <div
@@ -2720,7 +2720,7 @@ function ThinkingMessage({
 
   return (
     <div className="flex items-start gap-2 mt-2">
-      <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+      <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
       <div className="flex-1 min-w-0 olympus-think-shade">
         <div
           className="flex items-center gap-1.5 min-w-0 cursor-pointer select-none"
@@ -2734,9 +2734,9 @@ function ThinkingMessage({
           }}
           data-tip={expanded ? 'Collapse reasoning' : 'Expand reasoning'}
         >
-          <span className="text-[10px] font-mono text-[#5A5A5A] animate-pulse">thinking…</span>
-          <span className="text-[9px] font-mono text-[#5A5A5A] tabular-nums">({secs}s)</span>
-          <span className="text-[9px] font-mono text-[#5A5A5A] ml-auto shrink-0">
+          <span className="text-[10px] font-mono text-olympus-text-dim animate-pulse">thinking…</span>
+          <span className="text-[9px] font-mono text-olympus-text-dim tabular-nums">({secs}s)</span>
+          <span className="text-[9px] font-mono text-olympus-text-dim ml-auto shrink-0">
             {hasReasoning ? (expanded ? '▾' : '▸') : ''}
           </span>
         </div>
@@ -2746,11 +2746,11 @@ function ThinkingMessage({
             className="mt-1 ml-3 max-h-48 overflow-y-auto custom-scroll border-l border-[#5A5A5A]/30 pl-2"
           >
             {hasReasoning ? (
-              <div className="text-[13px] italic text-[#5A5A5A] whitespace-pre-wrap break-words leading-snug">
+              <div className="text-[13px] italic text-olympus-text-dim whitespace-pre-wrap break-words leading-snug">
                 {message.reasoning}
               </div>
             ) : (
-              <div className="text-[13px] italic text-[#5A5A5A]">
+              <div className="text-[13px] italic text-olympus-text-dim">
                 No reasoning stream received — this model may not emit thinking tokens (see LLM Strategy to switch).
               </div>
             )}
@@ -2778,7 +2778,7 @@ function QuestionMessage({
 
   return (
     <div className="flex items-start gap-2 mt-2">
-      <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
+      <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
       <div className="flex items-start gap-1.5 flex-1 min-w-0">
         {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5 animate-pulse" />}
         <div className="flex-1 min-w-0">
@@ -2797,10 +2797,10 @@ function QuestionMessage({
                     'block w-full text-left px-2 py-1 rounded-md text-[10px] font-mono transition-all',
                     message.awaitingAnswer
                       ? 'bg-olympus-card hover:bg-olympus-gold/10 ring-1 ring-olympus-gold/15 hover:ring-olympus-gold/30 text-olympus-text hover:text-olympus-gold cursor-default'
-                      : 'bg-olympus-card/50 ring-1 ring-olympus-gold/5 text-[#5A5A5A] cursor-default opacity-60',
+                      : 'bg-olympus-card/50 ring-1 ring-olympus-gold/5 text-olympus-text-dim cursor-default opacity-60',
                   )}
                 >
-                  <span className="text-[#5A5A5A] mr-1.5">{i + 1}.</span>
+                  <span className="text-olympus-text-dim mr-1.5">{i + 1}.</span>
                   {choice}
                 </button>
               ))}
@@ -2814,11 +2814,11 @@ function QuestionMessage({
               counter turns amber in the last 50 chars as a soft warning. */}
           {message.awaitingAnswer && (
             <div className="mt-2">
-              <div className="flex items-center justify-between text-[9px] font-mono text-[#5A5A5A] mb-1">
+              <div className="flex items-center justify-between text-[9px] font-mono text-olympus-text-dim mb-1">
                 <span>optional context (sent with your answer)</span>
                 <span
                   className={cn(
-                    ctx.length > MAX_CONTEXT - 50 ? 'text-olympus-amber' : 'text-[#5A5A5A]',
+                    ctx.length > MAX_CONTEXT - 50 ? 'text-olympus-amber' : 'text-olympus-text-dim',
                   )}
                 >
                   {ctx.length}/{MAX_CONTEXT}
@@ -2829,7 +2829,7 @@ function QuestionMessage({
                 onChange={e => setCtx(e.target.value.slice(0, MAX_CONTEXT))}
                 placeholder="e.g. 'use Tailwind', 'mobile-first', 'avoid external deps'…"
                 rows={2}
-                className="w-full bg-olympus-bg border border-olympus-gold/15 rounded-md px-2 py-1.5 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/40 resize-none custom-scroll"
+                className="w-full bg-olympus-bg border border-olympus-gold/15 rounded-md px-2 py-1.5 text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-gold/40 resize-none custom-scroll"
               />
             </div>
           )}

@@ -34,14 +34,23 @@ function initials(value: string): string {
 
 interface Arsenal { skills: string[]; mcps: string[]; demigods: string[] }
 
-export default function BuildTalentPage({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+export default function BuildTalentPage({
+  onClose,
+  onCreated,
+  initialBuild,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+  /** Simulate: prefill from an existing build (the viewer's "simulate"). */
+  initialBuild?: { name?: string; god?: string; signature?: string; skills?: string[]; mcps?: string[]; demigods?: string[] };
+}) {
   const [active, setActive] = useState(0);
-  const [name, setName] = useState('');
-  const [god, setGod] = useState('athena');
-  const [signature, setSignature] = useState('');
-  const [skills, setSkills] = useState<Set<string>>(new Set());
-  const [mcps, setMcps] = useState<Set<string>>(new Set());
-  const [demigods, setDemigods] = useState<Set<string>>(new Set());
+  const [name, setName] = useState(initialBuild?.name ? `${initialBuild.name} v2` : '');
+  const [god, setGod] = useState(initialBuild?.god ?? 'athena');
+  const [signature, setSignature] = useState(initialBuild?.signature ?? '');
+  const [skills, setSkills] = useState<Set<string>>(new Set(initialBuild?.skills ?? []));
+  const [mcps, setMcps] = useState<Set<string>>(new Set(initialBuild?.mcps ?? []));
+  const [demigods, setDemigods] = useState<Set<string>>(new Set(initialBuild?.demigods ?? []));
   const [picker, setPicker] = useState<Slot | null>(null);
   const [query, setQuery] = useState('');
   const [custom, setCustom] = useState('');
@@ -126,7 +135,7 @@ export default function BuildTalentPage({ onClose, onCreated }: { onClose: () =>
     finally { setBusy(false); }
   };
 
-  const field = 'bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50';
+  const field = 'bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-gold/50';
   const cat = BUILD_CATEGORIES[active];
 
   return (

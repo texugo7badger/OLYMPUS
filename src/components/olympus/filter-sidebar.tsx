@@ -146,7 +146,7 @@ export default function FilterSidebar() {
  </div>
 
  {/* Node type filters */}
- <div className="text-[9px] text-[#5A5A5A] font-mono uppercase tracking-wider px-1">Type</div>
+ <div className="text-[9px] text-olympus-text-dim font-mono uppercase tracking-wider px-1">Type</div>
  {items.map(it => (
  <label
  key={it.key}
@@ -175,7 +175,7 @@ export default function FilterSidebar() {
  'text-[9px] font-mono px-1 py-0.5 rounded min-w-4.5 text-center',
  counts[it.key as string] > 0
  ? 'bg-olympus-gold/10 text-olympus-text-dim'
- : 'bg-transparent text-[#5A5A5A]',
+ : 'bg-transparent text-olympus-text-dim',
  )}
  >
  {counts[it.key as string] ?? 0}
@@ -190,7 +190,7 @@ export default function FilterSidebar() {
  ))}
 
  {/* Scope filters (NEW) — tooltips removed per user request. */}
- <div className="text-[9px] text-[#5A5A5A] font-mono uppercase tracking-wider px-1 mt-1">Scope</div>
+ <div className="text-[9px] text-olympus-text-dim font-mono uppercase tracking-wider px-1 mt-1">Scope</div>
  {scopeItems.map(it => (
  <label
  key={it.key}
@@ -242,7 +242,7 @@ export default function FilterSidebar() {
  className="w-full accent-olympus-gold h-1.5"
  aria-label="Minimum confidence filter for instinct nodes"
  />
- <div className="flex items-center justify-between mt-1 text-[8px] font-mono text-[#5A5A5A]">
+ <div className="flex items-center justify-between mt-1 text-[8px] font-mono text-olympus-text-dim">
  <span>0.00</span>
  <span>1.00</span>
  </div>

@@ -119,7 +119,7 @@ export default function TimeSlider() {
               {current.shortHash}
             </span>
             <span className="text-olympus-text-dim truncate">{current.message}</span>
-            <span className="text-[#5A5A5A] shrink-0">{new Date(current.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            <span className="text-olympus-text-dim shrink-0">{new Date(current.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
           </div>
         )}
         {/* Stats badges */}
@@ -198,7 +198,7 @@ export default function TimeSlider() {
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-olympus-card border border-olympus-gold/20 rounded-md px-2 py-1 text-[9px] font-mono text-olympus-text whitespace-nowrap z-50 shadow-md pointer-events-none">
                   <div className="text-olympus-gold">{c.shortHash}</div>
                   <div className="text-olympus-text-dim">{new Date(c.ts).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}</div>
-                  <div className="text-[#5A5A5A] mt-0.5">{c.nodeCount} nodes · {c.instinctCount} instincts</div>
+                  <div className="text-olympus-text-dim mt-0.5">{c.nodeCount} nodes · {c.instinctCount} instincts</div>
                 </div>
               )}
             </button>
@@ -206,7 +206,7 @@ export default function TimeSlider() {
         </div>
 
         {/* Range labels */}
-        <div className="flex flex-col items-end text-[8px] font-mono text-[#5A5A5A] shrink-0">
+        <div className="flex flex-col items-end text-[8px] font-mono text-olympus-text-dim shrink-0">
           <span>{new Date(oldest.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
           <span>→ {new Date(newest.ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
@@ -218,7 +218,7 @@ export default function TimeSlider() {
 function Stat({ label, value, color }: { label: string; value: any; color: string }) {
   return (
     <div className="flex items-center gap-1 text-[9px] font-mono">
-      <span className="text-[#5A5A5A]">{label}</span>
+      <span className="text-olympus-text-dim">{label}</span>
       <span className={cn('font-bold', color)}>{value}</span>
     </div>
   );

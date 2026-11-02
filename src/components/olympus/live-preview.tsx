@@ -293,12 +293,12 @@ export default function LivePreview() {
                 : activeProject ? `Waiting for ${activeProject.name}'s dev server at :${port}. Start it with \`npm run dev\` in the project folder.` : `No active project. Select one from the Project Switcher, or the preview defaults to :${port}.`}
             </p>
             {!customUrl && !probing && !isRunning && (
-              <div className="text-[10px] font-mono text-[#5A5A5A] bg-olympus-card px-3 py-1.5 rounded-md border border-olympus-gold/10">
+              <div className="text-[10px] font-mono text-olympus-text-dim bg-olympus-card px-3 py-1.5 rounded-md border border-olympus-gold/10">
                 <span className="text-olympus-gold">tip:</span> run <code className="text-olympus-green">cd "{resolvedPath ?? '<project>'}" && npm run dev</code>
               </div>
             )}
             {!customUrl && !probing && !isRunning && status?.pathSource === 'note-stale' && (
-              <p className="text-[10px] font-mono text-[#5A5A5A]">note path is stale — the project lives at {status?.path}</p>
+              <p className="text-[10px] font-mono text-olympus-text-dim">note path is stale — the project lives at {status?.path}</p>
             )}
             {!iframeLoaded && !probing && (customUrl || isRunning) && <p className="text-[10px] font-mono text-olympus-text-dim">{customUrl ? 'Pinned URL' : 'Dev server is up'} — loading preview…</p>}
           </div>
@@ -313,7 +313,7 @@ export default function LivePreview() {
             : isRunning ? `:${port} · ${status?.responseTimeMs ?? 0}ms` : `:${port} · offline`}
           {status?.manager?.running ? ' · durable host' : ''}
         </span>
-        <span className="text-[#5A5A5A]">live · no auto-refresh · interactive</span>
+        <span className="text-olympus-text-dim">live · no auto-refresh · interactive</span>
       </div>
     </div>
   );

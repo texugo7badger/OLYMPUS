@@ -502,12 +502,12 @@ function GodRow({
  <span>{c.god.charAt(0).toUpperCase() + c.god.slice(1)}</span>
  </span>
  <span className="text-olympus-cyan text-[10px] truncate">{c.model.replace(/^[^/]+\//, '')}</span>
- <span className={hasData ? 'text-olympus-text' : 'text-[#5A5A5A]'}>{fmt(c.requests)}</span>
+ <span className={hasData ? 'text-olympus-text' : 'text-olympus-text-dim'}>{fmt(c.requests)}</span>
 	 <div className="flex flex-col gap-0.5">
 	 {isFree ? (
 	 <>
 	 <div className="flex items-center gap-1.5">
-	 <span className={cn('font-bold', !hasData ? 'text-[#5A5A5A]' : 'text-olympus-green')}>
+	 <span className={cn('font-bold', !hasData ? 'text-olympus-text-dim' : 'text-olympus-green')}>
 	 {fmt(c.inputTokens + c.outputTokens)} tok
 	 </span>
 	 </div>
@@ -518,7 +518,7 @@ function GodRow({
 	 <div className="flex items-center gap-1.5">
 	 <span
 	 className={cn('font-bold',
-	 !hasData ? 'text-[#5A5A5A]' :
+	 !hasData ? 'text-olympus-text-dim' :
 	 (c.pctOfCap ?? 0) > 80 ? 'text-olympus-red' :
 	 (c.pctOfCap ?? 0) > 60 ? 'text-olympus-amber-soft' : 'text-olympus-green')}
 	 data-tip={`step ${fmtUsd(c.spendRealUsd ?? 0)} · list ${fmtUsd(c.spendEstimatedUsd ?? 0)} · invoice unknown`}
@@ -543,11 +543,11 @@ function GodRow({
  {/* Sub-agent column now shows live `active / total`
  instead of a static number. Active = demigods that have at
  least one dispatch event in the activity feed. */}
- <span className={hasSubAgents ? 'text-olympus-cyan' : 'text-[#5A5A5A]'}>
+ <span className={hasSubAgents ? 'text-olympus-cyan' : 'text-olympus-text-dim'}>
  {hasSubAgents ? (
  <>
  <span className={activeSubagents > 0 ? 'text-olympus-green' : ''}>{activeSubagents}</span>
- <span className="text-[#5A5A5A]"> / </span>
+ <span className="text-olympus-text-dim"> / </span>
  <span>{subAgentCount}</span>
  </>
  ) : '—'}
@@ -594,7 +594,7 @@ function GodRow({
  );
  })}
  </div>
- <div className="text-[9px] font-mono text-[#5A5A5A] mt-2 leading-relaxed">
+ <div className="text-[9px] font-mono text-olympus-text-dim mt-2 leading-relaxed">
  <span className="text-olympus-green">{activeDemigodCount}</span> active of <span>{subAgentCount}</span> total dispatch routes. Usage updates every 10s from <code className="text-olympus-gold">live.jsonl</code>.
  </div>
  </div>
@@ -629,7 +629,7 @@ function SummaryCard({ icon: Icon, label, value, sub, pct, color }: { icon: any;
  </div>
  <div className="text-base font-bold font-mono">{value}</div>
  <div className="text-[9px] text-olympus-text-dim mt-0.5">{label}</div>
- {sub && <div className="text-[8px] text-[#5A5A5A] mt-0.5">{sub}</div>}
+ {sub && <div className="text-[8px] text-olympus-text-dim mt-0.5">{sub}</div>}
  </div>
  );
 }
@@ -638,7 +638,7 @@ function TokenStat({ label, value, color }: { label: string; value: number; colo
  return (
  <div>
  <div className="text-[9px] font-mono text-olympus-text-dim uppercase">{label}</div>
- <div className={cn('text-sm font-mono font-bold', value > 0 ? color : 'text-[#5A5A5A]')}>{fmt(value)}</div>
+ <div className={cn('text-sm font-mono font-bold', value > 0 ? color : 'text-olympus-text-dim')}>{fmt(value)}</div>
  <div className="text-[8px] font-mono text-olympus-text-dim">{(value / 1_000_000).toFixed(2)}M tokens</div>
  </div>
  );

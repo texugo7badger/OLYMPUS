@@ -28,9 +28,9 @@ export default function SSEStreamPanel() {
           {open ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
           <Radio size={11} className={events.length > 0 ? 'text-olympus-green animate-pulse' : 'text-olympus-text-dim'} />
           <span>SSE EVENT STREAM</span>
-          <span className="text-[#5A5A5A]">·</span>
+          <span className="text-olympus-text-dim">·</span>
           <span className={events.length > 0 ? 'text-olympus-gold' : 'text-olympus-text-dim'}>{events.length}</span>
-          <span className="text-[#5A5A5A]">events</span>
+          <span className="text-olympus-text-dim">events</span>
         </button>
         <div className="flex items-center gap-2 text-[9px] font-mono text-olympus-text-dim">
           {events.length > 0
@@ -51,7 +51,7 @@ export default function SSEStreamPanel() {
           {events.length === 0 && (
             <div className="text-olympus-text-dim py-8 text-center">
               <div className="text-[11px] mb-1 text-olympus-gold">Live stream idle</div>
-              <div className="text-[9px] text-[#5A5A5A] leading-relaxed">
+              <div className="text-[9px] text-olympus-text-dim leading-relaxed">
                 Dispatch a task to Apollo — events will stream here in real time as gods deliberate,
                 <br />dispatch to demigods, write instincts, and call MCP tools.
               </div>
@@ -100,7 +100,7 @@ function EventLine({ e }: { e: any }) {
     Icon = Sparkles; color = 'text-olympus-green'; bg = 'bg-olympus-green/5';
     text = e.msg;
   } else if (e.type === 'heartbeat') {
-    Icon = Radio; color = 'text-[#5A5A5A]';
+    Icon = Radio; color = 'text-olympus-text-dim';
     text = `heartbeat tick ${e.tick}`;
   } else if (e.type === 'prompt_received') {
     Icon = Brain; color = 'text-olympus-gold'; bg = 'bg-olympus-gold/10';
@@ -130,7 +130,7 @@ function EventLine({ e }: { e: any }) {
     Icon = Lightbulb; color = 'text-olympus-amber-soft';
     text = `pruned: ${e.file} (${e.reason})`;
   } else if (e.type === 'log') {
-    Icon = Radio; color = 'text-[#5A5A5A]';
+    Icon = Radio; color = 'text-olympus-text-dim';
     text = e.msg;
   } else {
     Icon = Radio; color = 'text-olympus-text-dim';
@@ -144,7 +144,7 @@ function EventLine({ e }: { e: any }) {
 
   return (
     <div className={`flex items-start gap-2 hover:bg-olympus-gold/10 px-1.5 py-0.5 rounded transition-colors ${bg}`}>
-      <span className="text-[#5A5A5A] shrink-0 tabular-nums">{time}</span>
+      <span className="text-olympus-text-dim shrink-0 tabular-nums">{time}</span>
       <Icon size={10} className={`shrink-0 mt-0.5 ${color}`} />
       <span className={`flex-1 ${color} truncate flex items-center gap-1`}>
         {(e.type === 'delegation') && FromIcon && ToIcon && (

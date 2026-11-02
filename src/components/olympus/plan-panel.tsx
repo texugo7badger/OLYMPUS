@@ -137,19 +137,19 @@ export default function PlanPanel({ items, onToggle }: PlanPanelProps) {
                 size={11}
                 className={cn(
                   'shrink-0 mt-px',
-                  isDone ? 'text-olympus-green' : isActive ? 'text-olympus-gold animate-spin' : 'text-[#5A5A5A]',
+                  isDone ? 'text-olympus-green' : isActive ? 'text-olympus-gold animate-spin' : 'text-olympus-text-dim',
                 )}
               />
               <span
                 className={cn(
                   'text-[9px] font-mono',
-                  isDone ? 'text-[#5A5A5A] line-through' : isActive ? 'text-olympus-text' : 'text-olympus-text-dim',
+                  isDone ? 'text-olympus-text-dim line-through' : isActive ? 'text-olympus-text' : 'text-olympus-text-dim',
                 )}
               >
                 {item.content}
               </span>
               {nested && item.god && (
-                <span className="text-[8px] font-mono ml-auto shrink-0 text-[#5A5A5A]">
+                <span className="text-[8px] font-mono ml-auto shrink-0 text-olympus-text-dim">
                   {DISPLAY_NAMES[item.god] || item.god}
                 </span>
               )}

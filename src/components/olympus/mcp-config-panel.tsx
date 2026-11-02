@@ -304,7 +304,7 @@ export default function MCPConfigPanel() {
           {deadCount > 0 && <span className="text-olympus-red ml-1">· {deadCount} dead</span>}
           {unprobedCount > 0 && <span className="text-olympus-text-dim ml-1">· {unprobedCount} unprobed</span>}
           {offCount > 0 && <span className="text-olympus-text-dim/60 ml-1">· {offCount} off</span>}
-          <span className="text-[#5A5A5A] ml-1">/ {servers.length}</span>
+          <span className="text-olympus-text-dim ml-1">/ {servers.length}</span>
         </span>
         <button
           onClick={() => loadHealth(true)}
@@ -330,7 +330,7 @@ export default function MCPConfigPanel() {
         {/* Registry source — a 24-vs-28 mismatch can never be a mystery again. */}
         {source && (
           <div
-            className="text-[8.5px] font-mono text-[#5A5A5A] px-1 truncate"
+            className="text-[8.5px] font-mono text-olympus-text-dim px-1 truncate"
             data-tip={`${source.opencodeJson} — ${source.runtimeEntries} runtime entries · ${source.catalogEntries} catalog entries`}
             data-tip-side="bottom"
           >
@@ -339,7 +339,7 @@ export default function MCPConfigPanel() {
         )}
 
         {/* Help text */}
-        <div className="text-[9px] font-mono text-[#5A5A5A] leading-relaxed mb-1 px-1">
+        <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mb-1 px-1">
           Enable or disable individual MCP servers. The enabled set is what OpenCode reads from
           <code className="text-olympus-gold/80"> opencode.json</code>; a new session picks it up.
         </div>
@@ -534,7 +534,7 @@ export default function MCPConfigPanel() {
                       )}
                     </div>
                     {s.description && (
-                      <div className="text-[9px] font-mono text-[#5A5A5A] truncate mt-0.5">
+                      <div className="text-[9px] font-mono text-olympus-text-dim truncate mt-0.5">
                         {s.description}
                       </div>
                     )}
@@ -576,7 +576,7 @@ export default function MCPConfigPanel() {
                       <Key size={9} className="shrink-0" />
                       <span>{s.requires?.label || `Requires: ${s.apiKeyEnvVars.join(', ')}`}</span>
                     </div>
-                    <div className="text-[9px] font-mono text-[#5A5A5A] mb-1.5">
+                    <div className="text-[9px] font-mono text-olympus-text-dim mb-1.5">
                       This MCP requires an API key to function. Register the key to enable it.
                     </div>
                     <button

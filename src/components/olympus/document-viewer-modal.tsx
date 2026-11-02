@@ -278,7 +278,7 @@ export default function DocumentViewerModal({
  <p className="text-[11px] font-mono text-olympus-red leading-relaxed">
  Failed to load: {error}
  </p>
- <p className="text-[10px] font-mono text-[#5A5A5A]">
+ <p className="text-[10px] font-mono text-olympus-text-dim">
  Source: {sourceLabel}
  </p>
  </div>
@@ -302,7 +302,7 @@ export default function DocumentViewerModal({
  {/* Footer — source path + skill extras */}
  {!loading && (
  <div className="px-4 py-2 border-t border-olympus-gold/10 bg-olympus-panel shrink-0">
- <div className="text-[9px] font-mono text-[#5A5A5A] truncate">
+ <div className="text-[9px] font-mono text-olympus-text-dim truncate">
  source: {sourceLabel}
  </div>
  {extraFiles.length > 0 && (

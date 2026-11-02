@@ -846,6 +846,19 @@ function themedWindowIcon(): Electron.NativeImage | null {
   }
 }
 
+/** The Linux dock reads the .desktop Icon — point it at the themed PNG. */
+function syncDesktopIcon(): void {
+  try {
+    const entry = join(nodeOs.homedir(), '.local', 'share', 'applications', 'olympus.desktop');
+    if (!existsSync(entry)) return;
+    const themed = join(nodeOs.homedir(), '.olympus', 'theme-icon.png');
+    if (!existsSync(themed)) return;
+    const raw = readFileSync(entry, 'utf-8');
+    const next = raw.replace(/^Icon=.*$/m, `Icon=${themed}`);
+    if (next !== raw) writeFileSync(entry, next, 'utf-8');
+  } catch { /* no desktop entry */ }
+}
+
 /** Re-read theme.json; repaint the window/tray when the user changed it. */
 function refreshThemeIfChanged(): void {
   try {
@@ -856,6 +869,7 @@ function refreshThemeIfChanged(): void {
     if (icon && mainWindow) {
       try { mainWindow.setIcon(icon); } catch { /* platform */ }
     }
+    syncDesktopIcon();
     if (tray) {
       trayIcons = null; // the dots ring in the new accent
       if (!trayNotificationActive) setTrayIndicator(null);
@@ -1616,6 +1630,7 @@ if (!gotLock) {
 
   app.whenReady().then(async () => {
     startNotifyTail();
+    try { themedWindowIcon(); syncDesktopIcon(); } catch { /* optional */ }
     // #V0.0.20: Auto-heal on boot — reconcile llm-providers.json with
     // active-strategy.json, repair opencode DB, prune stale lane-health.
     try {

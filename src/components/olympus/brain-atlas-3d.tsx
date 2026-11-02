@@ -246,10 +246,19 @@ export default function BrainAtlas3D() {
   const themeColors = resolvePalette(theme);
   const brainGraph = useMemo(() => {
     const graph = buildOlympusBrainGraph(filteredReal.nodes, filteredReal.links);
-    // The canvas renders from graph.activePalette — resolve it from the
-    // theme variables so a light/violet/ice theme repaints the brain too.
-    return { ...graph, activePalette: themedOlympusPalette() };
-  }, [filteredReal, theme.presetId, theme.accent]);
+    // v0.0.32 — the canvas nodes carry their own color (the adapter paints
+    // them from the default palette). Resolve the themed palette, recolor
+    // every node by kind, and remap the edges to the recolored nodes so the
+    // light/violet/custom themes are legible instead of pastel-on-white.
+    const palette = themedOlympusPalette();
+    const nodes = graph.nodes.map((n) => ({
+      ...n,
+      color: palette.kinds[n.kind] ?? n.color,
+    }));
+    // Edges reference node IDs; the renderer resolves them against graph.nodes,
+    // so recoloring the node objects is enough (no edge rewrite needed).
+    return { ...graph, nodes, activePalette: palette };
+  }, [filteredReal, theme.presetId, theme.mode, theme.accent, theme.custom]);
 
   // Keep graphRef in sync with the latest brainGraph. The renderer reads
   // this ref via its getGraph() callback on every frame.
@@ -846,7 +855,7 @@ export default function BrainAtlas3D() {
               degree: <span className="text-olympus-text">{hoverNode.degree}</span>
             </div>
           </div>
-          <div className="text-[#5A5A5A] mt-1">click to open</div>
+          <div className="text-olympus-text-dim mt-1">click to open</div>
         </div>
       )}
 
@@ -969,7 +978,7 @@ export default function BrainAtlas3D() {
                 className={`flex items-center gap-1 px-1.5 py-0.5 rounded border transition-colors ${
                   enabled
                     ? 'border-olympus-gold/30 bg-olympus-gold/10 text-olympus-text'
-                    : 'border-olympus-gold/10 bg-olympus-card/60 text-[#5A5A5A]'
+                    : 'border-olympus-gold/10 bg-olympus-card/60 text-olympus-text-dim'
                 }`}
               >
                 <span
@@ -977,7 +986,7 @@ export default function BrainAtlas3D() {
                   style={{ background: color, opacity: enabled ? 1 : 0.4 }}
                 />
                 <span>{LOBE_SHORT[lobe]}</span>
-                <span className="text-[#5A5A5A]">{lobeStats[lobe] ?? 0}</span>
+                <span className="text-olympus-text-dim">{lobeStats[lobe] ?? 0}</span>
               </button>
             );
           })}
@@ -1004,7 +1013,7 @@ export default function BrainAtlas3D() {
             </span>
           </div>
           <div className="text-olympus-text-dim text-[9px]">{LOBE_DESC[hoveredLobe].role}</div>
-          <div className="text-[#5A5A5A] mt-0.5 text-[8px]">click to toggle visibility</div>
+          <div className="text-olympus-text-dim mt-0.5 text-[8px]">click to toggle visibility</div>
         </div>
       )}
 
@@ -1046,7 +1055,7 @@ export default function BrainAtlas3D() {
       {/* Brain atlas attribution (bottom-center, subtle).
           Responsive: hidden on very small screens to avoid overlapping the
           focus card (bottom-left) and node count (bottom-right). */}
-      <div className="hidden md:block absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-mono text-[#5A5A5A] pointer-events-none whitespace-nowrap z-10">
+      <div className="hidden md:block absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-mono text-olympus-text-dim pointer-events-none whitespace-nowrap z-10">
         drag to rotate · scroll to zoom · click a node to open ·{' '}
         <a
           href="https://github.com/colorpulse6/brain-atlas"

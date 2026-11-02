@@ -84,7 +84,7 @@ export default function ShortcutsOverlay({ open, onClose }: { open: boolean; onC
             </div>
           ))}
         </div>
-        <div className="px-5 py-2.5 border-t border-olympus-gold/10 text-[9px] font-mono text-[#5A5A5A] flex justify-between">
+        <div className="px-5 py-2.5 border-t border-olympus-gold/10 text-[9px] font-mono text-olympus-text-dim flex justify-between">
           <span>press <kbd className="text-olympus-gold">?</kbd> anywhere to toggle</span>
           <span>Olympus v0.0.1</span>
         </div>

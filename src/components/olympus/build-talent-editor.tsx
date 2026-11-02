@@ -67,7 +67,7 @@ export default function BuildTalentEditor({ open, onClose, onCreated }: { open: 
   };
 
   if (!open) return null;
-  const field = 'w-full bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50';
+  const field = 'w-full bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-gold/50';
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 p-4" onClick={onClose} role="dialog" aria-modal="true" aria-label="Build talent editor">

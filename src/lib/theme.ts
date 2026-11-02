@@ -37,6 +37,8 @@ export interface ThemePreset {
 export interface ThemeState {
   presetId: string;
   mode: ThemeMode;
+  /** v0.0.32 — a full generated palette (wins over the preset). */
+  custom?: OlympusPalette;
   /** Optional primary override (#RRGGBB). */
   accent: string | null;
   iconId: string;
@@ -69,8 +71,8 @@ const dark = (gold: string, extra: Partial<OlympusPalette> = {}): OlympusPalette
   bg: '#0A0E16',
   panel: '#0E1320',
   card: '#121826',
-  text: '#B8B8B8',
-  textDim: '#8B8B8B',
+  text: '#E4E4E4',
+  textDim: '#A3A3A3',
   ...extra,
 });
 
@@ -88,11 +90,11 @@ const light = (gold: string, extra: Partial<OlympusPalette> = {}): OlympusPalett
   teal: '#2F7A69',
   red: '#94443C',
   cyan: '#2F6F7A',
-  bg: '#EFE7D8',
-  panel: '#F4EEDF',
-  card: '#FBF7EE',
-  text: '#241F18',
-  textDim: '#5E5346',
+  bg: '#DDD6C7',
+  panel: '#E6E0D2',
+  card: '#EFEADD',
+  text: '#211C16',
+  textDim: '#544B3F',
   ...extra,
 });
 
@@ -100,44 +102,44 @@ export const THEME_PRESETS: ThemePreset[] = [
   { id: 'olympus', name: 'Olympus', mode: 'dark', colors: dark('#D4A574') },
   { id: 'obsidian', name: 'Obsidian', mode: 'dark', colors: dark('#67C9E8', {
     amber: '#5AA9C4', amberSoft: '#5AA9C4', purple: '#8E9BD6', cyan: '#67C9E8',
-    bg: '#07090C', panel: '#0B0E13', card: '#10141A', text: '#C3CBD3', textDim: '#7C8794',
+    bg: '#07090C', panel: '#0B0E13', card: '#10141A', text: '#D6DEE5', textDim: '#9AA6B2',
   }) },
   { id: 'ember', name: 'Ember', mode: 'dark', colors: dark('#E8A45C', {
     amber: '#D18A45', amberSoft: '#E8A45C', red: '#D96C5F',
-    bg: '#120D0A', panel: '#18110D', card: '#1F1611', text: '#D8CEC6', textDim: '#9A8C80',
+    bg: '#120D0A', panel: '#18110D', card: '#1F1611', text: '#E6DAD0', textDim: '#B0A296',
   }) },
   { id: 'violet', name: 'Violet', mode: 'dark', colors: dark('#B79BE0', {
     amber: '#9B7BAE', purple: '#B79BE0', blue: '#8E9BD6',
-    bg: '#0D0A14', panel: '#120E1C', card: '#181224', text: '#CFC6DB', textDim: '#8B7F9A',
+    bg: '#0D0A14', panel: '#120E1C', card: '#181224', text: '#E0D6EC', textDim: '#A99CB8',
   }) },
   { id: 'forest', name: 'Forest', mode: 'dark', colors: dark('#9CC48E', {
     green: '#9CC48E', teal: '#7FB59B',
-    bg: '#08110C', panel: '#0C1711', card: '#101D16', text: '#C2D3C7', textDim: '#7F9486',
+    bg: '#08110C', panel: '#0C1711', card: '#101D16', text: '#D6E6DB', textDim: '#9CB3A2',
   }) },
   { id: 'ice', name: 'Ice', mode: 'dark', colors: dark('#8FC7E8', {
     amber: '#6B9FB5', amberSoft: '#A9C4D1', blue: '#8FC7E8', cyan: '#8FC7E8', teal: '#7FB5C4',
-    bg: '#080D12', panel: '#0C131A', card: '#101923', text: '#C6D3DC', textDim: '#7F8F9A',
+    bg: '#080D12', panel: '#0C131A', card: '#101923', text: '#D9E5EE', textDim: '#9AABB6',
   }) },
   { id: 'parchment', name: 'Parchment', mode: 'light', colors: light('#B07A3C') },
   { id: 'paper', name: 'Paper', mode: 'light', colors: light('#7E5F33', {
     gold: '#7E5F33', amber: '#6E522B', amberSoft: '#8E6E3E',
-    bg: '#ECECE7', panel: '#F2F2EE', card: '#F9F9F6', text: '#1B1B1D', textDim: '#57575C',
+    bg: '#DCDCD6', panel: '#E6E6E0', card: '#EFEFE9', text: '#1A1A1C', textDim: '#4F4F54',
   }) },
   { id: 'mist', name: 'Mist', mode: 'light', colors: light('#2A727E', {
     gold: '#2A727E', amber: '#25636E', amberSoft: '#3E8590', cyan: '#2A727E',
-    bg: '#E6F0F1', panel: '#EFF7F8', card: '#F8FCFC', text: '#162427', textDim: '#506568',
+    bg: '#D3E3E4', panel: '#DFECEC', card: '#EAF4F4', text: '#152225', textDim: '#475C5F',
   }) },
   { id: 'blossom', name: 'Blossom', mode: 'light', colors: light('#6E4C8C', {
     gold: '#6E4C8C', amber: '#7C5270', amberSoft: '#866A9C', purple: '#6E4C8C',
-    bg: '#F3E8F2', panel: '#FAF1F9', card: '#FFFAFE', text: '#241A2B', textDim: '#63526C',
+    bg: '#E4D6E3', panel: '#EDE1EC', card: '#F6ECF5', text: '#221829', textDim: '#584862',
   }) },
   { id: 'sand', name: 'Sand', mode: 'light', colors: light('#96631F', {
     gold: '#96631F', amber: '#84561D', amberSoft: '#A2763A',
-    bg: '#F0E7D6', panel: '#F7F0E2', card: '#FDF9F0', text: '#221C14', textDim: '#635744',
+    bg: '#DFD3BD', panel: '#E9DFCC', card: '#F2EADA', text: '#201A12', textDim: '#574C3C',
   }) },
   { id: 'mint', name: 'Mint', mode: 'light', colors: light('#2A7C6B', {
     gold: '#2A7C6B', amber: '#2F725F', amberSoft: '#418E7C', green: '#2A7C6B', teal: '#2A7C6B',
-    bg: '#E6F1EC', panel: '#F0F8F4', card: '#FAFDFB', text: '#16241F', textDim: '#4E665E',
+    bg: '#D2E4DC', panel: '#DEEDE6', card: '#E9F5EF', text: '#15231E', textDim: '#455C55',
   }) },
 ];
 
@@ -174,12 +176,18 @@ export function normalizeThemeState(input: unknown): ThemeState {
     ? raw.presetId
     : DEFAULT_THEME.presetId;
   const accent = typeof raw.accent === 'string' && HEX.test(raw.accent) ? raw.accent : null;
+  const customRaw = (raw as any).custom;
+  const custom: OlympusPalette | undefined =
+    customRaw && typeof customRaw === 'object' && PALETTE_KEYS.every((k) => typeof customRaw[k] === 'string' && HEX.test(customRaw[k]))
+      ? Object.fromEntries(PALETTE_KEYS.map((k) => [k, String(customRaw[k]).toUpperCase()])) as OlympusPalette
+      : undefined;
   return {
     presetId: preset,
     // The mode is a property of the preset, never a free-floating flag: a
     // "paper" theme is light even if an old store said dark.
     mode: presetById(preset).mode,
     accent,
+    ...(custom ? { custom } : {}),
     iconId: typeof raw.iconId === 'string' && THEME_ICONS.some((i) => i.id === raw.iconId) ? raw.iconId : 'classic',
     motion: isMotionMode(raw.motion) ? raw.motion : 'full',
   };
@@ -187,7 +195,7 @@ export function normalizeThemeState(input: unknown): ThemeState {
 
 /** The resolved palette (the user accent wins over the preset's primary). */
 export function resolvePalette(state: ThemeState): OlympusPalette {
-  const base = { ...presetById(state.presetId).colors };
+  const base = { ...(state.custom ?? presetById(state.presetId).colors) };
   if (state.accent) base.gold = state.accent;
   return base;
 }
