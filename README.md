@@ -12,6 +12,34 @@
 
 ---
 
+
+## Screens
+
+<div align="center">
+
+| The Brain Atlas | The Build Hub |
+|---|---|
+| <img src="screenshots/01-brain.png" width="480" alt="OLYMPUS Brain Atlas" /> | <img src="screenshots/03-builds.png" width="480" alt="OLYMPUS Build Hub" /> |
+
+| Style — the project's direction | Appearance — the palette lab |
+|---|---|
+| <img src="screenshots/04-style.png" width="480" alt="OLYMPUS Style Board" /> | <img src="screenshots/06-appearance.png" width="480" alt="OLYMPUS Appearance" /> |
+
+</div>
+
+A guided tour of every surface (with the references catalog and the Craft
+dashboard) lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). The
+screenshots are captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.32 highlights:** twelve theme presets plus a palette lab (full 14-color
+families with contrast floors) that repaint the app, the terminal, the brain,
+the loader, the tray and the system icon; **251 default builds** plus the
+hot/warm/cold learning loop; a swipeable talent carousel over the whole
+arsenal (334 skills · 28 MCPs · 132 agents); a live project Style Board; fixed
+references with real component previews; benchmark sessions; a notification
+center with hibernate-on-lock; and the Pattern Studio.
+
+
 ## What is OLYMPUS?
 
 OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencode.ai). It runs as a standalone **Electron desktop app** on Linux. Other platforms should use WSL. OLYMPUS routes each task to the cheapest LLM that can handle it, cascades token compression across five layers (including the Symphony latent protocol), and learns from every action via a self-curating **VaultBrain**.

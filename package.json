@@ -84,7 +84,8 @@
     "badges:update": "node scripts/update-badges.mjs",
     "measure:close": "npx tsx scripts/measure-close.test.mjs",
     "opencode:gate": "node scripts/opencode-gate.mjs",
-    "repo:privacy": "node scripts/check-repo-privacy.mjs"
+    "repo:privacy": "node scripts/check-repo-privacy.mjs",
+    "shots": "electron scripts/capture-ui.cjs --no-sandbox"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
