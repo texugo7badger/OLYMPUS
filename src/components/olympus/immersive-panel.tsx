@@ -151,13 +151,29 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     setChat((prev) => [...prev, { role: 'user' as const, text: question }].slice(-8));
     setChatBusy(true);
     try {
-      const r = await fetch('/api/olympus/studio/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-olympus-language': language },
-        body: JSON.stringify({ question, god: activeGod, language }),
-      });
-      const d = await r.json();
-      const answer = String(d?.answer || 'I could not read the live walk state.');
+      let answer = '';
+      // v0.0.38 — HUMAN conversation first: the god answers in its own words
+      // with the live walk as context. The deterministic summary is fallback.
+      try {
+        const cr = await fetch('/api/olympus/studio/converse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-olympus-language': language },
+          body: JSON.stringify({ message: question, god: activeGod, language }),
+        });
+        if (cr.ok) {
+          const cd = await cr.json();
+          if (cd?.ok && cd.answer) answer = String(cd.answer);
+        }
+      } catch { /* fall through */ }
+      if (!answer) {
+        const r = await fetch('/api/olympus/studio/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-olympus-language': language },
+          body: JSON.stringify({ question, god: activeGod, language }),
+        });
+        const d = await r.json();
+        answer = String(d?.answer || 'I could not read the live walk state.');
+      }
       setChat((prev) => [...prev, { role: 'god' as const, text: answer, god: activeGod }].slice(-8));
       if (voice) speak(answer, activeGod);
     } catch {
