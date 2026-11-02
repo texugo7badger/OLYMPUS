@@ -1643,6 +1643,14 @@ if (!gotLock) {
   app.on('before-quit', () => { writeHibernationMarker(false); stopHibernationWatch(); });
 
   app.whenReady().then(async () => {
+    // v0.0.34 — the microphone is a first-class input: allow the studio's
+    // getUserMedia/MediaRecorder lane (permission prompts still appear where
+    // the platform requires them).
+    try {
+      const allowed = new Set(['media', 'microphone', 'audioCapture', 'notifications', 'clipboard-read', 'clipboard-sanitized-write', 'fullscreen']);
+      session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(allowed.has(permission)));
+      session.defaultSession.setPermissionCheckHandler((_wc, permission) => allowed.has(permission));
+    } catch { /* optional */ }
     startNotifyTail();
     try { themedWindowIcon(); syncDesktopIcon(); } catch { /* optional */ }
     // #V0.0.20: Auto-heal on boot — reconcile llm-providers.json with

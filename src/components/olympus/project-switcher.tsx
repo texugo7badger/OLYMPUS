@@ -105,7 +105,7 @@ export default function ProjectSwitcher() {
                       {displayName(p)}
                     </span>
                     {active && <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-green">{t('common.active', language)}</span>}
-                    <span className="text-[8px] font-mono text-olympus-text-dim/70" title={new Date(p.last_active).toLocaleString()}>{timeAgo(p.last_active)}</span>
+                    <span className="text-[8px] font-mono text-olympus-text-dim/70" data-tip={new Date(p.last_active).toLocaleString()}>{timeAgo(p.last_active)}</span>
                   </div>
                   <div className="text-[10px] font-mono text-olympus-text-dim truncate mt-0.5 ml-5">
                     {p.description || t('common.noDescription', language)}

@@ -499,6 +499,7 @@ export default function SettingsDialog() {
 
   useEffect(() => {
     if (!open) return;
+    window.dispatchEvent(new CustomEvent('olympus:close-tutorial'));
     let cancelled = false;
     setData(null);
     setError(null);

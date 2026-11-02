@@ -78,6 +78,13 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const [chat, setChat] = useState<Array<{ role: 'user' | 'god'; text: string; god?: string }>>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatBusy, setChatBusy] = useState(false);
+  const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
+  const [micId, setMicId] = useState('');
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   // v0.0.34 — the gods learned to speak: the free edge-tts neural lane gives
   // ten distinct god voices in the selected language. Announce it once.
   const [voiceCount] = useState(10);
@@ -89,6 +96,30 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
       toast.success(t('studio.voicesReady', getLanguage(), { n: 10 }), { id: 'olympus-gods-voice' });
     }, 900);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => () => {
+    try { recorderRef.current?.stop(); } catch { /* already stopped */ }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+  }, []);
+
+
+  // v0.0.34 — local microphone: choose an input device and send speech as
+  // text. The STT lane is faster-whisper on this machine (no cloud).
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const ds = await navigator.mediaDevices.enumerateDevices();
+        if (!cancelled) setMicDevices(ds.filter((d) => d.kind === 'audioinput'));
+      } catch { /* permission not granted yet */ }
+    };
+    void refresh();
+    navigator.mediaDevices?.addEventListener?.('devicechange', refresh);
+    return () => {
+      cancelled = true;
+      navigator.mediaDevices?.removeEventListener?.('devicechange', refresh);
+    };
   }, []);
 
   // v0.0.34 — one calm, distinct voice per god. The free edge-tts neural lane
@@ -176,6 +207,52 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     setChat((prev) => [...prev, { role: 'god' as const, text: intro, god: g }].slice(-8));
     if (voice) speak(intro, g);
   }, [language, voice, speak]);
+
+  const toggleMic = useCallback(async () => {
+    if (recording) {
+      try { recorderRef.current?.stop(); } catch { /* already stopped */ }
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: micId ? { deviceId: { exact: micId } } : true,
+      });
+      streamRef.current = stream;
+      const mime = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus' : '';
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      recorderRef.current = rec;
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        setRecording(false);
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' });
+        if (!blob.size) return;
+        setTranscribing(true);
+        try {
+          const fd = new FormData();
+          fd.append('audio', blob, 'mic.webm');
+          fd.append('language', language);
+          const r = await fetch('/api/olympus/voice/listen', { method: 'POST', body: fd });
+          const d = await r.json();
+          if (d?.ok && d.text) void askStudio(String(d.text));
+          else toast.error(d?.error || t('studio.noSpeech', language));
+        } catch {
+          toast.error(t('studio.micDenied', language));
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      rec.start();
+      setRecording(true);
+      const ds = await navigator.mediaDevices.enumerateDevices();
+      setMicDevices(ds.filter((d) => d.kind === 'audioinput'));
+    } catch {
+      toast.error(t('studio.micDenied', language));
+    }
+  }, [recording, micId, language, askStudio]);
+
 
 
   // The particle field.
@@ -629,6 +706,33 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
             {GOD_IDS.map((g) => <option key={g} value={g}>{godName(g, language)}</option>)}
           </select>
 
+          <div className="w-full flex items-center gap-1">
+            <select
+              value={micId}
+              onChange={(e) => setMicId(e.target.value)}
+              className="flex-1 min-w-0 rounded px-1.5 py-1 text-[8px] font-mono outline-none"
+              style={{ background: palette.bg, color: palette.text, border: `1px solid ${palette.gold}33` }}
+              aria-label={t('studio.mic', language)}
+            >
+              <option value="">{t('studio.defaultMic', language)}</option>
+              {micDevices.map((d, i) => (
+                <option key={d.deviceId || i} value={d.deviceId}>{d.label || `${t('studio.mic', language)} ${i + 1}`}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => void toggleMic()}
+              aria-label={recording ? t('studio.listening', language) : t('studio.mic', language)}
+              className={recording ? 'rounded p-1 text-olympus-red animate-pulse' : 'rounded p-1'}
+              style={{ color: recording ? palette.red : orbTint, background: `${orbTint}12`, border: `1px solid ${orbTint}33` }}
+            >
+              <Mic size={12} />
+            </button>
+          </div>
+          {(recording || transcribing) && (
+            <p className="text-[7px] font-mono text-center" style={{ color: recording ? palette.red : palette.cyan }}>
+              {recording ? t('studio.listening', language) : t('studio.transcribing', language)}
+            </p>
+          )}
           <div className="w-full flex items-center gap-1">
             <input
               value={say}

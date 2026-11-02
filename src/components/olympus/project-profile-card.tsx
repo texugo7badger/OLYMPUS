@@ -212,7 +212,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                     {profile.project.slug} · created {new Date(profile.project.created).toLocaleDateString()} · active {timeAgo(profile.project.last_active)}
                   </p>
                   <div className="flex items-center gap-1 mt-1.5">
-                    <span className="text-[9px] font-mono text-olympus-text-dim truncate" title={profile.path}>{profile.path || '(no path)'}</span>
+                    <span className="text-[9px] font-mono text-olympus-text-dim truncate" data-tip={profile.path}>{profile.path || '(no path)'}</span>
                     {profile.path && (
                       <button onClick={() => copy(profile.path, 'path')} aria-label="Copy project path" className="shrink-0 text-olympus-text-dim hover:text-olympus-gold p-0.5">
                         {copied === 'path' ? <Check size={10} className="text-olympus-green" /> : <Copy size={10} />}
@@ -259,7 +259,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                 </div>
                 <div className="rounded-lg bg-olympus-card ring-1 ring-olympus-gold/10 px-2.5 py-2">
                   <div className="flex items-center gap-1 text-[8px] font-mono uppercase text-olympus-text-dim"><GitBranch size={9} /> branch</div>
-                  <div className="text-sm font-mono text-olympus-text mt-0.5 truncate" title={profile.git?.branch || 'no git'}>{profile.git?.branch || '—'}</div>
+                  <div className="text-sm font-mono text-olympus-text mt-0.5 truncate" data-tip={profile.git?.branch || 'no git'}>{profile.git?.branch || '—'}</div>
                 </div>
                 <div className="rounded-lg bg-olympus-card ring-1 ring-olympus-gold/10 px-2.5 py-2">
                   <div className="flex items-center gap-1 text-[8px] font-mono uppercase text-olympus-text-dim"><Clock size={9} /> changes</div>
@@ -307,7 +307,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                     ) : profile.stats.recent.slice(0, 7).map((f) => (
                       <div key={f.path} className="flex items-center gap-1.5 text-[9px] font-mono py-0.5 group">
                         {fileIcon(f.path)}
-                        <span className="flex-1 min-w-0 truncate text-olympus-text-dim group-hover:text-olympus-text" title={f.path}>{f.path}</span>
+                        <span className="flex-1 min-w-0 truncate text-olympus-text-dim group-hover:text-olympus-text" data-tip={f.path}>{f.path}</span>
                         <span className="text-[8px] text-olympus-text-dim/70 shrink-0">{fmtBytes(f.size)}</span>
                         <button onClick={() => copy(f.path, 'file path')} aria-label={`Copy ${f.path}`} className="opacity-0 group-hover:opacity-100 text-olympus-text-dim hover:text-olympus-gold shrink-0">
                           {copied === 'file path' ? <Check size={9} /> : <Copy size={9} />}
@@ -325,7 +325,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                           key={s}
                           onClick={() => copy(`npm run ${s}`, 'script')}
                           className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/20 hover:bg-olympus-cyan/20"
-                          title={`Copy: npm run ${s}`}
+                          data-tip={`Copy: npm run ${s}`}
                         >{s}</button>
                       ))}
                     </div>
