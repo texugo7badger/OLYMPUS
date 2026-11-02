@@ -9,7 +9,7 @@ import { useOlympus, GOD_ICONS } from '@/lib/olympus-store';
 import {
  Wifi, WifiOff, DollarSign, Key, Terminal,
  Minus, Square, X, Copy, PanelLeftClose, PanelLeftOpen,
- Lightbulb, Gauge, Layers, Users,
+ Lightbulb, Gauge, Layers, Users, Sparkles as StudioIcon, Mic,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -23,7 +23,6 @@ import { useDocVisible } from '@/lib/use-doc-visible';
 import ThemedLogo from './themed-logo';
 import NotificationCenter from './notification-center';
 import ImmersivePanel from './immersive-panel';
-import { Sparkles as StudioIcon } from 'lucide-react';
 import { useTheme } from '@/lib/theme-store';
 
 interface ProviderInfo {
@@ -196,6 +195,18 @@ export default function StatusBar({
 
  {/* v0.0.32 — notifications + the sleep contract. */}
 		 <NotificationCenter />
+		 {/* v0.0.34 — the ART & CREATIVITY mode, always visible: the studio
+		     opens the particle/voice surface (TTS in the chosen language). */}
+		 <button
+		   onClick={() => setStudio(true)}
+		   aria-label="Open the art and creativity studio with voice"
+		   data-tip="Art & creativity studio — live particles, the thinking gods, and voice"
+		   className="flex items-center gap-1.5 h-5 px-2 rounded-full shrink-0 bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20 transition-colors"
+		 >
+		   <StudioIcon size={11} className="text-olympus-gold" />
+		   <span className="text-[9px] font-mono font-semibold">art studio</span>
+		   <Mic size={9} className="text-olympus-cyan" />
+		 </button>
 		 {studio && <ImmersivePanel onClose={() => setStudio(false)} />}
 
 		 {/* Compact Brain button — to the RIGHT of Focus Mode. */}
