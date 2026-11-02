@@ -1496,10 +1496,18 @@ export function getProviderInfo(): ProviderInfo {
 
 export function godCosts(): GodCost[] { return readGodCosts(); }
 
-export function costSummary() {
+export function costSummary(opts: { sinceMs?: number } = {}) {
   // One disk read feeds both views (#179): the split aggregate and the
-  // per-god rows.
-  const rows = readCostRows();
+  // per-god rows. A benchmark session boundary filters here, so a "new
+  // session" really starts from zero without deleting history.
+  const sinceMs = Number.isFinite(opts.sinceMs) && (opts.sinceMs as number) > 0 ? (opts.sinceMs as number) : 0;
+  const allRows = readCostRows();
+  const rows = sinceMs
+    ? allRows.filter((r) => {
+        const t = new Date(r?.ts).getTime();
+        return Number.isFinite(t) && t >= sinceMs;
+      })
+    : allRows;
   const real = readRealCosts(rows);
   const costs = readGodCosts(rows);
   const prov = getProviderInfo();

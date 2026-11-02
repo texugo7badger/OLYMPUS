@@ -23,7 +23,7 @@ export function hashSeed(value: string): number {
   return h >>> 0;
 }
 
-function hslToHex(h: number, s: number, l: number): string {
+export function hslToHex(h: number, s: number, l: number): string {
   const hue = ((h % 360) + 360) % 360;
   const sat = Math.min(1, Math.max(0, s));
   const lig = Math.min(1, Math.max(0, l));
