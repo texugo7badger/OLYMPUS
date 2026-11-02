@@ -28,6 +28,8 @@ export interface PreviewEngineOptions {
   variant: string;
   palette: OlympusPalette;
   stable?: boolean;
+  /** The resolved study kind (the full catalog assigns it by category). */
+  kind?: PreviewKind;
 }
 
 export class PreviewEngine {
@@ -87,7 +89,7 @@ export class PreviewEngine {
     if (!ctx) throw new Error('Canvas2D is unavailable');
     this.ctx = ctx;
     this.opts = opts;
-    this.kind = previewSpec(opts.referenceId).kind;
+    this.kind = opts.kind ?? previewSpec(opts.referenceId).kind;
   }
 
   start(): void {
