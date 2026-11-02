@@ -9,6 +9,8 @@ import { useOlympus, type ActivityEvent } from '@/lib/olympus-store';
 import { Terminal as TerminalIcon, Library, LayoutGrid, AlertCircle, RefreshCw, Code2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import OlympusLoader from '@/components/olympus/olympus-loader';
+import { getPanelLoadingCount, panelLoadingBump, subscribePanelLoading } from '@/lib/panel-loading-bus';
 
 /* ------------------------------------------------------------------ */
 /* ChunkErrorBoundary — catches ChunkLoadError from Turbopack HMR.     */
@@ -93,6 +95,14 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, ChunkErrorBo
    2026-10-24 report ("LLM Strategy and others don't open") was exactly that
    misreading: the pane WAS loading, silently. This renders the truth. */
 function PanelLoading({ label }: { label: string }) {
+  // v0.0.32 — the global boot overlay stays until every dynamic panel has
+  // mounted (its chunk loaded), so the user never sees this list while the
+  // shell is still assembling. Child effects run before the parent's, so the
+  // counter is already >0 when the overlay first evaluates it.
+  useEffect(() => {
+    panelLoadingBump(1);
+    return () => { panelLoadingBump(-1); };
+  }, []);
   return (
     <div
       className="h-full w-full flex flex-col items-center justify-center gap-2 bg-olympus-bg text-olympus-text-dim"
@@ -100,11 +110,7 @@ function PanelLoading({ label }: { label: string }) {
       aria-live="polite"
       aria-label={`Loading ${label}`}
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="animate-spin text-olympus-gold/80" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2.5" />
-        <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-      </svg>
-      <span className="text-[10px] font-mono tracking-wide">{label}</span>
+      <OlympusLoader size={44} label={label} />
     </div>
   );
 }
@@ -228,6 +234,40 @@ function Tab({ id, icon: Icon, label, active, onClick }: { id: string; icon: any
 }
 
 export default function OlympusWorkspace() {
+  // v0.0.32 — the cold-boot animation, once per Electron session. It covers
+  // the Turbopack compile + the first dynamic chunks, so the user never sees
+  // a bare spinner list; HMR reloads stay quiet.
+  const [booting, setBooting] = useState(true);
+  const [bootLeaving, setBootLeaving] = useState(false);
+  const [pendingPanels, setPendingPanels] = useState(() => getPanelLoadingCount());
+  const [windowLoaded, setWindowLoaded] = useState(false);
+  const bootStartedAt = useRef(0);
+  useEffect(() => {
+    bootStartedAt.current = performance.now();
+    const unsubscribe = subscribePanelLoading(setPendingPanels);
+    const onLoad = () => setWindowLoaded(true);
+    if (document.readyState === 'complete') setWindowLoaded(true);
+    else window.addEventListener('load', onLoad, { once: true });
+    return () => {
+      unsubscribe();
+      window.removeEventListener('load', onLoad);
+    };
+  }, []);
+  useEffect(() => {
+    if (!booting) return;
+    const elapsed = performance.now() - bootStartedAt.current;
+    const minWait = Math.max(0, 1400 - elapsed);
+    // Ready = the window loaded, every mounted panel finished its chunk, and
+    // the mark had at least 1.4s (a flash is not an animation). A 15s hard cap
+    // keeps a failed chunk from trapping the user behind the loader.
+    const ready = windowLoaded && pendingPanels === 0;
+    const cap = Math.max(0, 15000 - elapsed);
+    const timer = setTimeout(() => {
+      setBootLeaving(true);
+      setTimeout(() => setBooting(false), 520);
+    }, ready ? minWait : cap);
+    return () => clearTimeout(timer);
+  }, [booting, windowLoaded, pendingPanels]);
   const setGraphData = useOlympus(s => s.setGraphData);
   const leftPane = useOlympus(s => s.leftPane);
   // #197: the window-visibility gate for pane polling surfaces.
@@ -480,6 +520,7 @@ export default function OlympusWorkspace() {
   return (
     <ChunkErrorBoundary>
     <div suppressHydrationWarning className="h-screen w-screen flex flex-col bg-olympus-bg text-olympus-text overflow-hidden">
+      {booting && <OlympusLoader fullscreen leaving={bootLeaving} />}
       <StatusBar health={brainHealth ?? health} />
 
       <div suppressHydrationWarning className="flex-1 flex min-h-0">

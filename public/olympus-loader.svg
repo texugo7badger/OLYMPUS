@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="OLYMPUS — loading the pantheon">
+  <!--
+    OLYMPUS loader — pure SVG (CSS keyframes, no JavaScript).
+    The mark breathes, two star belts orbit in opposite directions and the
+    dots twinkle over a soft radial shade. Designed to read at 40px (panel)
+    and 512px (boot screen); the palette is src/app/globals.css.
+    License: AGPL-3.0-or-later (original OLYMPUS code).
+  -->
+  <defs>
+    <radialGradient id="shade" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#D4A574" stop-opacity="0.16"/>
+      <stop offset="45%" stop-color="#9B7BAE" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#0B0B0D" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="core" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#D4A574" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#D4A574" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .orbit-a { transform-origin: 256px 256px; animation: spin 18s linear infinite; }
+      .orbit-b { transform-origin: 256px 256px; animation: spin-rev 26s linear infinite; }
+      .orbit-c { transform-origin: 256px 256px; animation: spin 40s linear infinite; }
+      .mark   { animation: breathe 4.6s ease-in-out infinite; transform-origin: 256px 256px; }
+      .ring   { animation: ring-pulse 4.6s ease-in-out infinite; transform-origin: 256px 256px; }
+      .tw-a, .tw-b, .tw-c, .tw-d, .tw-e, .tw-f { animation: twinkle 3.2s ease-in-out infinite; }
+      .tw-b { animation-delay: .5s; } .tw-c { animation-delay: 1.1s; }
+      .tw-d { animation-delay: 1.7s; } .tw-e { animation-delay: 2.2s; } .tw-f { animation-delay: 2.7s; }
+      @keyframes spin     { to { transform: rotate(360deg); } }
+      @keyframes spin-rev { to { transform: rotate(-360deg); } }
+      @keyframes breathe  { 0%,100% { transform: scale(1); opacity: .92; } 50% { transform: scale(1.035); opacity: 1; } }
+      @keyframes ring-pulse { 0%,100% { opacity: .18; } 50% { opacity: .42; } }
+      @keyframes twinkle  { 0%,100% { opacity: .15; } 50% { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) {
+        .orbit-a, .orbit-b, .orbit-c, .mark, .ring, .tw-a, .tw-b, .tw-c, .tw-d, .tw-e, .tw-f { animation: none; }
+      }
+    </style>
+  </defs>
+
+  <!-- soft shade -->
+  <circle cx="256" cy="256" r="250" fill="url(#shade)"/>
+  <circle cx="256" cy="256" r="150" fill="url(#core)"/>
+
+  <!-- the mark (logo geometry, scaled 1.6x around the 256 center) -->
+  <g class="mark" filter="url(#glow)">
+    <g transform="translate(256 256) scale(1.6) translate(-128 -128)">
+      <circle class="ring" cx="128" cy="128" r="112" stroke="#D4A574" stroke-width="1.6" fill="none" opacity="0.4"/>
+      <circle cx="128" cy="128" r="96" stroke="#D4A574" stroke-width="1" fill="none" opacity="0.22"/>
+      <path d="M 128 76 L 168 168 L 144 168 L 128 132 L 112 168 L 88 168 Z" fill="#D4A574"/>
+      <circle cx="128" cy="60" r="3" fill="#9B7BAE"/>
+      <circle cx="128" cy="168" r="3" fill="#D4A574"/>
+    </g>
+  </g>
+
+  <!-- star belt A: three bright stars, slow -->
+  <g class="orbit-a">
+    <circle class="tw-a" cx="256" cy="58" r="3.6" fill="#D4A574"/>
+    <circle class="tw-c" cx="427" cy="256" r="2.8" fill="#6BAEB5"/>
+    <circle class="tw-e" cx="256" cy="454" r="3.2" fill="#9B7BAE"/>
+  </g>
+
+  <!-- star belt B: two stars, reverse -->
+  <g class="orbit-b">
+    <circle class="tw-b" cx="147" cy="147" r="2.6" fill="#7BAE8E"/>
+    <circle class="tw-d" cx="365" cy="365" r="3" fill="#C4A265"/>
+  </g>
+
+  <!-- star belt C: faint dust, wide -->
+  <g class="orbit-c">
+    <circle class="tw-f" cx="256" cy="24" r="1.7" fill="#D4A574" opacity="0.6"/>
+    <circle class="tw-a" cx="470" cy="312" r="1.5" fill="#6BAEB5" opacity="0.6"/>
+    <circle class="tw-c" cx="188" cy="470" r="1.8" fill="#9B7BAE" opacity="0.6"/>
+    <circle class="tw-e" cx="42" cy="200" r="1.5" fill="#7BAE8E" opacity="0.6"/>
+  </g>
+
+  <!-- connection hints (the dispatch lines, barely there) -->
+  <g stroke="#D4A574" stroke-width="0.5" opacity="0.10">
+    <line x1="256" y1="256" x2="256" y2="58"/>
+    <line x1="256" y1="256" x2="427" y2="256"/>
+    <line x1="256" y1="256" x2="256" y2="454"/>
+    <line x1="256" y1="256" x2="85" y2="256"/>
+  </g>
+
+  <text x="256" y="486" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" letter-spacing="7" fill="#D4A574" opacity="0.85">OLYMPUS</text>
+</svg>

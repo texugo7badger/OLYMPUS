@@ -779,6 +779,27 @@ function stopHibernationWatch(): void {
   hibernationWatch = null;
 }
 
+
+/**
+ * v0.0.32 — the boot splash: the same pure-SVG loader the app uses, painted
+ * while Next compiles. Without it the window was blank/white until the first
+ * navigation answered.
+ */
+function splashDataUrl(): string {
+  try {
+    const svg = readFileSync(join(appRoot, 'public', 'olympus-loader.svg'), 'utf-8');
+    const b64 = Buffer.from(svg, 'utf-8').toString('base64');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>OLYMPUS</title>
+<style>html,body{margin:0;height:100%;background:#0B0B0D;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+img{width:min(58vmin,420px);height:auto;filter:drop-shadow(0 0 24px rgba(212,165,116,.18))}</style>
+</head><body><img src="data:image/svg+xml;base64,${b64}" alt="OLYMPUS — loading"></body></html>`;
+    return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+  } catch {
+    return '';
+  }
+}
+
 function createWindow() {
   if (hibernating) {
     hibernating = false;
@@ -912,7 +933,22 @@ button:hover{background:#D4A57433}
     }
   });
 
-  mainWindow.loadURL(BASE_URL);
+  // v0.0.32 — show the branded splash first, then navigate when the server
+  // actually answers. The in-app boot overlay takes over from there.
+  const splash = splashDataUrl();
+  if (splash) {
+    void mainWindow.loadURL(splash).catch(() => {});
+    void (async () => {
+      for (let i = 0; i < 240; i += 1) {
+        if (!mainWindow) return;
+        try { if (await isNextAlreadyRunning()) break; } catch { /* keep waiting */ }
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      try { mainWindow?.loadURL(BASE_URL); } catch { /* the error page owns it */ }
+    })();
+  } else {
+    mainWindow.loadURL(BASE_URL);
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;

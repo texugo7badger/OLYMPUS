@@ -62,6 +62,7 @@
  * Source: https://github.com/colorpulse6/brain-atlas (MIT, © Nichalas Barnes)
  */
 
+import { cn } from '@/lib/utils';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   LOBE_CENTERS,
@@ -169,6 +170,9 @@ export default function BrainAtlas3D() {
   });
   const [rendererKind, setRendererKind] = useState<'webgl2' | 'canvas2d' | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
+  // v0.0.32 — the live ticker: the brain reacts to the hop stream (the same
+  // SSE the activity panels read), so the atlas never feels like a static map.
+  const [liveEvent, setLiveEvent] = useState<{ label: string; tone: 'ready' | 'error' | 'walk' | 'design' } | null>(null);
   // When set, opens the DocumentViewerModal showing the full markdown
   // document for a clicked skill/instinct/knowledge node. Set by the
   // canvas click handler (onCanvasClickRef). Cleared by the modal's
@@ -691,6 +695,36 @@ export default function BrainAtlas3D() {
   /* ---------------------------------------------------------------- */
   /* Render.                                                           */
   /* ---------------------------------------------------------------- */
+  // v0.0.32 — live hop ticker (done / parked / started / campaign end).
+  useEffect(() => {
+    let es: EventSource | null = null;
+    let clear: ReturnType<typeof setTimeout> | null = null;
+    try {
+      es = new EventSource('/api/olympus/hops/stream');
+      es.onmessage = (e) => {
+        try {
+          const ev = JSON.parse(e.data);
+          const type = String(ev?.type ?? '');
+          const hop = String(ev?.hop ?? ev?.hopId ?? 'hop');
+          const map: Record<string, { label: string; tone: 'ready' | 'error' | 'walk' | 'design' }> = {
+            hop_start: { label: `${hop} started`, tone: 'walk' },
+            hop_done: { label: `${hop} done`, tone: 'ready' },
+            hop_parked: { label: `${hop} parked`, tone: 'error' },
+            campaign_start: { label: 'campaign started', tone: 'walk' },
+            campaign_end: { label: 'campaign ended', tone: 'design' },
+          };
+          const hit = map[type];
+          if (!hit) return;
+          setLiveEvent(hit);
+          if (clear) clearTimeout(clear);
+          clear = setTimeout(() => setLiveEvent(null), 7000);
+        } catch { /* a torn frame is ignored */ }
+      };
+      es.onerror = () => { /* EventSource reconnects by design */ };
+    } catch { /* SSE is optional */ }
+    return () => { if (clear) clearTimeout(clear); es?.close(); };
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -973,6 +1007,40 @@ export default function BrainAtlas3D() {
       <div className="absolute bottom-9 right-3 bg-olympus-card/85 backdrop-blur border border-olympus-gold/15 rounded-lg px-2 sm:px-2.5 py-1 text-[10px] text-olympus-text-dim font-mono pointer-events-none flex items-center gap-1.5 sm:gap-2 z-10">
         {nodeCount} nodes · {edgeCount} edges
         {rendererKind === 'canvas2d' && <span className="text-olympus-amber-soft ml-1 hidden sm:inline">· Canvas2D</span>}
+      </div>
+
+      {/* v0.0.32 — the OLYMPUS orbit loop (bottom-left) + the live hop
+          ticker. The mark breathes and the stars orbit while the brain
+          breathes with the campaign; pointer-events-none keeps the canvas
+          fully interactive. */}
+      <div className="absolute bottom-3 left-3 z-10 flex flex-col items-start gap-1 pointer-events-none">
+        <div className="relative">
+          <img
+            src="/olympus-loader.svg"
+            width={78}
+            height={78}
+            alt=""
+            draggable={false}
+            className="opacity-80 select-none drop-shadow-[0_0_18px_rgba(212,165,116,0.20)]"
+          />
+          <span className="absolute bottom-1 right-1 flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide text-olympus-green">
+            <span className="w-1.5 h-1.5 rounded-full bg-olympus-green animate-pulse" />
+            live
+          </span>
+        </div>
+        {liveEvent && (
+          <span
+            className={cn(
+              'rounded-full border px-2 py-0.5 text-[9px] font-mono backdrop-blur bg-olympus-card/85 truncate max-w-52',
+              liveEvent.tone === 'ready' && 'border-olympus-green/40 text-olympus-green',
+              liveEvent.tone === 'error' && 'border-olympus-red/40 text-olympus-red',
+              liveEvent.tone === 'walk' && 'border-olympus-cyan/40 text-olympus-cyan',
+              liveEvent.tone === 'design' && 'border-olympus-purple/40 text-olympus-purple',
+            )}
+          >
+            {liveEvent.label}
+          </span>
+        )}
       </div>
 
       {/* Brain atlas attribution (bottom-center, subtle).
