@@ -22,6 +22,8 @@ import { useWorkingGods } from '@/lib/use-working-gods';
 import { useDocVisible } from '@/lib/use-doc-visible';
 import ThemedLogo from './themed-logo';
 import NotificationCenter from './notification-center';
+import ImmersivePanel from './immersive-panel';
+import { Sparkles as StudioIcon } from 'lucide-react';
 import { useTheme } from '@/lib/theme-store';
 
 interface ProviderInfo {
@@ -64,6 +66,7 @@ export default function StatusBar({
   const docVisible = useDocVisible();
  const activeGod = useOlympus(s => s.activeGod);
   const [theme] = useTheme();
+  const [studio, setStudio] = useState(false);
  // W-D1: the idle fallback reads the user's SELECTED god (its own comment
  // always claimed it) — activeGod alone is the live session, reset to
  // apollo on every submit.
@@ -172,7 +175,7 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.31'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.32'}
    </span>
 )}
  </div>
@@ -193,6 +196,7 @@ export default function StatusBar({
 
  {/* v0.0.32 — notifications + the sleep contract. */}
 		 <NotificationCenter />
+		 {studio && <ImmersivePanel onClose={() => setStudio(false)} />}
 
 		 {/* Compact Brain button — to the RIGHT of Focus Mode. */}
  <CompactBrainButton />

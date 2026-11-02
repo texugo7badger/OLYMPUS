@@ -586,7 +586,8 @@ export default function OlympusWorkspace() {
             style={{ display: focusMode ? 'none' : undefined, overflow: 'hidden' }}
           >
             <div className="h-full flex relative">
-              <FilterSidebar />
+              {/* v0.0.32 — the FILTERS rail belongs to the brain atlas only. */}
+              {leftPane === 'brain' && <FilterSidebar />}
               <div className="flex-1 relative min-w-0">
                 {leftPane === 'brain' && <ChunkErrorBoundary><BrainGraph3D /></ChunkErrorBoundary>}
                 {leftPane === 'live-preview' && <ChunkErrorBoundary><LivePreview /></ChunkErrorBoundary>}

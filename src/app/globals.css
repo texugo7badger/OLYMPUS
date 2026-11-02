@@ -438,3 +438,5 @@
   50% { opacity: .85; transform: translateX(2%); }
 }
 [data-motion="stable"] .olympus-think-shade::before { animation: none; opacity: .4; }
+
+@keyframes olympus-plasma { to { transform: rotate(360deg); } }

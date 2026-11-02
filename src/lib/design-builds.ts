@@ -1,3 +1,5 @@
+import { BUILD_CATEGORIES } from './build-categories';
+
 /**
  * design-builds.ts — v0.0.32 (Epic P seed): the design build registry.
  *
@@ -199,6 +201,37 @@ export const SEED_DESIGN_BUILDS: DesignBuild[] = [
     source: 'seed', note: 'The user approves the spec before a line exists.',
   },
 
+  // v0.0.32 — the wide default shelf (one per common task class).
+  { id: 'empty-states', name: 'Empty states', signature: 'empty state zero data onboarding placeholder', god: 'athena', demigods: ['ui-designer'], skills: ['frontend-design', 'impeccable'], mcps: ['originkit'], verify: ['visual:empty-exists'], tier: 'cold', category: 'design', source: 'seed', note: 'An empty state is a first-run page, not a blank box.' },
+  { id: 'onboarding-flow', name: 'Onboarding flow', signature: 'onboarding wizard first run setup steps', god: 'athena', demigods: ['ux-researcher', 'ui-designer'], skills: ['frontend-design', 'writing-guidelines'], mcps: ['originkit'], verify: ['interaction:steps', 'a11y:focus'], tier: 'cold', category: 'design', source: 'seed', note: 'Three steps max; each one earns its place.' },
+  { id: 'settings-page', name: 'Settings page', signature: 'settings preferences form save toggle', god: 'athena', demigods: ['ui-designer'], skills: ['frontend-patterns', 'frontend-a11y'], mcps: ['shadcn'], verify: ['build', 'a11y:labels'], tier: 'cold', category: 'design', source: 'seed', note: 'Danger actions separated and confirmed.' },
+  { id: 'pricing-page', name: 'Pricing page', signature: 'pricing plans comparison checkout tier', god: 'athena', demigods: ['ui-designer'], skills: ['frontend-design', 'copywriting'], mcps: ['originkit'], verify: ['visual:pricing', 'build'], tier: 'cold', category: 'design', source: 'seed', note: 'The recommended plan is the honest default.' },
+  { id: 'email-template', name: 'Email template', signature: 'email template transaction notification html mail', god: 'athena', demigods: ['ui-designer'], skills: ['frontend-design'], mcps: ['context7'], verify: ['html:valid'], tier: 'cold', category: 'design', source: 'seed', note: 'Table-safe HTML; the preview is the gate.' },
+  { id: 'icon-set', name: 'Icon set', signature: 'icons glyph set svg symbols', god: 'athena', demigods: ['2d-asset-designer'], skills: ['image-enhancer', 'design-md'], mcps: ['originkit'], verify: ['svg:valid', 'visual:grid'], tier: 'cold', category: 'design', source: 'seed', note: 'One grid, one stroke, one corner radius.' },
+  { id: 'illustration-set', name: 'Illustration set', signature: 'illustration art asset scene hero image', god: 'hephaestus', demigods: ['image-generator'], skills: ['art-generate', 'image-enhancer'], mcps: ['fal'], verify: ['asset:vault'], tier: 'cold', category: 'design', source: 'seed', note: 'Draft on the free lane; final on BYOK.' },
+  { id: 'data-table', name: 'Data table', signature: 'table grid rows columns sort filter pagination', god: 'athena', demigods: ['ui-designer'], skills: ['frontend-patterns', 'design-system'], mcps: ['shadcn'], verify: ['build', 'interaction:sort'], tier: 'warm', category: 'design', source: 'seed', note: 'Density, sticky header, keyboard sort.' },
+  { id: 'form-flow', name: 'Form flow', signature: 'form validation input submit error success', god: 'athena', demigods: ['ui-designer'], skills: ['frontend-a11y', 'frontend-patterns'], mcps: ['shadcn'], verify: ['a11y:labels', 'interaction:submit'], tier: 'warm', category: 'design', source: 'seed', note: 'Errors next to the field, never a toast only.' },
+  { id: 'error-pages', name: 'Error pages', signature: '404 500 error not found offline page', god: 'athena', demigods: ['ui-designer'], skills: ['frontend-design'], mcps: ['originkit'], verify: ['visual:error', 'build'], tier: 'cold', category: 'design', source: 'seed', note: 'A way forward, not a dead end.' },
+  { id: 'seo-pass', name: 'SEO pass', signature: 'seo meta sitemap robots structured data open graph', god: 'hephaestus', demigods: ['code-verifier'], skills: ['seo', 'frontend-patterns'], mcps: ['context7'], verify: ['meta:present', 'build'], tier: 'cold', category: 'code', source: 'seed', note: 'Metadata is part of the page, not an afterthought.' },
+  { id: 'api-docs', name: 'API docs', signature: 'api docs openapi reference endpoints examples', god: 'hermes', demigods: ['api-integrator'], skills: ['api-design', 'writing-guidelines'], mcps: ['context7'], verify: ['openapi:valid'], tier: 'cold', category: 'code', source: 'seed', note: 'A request and a response for every route.' },
+  { id: 'cli-tool', name: 'CLI tool', signature: 'cli command flags argv terminal tool', god: 'hephaestus', demigods: ['script-reviewer'], skills: ['python-patterns', 'error-handling'], mcps: ['filesystem'], verify: ['--help', 'exit:0'], tier: 'cold', category: 'code', source: 'seed', note: 'The help text is the contract.' },
+  { id: 'worker-queue', name: 'Worker queue', signature: 'queue worker job retry backoff async', god: 'hephaestus', demigods: ['code-verifier'], skills: ['backend-patterns', 'error-handling'], mcps: ['context7'], verify: ['build', 'job:retry'], tier: 'cold', category: 'code', source: 'seed', note: 'Idempotent, bounded, observable.' },
+  { id: 'auth-hardening', name: 'Auth hardening', signature: 'auth session jwt cookie csrf password reset', god: 'artemis', demigods: ['security-reviewer', 'appsec-engineer'], skills: ['security-review', 'django-security'], mcps: ['github'], verify: ['scan:0-high'], tier: 'warm', category: 'security', source: 'seed', note: 'Every session path threat-modeled.' },
+  { id: 'secrets-rotation', name: 'Secrets rotation', signature: 'secret key rotate env vault credential', god: 'artemis', demigods: ['secrets-scanner'], skills: ['secrets-scanner', 'security-scan'], mcps: ['github'], verify: ['secrets:0', 'rotate:drill'], tier: 'cold', category: 'security', source: 'seed', note: 'Rotate, verify, revoke — in that order.' },
+  { id: 'backup-restore', name: 'Backup restore', signature: 'backup restore dump snapshot recovery database', god: 'persephone', demigods: ['dbre'], skills: ['database-migrations', 'postgres-patterns'], mcps: ['postgres'], verify: ['restore:drill', 'count:match'], tier: 'cold', category: 'data', source: 'seed', note: 'An untested backup is a hope.' },
+  { id: 'query-tuning', name: 'Query tuning', signature: 'query slow index explain analyze performance sql', god: 'persephone', demigods: ['query-optimizer'], skills: ['postgres-patterns', 'mysql-patterns'], mcps: ['postgres'], verify: ['explain:index', 'time:<100ms'], tier: 'cold', category: 'data', source: 'seed', note: 'EXPLAIN before and after, quoted.' },
+  { id: 'cache-layer', name: 'Cache layer', signature: 'cache redis ttl invalidation stale', god: 'prometheus', demigods: ['cache-architect'], skills: ['redis-patterns', 'backend-patterns'], mcps: ['context7'], verify: ['ttl:set', 'invalidate:test'], tier: 'cold', category: 'infra', source: 'seed', note: 'A cache with no invalidation is a bug factory.' },
+  { id: 'observability', name: 'Observability', signature: 'logs metrics traces dashboard alert observability', god: 'prometheus', demigods: ['sre'], skills: ['deployment-patterns', 'error-handling'], mcps: ['grafana'], verify: ['dash:exists', 'alert:fires'], tier: 'cold', category: 'infra', source: 'seed', note: 'One screen per question, not one wall.' },
+  { id: 'release-train', name: 'Release train', signature: 'release version tag changelog publish deploy', god: 'prometheus', demigods: ['release-engineer'], skills: ['deployment-patterns'], mcps: ['github'], verify: ['tag:exists', 'release:body'], tier: 'warm', category: 'infra', source: 'seed', note: 'The tag is the release notes.' },
+  { id: 'webhook-flow', name: 'Webhook flow', signature: 'webhook event signature retry endpoint', god: 'hermes', demigods: ['webhook-engineer'], skills: ['api-design', 'error-handling'], mcps: ['context7'], verify: ['signature:verify', 'retry:test'], tier: 'cold', category: 'integration', source: 'seed', note: 'Verify, dedupe, then act.' },
+  { id: 'payment-flow', name: 'Payment flow', signature: 'payment checkout subscription invoice stripe billing', god: 'hermes', demigods: ['payments-billing-engineer'], skills: ['api-design', 'security-review'], mcps: ['context7'], verify: ['idempotency:test', 'webhook:verify'], tier: 'cold', category: 'integration', source: 'seed', note: 'Idempotency and the webhook are the product.' },
+  { id: 'spec-review', name: 'Spec review', signature: 'spec review requirements acceptance scope', god: 'apollo', demigods: ['spec-author', 'scope-gatekeeper'], skills: ['intent-driven-development', 'writing-plans'], mcps: ['context7'], verify: ['spec:approved'], tier: 'warm', category: 'planning', source: 'seed', note: 'A no is a deliverable too.' },
+  { id: 'roadmap-plan', name: 'Roadmap plan', signature: 'roadmap plan milestones priorities quarters', god: 'apollo', demigods: ['planner', 'architect'], skills: ['writing-plans', 'brainstorming'], mcps: ['context7'], verify: ['plan:approved'], tier: 'cold', category: 'planning', source: 'seed', note: 'Sequenced by risk, not by enthusiasm.' },
+  { id: 'skill-authoring', name: 'Skill authoring', signature: 'skill author prompt instructions trigger', god: 'callimachus', demigods: ['skill-indexer'], skills: ['writing-skills', 'skill-index'], mcps: ['filesystem'], verify: ['index:rebuilt'], tier: 'cold', category: 'curation', source: 'seed', note: 'A trigger that fires on the right task.' },
+  { id: 'instinct-tuning', name: 'Instinct tuning', signature: 'instinct confidence seed empirical archive', god: 'callimachus', demigods: ['instinct-curator'], skills: ['continuous-learning-v2', 'knowledge-ops'], mcps: ['memory'], verify: ['gate:logged'], tier: 'cold', category: 'memory', source: 'seed', note: 'Promote on evidence, archive on silence.' },
+  { id: 'brain-backup', name: 'Brain backup', signature: 'backup brain vault restore export', god: 'callimachus', demigods: ['brain-backup', 'brain-restore'], skills: ['knowledge-ops'], mcps: ['filesystem'], verify: ['backup:restore'], tier: 'cold', category: 'memory', source: 'seed', note: 'A restore drill, not just an archive.' },
+  { id: 'doc-truth', name: 'Docs truth', signature: 'docs claims sourced readme architecture verify', god: 'callimachus', demigods: ['docs-verifier'], skills: ['writing-guidelines', 'docs-verifier'], mcps: ['filesystem'], verify: ['docs:truth'], tier: 'cold', category: 'curation', source: 'seed', note: 'Every claim carries its source.' },
+
 ];
 
 const SEED_CATEGORY: Record<string, BuildCategory> = {
@@ -332,4 +365,34 @@ export function describeBuild(build: DesignBuildWithStats): string {
   const skills = build.skills.length ? build.skills.join(', ') : 'no skills';
   const mcps = build.mcps.length ? build.mcps.join(', ') : 'no MCPs';
   return `${build.god} leads ${agents} for “${build.signature}”. Skills: ${skills}. MCPs: ${mcps}. ${build.note ? `${build.note} ` : ''}Evidence: ${evidence}.`;
+}
+
+/**
+ * v0.0.32 — the DEFAULT MATRIX. Every sector × every god × two variants
+ * (skill-led and agent-led). This is the wide shelf the user asked for; the
+ * combinatorial space is astronomically larger (the registry learns the rest
+ * from outcomes), but every god and sector is covered by a real default.
+ */
+const MATRIX_GODS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
+const MATRIX: DesignBuild[] = BUILD_CATEGORIES.flatMap((cat) => MATRIX_GODS.flatMap((god) => {
+  const skills = cat.skills.slice(0, 2);
+  const mcps = cat.mcps.slice(0, 1);
+  const demigods = cat.demigods.slice(0, 2);
+  return [
+    {
+      id: `mx-${cat.id}-${god}-s`, name: `${cat.name} · ${god} · skill`, signature: `${cat.id} ${god} skill ${cat.skills[0] ?? ''}`,
+      god, demigods: demigods.slice(0, 1), skills, mcps, verify: [`${cat.id}:check`], tier: 'cold',
+      category: cat.id as BuildCategory, source: 'seed',
+      note: `Matrix default: ${cat.skills[0]} + ${cat.mcps[0]} with ${cat.demigods[0]}.`,
+    },
+    {
+      id: `mx-${cat.id}-${god}-p`, name: `${cat.name} · ${god} · pair`, signature: `${cat.id} ${god} parallel ${cat.demigods.join(' ')}`,
+      god, demigods, skills: skills.slice(0, 1), mcps, verify: [`${cat.id}:check`], tier: 'cold',
+      category: cat.id as BuildCategory, source: 'seed',
+      note: `Matrix default: ${demigods.length} agents in parallel on ${cat.name}.`,
+    },
+  ];
+}));
+for (const build of MATRIX) {
+  if (!SEED_DESIGN_BUILDS.some((b) => b.id === build.id)) SEED_DESIGN_BUILDS.push(build);
 }
