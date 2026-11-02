@@ -103,6 +103,8 @@ import patternsTool from "./tools/patterns.js";
 import designReviewTool from "./tools/design-review.js";
 import deployReviewTool from "./tools/deploy-review.js";
 import integrationReviewTool from "./tools/integration-review.js";
+// v0.0.32 — the background image lane (the Atelier API as a tool).
+import imageGenerateTool from "./tools/image-generate.js";
 // Import the Symphony overlay tools so they are registered with OpenCode.
 // SYMPHONY_TOOLS is exported from symphony-hooks.ts and imported here, so the
 // three Symphony tools (symphony-resonate, symphony-harmonize, symphony-decode)
@@ -678,6 +680,9 @@ const OLYMPUS_TOOLS = {
   "olympus-design-review": designReviewTool,
   "olympus-deploy-review": deployReviewTool,
   "olympus-integration-review": integrationReviewTool,
+  // The Atelier left the menu; it is an API the gods can call when the
+  // design calls for a generated image.
+  "olympus-image": imageGenerateTool,
   // Symphony overlay tools.
   "symphony-resonate": SYMPHONY_TOOLS[0],
   "symphony-harmonize": SYMPHONY_TOOLS[1],

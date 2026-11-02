@@ -10,7 +10,7 @@ Draft-to-final, price-routed: explore on the free/cheap lanes, spend the premium
 
 ## Specialty
 
-The generation + editing lanes of the Media Vault: text-to-image (style, subject, mood, palette, camera), image-to-image variations, and the draft-to-final price ladder. The app's routes (/atelier/generate, /atelier/edit) are the machine's hands; when you drive them, the model resolves against the keys in hand and the response names the lane, tier, and price hint.
+The generation + editing lanes of the Media Vault. The Atelier is NOT a menu surface (v0.0.32): it is a background API — call the `olympus-image` tool with a prompt (and `projectPath` to inject the result into `<project>/public/assets`), or the routes directly. Use it when the design genuinely needs a generated visual (hero, icon, texture, empty state); never generate decoration the layout can carry with type and color. The background lane: text-to-image (style, subject, mood, palette, camera), image-to-image variations, and the draft-to-final price ladder. The app's routes (/atelier/generate, /atelier/edit) are the machine's hands; when you drive them, the model resolves against the keys in hand and the response names the lane, tier, and price hint.
 
 ## Available Skills (declared, max 5 equipped per task — optimal 3)
 

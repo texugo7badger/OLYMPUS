@@ -54,7 +54,6 @@ export default function ActivityBar() {
       <ActBtn icon={History} label="Recent activity" active={leftPane === 'timeline'} onClick={() => setLeftPane('timeline')} />
       <ActBtn icon={DollarSign} label="Cost" active={leftPane === 'cost'} onClick={() => setLeftPane('cost')} />
       <ActBtn icon={BarChart3} label="Benchmarks" active={leftPane === 'benchmarks'} onClick={() => setLeftPane('benchmarks')} />
-      <ActBtn icon={Palette} label="Atelier" active={leftPane === 'atelier'} onClick={() => setLeftPane('atelier')} accent />
       <ActBtn icon={Network} label="Sync map" active={leftPane === 'sync-map'} onClick={() => setLeftPane('sync-map')} />
       <ActBtn icon={Boxes} label="Craft apps" active={leftPane === 'craft-apps'} onClick={() => setLeftPane('craft-apps')} accent />
       <ActBtn icon={SlidersHorizontal} label="LLM strategy" active={leftPane === 'provider-settings'} onClick={() => setLeftPane('provider-settings')} />
