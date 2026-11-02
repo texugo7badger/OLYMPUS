@@ -201,3 +201,11 @@ the palette is the only thing that changes.
 - Campaigns carry a 60-minute wall-clock budget; new hops stop at the
   deadline with a named resume point, and the live preview follows each
   finished part (auto-follow toggle, part name in the footer).
+
+### v0.0.39 — the host budget
+
+Settings now ends with **System · resource governor**: a live memory bar, the
+OLYMPUS process census (count + RSS), load vs cores, and the honest verdict.
+`reclaim` stops the optional chat fleet; the next prompt recreates it. A new
+dev server is refused when it would leave less than 1.2 GB free, and the
+refusal shows the measured numbers instead of a generic failure.

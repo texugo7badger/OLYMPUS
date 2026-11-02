@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.38, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.39, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,14 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.39 — the host budget.** A resource governor reads the machine's own
+memory and the OLYMPUS process census, classifies pressure green/amber/red,
+and refuses a new dev server when it would leave less than 1.2 GB free — with
+the real numbers and the reclaim path in the refusal. Settings carries the
+live memory bar, the process count/RSS and a one-click reclaim that stops the
+optional chat fleet (the next prompt recreates it). The governor is cached for
+4s, pauses when the window is hidden, and never guesses.
 
 **v0.0.38 — 60 FPS & the project's own identity.** Hardware acceleration is
 the default again (measured 60 FPS on the Brain Atlas and the creative mode;
