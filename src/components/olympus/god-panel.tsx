@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { useDocVisible } from '@/lib/use-doc-visible';
 import { useEffect, useState } from 'react';
 import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
+import { useLanguage, godName, getLanguage } from '@/lib/i18n';
 import type { DemigodLive } from '@/lib/tasks-sheet';
 
 /** Coarse status bucket. Finer wire phases collapse into these. */
@@ -109,6 +110,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   const [campaignStats, setCampaignStats] = useState<null | { total: number; completed: number; parked: number; projectedRemainingMs: number }>(null);
   // The god's LIVE demigod dispatches (the arsenal in action — the
   // parallelism-of-parallelism surface: god → demigod chips).
+  const language = useLanguage();
   const [demigods, setDemigods] = useState<Record<string, DemigodLive[]>>({});
   const [sheetHop, setSheetHop] = useState<string | null>(null);
   const [, setTick] = useState(0);
@@ -196,7 +198,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
               type="button"
               onClick={() => onFocus(selected ? null : s.god)}
               aria-pressed={selected}
-              data-tip={selected ? 'Show every god' : `Focus the stream on ${DISPLAY_NAMES[s.god] || s.god}`}
+              data-tip={selected ? 'Show every god' : `Focus the stream on ${godName(s.god, language)}`}
               className={cn(
                 'w-full text-left px-2 py-1.5 border-b border-olympus-gold/5 transition-colors',
                 selected ? 'bg-olympus-gold/10' : 'hover:bg-olympus-gold/5',
@@ -209,7 +211,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                   className={cn('shrink-0', spinning && 'animate-pulse')}
                 />
                 <span className="text-[10px] font-mono font-semibold truncate" style={{ color }}>
-                  {DISPLAY_NAMES[s.god] || s.god}
+                  {godName(s.god, language)}
                 </span>
                 {s.steps > 0 && (
                   <span className="text-[8px] font-mono text-olympus-text-dim">
@@ -377,7 +379,7 @@ export function ParthenonRailCollapsed({ states, focusedGod, onFocus, onExpand }
           const color = STATUS_COLOR[s.status];
           const selected = focusedGod === s.god;
           const spinning = s.status === 'working';
-          const title = `${DISPLAY_NAMES[s.god] || s.god} — ${s.task || s.lastEvent || STATUS_LABEL[s.status]}${s.artifacts && s.artifacts.length ? `\n${s.artifacts.slice(0, 4).join('\n')}` : ''}`;
+          const title = `${godName(s.god, getLanguage())} — ${s.task || s.lastEvent || STATUS_LABEL[s.status]}${s.artifacts && s.artifacts.length ? `\n${s.artifacts.slice(0, 4).join('\n')}` : ''}`;
           return (
             <button
               key={s.god}

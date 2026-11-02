@@ -803,10 +803,10 @@ export default function SettingsDialog() {
       <DialogContent className="bg-olympus-panel border-olympus-gold/20 text-olympus-text max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-olympus-gold">
-            <Settings size={16} /> Settings
+            <Settings size={16} /> {t('settings.title', language)}
           </DialogTitle>
           <DialogDescription className="text-olympus-text-dim">
-            LLM strategy, default provider, and per-god model classes.
+            {t('settings.desc', language)}
             Changes persist to <code className="text-olympus-gold">~/.olympus/llm-providers.json</code>.
           </DialogDescription>
         </DialogHeader>
@@ -832,20 +832,20 @@ export default function SettingsDialog() {
             <section>
               <div className="flex items-center gap-2 mb-2">
                 <Palette size={12} className="text-olympus-gold" />
-                <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">Appearance</h3>
-                <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">applies instantly everywhere</span>
+                <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">{t('settings.appearance', language)}</h3>
+                <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">{t('settings.applies', language)}</span>
               </div>
 
               <div className="flex items-center gap-1.5 mb-2">
                 <button
                   onClick={() => setTheme({ mode: 'dark', presetId: THEME_PRESETS.find((p) => p.mode === 'dark')!.id })}
                   className={cn('flex items-center gap-1 px-2 py-1 rounded border text-[9px] font-mono uppercase', theme.mode === 'dark' ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text')}
-                ><MoonModeIcon active={theme.mode === 'dark'} /> dark</button>
+                ><MoonModeIcon active={theme.mode === 'dark'} /> {t('settings.dark', language)}</button>
                 <button
                   onClick={() => setTheme({ mode: 'light', presetId: THEME_PRESETS.find((p) => p.mode === 'light')!.id })}
                   className={cn('flex items-center gap-1 px-2 py-1 rounded border text-[9px] font-mono uppercase', theme.mode === 'light' ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text')}
-                ><SunModeIcon active={theme.mode === 'light'} /> light</button>
-                <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">colors come from the preset or the palette lab</span>
+                ><SunModeIcon active={theme.mode === 'light'} /> {t('settings.light', language)}</button>
+                <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">{t('settings.colorsNote', language)}</span>
               </div>
 
               <div className="grid grid-cols-3 gap-1.5">
@@ -870,7 +870,7 @@ export default function SettingsDialog() {
               </div>
 
               <div className="flex items-center justify-end gap-2 mt-2">
-                <span className="text-[9px] font-mono text-olympus-text-dim uppercase" data-tip="Decorative motion off; spinners and status stay">stable mode</span>
+                <span className="text-[9px] font-mono text-olympus-text-dim uppercase" data-tip="Decorative motion off; spinners and status stay">{t('settings.stableMode', language)}</span>
                 <Switch
                   checked={theme.motion === 'stable'}
                   onCheckedChange={(v) => setTheme({ motion: v ? 'stable' : 'full' })}
@@ -882,7 +882,7 @@ export default function SettingsDialog() {
               <div className="mt-2 rounded border border-olympus-gold/20 bg-olympus-bg/50 p-2">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <Palette size={10} className="text-olympus-gold" />
-                  <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">palette lab</span>
+                  <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">{t('settings.paletteLab', language)}</span>
                   <span className="text-[8px] font-mono text-olympus-text-dim">full family · contrast enforced</span>
                   <button
                     onClick={() => setLabSeed(randomSeed(labSeed.mode))}
@@ -939,7 +939,7 @@ export default function SettingsDialog() {
                   >
                     reset to preset
                   </button>
-                  <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">{theme.custom ? 'custom palette active' : 'preset active'}</span>
+                  <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">{theme.custom ? t('settings.active', language) : t('settings.present', language)}</span>
                 </div>
               </div>
 
@@ -966,14 +966,14 @@ export default function SettingsDialog() {
             <section>
               <div className="flex items-center gap-2 mb-2">
                 <Zap size={12} className="text-olympus-gold" />
-                <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">LLM Strategy</h3>
+                <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">{t('settings.llmStrategy', language)}</h3>
                 <Button
                   variant="ghost"
                   onClick={() => { setOpen(false); setBuilderOpen(true); }}
                   className="ml-auto h-6 px-2 text-[9px] font-mono text-olympus-gold hover:bg-olympus-gold/10"
                   aria-label="Build a strategy — pick a model per god"
                 >
-                  <Plus size={11} className="mr-1" /> Build
+                  <Plus size={11} className="mr-1" /> {t('settings.build', language)}
                 </Button>
               </div>
               <div className="grid grid-cols-3 gap-1.5 mb-2">
@@ -991,6 +991,11 @@ export default function SettingsDialog() {
                   const isActive = strategy === s.id;
                   const req = strategyApiRequirement(s.id);
                   const blocked = req ? data?.auth?.[req.kind] === false : false;
+                  const strategyKey = s.id.includes('local') ? 'local'
+                    : s.id.includes('max-quality') ? (s.id.startsWith('go') ? 'goMax' : 'zenMax')
+                    : s.id.includes('balanced') ? (s.id.startsWith('go') ? 'goBalanced' : 'zenBalanced')
+                    : s.id.startsWith('go') ? 'goBudget' : 'zenBudget';
+                  const description = t(`strategy.${strategyKey}`, language) || s.description;
                   return (
                     <button
                       key={s.id}
@@ -1012,7 +1017,7 @@ export default function SettingsDialog() {
                         </span>
                       </div>
                       {/* line-clamp-2 to prevent overflow */}
-                      <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mb-1 line-clamp-2">{s.description}</div>
+                      <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mb-1 line-clamp-2">{description}</div>
                       <div className="text-[9px] font-mono uppercase tracking-wide">
                         {blocked ? (
                           <span className="text-olympus-amber-soft inline-flex items-center gap-1">needs {req?.label} <Lock size={9} /></span>
@@ -1220,7 +1225,7 @@ export default function SettingsDialog() {
             onClick={() => setOpen(false)}
             className="text-olympus-text-dim hover:text-olympus-text hover:bg-olympus-gold/5"
           >
-            Cancel
+            {t('settings.cancel', language)}
           </Button>
           <Button
             onClick={save}
@@ -1230,7 +1235,7 @@ export default function SettingsDialog() {
             {saving ? <Loader2 size={12} className="animate-spin mr-1.5" /> :
              saved ? <Check size={12} className="mr-1.5" /> :
              <Save size={12} className="mr-1.5" />}
-            {saved ? 'Saved' : 'Save changes'}
+            {saved ? t('settings.saved', language) : t('settings.save', language)}
           </Button>
         </DialogFooter>
       </DialogContent>

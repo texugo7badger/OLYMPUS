@@ -297,3 +297,27 @@ export function t(key: string, lang: Language = getLanguage(), vars?: Record<str
 /* Loaded after the base dictionary to keep this file readable. */
 import { EXTRA_DICTS } from './i18n-extra';
 for (const [lang, dict] of Object.entries(EXTRA_DICTS)) DICTS[lang as Language] = dict;
+
+import { UI_DICTS } from './i18n-ui';
+for (const [lang, dict] of Object.entries(UI_DICTS)) {
+  DICTS[lang as Language] = { ...(DICTS[lang as Language] ?? en), ...dict };
+}
+
+/* ------------------------------------------------------------------ */
+/* God domains (the one-line role under the name).                     */
+/* ------------------------------------------------------------------ */
+const GOD_DOMAINS: Record<Language, Record<string, string>> = {
+  en: { apollo: 'Planning & architecture', atlas: 'Orchestration & execution', artemis: 'Security & auditing', athena: 'Frontend & design', dionysus: 'QA & testing', hephaestus: 'Backend code', hermes: 'Integrations & MCPs', persephone: 'Database & persistence', prometheus: 'DevOps & CI/CD', callimachus: 'Vault curation' },
+  'pt-BR': { apollo: 'Planejamento e arquitetura', atlas: 'Orquestração e execução', artemis: 'Segurança e auditoria', athena: 'Frontend e design', dionysus: 'QA e testes', hephaestus: 'Código backend', hermes: 'Integrações e MCPs', persephone: 'Banco de dados e persistência', prometheus: 'DevOps e CI/CD', callimachus: 'Curadoria do vault' },
+  es: { apollo: 'Planificación y arquitectura', atlas: 'Orquestación y ejecución', artemis: 'Seguridad y auditoría', athena: 'Frontend y diseño', dionysus: 'QA y pruebas', hephaestus: 'Código backend', hermes: 'Integraciones y MCPs', persephone: 'Base de datos y persistencia', prometheus: 'DevOps y CI/CD', callimachus: 'Curaduría del vault' },
+  fr: { apollo: 'Planification & architecture', atlas: 'Orchestration & exécution', artemis: 'Sécurité & audit', athena: 'Frontend & design', dionysus: 'QA & tests', hephaestus: 'Code backend', hermes: 'Intégrations & MCPs', persephone: 'Base de données & persistance', prometheus: 'DevOps & CI/CD', callimachus: 'Curation du vault' },
+  de: { apollo: 'Planung & Architektur', atlas: 'Orchestrierung & Ausführung', artemis: 'Sicherheit & Audit', athena: 'Frontend & Design', dionysus: 'QA & Tests', hephaestus: 'Backend-Code', hermes: 'Integrationen & MCPs', persephone: 'Datenbank & Persistenz', prometheus: 'DevOps & CI/CD', callimachus: 'Vault-Kuration' },
+  ja: { apollo: '計画とアーキテクチャ', atlas: 'オーケストレーションと実行', artemis: 'セキュリティと監査', athena: 'フロントエンドとデザイン', dionysus: 'QA とテスト', hephaestus: 'バックエンドコード', hermes: '統合と MCP', persephone: 'データベースと永続化', prometheus: 'DevOps と CI/CD', callimachus: 'Vault キュレーション' },
+  zh: { apollo: '规划与架构', atlas: '编排与执行', artemis: '安全与审计', athena: '前端与设计', dionysus: 'QA 与测试', hephaestus: '后端代码', hermes: '集成与 MCP', persephone: '数据库与持久化', prometheus: 'DevOps 与 CI/CD', callimachus: '知识库策展' },
+};
+
+export function godDomain(god: string | null | undefined, lang: Language = getLanguage()): string {
+  if (!god) return '';
+  const key = god.toLowerCase().replace(/^god:/, '');
+  return GOD_DOMAINS[lang]?.[key] ?? GOD_DOMAINS.en[key] ?? '';
+}

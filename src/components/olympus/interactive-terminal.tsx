@@ -2174,7 +2174,7 @@ export default function InteractiveTerminal() {
                 }
               }}
               disabled={awaitingAnswer || awaitingContext}
-              placeholder={awaitingAnswer ? 'click a choice above (or type optional context in the box under the question)...' : awaitingContext ? 'type context below (Cmd+Enter)...' : submitting ? 'Type to queue the next message (posts when this run idles)…' : t('terminal.placeholder', language)}
+              placeholder={awaitingAnswer ? 'click a choice above (or type optional context in the box under the question)...' : awaitingContext ? 'type context below (Cmd+Enter)...' : submitting ? t('terminal.queuePlaceholder', language) : t('terminal.placeholder', language)}
               className="flex-1 bg-transparent border-0 outline-none resize-none text-[12px] font-mono leading-relaxed text-olympus-text placeholder:text-olympus-text-dim disabled:opacity-50 max-h-48 overflow-y-auto py-1"
             />
             {/* Task 3 — the always-visible "ctx" toggle button is gone.
