@@ -598,6 +598,64 @@ export function activate(context: vscode.ExtensionContext) {
         `Focused OLYMPUS. Click "Open in Editor" in the Editor Bridge tab to launch your editor on:\n${ws}`,
       );
     }),
+
+    // v0.0.46 — SEND TO GOD. The editor is where the context lives; the god
+    // is where the work happens. Build a precise, paste-ready block (file,
+    // line, selection) and focus OLYMPUS so the prompt lands in one paste.
+    // Never sends silently: the clipboard is the user's hand.
+    vscode.commands.registerCommand('olympus.sendToGod', async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showWarningMessage('Open a file first.');
+        return;
+      }
+      const gods = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
+      const god = await vscode.window.showQuickPick(gods, {
+        title: 'Send to which god?',
+        placeHolder: 'apollo plans · athena designs · hephaestus builds · artemis audits',
+      });
+      if (!god) return;
+      const doc = editor.document;
+      const sel = editor.selection;
+      const selected = sel.isEmpty ? '' : doc.getText(sel);
+      const line = sel.start.line + 1;
+      const endLine = sel.end.line + 1;
+      const rel = vscode.workspace.asRelativePath(doc.uri);
+      const block = [
+        `@${god} — context from ${rel}:${line}${sel.isEmpty ? '' : `-${endLine}`}`,
+        '',
+        selected
+          ? '```' + doc.languageId + '\n' + selected + '\n```'
+          : `[no selection — look at ${rel} around line ${line}]`,
+        '',
+        `Project: ${vscode.workspace.workspaceFolders?.[0]?.name ?? '(no folder)'}`,
+        '',
+      ].join('\n');
+      await vscode.env.clipboard.writeText(block);
+      if (client.connected) client.send({ type: 'focus-olympus' });
+      vscode.window.showInformationMessage(
+        `Context for ${god} copied (${rel}:${line}) — paste it in the OLYMPUS terminal.`,
+      );
+    }),
+
+    // v0.0.46 — HOP CONTEXT: the editor can answer "what is the walk doing?"
+    // without leaving the file. Read-only, local, no token.
+    vscode.commands.registerCommand('olympus.showHopContext', async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:3737/api/olympus/run-state');
+        const d: any = await res.json();
+        const hops = d?.hops ?? {};
+        const running = Array.isArray(hops.inFlightList) && hops.inFlightList.length
+          ? hops.inFlightList.map((h: any) => `${h.hopId || h.id} (${h.god}, ${h.status || 'running'})`).join(', ')
+          : 'none';
+        vscode.window.showInformationMessage(
+          `OLYMPUS ${d?.verdict ?? 'unknown'} · ${hops.completed ?? 0}/${d?.campaign?.total ?? '?'} hops · running: ${running}`,
+          { modal: false },
+        );
+      } catch (e: any) {
+        vscode.window.showWarningMessage(`OLYMPUS is not reachable on :3737 (${e?.message || e}).`);
+      }
+    }),
   );
 
   // Auto-connect on activation if configured.

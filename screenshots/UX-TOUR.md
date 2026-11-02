@@ -261,3 +261,11 @@ status (`completed/total`, color-coded, with the full hop count in the
 tooltip) — not just the active project. Design memory, the living brief and
 the editor-follow lane are scoped by project, so two projects cannot leak a
 preference or a followed file into each other.
+
+### v0.0.46 — the editor speaks to the gods
+
+The VSCode-family extension (`olympus-bridge` 0.0.15) adds **Send Selection to
+a God** (right-click): choose a god, get a paste-ready block with the relative
+file, line range and the selected code, copied to the clipboard with OLYMPUS
+focused — never typed silently — and **Show Live Hop Context**, which reads
+the real run-state and names the running hops. The VSIX is built and committed.

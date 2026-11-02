@@ -2,7 +2,7 @@
   "name": "olympus-bridge",
   "displayName": "OLYMPUS Bridge",
   "description": "Embed the live OLYMPUS interactive terminal inside VSCode / VSCodium / Cursor. The terminal is shared with the one running in the OLYMPUS Electron app — type in either, see it in both. Only works when OLYMPUS is installed locally.",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "publisher": "olympus",
   "license": "AGPL-3.0-or-later",
   "repository": {
@@ -80,6 +80,13 @@
           "when": "view == olympus.terminals && viewItem == pty",
           "group": "inline"
         }
+      ],
+      "editor/context": [
+        {
+          "command": "olympus.sendToGod",
+          "when": "editorHasSelection || editorTextFocus",
+          "group": "navigation@9"
+        }
       ]
     },
     "commands": [
@@ -121,6 +128,18 @@
       {
         "command": "olympus.openEditorOnWorkspace",
         "title": "OLYMPUS: Open OLYMPUS on this workspace",
+        "category": "OLYMPUS"
+      },
+      {
+        "command": "olympus.sendToGod",
+        "title": "OLYMPUS: Send Selection to a God",
+        "icon": "$(send)",
+        "category": "OLYMPUS"
+      },
+      {
+        "command": "olympus.showHopContext",
+        "title": "OLYMPUS: Show Live Hop Context",
+        "icon": "$(pulse)",
         "category": "OLYMPUS"
       }
     ],

@@ -163,6 +163,20 @@ The server also sends unsolicited events:
 
 Binary WebSocket frames are treated as raw input to the first attached PTY (low-latency keystroke path — no JSON wrapping).
 
+## Sending context to a god (v0.0.46)
+
+The VSCode-family extension (`olympus-bridge` 0.0.15) adds two commands:
+
+| Command | What it does |
+|---|---|
+| **OLYMPUS: Send Selection to a God** (`olympus.sendToGod`, right-click in the editor) | Asks which god, builds a paste-ready block with the relative file, the line range and the selected code, copies it and focuses OLYMPUS. It never types into the app by itself — the user pastes. |
+| **OLYMPUS: Show Live Hop Context** (`olympus.showHopContext`) | Reads `GET /api/olympus/run-state` and shows the verdict, completed/total hops and the running hops. Read-only. |
+
+The Zed extension keeps the slash-command + "Open in OLYMPUS" lanes; the
+VSCode-family extension is the one with the contextual send. Rebuild it with
+`cd extensions/vscode-olympus && npx tsc -p ./ && npm run package`; the VSIX
+is `olympus-bridge-<version>.vsix`.
+
 ## Security
 
 - The bridge binds to **127.0.0.1 only** — never exposed to the network.

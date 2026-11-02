@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.45, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.46, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,13 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.46 — the editor speaks to the gods.** The VSCode-family extension
+(0.0.15) gains **Send Selection to a God** — a paste-ready block with the
+relative file, line range and selected code, copied to the clipboard with
+OLYMPUS focused (never typed silently) — and **Show Live Hop Context**, which
+reads the real run-state and names the running hops. The VSIX is packaged and
+checked into `extensions/vscode-olympus/`.
 
 **v0.0.45 — many projects, one truth.** The project switcher shows each
 project's own campaign status (`2/17`, parked/running/done) next to its name,
