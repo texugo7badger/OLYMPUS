@@ -95,3 +95,68 @@ npm run shots      # re-capture these screenshots from the live app
 ```
 
 The app is local-first: no account, no upload, no telemetry by default.
+
+---
+
+## v0.0.34 — the chameleon pass
+
+![Pattern Studio](./04-studio.png)
+
+### Pattern Studio — every thought is a node
+
+The **criatividade** button in the status bar opens the studio. Every hop,
+verification and park becomes a thought node around the mark, merged by hop
+(shared thoughts evolve instead of duplicating), with a line back to the
+centre and the god's color. The background is a living cell field with Van
+Gogh brushstrokes; ten god icons orbit the original OLYMPUS mark. Click a node
+or a god icon to switch the active god.
+
+The plasma-ring orb is the voice. Each god has a calm neural voice (free
+`edge-tts` lane), and the orb expands while speaking. The discreet chat answers
+**only what you ask** — it does not narrate the walk — and speaks the answer
+when voice is on. Click a **learning** item (instinct, knowledge, skill or MCP)
+to hear the god explain what it learned and how it improves. The **project
+summary** button asks for the short version in one click.
+
+![References](./02-references.png)
+
+### References — 859 components, one live study each
+
+OriginKit + Skiper are fully indexed (859 entries, deduped by id and name).
+Every card is an original interactive canvas study in the active theme — no
+vendor page, no login banner. The grid loads 60 at a time as you scroll, until
+the catalog truly ends; preview canvases mount only near the viewport, so
+memory stays flat. Search understands the seven languages (category aliases
+and localized labels).
+
+![Style Board](./03-style.png)
+
+### Style — Open Design wisdom + a real browser preview
+
+The board keeps the instant token mock (click a component to select it) and
+adds a **live** tab with the project's real dev server: URL editing,
+back/forward, reload and mark-to-edit. **Open Design wisdom** distills the
+designer charter into eight principles and eight system recipes (Linear,
+Vercel, Stripe, Raycast, Apple, Material, Notion, Airbnb), with one-click
+application. Athena's decision shows at most three project-specific
+directions, one clearly recommended; in hibernation the recommended one is
+applied automatically.
+
+The identity generator now shows **one logo at a time**, built from the
+project name and palette, with "another" and "use this".
+
+![Builds](./05-builds.png)
+
+### Builds — the talent icons follow the machine
+
+The 251-build hub and the talent carousel now tint every animated category
+icon with the active palette (server-rendered SVG recoloring, cache-busted per
+palette). The original mark stays the only app/system identity.
+
+![Settings](./06-settings.png)
+
+### Settings — seven languages, real
+
+The language selector applies instantly to the whole interface and to the
+chat. God names, domains, reference categories, the build queue, the projects
+and the Pattern Studio follow it. See the [Languages section](../README.md#languages--olympus-is-global).

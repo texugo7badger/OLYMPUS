@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.33, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.34, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -17,29 +17,52 @@
 
 <div align="center">
 
-| The Brain Atlas | The Build Hub |
+| The Brain Atlas | The Pattern Studio |
 |---|---|
-| <img src="screenshots/01-brain.png" width="480" alt="OLYMPUS Brain Atlas" /> | <img src="screenshots/03-builds.png" width="480" alt="OLYMPUS Build Hub" /> |
+| <img src="screenshots/01-brain.png" width="480" alt="OLYMPUS Brain Atlas — the regions in their own palette colors" /> | <img src="screenshots/04-studio.png" width="480" alt="OLYMPUS Pattern Studio — thoughts, connections, voice and chat" /> |
 
-| Style — the project's direction | Appearance — the palette lab |
+| Every reference is a live study | The Style Board + Open Design wisdom |
 |---|---|
-| <img src="screenshots/04-style.png" width="480" alt="OLYMPUS Style Board" /> | <img src="screenshots/06-appearance.png" width="480" alt="OLYMPUS Appearance" /> |
+| <img src="screenshots/02-references.png" width="480" alt="OLYMPUS References — 859 components, native interactive studies" /> | <img src="screenshots/03-style.png" width="480" alt="OLYMPUS Style Board — tokens, live preview and design wisdom" /> |
+
+| The Build Hub / talent carousel | Settings — appearance + language |
+|---|---|
+| <img src="screenshots/05-builds.png" width="480" alt="OLYMPUS Build Hub — themed talent icons" /> | <img src="screenshots/06-settings.png" width="480" alt="OLYMPUS Settings — the global language selector" /> |
 
 </div>
 
-A guided tour of every surface (with the references catalog and the Craft
-dashboard) lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). The
-screenshots are captured from the running app by `npm run shots` — no mockups.
+A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
 
-**v0.0.33 highlights:** twelve theme presets plus a palette lab (full 14-color
-families with contrast floors) that repaint the app, the terminal, the brain,
-the loader, the tray and the system icon; **251 default builds** plus the
-hot/warm/cold learning loop; a swipeable talent carousel over the whole
-arsenal (334 skills · 28 MCPs · 132 agents); a live project Style Board; fixed
-references with real component previews; benchmark sessions; a notification
-center with hibernate-on-lock; and the Pattern Studio.
+**v0.0.34 — the chameleon release.** The original OLYMPUS mark now follows the
+palette everywhere (app bar, favicon, window, tray, dock) — same SVG, same
+rings, same dots, only the colors change. The Pattern Studio maps every hop,
+verify and park as a **thought node** around the mark, with living cells and
+Van Gogh brushstrokes behind it; each god has a **calm neural voice** and a
+plasma-ring orb that expands while speaking. The studio chat answers the live
+walk (and introduces each god) in the selected language, and **all ten gods
+speak** through the free `edge-tts` lane. The reference catalog now carries
+**859 OriginKit + Skiper components**, deduped by name, with infinite scroll
+and a native interactive study on every card. Settings is a **real global
+language** (seven languages, instant, including the chat and the gods' names),
+the project Style Board gains Open Design wisdom and a browser-grade live
+preview, every talent icon follows the theme, and clicking a project opens a
+full profile card.
 
+## Languages — OLYMPUS is global
 
+The Settings selector applies instantly to the app chrome, the terminal, the
+build queue, the projects, the reference catalog, the Pattern Studio and the
+gods' replies. The chat carries the language to the model; the voices are
+chosen from the same language.
+
+| | | | | | | |
+|---|---|---|---|---|---|---|
+| **English** | **Português** | **Español** | **Français** | **Deutsch** | **日本語** | **中文** |
+
+God names and domains localize too — *Apolo, Atena, Hefesto, Perséfone* in
+Português; *Apollon, Athéna, Héphaïstos* in Français; *アポロン, アテナ* in
+日本語. Missing keys fall back to English, so a partial dictionary never
+renders blank.
 
 ## Themes — twelve families and a palette lab
 
@@ -84,7 +107,7 @@ OLYMPUS runs as a **standalone desktop application** — it opens its own window
 ```bash
 # 1. Download the latest AppImage from GitHub Releases:
 #    https://github.com/texugo7badger/olympus/releases
-#    OLYMPUS-0.0.33-linux-x86_64.AppImage (~482 MB)
+#    OLYMPUS-0.0.34-linux-x86_64.AppImage (~482 MB)
 
 # 2. Make it executable and run:
 chmod +x OLYMPUS-*.AppImage
