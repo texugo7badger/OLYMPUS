@@ -659,8 +659,24 @@ function ReferenceCard({
       onMouseLeave={() => setHovered(false)}
     >
       <button onClick={onOpen} className="w-full text-left">
-        <div className="relative h-[96px] w-full bg-[radial-gradient(circle_at_30%_20%,rgba(212,165,116,0.10),transparent_60%)] flex items-center justify-center">
-          <img src={preview} alt="" width={54} height={54} loading="lazy" />
+        <div className="relative h-[110px] w-full overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(212,165,116,0.10),transparent_60%)]">
+          {hovered ? (
+            // The REAL component page, cropped to the demo area (no login
+            // banner): one iframe at a time, loaded on hover, 60fps.
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <iframe
+                src={reference.demoUrl}
+                title={`${reference.name} live component`}
+                loading="lazy"
+                sandbox="allow-scripts allow-same-origin"
+                style={{ position: 'absolute', top: -84, left: 0, width: 1200, height: 1700, border: 0, transform: 'scale(0.25)', transformOrigin: 'top left' }}
+              />
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <img src={preview} alt="" width={54} height={54} loading="lazy" />
+            </div>
+          )}
           <span className="absolute top-1 right-1 text-[7px] font-mono px-1 py-0.5 rounded bg-olympus-bg/80 text-olympus-cyan uppercase">live</span>
         </div>
         <div className="px-2.5 pt-1.5">
