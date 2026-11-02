@@ -58,6 +58,12 @@ export default function OlympusLoader({
           <stop offset="0%" stopColor={c.gold} stopOpacity="0.20" />
           <stop offset="100%" stopColor={c.gold} stopOpacity="0" />
         </radialGradient>
+        <linearGradient id="ol-peak" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={c.gold} /><stop offset="48%" stopColor={c.purple} /><stop offset="100%" stopColor={c.cyan} />
+        </linearGradient>
+        <linearGradient id="ol-word" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor={c.gold} /><stop offset="45%" stopColor={c.green} /><stop offset="75%" stopColor={c.cyan} /><stop offset="100%" stopColor={c.purple} />
+        </linearGradient>
         <filter id="ol-glow" x="-60%" y="-60%" width="220%" height="220%">
           <feGaussianBlur stdDeviation="6" result="b" />
           <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
@@ -88,10 +94,24 @@ export default function OlympusLoader({
       <g className="ol-mark" filter="url(#ol-glow)">
         <g transform="translate(256 256) scale(1.6) translate(-128 -128)">
           <circle className="ol-ring" cx="128" cy="128" r="112" stroke={c.gold} strokeWidth="1.6" fill="none" opacity="0.4" />
-          <circle cx="128" cy="128" r="96" stroke={c.gold} strokeWidth="1" fill="none" opacity="0.22" />
-          <path d="M 128 76 L 168 168 L 144 168 L 128 132 L 112 168 L 88 168 Z" fill={c.gold} />
+          <circle cx="128" cy="128" r="96" stroke={c.cyan} strokeWidth="1" fill="none" opacity="0.25" />
+          <path d="M 128 76 L 168 168 L 144 168 L 128 132 L 112 168 L 88 168 Z" fill="url(#ol-peak)" />
           <circle cx="128" cy="60" r="3" fill={c.purple} />
           <circle cx="128" cy="168" r="3" fill={c.gold} />
+          <circle cx="128" cy="24" r="4" fill={c.gold} />
+          <circle cx="201.6" cy="54.4" r="3.5" fill={c.red} opacity=".85" />
+          <circle cx="232" cy="128" r="4" fill={c.cyan} />
+          <circle cx="201.6" cy="201.6" r="3.5" fill={c.green} opacity=".85" />
+          <circle cx="128" cy="232" r="4" fill={c.amberSoft} />
+          <circle cx="54.4" cy="201.6" r="3.5" fill={c.purple} opacity=".85" />
+          <circle cx="24" cy="128" r="4" fill={c.teal} />
+          <circle cx="54.4" cy="54.4" r="3.5" fill={c.blue} opacity=".85" />
+          <g stroke={c.gold} strokeWidth="0.4" opacity=".13">
+            <line x1="128" y1="128" x2="128" y2="24"/><line x1="128" y1="128" x2="201.6" y2="54.4"/>
+            <line x1="128" y1="128" x2="232" y2="128"/><line x1="128" y1="128" x2="201.6" y2="201.6"/>
+            <line x1="128" y1="128" x2="128" y2="232"/><line x1="128" y1="128" x2="54.4" y2="201.6"/>
+            <line x1="128" y1="128" x2="24" y2="128"/><line x1="128" y1="128" x2="54.4" y2="54.4"/>
+          </g>
         </g>
       </g>
       <g className="ol-orbit-a">
@@ -115,7 +135,7 @@ export default function OlympusLoader({
         <line x1="256" y1="256" x2="256" y2="454" />
         <line x1="256" y1="256" x2="85" y2="256" />
       </g>
-      <text x="256" y="486" textAnchor="middle" fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace" fontSize="13" letterSpacing="7" fill={c.gold} opacity="0.85">OLYMPUS</text>
+      <text x="256" y="486" textAnchor="middle" fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace" fontSize="13" letterSpacing="7" fill="url(#ol-word)" opacity="0.9">OLYMPUS</text>
     </svg>
   );
 
