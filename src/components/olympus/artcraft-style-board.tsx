@@ -11,7 +11,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Copy, Loader2, Palette, RefreshCw, Send, Sparkles } from 'lucide-react';
+import { Check, Layers, Loader2, Palette, RefreshCw, Send, Sparkles } from 'lucide-react';
 import { generateLogos, generatePalettes } from '@/lib/design-generator';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
@@ -47,12 +47,11 @@ export default function ArtcraftStyleBoard({
 }) {
   const projectSlug = useOlympus((s) => s.activeProject?.slug ?? 'project');
   const projectName = useOlympus((s) => s.activeProject?.name ?? 'the project');
+  const projectStacks = useOlympus((s) => s.activeProject?.stacks ?? []);
   const [tokens, setTokens] = useState<StyleTokens>({ ...DEFAULT_TOKENS, custom: PROJECT_NEUTRAL });
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [priority, setPriority] = useState<Priority>('high');
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [queueing, setQueueing] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [note, setNote] = useState<string | null>(null);
@@ -87,6 +86,9 @@ export default function ArtcraftStyleBoard({
   const [palettes, setPalettes] = useState<ReturnType<typeof generatePalettes>>([]);
   const [logos, setLogos] = useState<ReturnType<typeof generateLogos>>([]);
   const [editing, setEditing] = useState(false);
+  // Athena's read: deterministic suggestions from the project seed, always
+  // available (no LLM cost) and explained by the project's own stacks.
+  const athenaSuggestions = useMemo(() => generatePalettes(`${projectSlug}-athena`, 3), [projectSlug]);
   const generateIdentity = useCallback(() => {
     const nextSalt = genSalt + 1;
     setGenSalt(nextSalt);
@@ -195,16 +197,6 @@ export default function ArtcraftStyleBoard({
     }
   }, [webQuery]);
 
-  const copy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(prompt);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setNote('clipboard blocked — select the prompt manually');
-    }
-  }, [prompt]);
-
   const enqueue = useCallback(async () => {
     setQueueing(true);
     try {
@@ -217,13 +209,13 @@ export default function ArtcraftStyleBoard({
           prompt,
           tokens,
           references: selectedRefs,
-          priority,
+          priority: 'now',
         }),
       });
       const d = await r.json();
       if (d?.ok) {
         setQueue((prev) => [d.item, ...prev].slice(0, 5));
-        setNote(`queued (${priority})`);
+        setNote("sent to the gods (priority now)");
       } else {
         setNote(d?.error ?? 'queue failed');
       }
@@ -232,7 +224,7 @@ export default function ArtcraftStyleBoard({
     } finally {
       setQueueing(false);
     }
-  }, [projectName, projectSlug, prompt, tokens, selectedRefs, priority]);
+  }, [projectName, projectSlug, prompt, tokens, selectedRefs]);
 
   const field = 'bg-olympus-bg border border-olympus-gold/20 rounded px-1.5 py-1 text-[10px] font-mono text-olympus-text outline-none focus:border-olympus-gold/50';
 
@@ -320,33 +312,56 @@ export default function ArtcraftStyleBoard({
           </div>
         </section>
 
-        {/* prompt + queue */}
+        {/* v0.0.32 — LIVE PREVIEW + accept. No prompt to copy: the direction
+            is the object, the preview proves it, and "send" enqueues it with
+            maximum priority for the gods. */}
         <section className="rounded border border-olympus-gold/15 bg-olympus-panel/60 p-2.5 flex flex-col min-h-0">
           <header className="flex items-center gap-1.5 mb-1.5">
-            <Sparkles size={12} className="text-olympus-gold" />
-            <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">prompt</span>
-            <button onClick={copy} className="ml-auto flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">
-              {copied ? <Check size={10} /> : <Copy size={10} />} {copied ? 'copied' : 'copy'}
-            </button>
+            <Layers size={12} className="text-olympus-gold" />
+            <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">live preview</span>
+            <span className="text-[8px] font-mono text-olympus-text-dim truncate">{projectName} — updates as you edit</span>
           </header>
-          <textarea
-            readOnly
-            value={prompt}
-            rows={12}
-            className="w-full flex-1 min-h-[180px] bg-olympus-bg border border-olympus-gold/15 rounded p-2 text-[9px] leading-relaxed font-mono text-olympus-text resize-y outline-none"
-          />
+
+          <div className="flex-1 min-h-[190px] rounded-lg overflow-hidden border border-olympus-gold/15" style={{ background: colors.bg }}>
+            <div className="flex items-center gap-1.5 px-2 py-1" style={{ background: colors.surface, borderBottom: `1px solid ${colors.accent}22` }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: colors.accent }} />
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: colors.muted }} />
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: colors.muted }} />
+              <span className="ml-2 text-[7px] font-mono truncate" style={{ color: colors.muted }}>{projectSlug}.local</span>
+            </div>
+            <div className="p-3" style={{ color: colors.text }}>
+              <div className="flex items-center gap-1.5">
+                {chosenLogo
+                  ? <img src={`data:image/svg+xml;utf8,${encodeURIComponent(chosenLogo)}`} alt="" width={26} height={26} className="rounded" />
+                  : <span className="w-6 h-6 rounded flex items-center justify-center text-[9px] font-mono font-bold" style={{ background: colors.accent, color: colors.bg }}>{projectName.slice(0, 2).toUpperCase()}</span>}
+                <span className="text-[10px] font-mono font-semibold truncate" style={{ color: colors.text }}>{projectName}</span>
+                <span className="ml-auto text-[7px] font-mono px-1.5 py-0.5 rounded-full" style={{ background: `${colors.accent}22`, color: colors.accent }}>preview</span>
+              </div>
+              <h3 className="mt-3 text-[16px] font-semibold leading-tight" style={{ color: colors.text }}>Build something precise.</h3>
+              <p className="mt-1 text-[9px] leading-relaxed" style={{ color: colors.muted }}>This page uses the project&apos;s palette, type and spacing — not the OLYMPUS chrome.</p>
+              <div className="mt-2 flex items-center gap-1.5">
+                <span className="text-[8px] font-mono px-2 py-1 rounded" style={{ background: colors.accent, color: colors.bg }}>get started</span>
+                <span className="text-[8px] font-mono px-2 py-1 rounded border" style={{ borderColor: `${colors.accent}66`, color: colors.accent }}>learn more</span>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="rounded p-1.5" style={{ background: colors.surface }}>
+                    <span className="block h-1 w-8 rounded-full mb-1" style={{ background: colors.accent }} />
+                    <span className="block h-1 w-12 rounded-full" style={{ background: colors.muted, opacity: 0.5 }} />
+                    <span className="block h-1 w-9 rounded-full mt-1" style={{ background: colors.muted, opacity: 0.35 }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center gap-1.5 mt-2">
-            <select className={cn(field, 'flex-1')} value={priority} onChange={(e) => setPriority(e.target.value as Priority)} aria-label="priority">
-              <option value="now">priority: now</option>
-              <option value="high">priority: high</option>
-              <option value="normal">priority: normal</option>
-            </select>
             <button
-              onClick={enqueue}
+              onClick={() => void enqueue()}
               disabled={queueing}
-              className="flex items-center gap-1 text-[9px] font-mono px-2 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25 disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-1 text-[9px] font-mono px-2 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/35 hover:bg-olympus-gold/25 disabled:opacity-50"
             >
-              {queueing ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />} queue
+              {queueing ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />} send to the gods · priority now
             </button>
             <button
               onClick={async () => {
@@ -357,35 +372,50 @@ export default function ArtcraftStyleBoard({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       project: projectSlug,
-                      title: `${projectName} — design review`,
-                      priority: 'high',
+                      title: `${projectName} — Athena, refine this direction`,
+                      priority: 'now',
                       tokens,
                       references: selectedRefs,
-                      prompt: `Review this project's design direction WITH me. What works, what does not, and what would you change? Ask me the three most important questions before changing anything.\n\n${prompt}`,
+                      prompt: `Refine this project's design direction WITH me. The project is ${projectName} (${projectStacks.join(', ') || 'no stacks declared'}). Read the intent, name what works and what does not, ask the three decisive questions, then propose the narrowed direction.\n\n${prompt}`,
                     }),
                   });
                   const d = await r.json();
-                  if (d?.ok) setNote('Athena will review this direction');
+                  if (d?.ok) setNote('Athena will refine this direction (priority now)');
                   else setNote(d?.error ?? 'queue failed');
                 } catch (e: any) { setNote(e?.message || 'queue failed'); }
                 finally { setQueueing(false); }
               }}
-              className="flex items-center gap-1 text-[9px] font-mono px-2 py-1 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30 hover:bg-olympus-purple/25"
+              className="flex items-center gap-1 text-[9px] font-mono px-2 py-1.5 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30 hover:bg-olympus-purple/25"
             >
-              <Sparkles size={10} /> ask Athena
+              <Sparkles size={10} /> Athena
             </button>
           </div>
           {note && <p className="text-[8px] font-mono text-olympus-amber-soft mt-1">{note}</p>}
           {queue.length > 0 && (
-            <div className="mt-2 border-t border-olympus-gold/10 pt-1.5">
-              <span className="text-[8px] font-mono text-olympus-text-dim uppercase">queued</span>
-              {queue.map((q) => (
-                <p key={q.id} className="text-[8px] font-mono text-olympus-text truncate">
+            <div className="mt-1.5 border-t border-olympus-gold/10 pt-1">
+              {queue.slice(0, 3).map((q) => (
+                <p key={q.id} className="text-[8px] font-mono text-olympus-text-dim truncate">
                   <span className="text-olympus-gold">{q.priority}</span> · {q.title}
                 </p>
               ))}
             </div>
           )}
+
+          <div className="mt-2 border-t border-olympus-gold/10 pt-1.5">
+            <div className="flex items-center gap-1 mb-1">
+              <Sparkles size={9} className="text-olympus-purple" />
+              <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-purple">Athena suggests</span>
+              <span className="text-[7px] font-mono text-olympus-text-dim truncate">based on {projectStacks.join(' · ') || 'the project brief'}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {athenaSuggestions.map((p) => (
+                <button key={p.id} onClick={() => update({ custom: p.colors })} className="rounded border border-olympus-gold/10 px-1.5 py-1 text-left hover:border-olympus-purple/40">
+                  <span className="flex gap-1">{[p.colors.bg, p.colors.surface, p.colors.accent].map((c) => <span key={c} className="w-2.5 h-2.5 rounded-sm ring-1 ring-black/30" style={{ background: c }} />)}</span>
+                  <span className="block text-[7px] font-mono text-olympus-text-dim mt-0.5 truncate">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* v0.0.32 — IDENTITY: generated palettes + logo marks from the name. */}
