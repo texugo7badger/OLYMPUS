@@ -33,6 +33,36 @@ export function setVoiceEnabled(on: boolean): void {
   try { window.localStorage.setItem('olympus:voice-enabled', on ? '1' : '0'); } catch { /* private */ }
 }
 
+/**
+ * v0.0.38 — a turn's report is not a conversation.
+ *
+ * The terminal and the studio both hand whole answers to the voice lane; a
+ * long answer full of code, URLs and bullets read aloud sounds like a machine
+ * reciting a document. Speech gets the opening thought only: formatting is
+ * stripped and a long reply stops at a sentence boundary instead of being cut
+ * mid-word at 900 characters. Short conversational replies pass through whole.
+ */
+export function toSpeech(text: string, max = 360): string {
+  let s = String(text || '');
+  s = s.replace(/```[\s\S]*?```/g, ' ');
+  s = s.replace(/`([^`]+)`/g, '$1');
+  s = s.replace(/!\[[^\]]*\]\([^)]*\)/g, ' ');
+  s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+  s = s.replace(/https?:\/\/\S+/g, ' ');
+  s = s.replace(/^\s{0,3}#{1,6}\s+/gm, '');
+  s = s.replace(/^\s*[-*+]\s+/gm, '');
+  s = s.replace(/^\s*\d+[.)]\s+/gm, '');
+  s = s.replace(/[*_~>|]/g, '');
+  s = s.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
+  s = s.replace(/\s+/g, ' ').trim();
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max);
+  const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '), cut.lastIndexOf('; '));
+  if (end > max * 0.45) return cut.slice(0, end + 1).trim();
+  const space = cut.lastIndexOf(' ');
+  return `${cut.slice(0, space > 0 ? space : max).trim()}…`;
+}
+
 let currentAudio: HTMLAudioElement | null = null;
 let audioCtx: AudioContext | null = null;
 
@@ -47,12 +77,14 @@ export async function speakAs(
   onLevel?: (level: number) => void,
 ): Promise<void> {
   if (!text || typeof window === 'undefined') return;
+  const spoken = toSpeech(text);
+  if (!spoken) return;
   const key = (god || 'apollo').toLowerCase();
   try {
     const res = await fetch('/api/olympus/voice/speak', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text.slice(0, 900), god: key, language }),
+      body: JSON.stringify({ text: spoken, god: key, language }),
     });
     if (res.ok) {
       const blob = await res.blob();
@@ -93,7 +125,7 @@ export async function speakAs(
   if (!('speechSynthesis' in window)) { onState?.(false); return; }
   try {
     const profile = GOD_VOICE[key] ?? GOD_VOICE.apollo;
-    const u = new SpeechSynthesisUtterance(text.replace(/[#*_`>]/g, '').slice(0, 420));
+    const u = new SpeechSynthesisUtterance(spoken);
     u.lang = speechLocale(language);
     u.pitch = profile.pitch;
     u.rate = profile.rate;

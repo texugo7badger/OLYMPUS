@@ -21,16 +21,40 @@ export const dynamic = 'force-dynamic';
 
 const GODS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
 
-/** Curated free neural voices per language. The list is intentionally short:
- *  the elegant low-pitch voices, cycled per god and shaped by the profile. */
-const VOICES: Record<string, string[]> = {
-  en: ['en-US-AndrewNeural', 'en-US-BrianNeural', 'en-GB-SoniaNeural', 'en-US-AriaNeural', 'en-US-EmmaNeural', 'en-GB-RyanNeural', 'en-US-GuyNeural', 'en-US-MichelleNeural', 'en-GB-ThomasNeural', 'en-US-SteffanNeural'],
-  'pt-BR': ['pt-BR-AntonioNeural', 'pt-BR-FranciscaNeural', 'pt-BR-ThalitaMultilingualNeural', 'pt-PT-DuarteNeural', 'pt-PT-RaquelNeural'],
-  es: ['es-ES-AlvaroNeural', 'es-ES-ElviraNeural', 'es-ES-XimenaNeural'],
-  fr: ['fr-FR-HenriNeural', 'fr-FR-DeniseNeural', 'fr-FR-EloiseNeural', 'fr-FR-RemyMultilingualNeural', 'fr-FR-VivienneMultilingualNeural'],
-  de: ['de-DE-ConradNeural', 'de-DE-KatjaNeural', 'de-DE-AmalaNeural', 'de-DE-FlorianMultilingualNeural', 'de-DE-KillianNeural', 'de-DE-SeraphinaMultilingualNeural'],
-  ja: ['ja-JP-KeitaNeural', 'ja-JP-NanamiNeural'],
-  zh: ['zh-CN-YunxiNeural', 'zh-CN-XiaoxiaoNeural', 'zh-CN-YunjianNeural', 'zh-CN-XiaoyiNeural', 'zh-CN-YunyangNeural'],
+/** Curated free neural voices per language, split by the god's voice gender:
+ *  a male god must never be read by a female voice (the v0.0.37 PT-BR pool
+ *  mixed pt-PT and flipped genders at index 3). The profile still shapes
+ *  pitch/rate, so two gods sharing a voice stay distinct. */
+const VOICES: Record<string, { male: string[]; female: string[] }> = {
+  en: {
+    male: ['en-US-AndrewNeural', 'en-US-BrianNeural', 'en-GB-RyanNeural', 'en-US-GuyNeural', 'en-GB-ThomasNeural', 'en-US-SteffanNeural'],
+    female: ['en-GB-SoniaNeural', 'en-US-AriaNeural', 'en-US-EmmaNeural', 'en-US-MichelleNeural'],
+  },
+  'pt-BR': {
+    male: ['pt-BR-AntonioNeural'],
+    female: ['pt-BR-FranciscaNeural', 'pt-BR-ThalitaMultilingualNeural'],
+  },
+  es: { male: ['es-ES-AlvaroNeural'], female: ['es-ES-ElviraNeural', 'es-ES-XimenaNeural'] },
+  fr: {
+    male: ['fr-FR-HenriNeural', 'fr-FR-RemyMultilingualNeural'],
+    female: ['fr-FR-DeniseNeural', 'fr-FR-EloiseNeural', 'fr-FR-VivienneMultilingualNeural'],
+  },
+  de: {
+    male: ['de-DE-ConradNeural', 'de-DE-FlorianMultilingualNeural', 'de-DE-KillianNeural'],
+    female: ['de-DE-KatjaNeural', 'de-DE-AmalaNeural', 'de-DE-SeraphinaMultilingualNeural'],
+  },
+  ja: { male: ['ja-JP-KeitaNeural'], female: ['ja-JP-NanamiNeural'] },
+  zh: {
+    male: ['zh-CN-YunxiNeural', 'zh-CN-YunjianNeural', 'zh-CN-YunyangNeural'],
+    female: ['zh-CN-XiaoxiaoNeural', 'zh-CN-XiaoyiNeural'],
+  },
+};
+
+/** The god's voice gender — matches the persona, not the array order. */
+const GOD_GENDER: Record<string, 'male' | 'female'> = {
+  apollo: 'male', atlas: 'male', artemis: 'female', athena: 'female',
+  dionysus: 'male', hephaestus: 'male', hermes: 'male', persephone: 'female',
+  prometheus: 'male', callimachus: 'female',
 };
 
 const PROFILE: Record<string, { pitch: number; rate: number }> = {
@@ -53,8 +77,13 @@ export async function POST(req: NextRequest) {
 
   const god = String(body?.god || 'apollo').toLowerCase();
   const lang = String(body?.language || 'en');
-  const pool = VOICES[lang] ?? VOICES.en;
-  const index = Math.max(0, GODS.indexOf(god));
+  const family = VOICES[lang] ?? VOICES.en;
+  const gender = GOD_GENDER[god] ?? 'male';
+  const pool = family[gender];
+  // Round-robin inside the same gender, so Apollo/Atlas do not share the
+  // exact same voice when the language offers more than one.
+  const sameGender = GODS.filter((g) => (GOD_GENDER[g] ?? 'male') === gender);
+  const index = Math.max(0, sameGender.indexOf(god));
   const voice = pool[index % pool.length];
   const profile = PROFILE[god] ?? PROFILE.apollo;
   const rate = signed(Math.round((profile.rate - 1) * 50) - 4, '%');
