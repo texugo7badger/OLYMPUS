@@ -24,6 +24,7 @@ import ThemedLogo from './themed-logo';
 import NotificationCenter from './notification-center';
 import ImmersivePanel from './immersive-panel';
 import { useTheme } from '@/lib/theme-store';
+import { useLanguage, t } from '@/lib/i18n';
 
 interface ProviderInfo {
  name: string; isFree: boolean; displayName: string; capsDisplay: string;
@@ -65,6 +66,7 @@ export default function StatusBar({
   const docVisible = useDocVisible();
  const activeGod = useOlympus(s => s.activeGod);
   const [theme] = useTheme();
+  const language = useLanguage();
   const [studio, setStudio] = useState(false);
  // W-D1: the idle fallback reads the user's SELECTED god (its own comment
  // always claimed it) — activeGod alone is the live session, reset to
@@ -199,12 +201,12 @@ export default function StatusBar({
 		     opens the particle/voice surface (TTS in the chosen language). */}
 		 <button
 		   onClick={() => setStudio(true)}
-		   aria-label="Open the art and creativity studio with voice"
-		   data-tip="Art & creativity studio — live particles, the thinking gods, and voice"
+		   aria-label={t('status.artStudioTip', language)}
+		   data-tip={t('status.artStudioTip', language)}
 		   className="flex items-center gap-1.5 h-5 px-2 rounded-full shrink-0 bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20 transition-colors"
 		 >
 		   <StudioIcon size={11} className="text-olympus-gold" />
-		   <span className="text-[9px] font-mono font-semibold">art studio</span>
+		   <span className="text-[9px] font-mono font-semibold">{t('status.artStudio', language)}</span>
 		   <Mic size={9} className="text-olympus-cyan" />
 		 </button>
 		 {studio && <ImmersivePanel onClose={() => setStudio(false)} />}

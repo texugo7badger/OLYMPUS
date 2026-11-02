@@ -21,6 +21,7 @@
 
 import { CheckCircle2, Circle, Loader2, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage, t } from '@/lib/i18n';
 import TaskSigil, { sigilFor } from './task-sigil';
 
 export type PlanStatus = 'pending' | 'in_progress' | 'done';
@@ -97,6 +98,7 @@ interface PlanPanelProps {
 }
 
 export default function PlanPanel({ items, onToggle }: PlanPanelProps) {
+  const language = useLanguage();
   if (items.length === 0) return null;
 
   const done = items.filter(i => i.status === 'done').length;
@@ -106,8 +108,8 @@ export default function PlanPanel({ items, onToggle }: PlanPanelProps) {
     <div className="border-t border-olympus-gold/10 bg-olympus-panel/60">
       <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide flex items-center gap-1.5">
         <ListChecks size={10} className="text-olympus-gold" />
-        <span>build queue</span>
-        <span className="text-olympus-text-dim/70 normal-case">· the chosen tasks</span>
+        <span>{t('terminal.buildQueue', language)}</span>
+        <span className="text-olympus-text-dim/70 normal-case">· {t('terminal.chosenTasks', language)}</span>
         <span className="ml-auto normal-case tracking-normal tabular-nums">{done}/{items.length}</span>
         <span className="w-14 h-1 rounded-full bg-olympus-bg overflow-hidden ring-1 ring-olympus-gold/10" aria-hidden>
           <span className="block h-full w-full rounded-full bg-olympus-gold origin-left transition-transform duration-500" style={{ transform: `scaleX(${pct / 100})` }} />
@@ -147,7 +149,7 @@ export default function PlanPanel({ items, onToggle }: PlanPanelProps) {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1 text-[7px] font-mono uppercase tracking-wider text-olympus-cyan/70">
-                    build · {kind}{nested && item.god ? ` · ${DISPLAY_NAMES[item.god] || item.god}` : ''}
+                    {t('common.build', language)} · {kind}{nested && item.god ? ` · ${DISPLAY_NAMES[item.god] || item.god}` : ''}
                   </span>
                   <span className={cn(
                     'block text-[9.5px] font-mono leading-snug mt-0.5 line-clamp-2',
@@ -177,7 +179,7 @@ export default function PlanPanel({ items, onToggle }: PlanPanelProps) {
                   'ml-auto text-[7px] font-mono uppercase tracking-wide',
                   isDone ? 'text-olympus-green' : isActive ? 'text-olympus-gold' : 'text-olympus-text-dim/70',
                 )}>
-                  {isDone ? 'done' : isActive ? 'in flight' : 'queued'}
+                  {isDone ? t('common.done', language) : isActive ? t('common.inFlight', language) : t('common.queued', language)}
                 </span>
               </div>
               {isActive && (

@@ -15,10 +15,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOlympus, GOD_ICONS, GOD_IDS, type LLMStrategy } from '@/lib/olympus-store';
 import { Settings, Save, Loader2, Check, AlertCircle, AlertTriangle, Zap, BarChart3, Lock, Plus, X, Trash2, Calculator, Palette, Sun, Moon, RefreshCw } from 'lucide-react';
-import { THEME_ICONS, THEME_PRESETS, resolvePalette } from '@/lib/theme';
+import { THEME_PRESETS, resolvePalette } from '@/lib/theme';
 import { MoonModeIcon, SunModeIcon } from './theme-mode-icons';
 import { generateThemePalette, randomSeed, type PaletteLabSeed } from '@/lib/theme-generator';
 import { useTheme } from '@/lib/theme-store';
+import { useLanguage, setLanguage, t, LANGUAGES } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { strategyApiRequirement, modelClassesForStrategy } from '@/lib/model-strategies';
@@ -411,6 +412,7 @@ export default function SettingsDialog() {
 
   const [data, setData] = useState<SettingsData | null>(null);
   const [theme, setTheme] = useTheme();
+  const language = useLanguage();
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [customGodModels, setCustomGodModels] = useState<Record<string, Record<string, string>>>({});
   const [strategy, setStrategy] = useState<LLMStrategy>('go-balanced');
@@ -867,27 +869,13 @@ export default function SettingsDialog() {
                 })}
               </div>
 
-              <div className="flex items-center gap-1.5 mt-2">
-                <span className="text-[9px] font-mono text-olympus-text-dim uppercase">icon</span>
-                {THEME_ICONS.map((icon) => (
-                  <button
-                    key={icon.id}
-                    onClick={() => setTheme({ iconId: icon.id })}
-                    aria-pressed={theme.iconId === icon.id}
-                    data-tip={icon.name}
-                    className={cn('w-7 h-7 rounded border flex items-center justify-center', theme.iconId === icon.id ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/15 hover:border-olympus-gold/40')}
-                  >
-                    <img src={icon.src} alt={icon.name} className="w-4 h-4" />
-                  </button>
-                ))}
-                <div className="ml-auto flex items-center gap-2">
-                  <span className="text-[9px] font-mono text-olympus-text-dim uppercase" data-tip="Simple animations: decorative motion off, spinners and status kept">stable mode</span>
-                  <Switch
-                    checked={theme.motion === 'stable'}
-                    onCheckedChange={(v) => setTheme({ motion: v ? 'stable' : 'full' })}
-                    aria-label="Stable mode"
-                  />
-                </div>
+              <div className="flex items-center justify-end gap-2 mt-2">
+                <span className="text-[9px] font-mono text-olympus-text-dim uppercase" data-tip="Decorative motion off; spinners and status stay">stable mode</span>
+                <Switch
+                  checked={theme.motion === 'stable'}
+                  onCheckedChange={(v) => setTheme({ motion: v ? 'stable' : 'full' })}
+                  aria-label="Stable mode"
+                />
               </div>
 
               {/* v0.0.32 — the palette lab: combinations across ALL keys. */}
@@ -955,22 +943,22 @@ export default function SettingsDialog() {
                 </div>
               </div>
 
-              {/* v0.0.32 — OLYMPUS is global: the interface language. */}
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">language</span>
+              {/* v0.0.34 — the real global language: applies instantly. */}
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">{t('settings.language', language)}</span>
                 <select
-                  defaultValue={(typeof window !== 'undefined' && localStorage.getItem('olympus:language')) || 'en'}
+                  value={language}
                   onChange={(e) => {
-                    try { localStorage.setItem('olympus:language', e.target.value); } catch { /* private */ }
-                    document.documentElement.lang = e.target.value;
-                    toast.success(`Language: ${e.target.selectedOptions[0].text}`);
+                    const next = e.target.value as typeof language;
+                    setLanguage(next);
+                    toast.success(`${t('settings.language', next)}: ${e.target.selectedOptions[0].text}`);
                   }}
                   className="bg-olympus-bg border border-olympus-gold/20 rounded px-1.5 py-0.5 text-[9px] font-mono text-olympus-text outline-none"
                   aria-label="Interface language"
                 >
-                  {[['en','English'],['pt-BR','Português'],['es','Español'],['fr','Français'],['de','Deutsch'],['ja','日本語'],['zh','中文']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                  {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.native}</option>)}
                 </select>
-                <span className="text-[8px] font-mono text-olympus-text-dim">full translations ship incrementally; the choice is stored now</span>
+                <span className="text-[8px] font-mono text-olympus-text-dim">{t('settings.languageNote', language)}</span>
               </div>
             </section>
 

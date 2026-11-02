@@ -15,6 +15,7 @@ import { FolderPlus, Folder, ChevronDown, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOlympus, type ProjectNote } from '@/lib/olympus-store';
 import ProjectProfileCard from './project-profile-card';
+import { useLanguage, t } from '@/lib/i18n';
 
 const STACK_LABELS: Record<string, string> = { react: 'React', next: 'Next.js', vue: 'Vue', svelte: 'Svelte', node: 'Node.js', bun: 'Bun', python: 'Python', rust: 'Rust', go: 'Go', typescript: 'TS', javascript: 'JS', tailwind: 'Tailwind', postgres: 'Postgres', mongodb: 'MongoDB', redis: 'Redis', docker: 'Docker', kubernetes: 'K8s', vercel: 'Vercel', aws: 'AWS', gcp: 'GCP', azure: 'Azure' };
 
@@ -30,6 +31,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function ProjectSwitcher() {
+  const language = useLanguage();
   const projects = useOlympus((s) => s.availableProjects);
   const activeProject = useOlympus((s) => s.activeProject);
   const refreshProjects = useOlympus((s) => s.refreshProjects);
@@ -71,20 +73,20 @@ export default function ProjectSwitcher() {
         <div className="absolute top-full left-0 mt-1 w-96 bg-olympus-panel border border-olympus-gold/20 rounded-lg shadow-md z-50 overflow-hidden">
           <div className="px-3 py-2 border-b border-olympus-gold/10 flex items-center justify-between">
             <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">
-              Projects <span className="text-olympus-gold/70">· {projects.length}</span>
+              {t('projects.title', language)} <span className="text-olympus-gold/70">· {projects.length}</span>
             </span>
             <button
               onClick={() => { setNewProjectDialogOpen(true); setDropdownOpen(false); }}
               className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25 transition-colors"
             >
-              <FolderPlus size={10} /> New
+              <FolderPlus size={10} /> {t('projects.new', language)}
             </button>
           </div>
 
           <div className="max-h-[22rem] overflow-y-auto custom-scroll">
             {projects.length === 0 ? (
               <div className="px-3 py-6 text-center text-[11px] font-mono text-olympus-text-dim">
-                No projects yet.<br />Click &quot;New&quot; to create one.
+                {t('projects.noProjects', language)}<br />{t('projects.noProjectsHint', language)}
               </div>
             ) : projects.map((p) => {
               const active = activeProject?.slug === p.slug;
@@ -102,11 +104,11 @@ export default function ProjectSwitcher() {
                     <span className={cn('text-[11px] font-mono font-semibold flex-1 truncate', active ? 'text-olympus-gold' : 'text-olympus-text')}>
                       {displayName(p)}
                     </span>
-                    {active && <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-green">active</span>}
+                    {active && <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-green">{t('common.active', language)}</span>}
                     <span className="text-[8px] font-mono text-olympus-text-dim/70" title={new Date(p.last_active).toLocaleString()}>{timeAgo(p.last_active)}</span>
                   </div>
                   <div className="text-[10px] font-mono text-olympus-text-dim truncate mt-0.5 ml-5">
-                    {p.description || '(no description)'}
+                    {p.description || t('common.noDescription', language)}
                   </div>
                   {p.stacks.length > 0 && (
                     <div className="flex items-center gap-1 mt-1 ml-5 flex-wrap">
@@ -125,7 +127,7 @@ export default function ProjectSwitcher() {
           </div>
 
           <div className="px-3 py-1.5 border-t border-olympus-gold/10 text-[9px] font-mono text-olympus-text-dim">
-            Click a project to open its profile · brain is global
+            {t('projects.hint', language)}
           </div>
         </div>
       )}

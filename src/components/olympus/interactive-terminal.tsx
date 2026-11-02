@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { marked } from 'marked';
 import { useOlympus } from '@/lib/olympus-store';
+import { useLanguage, t, getLanguage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip';
 // ContextIndicator polls /api/olympus/context-usage every 5s and shows
@@ -271,9 +272,10 @@ const PHASE_TO_STATUS: Record<GodPhase, GodState['status']> = {
 // Issue #43: todos are plan items — `{ content, status }`, not a done flag.
 
 export default function InteractiveTerminal() {
+  const language = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 'sys-1', type: 'system', text: 'Olympus Interactive Terminal - speak directly to Apollo.', ts: new Date().toISOString() },
-    { id: 'sys-2', type: 'system', text: 'Apollo will interview you, classify your task, and delegate to the right gods.', ts: new Date().toISOString() },
+    { id: 'sys-1', type: 'system', text: t('terminal.welcome1', getLanguage()), ts: new Date().toISOString() },
+    { id: 'sys-2', type: 'system', text: t('terminal.welcome2', getLanguage()), ts: new Date().toISOString() },
   ]);
   const [input, setInput] = useState('');
   const [context, setContext] = useState('');
@@ -1348,7 +1350,7 @@ export default function InteractiveTerminal() {
       const controller = new AbortController();
       actionAbortRef.current = controller;
       const res = await fetch('/api/olympus/action', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-olympus-language': getLanguage() },
         body: JSON.stringify({ action: 'prompt', text: fullText, context: contextText?.trim() || undefined, conversationId: conversationIdRef.current }),
         signal: controller.signal,
       });
@@ -1606,8 +1608,8 @@ export default function InteractiveTerminal() {
     reasoningBufRef.current = '';
     atBottomRef.current = true;
     setMessages([
-      { id: 'sys-1', type: 'system' as const, text: 'Olympus Interactive Terminal - speak directly to Apollo.', ts: new Date().toISOString() },
-      { id: 'sys-2', type: 'system' as const, text: 'Apollo will interview you, classify your task, and delegate to the right gods.', ts: new Date().toISOString() },
+      { id: 'sys-1', type: 'system' as const, text: t('terminal.welcome1', getLanguage()), ts: new Date().toISOString() },
+      { id: 'sys-2', type: 'system' as const, text: t('terminal.welcome2', getLanguage()), ts: new Date().toISOString() },
     ]);
     setTodos([]);
     setGodStates(new Map());
@@ -1669,7 +1671,7 @@ export default function InteractiveTerminal() {
         });
         addMessage({
           type: 'system',
-          text: `Uploaded ${d.files.length} file(s): ${summary.join(', ')}`,
+          text: `${t('terminal.uploaded', getLanguage(), { n: d.files.length })}: ${summary.join(', ')}`,
         });
       } else {
         addMessage({ type: 'error', text: d.error || 'Upload failed' });
@@ -2172,7 +2174,7 @@ export default function InteractiveTerminal() {
                 }
               }}
               disabled={awaitingAnswer || awaitingContext}
-              placeholder={awaitingAnswer ? 'click a choice above (or type optional context in the box under the question)...' : awaitingContext ? 'type context below (Cmd+Enter)...' : submitting ? 'Type to queue the next message (posts when this run idles)…' : 'Ask Apollo anything...'}
+              placeholder={awaitingAnswer ? 'click a choice above (or type optional context in the box under the question)...' : awaitingContext ? 'type context below (Cmd+Enter)...' : submitting ? 'Type to queue the next message (posts when this run idles)…' : t('terminal.placeholder', language)}
               className="flex-1 bg-transparent border-0 outline-none resize-none text-[12px] font-mono leading-relaxed text-olympus-text placeholder:text-olympus-text-dim disabled:opacity-50 max-h-48 overflow-y-auto py-1"
             />
             {/* Task 3 — the always-visible "ctx" toggle button is gone.
@@ -2268,7 +2270,7 @@ export default function InteractiveTerminal() {
                     onClick={stop}
                     className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono bg-olympus-red/20 text-olympus-red hover:bg-olympus-red/30 transition-all shrink-0"
                   >
-                    <Square size={11} /> stop
+                    <Square size={11} /> {t('terminal.stop', language)}
                   </button>
                 </OlympusTooltip>
               </div>
@@ -2286,7 +2288,7 @@ export default function InteractiveTerminal() {
                   )}
                   style={input.trim() ? { color: GOD_COLOR } : { color: 'var(--olympus-text-dim)' }}
                 >
-                  <><Send size={11} /> send</>
+                  <><Send size={11} /> {t('terminal.send', language)}</>
                 </button>
               </OlympusTooltip>
             )}
@@ -2408,13 +2410,13 @@ const MessageRenderer = memo(function MessageRenderer({
               />
               <span className="min-w-0">
                 <span className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide text-olympus-gold">
-                  <ImageIcon size={9} /> image
+                  <ImageIcon size={9} /> {t('terminal.image', getLanguage())}
                 </span>
                 <span className="block truncate text-[10px] font-mono text-olympus-text">
                   {message.imageFilename || 'reference image'}
                 </span>
                 <span className="block text-[8px] font-mono text-olympus-text-dim">
-                  attached to this prompt
+                  {t('terminal.attachedPrompt', getLanguage())}
                 </span>
               </span>
             </div>
