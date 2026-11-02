@@ -420,3 +420,21 @@
 /* Light mode: the status bar and panels inherit the theme variables; only the
    hard-coded near-black text needs a nudge for legibility. */
 [data-mode="light"] .text-\[\#5A5A5A\] { color: var(--color-olympus-text-dim); }
+
+/* v0.0.32 — the thinking shade: a slow, soft radial breath behind reasoning
+   and planning blocks. Theme-driven; stable mode keeps it static. */
+.olympus-think-shade { position: relative; }
+.olympus-think-shade::before {
+  content: '';
+  position: absolute;
+  inset: -6px -8px;
+  border-radius: 10px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 30% 20%, color-mix(in oklab, var(--olympus-gold) 9%, transparent), transparent 62%);
+  animation: olympus-shade 6.5s ease-in-out infinite;
+}
+@keyframes olympus-shade {
+  0%, 100% { opacity: .35; transform: translateX(-2%); }
+  50% { opacity: .85; transform: translateX(2%); }
+}
+[data-motion="stable"] .olympus-think-shade::before { animation: none; opacity: .4; }

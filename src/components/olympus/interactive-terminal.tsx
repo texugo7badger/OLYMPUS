@@ -2397,17 +2397,26 @@ const MessageRenderer = memo(function MessageRenderer({
         <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <div className="flex-1 min-w-0">
           {message.imagePath && (
-            <div className="mb-1.5">
+            <div
+              className="mb-1.5 inline-flex max-w-full items-center gap-2 rounded-lg border border-olympus-gold/20 bg-olympus-card/60 p-1.5 pr-3"
+              title={message.imageSavedPath ? `saved → ${message.imageSavedPath}` : undefined}
+            >
               <img
                 src={message.imagePath}
                 alt={message.imageFilename || 'reference image'}
-                className="max-h-40 max-w-56 rounded-md ring-1 ring-olympus-gold/25 object-cover"
+                className="h-12 w-12 rounded object-cover ring-1 ring-olympus-gold/25"
               />
-              {message.imageSavedPath && (
-                <div className="text-[9px] text-[#5A5A5A] mt-1 font-mono break-all">
-                  saved → {message.imageSavedPath}
-                </div>
-              )}
+              <span className="min-w-0">
+                <span className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide text-olympus-gold">
+                  <ImageIcon size={9} /> image
+                </span>
+                <span className="block truncate text-[10px] font-mono text-olympus-text">
+                  {message.imageFilename || 'reference image'}
+                </span>
+                <span className="block text-[8px] font-mono text-olympus-text-dim">
+                  attached to this prompt
+                </span>
+              </span>
             </div>
           )}
           <div className="flex items-start gap-1.5">
@@ -2712,7 +2721,7 @@ function ThinkingMessage({
   return (
     <div className="flex items-start gap-2 mt-2">
       <span className="text-[9px] text-[#5A5A5A] shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 olympus-think-shade">
         <div
           className="flex items-center gap-1.5 min-w-0 cursor-pointer select-none"
           onClick={() => {
