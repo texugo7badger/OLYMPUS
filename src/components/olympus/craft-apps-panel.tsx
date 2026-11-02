@@ -18,7 +18,8 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import OlympusLoader from './olympus-loader';
-import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload, Palette, Sparkles, Maximize2 } from 'lucide-react';
+import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload, Palette, Sparkles, Maximize2, Bookmark, BookmarkCheck, Copy, MessageSquare, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
 import ArtcraftStyleBoard from './artcraft-style-board';
@@ -115,6 +116,12 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   // #198 — the OriginKit free-tier budget (10 fetches/day), surfaced in the
   // References tab so exhaustion never looks like a broken lane.
   const [originkitBudget, setOriginkitBudget] = useState<{ limit: number; remaining: number; exhausted: boolean; resetAt: string } | null>(null);
+  // v0.0.43 — DESIGN MEMORY: named references the user chose to keep.
+  const activeProject = useOlympus((s) => s.activeProject);
+  const projectSlug = activeProject?.slug ?? 'project';
+  const [memory, setMemory] = useState<Array<{ id: string; name: string; library: string; note: string; savedAt: string }>>([]);
+  const [memoryOnly, setMemoryOnly] = useState(false);
+  const memoryIds = new Set(memory.map((m) => m.id));
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -146,6 +153,14 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
     } catch { /* the honest empty */ }
   }, []);
   useEffect(() => { loadRefs(''); }, [loadRefs]);
+  const loadMemory = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/olympus/design-memory?project=${encodeURIComponent(projectSlug)}`, { cache: 'no-store' });
+      const d = await r.json();
+      if (Array.isArray(d?.memory)) setMemory(d.memory);
+    } catch { /* the honest empty */ }
+  }, [projectSlug]);
+  useEffect(() => { if (tab === 'references') void loadMemory(); }, [tab, loadMemory]);
   useEffect(() => { setRefLimit(60); }, [refCat, refLib, refSearch]);
 
   // #198 — poll the budget while the References tab is open (a god may fetch
@@ -292,6 +307,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const query = refSearch.trim().toLowerCase();
   const queryTerms = searchTerms(refSearch, language);
   const filteredRefs = uiRefs.filter((r) => {
+    if (memoryOnly && !memoryIds.has(r.id)) return false;
     if (refCat !== 'all' && r.category !== refCat) return false;
     if (refLib !== 'all' && r.library !== refLib) return false;
     if (!query) return true;
@@ -322,6 +338,48 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   // v0.0.32 — the Originkit demo requires a session; embedding it showed a
   // login wall. Use = carry the reference into the project's Style Board;
   // Queue = a design task for Athena (priority high).
+  const referencePrompt = (r: UiRef): string => [
+    `Implement the "${r.name}" interaction (${r.library} · ${r.category}) in the open project.`,
+    r.what,
+    `Reference: ${r.demoUrl}`,
+    `Fetch lane: ${r.fetchLane}`,
+    'Recreate the MOTION and structure in the project identity — do not copy colors or demo copy. Verify the result in the live preview and keep all existing content.',
+  ].join('\n');
+  const copyReferencePrompt = async (r: UiRef) => {
+    try {
+      await navigator.clipboard.writeText(referencePrompt(r));
+      toast.success('reference prompt copied');
+    } catch { toast.error('clipboard blocked'); }
+  };
+  const saveReference = async (r: UiRef) => {
+    try {
+      const res = await fetch('/api/olympus/design-memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: r.id, name: r.name, library: r.library, category: r.category, demoUrl: r.demoUrl, note: r.what, projectSlug }),
+      });
+      const d = await res.json();
+      if (d?.ok) { toast.success(`saved to design memory · ${r.name}`); void loadMemory(); }
+      else toast.error(d?.error || 'could not save');
+    } catch { toast.error('could not save'); }
+  };
+  const critiqueReference = async (r: UiRef) => {
+    try {
+      const res = await fetch('/api/olympus/artcraft/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: projectSlug,
+          title: `Critique the ${r.name} reference`,
+          priority: 'high',
+          prompt: `Athena: critique the "${r.name}" reference (${r.library} · ${r.category}) against the open project's current style.\n${r.what}\nReference: ${r.demoUrl}\n\nName what fits, what conflicts, and the smallest change that would make it belong. Do not edit any file in this turn.`,
+        }),
+      });
+      const d = await res.json();
+      if (d?.ok) toast.success('Athena will critique this reference');
+      else toast.error(d?.error || 'could not queue the critique');
+    } catch { toast.error('could not queue the critique'); }
+  };
   const applyReference = (r: UiRef) => {
     setPendingRef({ name: r.name, demoUrl: r.demoUrl, category: r.category, library: r.library });
     setTab('style');
@@ -384,9 +442,21 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   <span className="text-[10px] font-mono font-semibold text-olympus-gold truncate">{refView.name}</span>
                   <span className="text-[8px] font-mono text-olympus-text-dim truncate hidden md:block">{refView.what}</span>
                   <button
+                    onClick={() => void saveReference(refView)}
+                    data-tip={memoryIds.has(refView.id) ? 'Saved in design memory' : 'Save to design memory (named reference)'}
+                    className="ml-auto text-olympus-text-dim hover:text-olympus-gold p-1 shrink-0"
+                    aria-label="Save to design memory"
+                  >{memoryIds.has(refView.id) ? <BookmarkCheck size={12} className="text-olympus-green" /> : <Bookmark size={12} />}</button>
+                  <button
+                    onClick={() => void copyReferencePrompt(refView)}
+                    data-tip="Copy the implementation prompt"
+                    className="text-olympus-text-dim hover:text-olympus-gold p-1 shrink-0"
+                    aria-label="Copy implementation prompt"
+                  ><Copy size={11} /></button>
+                  <button
                     onClick={() => { try { navigator.clipboard.writeText(refView.fetchLane); } catch { /* best-effort */ } }}
                     data-tip="Copy the fetch/install lane"
-                    className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20 shrink-0"
+                    className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20 shrink-0"
                   >{t('common.copyLane', language)}</button>
                   <a href={refView.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold px-1 shrink-0"><ExternalLink size={10} /></a>
                 </div>
@@ -411,7 +481,8 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                     >{v}</button>
                   ))}
                   <span className="text-[8px] font-mono text-olympus-text-dim hidden md:inline">· interactive — move the pointer</span>
-                  <button onClick={() => applyReference(refView)} className="ml-auto text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
+                  <button onClick={() => void critiqueReference(refView)} className="ml-auto flex items-center gap-1 text-[9px] font-mono px-2 py-1 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20"><MessageSquare size={9} /> {t('references.critique', language)}</button>
+                  <button onClick={() => applyReference(refView)} className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
                   <button onClick={() => void queueReference(refView)} className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">{t('common.queue', language)}</button>
                 </div>
               </div>
@@ -435,6 +506,13 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                         {lib === 'all' ? 'all' : lib === 'originkit' ? 'OriginKit' : 'Skiper'}
                       </button>
                     ))}
+                    <button
+                      onClick={() => setMemoryOnly((v) => !v)}
+                      data-tip="Show only the references saved in design memory for this project"
+                      className={cn('flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded-full border transition-colors', memoryOnly ? 'border-olympus-green/50 bg-olympus-green/10 text-olympus-green' : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text')}
+                    >
+                      {memoryOnly ? <BookmarkCheck size={8} /> : <Bookmark size={8} />} memory {memory.length > 0 ? `· ${memory.length}` : ''}
+                    </button>
                     <span className="ml-auto text-[8px] font-mono text-olympus-text-dim tabular-nums">{t('references.count', language, { n: filteredRefs.length.toLocaleString() })}</span>
                   </div>
                   <div className="flex items-center gap-1 mt-1.5 overflow-x-auto custom-scroll pb-0.5">

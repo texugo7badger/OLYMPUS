@@ -234,3 +234,13 @@ configured editor (VSCode-family at `file:line` via `-g`; Zed at
 `file:line`). Bursts are debounced, the same file is not reopened within 5s,
 the feed pauses while the window is hidden, and `/api/olympus/editor/open`
 refuses traversal, non-files and anything outside the project root.
+
+### v0.0.43 — design memory & critique
+
+The reference detail gains three actions: **save** (a named preference with
+its reason, scoped to the active project), **copy prompt** (a real
+implementation prompt with the motion, the link and the identity rule) and
+**critique** (Athena is queued to say what fits, what conflicts and the
+smallest change that would make it belong). The catalog filters to the saved
+memory; the store is `~/.olympus/design-memory.json`, capped, deduped and
+atomic.
