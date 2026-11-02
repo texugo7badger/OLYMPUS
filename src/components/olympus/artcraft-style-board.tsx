@@ -11,8 +11,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Layers, Loader2, Palette, RefreshCw, Send, Sparkles } from 'lucide-react';
+import { Check, Layers, Loader2, Palette, RefreshCw, Send, Sparkles, BookOpen, MousePointerClick } from 'lucide-react';
 import { generateLogos, generatePalettes } from '@/lib/design-generator';
+import { DESIGN_PRINCIPLES, DESIGN_SYSTEMS, TYPE_LABEL, DENSITY_LABEL, RADIUS_LABEL, MOTION_LABEL } from '@/lib/design-wisdom';
+import LivePreview from './live-preview';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
 import {
@@ -55,6 +57,10 @@ export default function ArtcraftStyleBoard({
   const [queueing, setQueueing] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [note, setNote] = useState<string | null>(null);
+  // v0.0.34 — the preview has two lanes: the instant token mock and the REAL
+  // project dev server (URL bar, back/forward, reload, mark-to-edit).
+  const [previewTab, setPreviewTab] = useState<'design' | 'live'>('design');
+  const [selectedPart, setSelectedPart] = useState<string | null>(null);
   // v0.0.32 — the identity generator (palettes + logo marks from the name).
   const [genSalt, setGenSalt] = useState(0);
   const [chosenLogo, setChosenLogo] = useState<string | null>(null);
@@ -321,8 +327,18 @@ export default function ArtcraftStyleBoard({
             <Layers size={12} className="text-olympus-gold" />
             <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">live preview</span>
             <span className="text-[8px] font-mono text-olympus-text-dim truncate">{projectName} — updates as you edit</span>
+            <div className="ml-auto flex items-center gap-1">
+              <button onClick={() => setPreviewTab('design')} className={cn('text-[8px] font-mono px-2 py-0.5 rounded-full border', previewTab === 'design' ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/10 text-olympus-text-dim')}>design</button>
+              <button onClick={() => setPreviewTab('live')} className={cn('text-[8px] font-mono px-2 py-0.5 rounded-full border', previewTab === 'live' ? 'border-olympus-cyan/50 bg-olympus-cyan/10 text-olympus-cyan' : 'border-olympus-gold/10 text-olympus-text-dim')}>live</button>
+            </div>
           </header>
 
+          <div className={cn('flex-1 min-h-0', previewTab === 'live' && 'min-h-[320px]')}>
+          {previewTab === 'live' ? (
+            <div className="h-full min-h-[320px] rounded-lg overflow-hidden border border-olympus-gold/15">
+              <LivePreview />
+            </div>
+          ) : (
           <div className="flex-1 min-h-[190px] rounded-lg overflow-hidden border border-olympus-gold/15" style={{ background: colors.bg }}>
             <div className="flex items-center gap-1.5 px-2 py-1" style={{ background: colors.surface, borderBottom: `1px solid ${colors.accent}22` }}>
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: colors.accent }} />
@@ -330,7 +346,11 @@ export default function ArtcraftStyleBoard({
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: colors.muted }} />
               <span className="ml-2 text-[7px] font-mono truncate" style={{ color: colors.muted }}>{projectSlug}.local</span>
             </div>
-            <div className="p-3" style={{ color: colors.text }}>
+            <div
+              className={cn('p-3 transition-all', selectedPart === 'hero' && 'ring-1 ring-inset')}
+              style={{ color: colors.text, ...(selectedPart === 'hero' ? { boxShadow: `inset 0 0 0 1px ${colors.accent}88` } : {}) }}
+              onClick={() => setSelectedPart('hero')}
+            >
               <div className="flex items-center gap-1.5">
                 {chosenLogo
                   ? <img src={`data:image/svg+xml;utf8,${encodeURIComponent(chosenLogo)}`} alt="" width={26} height={26} className="rounded" />
@@ -341,12 +361,12 @@ export default function ArtcraftStyleBoard({
               <h3 className="mt-3 text-[16px] font-semibold leading-tight" style={{ color: colors.text }}>Build something precise.</h3>
               <p className="mt-1 text-[9px] leading-relaxed" style={{ color: colors.muted }}>This page uses the project&apos;s palette, type and spacing — not the OLYMPUS chrome.</p>
               <div className="mt-2 flex items-center gap-1.5">
-                <span className="text-[8px] font-mono px-2 py-1 rounded" style={{ background: colors.accent, color: colors.bg }}>get started</span>
-                <span className="text-[8px] font-mono px-2 py-1 rounded border" style={{ borderColor: `${colors.accent}66`, color: colors.accent }}>learn more</span>
+                <span onClick={(e) => { e.stopPropagation(); setSelectedPart('primary button'); }} className={cn('text-[8px] font-mono px-2 py-1 rounded cursor-pointer', selectedPart === 'primary button' && 'ring-2 ring-offset-1')} style={{ background: colors.accent, color: colors.bg, ...(selectedPart === 'primary button' ? { boxShadow: `0 0 0 2px ${colors.accent}55` } : {}) }}>get started</span>
+                <span onClick={(e) => { e.stopPropagation(); setSelectedPart('secondary button'); }} className={cn('text-[8px] font-mono px-2 py-1 rounded border cursor-pointer', selectedPart === 'secondary button' && 'ring-2 ring-offset-1')} style={{ borderColor: `${colors.accent}66`, color: colors.accent }}>learn more</span>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-1.5">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="rounded p-1.5" style={{ background: colors.surface }}>
+                  <div key={i} onClick={(e) => { e.stopPropagation(); setSelectedPart(`card ${i + 1}`); }} className={cn('rounded p-1.5 cursor-pointer', selectedPart === `card ${i + 1}` && 'ring-2')} style={{ background: colors.surface, ...(selectedPart === `card ${i + 1}` ? { boxShadow: `0 0 0 2px ${colors.accent}55` } : {}) }}>
                     <span className="block h-1 w-8 rounded-full mb-1" style={{ background: colors.accent }} />
                     <span className="block h-1 w-12 rounded-full" style={{ background: colors.muted, opacity: 0.5 }} />
                     <span className="block h-1 w-9 rounded-full mt-1" style={{ background: colors.muted, opacity: 0.35 }} />
@@ -354,6 +374,14 @@ export default function ArtcraftStyleBoard({
                 ))}
               </div>
             </div>
+          </div>
+            )}
+            {previewTab === 'design' && (
+              <div className="flex items-center gap-1 mt-1 text-[8px] font-mono text-olympus-text-dim">
+                <MousePointerClick size={9} className="text-olympus-gold" />
+                {selectedPart ? <>selected: <span className="text-olympus-gold">{selectedPart}</span> · click another component</> : 'click a component in the preview to select it'}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 mt-2">
@@ -501,6 +529,47 @@ export default function ArtcraftStyleBoard({
           )}
         </section>
 
+        {/* v0.0.34 — OPEN DESIGN WISDOM: the charter distilled into decisions
+            the board can apply, plus the reference-system token recipes. */}
+        <section className="rounded border border-olympus-purple/20 bg-olympus-panel/60 p-2.5 lg:col-span-2">
+          <header className="flex items-center gap-1.5 mb-1.5">
+            <BookOpen size={11} className="text-olympus-purple" />
+            <span className="text-[10px] font-mono font-semibold text-olympus-purple uppercase">Open Design wisdom</span>
+            <span className="text-[8px] font-mono text-olympus-text-dim">the designer charter, distilled · every rule applies to this board</span>
+            <span className="ml-auto text-[7px] font-mono text-olympus-text-dim">full lane: the opendesign MCP · Athena</span>
+          </header>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 max-h-[210px] overflow-y-auto custom-scroll pr-1">
+            {DESIGN_PRINCIPLES.map((p, i) => (
+              <div key={p.id} className="rounded-lg border border-olympus-gold/10 bg-olympus-card px-2 py-1.5">
+                <div className="flex items-center gap-1">
+                  <span className="text-[7px] font-mono text-olympus-purple/70 tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="text-[9px] font-mono font-semibold text-olympus-text">{p.title}</span>
+                  {p.apply && (
+                    <button
+                      onClick={() => { update(p.apply!); setNote(`${p.title} applied to the board`); }}
+                      className="ml-auto text-[7px] font-mono px-1 py-0.5 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20"
+                    >apply</button>
+                  )}
+                </div>
+                <p className="text-[8px] font-mono text-olympus-text-dim leading-relaxed mt-0.5 line-clamp-2">{p.body}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center gap-1 flex-wrap">
+            <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mr-1">systems</span>
+            {DESIGN_SYSTEMS.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => { update(s.tokens); setNote(`${s.name} recipe applied`); }}
+                data-tip={s.note}
+                className="text-[8px] font-mono px-1.5 py-0.5 rounded-full border border-olympus-gold/15 text-olympus-text-dim hover:border-olympus-purple/45 hover:text-olympus-purple"
+              >{s.name}</button>
+            ))}
+            <span className="ml-auto text-[7px] font-mono text-olympus-text-dim">
+              {TYPE_LABEL[tokens.typography]} · {DENSITY_LABEL[tokens.density]} · {RADIUS_LABEL[tokens.radius]} · {MOTION_LABEL[tokens.motion]}
+            </span>
+          </div>
+        </section>
 
       </div>
     </div>
