@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="OLYMPUS curation build category">
+  
+  <circle cx="48" cy="48" r="44" fill="none" stroke="#B79BE0" stroke-width="1" opacity=".22"/>
+  <g class="spin"><path d="M48 14 L52 40 L78 48 L52 56 L48 82 L44 56 L18 48 L44 40 Z" fill="#B79BE0" opacity=".55"/></g><g class="pulse"><circle cx="66" cy="30" r="2.6" fill="#D4A574"/><circle cx="28" cy="66" r="2.2" fill="#6BAEB5"/><circle cx="70" cy="68" r="2" fill="#7BAE8E"/></g><circle cx="48" cy="48" r="5" fill="#D4A574"/>
+</svg>

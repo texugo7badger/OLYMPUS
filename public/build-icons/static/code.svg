@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="OLYMPUS code build category">
+  
+  <circle cx="48" cy="48" r="44" fill="none" stroke="#6BAEB5" stroke-width="1" opacity=".22"/>
+  <g fill="none" stroke="#6BAEB5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M32 30 L16 48 L32 66"/><path d="M64 30 L80 48 L64 66"/></g><circle class="pulse" cx="48" cy="48" r="4" fill="#D4A574"/>
+</svg>

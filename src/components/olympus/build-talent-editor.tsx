@@ -70,7 +70,7 @@ export default function BuildTalentEditor({ open, onClose, onCreated }: { open: 
   const field = 'w-full bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50';
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/65 backdrop-blur-[2px] p-4" onClick={onClose} role="dialog" aria-modal="true" aria-label="Build talent editor">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 p-4" onClick={onClose} role="dialog" aria-modal="true" aria-label="Build talent editor">
       <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-xl border border-olympus-gold/25 bg-olympus-bg shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
         <header className="flex items-center gap-2 px-4 py-2.5 border-b border-olympus-gold/10 bg-olympus-panel">
           <Sparkles size={13} className="text-olympus-gold" />
@@ -92,7 +92,7 @@ export default function BuildTalentEditor({ open, onClose, onCreated }: { open: 
                     className={cn('relative rounded-lg border p-1.5 flex flex-col items-center gap-0.5 transition-all', selected ? 'border-olympus-gold/60 bg-olympus-gold/10 -translate-y-0.5' : 'border-olympus-gold/10 hover:border-olympus-gold/35')}
                     aria-pressed={selected}
                   >
-                    <img src={cat.icon} alt="" width={34} height={34} />
+                    <img src={cat.iconStatic} alt="" width={34} height={34} loading="lazy" />
                     <span className="text-[8px] font-mono text-olympus-text-dim uppercase">{cat.name}</span>
                     {count > 0 && <span className="absolute top-0.5 right-0.5 text-[7px] font-mono px-1 rounded-full bg-olympus-gold/20 text-olympus-gold">{count}</span>}
                   </button>

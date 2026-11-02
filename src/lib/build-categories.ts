@@ -13,6 +13,9 @@ export interface BuildCategory {
   id: string;
   name: string;
   icon: string;
+  /** Static twin (no keyframes) for grids: 10 simultaneous animations are
+   *  not worth 60fps. The active node keeps the animated icon. */
+  iconStatic: string;
   color: string;
   skills: string[];
   mcps: string[];
@@ -21,47 +24,47 @@ export interface BuildCategory {
 
 export const BUILD_CATEGORIES: BuildCategory[] = [
   {
-    id: 'planning', name: 'Planning', icon: '/build-icons/planning.svg', color: '#D4A574',
+    id: 'planning', name: 'Planning', icon: '/build-icons/planning.svg', iconStatic: '/build-icons/static/planning.svg', color: '#D4A574',
     skills: ['brainstorming', 'writing-plans', 'intent-driven-development'],
     mcps: ['context7', 'sequential-thinking'], demigods: ['planner', 'architect'],
   },
   {
-    id: 'code', name: 'Code', icon: '/build-icons/code.svg', color: '#6BAEB5',
+    id: 'code', name: 'Code', icon: '/build-icons/code.svg', iconStatic: '/build-icons/static/code.svg', color: '#6BAEB5',
     skills: ['frontend-patterns', 'backend-patterns', 'tdd-workflow'],
     mcps: ['context7', 'filesystem'], demigods: ['code-verifier', 'refactor-engineer'],
   },
   {
-    id: 'qa', name: 'QA', icon: '/build-icons/qa.svg', color: '#7BAE8E',
+    id: 'qa', name: 'QA', icon: '/build-icons/qa.svg', iconStatic: '/build-icons/static/qa.svg', color: '#7BAE8E',
     skills: ['test-driven-development', 'e2e-testing', 'verification-before-completion'],
     mcps: ['playwright'], demigods: ['e2e-runner', 'unit-test-author'],
   },
   {
-    id: 'security', name: 'Security', icon: '/build-icons/security.svg', color: '#C4756A',
+    id: 'security', name: 'Security', icon: '/build-icons/security.svg', iconStatic: '/build-icons/static/security.svg', color: '#C4756A',
     skills: ['security-review', 'security-scan'], mcps: ['github'], demigods: ['security-reviewer', 'secrets-scanner'],
   },
   {
-    id: 'design', name: 'Design', icon: '/build-icons/design.svg', color: '#9B7BAE',
+    id: 'design', name: 'Design', icon: '/build-icons/design.svg', iconStatic: '/build-icons/static/design.svg', color: '#9B7BAE',
     skills: ['frontend-design', 'design-md', 'impeccable'],
     mcps: ['originkit', 'shadcn'], demigods: ['ui-designer', 'a11y-auditor'],
   },
   {
-    id: 'data', name: 'Data', icon: '/build-icons/data.svg', color: '#6B8FB5',
+    id: 'data', name: 'Data', icon: '/build-icons/data.svg', iconStatic: '/build-icons/static/data.svg', color: '#6B8FB5',
     skills: ['postgres-patterns', 'database-migrations'], mcps: ['postgres', 'context7'], demigods: ['schema-reviewer', 'query-optimizer'],
   },
   {
-    id: 'infra', name: 'Infra', icon: '/build-icons/infra.svg', color: '#C4A265',
+    id: 'infra', name: 'Infra', icon: '/build-icons/infra.svg', iconStatic: '/build-icons/static/infra.svg', color: '#C4A265',
     skills: ['docker-patterns', 'deployment-patterns'], mcps: ['docker', 'kubernetes'], demigods: ['docker-expert', 'sre'],
   },
   {
-    id: 'integration', name: 'Integration', icon: '/build-icons/integration.svg', color: '#6BAE9B',
+    id: 'integration', name: 'Integration', icon: '/build-icons/integration.svg', iconStatic: '/build-icons/static/integration.svg', color: '#6BAE9B',
     skills: ['api-design', 'mcp-server-patterns'], mcps: ['brave-search', 'github'], demigods: ['api-integrator', 'auth-specialist'],
   },
   {
-    id: 'memory', name: 'Memory', icon: '/build-icons/memory.svg', color: '#D4A574',
+    id: 'memory', name: 'Memory', icon: '/build-icons/memory.svg', iconStatic: '/build-icons/static/memory.svg', color: '#D4A574',
     skills: ['knowledge-ops', 'continuous-learning-v2'], mcps: ['memory'], demigods: ['brain-backup', 'instinct-curator'],
   },
   {
-    id: 'curation', name: 'Curation', icon: '/build-icons/curation.svg', color: '#B79BE0',
+    id: 'curation', name: 'Curation', icon: '/build-icons/curation.svg', iconStatic: '/build-icons/static/curation.svg', color: '#B79BE0',
     skills: ['docs-verifier', 'skill-indexer'], mcps: ['olympus-craft'], demigods: ['docs-verifier', 'pattern-extractor'],
   },
 ];

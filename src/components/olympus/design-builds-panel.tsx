@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, Copy, Flame, Loader2, Plus, Snowflake, Sparkles, Sun, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { buildPrompt, type DesignBuildWithStats } from '@/lib/design-builds';
-import BuildTalentEditor from './build-talent-editor';
+import BuildTalentPage from './build-talent-page';
 
 const TIER: Record<string, { label: string; className: string; Icon: any }> = {
   hot: { label: 'hot', className: 'border-olympus-green/45 text-olympus-green bg-olympus-green/10', Icon: Flame },
@@ -31,7 +31,7 @@ export default function DesignBuildsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [talentOpen, setTalentOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState({
     name: '', signature: '', god: 'athena', demigods: '', skills: '', mcps: '', note: '',
@@ -99,6 +99,10 @@ export default function DesignBuildsPanel() {
 
   const field = 'w-full bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50';
 
+  if (talentOpen) {
+    return <BuildTalentPage onClose={() => setTalentOpen(false)} onCreated={() => { void load(); }} />;
+  }
+
   return (
     <div className="absolute inset-0 overflow-auto custom-scroll p-3">
       <header className="flex items-center gap-2 mb-2">
@@ -108,7 +112,7 @@ export default function DesignBuildsPanel() {
           {counts.hot} hot · {counts.warm} warm · {counts.cold} cold — learned from the arsenal-resonance log
         </span>
         <button
-          onClick={() => setEditorOpen(true)}
+          onClick={() => setTalentOpen(true)}
           className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30 hover:bg-olympus-purple/25"
         >
           <Sparkles size={10} /> talent editor
@@ -188,7 +192,6 @@ export default function DesignBuildsPanel() {
           );
         })}
       </div>
-      <BuildTalentEditor open={editorOpen} onClose={() => setEditorOpen(false)} onCreated={() => { void load(); }} />
       {builds.length === 0 && !loading && (
         <p className="text-center py-10 text-[10px] font-mono text-olympus-text-dim">no builds yet — create the first combination</p>
       )}

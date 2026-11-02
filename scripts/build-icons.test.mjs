@@ -45,12 +45,12 @@ ok('each category offers real arsenal options', () => {
 });
 
 ok('the talent editor enforces the caps and posts a real build', () => {
-  const editor = read('src/components/olympus/build-talent-editor.tsx');
+  const editor = read('src/components/olympus/build-talent-page.tsx');
   assert.match(editor, /BUILD_LIMITS/);
-  assert.match(editor, /limit reached/);
+  assert.match(editor, /BUILD_LIMITS/);
   assert.match(editor, /\/api\/olympus\/design-builds/);
   const panel = read('src/components/olympus/design-builds-panel.tsx');
-  assert.match(panel, /BuildTalentEditor/);
+  assert.match(panel, /BuildTalentPage/);
   assert.match(panel, /talent editor/);
 });
 

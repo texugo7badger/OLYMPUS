@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="OLYMPUS data build category">
+  
+  <circle cx="48" cy="48" r="44" fill="none" stroke="#6B8FB5" stroke-width="1" opacity=".22"/>
+  <g fill="none" stroke="#6B8FB5" stroke-width="2.4"><ellipse cx="48" cy="28" rx="26" ry="9"/><ellipse cx="48" cy="48" rx="26" ry="9" opacity=".75"/><ellipse cx="48" cy="68" rx="26" ry="9" opacity=".5"/></g><circle class="travel" cx="48" cy="48" r="4" fill="#D4A574"/>
+</svg>
