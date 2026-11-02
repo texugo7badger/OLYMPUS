@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.40, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.41, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,13 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.41 — the living project brief.** A project profile now answers what
+the project is *doing*: campaign status, completed/total hops, the parked hop
+and its named cause, the next parts, the docs that describe it, the walk's
+memory files and the measured brain scope (instincts · knowledge · skills).
+The profile card is localized (English + PT-BR labels), and the summary opens
+with the folder identity — `aime`, not “AIME”.
 
 **v0.0.40 — the stability harness.** `npm run soak` probes health, power,
 resources, run-state and projects on a cadence and fails on the truth:

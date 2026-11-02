@@ -19,6 +19,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import { getProject, getActiveProjectSlug, reconcileProjectPath } from '@/lib/project-context';
 import { detectProjectStacks, folderName, projectSummary } from '@/lib/project-summary';
+import { buildProjectBrief } from '@/lib/project-brief';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -177,6 +178,7 @@ export async function GET(req: NextRequest) {
     isDir,
     stacks,
     // A summary, not the prompt that created the project.
+    brief: buildProjectBrief(isDir ? root : undefined),
     description: projectSummary({
       slug: note.slug,
       pkg,

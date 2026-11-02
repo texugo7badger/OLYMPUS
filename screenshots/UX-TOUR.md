@@ -217,3 +217,11 @@ load-bearing endpoints, records latency, memory and the process census, and
 fails on a non-2xx, a budget overrun, memory below 900 MB or unbounded RSS.
 The measured 40-round run is in [STABILITY.md](../STABILITY.md); the 8-hour /
 100-hop certification is explicitly not claimed.
+
+### v0.0.41 — the living project brief
+
+The project profile now carries the **brief**: status (running / parked / done
+/ idle), completed/total hops, the campaign id, the parked hop with its cause,
+the next parts, the docs, the walk's memory files and the measured brain scope
+(115 instincts · 39 knowledge · 321 skills on this machine). The card's
+labels follow the selected language (English + PT-BR).

@@ -19,19 +19,34 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Check, ChevronDown, Clock, Code2, Copy, ExternalLink, FileCode,
-  Files, Folder, GitBranch, HardDrive, Layers, Loader2, X,
+  Activity, BookOpen, Brain, Check, ChevronDown, Clock, Code2, Copy, ExternalLink, FileCode,
+  Files, Folder, GitBranch, HardDrive, Layers, ListTree, Loader2, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useOlympus, type ProjectNote } from '@/lib/olympus-store';
 import OlympusLoader from './olympus-loader';
 import StackIcon, { stackLabel } from './stack-icon';
+import { useLanguage, t } from '@/lib/i18n';
 
 interface RecentFile {
   path: string;
   size: number;
   mtime: string;
+}
+
+interface Brief {
+  status: 'running' | 'parked' | 'done' | 'idle';
+  campaignId: string | null;
+  completed: number;
+  total: number;
+  parked: number;
+  next: Array<{ id: string; god: string; status: string }>;
+  parkedHop: { hopId: string; reason: string; error?: string | null } | null;
+  docs: Array<{ name: string; title: string }>;
+  memory: string[];
+  scope: { instincts: number; knowledge: number; skills: number };
+  updatedAt: string | null;
 }
 
 interface Profile {
@@ -44,6 +59,7 @@ interface Profile {
   isDir: boolean;
   stacks: string[];
   description: string;
+  brief?: Brief;
   stats: {
     files: number;
     directories: number;
@@ -92,6 +108,7 @@ function fileIcon(rel: string) {
 }
 
 export default function ProjectProfileCard({ slug, onClose }: { slug: string; onClose: () => void }) {
+  const language = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -169,6 +186,22 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
   // v0.0.38 — the folder name, lowercase, is the identity.
   const name = String(slug || profile?.project.name || '').toLowerCase();
   const truncated = profile?.stats.truncated;
+  // v0.0.41 — the brief's status in the selected language (no raw English).
+  const briefStatus = profile?.brief?.status ?? 'idle';
+  const briefStatusLabel = briefStatus === 'running'
+    ? t('projects.statusRunning', language)
+    : briefStatus === 'parked'
+      ? t('projects.statusParked', language)
+      : briefStatus === 'done'
+        ? t('projects.statusDone', language)
+        : t('projects.statusIdle', language);
+  const briefStatusTone = briefStatus === 'running'
+    ? 'text-olympus-gold bg-olympus-gold/10 ring-olympus-gold/30'
+    : briefStatus === 'parked'
+      ? 'text-olympus-red bg-olympus-red/10 ring-olympus-red/30'
+      : briefStatus === 'done'
+        ? 'text-olympus-green bg-olympus-green/10 ring-olympus-green/30'
+        : 'text-olympus-text-dim bg-olympus-bg/60 ring-olympus-gold/10';
 
   return createPortal(
     <div
@@ -189,7 +222,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
         ) : error ? (
           <div className="p-6 text-center">
             <p className="text-xs font-mono text-olympus-red">{error}</p>
-            <button onClick={onClose} className="mt-3 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30">close</button>
+            <button onClick={onClose} className="mt-3 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30">{t('common.close', language)}</button>
           </div>
         ) : profile ? (
           <>
@@ -204,10 +237,10 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-base font-semibold text-olympus-text truncate">{name}</h2>
                     {isActive && (
-                      <span className="text-[8px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded bg-olympus-green/15 text-olympus-green ring-1 ring-olympus-green/30">active</span>
+                      <span className="text-[8px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded bg-olympus-green/15 text-olympus-green ring-1 ring-olympus-green/30">{t('common.active', language)}</span>
                     )}
                     {!profile.exists && (
-                      <span className="text-[8px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded bg-olympus-red/15 text-olympus-red ring-1 ring-olympus-red/30">path missing</span>
+                      <span className="text-[8px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded bg-olympus-red/15 text-olympus-red ring-1 ring-olympus-red/30">{t('projects.pathMissing', language)}</span>
                     )}
                   </div>
                   <p className="text-[9px] font-mono text-olympus-text-dim mt-0.5 truncate">
@@ -237,7 +270,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
               {/* Stack shelf — official marks, one tile each */}
               {profile.stacks.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5"><Layers size={10} className="text-olympus-gold" /> stack</div>
+                  <div className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5"><Layers size={10} className="text-olympus-gold" /> {t('projects.stack', language)}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {profile.stacks.map((s) => (
                       <span key={s} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-card text-olympus-text-dim ring-1 ring-olympus-gold/15">
@@ -251,24 +284,77 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                 </div>
               )}
 
+              {/* v0.0.41 — the living brief: what the project is DOING. */}
+              {profile.brief && (
+                <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card/40 p-2.5 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <Activity size={10} className="text-olympus-gold" />
+                    <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">{t('projects.brief', language)}</span>
+                    <span className={cn('ml-auto text-[8px] font-mono uppercase px-1.5 py-0.5 rounded ring-1', briefStatusTone)}>{briefStatusLabel}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[9px] font-mono text-olympus-text-dim">
+                    <span className="text-olympus-text">{profile.brief.completed}/{profile.brief.total} {t('projects.hops', language)}</span>
+                    {profile.brief.parked > 0 && <span className="text-olympus-red">· {profile.brief.parked} parked</span>}
+                    {profile.brief.campaignId && <span className="truncate">· {profile.brief.campaignId}</span>}
+                    {profile.brief.updatedAt && <span className="ml-auto shrink-0">{timeAgo(profile.brief.updatedAt)}</span>}
+                  </div>
+                  <div className="h-1 rounded-full bg-olympus-bg overflow-hidden ring-1 ring-olympus-gold/10">
+                    <div
+                      className={cn('h-full rounded-full', profile.brief.status === 'parked' ? 'bg-olympus-red' : profile.brief.status === 'done' ? 'bg-olympus-green' : 'bg-olympus-gold')}
+                      style={{ width: `${profile.brief.total > 0 ? Math.round((profile.brief.completed / profile.brief.total) * 100) : 0}%` }}
+                    />
+                  </div>
+                  {profile.brief.parkedHop && (
+                    <p className="text-[8.5px] font-mono text-olympus-red/90 truncate" data-tip={profile.brief.parkedHop.error || ''}>
+                      {t('projects.parkedAt', language)} {profile.brief.parkedHop.hopId} · {profile.brief.parkedHop.reason}
+                    </p>
+                  )}
+                  {profile.brief.next.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <ListTree size={9} className="text-olympus-gold/70" />
+                      {profile.brief.next.map((h) => (
+                        <span key={h.id} className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-bg/60 ring-1 ring-olympus-gold/10 text-olympus-text-dim">
+                          {h.id} · {h.god}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {profile.brief.docs.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <BookOpen size={9} className="text-olympus-gold/70" />
+                      {profile.brief.docs.slice(0, 4).map((d) => (
+                        <span key={d.name} className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-bg/60 ring-1 ring-olympus-gold/10 text-olympus-text-dim truncate max-w-[160px]" data-tip={d.title}>
+                          {d.name}
+                        </span>
+                      ))}
+                      {profile.brief.memory.length > 0 && <span className="text-[8px] font-mono text-olympus-green">· memory {profile.brief.memory.length}</span>}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-[8px] font-mono text-olympus-text-dim">
+                    <Brain size={9} className="text-olympus-purple" />
+                    <span>{t('projects.scope', language)}: {profile.brief.scope.instincts} {t('projects.instincts', language)} · {profile.brief.scope.knowledge} {t('projects.knowledge', language)} · {profile.brief.scope.skills} {t('projects.skills', language)}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 <div className="rounded-lg bg-olympus-card ring-1 ring-olympus-gold/10 px-2.5 py-2">
-                  <div className="flex items-center gap-1 text-[8px] font-mono uppercase text-olympus-text-dim"><Files size={9} /> files</div>
+                  <div className="flex items-center gap-1 text-[8px] font-mono uppercase text-olympus-text-dim"><Files size={9} /> {t('common.files', language)}</div>
                   <div className="text-sm font-mono text-olympus-text mt-0.5">{profile.stats.files.toLocaleString()}{truncated ? '+' : ''}</div>
                 </div>
                 <div className="rounded-lg bg-olympus-card ring-1 ring-olympus-gold/10 px-2.5 py-2">
-                  <div className="flex items-center gap-1 text-[8px] font-mono uppercase text-olympus-text-dim"><HardDrive size={9} /> size</div>
+                  <div className="flex items-center gap-1 text-[8px] font-mono uppercase text-olympus-text-dim"><HardDrive size={9} /> {t('common.size', language)}</div>
                   <div className="text-sm font-mono text-olympus-text mt-0.5">{fmtBytes(profile.stats.bytes)}</div>
                 </div>
                 <div className="rounded-lg bg-olympus-card ring-1 ring-olympus-gold/10 px-2.5 py-2">
-                  <div className="flex items-center gap-1 text-[8px] font-mono uppercase text-olympus-text-dim"><GitBranch size={9} /> branch</div>
+                  <div className="flex items-center gap-1 text-[8px] font-mono uppercase text-olympus-text-dim"><GitBranch size={9} /> {t('common.branch', language)}</div>
                   <div className="text-sm font-mono text-olympus-text mt-0.5 truncate" data-tip={profile.git?.branch || 'no git'}>{profile.git?.branch || '—'}</div>
                 </div>
                 <div className="rounded-lg bg-olympus-card ring-1 ring-olympus-gold/10 px-2.5 py-2">
-                  <div className="flex items-center gap-1 text-[8px] font-mono uppercase text-olympus-text-dim"><Clock size={9} /> changes</div>
+                  <div className="flex items-center gap-1 text-[8px] font-mono uppercase text-olympus-text-dim"><Clock size={9} /> {t('common.changes', language)}</div>
                   <div className="text-sm font-mono mt-0.5" style={{ color: profile.git && profile.git.dirty > 0 ? 'var(--olympus-amber)' : 'var(--olympus-green)' }}>
-                    {profile.git ? (profile.git.dirty > 0 ? `${profile.git.dirty} dirty` : 'clean') : '—'}
+                    {profile.git ? (profile.git.dirty > 0 ? `${profile.git.dirty} ${t('projects.dirty', language)}` : t('projects.clean', language)) : '—'}
                   </div>
                 </div>
               </div>
@@ -276,10 +362,10 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
               {/* Manifest + git commit */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <div className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5">manifests</div>
+                  <div className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5">{t('common.manifests', language)}</div>
                   <div className="flex flex-wrap gap-1">
                     {profile.manifests.length === 0 ? (
-                      <span className="text-[9px] font-mono text-olympus-text-dim">none detected</span>
+                      <span className="text-[9px] font-mono text-olympus-text-dim">{t('common.noneDetected', language)}</span>
                     ) : profile.manifests.map((m) => (
                       <span key={m} className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-panel text-olympus-text-dim ring-1 ring-olympus-gold/15">{m}</span>
                     ))}
@@ -289,14 +375,14 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                   )}
                 </div>
                 <div>
-                  <div className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5">latest commit</div>
+                  <div className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5">{t('common.latestCommit', language)}</div>
                   {profile.git ? (
                     <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed">
                       <span className="text-olympus-gold">{profile.git.commit}</span> {profile.git.subject}
                       <div className="text-[8px] mt-0.5">{profile.git.relative}</div>
                     </div>
                   ) : (
-                    <span className="text-[9px] font-mono text-olympus-text-dim">not a git repository</span>
+                    <span className="text-[9px] font-mono text-olympus-text-dim">{t('common.notGit', language)}</span>
                   )}
                 </div>
               </div>
@@ -304,10 +390,10 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
               {/* Recent files + scripts */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <div className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5">recent files</div>
+                  <div className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5">{t('common.recentFiles', language)}</div>
                   <div className="space-y-0.5">
                     {profile.stats.recent.length === 0 ? (
-                      <span className="text-[9px] font-mono text-olympus-text-dim">nothing recent</span>
+                      <span className="text-[9px] font-mono text-olympus-text-dim">{t('common.nothingRecent', language)}</span>
                     ) : profile.stats.recent.slice(0, 7).map((f) => (
                       <div key={f.path} className="flex items-center gap-1.5 text-[9px] font-mono py-0.5 group">
                         {fileIcon(f.path)}
@@ -321,7 +407,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                   </div>
                 </div>
                 <div>
-                  <div className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5">scripts</div>
+                  <div className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5">{t('common.scripts', language)}</div>
                   {profile.manifest && profile.manifest.scripts.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {profile.manifest.scripts.slice(0, 10).map((s) => (
@@ -334,7 +420,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                       ))}
                     </div>
                   ) : (
-                    <span className="text-[9px] font-mono text-olympus-text-dim">no package scripts</span>
+                    <span className="text-[9px] font-mono text-olympus-text-dim">{t('common.noScripts', language)}</span>
                   )}
                 </div>
               </div>
@@ -361,7 +447,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
             <div className="sticky bottom-0 flex items-center gap-1.5 px-5 py-3 border-t border-olympus-gold/10 bg-olympus-panel/95">
               {!isActive && (
                 <button onClick={activate} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-gold text-olympus-bg font-semibold ring-1 ring-olympus-gold/50 hover:brightness-110">
-                  <Check size={11} /> set active
+                  <Check size={11} /> {t('common.setActive', language)}
                 </button>
               )}
               <button
@@ -374,7 +460,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
               <button onClick={() => copy(profile.path, 'path')} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-panel text-olympus-text-dim ring-1 ring-olympus-gold/15 hover:text-olympus-gold">
                 <Copy size={11} /> path
               </button>
-              <button onClick={onClose} className="ml-auto text-[10px] font-mono px-3 py-1.5 rounded text-olympus-text-dim hover:text-olympus-text">close</button>
+              <button onClick={onClose} className="ml-auto text-[10px] font-mono px-3 py-1.5 rounded text-olympus-text-dim hover:text-olympus-text">{t('common.close', language)}</button>
             </div>
           </>
         ) : null}
