@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import { withTtl } from '@/lib/ttl-cache';
 import { costSummary } from '@/lib/olympus';
+import { loadBenchmarkConfig } from '@/lib/benchmarks';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,10 +26,17 @@ export const dynamic = 'force-dynamic';
  *   - The dashboard client also passes `cache: 'no-store'` on its fetch.
  */
 export async function GET() {
+  // v0.0.32 — a benchmark session boundary filters the aggregate; a "new
+  // session" starts from zero without deleting the lifetime ledger.
+  const cfg = loadBenchmarkConfig();
+  const sinceMs = cfg.sessionStartedAt ? Date.parse(cfg.sessionStartedAt) : 0;
   // v0.0.25 — the status bar polls this every 10s; a 5s cache absorbs the
   // pane-open burst without serving the UI a stale minute.
-  const body = await withTtl('costs', () => costSummary(), { ttlMs: 5_000 });
-  return NextResponse.json(body, {
+  const body = await withTtl(`costs:${Number.isFinite(sinceMs) ? sinceMs : 0}`, () => costSummary({ sinceMs }), { ttlMs: 5_000 });
+  return NextResponse.json({
+    ...body,
+    ...(cfg.sessionStartedAt ? { session: { label: cfg.sessionLabel ?? null, startedAt: cfg.sessionStartedAt } } : {}),
+  }, {
     headers: {
       'Cache-Control': 'no-store, max-age=0, must-revalidate',
       'Vary': '*',

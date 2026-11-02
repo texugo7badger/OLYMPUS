@@ -33,6 +33,8 @@ const NO_START_LOG = join(VAULT_ROOT, '07_Reviews', 'benchmarks', 'no-start.json
 export interface BenchmarkConfig {
   recordingEnabled: boolean;
   sessionLabel?: string;
+  /** v0.0.32 — the cost dashboard counts from here (a new session zeroes it). */
+  sessionStartedAt?: string;
 }
 
 export interface BenchmarkEntry {
@@ -116,6 +118,7 @@ export function loadBenchmarkConfig(): BenchmarkConfig {
       return {
         recordingEnabled: raw.recordingEnabled === true,
         sessionLabel: typeof raw.sessionLabel === 'string' ? raw.sessionLabel : undefined,
+        sessionStartedAt: typeof raw.sessionStartedAt === 'string' ? raw.sessionStartedAt : undefined,
       };
     }
   } catch {}
@@ -438,4 +441,41 @@ export function getBenchmarkStats(maxLines: number = 100_000): BenchmarkStats {
     },
     generated_at: new Date().toISOString(),
   };
+}
+
+/**
+ * v0.0.32 — a benchmark session: a named boundary. The user's name wins; an
+ * empty name falls back to `<project>-<YYYY-MM-DD>` so "just continue" still
+ * produces a meaningful label, description and stacks (from the project note).
+ */
+export interface BenchmarkSession {
+  label: string;
+  startedAt: string;
+  project: { slug: string; name: string; description?: string; stacks: string[] } | null;
+}
+
+export function buildBenchmarkSession(input: {
+  name?: string | null;
+  project?: { slug: string; name: string; description?: string; stacks: string[] } | null;
+  now?: number;
+}): BenchmarkSession {
+  const now = input.now ?? Date.now();
+  const iso = new Date(now).toISOString();
+  const project = input.project ?? null;
+  const auto = `${project?.slug ?? 'session'}-${iso.slice(0, 10)}`;
+  const label = (typeof input.name === 'string' ? input.name.trim() : '') || auto;
+  return { label, startedAt: iso, project };
+}
+
+/** Append one session to ~/.olympus/benchmark-sessions.json (append-only). */
+export function appendBenchmarkSession(session: BenchmarkSession): void {
+  const file = join(homedir(), '.olympus', 'benchmark-sessions.json');
+  let list: unknown[] = [];
+  try {
+    const raw = JSON.parse(readFileSync(file, 'utf-8'));
+    list = Array.isArray(raw) ? raw : Array.isArray((raw as any)?.sessions) ? (raw as any).sessions : [];
+  } catch { /* first session */ }
+  list.push(session);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, JSON.stringify(list, null, 2) + '\n', { mode: 0o600 });
 }

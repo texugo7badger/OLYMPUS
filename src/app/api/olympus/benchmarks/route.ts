@@ -4,11 +4,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import {
+  appendBenchmarkSession,
+  buildBenchmarkSession,
   getBenchmarkStats,
   loadBenchmarkConfig,
   saveBenchmarkConfig,
   type BenchmarkConfig,
 } from '@/lib/benchmarks';
+import { getActiveProject } from '@/lib/project-context';
 import { flushBenchmarkWindows } from '@/lib/opencode-session';
 
 export const runtime = 'nodejs';
@@ -50,9 +53,32 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const current = loadBenchmarkConfig();
+
+    // v0.0.32 — a new benchmark session: the user's name or "<project>-<date>",
+    // description/stacks from the project note, and a cost boundary. Recording
+    // follows the toggle (a reset with recording off is still useful).
+    if (body.newSession === true) {
+      const project = getActiveProject();
+      const session = buildBenchmarkSession({
+        name: typeof body.sessionName === 'string' ? body.sessionName : '',
+        project: project
+          ? { slug: project.slug, name: project.name, description: project.description, stacks: project.stacks }
+          : null,
+      });
+      const config: BenchmarkConfig = {
+        recordingEnabled: typeof body.recordingEnabled === 'boolean' ? body.recordingEnabled : current.recordingEnabled,
+        sessionLabel: session.label,
+        sessionStartedAt: session.startedAt,
+      };
+      saveBenchmarkConfig(config);
+      try { appendBenchmarkSession(session); } catch { /* the config is the truth */ }
+      return NextResponse.json({ ok: true, config, session });
+    }
+
     const updated: BenchmarkConfig = {
       recordingEnabled: typeof body.recordingEnabled === 'boolean' ? body.recordingEnabled : current.recordingEnabled,
       sessionLabel: typeof body.sessionLabel === 'string' ? (body.sessionLabel.trim() || undefined) : current.sessionLabel,
+      ...(current.sessionStartedAt ? { sessionStartedAt: current.sessionStartedAt } : {}),
     };
     // Toggle-off must land the in-flight conversation's counters rather than
     // discarding them (R-D).
