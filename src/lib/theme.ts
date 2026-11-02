@@ -288,16 +288,18 @@ export function themedFaviconSvg(state: ThemeState): string {
   const c = resolvePalette(state);
   const dot = (x: number, y: number, r: number, fill: string, opacity = 1) =>
     `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"${opacity < 1 ? ` opacity="${opacity}"` : ''}/>`;
-  // public/logo.svg scaled 0.25 into a 64px badge — same points, same radii.
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="31" fill="${c.bg}"/>`
+  // public/logo.svg scaled 0.25 into a 64px badge — CHAMELEON edition:
+  // same points/radii; the peak is gold→purple→cyan, the inner ring cyan,
+  // and each orbit dot carries its own palette color.
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="olympus-cham" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${c.gold}"/><stop offset="48%" stop-color="${c.purple}"/><stop offset="100%" stop-color="${c.cyan}"/></linearGradient></defs><circle cx="32" cy="32" r="31" fill="${c.bg}"/>`
     + `<circle cx="32" cy="32" r="28" fill="none" stroke="${c.gold}" stroke-width="0.375" opacity=".4"/>`
-    + `<circle cx="32" cy="32" r="24" fill="none" stroke="${c.gold}" stroke-width="0.25" opacity=".25"/>`
-    + `<path d="M32 19 L42 42 L36 42 L32 33 L28 42 L22 42 Z" fill="${c.gold}"/>`
+    + `<circle cx="32" cy="32" r="24" fill="none" stroke="${c.cyan}" stroke-width="0.25" opacity=".28"/>`
+    + `<path d="M32 19 L42 42 L36 42 L32 33 L28 42 L22 42 Z" fill="url(#olympus-cham)"/>`
     + dot(32, 15, 0.75, c.purple) + dot(32, 42, 0.75, c.gold)
-    + dot(32, 6, 1, c.gold) + dot(50.4, 13.6, 0.875, c.gold, 0.85)
-    + dot(58, 32, 1, c.gold) + dot(50.4, 50.4, 0.875, c.gold, 0.85)
-    + dot(32, 58, 1, c.gold) + dot(13.6, 50.4, 0.875, c.gold, 0.85)
-    + dot(6, 32, 1, c.gold) + dot(13.6, 13.6, 0.875, c.gold, 0.85)
+    + dot(32, 6, 1, c.gold) + dot(50.4, 13.6, 0.875, c.red, 0.85)
+    + dot(58, 32, 1, c.cyan) + dot(50.4, 50.4, 0.875, c.green, 0.85)
+    + dot(32, 58, 1, c.amberSoft) + dot(13.6, 50.4, 0.875, c.purple, 0.85)
+    + dot(6, 32, 1, c.teal) + dot(13.6, 13.6, 0.875, c.blue, 0.85)
     + `<g stroke="${c.gold}" stroke-width="0.125" opacity=".15"><path d="M32 32V6M32 32H58M32 32V58M32 32H6M32 32L50.4 13.6M32 32L50.4 50.4M32 32L13.6 50.4M32 32L13.6 13.6"/></g>`
     + `</svg>`;
 }

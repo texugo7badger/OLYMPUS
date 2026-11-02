@@ -50,7 +50,7 @@ export default function PlasmaOrb({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const levelRef = useRef(level);
-  levelRef.current = level;
+  useEffect(() => { levelRef.current = level; }, [level]);
   const [theme] = useTheme();
   const stable = theme.motion === 'stable';
 

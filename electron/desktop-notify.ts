@@ -123,6 +123,13 @@ export interface ThemeMarkColors {
   accent: string;
   purple: string;
   bg: string;
+  /** Chameleon marks (v0.0.36) — optional for old callers. */
+  cyan?: string;
+  green?: string;
+  red?: string;
+  amber?: string;
+  blue?: string;
+  teal?: string;
 }
 
 /**
@@ -143,6 +150,21 @@ function originalMarkPng(colors: ThemeMarkColors, size: number): Buffer {
   const [ar, ag, ab] = hexToRgb(colors.accent);
   const [pr, pg, pb] = hexToRgb(colors.purple);
   const [br, bgc, bb] = hexToRgb(colors.bg);
+  const [cnr, cng, cnb] = hexToRgb(colors.cyan ?? colors.accent);
+  const [gr, gg, gb] = hexToRgb(colors.green ?? colors.accent);
+  const [rr, rg, rb] = hexToRgb(colors.red ?? colors.purple);
+  const [amr, amg, amb] = hexToRgb(colors.amber ?? colors.accent);
+  const [blr, blg, blb] = hexToRgb(colors.blue ?? colors.purple);
+  const [tr, tg, tb] = hexToRgb(colors.teal ?? colors.cyan ?? colors.accent);
+  const mix = (a: [number, number, number], b: [number, number, number], t: number): [number, number, number] => [
+    Math.round(a[0] + (b[0] - a[0]) * t),
+    Math.round(a[1] + (b[1] - a[1]) * t),
+    Math.round(a[2] + (b[2] - a[2]) * t),
+  ];
+  const accents: Array<[number, number, number]> = [
+    [ar, ag, ab], [rr, rg, rb], [cnr, cng, cnb], [gr, gg, gb],
+    [amr, amg, amb], [pr, pg, pb], [tr, tg, tb], [blr, blg, blb],
+  ];
 
   const P = (v: number) => v * S;
   const cx = P(128 / 256);
@@ -212,15 +234,23 @@ function originalMarkPng(colors: ThemeMarkColors, size: number): Buffer {
       }
       // The two rings.
       if (Math.abs(d - outerR) <= outerHalf) blend(i, ar, ag, ab, 0.4);
-      if (Math.abs(d - innerR) <= innerHalf) blend(i, ar, ag, ab, 0.25);
+      if (Math.abs(d - innerR) <= innerHalf) blend(i, cnr, cng, cnb, 0.28);
       // The mountain.
-      if (inPeak(x, y)) blend(i, ar, ag, ab, 1);
+      if (inPeak(x, y)) {
+        const t = Math.max(0, Math.min(1, (y - P(76 / 256)) / P(92 / 256)));
+        const peak = t < 0.5
+          ? mix([ar, ag, ab], [pr, pg, pb], t * 2)
+          : mix([pr, pg, pb], [cnr, cng, cnb], (t - 0.5) * 2);
+        blend(i, peak[0], peak[1], peak[2], 1);
+      }
       // Callimachus above the peak (purple), Atlas at the base (gold).
       if (Math.hypot(x - cx, y - P(60 / 256)) <= P(3 / 256)) blend(i, pr, pg, pb, 1);
       if (Math.hypot(x - cx, y - P(168 / 256)) <= P(3 / 256)) blend(i, ar, ag, ab, 1);
       // The eight specialist gods in orbit.
-      for (const [ox, oy, or, op] of orbit) {
-        if (Math.hypot(x - ox, y - oy) <= or) blend(i, ar, ag, ab, op);
+      for (let oi = 0; oi < orbit.length; oi += 1) {
+        const [ox, oy, or, op] = orbit[oi];
+        const [dr, dg, db] = accents[oi % accents.length];
+        if (Math.hypot(x - ox, y - oy) <= or) blend(i, dr, dg, db, op);
       }
     }
   }
@@ -268,6 +298,21 @@ export function themeMarkPng(colors: ThemeMarkColors, size = 256, iconId = 'clas
   const [ar, ag, ab] = hexToRgb(colors.accent);
   const [pr, pg, pb] = hexToRgb(colors.purple);
   const [br, bgc, bb] = hexToRgb(colors.bg);
+  const [cnr, cng, cnb] = hexToRgb(colors.cyan ?? colors.accent);
+  const [gr, gg, gb] = hexToRgb(colors.green ?? colors.accent);
+  const [rr, rg, rb] = hexToRgb(colors.red ?? colors.purple);
+  const [amr, amg, amb] = hexToRgb(colors.amber ?? colors.accent);
+  const [blr, blg, blb] = hexToRgb(colors.blue ?? colors.purple);
+  const [tr, tg, tb] = hexToRgb(colors.teal ?? colors.cyan ?? colors.accent);
+  const mix = (a: [number, number, number], b: [number, number, number], t: number): [number, number, number] => [
+    Math.round(a[0] + (b[0] - a[0]) * t),
+    Math.round(a[1] + (b[1] - a[1]) * t),
+    Math.round(a[2] + (b[2] - a[2]) * t),
+  ];
+  const accents: Array<[number, number, number]> = [
+    [ar, ag, ab], [rr, rg, rb], [cnr, cng, cnb], [gr, gg, gb],
+    [amr, amg, amb], [pr, pg, pb], [tr, tg, tb], [blr, blg, blb],
+  ];
   const rgba = Buffer.alloc(size * size * 4);
   const cx = (size - 1) / 2;
   const cy = (size - 1) / 2;

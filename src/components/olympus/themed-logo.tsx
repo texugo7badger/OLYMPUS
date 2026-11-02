@@ -9,6 +9,7 @@
  */
 'use client';
 
+import { useId } from 'react';
 import { resolvePalette } from '@/lib/theme';
 import { useTheme } from '@/lib/theme-store';
 
@@ -16,6 +17,7 @@ export default function ThemedLogo({ iconId, size = 20 }: { iconId: string; size
   const [theme] = useTheme();
   const c = resolvePalette(theme);
   const common = { width: size, height: size, viewBox: '0 0 128 128', role: 'img' as const, 'aria-label': 'OLYMPUS' };
+  const gradientId = `olympus-peak-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   if (iconId === 'peak') {
     return (
       <svg {...common}>
@@ -50,27 +52,35 @@ export default function ThemedLogo({ iconId, size = 20 }: { iconId: string; size
       </svg>
     );
   }
-  // classic — the EXACT geometry of public/logo.svg scaled to the 128 viewBox:
-  // same rings, same peak, same eight god dots (radii and opacity included),
-  // Callimachus above and Atlas at the base. Only the colors change.
+  // classic — the EXACT geometry of public/logo.svg, CHAMELEON edition:
+  // the same rings, peak, eight god dots and rays, but the peak is a
+  // gold→purple→cyan gradient, the inner ring is cyan, and each orbit dot
+  // carries its own palette color. Only the colors change.
   const dot = (x: number, y: number, r: number, fill: string, opacity = 1) => (
     <circle cx={x} cy={y} r={r} fill={fill} opacity={opacity} />
   );
   return (
     <svg {...common}>
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={c.gold} />
+          <stop offset="48%" stopColor={c.purple} />
+          <stop offset="100%" stopColor={c.cyan} />
+        </linearGradient>
+      </defs>
       <circle cx="64" cy="64" r="56" stroke={c.gold} strokeWidth="0.75" fill="none" opacity=".4" />
-      <circle cx="64" cy="64" r="48" stroke={c.gold} strokeWidth="0.5" fill="none" opacity=".25" />
-      <path d="M 64 38 L 84 84 L 72 84 L 64 66 L 56 84 L 44 84 Z" fill={c.gold} />
+      <circle cx="64" cy="64" r="48" stroke={c.cyan} strokeWidth="0.5" fill="none" opacity=".28" />
+      <path d="M 64 38 L 84 84 L 72 84 L 64 66 L 56 84 L 44 84 Z" fill={`url(#${gradientId})`} />
       {dot(64, 30, 1.5, c.purple)}
       {dot(64, 84, 1.5, c.gold)}
       {dot(64, 12, 2, c.gold)}
-      {dot(100.8, 27.2, 1.75, c.gold, 0.85)}
-      {dot(116, 64, 2, c.gold)}
-      {dot(100.8, 100.8, 1.75, c.gold, 0.85)}
-      {dot(64, 116, 2, c.gold)}
-      {dot(27.2, 100.8, 1.75, c.gold, 0.85)}
-      {dot(12, 64, 2, c.gold)}
-      {dot(27.2, 27.2, 1.75, c.gold, 0.85)}
+      {dot(100.8, 27.2, 1.75, c.red, 0.85)}
+      {dot(116, 64, 2, c.cyan)}
+      {dot(100.8, 100.8, 1.75, c.green, 0.85)}
+      {dot(64, 116, 2, c.amberSoft)}
+      {dot(27.2, 100.8, 1.75, c.purple, 0.85)}
+      {dot(12, 64, 2, c.teal)}
+      {dot(27.2, 27.2, 1.75, c.blue, 0.85)}
       <g stroke={c.gold} strokeWidth="0.25" opacity=".15">
         <path d="M64 64V12M64 64H116M64 64V116M64 64H12" />
         <path d="M64 64L100.8 27.2M64 64L100.8 100.8M64 64L27.2 27.2M64 64L27.2 100.8" />

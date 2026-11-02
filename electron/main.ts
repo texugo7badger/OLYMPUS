@@ -807,7 +807,8 @@ function stopHibernationWatch(): void {
 const THEME_FILE = join(nodeOs.homedir(), '.olympus', 'theme.json');
 const DEFAULT_PALETTE = {
   accent: '#D4A574', purple: '#9B7BAE', cyan: '#6BAEB5', green: '#7BAE8E',
-  amber: '#C4A265', bg: '#0A0E16', text: '#B8B8B8',
+  amber: '#C4A265', red: '#C4756A', blue: '#6B8FB5', teal: '#6BAE9B',
+  bg: '#0A0E16', text: '#B8B8B8',
 };
 let themeMtimeMs = 0;
 let themedIcon: Electron.NativeImage | null = null;
@@ -829,6 +830,9 @@ function readThemePalette(): typeof DEFAULT_PALETTE {
       cyan: typeof p.cyan === 'string' ? p.cyan : DEFAULT_PALETTE.cyan,
       green: typeof p.green === 'string' ? p.green : DEFAULT_PALETTE.green,
       amber: typeof p.amberSoft === 'string' ? p.amberSoft : DEFAULT_PALETTE.amber,
+      red: typeof p.red === 'string' ? p.red : DEFAULT_PALETTE.red,
+      blue: typeof p.blue === 'string' ? p.blue : DEFAULT_PALETTE.blue,
+      teal: typeof p.teal === 'string' ? p.teal : DEFAULT_PALETTE.teal,
       bg: typeof p.bg === 'string' ? p.bg : DEFAULT_PALETTE.bg,
       text: typeof p.text === 'string' ? p.text : DEFAULT_PALETTE.text,
     };
@@ -841,7 +845,11 @@ function readThemePalette(): typeof DEFAULT_PALETTE {
 function themedWindowIcon(): Electron.NativeImage | null {
   try {
     const palette = readThemePalette();
-    const png = themeMarkPng({ accent: palette.accent, purple: palette.purple, bg: palette.bg }, 256, readThemeIconId());
+    const png = themeMarkPng({
+      accent: palette.accent, purple: palette.purple, bg: palette.bg,
+      cyan: palette.cyan, green: palette.green, red: palette.red,
+      amber: palette.amber, blue: palette.blue, teal: palette.teal,
+    }, 256, readThemeIconId());
     themedIcon = nativeImage.createFromBuffer(png);
     try {
       writeFileSync(join(nodeOs.homedir(), '.olympus', 'theme-icon.png'), png);
