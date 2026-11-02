@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip';
 import { useWorkingGods } from '@/lib/use-working-gods';
 import { useDocVisible } from '@/lib/use-doc-visible';
-import { iconById } from '@/lib/theme';
+import ThemedLogo from './themed-logo';
 import { useTheme } from '@/lib/theme-store';
 
 interface ProviderInfo {
@@ -167,7 +167,7 @@ export default function StatusBar({
 	 {/* LEFT SIDE: logo + window controls + Compact Brain + focus mode + nav info */}
  <div className="flex items-center gap-3 min-w-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
  <div className="flex items-center gap-1.5 text-olympus-gold font-semibold shrink-0">
- <img src={iconById(theme.iconId).src} alt="OLYMPUS" className="size-5" />
+ <ThemedLogo iconId={theme.iconId} size={20} />
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">

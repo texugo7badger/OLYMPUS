@@ -190,6 +190,15 @@ export function resolvePalette(state: ThemeState): OlympusPalette {
 
 /** CSS variable name for a palette key (`gold` → `--color-olympus-gold`). */
 export function cssVarName(key: PaletteKey): string {
+  // The runtime variables the Tailwind utilities reference (globals.css:
+  // :root + @theme inline). Setting these repaints every utility.
+  return key === 'amberSoft' ? '--olympus-amber-soft'
+    : key === 'textDim' ? '--olympus-text-dim'
+    : `--olympus-${key}`;
+}
+
+/** The aliased Tailwind name (kept in sync for direct readers). */
+export function cssColorVarName(key: PaletteKey): string {
   return key === 'amberSoft' ? '--color-olympus-amber-soft'
     : key === 'textDim' ? '--color-olympus-text-dim'
     : `--color-olympus-${key}`;
@@ -207,7 +216,10 @@ export interface ApplyTarget {
 export function applyTheme(state: ThemeState, root: ApplyTarget): ThemeState {
   const normalized = normalizeThemeState(state);
   const palette = resolvePalette(normalized);
-  for (const key of PALETTE_KEYS) root.style.setProperty(cssVarName(key), palette[key]);
+  for (const key of PALETTE_KEYS) {
+    root.style.setProperty(cssVarName(key), palette[key]);
+    root.style.setProperty(cssColorVarName(key), palette[key]);
+  }
   root.setAttribute('data-theme', normalized.presetId);
   root.setAttribute('data-mode', normalized.mode);
   root.setAttribute('data-motion', normalized.motion);
@@ -236,4 +248,10 @@ export function contrastRatio(a: string, b: string): number {
 export interface ThemePayload extends ThemeState {
   presets: Array<{ id: string; name: string; mode: ThemeMode; colors: OlympusPalette }>;
   icons: ThemeIcon[];
+}
+
+/** A tiny themed favicon (the peak in the accent) for the browser/window tab. */
+export function themedFaviconSvg(state: ThemeState): string {
+  const c = resolvePalette(state);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${c.bg}"/><circle cx="32" cy="32" r="24" fill="none" stroke="${c.gold}" stroke-width="1.5" opacity=".5"/><path d="M32 18 L46 46 L39 46 L32 32 L25 46 L18 46 Z" fill="${c.gold}"/><circle cx="32" cy="15" r="2.4" fill="${c.purple}"/></svg>`;
 }

@@ -73,7 +73,9 @@ import {
   setLobeEnabled,
   setAllLobes,
 } from '@/lib/olympus-brain-adapter';
-import { OLYMPUS_PALETTE, LOBE_TINTS, hexA } from '@/lib/brain-atlas-palette';
+import { OLYMPUS_PALETTE, LOBE_TINTS, hexA, themedOlympusPalette } from '@/lib/brain-atlas-palette';
+import { resolvePalette } from '@/lib/theme';
+import { useTheme } from '@/lib/theme-store';
 import { useOlympus } from '@/lib/olympus-store';
 import { useWorkingGods } from '@/lib/use-working-gods';
 import { useDispatchDna } from '@/lib/use-dispatch-dna';
@@ -240,10 +242,14 @@ export default function BrainAtlas3D() {
     return { nodes, links };
   }, [graphData, filters]);
 
-  const brainGraph = useMemo(
-    () => buildOlympusBrainGraph(filteredReal.nodes, filteredReal.links),
-    [filteredReal],
-  );
+  const [theme] = useTheme();
+  const themeColors = resolvePalette(theme);
+  const brainGraph = useMemo(() => {
+    const graph = buildOlympusBrainGraph(filteredReal.nodes, filteredReal.links);
+    // The canvas renders from graph.activePalette — resolve it from the
+    // theme variables so a light/violet/ice theme repaints the brain too.
+    return { ...graph, activePalette: themedOlympusPalette() };
+  }, [filteredReal, theme.presetId, theme.accent]);
 
   // Keep graphRef in sync with the latest brainGraph. The renderer reads
   // this ref via its getGraph() callback on every frame.
@@ -732,10 +738,10 @@ export default function BrainAtlas3D() {
       suppressHydrationWarning
       className="relative w-full h-full overflow-hidden bg-olympus-bg select-none"
       style={{
-        backgroundColor: OLYMPUS_PALETTE.bg,
+        backgroundColor: themeColors.bg,
         backgroundImage: `
-          radial-gradient(ellipse at center, ${OLYMPUS_PALETTE.bg} 0%, ${OLYMPUS_PALETTE.bgFar} 80%, #03050A 100%),
-          radial-gradient(circle at 50% 50%, ${hexA(OLYMPUS_PALETTE.hud, 0.03)} 0%, transparent 60%)
+          radial-gradient(ellipse at center, ${themeColors.bg} 0%, ${themeColors.panel} 80%, ${themeColors.bg} 100%),
+          radial-gradient(circle at 50% 50%, ${hexA(themeColors.gold, 0.03)} 0%, transparent 60%)
         `,
       }}
       onMouseMove={onMouseMove}

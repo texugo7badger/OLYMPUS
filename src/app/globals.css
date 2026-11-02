@@ -1,3 +1,20 @@
+:root {
+  --olympus-gold: #D4A574;
+  --olympus-amber: #C4956A;
+  --olympus-blue: #6B8FB5;
+  --olympus-green: #7BAE8E;
+  --olympus-amber-soft: #C4A265;
+  --olympus-purple: #9B7BAE;
+  --olympus-teal: #6BAE9B;
+  --olympus-red: #C4756A;
+  --olympus-cyan: #6BAEB5;
+  --olympus-bg: #0A0E16;
+  --olympus-panel: #0E1320;
+  --olympus-card: #121826;
+  --olympus-text: #B8B8B8;
+  --olympus-text-dim: #8B8B8B;
+}
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -40,20 +57,20 @@
 
   /* v0.0.1 overhaul — pastel palette (Issue 11) registered as Tailwind colors.
      Usage: text-olympus-gold, bg-olympus-panel, border-olympus-gold/15, etc. */
-  --color-olympus-gold:        #D4A574;
-  --color-olympus-amber:       #C4956A;
-  --color-olympus-blue:        #6B8FB5;
-  --color-olympus-green:       #7BAE8E;
-  --color-olympus-amber-soft:  #C4A265;
-  --color-olympus-purple:      #9B7BAE;
-  --color-olympus-teal:        #6BAE9B;
-  --color-olympus-red:         #C4756A;
-  --color-olympus-cyan:        #6BAEB5;
-  --color-olympus-bg:          #0A0E16;
-  --color-olympus-panel:       #0E1320;
-  --color-olympus-card:        #121826;
-  --color-olympus-text:        #B8B8B8;
-  --color-olympus-text-dim:    #8B8B8B;
+  --color-olympus-gold:        var(--olympus-gold);
+  --color-olympus-amber: var(--olympus-amber);
+  --color-olympus-blue:        var(--olympus-blue);
+  --color-olympus-green: var(--olympus-green);
+  --color-olympus-amber-soft: var(--olympus-amber-soft);
+  --color-olympus-purple: var(--olympus-purple);
+  --color-olympus-teal:        var(--olympus-teal);
+  --color-olympus-red: var(--olympus-red);
+  --color-olympus-cyan:        var(--olympus-cyan);
+  --color-olympus-bg: var(--olympus-bg);
+  --color-olympus-panel: var(--olympus-panel);
+  --color-olympus-card:        var(--olympus-card);
+  --color-olympus-text:        var(--olympus-text);
+  --color-olympus-text-dim: var(--olympus-text-dim);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

@@ -89,6 +89,18 @@ ok('the settings UI and the status bar consume the system', () => {
   assert.match(settings, /stable mode/i);
   assert.match(status, /iconById\(theme\.iconId\)/);
   assert.match(css, /\[data-motion="stable"\]/);
+  // The runtime variables are the ones the utilities reference; a literal
+  // hex in a utility would ignore the theme (the bug this test exists for).
+  assert.match(css, /--olympus-gold:\s*#[0-9A-Fa-f]{6}/);
+  assert.match(css, /--color-olympus-gold:\s*var\(--olympus-gold\)/);
+  const sunmoon = readFileSync(new URL('../src/components/olympus/theme-mode-icons.tsx', import.meta.url), 'utf-8');
+  assert.match(sunmoon, /tmi-spin/);
+  assert.match(sunmoon, /tmi-twinkle/);
+  assert.match(settings, /SunModeIcon/);
+  assert.match(settings, /MoonModeIcon/);
+  const brainPalette = readFileSync(new URL('../src/lib/brain-atlas-palette.ts', import.meta.url), 'utf-8');
+  assert.match(brainPalette, /themedOlympusPalette/);
+  assert.match(brainPalette, /get\('--olympus-gold'/);
 });
 
 console.log(`\ntheme: ${passed} passed`);

@@ -148,3 +148,56 @@ export function mixHex(a: string, b: string, t: number): string {
   const bl = Math.round(ab + (bb - ab) * t);
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`;
 }
+
+/**
+ * v0.0.32 — the brain palette follows the Appearance theme. The canvas is
+ * rendered from this object, so it must be resolved at RUNTIME from the CSS
+ * variables the theme store writes (the static OLYMPUS_PALETTE is the
+ * fallback). Semantic kinds keep their meaning; the hues follow the theme.
+ */
+export function themedOlympusPalette(): BrainPalette {
+  if (typeof document === 'undefined') return OLYMPUS_PALETTE;
+  const css = getComputedStyle(document.documentElement);
+  const get = (name: string, fallback: string): string => {
+    const value = css.getPropertyValue(name).trim();
+    return value || fallback;
+  };
+  const gold = get('--olympus-gold', OLYMPUS_PALETTE.kinds.person);
+  const blue = get('--olympus-blue', OLYMPUS_PALETTE.kinds.concept);
+  const green = get('--olympus-green', OLYMPUS_PALETTE.kinds.dailyNote);
+  const amber = get('--olympus-amber', OLYMPUS_PALETTE.kinds.workThread);
+  const amberSoft = get('--olympus-amber-soft', OLYMPUS_PALETTE.kinds.question);
+  const purple = get('--olympus-purple', OLYMPUS_PALETTE.kinds.source);
+  const red = get('--olympus-red', OLYMPUS_PALETTE.kinds.incident);
+  const dim = get('--olympus-text-dim', OLYMPUS_PALETTE.kinds.index);
+  return {
+    ...OLYMPUS_PALETTE,
+    bg: get('--olympus-bg', OLYMPUS_PALETTE.bg),
+    bgFar: get('--olympus-bg', OLYMPUS_PALETTE.bgFar),
+    fg: get('--olympus-text', OLYMPUS_PALETTE.fg),
+    hud: gold,
+    kinds: {
+      ...OLYMPUS_PALETTE.kinds,
+      person: gold, project: gold, decision: gold, organization: gold,
+      concept: blue, tool: blue,
+      question: amberSoft, workThread: amber,
+      dailyNote: green, source: purple, repo: purple,
+      incident: red, index: dim, unknown: dim,
+    },
+  };
+}
+
+/** The lobe haze follows the same palette. */
+export function themedLobeTints(): Record<string, string> {
+  if (typeof document === 'undefined') return LOBE_TINTS;
+  const css = getComputedStyle(document.documentElement);
+  const get = (name: string, fallback: string): string => css.getPropertyValue(name).trim() || fallback;
+  return {
+    frontal: get('--olympus-gold', LOBE_TINTS.frontal),
+    parietal: get('--olympus-blue', LOBE_TINTS.parietal),
+    temporal: get('--olympus-amber', LOBE_TINTS.temporal),
+    occipital: get('--olympus-purple', LOBE_TINTS.occipital),
+    cerebellum: get('--olympus-green', LOBE_TINTS.cerebellum),
+    stem: get('--olympus-text-dim', LOBE_TINTS.stem),
+  };
+}

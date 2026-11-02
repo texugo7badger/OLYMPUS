@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useOlympus, GOD_ICONS, GOD_IDS, type LLMStrategy } from '@/lib/olympus-store';
 import { Settings, Save, Loader2, Check, AlertCircle, AlertTriangle, Zap, BarChart3, Lock, Plus, X, Trash2, Calculator, Palette, Sun, Moon } from 'lucide-react';
 import { THEME_ICONS, THEME_PRESETS, resolvePalette } from '@/lib/theme';
+import { MoonModeIcon, SunModeIcon } from './theme-mode-icons';
 import { useTheme } from '@/lib/theme-store';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -833,11 +834,11 @@ export default function SettingsDialog() {
                 <button
                   onClick={() => setTheme({ mode: 'dark', presetId: THEME_PRESETS.find((p) => p.mode === 'dark')!.id })}
                   className={cn('flex items-center gap-1 px-2 py-1 rounded border text-[9px] font-mono uppercase', theme.mode === 'dark' ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text')}
-                ><Moon size={10} /> dark</button>
+                ><MoonModeIcon active={theme.mode === 'dark'} /> dark</button>
                 <button
                   onClick={() => setTheme({ mode: 'light', presetId: THEME_PRESETS.find((p) => p.mode === 'light')!.id })}
                   className={cn('flex items-center gap-1 px-2 py-1 rounded border text-[9px] font-mono uppercase', theme.mode === 'light' ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text')}
-                ><Sun size={10} /> light</button>
+                ><SunModeIcon active={theme.mode === 'light'} /> light</button>
                 <label className="ml-auto flex items-center gap-1.5 text-[9px] font-mono text-olympus-text-dim uppercase">
                   accent
                   <input

@@ -612,9 +612,14 @@ const TRAY_RESET_MS = 20_000;
 const NOTIFY_FILE = join(nodeOs.homedir(), '.olympus', 'desktop-notifications.jsonl');
 let trayIcons: Map<NotifyType, Electron.NativeImage> | null = null;
 let trayResetTimer: ReturnType<typeof setTimeout> | null = null;
+let trayNotificationActive = false;
 let notifyOffset = 0;
 
 function defaultTrayImage(): Electron.NativeImage {
+  // The base tray icon is the themed mark (the palette the user picked), not
+  // a static gold logo. Notification colors still override it temporarily.
+  const themed = themedWindowIcon();
+  if (themed && !themed.isEmpty()) return themed.resize({ width: 16, height: 16 });
   const iconPath = existsSync(join(appRoot, 'public', 'logo-32x32.png'))
     ? join(appRoot, 'public', 'logo-32x32.png')
     : join(appRoot, 'public', 'logo.png');
@@ -646,8 +651,13 @@ function setTrayIndicator(type: NotifyType | null): void {
 
 function flashTray(type: NotifyType): void {
   setTrayIndicator(type);
+  trayNotificationActive = true;
   if (trayResetTimer) clearTimeout(trayResetTimer);
-  trayResetTimer = setTimeout(() => { trayResetTimer = null; setTrayIndicator(null); }, TRAY_RESET_MS);
+  trayResetTimer = setTimeout(() => {
+    trayResetTimer = null;
+    trayNotificationActive = false;
+    setTrayIndicator(null);
+  }, TRAY_RESET_MS);
   trayResetTimer.unref?.();
 }
 
@@ -824,6 +834,9 @@ function themedWindowIcon(): Electron.NativeImage | null {
     const palette = readThemePalette();
     const png = themeMarkPng({ accent: palette.accent, purple: palette.purple, bg: palette.bg }, 256);
     themedIcon = nativeImage.createFromBuffer(png);
+    try {
+      writeFileSync(join(nodeOs.homedir(), '.olympus', 'theme-icon.png'), png);
+    } catch { /* diagnostics only */ }
     return themedIcon;
   } catch {
     return null;
@@ -841,9 +854,8 @@ function refreshThemeIfChanged(): void {
       try { mainWindow.setIcon(icon); } catch { /* platform */ }
     }
     if (tray) {
-      const palette = readThemePalette();
       trayIcons = null; // the dots ring in the new accent
-      tray.setImage(nativeImage.createFromBuffer(trayPng(palette.accent, 32, palette.accent)).resize({ width: 16, height: 16 }));
+      if (!trayNotificationActive) setTrayIndicator(null);
       tray.setToolTip('OLYMPUS — click to restore');
     }
   } catch { /* no theme file */ }
@@ -883,6 +895,8 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
+    trayNotificationActive = false;
+    setTrayIndicator(null);
     if (isDev) {
       // Open DevTools automatically in dev mode for debugging.
       // mainWindow?.webContents.openDevTools({ mode: 'detach' });

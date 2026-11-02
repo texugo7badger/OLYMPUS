@@ -16,6 +16,7 @@ import {
   applyTheme,
   normalizeThemeState,
   presetById,
+  themedFaviconSvg,
   type ThemeState,
 } from './theme';
 
@@ -34,6 +35,17 @@ function repaint(next: ThemeState): void {
     setAttribute(n: string, v: string): void;
     style: { setProperty(n: string, v: string): void };
   });
+  // The tab/window icon follows the palette too (no static gold favicon).
+  try {
+    let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.type = 'image/svg+xml';
+    link.href = `data:image/svg+xml,${encodeURIComponent(themedFaviconSvg(next))}`;
+  } catch { /* no head yet */ }
 }
 
 export function getThemeState(): ThemeState {
