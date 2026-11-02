@@ -34,6 +34,7 @@ export function setVoiceEnabled(on: boolean): void {
 }
 
 let currentAudio: HTMLAudioElement | null = null;
+let audioCtx: AudioContext | null = null;
 
 /** Speak as a god. Preferred lane: the free edge-tts neural voice route
  *  (professional, per-god, per-language). Fallback: the browser voice.
@@ -43,6 +44,7 @@ export async function speakAs(
   god: string,
   language: Language,
   onState?: (speaking: boolean) => void,
+  onLevel?: (level: number) => void,
 ): Promise<void> {
   if (!text || typeof window === 'undefined') return;
   const key = (god || 'apollo').toLowerCase();
@@ -59,8 +61,30 @@ export async function speakAs(
       const audio = new Audio(url);
       currentAudio = audio;
       onState?.(true);
-      audio.onended = () => { onState?.(false); URL.revokeObjectURL(url); };
-      audio.onerror = () => { onState?.(false); URL.revokeObjectURL(url); };
+      // v0.0.34 — the orb responds to the REAL waveform: an analyser reads
+      // the MP3 as it plays and reports a 0..1 level.
+      try {
+        const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioCtx ??= new Ctx();
+        const src = audioCtx.createMediaElementSource(audio);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        src.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        await audioCtx.resume();
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        const tick = () => {
+          if (audio.paused || audio.ended) { onLevel?.(0); return; }
+          analyser.getByteFrequencyData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i += 1) sum += data[i];
+          onLevel?.(Math.min(1, sum / data.length / 72));
+          requestAnimationFrame(tick);
+        };
+        tick();
+      } catch { onLevel?.(0.5); }
+      audio.onended = () => { onState?.(false); onLevel?.(0); URL.revokeObjectURL(url); };
+      audio.onerror = () => { onState?.(false); onLevel?.(0); URL.revokeObjectURL(url); };
       await audio.play();
       return;
     }
@@ -77,9 +101,10 @@ export async function speakAs(
     const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(prefix));
     const idx = Math.max(0, GOD_ORDER.indexOf(key));
     if (voices.length) u.voice = voices[idx % voices.length];
-    u.onstart = () => onState?.(true);
-    u.onend = () => onState?.(false);
-    u.onerror = () => onState?.(false);
+    let levelTimer: ReturnType<typeof setInterval> | null = null;
+    u.onstart = () => { onState?.(true); levelTimer = setInterval(() => onLevel?.(0.25 + Math.random() * 0.55), 90); };
+    u.onend = () => { onState?.(false); onLevel?.(0); if (levelTimer) clearInterval(levelTimer); };
+    u.onerror = () => { onState?.(false); onLevel?.(0); if (levelTimer) clearInterval(levelTimer); };
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
   } catch { onState?.(false); }

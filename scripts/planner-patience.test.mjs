@@ -72,11 +72,11 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf-8');
   check('opencode.json: apollo still rides a planner-class reasoner (DeepSeek V4.1 Flash / GLM-5.3 / GPT 6.1 Sol / Qwen3.8 Max / Kimi K3 / local — never a volume-only model)',
     plannerClass && !volumeOnly,
     `apollo model=${apollo.model} — the planner is the quality bottleneck; a volume model (haiku/luna/mimo/flash-only) fails this pin`);
-  check('opencode.json: ONLY apollo carries the low effort (the other gods keep full reasoning)',
+  check('opencode.json: ONLY apollo (and the lean -hop executors) carries the low effort',
     Object.entries(cfg.agent || {})
-      .filter(([id, a]) => id !== 'apollo' && a && typeof a === 'object' && a.reasoning_effort === 'low')
+      .filter(([id, a]) => id !== 'apollo' && !id.endsWith('-hop') && a && typeof a === 'object' && a.reasoning_effort === 'low')
       .length === 0,
-    'other agents were silenced — out of scope');
+    'other gods were silenced — out of scope (hop executors are deliberately lean)');
 }
 
 // ── 1b. THE WIRE: opencode v2 builds request options from the session

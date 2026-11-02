@@ -74,6 +74,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     try { return window.localStorage.getItem('olympus:voice-enabled') !== '0'; } catch { return true; }
   });
   const [speaking, setSpeaking] = useState(false);
+  const [voiceLevel, setVoiceLevel] = useState(0);
   const [say, setSay] = useState('');
   const [chat, setChat] = useState<Array<{ role: 'user' | 'god'; text: string; god?: string }>>([]);
   const [chatInput, setChatInput] = useState('');
@@ -86,16 +87,30 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   // v0.0.34 — the gods learned to speak: the free edge-tts neural lane gives
-  // ten distinct god voices in the selected language. Announce it once.
-  const [voiceCount] = useState(10);
+  // ten distinct god voices in the selected language. Announce it once, with
+  // the honest status of the local STT lane too.
+  const [voiceCount, setVoiceCount] = useState(0);
+  const [sttReady, setSttReady] = useState<boolean | null>(null);
   const voiceAnnounced = useRef(false);
   useEffect(() => {
-    if (voiceAnnounced.current) return;
-    voiceAnnounced.current = true;
-    const timer = setTimeout(() => {
-      toast.success(t('studio.voicesReady', getLanguage(), { n: 10 }), { id: 'olympus-gods-voice' });
-    }, 900);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    fetch('/api/olympus/voice/status', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        setVoiceCount(d?.neural ? Number(d?.godVoices || 10) : 0);
+        setSttReady(Boolean(d?.stt));
+        if (!voiceAnnounced.current && d?.neural) {
+          voiceAnnounced.current = true;
+          const timer = setTimeout(() => {
+            toast.success(t('studio.voicesReady', getLanguage(), { n: Number(d?.godVoices || 10) }), { id: 'olympus-gods-voice' });
+          }, 900);
+          return () => clearTimeout(timer);
+        }
+        return undefined;
+      })
+      .catch(() => { if (!cancelled) { setVoiceCount(0); setSttReady(false); } });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => () => {
@@ -126,7 +141,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   // is the primary voice; the browser voice is the fallback. The orb form and
   // color follow the active god; the language comes from Settings.
   const speak = useCallback((text: string, god?: string) => {
-    void speakAs(text, god || activeGod, language, setSpeaking);
+    void speakAs(text, god || activeGod, language, setSpeaking, setVoiceLevel);
   }, [language, activeGod]);
 
   const askStudio = useCallback(async (override?: string) => {
@@ -694,7 +709,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
             }}
           >
             <span className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle at 50% 45%, ${orbTint}18, transparent 72%)` }} />
-            <PlasmaOrb tint={orbTint} speaking={speaking && voice} size={160} />
+            <PlasmaOrb tint={orbTint} speaking={speaking && voice} level={voiceLevel} size={160} />
           </button>
           <select
             value={activeGod}
@@ -721,8 +736,9 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
             </select>
             <button
               onClick={() => void toggleMic()}
+              disabled={sttReady === false}
               aria-label={recording ? t('studio.listening', language) : t('studio.mic', language)}
-              className={recording ? 'rounded p-1 text-olympus-red animate-pulse' : 'rounded p-1'}
+              className={recording ? 'rounded p-1 text-olympus-red animate-pulse' : 'rounded p-1 disabled:opacity-40'}
               style={{ color: recording ? palette.red : orbTint, background: `${orbTint}12`, border: `1px solid ${orbTint}33` }}
             >
               <Mic size={12} />

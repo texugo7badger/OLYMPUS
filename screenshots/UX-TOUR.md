@@ -1,4 +1,4 @@
-# OLYMPUS — UX tour (v0.0.32)
+# OLYMPUS — UX tour (v0.0.34)
 
 > Real screenshots from the running app: `npm run shots` (Electron, offscreen)
 > captures them from `http://127.0.0.1:3737`. No mockups.
@@ -16,7 +16,7 @@ stream next to it.
 
 ## 2. Craft — the surfaces that build the product
 
-![Craft apps](./02-craft-apps.png)
+![Craft apps](./02-references.png)
 
 The Craft dashboard gathers the vendored apps (ArtCraft Studio, PhotoCraft,
 VectorCraft, …) and the design lanes. Each app runs inside OLYMPUS after a
@@ -24,7 +24,7 @@ one-click install; the ArtCraft Studio is the composition lane.
 
 ## 3. Builds — the loadout hub
 
-![Builds](./03-builds.png)
+![Builds](./05-builds.png)
 
 **251 default builds** (51 curated + a matrix of every sector × every god ×
 skill-led/agent-led), grouped by category and filterable by god. Every card
@@ -42,7 +42,7 @@ the brain learns from.
 
 ## 4. Style — the project's direction, not OLYMPUS's
 
-![Style](./04-style.png)
+![Style](./03-style.png)
 
 The Style Board belongs to the open project. A neutral project palette starts
 the direction; **edit** exposes the five colors, and the mock page updates
@@ -53,7 +53,7 @@ asks for a refinement. Nothing is copied by hand.
 
 ## 5. References — real components, one click
 
-![References](./05-references.png)
+![References](./02-references.png)
 
 The catalog is fixed (24/24 demo URLs) and searchable by category. Hover a card
 to play the **real component** from the Originkit page (cropped to the demo area,
@@ -62,7 +62,7 @@ Board, **send to queue** opens a high-priority Athena task.
 
 ## 6. Appearance — one palette for the whole machine
 
-![Appearance](./06-appearance.png)
+![Appearance](./06-settings.png)
 
 Twelve presets (six dark, six light pastel) plus the **palette lab**: a hue
 slider, five harmonies, shuffle, and a full 14-key family generated with
@@ -160,3 +160,13 @@ palette). The original mark stays the only app/system identity.
 The language selector applies instantly to the whole interface and to the
 chat. God names, domains, reference categories, the build queue, the projects
 and the Pattern Studio follow it. See the [Languages section](../README.md#languages--olympus-is-global).
+
+### v0.0.35 — voice in and out
+
+The studio now shows the **honest voice state** (`/api/olympus/voice/status`):
+ten neural voices when `edge-tts` is installed, otherwise the browser fallback.
+Choose any **microphone** from the selector, press the mic, speak, and the clip
+is transcribed locally by `faster-whisper` — the transcript becomes your
+question and the god answers in persona, out loud. No audio leaves the machine
+for STT. The mic is disabled when the local STT lane is unavailable, never a
+dead button.

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.34, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.35, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -32,6 +32,15 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.35 — the voice & hygiene release.** The free neural voice lane now
+speaks through the terminal and the studio, the Pattern Studio lets you choose
+a microphone and talk to the gods (local Whisper STT — no audio leaves the
+machine), and the plasma orb reacts to the real waveform. The repo is clean:
+the battery is green (106 PASS / 0 FAIL / 1 declared skip), `tsc`/`lint` are
+clean, the runtime config is committed, and the README/header/badges carry the
+current version. The chameleon identity, 859-reference catalog and
+seven-language interface from v0.0.34 are unchanged.
 
 **v0.0.34 — the chameleon release.** The original OLYMPUS mark now follows the
 palette everywhere (app bar, favicon, window, tray, dock) — same SVG, same
@@ -81,6 +90,31 @@ Beyond the presets, the **palette lab** generates all 14 colors of a family
 from a hue + harmony, with contrast floors (text ≥ 7:1, dim ≥ 4.5:1, accent
 ≥ 3:1). Apply it and every surface follows — including the OS icon.
 
+
+## Voice — the gods speak, and they listen
+
+**They speak.** The free, open-source [`edge-tts`](https://github.com/rany2/edge-tts)
+lane gives each of the ten gods a distinct, calm neural voice in the selected
+language — no API key. Apollo is warm and measured, Hephaestus is deep and
+slow, Hermes is quick and light. The Pattern Studio's orb is an organic plasma
+sphere that expands while the god speaks, tinted by the active god; the
+terminal speaks the final reply once per run.
+
+**They listen.** Choose any audio input on your machine in the studio, press
+the mic, and speak. The clip is transcribed locally by
+[`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) (Whisper base via
+ffmpeg → 16 kHz PCM), and the transcript is sent as your question. The god
+answers in persona and speaks the answer. **No audio leaves the machine** for
+STT.
+
+The voice answers **only what you ask** — it does not narrate the walk. If the
+neural lane is missing, the app falls back to the browser voice and says so;
+`GET /api/olympus/voice/status` reports the honest state of TTS, STT and
+ffmpeg.
+
+**Requirements:** `pip install --user --break-system-packages edge-tts faster-whisper`
+and `ffmpeg` on PATH. The first transcription downloads the Whisper base model
+(~74 MB); it is cached by faster-whisper.
 
 ## What is OLYMPUS?
 
