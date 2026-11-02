@@ -20,6 +20,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import OlympusLoader from './olympus-loader';
 import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload, Palette, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useOlympus } from '@/lib/olympus-store';
 import ArtcraftStyleBoard from './artcraft-style-board';
 import DesignBuildsPanel from './design-builds-panel';
 
@@ -101,6 +102,9 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const [uiRefs, setUiRefs] = useState<UiRef[]>([]);
   const [refSearch, setRefSearch] = useState('');
   const [refView, setRefView] = useState<UiRef | null>(null);
+  // v0.0.32 — live previews: at most 3 iframes (60fps), hover promotes one.
+  const [refCat, setRefCat] = useState('all');
+  const [pendingRef, setPendingRef] = useState<{ name: string; demoUrl: string; category: string; library: string } | null>(null);
   // #198 — the OriginKit free-tier budget (10 fetches/day), surfaced in the
   // References tab so exhaustion never looks like a broken lane.
   const [originkitBudget, setOriginkitBudget] = useState<{ limit: number; remaining: number; exhausted: boolean; resetAt: string } | null>(null);
@@ -276,6 +280,33 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
 
   const fmtMb = (b?: number) => (b ? `${(b / 1e6).toFixed(1)} MB` : '');
 
+  // v0.0.32 — reference categories + the live-preview slot policy (max 3
+  // iframes; a card entering the viewport asks for a slot, hover promotes).
+  const refCats = ['all', ...Array.from(new Set(uiRefs.map((r) => r.category)))];
+  const visibleRefs = uiRefs.filter((r) => refCat === 'all' || r.category === refCat);
+  // v0.0.32 — the Originkit demo requires a session; embedding it showed a
+  // login wall. Use = carry the reference into the project's Style Board;
+  // Queue = a design task for Athena (priority high).
+  const applyReference = (r: UiRef) => {
+    setPendingRef({ name: r.name, demoUrl: r.demoUrl, category: r.category, library: r.library });
+    setTab('style');
+    setRefView(null);
+  };
+  const queueReference = async (r: UiRef) => {
+    try {
+      await fetch('/api/olympus/artcraft/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: useOlympus.getState().activeProject?.slug ?? 'project',
+          title: `Use the ${r.name} reference`,
+          priority: 'high',
+          prompt: `Use the "${r.name}" reference (${r.library} · ${r.category}) in the open project.\n${r.what}\nReference link: ${r.demoUrl}\nFetch lane: ${r.fetchLane}\n\nAsk me where it belongs before changing the page if it is ambiguous.`,
+        }),
+      });
+    } catch { /* best effort */ }
+  };
+
   return (
     <div className="w-full h-full flex flex-col bg-olympus-bg">
       {/* Header */}
@@ -307,7 +338,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
           <DesignBuildsPanel />
         ) : tab === 'style' ? (
           /* v0.0.32 (Epic Q) — the STYLE BOARD: tokens + prompt + queue */
-          <ArtcraftStyleBoard references={uiRefs.map((r) => ({ name: r.name, demoUrl: r.demoUrl, category: r.category, library: r.library }))} />
+          <ArtcraftStyleBoard references={uiRefs.map((r) => ({ name: r.name, demoUrl: r.demoUrl, category: r.category, library: r.library }))} pendingRef={pendingRef} onPendingConsumed={() => setPendingRef(null)} />
         ) : tab === 'references' ? (
           /* W-J: the REFERENCES tab — the curated inspiration catalog */
           <div className="absolute inset-0 flex flex-col">
@@ -342,6 +373,17 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                     placeholder="search references — black hole, smoky text, carousel, tooltip…"
                     className="w-full bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50"
                   />
+                  <div className="flex items-center gap-1 mt-1.5 overflow-x-auto custom-scroll pb-0.5">
+                    {refCats.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setRefCat(cat)}
+                        className={cn('shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-full border uppercase tracking-wide transition-colors', refCat === cat ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}
+                      >
+                        {cat} {cat !== 'all' && <span className="opacity-60">{uiRefs.filter((r) => r.category === cat).length}</span>}
+                      </button>
+                    ))}
+                  </div>
                   <div className="flex items-center justify-between gap-2 mt-1">
                     <p className="text-[8px] font-mono text-[#5A5A5A]">OriginKit (free key MCP) + Skiper UI (shadcn registry) — curated inspiration; the [OLYMPUS-DESIGN] marker carries the marquee list to the gods.</p>
                     {originkitBudget && (
@@ -364,18 +406,17 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scroll p-3">
                   <div className="grid grid-cols-2 xl:grid-cols-3 gap-2">
-                    {uiRefs.map((r) => (
-                      <button key={r.id} onClick={() => setRefView(r)} className="rounded-lg p-2.5 bg-olympus-card border border-olympus-gold/10 hover:border-olympus-gold/40 transition-colors text-left group">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-mono font-semibold text-olympus-text truncate group-hover:text-olympus-gold">{r.name}</span>
-                          {!r.free && <span className="text-[7px] font-mono px-1 rounded bg-olympus-amber-soft/10 text-olympus-amber-soft ring-1 ring-olympus-amber-soft/25 shrink-0 uppercase">premium</span>}
-                        </div>
-                        <div className="text-[8px] font-mono text-olympus-cyan/80 uppercase tracking-wide mt-0.5">{r.library} · {r.category}</div>
-                        <p className="text-[9px] font-mono text-olympus-text-dim mt-1 leading-relaxed line-clamp-2">{r.what}</p>
-                      </button>
+                    {visibleRefs.map((r) => (
+                      <ReferenceCard
+                        key={r.id}
+                        reference={r}
+                        onOpen={() => setRefView(r)}
+                        onUse={() => applyReference(r)}
+                        onQueue={() => void queueReference(r)}
+                      />
                     ))}
                   </div>
-                  {uiRefs.length === 0 && <p className="text-center py-8 text-olympus-text-dim text-xs font-mono">no references match — try a broader term</p>}
+                  {visibleRefs.length === 0 && <p className="text-center py-8 text-olympus-text-dim text-xs font-mono">no references match — try a broader term</p>}
                 </div>
               </>
             )}
@@ -585,6 +626,55 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * v0.0.32 — a reference card with a LIVE preview. At most three iframes run
+ * at once (the parent enforces it); the card asks for a slot when it enters
+ * the viewport and promotes itself on hover. The iframe is pointer-events-none
+ * so the card stays one click target; the detail view has the full embed.
+ */
+function ReferenceCard({
+  reference,
+  onOpen,
+  onUse,
+  onQueue,
+}: {
+  reference: UiRef;
+  onOpen: () => void;
+  onUse: () => void;
+  onQueue: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  // One animated icon at a time (the hovered card) — 24 simultaneous SVG
+  // animations would cost the frame budget for no information.
+  const preview = hovered ? '/build-icons/design.svg' : '/build-icons/static/design.svg';
+  return (
+    <div
+      className="rounded-lg bg-olympus-card border border-olympus-gold/10 hover:border-olympus-gold/40 transition-colors text-left group overflow-hidden"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <button onClick={onOpen} className="w-full text-left">
+        <div className="relative h-[96px] w-full bg-[radial-gradient(circle_at_30%_20%,rgba(212,165,116,0.10),transparent_60%)] flex items-center justify-center">
+          <img src={preview} alt="" width={54} height={54} loading="lazy" />
+          <span className="absolute top-1 right-1 text-[7px] font-mono px-1 py-0.5 rounded bg-olympus-bg/80 text-olympus-cyan uppercase">live</span>
+        </div>
+        <div className="px-2.5 pt-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-mono font-semibold text-olympus-text truncate group-hover:text-olympus-gold">{reference.name}</span>
+            {!reference.free && <span className="text-[7px] font-mono px-1 rounded bg-olympus-amber-soft/10 text-olympus-amber-soft ring-1 ring-olympus-amber-soft/25 shrink-0 uppercase">premium</span>}
+          </div>
+          <div className="text-[8px] font-mono text-olympus-cyan/80 uppercase tracking-wide mt-0.5">{reference.library} · {reference.category}</div>
+          <p className="text-[9px] font-mono text-olympus-text-dim mt-1 leading-relaxed line-clamp-2">{reference.what}</p>
+        </div>
+      </button>
+      <div className="flex items-center gap-1 px-2.5 pb-2 pt-1.5">
+        <button onClick={onUse} className="flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">use</button>
+        <button onClick={onQueue} className="flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">send to queue</button>
       </div>
     </div>
   );
