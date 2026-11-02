@@ -74,21 +74,25 @@ const dark = (gold: string, extra: Partial<OlympusPalette> = {}): OlympusPalette
   ...extra,
 });
 
+/**
+ * Light presets are PASTEL, not white: a tinted paper that does not glow at
+ * night, with a genuinely dark ink for contrast. The suite enforces 4.5:1.
+ */
 const light = (gold: string, extra: Partial<OlympusPalette> = {}): OlympusPalette => ({
   gold,
-  amber: '#9A6A33',
-  blue: '#4E6F93',
-  green: '#4F8563',
-  amberSoft: '#A87E45',
-  purple: '#7D6395',
-  teal: '#3F8A79',
-  red: '#A5524A',
-  cyan: '#3F7F8A',
-  bg: '#F6F0E4',
-  panel: '#FBF7EE',
-  card: '#FFFDF7',
-  text: '#2E2A24',
-  textDim: '#6B6156',
+  amber: '#8A5C26',
+  blue: '#3E5F83',
+  green: '#3F7553',
+  amberSoft: '#96692F',
+  purple: '#6A4F86',
+  teal: '#2F7A69',
+  red: '#94443C',
+  cyan: '#2F6F7A',
+  bg: '#EFE7D8',
+  panel: '#F4EEDF',
+  card: '#FBF7EE',
+  text: '#241F18',
+  textDim: '#5E5346',
   ...extra,
 });
 
@@ -115,25 +119,25 @@ export const THEME_PRESETS: ThemePreset[] = [
     bg: '#080D12', panel: '#0C131A', card: '#101923', text: '#C6D3DC', textDim: '#7F8F9A',
   }) },
   { id: 'parchment', name: 'Parchment', mode: 'light', colors: light('#B07A3C') },
-  { id: 'paper', name: 'Paper', mode: 'light', colors: light('#8A6A3B', {
-    gold: '#8A6A3B', amber: '#7A5C32', amberSoft: '#9A7A48',
-    bg: '#FFFFFF', panel: '#F7F7F7', card: '#FFFFFF', text: '#1D1D1F', textDim: '#6B6B70',
+  { id: 'paper', name: 'Paper', mode: 'light', colors: light('#7E5F33', {
+    gold: '#7E5F33', amber: '#6E522B', amberSoft: '#8E6E3E',
+    bg: '#ECECE7', panel: '#F2F2EE', card: '#F9F9F6', text: '#1B1B1D', textDim: '#57575C',
   }) },
-  { id: 'mist', name: 'Mist', mode: 'light', colors: light('#2F7F8C', {
-    gold: '#2F7F8C', amber: '#2A6F7A', amberSoft: '#4A8F99', cyan: '#2F7F8C',
-    bg: '#F2F7F8', panel: '#FAFCFC', card: '#FFFFFF', text: '#1E2A2E', textDim: '#5F7076',
+  { id: 'mist', name: 'Mist', mode: 'light', colors: light('#2A727E', {
+    gold: '#2A727E', amber: '#25636E', amberSoft: '#3E8590', cyan: '#2A727E',
+    bg: '#E6F0F1', panel: '#EFF7F8', card: '#F8FCFC', text: '#162427', textDim: '#506568',
   }) },
-  { id: 'blossom', name: 'Blossom', mode: 'light', colors: light('#7D5A9A', {
-    gold: '#7D5A9A', amber: '#8A5F7A', amberSoft: '#9A7AAE', purple: '#7D5A9A',
-    bg: '#FBF5FA', panel: '#FFF9FE', card: '#FFFFFF', text: '#2B2230', textDim: '#6E5F75',
+  { id: 'blossom', name: 'Blossom', mode: 'light', colors: light('#6E4C8C', {
+    gold: '#6E4C8C', amber: '#7C5270', amberSoft: '#866A9C', purple: '#6E4C8C',
+    bg: '#F3E8F2', panel: '#FAF1F9', card: '#FFFAFE', text: '#241A2B', textDim: '#63526C',
   }) },
-  { id: 'sand', name: 'Sand', mode: 'light', colors: light('#A8742F', {
-    gold: '#A8742F', amber: '#92652A', amberSoft: '#B0854A',
-    bg: '#F8F2E8', panel: '#FCF8F1', card: '#FFFFFF', text: '#2B251C', textDim: '#6F6555',
+  { id: 'sand', name: 'Sand', mode: 'light', colors: light('#96631F', {
+    gold: '#96631F', amber: '#84561D', amberSoft: '#A2763A',
+    bg: '#F0E7D6', panel: '#F7F0E2', card: '#FDF9F0', text: '#221C14', textDim: '#635744',
   }) },
-  { id: 'mint', name: 'Mint', mode: 'light', colors: light('#2F8A78', {
-    gold: '#2F8A78', amber: '#357F6A', amberSoft: '#4F9A88', green: '#2F8A78', teal: '#2F8A78',
-    bg: '#F1F8F5', panel: '#F9FDFB', card: '#FFFFFF', text: '#1E2E29', textDim: '#5D726B',
+  { id: 'mint', name: 'Mint', mode: 'light', colors: light('#2A7C6B', {
+    gold: '#2A7C6B', amber: '#2F725F', amberSoft: '#418E7C', green: '#2A7C6B', teal: '#2A7C6B',
+    bg: '#E6F1EC', panel: '#F0F8F4', card: '#FAFDFB', text: '#16241F', textDim: '#4E665E',
   }) },
 ];
 
