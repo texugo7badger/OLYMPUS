@@ -179,3 +179,10 @@ gold→purple→cyan peak, a cyan inner ring and eight palette-colored dots. The
 app bar, favicon, window/tray/dock PNG and the static `logo.svg`/`.png`/`.ico`
 all show it, and the system icon renderer receives the full palette instead of
 one accent. Only the colors change; the points never move.
+
+### v0.0.37 — the living mark
+
+The boot/fullscreen loader and the brain's bottom-left live mark now use the
+chameleon geometry: gradient peak, cyan inner ring, eight palette-colored dots
+and a gradient wordmark. Stable mode renders the same mark as a static frame;
+the palette is the only thing that changes.
