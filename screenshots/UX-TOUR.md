@@ -286,3 +286,12 @@ docs and design memory — no code tree, no absolute home paths. The profile
 card copies it to the clipboard or downloads `olympus-<slug>.passport.json`;
 the switcher's **import** reads a passport and creates a new lane with its
 identity and saved references. An existing project is never overwritten.
+
+### v0.0.49 — seven languages, one focus ring
+
+The project profile is complete in **English, PT-BR, Spanish, French, German,
+Japanese and Chinese** — brief, scope, instincts, knowledge, skills, parked,
+status and critique. Globally, `prefers-reduced-motion` now disables
+decorative motion (the in-app stable mode remains the explicit control) and
+every button/link/input gets a visible `:focus-visible` ring. The pass is
+pinned by a 14-assertion suite.

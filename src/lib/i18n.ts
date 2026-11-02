@@ -299,10 +299,15 @@ for (const [lang, dict] of Object.entries(EXTRA_DICTS)) DICTS[lang as Language] 
 
 import { UI_DICTS } from './i18n-ui';
 import { STUDIO_DICTS } from './i18n-studio';
+import { PROJECT_DICTS } from './i18n-projects';
 for (const [lang, dict] of Object.entries(UI_DICTS)) {
   DICTS[lang as Language] = { ...(DICTS[lang as Language] ?? en), ...dict };
 }
 for (const [lang, dict] of Object.entries(STUDIO_DICTS)) {
+  DICTS[lang as Language] = { ...(DICTS[lang as Language] ?? en), ...dict };
+}
+// v0.0.49 — the project surface is complete in all seven languages.
+for (const [lang, dict] of Object.entries(PROJECT_DICTS)) {
   DICTS[lang as Language] = { ...(DICTS[lang as Language] ?? en), ...dict };
 }
 

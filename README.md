@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.48, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.49, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,12 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.49 — seven languages, one focus ring.** The project surface is now
+complete in **all seven languages** (brief, scope, instincts, knowledge,
+skills, status, dirty/clean, critique), and the app honors
+`prefers-reduced-motion` globally while giving every interactive surface a
+visible keyboard focus ring. The pass is measured by a new 14-assertion suite.
 
 **v0.0.48 — projects that travel.** A project can be shared as a **passport**:
 identity, stacks, summary, live brief, docs and design memory — never the code
