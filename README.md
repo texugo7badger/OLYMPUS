@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.49, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.50, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,15 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.50 — v1.0 readiness, honestly.** The ladder from v0.0.38 to here is
+measured, not narrated: 60 FPS with GPU acceleration, a resource governor, a
+soak harness (39 rounds PASS, p95 ≤ 85 ms, RSS −126 MB), a 60-minute project
+budget, the living project brief, design memory, the editor follow/send lanes,
+the unattended contract, project passports and a project surface in seven
+languages. The two gates before calling a build *v1.0* — the 8-hour/100-hop
+certification and the AppImage — are named as **not run** in
+[V1-READINESS.md](V1-READINESS.md). No fake green.
 
 **v0.0.49 — seven languages, one focus ring.** The project surface is now
 complete in **all seven languages** (brief, scope, instincts, knowledge,

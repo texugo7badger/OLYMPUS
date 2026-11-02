@@ -1,0 +1,76 @@
+# OLYMPUS — v1.0 readiness
+
+> v0.0.50 · 2026-11-02 · **GO for a release candidate after two named gates**
+> (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
+> this build "certified v1.0" until those gates are green.** This page is the
+> report; it does not claim what was not run.
+
+## The ladder that shipped (v0.0.38 → v0.0.50)
+
+| Version | Theme | The measured change |
+|---|---|---|
+| v0.0.38 | 60 FPS, folder identity, 60-min projects | GPU default (60 FPS), canvas budget, lowercase project identity + stack marks, 60-minute campaign budget, live-preview parts |
+| v0.0.39 | The host budget | resource governor (green/amber/red, 1.2 GB admission floor), settings memory bar + reclaim |
+| v0.0.40 | The stability harness | `npm run soak` (p50/p95, memory, failures), 2-min measured PASS, honest 8h/100-hop gap |
+| v0.0.41 | The living project brief | status, parked cause, next parts, docs, memory, brain scope, localized profile |
+| v0.0.42 | The editor follows the agent | opt-in follow, `file:line`, root-confined open API |
+| v0.0.43 | Design memory & critique | named references per project, copy prompt, Athena critique |
+| v0.0.44 | Agent access, proven | real byte read from the newest asset, MCP lane names, honest prices |
+| v0.0.45 | Many projects, one truth | per-project status in the switcher, scoped memory/follow |
+| v0.0.46 | The editor speaks to the gods | VSIX 0.0.15: send-to-god, live hop context |
+| v0.0.47 | Unattended, bounded, visible | explicit `Run without me`, 3 bounded resumes, auto-approval only when unattended |
+| v0.0.48 | Projects that travel | passport export/import, no home paths, no overwrite |
+| v0.0.49 | Seven languages, one focus ring | complete project surface in 7 locales, reduced motion, focus-visible |
+| v0.0.50 | v1.0 readiness | this report |
+
+## Evidence (this machine, 2026-11-02)
+
+| Claim | Evidence |
+|---|---|
+| 60 FPS creative mode | offscreen probe: **Brain 60.1** · **Studio idle 59.8** · **Studio chat 60.2** |
+| Stability | soak **39 rounds PASS**, 5/5 probes every round, p95 ≤ 85 ms |
+| Memory bounded | available min **7,956 MB** (governor floor 1.2 GB); OLYMPUS RSS 4,457 → 4,331 MB (**−126 MB**), 32 processes |
+| Test battery | **119 PASS / 0 FAIL / 1 declared skip** (120 suites) at v0.0.50 |
+| Types/lint | `tsc --noEmit` and `lint` clean |
+| Security | `npm run security:audit` → **0 high / 0 critical**; 27 moderate transitive `glob/minimatch` advisories via the opencode/npm tree, no safe non-breaking fix |
+| Governor | live snapshot 15,459 MB total · 8,426 MB available · 45% · 36 processes · green |
+| Editor | VSIX `olympus-bridge-0.0.15.vsix` (9 files, 27 KB), compiled + packaged |
+| Projects | AIME probe: parked 2/17, cause `Agent not found: "athena-hop"`, next 4 hops named |
+
+Machine-local evidence: `~/Documents/OLYMPUS-plan/soak-v0.0.50.md`.
+
+## The two gates before a v1.0 candidate
+
+1. **8-hour soak + 100-hop campaign.** The harness is ready:
+   `npm run soak -- --minutes 480 --interval 10` with a real 100-hop campaign
+   on a lane. Acceptance: 100 started, 0 lost, every hop traceable, 0
+   un-named parks, RSS bounded, the 60-minute project budget respected per
+   project. **Not run yet.**
+2. **AppImage.** The last attempt was OOM-killed at the 6 GB heap cap; the
+   build needs a lower cap (`--max-old-space-size=4096`) with the app stopped.
+   **Not built yet.**
+
+## Named gaps (honest)
+
+- **Originkit `plasma-ring` exact source**: free quota (3/day) exhausted; the
+  local organic study is in use.
+- **Deep i18n sweep**: the project surface is complete in 7 languages; other
+  panels still have English-only copy.
+- **Multi-user** (accounts, permissions, live sharing) is not shipped; the
+  passport is a file the user shares.
+- **Concurrent campaigns** across projects are serialized by the walk lock;
+  the cross-lane scheduler (R39-03) is not shipped.
+- **Moderate advisories**: 27 transitive `glob/minimatch`; high/critical = 0.
+- **Engine defects** from the roadmap baseline (E-01…E-16) are partly cured
+  (park breaker, lane config, budget, MCP curation); a line-by-line closure
+  table is not claimed.
+
+## Go / no-go
+
+- **GO**: daily development, the premium test, a v1.0 **release candidate**
+  after the two gates above.
+- **NO-GO**: public "v1.0 certified" language, the 100-hop reliability claim,
+  or an AppImage asset that does not exist.
+
+The rule is the house's own: *prove, never claim*. A green test is evidence
+for what it tested; a missing gate is a named gap, not a footnote.

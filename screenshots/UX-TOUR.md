@@ -295,3 +295,12 @@ status and critique. Globally, `prefers-reduced-motion` now disables
 decorative motion (the in-app stable mode remains the explicit control) and
 every button/link/input gets a visible `:focus-visible` ring. The pass is
 pinned by a 14-assertion suite.
+
+### v0.0.50 — v1.0 readiness, honestly
+
+The readiness report is [V1-READINESS.md](../V1-READINESS.md): the shipped
+ladder, the measured evidence (60 FPS, 39-round soak PASS, p95 ≤ 85 ms, RSS
+−126 MB, 118/0/1 battery, 0 high/critical advisories) and the two gates that
+are **not** run — the 8-hour/100-hop certification and the AppImage. GO for a
+v1.0 release candidate after those gates; NO-GO for calling this build
+"certified v1.0".
