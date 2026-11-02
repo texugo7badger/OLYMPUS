@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { strategyApiRequirement, modelClassesForStrategy } from '@/lib/model-strategies';
 import StrategyBuilder from './strategy-builder';
 import ResourceGovernorCard from './resource-governor-card';
+import AutonomyCard from './autonomy-card';
 
 /* ------------------------------------------------------------------ */
 /* Settings Dialog — minimalist refactor.                              */
@@ -1213,6 +1214,7 @@ export default function SettingsDialog() {
               </div>
             </section>
 
+            <AutonomyCard />
             <ResourceGovernorCard />
 
             {error && (

@@ -269,3 +269,12 @@ a God** (right-click): choose a god, get a paste-ready block with the relative
 file, line range and the selected code, copied to the clipboard with OLYMPUS
 focused — never typed silently — and **Show Live Hop Context**, which reads
 the real run-state and names the running hops. The VSIX is built and committed.
+
+### v0.0.47 — unattended, bounded, visible
+
+Settings gains **Autonomy · unattended**: one switch, off by default. When on,
+the plan-walk gate auto-approves, design choices follow the recommended option
+and a parked wave auto-resumes up to 3 times — the 60-minute budget and the
+resource governor still apply, and the morning digest still lands. The
+terminal shows an `UNATTENDED` chip; every auto-approval is in the activity
+feed. The switch is read at send time, never from a stale closure.

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.46, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.47, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,13 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.47 — unattended, bounded, visible.** Settings carries the explicit
+**Run without me** switch: the plan-walk gate auto-approves, design choices
+follow the recommendation and a parked wave resumes up to 3 times — while the
+60-minute campaign budget and the resource governor still apply and the
+morning digest still lands. The terminal shows an `UNATTENDED` chip and reads
+the switch at send time; every auto-approval is logged.
 
 **v0.0.46 — the editor speaks to the gods.** The VSCode-family extension
 (0.0.15) gains **Send Selection to a God** — a paste-ready block with the

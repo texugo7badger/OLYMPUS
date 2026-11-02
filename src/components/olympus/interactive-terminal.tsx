@@ -15,6 +15,7 @@ import { marked } from 'marked';
 import { useOlympus } from '@/lib/olympus-store';
 import { useLanguage, t, getLanguage } from '@/lib/i18n';
 import { speakAs, voiceEnabled } from '@/lib/voice';
+import { unattendedEnabled, UNATTENDED_EVENT } from '@/lib/autonomy';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip';
 // ContextIndicator polls /api/olympus/context-usage every 5s and shows
@@ -282,6 +283,7 @@ export default function InteractiveTerminal() {
   const [context, setContext] = useState('');
   const [showContext, setShowContext] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [unattended, setUnattended] = useState(false);
   // #MINITASK (2026-10-25): the hop currently in flight, surfaced as a
   // mini-card above the transcript so the user can see WHO is doing WHAT
   // without scrolling. Polled from /api/olympus/run-state (10s, paused when
@@ -1363,7 +1365,7 @@ export default function InteractiveTerminal() {
       actionAbortRef.current = controller;
       const res = await fetch('/api/olympus/action', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-olympus-language': getLanguage() },
-        body: JSON.stringify({ action: 'prompt', text: fullText, context: contextText?.trim() || undefined, conversationId: conversationIdRef.current }),
+        body: JSON.stringify({ action: 'prompt', text: fullText, context: contextText?.trim() || undefined, conversationId: conversationIdRef.current, unattended: unattendedEnabled() }),
         signal: controller.signal,
       });
       if (!res.body) { addMessage({ type: 'error', text: 'No response stream returned.' }); return; }
@@ -1390,6 +1392,14 @@ export default function InteractiveTerminal() {
       setSubmitting(false); updateGodActivity('apollo', 'idle'); inputRef.current?.focus(); setUploadedFiles([]); setUploadedFileDetails([]);
     }
   }, [submitting, addMessage, updateGodActivity, pushEvent, pushPulse, setActiveGod, handleServerEvent, uploadedFileDetails, pendingImage]);
+
+  // v0.0.47 — the unattended switch is read at SEND time; the chip reflects it.
+  useEffect(() => {
+    setUnattended(unattendedEnabled());
+    const sync = () => setUnattended(unattendedEnabled());
+    window.addEventListener(UNATTENDED_EVENT, sync);
+    return () => window.removeEventListener(UNATTENDED_EVENT, sync);
+  }, []);
 
   // #210: queue persistence (per conversation) — hydrate on mount and write
   // on every change. A restart resumes exactly what was pending.
@@ -1922,6 +1932,11 @@ export default function InteractiveTerminal() {
           <span className="text-[9px] text-olympus-green">
             Interactive Mode
           </span>
+          {unattended && (
+            <span className="text-[8px] font-mono uppercase tracking-wide px-1 py-0.5 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30" data-tip="No human at the keyboard: gates auto-approve and parks resume within the budget">
+              unattended
+            </span>
+          )}
           {/* Compact "ctx N%" + bar.
               Placed next to the title so it reads as a session-state
               indicator (like a status LED) rather than a control. The
