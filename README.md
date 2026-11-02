@@ -37,7 +37,7 @@ OLYMPUS runs as a **standalone desktop application** — it opens its own window
 ```bash
 # 1. Download the latest AppImage from GitHub Releases:
 #    https://github.com/texugo7badger/olympus/releases
-#    OLYMPUS-0.0.31-linux-x86_64.AppImage (~460 MB)
+#    OLYMPUS-0.0.31-linux-x86_64.AppImage (~482 MB)
 
 # 2. Make it executable and run:
 chmod +x OLYMPUS-*.AppImage
