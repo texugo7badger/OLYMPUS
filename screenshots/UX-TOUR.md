@@ -170,3 +170,12 @@ is transcribed locally by `faster-whisper` — the transcript becomes your
 question and the god answers in persona, out loud. No audio leaves the machine
 for STT. The mic is disabled when the local STT lane is unavailable, never a
 dead button.
+
+### v0.0.36 — the chameleon mark
+
+The same original geometry — two rings, the peak, Callimachus above, Atlas at
+the base, the eight gods in orbit — now carries a color family: a
+gold→purple→cyan peak, a cyan inner ring and eight palette-colored dots. The
+app bar, favicon, window/tray/dock PNG and the static `logo.svg`/`.png`/`.ico`
+all show it, and the system icon renderer receives the full palette instead of
+one accent. Only the colors change; the points never move.

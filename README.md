@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.35, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.36, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -32,6 +32,14 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.36 — the chameleon mark.** The original OLYMPUS mark is now a
+chameleon: the exact `logo.svg` geometry, but the peak is a gold→purple→cyan
+gradient, the inner ring is cyan, and each of the eight orbit dots carries its
+own palette color. It applies to the app bar, the favicon and the
+window/tray/dock PNG (which now receives the full palette); the static
+`logo.svg`/`.png`/`.ico` carry the multicolor brand. The geometry is untouched
+— only the colors became a family.
 
 **v0.0.35 — the voice & hygiene release.** The free neural voice lane now
 speaks through the terminal and the studio, the Pattern Studio lets you choose
@@ -141,7 +149,7 @@ OLYMPUS runs as a **standalone desktop application** — it opens its own window
 ```bash
 # 1. Download the latest AppImage from GitHub Releases:
 #    https://github.com/texugo7badger/olympus/releases
-#    OLYMPUS-0.0.35-linux-x86_64.AppImage (~482 MB)
+#    OLYMPUS-0.0.36-linux-x86_64.AppImage (~482 MB)
 
 # 2. Make it executable and run:
 chmod +x OLYMPUS-*.AppImage
