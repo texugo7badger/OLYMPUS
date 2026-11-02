@@ -405,7 +405,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scroll p-3">
-                  <div className="grid grid-cols-2 xl:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                     {visibleRefs.map((r) => (
                       <ReferenceCard
                         key={r.id}
@@ -446,7 +446,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
               </button>
             )}
             {/* The 13 apps grid — the vendored truth per card */}
-            <div className="grid grid-cols-2 xl:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
               {apps.map((a) => {
                 const v = vendor[a.id];
                 const job = jobFor(a.id);
@@ -659,7 +659,7 @@ function ReferenceCard({
       onMouseLeave={() => setHovered(false)}
     >
       <button onClick={onOpen} className="w-full text-left">
-        <div className="relative h-[110px] w-full overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(212,165,116,0.10),transparent_60%)]">
+        <div className="relative h-[230px] w-full overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(212,165,116,0.10),transparent_60%)]">
           {hovered ? (
             // The REAL component page, cropped to the demo area (no login
             // banner): one iframe at a time, loaded on hover, 60fps.
@@ -669,28 +669,28 @@ function ReferenceCard({
                 title={`${reference.name} live component`}
                 loading="lazy"
                 sandbox="allow-scripts allow-same-origin"
-                style={{ position: 'absolute', top: -84, left: 0, width: 1200, height: 1700, border: 0, transform: 'scale(0.25)', transformOrigin: 'top left' }}
+                style={{ position: 'absolute', top: -150, left: '50%', marginLeft: -300, width: 1500, height: 2600, border: 0, transform: 'scale(0.4)', transformOrigin: 'top left' }}
               />
             </div>
           ) : (
             <div className="h-full flex items-center justify-center">
-              <img src={preview} alt="" width={54} height={54} loading="lazy" />
+              <img src={preview} alt="" width={84} height={84} loading="lazy" />
             </div>
           )}
           <span className="absolute top-1 right-1 text-[7px] font-mono px-1 py-0.5 rounded bg-olympus-bg/80 text-olympus-cyan uppercase">live</span>
         </div>
         <div className="px-2.5 pt-1.5">
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-mono font-semibold text-olympus-text truncate group-hover:text-olympus-gold">{reference.name}</span>
+            <span className="text-[12px] font-mono font-semibold text-olympus-text truncate group-hover:text-olympus-gold">{reference.name}</span>
             {!reference.free && <span className="text-[7px] font-mono px-1 rounded bg-olympus-amber-soft/10 text-olympus-amber-soft ring-1 ring-olympus-amber-soft/25 shrink-0 uppercase">premium</span>}
           </div>
           <div className="text-[8px] font-mono text-olympus-cyan/80 uppercase tracking-wide mt-0.5">{reference.library} · {reference.category}</div>
-          <p className="text-[9px] font-mono text-olympus-text-dim mt-1 leading-relaxed line-clamp-2">{reference.what}</p>
+          <p className="text-[10px] font-mono text-olympus-text-dim mt-1 leading-relaxed line-clamp-2">{reference.what}</p>
         </div>
       </button>
       <div className="flex items-center gap-1 px-2.5 pb-2 pt-1.5">
-        <button onClick={onUse} className="flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">use</button>
-        <button onClick={onQueue} className="flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">send to queue</button>
+        <button onClick={onUse} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">use</button>
+        <button onClick={onQueue} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">send to queue</button>
       </div>
     </div>
   );

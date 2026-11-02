@@ -954,6 +954,24 @@ export default function SettingsDialog() {
                   <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">{theme.custom ? 'custom palette active' : 'preset active'}</span>
                 </div>
               </div>
+
+              {/* v0.0.32 — OLYMPUS is global: the interface language. */}
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">language</span>
+                <select
+                  defaultValue={(typeof window !== 'undefined' && localStorage.getItem('olympus:language')) || 'en'}
+                  onChange={(e) => {
+                    try { localStorage.setItem('olympus:language', e.target.value); } catch { /* private */ }
+                    document.documentElement.lang = e.target.value;
+                    toast.success(`Language: ${e.target.selectedOptions[0].text}`);
+                  }}
+                  className="bg-olympus-bg border border-olympus-gold/20 rounded px-1.5 py-0.5 text-[9px] font-mono text-olympus-text outline-none"
+                  aria-label="Interface language"
+                >
+                  {[['en','English'],['pt-BR','Português'],['es','Español'],['fr','Français'],['de','Deutsch'],['ja','日本語'],['zh','中文']].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+                <span className="text-[8px] font-mono text-olympus-text-dim">full translations ship incrementally; the choice is stored now</span>
+              </div>
             </section>
 
             {/* LLM Strategy — segmented control */}
