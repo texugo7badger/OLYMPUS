@@ -20,7 +20,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Activity, BookOpen, Brain, Check, ChevronDown, Clock, Code2, Copy, ExternalLink, FileCode,
-  Files, Folder, GitBranch, HardDrive, Layers, ListTree, Loader2, X,
+  Files, Folder, GitBranch, HardDrive, Layers, ListTree, Loader2, X, Download, Share2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -109,6 +109,19 @@ function fileIcon(rel: string) {
 
 export default function ProjectProfileCard({ slug, onClose }: { slug: string; onClose: () => void }) {
   const language = useLanguage();
+  // v0.0.48 — the passport: share/export the project's identity.
+  const [sharing, setSharing] = useState(false);
+  const sharePassport = async () => {
+    setSharing(true);
+    try {
+      const r = await fetch(`/api/olympus/projects/export?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
+      if (!r.ok) throw new Error('export failed');
+      const text = await r.text();
+      await navigator.clipboard.writeText(text);
+      toast.success('project passport copied');
+    } catch { toast.error('could not copy the passport'); }
+    finally { setSharing(false); }
+  };
   const [mounted, setMounted] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -460,6 +473,12 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
               <button onClick={() => copy(profile.path, 'path')} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-panel text-olympus-text-dim ring-1 ring-olympus-gold/15 hover:text-olympus-gold">
                 <Copy size={11} /> path
               </button>
+              <button onClick={() => void sharePassport()} disabled={sharing} data-tip="Copy the project passport (identity, stacks, brief, design memory)" className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded border border-olympus-gold/20 text-olympus-text-dim hover:text-olympus-gold disabled:opacity-50">
+                {sharing ? <Loader2 size={10} className="animate-spin" /> : <Share2 size={10} />} share
+              </button>
+              <a href={`/api/olympus/projects/export?slug=${encodeURIComponent(slug)}`} download={`olympus-${slug}.passport.json`} className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded border border-olympus-gold/20 text-olympus-text-dim hover:text-olympus-gold">
+                <Download size={10} /> export
+              </a>
               <button onClick={onClose} className="ml-auto text-[10px] font-mono px-3 py-1.5 rounded text-olympus-text-dim hover:text-olympus-text">{t('common.close', language)}</button>
             </div>
           </>

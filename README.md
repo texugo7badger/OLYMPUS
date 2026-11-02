@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.47, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.48, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,12 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.48 — projects that travel.** A project can be shared as a **passport**:
+identity, stacks, summary, live brief, docs and design memory — never the code
+tree or your absolute paths. The profile card copies or downloads it; the
+project switcher imports a passport as a new lane (existing projects are never
+overwritten) and its design memory comes along.
 
 **v0.0.47 — unattended, bounded, visible.** Settings carries the explicit
 **Run without me** switch: the plan-walk gate auto-approves, design choices

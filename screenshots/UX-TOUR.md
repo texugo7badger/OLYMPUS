@@ -278,3 +278,11 @@ and a parked wave auto-resumes up to 3 times — the 60-minute budget and the
 resource governor still apply, and the morning digest still lands. The
 terminal shows an `UNATTENDED` chip; every auto-approval is in the activity
 feed. The switch is read at send time, never from a stale closure.
+
+### v0.0.48 — projects that travel
+
+Every project can be exported as a **passport**: slug, stacks, summary, brief,
+docs and design memory — no code tree, no absolute home paths. The profile
+card copies it to the clipboard or downloads `olympus-<slug>.passport.json`;
+the switcher's **import** reads a passport and creates a new lane with its
+identity and saved references. An existing project is never overwritten.

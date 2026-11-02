@@ -11,11 +11,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FolderPlus, Folder, ChevronDown, Layers } from 'lucide-react';
+import { FolderPlus, Folder, ChevronDown, Layers, Upload, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOlympus, type ProjectNote } from '@/lib/olympus-store';
 import ProjectProfileCard from './project-profile-card';
 import { useLanguage, t } from '@/lib/i18n';
+import { toast } from 'sonner';
 import { StackShelf } from './stack-icon';
 
 const STACK_LABELS: Record<string, string> = { react: 'React', next: 'Next.js', vue: 'Vue', svelte: 'Svelte', node: 'Node.js', bun: 'Bun', python: 'Python', rust: 'Rust', go: 'Go', typescript: 'TS', javascript: 'JS', tailwind: 'Tailwind', postgres: 'Postgres', mongodb: 'MongoDB', redis: 'Redis', docker: 'Docker', kubernetes: 'K8s', vercel: 'Vercel', aws: 'AWS', gcp: 'GCP', azure: 'Azure' };
@@ -39,6 +40,31 @@ export default function ProjectSwitcher() {
   const setNewProjectDialogOpen = useOlympus((s) => s.setNewProjectDialogOpen);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [profileSlug, setProfileSlug] = useState<string | null>(null);
+  // v0.0.48 — import a project passport as a new lane.
+  const importRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const importPassport = async (file: File) => {
+    setImporting(true);
+    try {
+      const passport = JSON.parse(await file.text());
+      const r = await fetch('/api/olympus/projects/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(passport),
+      });
+      const d = await r.json();
+      if (d?.ok) {
+        toast.success(`imported ${d.slug} — its identity and design memory are ready`);
+        await refreshProjects();
+        setDropdownOpen(false);
+        setProfileSlug(d.slug);
+      } else {
+        toast.error(d?.error || 'import failed');
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'invalid passport file');
+    } finally { setImporting(false); }
+  };
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { refreshProjects(); }, [refreshProjects]);
@@ -136,8 +162,23 @@ export default function ProjectSwitcher() {
             })}
           </div>
 
-          <div className="px-3 py-1.5 border-t border-olympus-gold/10 text-[9px] font-mono text-olympus-text-dim">
-            {t('projects.hint', language)}
+          <div className="px-3 py-1.5 border-t border-olympus-gold/10 flex items-center gap-2">
+            <span className="text-[9px] font-mono text-olympus-text-dim flex-1 truncate">{t('projects.hint', language)}</span>
+            <input
+              ref={importRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) void importPassport(f); e.target.value = ''; }}
+            />
+            <button
+              onClick={() => importRef.current?.click()}
+              disabled={importing}
+              data-tip="Import a project passport (.json) as a new lane"
+              className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border border-olympus-gold/20 text-olympus-text-dim hover:text-olympus-gold disabled:opacity-50 shrink-0"
+            >
+              {importing ? <Loader2 size={9} className="animate-spin" /> : <Upload size={9} />} import
+            </button>
           </div>
         </div>
       )}
