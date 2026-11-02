@@ -171,7 +171,7 @@ export default function StatusBar({
 	 {/* LEFT SIDE: logo + window controls + Compact Brain + focus mode + nav info */}
  <div className="flex items-center gap-3 min-w-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
  <div className="flex items-center gap-1.5 text-olympus-gold font-semibold shrink-0">
- <ThemedLogo iconId={theme.iconId} size={20} />
+ <ThemedLogo iconId="classic" size={20} />
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
