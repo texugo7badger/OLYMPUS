@@ -32,17 +32,18 @@ export const GOD_ICONS: Record<string, LucideIcon> = {
 
 export const GOD_IDS = Object.keys(GOD_ICONS);
 
-/** Pastel god accent colors (Issue 11). */
+/** God accents follow the ACTIVE theme (CSS variables, not frozen hexes). */
 export const GOD_COLORS: Record<string, string> = {
-  apollo: '#D4A574',
-  hephaestus: '#C4956A',
-  athena: '#D4A574',
-  hermes: '#D4A574',
-  artemis: '#D4A574',
-  dionysus: '#D4A574',
-  persephone: '#D4A574',
-  prometheus: '#D4A574',
-  callimachus: '#9B7BAE',
+  apollo: 'var(--olympus-gold)',
+  atlas: 'var(--olympus-amber-soft)',
+  hephaestus: 'var(--olympus-amber)',
+  athena: 'var(--olympus-cyan)',
+  hermes: 'var(--olympus-teal)',
+  artemis: 'var(--olympus-purple)',
+  dionysus: 'var(--olympus-green)',
+  persephone: 'var(--olympus-blue)',
+  prometheus: 'var(--olympus-red)',
+  callimachus: 'var(--olympus-purple)',
 };
 
 /** God domains — short descriptors for the god-detail panel. */

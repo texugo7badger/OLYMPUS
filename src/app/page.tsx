@@ -577,6 +577,8 @@ export default function OlympusWorkspace() {
                mode is on the floor drops to 0 so the chat expands
                FULL-WIDTH; back to 20 when the dashboard returns. */
             minSize={focusMode ? 0 : 20}
+            collapsible
+            collapsedSize={0}
             // Hide the panel content via CSS when focus mode is on (size 0).
             // The panel itself has width:0, but its content might still be
             // visible briefly during the resize animation. This wrapper ensures

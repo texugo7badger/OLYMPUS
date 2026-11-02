@@ -74,17 +74,17 @@ export default function FilterSidebar() {
 
  // Issue 12 — clearly distinct pastel colors per filter type.
  const items: { key: keyof typeof filters; label: string; color: string }[] = [
-   { key: 'god', label: 'Gods', color: '#D4A574' },
-   { key: 'instinct', label: 'Instincts', color: '#7BAE8E' },
-   { key: 'knowledge', label: 'Knowledge', color: '#6BAEB5' },
+   { key: 'god', label: 'Gods', color: 'var(--olympus-gold)' },
+   { key: 'instinct', label: 'Instincts', color: 'var(--olympus-green)' },
+   { key: 'knowledge', label: 'Knowledge', color: 'var(--olympus-cyan)' },
   ];
 
  // Scope filters (NEW) — tooltips removed per user request.
  const scopeItems: { key: keyof typeof filters; label: string; color: string }[] = [
- { key: 'scopeGlobal', label: 'Global', color: '#7BAE8E' },
- { key: 'scopeStack', label: 'Stack', color: '#6BAEB5' },
- { key: 'scopeProject', label: 'Project', color: '#9B7BAE' },
- { key: 'showCrossStack', label: 'Cross-stack', color: '#C4A265' },
+ { key: 'scopeGlobal', label: 'Global', color: 'var(--olympus-green)' },
+ { key: 'scopeStack', label: 'Stack', color: 'var(--olympus-cyan)' },
+ { key: 'scopeProject', label: 'Project', color: 'var(--olympus-purple)' },
+ { key: 'showCrossStack', label: 'Cross-stack', color: 'var(--olympus-amber-soft)' },
  ];
 
  if (collapsed) {

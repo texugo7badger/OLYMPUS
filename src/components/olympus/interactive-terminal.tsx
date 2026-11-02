@@ -43,7 +43,7 @@ import { ToolFrame } from './tool-frame';
 // TerminalTabs with allowedKinds=['shell','command'].
 // The opencode one-shot run IPC channel is still registered.
 
-const GOD_COLOR = '#D4A574';
+const GOD_COLOR = 'var(--olympus-gold)';
 
 // #195: reasoning deltas are buffered in a ref and flushed to the open
 // thinking line at most every REASONING_FLUSH_MS — a reasoning-heavy
@@ -2258,7 +2258,7 @@ export default function InteractiveTerminal() {
                       'flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono transition-all shrink-0',
                       input.trim() ? 'bg-olympus-gold/15 ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25 cursor-pointer' : 'bg-olympus-card/50 ring-1 ring-olympus-red/10 opacity-50',
                     )}
-                    style={input.trim() ? { color: GOD_COLOR } : { color: '#5A5A5A' }}
+                    style={input.trim() ? { color: GOD_COLOR } : { color: 'var(--olympus-text-dim)' }}
                   >
                     <Send size={11} /> queue
                   </button>
@@ -2284,7 +2284,7 @@ export default function InteractiveTerminal() {
                       ? 'bg-olympus-gold/15 ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25 cursor-pointer'
                       : 'bg-olympus-card/50 ring-1 ring-olympus-red/10 olympus-ban-cursor',
                   )}
-                  style={input.trim() ? { color: GOD_COLOR } : { color: '#5A5A5A' }}
+                  style={input.trim() ? { color: GOD_COLOR } : { color: 'var(--olympus-text-dim)' }}
                 >
                   <><Send size={11} /> send</>
                 </button>
@@ -2495,7 +2495,7 @@ const MessageRenderer = memo(function MessageRenderer({
       <div className="flex items-start gap-2">
         <span className="text-[9px] text-olympus-text-dim shrink-0 tabular-nums w-16 pt-0.5 leading-none">{time}</span>
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <Zap size={11} style={{ color: '#9B7BAE' }} className="shrink-0 mt-0.5" />
+          <Zap size={11} style={{ color: 'var(--olympus-purple)' }} className="shrink-0 mt-0.5" />
           <span className="text-olympus-purple wrap-break-word flex-1 min-w-0">{message.text}</span>
           {Icon && <Icon size={11} style={{ color: GOD_COLOR }} className="shrink-0 mt-0.5" />}
         </div>
