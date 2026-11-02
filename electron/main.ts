@@ -815,10 +815,8 @@ let themedIcon: Electron.NativeImage | null = null;
 /** The palette the user picked in Settings → Appearance (theme.json). */
 /** The icon family the user picked (classic | orbit | peak | monogram). */
 function readThemeIconId(): string {
-  try {
-    const raw = JSON.parse(readFileSync(THEME_FILE, 'utf-8'));
-    return typeof raw?.iconId === 'string' ? raw.iconId : 'classic';
-  } catch { return 'classic'; }
+  // v0.0.34 — the original mark is the only identity; the selector is gone.
+  return 'classic';
 }
 
 function readThemePalette(): typeof DEFAULT_PALETTE {

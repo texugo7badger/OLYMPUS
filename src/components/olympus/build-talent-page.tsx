@@ -17,7 +17,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Loader2, Plus, Search, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BUILD_CATEGORIES, BUILD_LIMITS } from '@/lib/build-categories';
+import { BUILD_CATEGORIES, BUILD_LIMITS, BUILD_CATEGORY_TINT, buildIconUrl } from '@/lib/build-categories';
+import { useTheme } from '@/lib/theme-store';
+import { resolvePalette } from '@/lib/theme';
 
 const GODS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
 type Slot = 'skills' | 'mcps' | 'demigods';
@@ -44,6 +46,9 @@ export default function BuildTalentPage({
   /** Simulate: prefill from an existing build (the viewer's "simulate"). */
   initialBuild?: { name?: string; god?: string; signature?: string; skills?: string[]; mcps?: string[]; demigods?: string[] };
 }) {
+  const [theme] = useTheme();
+  const palette = resolvePalette(theme);
+  const iconVersion = `${palette.gold}${palette.bg}`;
   const [active, setActive] = useState(0);
   const [name, setName] = useState(initialBuild?.name ? `${initialBuild.name} v2` : '');
   const [god, setGod] = useState(initialBuild?.god ?? 'athena');
@@ -185,8 +190,8 @@ export default function BuildTalentPage({
           {BUILD_CATEGORIES.map((c, index) => (
             <section key={c.id} className="snap-center shrink-0 w-full h-full flex flex-col items-center justify-center gap-5 px-6 py-4">
               <div className="flex flex-col items-center gap-1">
-                <img src={index === active ? c.icon : c.iconStatic} alt="" width={112} height={112} draggable={false} />
-                <span className="text-[15px] font-mono font-semibold uppercase tracking-[0.22em]" style={{ color: c.color }}>{c.name}</span>
+                <img src={buildIconUrl(c, index === active, iconVersion)} alt="" width={112} height={112} draggable={false} />
+                <span className="text-[15px] font-mono font-semibold uppercase tracking-[0.22em]" style={{ color: palette[BUILD_CATEGORY_TINT[c.id] ?? 'gold'] }}>{c.name}</span>
                 <span className="text-[9px] font-mono text-olympus-text-dim">sector {index + 1} of {BUILD_CATEGORIES.length}</span>
               </div>
 

@@ -189,7 +189,10 @@ export function normalizeThemeState(input: unknown): ThemeState {
     mode: presetById(preset).mode,
     accent,
     ...(custom ? { custom } : {}),
-    iconId: typeof raw.iconId === 'string' && THEME_ICONS.some((i) => i.id === raw.iconId) ? raw.iconId : 'classic',
+    // v0.0.34 — the ORIGINAL OLYMPUS mark is the only identity: the icon
+    // family selector is gone, and old stores are coerced to classic so the
+    // app bar, tray, window, dock and favicon all show the same logo.
+    iconId: 'classic',
     motion: isMotionMode(raw.motion) ? raw.motion : 'full',
   };
 }
