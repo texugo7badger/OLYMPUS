@@ -21,6 +21,9 @@ const PRIVATE = [
   [/\.(pem|key)$/, 'private key'],
   [/(^|\/)api-configs\.json$/, 'api-configs.json'],
   [/(^|\/)\.olympus\//, '.olympus/'],
+  // v0.0.31 golden rule: release notes live in the GitHub Release (tag), not
+  // in the repository root. Keeping them here duplicated the release body.
+  [/^release-notes-.*\.md$/, 'release notes belong to the tag release'],
 ];
 
 

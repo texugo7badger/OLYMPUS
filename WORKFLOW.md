@@ -185,3 +185,31 @@ Interactive terminal sessions run their `opencode serve` **inside the workspace 
 2. default: `~/.local/share/olympus/workspace`.
 
 The lane is bootstrapped with the UAT-kit's proven shape (`reports/uat-r1/SPAWN-INVOCATION.sh`): `.opencode` symlinked to the repo's overlay, `opencode.json` + `opencode.demigods.json` copied from the repo (created-if-missing; refresh semantics belong to the #78 drift-detector class). A workspace path pointing inside the OLYMPUS root falls back to the default — projects never silently land in the working tree. On the first cold start that creates the lane, the terminal shows a one-time notice (the ask seam); override it any time via `OLYMPUS_WORKSPACE`. The serve's spawn env also carries `OLYMPUS_ROOT_SESSION=1` (#95) — the app-spawned serve IS the root session, so the Part-3 heartbeat trio registers without any manual export.
+
+---
+
+## Release ritual — the tag IS the release notes
+
+Every version follows the same order; no step is optional.
+
+1. **Docs first.** Update the living docs in the same change that ships the
+   behavior: `TOKEN-ECONOMY.md` and `WORKFLOW.md` always; `README.md`,
+   `ARCHITECTURE.md`, `MCP.md`, `MODEL-STRATEGIES.md`, `AGENTS.md` and any
+   other `.md` the change touched.
+2. **Gate.** `npm run battery` green, `npx tsc --noEmit` clean, `npm run lint`
+   clean, `npm run repo:privacy` clean, `npm run security:audit` with no high.
+3. **Build.** Stop the dev app first (it owns `.next`); `npm run build`
+   (Next standalone + Electron compile) and, for a release, `npm run build:linux`
+   (AppImage/deb). `npm run verify:standalone` must pass.
+4. **Tag.** `git tag -a vX.Y.Z -m "OLYMPUS vX.Y.Z"` on the release commit and
+   push the tag.
+5. **Release body.** Publish the notes as the GitHub Release body for that tag:
+   `gh release create vX.Y.Z --title "OLYMPUS vX.Y.Z" --notes-file /tmp/notes.md`
+   (or `gh release edit vX.Y.Z --notes-file /tmp/notes.md`).
+   **Never commit `release-notes-vX.md` to the repository** — `repo:privacy`
+   fails if one appears.
+6. **Verify the surface.** `gh release view vX.Y.Z` shows the body; the tag
+   points at the release commit; `npm run doctor` is green.
+7. **Live docs.** If the release changed token economics, update
+   `TOKEN-ECONOMY.md` **before** the tag; a number without a measurement is
+   not published.
