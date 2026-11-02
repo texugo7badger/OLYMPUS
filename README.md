@@ -16,22 +16,39 @@
 ## Screens
 
 <div align="center">
+  <img src="screenshots/00-hero.png" width="100%" alt="OLYMPUS fullscreen — the Brain Atlas and the live terminal, Olympus theme, English UI" />
+</div>
 
-| The Brain Atlas | The Pattern Studio |
-|---|---|
-| <img src="screenshots/01-brain.png" width="480" alt="OLYMPUS Brain Atlas — the regions in their own palette colors" /> | <img src="screenshots/04-studio.png" width="480" alt="OLYMPUS Pattern Studio — thoughts, connections, voice and chat" /> |
+<div align="center">
 
-| Every reference is a live study | The Style Board + Open Design wisdom |
+| The Brain Atlas · Obsidian | The Pattern Studio · Ember |
 |---|---|
-| <img src="screenshots/02-references.png" width="480" alt="OLYMPUS References — 859 components, native interactive studies" /> | <img src="screenshots/03-style.png" width="480" alt="OLYMPUS Style Board — tokens, live preview and design wisdom" /> |
+| <img src="screenshots/01-brain.png" width="480" alt="OLYMPUS Brain Atlas in the Obsidian theme — cyan regions, eight gods in orbit" /> | <img src="screenshots/04-studio.png" width="480" alt="OLYMPUS Pattern Studio in the Ember theme — thoughts, living cells, plasma orb, voice and chat" /> |
 
-| The Build Hub / talent carousel | Settings — appearance + language |
+| Every reference is a live study · Violet | The Style Board + Open Design wisdom · Forest |
 |---|---|
-| <img src="screenshots/05-builds.png" width="480" alt="OLYMPUS Build Hub — themed talent icons" /> | <img src="screenshots/06-settings.png" width="480" alt="OLYMPUS Settings — the global language selector" /> |
+| <img src="screenshots/02-references.png" width="480" alt="OLYMPUS References in the Violet theme — 859 components, native interactive studies" /> | <img src="screenshots/03-style.png" width="480" alt="OLYMPUS Style Board in the Forest theme — tokens, live preview and design wisdom" /> |
+
+| The Build Hub / talent carousel · Ice | Settings — appearance + language · Parchment |
+|---|---|
+| <img src="screenshots/05-builds.png" width="480" alt="OLYMPUS Build Hub in the Ice theme — the animated talent carousel" /> | <img src="screenshots/06-settings.png" width="480" alt="OLYMPUS Settings in the Parchment theme — the global language selector" /> |
 
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.38 — 60 FPS & the project's own identity.** Hardware acceleration is
+the default again (measured 60 FPS on the Brain Atlas and the creative mode;
+software rendering is only the fallback after two GPU crashes, and
+`--reset-gpu` retries it). The creative canvas batches its proximity links and
+replaces per-frame gradients, the plasma orb carries fewer filaments, and the
+voice level no longer re-renders the panel 60 times a second. OLYMPUS opens
+**fullscreen**, and F11 / Ctrl+Shift+F toggles it. A project is its folder:
+**aime**, not “AIME”, with a summary taken from its README/package — never the
+prompt that created it — and the official stack marks under the description.
+A campaign carries a **60-minute wall-clock budget**: new hops stop at the
+deadline with a named resume point, parts land in the live preview as they
+finish, and a parked hop can never hold a project hostage.
 
 **v0.0.36 — the chameleon mark.** The animated boot loader and the brain's live mark are
 chameleon too. The original geometry is now a
