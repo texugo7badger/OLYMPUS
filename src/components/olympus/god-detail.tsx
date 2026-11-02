@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useOlympus, GOD_ICONS, GOD_DOMAINS } from '@/lib/olympus-store';
-import { Cpu, Zap, Clock, TrendingUp, Activity as ActivityIcon, BookOpenText, FileText, FlaskConical } from 'lucide-react';
+import { Cpu, Zap, Clock, TrendingUp, Activity as ActivityIcon, BookOpenText, FileText, FlaskConical, Plus, Check, Trash2, Flag, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDocVisible } from '@/lib/use-doc-visible';
 import { demigodShortDescription } from '@/lib/demigod-short-desc';
@@ -47,6 +47,14 @@ interface DispatchInfo {
  recentShortCircuits: any[];
 }
 
+interface GodNote {
+  id: string;
+  ts: string;
+  kind: 'plan' | 'attention' | 'note';
+  text: string;
+  done: boolean;
+}
+
 interface GodStats {
  instinctCounts: { seed: number; empirical: number; archived: number; total: number };
  shortCircuitHitRate: number;
@@ -67,6 +75,11 @@ export default function GodDetail() {
  const domain = god ? GOD_DOMAINS[god] : null;
  const [dispatch, setDispatch] = useState<DispatchInfo | null>(null);
  const [stats, setStats] = useState<GodStats | null>(null);
+ // v0.0.32 — the human's intent between dispatches (planning / attention).
+ const [notes, setNotes] = useState<GodNote[]>([]);
+ const [noteText, setNoteText] = useState('');
+ const [noteKind, setNoteKind] = useState<'plan' | 'attention' | 'note'>('plan');
+ const [noteBusy, setNoteBusy] = useState(false);
  	// When set, opens the DemigodPromptModal showing the
  // agent's full Identity .txt prompt. Set by clicking a demigod row.
  const [viewingDemigod, setViewingDemigod] = useState<{ agent: string; shortDesc: string } | null>(null);
@@ -158,7 +171,8 @@ export default function GodDetail() {
  loadReferences();
  loadResonance();
 
- if (!docVisible) return () => {};
+ if (!docVisible)
+ return () => {};
  // v0.0.25 — 30s (was 10s): the pane is read-mostly, and a 3x lighter
  // poll keeps the single server responsive for the other panes.
  const iv = setInterval(() => {
@@ -174,6 +188,54 @@ export default function GodDetail() {
  window.removeEventListener('olympus:demigods-changed', onDemigodsChanged);
  };
 }, [god, docVisible]);
+ // v0.0.32 — planning/attention notes (user data, not campaign state).
+ useEffect(() => {
+   if (!god) { setNotes([]); return; }
+   const ctrl = new AbortController();
+   fetch(`/api/olympus/god/notes?god=${god}`, { signal: ctrl.signal, cache: 'no-store' })
+     .then((r) => r.json())
+     .then((d) => { if (d?.ok && Array.isArray(d.notes)) setNotes(d.notes); })
+     .catch(() => { /* the panel still works without notes */ });
+   return () => ctrl.abort();
+ }, [god]);
+
+ const addNote = async () => {
+   const text = noteText.trim();
+   if (!god || !text || noteBusy) return;
+   setNoteBusy(true);
+   try {
+     const r = await fetch('/api/olympus/god/notes', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ god, text, kind: noteKind }),
+     });
+     const d = await r.json();
+     if (d?.ok) { setNotes(d.notes); setNoteText(''); }
+   } catch { /* keep the text for a retry */ }
+   finally { setNoteBusy(false); }
+ };
+ const toggleNote = async (note: GodNote) => {
+   if (!god) return;
+   try {
+     const r = await fetch('/api/olympus/god/notes', {
+       method: 'PATCH',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ god, id: note.id, done: !note.done }),
+     });
+     const d = await r.json();
+     if (d?.ok) setNotes(d.notes);
+   } catch { /* ignore */ }
+ };
+ const removeNote = async (note: GodNote) => {
+   if (!god) return;
+   try {
+     const r = await fetch(`/api/olympus/god/notes?god=${god}&id=${encodeURIComponent(note.id)}`, { method: 'DELETE' });
+     const d = await r.json();
+     if (d?.ok) setNotes(d.notes);
+   } catch { /* ignore */ }
+ };
+
+
 
  if (!god || !GodIcon) {
  return (
@@ -210,7 +272,7 @@ export default function GodDetail() {
  color={stats.shortCircuitHitRate > 0.3 ? 'text-olympus-green' : 'text-olympus-text-dim'}
  />
  <Stat
- label="Success rate"
+ label={`Success (${stats.dispatchCount} disp.)`}
  value={stats.successRate.allTime === null ? '—' : `${(stats.successRate.allTime * 100).toFixed(0)}%`}
  icon={TrendingUp}
  color={stats.successRate.allTime === null ? 'text-olympus-text-dim' :
@@ -219,7 +281,7 @@ export default function GodDetail() {
  />
  <Stat
  label="Avg latency"
- value={stats.avgDurationMs !== null ? `${stats.avgDurationMs}ms` : '—'}
+ value={stats.avgDurationMs !== null ? formatDuration(stats.avgDurationMs) : '—'}
  icon={Clock}
  color="text-olympus-cyan"
  />
@@ -229,6 +291,64 @@ export default function GodDetail() {
  {/* Callimachus info panel — kept as a brief description, but he
  now dispatches to demigods like any other god. The demigods
  section below shows his dispatch routes. */}
+
+ {/* v0.0.32 — PLANNING & ATTENTION. The gap between dispatches had no
+     place for the human's intent; a note parks it on the god's desk. */}
+ <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card/50 p-2.5">
+   <div className="flex items-center gap-1.5 mb-1.5">
+     <ClipboardList size={11} className="text-olympus-gold" />
+     <span className="text-[10px] font-semibold text-olympus-text-dim uppercase tracking-wide">planning &amp; attention</span>
+     {notes.filter((n) => !n.done && n.kind === 'attention').length > 0 && (
+       <span className="ml-auto flex items-center gap-1 text-[9px] font-mono text-olympus-red">
+         <Flag size={9} /> {notes.filter((n) => !n.done && n.kind === 'attention').length} open
+       </span>
+     )}
+   </div>
+   <div className="flex items-start gap-1.5">
+     <select
+       value={noteKind}
+       onChange={(e) => setNoteKind(e.target.value as 'plan' | 'attention' | 'note')}
+       className="bg-olympus-bg border border-olympus-gold/20 rounded px-1 py-1 text-[9px] font-mono text-olympus-text outline-none"
+       aria-label="note kind"
+     >
+       <option value="plan">plan</option>
+       <option value="attention">attention</option>
+       <option value="note">note</option>
+     </select>
+     <input
+       value={noteText}
+       onChange={(e) => setNoteText(e.target.value)}
+       onKeyDown={(e) => { if (e.key === 'Enter') void addNote(); }}
+       placeholder="e.g. the next plan must land the login before the deck"
+       className="flex-1 min-w-0 bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-[#5A5A5A] outline-none focus:border-olympus-gold/50"
+     />
+     <button
+       onClick={() => void addNote()}
+       disabled={noteBusy || !noteText.trim()}
+       className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25 disabled:opacity-40"
+     >
+       <Plus size={10} /> add
+     </button>
+   </div>
+   {notes.length > 0 && (
+     <div className="mt-1.5 space-y-0.5 max-h-28 overflow-auto">
+       {notes.slice().sort((a, b) => Number(a.done) - Number(b.done) || b.ts.localeCompare(a.ts)).map((n) => (
+         <div key={n.id} className={cn('flex items-center gap-1.5 text-[9px] font-mono rounded px-1 py-0.5', n.done ? 'text-olympus-text-dim/60' : 'text-olympus-text')}>
+           <button onClick={() => void toggleNote(n)} aria-label={n.done ? 'reopen note' : 'complete note'} className={cn('shrink-0 rounded border w-3 h-3 flex items-center justify-center', n.done ? 'border-olympus-green/50 bg-olympus-green/20 text-olympus-green' : 'border-olympus-gold/30 text-transparent hover:text-olympus-gold')}>
+             <Check size={8} />
+           </button>
+           <span className={cn('shrink-0 uppercase', n.kind === 'attention' ? 'text-olympus-red' : n.kind === 'plan' ? 'text-olympus-cyan' : 'text-olympus-text-dim')}>{n.kind}</span>
+           <span className={cn('flex-1 truncate', n.done && 'line-through')}>{n.text}</span>
+           <button onClick={() => void removeNote(n)} aria-label="delete note" className="shrink-0 text-olympus-text-dim hover:text-olympus-red"><Trash2 size={9} /></button>
+         </div>
+       ))}
+     </div>
+   )}
+   {notes.length === 0 && (
+     <p className="mt-1.5 text-[9px] font-mono text-olympus-text-dim">No notes — leave a plan line or an attention flag for this god.</p>
+   )}
+ </div>
+
  {god === 'callimachus' && (
  <div className="rounded-lg border border-olympus-purple/20 bg-olympus-purple/5 p-3 text-[11px] font-mono text-olympus-text leading-relaxed">
  Vault curator — runs the 7-stage brain maintenance loop (observe, distill, inject,
@@ -461,6 +581,18 @@ export default function GodDetail() {
  )}
  </div>
  );
+}
+
+function formatDuration(ms: number): string {
+ if (!Number.isFinite(ms) || ms < 0) return '—';
+ if (ms < 1000) return `${Math.round(ms)}ms`;
+ const s = ms / 1000;
+ if (s < 60) return `${s.toFixed(1)}s`;
+ const m = Math.floor(s / 60);
+ const rem = Math.round(s % 60);
+ if (m < 60) return `${m}m ${rem}s`;
+ const h = Math.floor(m / 60);
+ return `${h}h ${m % 60}m`;
 }
 
 function Stat({ label, value, icon: Icon, color }: { label: string; value: string; icon: any; color: string }) {
