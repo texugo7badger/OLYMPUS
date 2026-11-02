@@ -39,6 +39,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -387,12 +388,15 @@ function startElectron(extraArgs = []) {
   // Set WM_CLASS to 'olympus' so the Linux desktop environment matches
   // the .desktop entry (which has StartupWMClass=olympus) and shows the
   // OLYMPUS logo in the taskbar/dock instead of the generic gear icon.
-  // #GPU-DISABLE: this machine's AMD Radeon RX 6600 crashes Electron's GPU
-  // process on launch. Always pass --disable-gpu so the app runs in software
-  // rendering mode. The user can re-enable with --reset-gpu (which removes
-  // the marker and clears the flag).
-  const gpuDisabled = !process.argv.includes('--reset-gpu');
-  let electronArgs = gpuDisabled
+  // GPU policy (v0.0.38): hardware acceleration is the DEFAULT — the creative
+  // mode needs it to hold 60 FPS. Software rendering is the fallback only
+  // when the persisted gpu-fallback marker exists (two GPU crashes in a prior
+  // session) or the user explicitly passes --disable-gpu. `--reset-gpu`
+  // clears the marker and retries hardware acceleration.
+  const resetGpu = process.argv.includes('--reset-gpu');
+  const gpuMarker = join(homedir(), '.olympus', 'gpu-fallback');
+  const forceSoftware = process.argv.includes('--disable-gpu') || (!resetGpu && existsSync(gpuMarker));
+  let electronArgs = forceSoftware
     ? ['--class=olympus', '--disable-gpu', '--disable-gpu-sandbox', ROOT, ...extraArgs]
     : ['--class=olympus', ROOT, ...extraArgs];
   if (process.platform === 'linux') {

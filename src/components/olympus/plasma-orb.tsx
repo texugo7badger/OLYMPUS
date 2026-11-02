@@ -59,7 +59,7 @@ export default function PlasmaOrb({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(1.5, window.devicePixelRatio || 1);
     canvas.width = Math.round(size * dpr);
     canvas.height = Math.round(size * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -71,7 +71,7 @@ export default function PlasmaOrb({
     let running = true;
 
     // Organic filaments: irregular paths, not latitude/longitude rings.
-    const filaments: Filament[] = Array.from({ length: 74 }, (_, i) => ({
+    const filaments: Filament[] = Array.from({ length: 52 }, (_, i) => ({
       lat: -1.25 + hash(i * 2.1) * 2.5,
       lon: hash(i * 5.7) * TAU,
       wobble: 0.08 + hash(i * 9.3) * 0.16,
@@ -80,7 +80,7 @@ export default function PlasmaOrb({
       color: i % 3,
       width: 0.45 + hash(i * 11.7) * 0.65,
     }));
-    const sparks = Array.from({ length: 34 }, (_, i) => ({
+    const sparks = Array.from({ length: 26 }, (_, i) => ({
       lat: -1.15 + hash(i * 4.1) * 2.3,
       lon: hash(i * 6.7) * TAU,
       speed: 0.2 + hash(i * 8.3) * 0.5,
@@ -145,7 +145,7 @@ export default function PlasmaOrb({
 
       // organic plasma filaments
       for (const f of filaments) {
-        const steps = 22;
+        const steps = 16;
         let prev: [number, number, number] | null = null;
         for (let s = 0; s <= steps; s += 1) {
           const k = s / steps;

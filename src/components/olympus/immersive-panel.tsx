@@ -140,9 +140,20 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   // v0.0.34 — one calm, distinct voice per god. The free edge-tts neural lane
   // is the primary voice; the browser voice is the fallback. The orb form and
   // color follow the active god; the language comes from Settings.
+  // v0.0.38 — PERFORMANCE: the analyser reports a level every animation
+  // frame. Feeding that into React state re-rendered this whole panel 60x/s.
+  // The orb reads the level from a ref and animates on its own; the prop only
+  // needs ~10 updates per second.
+  const levelGate = useRef(0);
+  const onVoiceLevel = useCallback((level: number) => {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - levelGate.current < 90) return;
+    levelGate.current = now;
+    setVoiceLevel(level);
+  }, []);
   const speak = useCallback((text: string, god?: string) => {
-    void speakAs(text, god || activeGod, language, setSpeaking, setVoiceLevel);
-  }, [language, activeGod]);
+    void speakAs(text, god || activeGod, language, setSpeaking, onVoiceLevel);
+  }, [language, activeGod, onVoiceLevel]);
 
   const askStudio = useCallback(async (override?: string) => {
     const question = (override ?? chatInput).trim();
@@ -292,7 +303,9 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    // 60 FPS: a 1600x1000 surface at DPR 2 costs 6.4M pixels a frame. 1.5
+    // keeps the field crisp and cuts the fill rate by ~44%.
+    const dpr = Math.min(1.5, window.devicePixelRatio || 1);
     let raf = 0;
     let running = true;
     let particles: Particle[] = [];
@@ -302,7 +315,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
       canvas.height = Math.floor(canvas.clientHeight * dpr);
     };
     resize();
-    particles = Array.from({ length: 120 }, () => ({
+    particles = Array.from({ length: 96 }, () => ({
       x: Math.random(), y: Math.random(),
       vx: (Math.random() - 0.5) * 0.0006, vy: (Math.random() - 0.5) * 0.0006,
       r: 0.7 + Math.random() * 1.6, c: Math.floor(Math.random() * colors.length), a: 0.25 + Math.random() * 0.6,
@@ -332,7 +345,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
         const speed = 0.0008 + Math.random() * 0.0016;
         particles.push({ x: ox, y: oy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r: 1 + Math.random() * 1.4, c: Math.floor(Math.random() * colors.length), a: 0.9 });
       }
-      if (particles.length > 220) particles = particles.slice(particles.length - 220);
+      if (particles.length > 180) particles = particles.slice(particles.length - 180);
     };
     const draw = () => {
       const w = canvas.width;
@@ -372,32 +385,32 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
           c.r = Math.max(0.012, c.r * 0.78);
           cells.push({ ...c, x: c.x + 0.012, y: c.y - 0.008, r: c.r * 0.7, phase: c.phase + 1.7, splitAt: now + 7000 + Math.random() * 9000, drift: -c.drift });
         }
-        const g = ctx.createRadialGradient(c.x * w, c.y * h, r * w * 0.1, c.x * w, c.y * h, r * w);
-        g.addColorStop(0, `${colors[c.c]}33`);
-        g.addColorStop(0.7, `${colors[c.c]}18`);
-        g.addColorStop(1, `${colors[c.c]}00`);
-        ctx.fillStyle = g;
+        // Two soft alpha circles replace a per-frame radial gradient: the
+        // gradient object was allocated 22+ times every frame and dominated
+        // the creative-mode budget. Same glow, no allocation.
+        ctx.fillStyle = colors[c.c];
+        ctx.globalAlpha = 0.035;
         ctx.beginPath();
         ctx.arc(c.x * w, c.y * h, r * w, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = `${colors[c.c]}44`;
-        ctx.lineWidth = Math.max(0.5, 0.7 * dpr);
+        ctx.globalAlpha = 0.065;
         ctx.beginPath();
-        ctx.arc(c.x * w, c.y * h, r * w * 0.82, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.fillStyle = `${colors[c.c]}88`;
+        ctx.arc(c.x * w, c.y * h, r * w * 0.62, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.42;
         ctx.beginPath();
         ctx.arc(c.x * w, c.y * h, Math.max(1, 1.5 * dpr), 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 1;
         if (alive < 60) {
           for (const other of cells) {
             if (other === c) continue;
             const dx = (c.x - other.x) * w;
             const dy = (c.y - other.y) * h;
-            const d = Math.hypot(dx, dy);
-            if (d > Math.min(w, h) * 0.12) continue;
-            ctx.strokeStyle = `${colors[c.c]}22`;
-            ctx.globalAlpha = 0.35;
+            const reach = Math.min(w, h) * 0.12;
+            if (dx * dx + dy * dy > reach * reach) continue;
+            ctx.strokeStyle = colors[c.c];
+            ctx.globalAlpha = 0.10;
             ctx.lineWidth = 0.5 * dpr;
             ctx.beginPath();
             ctx.moveTo(c.x * w, c.y * h);
@@ -418,23 +431,32 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
         p.y = Math.max(0, Math.min(1, p.y));
       }
       const link = Math.min(w, h) * 0.11;
+      const link2 = link * link;
       ctx.globalAlpha = 1;
+      // Batch the proximity links per palette color: one Path2D and one
+      // stroke per color instead of hundreds of stroke() calls, and squared
+      // distance instead of hypot in the O(n^2) walk.
+      const linkPaths = colors.map(() => new Path2D());
       for (let i = 0; i < particles.length; i += 1) {
         const a = particles[i];
+        const ax = a.x * w;
+        const ay = a.y * h;
         for (let j = i + 1; j < particles.length; j += 1) {
           const b = particles[j];
-          const dx = (a.x - b.x) * w;
-          const dy = (a.y - b.y) * h;
-          const d = Math.hypot(dx, dy);
-          if (d > link) continue;
-          ctx.strokeStyle = colors[a.c];
-          ctx.globalAlpha = (1 - d / link) * 0.16;
-          ctx.lineWidth = 0.6 * dpr;
-          ctx.beginPath();
-          ctx.moveTo(a.x * w, a.y * h);
-          ctx.lineTo(b.x * w, b.y * h);
-          ctx.stroke();
+          const bx = b.x * w;
+          const by = b.y * h;
+          const dx = ax - bx;
+          const dy = ay - by;
+          if (dx * dx + dy * dy > link2) continue;
+          linkPaths[a.c].moveTo(ax, ay);
+          linkPaths[a.c].lineTo(bx, by);
         }
+      }
+      for (let c = 0; c < linkPaths.length; c += 1) {
+        ctx.strokeStyle = colors[c];
+        ctx.globalAlpha = 0.10;
+        ctx.lineWidth = 0.6 * dpr;
+        ctx.stroke(linkPaths[c]);
       }
       for (const p of particles) {
         ctx.globalAlpha = p.a;
@@ -447,7 +469,8 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     };
     const loop = () => {
       if (!running) return;
-      draw();
+      // A hidden panel must not burn a core; the visibility handler resumes it.
+      if (document.visibilityState !== 'hidden') draw();
       raf = requestAnimationFrame(loop);
     };
     if (theme.motion === 'stable') draw();
