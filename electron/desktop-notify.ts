@@ -126,11 +126,145 @@ export interface ThemeMarkColors {
 }
 
 /**
+ * v0.0.34 — the ORIGINAL OLYMPUS mark as a PNG, in the active palette.
+ *
+ * Geometry mirrors public/logo.svg (the 256 viewBox):
+ *   background disc, outer + inner rings, the mountain peak, Callimachus
+ *   floating above (purple), Atlas at the base (gold), the eight specialist
+ *   gods in orbit, and the faint rays from the centre.
+ *
+ * Rendered 4x supersampled then box-filtered (premultiplied), so the 16px
+ * tray still reads and the 256px window/dock icon stays crisp. No SVG
+ * rasterizer, no dependency.
+ */
+function originalMarkPng(colors: ThemeMarkColors, size: number): Buffer {
+  const ss = 4;
+  const S = Math.max(32, size * ss);
+  const [ar, ag, ab] = hexToRgb(colors.accent);
+  const [pr, pg, pb] = hexToRgb(colors.purple);
+  const [br, bgc, bb] = hexToRgb(colors.bg);
+
+  const P = (v: number) => v * S;
+  const cx = P(128 / 256);
+  const cy = P(128 / 256);
+  const bgR = P(124 / 256);
+  const outerR = P(112 / 256);
+  const innerR = P(96 / 256);
+  const outerHalf = P(1.5 / 256) / 2;
+  const innerHalf = P(1 / 256) / 2;
+
+  // The 8 god dots (x, y, r, opacity) — same coordinates as the logo.
+  const orbit: Array<[number, number, number, number]> = [
+    [128, 24, 4, 1],
+    [201.6, 54.4, 3.5, 0.85],
+    [232, 128, 4, 1],
+    [201.6, 201.6, 3.5, 0.85],
+    [128, 232, 4, 1],
+    [54.4, 201.6, 3.5, 0.85],
+    [24, 128, 4, 1],
+    [54.4, 54.4, 3.5, 0.85],
+  ].map(([x, y, r, o]) => [P(x / 256), P(y / 256), P(r / 256), o] as [number, number, number, number]);
+
+  const peak: Array<[number, number]> = ([
+    [128, 76], [168, 168], [144, 168], [128, 132], [112, 168], [88, 168],
+  ] as Array<[number, number]>).map(([x, y]) => [P(x / 256), P(y / 256)] as [number, number]);
+
+  function inPeak(x: number, y: number): boolean {
+    let inside = false;
+    for (let i = 0, j = peak.length - 1; i < peak.length; j = i, i += 1) {
+      const [xi, yi] = peak[i];
+      const [xj, yj] = peak[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+
+  /** Squared distance from a point to the centre→orbit-dot ray. */
+  function rayDistance(x: number, y: number, tx: number, ty: number): number {
+    const dx = tx - cx;
+    const dy = ty - cy;
+    const len2 = dx * dx + dy * dy;
+    const t = Math.max(0, Math.min(1, ((x - cx) * dx + (y - cy) * dy) / len2));
+    return Math.hypot(x - (cx + t * dx), y - (cy + t * dy));
+  }
+
+  const rgba = Buffer.alloc(S * S * 4);
+  const blend = (i: number, r: number, g: number, b: number, a: number): void => {
+    const da = rgba[i + 3] / 255;
+    const outA = a + da * (1 - a);
+    if (outA <= 0) return;
+    rgba[i] = Math.round((r * a + rgba[i] * da * (1 - a)) / outA);
+    rgba[i + 1] = Math.round((g * a + rgba[i + 1] * da * (1 - a)) / outA);
+    rgba[i + 2] = Math.round((b * a + rgba[i + 2] * da * (1 - a)) / outA);
+    rgba[i + 3] = Math.round(outA * 255);
+  };
+
+  for (let y = 0; y < S; y += 1) {
+    for (let x = 0; x < S; x += 1) {
+      const i = (y * S + x) * 4;
+      const d = Math.hypot(x - cx, y - cy);
+      // The disc is opaque; everything else lives inside it.
+      if (d <= bgR) blend(i, br, bgc, bb, 1);
+      else continue;
+      // Faint rays from the centre to each god dot.
+      for (const [ox, oy] of orbit) {
+        if (rayDistance(x, y, ox, oy) <= P(0.5 / 256)) blend(i, ar, ag, ab, 0.15);
+      }
+      // The two rings.
+      if (Math.abs(d - outerR) <= outerHalf) blend(i, ar, ag, ab, 0.4);
+      if (Math.abs(d - innerR) <= innerHalf) blend(i, ar, ag, ab, 0.25);
+      // The mountain.
+      if (inPeak(x, y)) blend(i, ar, ag, ab, 1);
+      // Callimachus above the peak (purple), Atlas at the base (gold).
+      if (Math.hypot(x - cx, y - P(60 / 256)) <= P(3 / 256)) blend(i, pr, pg, pb, 1);
+      if (Math.hypot(x - cx, y - P(168 / 256)) <= P(3 / 256)) blend(i, ar, ag, ab, 1);
+      // The eight specialist gods in orbit.
+      for (const [ox, oy, or, op] of orbit) {
+        if (Math.hypot(x - ox, y - oy) <= or) blend(i, ar, ag, ab, op);
+      }
+    }
+  }
+
+  // Box-filter to the requested size with premultiplied alpha (no dark halo).
+  const out = Buffer.alloc(size * size * 4);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      let r = 0; let g = 0; let b = 0; let a = 0;
+      for (let sy = 0; sy < ss; sy += 1) {
+        for (let sx = 0; sx < ss; sx += 1) {
+          const i = ((y * ss + sy) * S + (x * ss + sx)) * 4;
+          const al = rgba[i + 3] / 255;
+          r += rgba[i] * al;
+          g += rgba[i + 1] * al;
+          b += rgba[i + 2] * al;
+          a += al;
+        }
+      }
+      const n = ss * ss;
+      const oi = (y * size + x) * 4;
+      if (a > 0) {
+        out[oi] = Math.round(r / a);
+        out[oi + 1] = Math.round(g / a);
+        out[oi + 2] = Math.round(b / a);
+        out[oi + 3] = Math.round((a / n) * 255);
+      }
+    }
+  }
+  return encodePng(size, size, out);
+}
+
+/**
  * The window/taskbar icon in the user's palette: the OLYMPUS mark (a peak
  * inside a disc) rendered with the PNG encoder — no dependency, no SVG
  * rasterizer. 256px by default; the taskbar downsamples cleanly.
  */
 export function themeMarkPng(colors: ThemeMarkColors, size = 256, iconId = 'classic'): Buffer {
+  // v0.0.34 — PRIORITY: the system icon carries the ORIGINAL OLYMPUS mark
+  // (two rings, the peak, the eight gods in orbit, Callimachus above and
+  // Atlas at the base), not a simplified triangle. The icon-family options
+  // still render for users who picked one, but 'classic' is the true mark
+  // everywhere: window, taskbar, tray and Linux dock.
+  if (iconId === 'classic') return originalMarkPng(colors, size);
   const [ar, ag, ab] = hexToRgb(colors.accent);
   const [pr, pg, pb] = hexToRgb(colors.purple);
   const [br, bgc, bb] = hexToRgb(colors.bg);

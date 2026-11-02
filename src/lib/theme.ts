@@ -52,7 +52,8 @@ export interface ThemeIcon {
 }
 
 export const THEME_ICONS: ThemeIcon[] = [
-  { id: 'classic', name: 'Classic peak', src: '/logo.svg' },
+  // The original mark is the priority identity — app bar, window, tray, dock.
+  { id: 'classic', name: 'Original OLYMPUS (recommended)', src: '/logo.svg' },
   { id: 'orbit', name: 'Orbit', src: '/icons/olympus-orbit.svg' },
   { id: 'peak', name: 'Minimal peak', src: '/icons/olympus-peak.svg' },
   { id: 'monogram', name: 'Monogram', src: '/icons/olympus-monogram.svg' },
@@ -262,8 +263,24 @@ export interface ThemePayload extends ThemeState {
   icons: ThemeIcon[];
 }
 
-/** A tiny themed favicon (the peak in the accent) for the browser/window tab. */
+/**
+ * The themed favicon — the ORIGINAL mark in the active palette (two rings,
+ * the peak, the eight gods in orbit, Callimachus above and Atlas at the
+ * base), matching the status bar and the system icon.
+ */
 export function themedFaviconSvg(state: ThemeState): string {
   const c = resolvePalette(state);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${c.bg}"/><circle cx="32" cy="32" r="24" fill="none" stroke="${c.gold}" stroke-width="1.5" opacity=".5"/><path d="M32 18 L46 46 L39 46 L32 32 L25 46 L18 46 Z" fill="${c.gold}"/><circle cx="32" cy="15" r="2.4" fill="${c.purple}"/></svg>`;
+  const dot = (x: number, y: number, r: number, fill: string, opacity = 1) =>
+    `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"${opacity < 1 ? ` opacity="${opacity}"` : ''}/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${c.bg}"/>`
+    + `<circle cx="32" cy="32" r="28" fill="none" stroke="${c.gold}" stroke-width="1.5" opacity=".4"/>`
+    + `<circle cx="32" cy="32" r="24" fill="none" stroke="${c.gold}" stroke-width="1" opacity=".25"/>`
+    + `<path d="M32 19 L42 42 L36 42 L32 33 L28 42 L22 42 Z" fill="${c.gold}"/>`
+    + dot(32, 15, 1.5, c.purple) + dot(32, 42, 1.5, c.gold)
+    + dot(32, 6, 2, c.gold) + dot(50.4, 13.6, 1.75, c.gold, 0.85)
+    + dot(58, 32, 2, c.gold) + dot(50.4, 50.4, 1.75, c.gold, 0.85)
+    + dot(32, 58, 2, c.gold) + dot(13.6, 50.4, 1.75, c.gold, 0.85)
+    + dot(6, 32, 2, c.gold) + dot(13.6, 13.6, 1.75, c.gold, 0.85)
+    + `<g stroke="${c.gold}" stroke-width="0.4" opacity=".15"><path d="M32 32V6M32 32H58M32 32V58M32 32H6M32 32L50.4 13.6M32 32L50.4 50.4M32 32L13.6 50.4M32 32L13.6 13.6"/></g>`
+    + `</svg>`;
 }

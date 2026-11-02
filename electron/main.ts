@@ -1075,11 +1075,19 @@ button:hover{background:#D4A57433}
   // closing the window hides it instead of quitting. Double-click restores.
   if (!tray) {
     try {
-      const iconPath = existsSync(join(appRoot, 'public', 'logo-32x32.png'))
-        ? join(appRoot, 'public', 'logo-32x32.png')
-        : join(appRoot, 'public', 'logo.png');
-      const icon = nativeImage.createFromPath(iconPath);
-      tray = new Tray(icon.resize({ width: 16, height: 16 }));
+      // v0.0.34 — the tray opens with the ORIGINAL mark in the active
+      // palette (not the static gold fallback); notifications still paint
+      // their type color on top and restore this mark afterwards.
+      const themed = defaultTrayImage();
+      if (!themed.isEmpty()) {
+        tray = new Tray(themed);
+      } else {
+        const iconPath = existsSync(join(appRoot, 'public', 'logo-32x32.png'))
+          ? join(appRoot, 'public', 'logo-32x32.png')
+          : join(appRoot, 'public', 'logo.png');
+        const icon = nativeImage.createFromPath(iconPath);
+        tray = new Tray(icon.resize({ width: 16, height: 16 }));
+      }
       tray.setToolTip('OLYMPUS — click to restore');
       const contextMenu = Menu.buildFromTemplate([
         { label: 'Show OLYMPUS', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } else createWindow(); } },
