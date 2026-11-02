@@ -949,10 +949,15 @@ button:hover{background:#D4A57433}
   }
 
   // Minimize to tray instead of closing.
+  let trayHintShown = false;
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
       event.preventDefault();
       mainWindow?.hide();
+      if (!trayHintShown) {
+        trayHintShown = true;
+        notifyDesktop('walk', 'OLYMPUS is still running', 'The window is in the tray. Click the icon (or run `olympus dev` again) to restore it.');
+      }
       // Notify the renderer that it's now in background mode (reduce polling).
       mainWindow?.webContents.send('olympus:background-mode', true);
       console.log('[olympus:electron] window hidden to tray (running in background)');
@@ -1457,12 +1462,19 @@ if (!process.argv.includes('--reset-gpu')) {
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
+  // A hidden-to-tray instance owns the lock; ITS second-instance handler
+  // shows the window. This process exits without a second copy (the old
+  // handler only focused a hidden window, so `olympus dev` looked dead).
+  console.log('[olympus:electron] another instance is running — asking it to show the window');
   app.quit();
 } else {
   app.on('second-instance', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
       mainWindow.focus();
+    } else {
+      createWindow();
     }
   });
 
