@@ -192,7 +192,10 @@ export class BrainRenderer extends RenderCore {
   ): void {
     const lobe = cp.p.lobe ?? "parietal";
     // Minimalist brain cloud — faint, subtle surface.
-    const alphaBase = far ? 0.20 : 0.38;
+    // v0.0.32 — on light palettes the cloud points vanished (paper + alpha
+    // 0.2). Lift the base alpha so the silhouette still reads as a brain.
+    const lightBg = hexLuminance(graph.activePalette.bg) > 0.55;
+    const alphaBase = far ? (lightBg ? 0.42 : 0.20) : (lightBg ? 0.62 : 0.38);
     const alpha = (1 - cp.pr.depth) * alphaBase * cp.tw * lobeMul(lobe);
     ctx.fillStyle = hexA(this.lobeColor(lobe, graph), alpha);
     ctx.beginPath();
@@ -308,7 +311,7 @@ export class BrainRenderer extends RenderCore {
     ctx.arc(projected.sx, projected.sy, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = lightBg
-      ? hexA(graph.activePalette.text, Math.min(1, alpha))
+      ? hexA(graph.activePalette.fg, Math.min(1, alpha))
       : `rgba(255,255,255,${Math.min(1, alpha)})`;
     ctx.beginPath();
     ctx.arc(projected.sx, projected.sy, Math.max(0.7, radius * 0.42), 0, Math.PI * 2);
