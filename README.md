@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.39, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.40, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,14 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.40 — the stability harness.** `npm run soak` probes health, power,
+resources, run-state and projects on a cadence and fails on the truth:
+non-2xx, a budget overrun, available memory below 900 MB, or OLYMPUS RSS
+growth beyond `max(600 MB, 25%)`. The measured 2-minute run (40 rounds) is
+recorded in [STABILITY.md](STABILITY.md): every probe green, p95 ≤ 85 ms,
+RSS −121 MB. The 8-hour / 100-hop certification is **not** claimed yet; the
+protocol and the un-drilled disk case are named honestly.
 
 **v0.0.39 — the host budget.** A resource governor reads the machine's own
 memory and the OLYMPUS process census, classifies pressure green/amber/red,
