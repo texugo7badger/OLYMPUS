@@ -272,15 +272,16 @@ export function themedFaviconSvg(state: ThemeState): string {
   const c = resolvePalette(state);
   const dot = (x: number, y: number, r: number, fill: string, opacity = 1) =>
     `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"${opacity < 1 ? ` opacity="${opacity}"` : ''}/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${c.bg}"/>`
-    + `<circle cx="32" cy="32" r="28" fill="none" stroke="${c.gold}" stroke-width="1.5" opacity=".4"/>`
-    + `<circle cx="32" cy="32" r="24" fill="none" stroke="${c.gold}" stroke-width="1" opacity=".25"/>`
+  // public/logo.svg scaled 0.25 into a 64px badge — same points, same radii.
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="31" fill="${c.bg}"/>`
+    + `<circle cx="32" cy="32" r="28" fill="none" stroke="${c.gold}" stroke-width="0.375" opacity=".4"/>`
+    + `<circle cx="32" cy="32" r="24" fill="none" stroke="${c.gold}" stroke-width="0.25" opacity=".25"/>`
     + `<path d="M32 19 L42 42 L36 42 L32 33 L28 42 L22 42 Z" fill="${c.gold}"/>`
-    + dot(32, 15, 1.5, c.purple) + dot(32, 42, 1.5, c.gold)
-    + dot(32, 6, 2, c.gold) + dot(50.4, 13.6, 1.75, c.gold, 0.85)
-    + dot(58, 32, 2, c.gold) + dot(50.4, 50.4, 1.75, c.gold, 0.85)
-    + dot(32, 58, 2, c.gold) + dot(13.6, 50.4, 1.75, c.gold, 0.85)
-    + dot(6, 32, 2, c.gold) + dot(13.6, 13.6, 1.75, c.gold, 0.85)
-    + `<g stroke="${c.gold}" stroke-width="0.4" opacity=".15"><path d="M32 32V6M32 32H58M32 32V58M32 32H6M32 32L50.4 13.6M32 32L50.4 50.4M32 32L13.6 50.4M32 32L13.6 13.6"/></g>`
+    + dot(32, 15, 0.75, c.purple) + dot(32, 42, 0.75, c.gold)
+    + dot(32, 6, 1, c.gold) + dot(50.4, 13.6, 0.875, c.gold, 0.85)
+    + dot(58, 32, 1, c.gold) + dot(50.4, 50.4, 0.875, c.gold, 0.85)
+    + dot(32, 58, 1, c.gold) + dot(13.6, 50.4, 0.875, c.gold, 0.85)
+    + dot(6, 32, 1, c.gold) + dot(13.6, 13.6, 0.875, c.gold, 0.85)
+    + `<g stroke="${c.gold}" stroke-width="0.125" opacity=".15"><path d="M32 32V6M32 32H58M32 32V58M32 32H6M32 32L50.4 13.6M32 32L50.4 50.4M32 32L13.6 50.4M32 32L13.6 13.6"/></g>`
     + `</svg>`;
 }
