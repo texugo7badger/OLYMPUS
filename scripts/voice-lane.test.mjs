@@ -46,6 +46,12 @@ ok('the studio exposes microphone selection and a mic button', () => {
   assert.match(src, /toggleMic/);
 });
 
+ok('the orb reacts to the real audio level', () => {
+  assert.match(read('src/lib/voice.ts'), /createAnalyser/);
+  assert.match(read('src/components/olympus/plasma-orb.tsx'), /levelRef/);
+  assert.match(read('src/components/olympus/immersive-panel.tsx'), /voiceLevel/);
+});
+
 ok('voice answers questions only — no ambient hop narration', () => {
   const src = read('src/components/olympus/immersive-panel.tsx');
   assert.ok(!src.includes("voice && (type === 'hop_start'"), 'hop narration returned');

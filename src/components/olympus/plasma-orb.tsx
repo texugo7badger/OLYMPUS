@@ -41,12 +41,16 @@ export default function PlasmaOrb({
   tint,
   speaking,
   size = 144,
+  level = 0,
 }: {
   tint: string;
   speaking: boolean;
   size?: number;
+  level?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const levelRef = useRef(level);
+  levelRef.current = level;
   const [theme] = useTheme();
   const stable = theme.motion === 'stable';
 
@@ -104,15 +108,16 @@ export default function PlasmaOrb({
 
     const draw = (now: number) => {
       const t = (now - start) / 1000;
-      const amp = speaking ? 1.04 + 0.035 * Math.sin(t * 6) : 1 + 0.012 * Math.sin(t * 1.7);
+      const drive = speaking ? Math.min(1, levelRef.current) : 0;
+      const amp = (speaking ? 1.035 + 0.035 * Math.sin(t * 6) : 1 + 0.012 * Math.sin(t * 1.7)) + drive * 0.06;
       const ax = 0.28 + Math.sin(t * 0.13) * 0.12;
-      const ay = t * (speaking ? 0.62 : 0.26);
+      const ay = t * ((speaking ? 0.62 : 0.26) + drive * 0.25);
       ctx.clearRect(0, 0, size, size);
       ctx.globalCompositeOperation = 'lighter';
 
       // aura
       const aura = ctx.createRadialGradient(cx, cy, R * 0.25, cx, cy, R * 1.5);
-      aura.addColorStop(0, `${tint}26`);
+      aura.addColorStop(0, `${tint}${Math.round(26 + drive * 26).toString(16).padStart(2, '0')}`);
       aura.addColorStop(0.55, `${tint}0D`);
       aura.addColorStop(1, `${tint}00`);
       ctx.fillStyle = aura;
