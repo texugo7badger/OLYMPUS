@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="OLYMPUS Forest theme">
+  <rect width="640" height="360" rx="18" fill="#08110C"/>
+  <rect x="18" y="18" width="604" height="30" rx="8" fill="#0C1711"/>
+  <circle cx="34" cy="33" r="5" fill="#9CC48E"/>
+  <text x="48" y="37" font-family="ui-monospace,monospace" font-size="12" fill="#D6E6DB">OLYMPUS · Forest</text>
+  <text x="560" y="37" font-family="ui-monospace,monospace" font-size="10" fill="#9CB3A2">dark</text>
+  <rect x="18" y="60" width="180" height="282" rx="10" fill="#0C1711"/>
+  <rect x="210" y="60" width="412" height="160" rx="10" fill="#101D16"/>
+  <rect x="210" y="232" width="200" height="110" rx="10" fill="#101D16"/>
+  <rect x="422" y="232" width="200" height="110" rx="10" fill="#101D16"/>
+  <path d="M300 176 L326 112 L352 176 L338 176 L326 146 L314 176 Z" fill="#9CC48E"/>
+  <circle cx="326" cy="96" r="4" fill="#9B7BAE"/>
+  <rect x="230" y="196" width="120" height="8" rx="4" fill="#9CC48E" opacity=".9"/>
+  <rect x="230" y="210" width="70" height="5" rx="2.5" fill="#9CB3A2" opacity=".6"/>
+  <rect x="228" y="248" width="80" height="7" rx="3" fill="#9CC48E"/>
+  <rect x="228" y="262" width="120" height="5" rx="2.5" fill="#9CB3A2" opacity=".5"/>
+  <rect x="440" y="248" width="80" height="7" rx="3" fill="#6BAEB5"/>
+  <rect x="440" y="262" width="120" height="5" rx="2.5" fill="#9CB3A2" opacity=".5"/>
+  <g><rect x="28" y="90" width="34" height="18" rx="4" fill="#9CC48E"/><rect x="70" y="90" width="34" height="18" rx="4" fill="#C4956A"/><rect x="112" y="90" width="34" height="18" rx="4" fill="#6B8FB5"/><rect x="154" y="90" width="34" height="18" rx="4" fill="#9CC48E"/><rect x="28" y="116" width="34" height="18" rx="4" fill="#9B7BAE"/><rect x="70" y="116" width="34" height="18" rx="4" fill="#7FB59B"/><rect x="112" y="116" width="34" height="18" rx="4" fill="#C4756A"/><rect x="154" y="116" width="34" height="18" rx="4" fill="#6BAEB5"/></g>
+  <text x="28" y="330" font-family="ui-monospace,monospace" font-size="9" fill="#9CB3A2">forest · text #D6E6DB · dim #9CB3A2</text>
+</svg>

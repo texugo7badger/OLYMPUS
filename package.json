@@ -85,7 +85,8 @@
     "measure:close": "npx tsx scripts/measure-close.test.mjs",
     "opencode:gate": "node scripts/opencode-gate.mjs",
     "repo:privacy": "node scripts/check-repo-privacy.mjs",
-    "shots": "electron scripts/capture-ui.cjs --no-sandbox"
+    "shots": "electron scripts/capture-ui.cjs --no-sandbox",
+    "themes:gallery": "tsx scripts/theme-gallery.mjs"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
