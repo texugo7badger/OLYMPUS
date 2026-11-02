@@ -14,6 +14,7 @@ import {
 import { marked } from 'marked';
 import { useOlympus } from '@/lib/olympus-store';
 import { useLanguage, t, getLanguage } from '@/lib/i18n';
+import { speakAs, voiceEnabled } from '@/lib/voice';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip';
 // ContextIndicator polls /api/olympus/context-usage every 5s and shows
@@ -338,6 +339,8 @@ export default function InteractiveTerminal() {
   const queuePausedRef = useRef(false);
   const [awaitingAnswer, setAwaitingAnswer] = useState(false);
   const runHadText = useRef(false);
+  const lastResponseRef = useRef('');
+  const lastSpokenRef = useRef('');
   const runHadError = useRef(false);
   // #98 (UAT-BUILD-1 Batch B): the last error text seen this run, so the
   // failure card names the CAUSE (the provider's own words — e.g. "Service
@@ -823,6 +826,7 @@ export default function InteractiveTerminal() {
       }
       if (text) {
         runHadText.current = true;
+        lastResponseRef.current = `${lastResponseRef.current} ${text}`.trim().slice(-2400);
         runTextCount.current++;
         removeThinking();
         addMessage({ type: 'response', text, god: ev.god || 'apollo' });
@@ -1028,6 +1032,7 @@ export default function InteractiveTerminal() {
     if (ev.type === 'action_start') {
       // Already handled by the "Routing to Apollo..." message above.
       runHadText.current = false;
+      lastResponseRef.current = '';
       runHadError.current = false;
       // #98: a new run starts with an empty cause.
       runLastError.current = '';
@@ -1051,6 +1056,13 @@ export default function InteractiveTerminal() {
     if (ev.type === 'action_done') {
       removeThinking();
       setSubmitting(false); setAwaitingAnswer(false); setAwaitingContext(false); updateGodActivity('apollo', 'idle');
+      // v0.0.34 — when the studio voice is on, the gods ANSWER OUT LOUD in
+      // the terminal too, with the speaking god's own voice and language.
+      const spokenReply = lastResponseRef.current;
+      if (ev.code === 0 && spokenReply && voiceEnabled() && spokenReply !== lastSpokenRef.current) {
+        lastSpokenRef.current = spokenReply;
+        void speakAs(spokenReply, String(ev.god || 'apollo'), getLanguage(), () => { /* terminal has no orb */ });
+      }
       if (ev.code === 0) {
         if (runWalkSummary.current) {
           // #117 (PLANO-MASTER-1 B3): the walk's truth already rendered

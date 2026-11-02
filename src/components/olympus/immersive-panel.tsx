@@ -20,11 +20,27 @@ import { Mic, Send, Sparkles, Volume2, X, Waypoints } from 'lucide-react';
 import { resolvePalette } from '@/lib/theme';
 import { useTheme } from '@/lib/theme-store';
 import { useOlympus, GOD_IDS, GOD_ICONS } from '@/lib/olympus-store';
-import { useLanguage, setLanguage, t, speechLocale, LANGUAGES, godName } from '@/lib/i18n';
+import { useLanguage, t, godName, godDomain, getLanguage } from '@/lib/i18n';
+import { toast } from 'sonner';
+import { speakAs } from '@/lib/voice';
+import { godIntro } from '@/lib/god-personas';
 import ThemedLogo from './themed-logo';
+import PlasmaOrb from './plasma-orb';
 
 interface Particle { x: number; y: number; vx: number; vy: number; r: number; c: number; a: number }
+interface Cell { x: number; y: number; r: number; phase: number; splitAt: number; c: number; drift: number }
+interface Stroke { x: number; y: number; angle: number; len: number; c: number; speed: number }
 interface InFlight { hopId: string; god?: string; status?: string; startedAt?: string }
+interface LearningItem {
+  id: string;
+  type: 'instinct' | 'knowledge' | 'skill' | 'mcp';
+  name: string;
+  god: string;
+  ts: string;
+  summary: string;
+  confidence?: number;
+}
+
 interface Thought {
   id: string;
   kind: string;
@@ -36,63 +52,54 @@ interface Thought {
   radius: number;
 }
 
-/** One calm voice per god. Pitch/rate only — the browser picks the closest
- *  installed voice for the selected language, so no external TTS is needed. */
-const GOD_VOICE: Record<string, { pitch: number; rate: number }> = {
-  apollo: { pitch: 0.92, rate: 0.96 },
-  atlas: { pitch: 0.78, rate: 0.9 },
-  artemis: { pitch: 1.06, rate: 1.0 },
-  athena: { pitch: 1.02, rate: 0.97 },
-  dionysus: { pitch: 1.12, rate: 1.04 },
-  hephaestus: { pitch: 0.7, rate: 0.88 },
-  hermes: { pitch: 1.05, rate: 1.06 },
-  persephone: { pitch: 0.96, rate: 0.93 },
-  prometheus: { pitch: 0.84, rate: 0.96 },
-  callimachus: { pitch: 1.0, rate: 0.9 },
-};
+
 
 export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const [theme] = useTheme();
   const palette = resolvePalette(theme);
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('olympus:close-tutorial'));
+  }, []);
   const iconId = theme.iconId;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [inflight, setInflight] = useState<InFlight[]>([]);
   const [thoughts, setThoughts] = useState<Thought[]>([]);
+  const [learnings, setLearnings] = useState<LearningItem[]>([]);
   const thoughtSeq = useRef(0);
   const language = useLanguage();
   const [activeGod, setActiveGod] = useState('apollo');
-  const [voice, setVoice] = useState(false);
+  // v0.0.34 — the studio opens with voice on (unless the user turned it off):
+  // a chat answer is also spoken with the active god's voice.
+  const [voice, setVoice] = useState(() => {
+    try { return window.localStorage.getItem('olympus:voice-enabled') !== '0'; } catch { return true; }
+  });
   const [speaking, setSpeaking] = useState(false);
   const [say, setSay] = useState('');
   const [chat, setChat] = useState<Array<{ role: 'user' | 'god'; text: string; god?: string }>>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatBusy, setChatBusy] = useState(false);
+  // v0.0.34 — the gods learned to speak: the free edge-tts neural lane gives
+  // ten distinct god voices in the selected language. Announce it once.
+  const [voiceCount] = useState(10);
+  const voiceAnnounced = useRef(false);
+  useEffect(() => {
+    if (voiceAnnounced.current) return;
+    voiceAnnounced.current = true;
+    const timer = setTimeout(() => {
+      toast.success(t('studio.voicesReady', getLanguage(), { n: 10 }), { id: 'olympus-gods-voice' });
+    }, 900);
+    return () => clearTimeout(timer);
+  }, []);
 
-  // v0.0.34 — one calm, distinct voice per god. The orb form and color follow
-  // the active god; the browser voice is chosen from the selected language.
+  // v0.0.34 — one calm, distinct voice per god. The free edge-tts neural lane
+  // is the primary voice; the browser voice is the fallback. The orb form and
+  // color follow the active god; the language comes from Settings.
   const speak = useCallback((text: string, god?: string) => {
-    if (!text || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    try {
-      const voiceGod = (god || activeGod).toLowerCase();
-      const profile = GOD_VOICE[voiceGod] ?? GOD_VOICE.apollo;
-      const u = new SpeechSynthesisUtterance(text.slice(0, 400));
-      u.lang = speechLocale(language);
-      u.pitch = profile.pitch;
-      u.rate = profile.rate;
-      const prefix = speechLocale(language).slice(0, 2).toLowerCase();
-      const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(prefix));
-      const godIndex = Math.max(0, GOD_IDS.indexOf(voiceGod));
-      if (voices.length) u.voice = voices[godIndex % voices.length];
-      u.onstart = () => setSpeaking(true);
-      u.onend = () => setSpeaking(false);
-      u.onerror = () => setSpeaking(false);
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(u);
-    } catch { /* voice optional */ }
+    void speakAs(text, god || activeGod, language, setSpeaking);
   }, [language, activeGod]);
 
-  const askStudio = useCallback(async () => {
-    const question = chatInput.trim();
+  const askStudio = useCallback(async (override?: string) => {
+    const question = (override ?? chatInput).trim();
     if (!question || chatBusy) return;
     setChatInput('');
     setChat((prev) => [...prev, { role: 'user' as const, text: question }].slice(-8));
@@ -114,9 +121,6 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     }
   }, [chatInput, chatBusy, activeGod, language, voice, speak]);
 
-  const pickLang = useCallback((value: string) => {
-    setLanguage(value as typeof language);
-  }, []);
 
   const godTint = useCallback((god?: string) => {
     const key = (god || '').toLowerCase();
@@ -144,6 +148,36 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     return () => clearInterval(iv);
   }, []);
 
+  // v0.0.34 — the learning feed: the newest instincts, knowledge, skills and
+  // MCPs. Clicking an item lets the god SAY what it learned.
+  useEffect(() => {
+    const load = () => {
+      if (document.visibilityState === 'hidden') return;
+      fetch('/api/olympus/learning/recent?limit=8', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((d) => setLearnings(Array.isArray(d?.learnings) ? d.learnings : []))
+        .catch(() => { /* offline */ });
+    };
+    load();
+    const iv = setInterval(load, 60_000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const explainLearning = useCallback((l: LearningItem) => {
+    const g = GOD_IDS.includes(l.god) ? l.god : activeGod;
+    setActiveGod(g);
+    const text = `${t('learning.learned', language)} ${l.name}. ${l.summary}. ${t('learning.improved', language, { domain: godDomain(g, language) })}`;
+    setChat((prev) => [...prev, { role: 'god' as const, text, god: g }].slice(-8));
+    if (voice) speak(text, g);
+  }, [activeGod, language, voice, speak]);
+  const introduceGod = useCallback((g: string) => {
+    setActiveGod(g);
+    const intro = godIntro(g, language);
+    setChat((prev) => [...prev, { role: 'god' as const, text: intro, god: g }].slice(-8));
+    if (voice) speak(intro, g);
+  }, [language, voice, speak]);
+
+
   // The particle field.
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -160,10 +194,27 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
       canvas.height = Math.floor(canvas.clientHeight * dpr);
     };
     resize();
-    particles = Array.from({ length: 140 }, () => ({
+    particles = Array.from({ length: 120 }, () => ({
       x: Math.random(), y: Math.random(),
       vx: (Math.random() - 0.5) * 0.0006, vy: (Math.random() - 0.5) * 0.0006,
       r: 0.7 + Math.random() * 1.6, c: Math.floor(Math.random() * colors.length), a: 0.25 + Math.random() * 0.6,
+    }));
+    // Living cells: membranes that breathe, connect and divide.
+    let cells: Cell[] = Array.from({ length: 22 }, (_, i) => ({
+      x: Math.random(), y: Math.random(),
+      r: 0.018 + Math.random() * 0.045,
+      phase: Math.random() * Math.PI * 2,
+      splitAt: performance.now() + 2500 + Math.random() * 9000,
+      c: i % colors.length,
+      drift: (Math.random() - 0.5) * 0.00012,
+    }));
+    // Van Gogh brushstrokes following a slow flow field.
+    const strokes: Stroke[] = Array.from({ length: 90 }, (_, i) => ({
+      x: Math.random(), y: Math.random(),
+      angle: Math.random() * Math.PI * 2,
+      len: 0.008 + Math.random() * 0.022,
+      c: i % colors.length,
+      speed: 0.00015 + Math.random() * 0.00035,
     }));
     const burst = (at?: { x: number; y: number }) => {
       const ox = at?.x ?? Math.random();
@@ -178,17 +229,88 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     const draw = () => {
       const w = canvas.width;
       const h = canvas.height;
+      const now = performance.now();
       ctx.clearRect(0, 0, w, h);
+
+      // ── layer 1: Van Gogh brushstrokes (a slow flow field) ──────────────
+      for (const s of strokes) {
+        s.angle += Math.sin(s.y * 9 + now * 0.00013) * 0.012 + Math.cos(s.x * 7 - now * 0.00011) * 0.01;
+        s.x += Math.cos(s.angle) * s.speed;
+        s.y += Math.sin(s.angle) * s.speed;
+        if (s.x < -0.02) s.x = 1.02; if (s.x > 1.02) s.x = -0.02;
+        if (s.y < -0.02) s.y = 1.02; if (s.y > 1.02) s.y = -0.02;
+        ctx.strokeStyle = colors[s.c];
+        ctx.globalAlpha = 0.075 + 0.06 * (0.5 + 0.5 * Math.sin(now * 0.0004 + s.angle));
+        ctx.lineWidth = Math.max(1, 1.4 * dpr);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(s.x * w, s.y * h);
+        ctx.lineTo((s.x + Math.cos(s.angle) * s.len) * w, (s.y + Math.sin(s.angle) * s.len) * h);
+        ctx.stroke();
+      }
+
+      // ── layer 2: living cells — breathe, connect, multiply ──────────────
+      let alive = 0;
+      for (const c of cells) {
+        c.x += Math.sin(now * 0.00018 + c.phase) * 0.00009 + c.drift;
+        c.y += Math.cos(now * 0.00015 + c.phase * 1.7) * 0.00009;
+        if (c.x < 0.02 || c.x > 0.98) c.drift *= -1;
+        c.x = Math.max(0.01, Math.min(0.99, c.x));
+        c.y = Math.max(0.01, Math.min(0.99, c.y));
+        const breath = 1 + 0.12 * Math.sin(now * 0.0016 + c.phase);
+        const r = c.r * breath;
+        if (now > c.splitAt && cells.length < 34) {
+          c.splitAt = now + 7000 + Math.random() * 12000;
+          c.r = Math.max(0.012, c.r * 0.78);
+          cells.push({ ...c, x: c.x + 0.012, y: c.y - 0.008, r: c.r * 0.7, phase: c.phase + 1.7, splitAt: now + 7000 + Math.random() * 9000, drift: -c.drift });
+        }
+        const g = ctx.createRadialGradient(c.x * w, c.y * h, r * w * 0.1, c.x * w, c.y * h, r * w);
+        g.addColorStop(0, `${colors[c.c]}33`);
+        g.addColorStop(0.7, `${colors[c.c]}18`);
+        g.addColorStop(1, `${colors[c.c]}00`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(c.x * w, c.y * h, r * w, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = `${colors[c.c]}44`;
+        ctx.lineWidth = Math.max(0.5, 0.7 * dpr);
+        ctx.beginPath();
+        ctx.arc(c.x * w, c.y * h, r * w * 0.82, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = `${colors[c.c]}88`;
+        ctx.beginPath();
+        ctx.arc(c.x * w, c.y * h, Math.max(1, 1.5 * dpr), 0, Math.PI * 2);
+        ctx.fill();
+        if (alive < 60) {
+          for (const other of cells) {
+            if (other === c) continue;
+            const dx = (c.x - other.x) * w;
+            const dy = (c.y - other.y) * h;
+            const d = Math.hypot(dx, dy);
+            if (d > Math.min(w, h) * 0.12) continue;
+            ctx.strokeStyle = `${colors[c.c]}22`;
+            ctx.globalAlpha = 0.35;
+            ctx.lineWidth = 0.5 * dpr;
+            ctx.beginPath();
+            ctx.moveTo(c.x * w, c.y * h);
+            ctx.lineTo(other.x * w, other.y * h);
+            ctx.stroke();
+          }
+        }
+        alive += 1;
+      }
+
+      // ── layer 3: the particles + their short connections ────────────────
       for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
+        p.x += p.vx + Math.sin(p.y * 8 + now * 0.0002) * 0.00006;
+        p.y += p.vy + Math.cos(p.x * 7 - now * 0.00017) * 0.00006;
         if (p.x < 0 || p.x > 1) p.vx *= -1;
         if (p.y < 0 || p.y > 1) p.vy *= -1;
         p.x = Math.max(0, Math.min(1, p.x));
         p.y = Math.max(0, Math.min(1, p.y));
       }
-      // Links: only a short radius keeps this cheap.
       const link = Math.min(w, h) * 0.11;
+      ctx.globalAlpha = 1;
       for (let i = 0; i < particles.length; i += 1) {
         const a = particles[i];
         for (let j = i + 1; j < particles.length; j += 1) {
@@ -240,17 +362,18 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
             const god = String(ev?.god || '');
             const hop = String(ev?.hop || ev?.hopId || ev?.campaignId || 'walk');
             const seconds = ev?.durationMs ? Math.max(1, Math.round(Number(ev.durationMs) / 1000)) : null;
+            const dlang = getLanguage();
             const detail = type === 'campaign_start'
-              ? `${ev?.project || 'campaign'} · started`
+              ? `${ev?.project || 'campaign'} · ${t('thought.started', dlang)}`
               : type === 'campaign_end'
-                ? `${ev?.completed ?? 0}/${ev?.total ?? '?'} hops · ended`
+                ? `${ev?.completed ?? 0}/${ev?.total ?? '?'} hops · ${t('thought.ended', dlang)}`
                 : type === 'hop_verify'
-                  ? `verify · ${ev?.reason || 'deterministic'}`
+                  ? `${t('thought.verify', dlang)} · ${ev?.reason || 'deterministic'}`
                   : type === 'hop_done'
-                    ? `${god || 'god'} · done${seconds ? ` · ${seconds}s` : ''}`
+                    ? `${god || 'god'} · ${t('thought.done', dlang)}${seconds ? ` · ${seconds}s` : ''}`
                     : type === 'hop_parked'
-                      ? `${god || 'god'} · parked · ${ev?.reason || 'resume available'}`
-                      : `${god || 'god'} · started`;
+                      ? `${god || 'god'} · ${t('thought.parked', dlang)} · ${ev?.reason || 'resume available'}`
+                      : `${god || 'god'} · ${t('thought.started', dlang)}`;
             setThoughts((prev) => {
               // SHARED THOUGHTS: start/verify/done/park for the same hop are
               // one node that evolves, not four duplicated cards.
@@ -272,9 +395,6 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
               return [...prev, next].slice(-16);
             });
             burst({ x: 0.5 + Math.cos(angle) * radius, y: 0.5 + Math.sin(angle) * radius * 0.8 });
-            if (voice && (type === 'hop_start' || type === 'hop_done' || type === 'hop_parked')) {
-              speak(type === 'hop_done' ? `${god || 'a god'} finished ${hop}` : type === 'hop_parked' ? `${god || 'a god'} parked ${hop}` : `${god || 'a god'} started ${hop}`, god);
-            }
           }
         } catch { /* torn */ }
       };
@@ -316,7 +436,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
         </button>
       </header>
 
-      <div className="relative z-10 h-[calc(100%-52px)] grid grid-cols-[240px_1fr_240px] gap-3 px-4 pb-4">
+      <div className="relative z-10 h-[calc(100%-52px)] grid grid-cols-[240px_1fr_380px] gap-3 px-4 pb-4">
         {/* the gods at work */}
         <aside className="rounded-xl border p-3 overflow-auto custom-scroll" style={{ borderColor: `${palette.gold}22`, background: `${palette.panel}99` }}>
           <div className="text-[9px] font-mono uppercase tracking-wide mb-2" style={{ color: palette.gold }}>{t('studio.gods', language)}</div>
@@ -334,11 +454,11 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
 
           <div className="mt-3 pt-2 border-t" style={{ borderColor: `${palette.gold}22` }}>
             <div className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wide mb-1.5" style={{ color: palette.cyan }}>
-              <Waypoints size={10} /> thoughts &amp; connections
+              <Waypoints size={10} /> {t('studio.thoughts', language)}
             </div>
             {thoughts.length === 0 ? (
               <p className="text-[9px] font-mono leading-relaxed" style={{ color: palette.textDim }}>
-                each hop, verify and park becomes a node around the mark — with a line back to the centre.
+                {t('studio.thoughtsHint', language)}
               </p>
             ) : (
               thoughts.slice(-7).reverse().map((th) => (
@@ -351,6 +471,28 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
                 </div>
               ))
             )}
+          </div>
+
+          <div className="mt-3 pt-2 border-t" style={{ borderColor: `${palette.gold}22` }}>
+            <div className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wide mb-1.5" style={{ color: palette.green }}>
+              <Sparkles size={10} /> {t('learning.title', language)}
+            </div>
+            {learnings.length === 0 ? (
+              <p className="text-[8px] font-mono" style={{ color: palette.textDim }}>—</p>
+            ) : learnings.slice(0, 5).map((l) => (
+              <button
+                key={l.id}
+                onClick={() => explainLearning(l)}
+                className="w-full text-left flex items-start gap-1.5 mb-1 rounded px-1 py-0.5 hover:bg-olympus-gold/5"
+                data-tip={`${l.type} · ${l.god}`}
+              >
+                <span className="text-[7px] font-mono uppercase px-1 rounded shrink-0" style={{ background: `${godTint(l.god)}18`, color: godTint(l.god) }}>{l.type}</span>
+                <span className="min-w-0">
+                  <span className="block text-[8px] font-mono truncate" style={{ color: palette.text }}>{l.name}</span>
+                  <span className="block text-[7px] font-mono truncate" style={{ color: palette.textDim }}>{godName(l.god, language)} · click to hear it</span>
+                </span>
+              </button>
+            ))}
           </div>
         </aside>
 
@@ -401,112 +543,127 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
               </div>
             );
           })}
-          <div className="rounded-full p-6" style={{ background: `radial-gradient(circle, ${palette.gold}18, transparent 70%)` }}>
-            <ThemedLogo iconId={iconId} size={132} />
+          <div className="relative w-[300px] h-[300px] flex items-center justify-center">
+            <span className="absolute inset-2 rounded-full border" style={{ borderColor: `${palette.gold}18` }} />
+            <span
+              className="absolute inset-8 rounded-full border border-dashed"
+              style={{ borderColor: `${palette.gold}20`, animation: theme.motion === 'stable' ? undefined : 'olympus-plasma 40s linear infinite' }}
+            />
+            <span
+              className="absolute w-[196px] h-[196px] rounded-full"
+              style={{
+                background: `conic-gradient(from 0deg, transparent, ${palette.gold}22, transparent 32%, ${palette.cyan}18, transparent 68%, ${palette.purple}16, transparent)`,
+                animation: theme.motion === 'stable' ? undefined : 'olympus-plasma 18s linear infinite',
+              }}
+            />
+            {GOD_IDS.map((g, i) => {
+              const a = (i / GOD_IDS.length) * Math.PI * 2 - Math.PI / 2;
+              const x = Math.cos(a) * 126;
+              const y = Math.sin(a) * 126;
+              const Icon = GOD_ICONS[g] ?? Sparkles;
+              const tint = godTint(g);
+              return (
+                <button
+                  key={g}
+                  onClick={() => introduceGod(g)}
+                  data-tip={godName(g, language)}
+                  aria-label={godName(g, language)}
+                  aria-pressed={activeGod === g}
+                  className="absolute w-7 h-7 rounded-full flex items-center justify-center transition-colors hover:brightness-125"
+                  style={{
+                    left: `calc(50% + ${x}px)`,
+                    top: `calc(50% + ${y}px)`,
+                    transform: 'translate(-50%, -50%)',
+                    background: `${tint}14`,
+                    border: `1px solid ${tint}${activeGod === g ? 'AA' : '44'}`,
+                    color: tint,
+                    boxShadow: activeGod === g ? `0 0 16px ${tint}55` : undefined,
+                  }}
+                >
+                  <Icon size={13} />
+                </button>
+              );
+            })}
+            <div className="rounded-full p-6" style={{ background: `radial-gradient(circle, ${orbTint}1F, transparent 70%)` }}>
+              <ThemedLogo iconId={iconId} size={132} />
+            </div>
           </div>
           <h2 className="mt-3 text-[18px] font-mono font-semibold tracking-[0.30em]" style={{ color: palette.gold }}>OLYMPUS</h2>
           <p className="mt-1 text-[9px] font-mono text-center" style={{ color: palette.textDim }}>
-            every burst is a hop; every line is a dispatch
+            {t('studio.tagline', language)}
           </p>
           <p className="mt-1 flex items-center gap-1 text-[8px] font-mono" style={{ color: thoughts.length ? palette.cyan : palette.textDim }}>
             <Waypoints size={9} />
             {thoughts.length
-              ? `${thoughts.length} thought${thoughts.length === 1 ? '' : 's'} · live connections`
-              : 'start a walk — each thought becomes a node here'}
+              ? `${thoughts.length} ${t('studio.thoughts', language)} · ${t('studio.live', language)}`
+              : t('studio.startWalk', language)}
           </p>
         </main>
 
         {/* the voice orb */}
         <aside className="rounded-xl border p-3 flex flex-col items-center justify-start gap-2 overflow-y-auto custom-scroll" style={{ borderColor: `${palette.gold}22`, background: `${palette.panel}99` }}>
-          <div className="text-[9px] font-mono uppercase tracking-wide" style={{ color: palette.gold }}>
+          <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wide" style={{ color: palette.gold }}>
+            <ActiveGodIcon size={13} style={{ color: orbTint }} />
             {t('studio.voice', language)} · {godName(activeGod, language)}
           </div>
           <button
-            onClick={() => setVoice((v) => !v)}
+            onClick={() => setVoice((v) => { const next = !v; try { window.localStorage.setItem('olympus:voice-enabled', next ? '1' : '0'); } catch { /* private */ } return next; })}
             aria-pressed={voice}
             aria-label={`Voice of ${godName(activeGod, language)}`}
-            className="relative w-28 h-28 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: palette.bg, boxShadow: `0 0 ${speaking ? 58 : 30}px ${orbTint}66` }}
+            className="relative w-40 h-40 rounded-full flex items-center justify-center shrink-0"
+            style={{
+              background: 'radial-gradient(circle at 50% 45%, #0B0B16 0%, #06060C 56%, rgba(6,6,12,0.55) 72%, transparent 80%)',
+              boxShadow: `0 0 ${speaking ? 64 : 34}px ${orbTint}55, inset 0 0 0 1px ${orbTint}33`,
+            }}
           >
-            <span className="absolute inset-0 rounded-full overflow-hidden">
-              <span
-                className="absolute inset-0"
-                style={{
-                  background: `conic-gradient(from 0deg, ${orbTint}, ${palette.purple}, ${palette.gold}, ${palette.cyan}, ${orbTint})`,
-                  animation: theme.motion === 'stable' ? undefined : 'olympus-plasma 8s linear infinite',
-                }}
-              />
-              <span className="absolute inset-[2px] rounded-full" style={{ background: palette.bg }} />
-              <span
-                className="absolute inset-[2px] rounded-full"
-                style={{
-                  background: `radial-gradient(circle at 50% 50%, transparent 52%, ${orbTint}33 59%, transparent 68%)`,
-                  opacity: speaking ? 1 : 0.55,
-                  animation: speaking && theme.motion !== 'stable' ? 'pulse 1.2s ease-in-out infinite' : undefined,
-                }}
-              />
-              {Array.from({ length: 14 }).map((_, i) => (
-                <span
-                  key={i}
-                  className="absolute inset-0"
-                  style={{
-                    transform: `rotate(${(i / 14) * 360}deg)`,
-                    animation: theme.motion === 'stable' ? undefined : `olympus-plasma ${5 + (i % 5) * 0.8}s linear infinite${i % 2 ? ' reverse' : ''}`,
-                  }}
-                >
-                  <span
-                    className="absolute left-1/2 top-[2px] rounded-full"
-                    style={{ width: 1.6, height: 1.6, background: i % 3 === 0 ? palette.gold : orbTint, transform: 'translateX(-50%)', opacity: 0.55 + (i % 3) * 0.15 }}
-                  />
-                </span>
-              ))}
-            </span>
-            <span className="absolute inset-[13px] rounded-full" style={{ background: `radial-gradient(circle at 50% 38%, ${orbTint}2A, transparent 72%)` }} />
-            <ActiveGodIcon size={26} className={speaking ? 'relative animate-pulse' : 'relative'} style={{ color: voice ? orbTint : palette.textDim }} />
-            <Mic size={9} className="absolute bottom-5" style={{ color: voice ? palette.gold : palette.textDim }} />
+            <span className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle at 50% 45%, ${orbTint}18, transparent 72%)` }} />
+            <PlasmaOrb tint={orbTint} speaking={speaking && voice} size={160} />
           </button>
           <select
             value={activeGod}
-            onChange={(e) => setActiveGod(e.target.value)}
+            onChange={(e) => introduceGod(e.target.value)}
             className="w-full rounded px-1.5 py-1 text-[9px] font-mono outline-none"
             style={{ background: palette.bg, color: palette.text, border: `1px solid ${orbTint}44` }}
             aria-label="God voice"
           >
             {GOD_IDS.map((g) => <option key={g} value={g}>{godName(g, language)}</option>)}
           </select>
-          <select
-            value={language}
-            onChange={(e) => pickLang(e.target.value)}
-            className="w-full rounded px-1.5 py-1 text-[9px] font-mono outline-none"
-            style={{ background: palette.bg, color: palette.text, border: `1px solid ${palette.gold}33` }}
-            aria-label="Language"
-          >
-            {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.native}</option>)}
-          </select>
+
           <div className="w-full flex items-center gap-1">
             <input
               value={say}
               onChange={(e) => setSay(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { speak(say); setSay(''); } }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && say.trim()) { const q = say; setSay(''); void askStudio(q); } }}
               placeholder={t('studio.say', language)}
               className="flex-1 min-w-0 rounded px-1.5 py-1 text-[9px] font-mono outline-none"
               style={{ background: palette.bg, color: palette.text, border: `1px solid ${palette.gold}33` }}
             />
-            <button onClick={() => { speak(say); setSay(''); }} aria-label="Speak" className="rounded p-1" style={{ color: palette.gold }}>
+            <button onClick={() => { if (say.trim()) { const q = say; setSay(''); void askStudio(q); } }} aria-label="Ask the god" className="rounded p-1" style={{ color: palette.gold }}>
               <Send size={11} />
             </button>
           </div>
           <p className="text-[8px] font-mono text-center flex items-center gap-1" style={{ color: speaking ? palette.gold : palette.textDim }}>
             <Volume2 size={9} /> {voice ? (speaking ? t('studio.speaking', language) : t('studio.voiceOn', language)) : t('studio.voiceOff', language)}
           </p>
+          <p className="text-[7px] font-mono text-center" style={{ color: voiceCount > 0 ? palette.green : palette.textDim }}>
+            {voiceCount > 0 ? t('studio.voicesReady', language, { n: voiceCount }) : t('studio.voicesLoading', language)}
+          </p>
+          <p className="text-[7px] font-mono text-center" style={{ color: palette.textDim }}>
+            {t('studio.voicePolicy', language)}
+          </p>
 
           {/* The discreet studio chat: asks the live walk, answers as the
               active god, and speaks the answer when voice is on. */}
           <div className="w-full mt-1 pt-2 border-t" style={{ borderColor: `${palette.gold}22` }}>
             <div className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide mb-1" style={{ color: orbTint }}>
-              <Waypoints size={9} /> studio chat · {godName(activeGod, language)}
+              <Waypoints size={9} /> {t('studio.chat', language)} · {godName(activeGod, language)}
+              <button
+                onClick={() => void askStudio(language === 'pt-BR' ? 'resuma o projeto e o que está sendo feito' : 'summarize the project and what is being done')}
+                className="ml-auto text-[7px] font-mono px-1.5 py-0.5 rounded normal-case tracking-normal"
+                style={{ background: `${orbTint}18`, color: orbTint, border: `1px solid ${orbTint}33` }}
+              >{t('studio.projectSummary', language)}</button>
             </div>
-            <div className="max-h-28 overflow-y-auto custom-scroll space-y-1 mb-1.5">
+            <div className="max-h-56 overflow-y-auto custom-scroll space-y-1.5 mb-2 pr-0.5">
               {chat.length === 0 ? (
                 <p className="text-[8px] font-mono leading-relaxed" style={{ color: palette.textDim }}>
                   ask “summarize what is being done” — the answer comes from the live walk, in your language.
@@ -514,13 +671,13 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
               ) : chat.map((m, i) => (
                 <div key={`${m.role}:${i}`} className={m.role === 'user' ? 'text-right' : 'text-left'}>
                   <span
-                    className="inline-block rounded-lg px-1.5 py-1 text-[8px] font-mono whitespace-pre-wrap text-left max-w-full"
+                    className="inline-block rounded-lg px-2 py-1.5 text-[9px] font-mono whitespace-pre-wrap text-left max-w-full leading-relaxed"
                     style={{
                       background: m.role === 'user' ? `${palette.gold}18` : `${godTint(m.god || activeGod)}14`,
                       color: m.role === 'user' ? palette.text : palette.text,
                       border: `1px solid ${m.role === 'user' ? palette.gold : godTint(m.god || activeGod)}33`,
                     }}
-                  >{m.text}</span>
+                  >{m.text.replace(/\*\*/g, '')}</span>
                 </div>
               ))}
             </div>
@@ -530,7 +687,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void askStudio(); } }}
                 placeholder={t('terminal.placeholder', language)}
-                className="flex-1 min-w-0 rounded px-1.5 py-1 text-[8px] font-mono outline-none"
+                className="flex-1 min-w-0 rounded px-2 py-1.5 text-[9px] font-mono outline-none"
                 style={{ background: palette.bg, color: palette.text, border: `1px solid ${orbTint}33` }}
               />
               <button onClick={() => void askStudio()} disabled={chatBusy || !chatInput.trim()} aria-label="Ask the studio" className="rounded p-1 disabled:opacity-40" style={{ color: orbTint }}>

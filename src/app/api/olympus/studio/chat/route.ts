@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readHopEvents } from '@/lib/hop-runtime/hop-events';
 import { getActiveProject } from '@/lib/project-context';
+import { godIntro, godFallback, godThanks, isIntroIntent, isThanksIntent } from '@/lib/god-personas';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -124,8 +125,15 @@ export async function POST(req: NextRequest) {
     project,
   };
 
+  if (isIntroIntent(question)) {
+    return NextResponse.json({ ok: true, answer: godIntro(god, lang), summary });
+  }
+  if (isThanksIntent(question)) {
+    return NextResponse.json({ ok: true, answer: godThanks(lang), summary });
+  }
+
   if (!lastCampaign) {
-    return NextResponse.json({ ok: true, answer: txt.noWalk, summary });
+    return NextResponse.json({ ok: true, answer: godFallback(god, lang, 'idle'), summary });
   }
 
   const head = `**${god[0].toUpperCase() + god.slice(1)} → ${txt.summary({ project, campaign: lastCampaign, total: summary.total, completed, inflight, last: lastLine })}**`;
@@ -135,11 +143,17 @@ export async function POST(req: NextRequest) {
     .map(([hop, h]) => `- \`${hop}\` · ${h.god} · ${h.status}`)
     .join('\n');
   const wantsSummary = !question || /resum|summary|status|what.*(doing|happening)|andamento|acontec|progress|état|stand|was.*läuft|進捗|当前/i.test(question);
-  const extra = wantsSummary ? '' : `\n\n${txt.deeper}`;
+  if (!wantsSummary) {
+    return NextResponse.json({
+      ok: true,
+      answer: `${godFallback(god, lang, `${completed}/${summary.total} hops · ${inflight} in flight`)}`,
+      summary,
+    });
+  }
 
   return NextResponse.json({
     ok: true,
-    answer: `${head}\n\n${txt.recent}:\n${recentLines}${extra}`,
+    answer: `${head}\n\n${txt.recent}:\n${recentLines}`,
     summary,
   });
 }
