@@ -84,7 +84,7 @@ interface UiRef {
   demoUrl: string;
   fetchLane: string;
   free: boolean;
-  probe: { ok: boolean; frameable: boolean; httpStatus: number | null };
+  probe: { ok: boolean; frameable: boolean; inconclusive?: boolean; httpStatus: number | null };
 }
 
 export default function CraftAppsPanel({ initialApp }: { initialApp?: string | null }) {
@@ -319,11 +319,11 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   >copy lane</button>
                   <a href={refView.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold px-1 shrink-0"><ExternalLink size={10} /></a>
                 </div>
-                {refView.probe.frameable ? (
+                {(refView.probe.frameable || refView.probe.inconclusive) ? (
                   <iframe src={refView.demoUrl} className="flex-1 w-full bg-white" title={refView.name} data-tip={refView.name} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals" />
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center p-8">
-                    <p className="text-olympus-text text-xs font-mono">{refView.name}: {refView.probe.ok ? 'the demo blocks embedding (upstream frame policy)' : 'demo unreachable right now'}</p>
+                    <p className="text-olympus-text text-xs font-mono">{refView.name}: {refView.probe.ok ? 'the demo blocks embedding (upstream frame policy)' : refView.probe.httpStatus === 404 ? 'demo not found at the catalog URL (404) — use the fetch lane' : 'demo unreachable right now'}</p>
                     <a href={refView.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] font-mono px-2.5 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25"><ExternalLink size={10} /> open the demo externally</a>
                   </div>
                 )}

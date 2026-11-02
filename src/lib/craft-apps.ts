@@ -66,6 +66,8 @@ export interface CraftAppProbe {
    *  CSP frame-ancestors that block iframing — the honest external-open
    *  fallback fires, never a blank frame. */
   frameable: boolean;
+  /** The probe hit a bot wall (401/403/405/429); the client may still load. */
+  inconclusive?: boolean;
   httpStatus: number | null;
   note?: string;
 }
@@ -75,9 +77,18 @@ export interface CraftAppProbe {
  *  instead of rendering a dead frame). */
 export async function probeCraftApp(url: string, timeoutMs = 3000): Promise<CraftAppProbe> {
   try {
+    // v0.0.32 — a server probe is not a browser: sites routinely 403 the
+    // default UA while the user's Chromium loads them fine. Identify as a
+    // browser and treat a bot wall as INCONCLUSIVE (try the embed), never as
+    // "unreachable" (the Originkit 404 was real; a 403 is not proof).
     const r = await fetch(url, {
       method: 'GET',
       redirect: 'follow',
+      headers: {
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'accept-language': 'en-US,en;q=0.8',
+      },
       signal: AbortSignal.timeout(timeoutMs),
     });
     const xfo = (r.headers.get('x-frame-options') || '').toLowerCase();
@@ -85,13 +96,18 @@ export async function probeCraftApp(url: string, timeoutMs = 3000): Promise<Craf
     const frameBlocked =
       xfo.includes('deny') || xfo.includes('sameorigin') ||
       (csp.includes('frame-ancestors') && !csp.includes("frame-ancestors *"));
+    const botWall = r.status === 401 || r.status === 403 || r.status === 405 || r.status === 429;
     return {
       id: url.split('/').pop() || url,
       url,
       ok: r.ok,
+      // A bot wall is inconclusive: the client browser may still embed it.
       frameable: r.ok && !frameBlocked,
+      ...(botWall && !frameBlocked ? { inconclusive: true } : {}),
       httpStatus: r.status,
-      note: frameBlocked ? 'the upstream blocks embedding — open externally' : undefined,
+      note: frameBlocked
+        ? 'the upstream blocks embedding — open externally'
+        : botWall ? 'the server refused the probe (bot wall) — trying the embed anyway' : undefined,
     };
   } catch (e: any) {
     return { id: url.split('/').pop() || url, url, ok: false, frameable: false, httpStatus: null, note: e?.message || 'unreachable' };

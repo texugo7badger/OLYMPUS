@@ -27,6 +27,6 @@ export async function GET(req: NextRequest) {
   }
   // The live probe of the demo URLs (parallel, bounded) — the embed verdict.
   const probes = await Promise.all(refs.map((r) => probeCraftApp(r.demoUrl, 8_000)));
-  const withProbes = refs.map((r, i) => ({ ...r, probe: { ok: probes[i].ok, frameable: probes[i].frameable, httpStatus: probes[i].httpStatus } }));
+  const withProbes = refs.map((r, i) => ({ ...r, probe: { ok: probes[i].ok, frameable: probes[i].frameable, inconclusive: probes[i].inconclusive === true, httpStatus: probes[i].httpStatus } }));
   return NextResponse.json({ ok: true, references: withProbes, libraries: UI_REF_LIBRARIES }, { headers: NO_CACHE_HEADERS });
 }
