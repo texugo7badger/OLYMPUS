@@ -253,3 +253,11 @@ asset count, the newest asset's size and the MCP lanes that can see it
 a real byte from the newest asset; an empty vault says unverified. The
 generation ladder remains honest: Pollinations is `$0`, BYOK fal/Google carry
 their own price.
+
+### v0.0.45 — many projects, one truth
+
+Every row in the project switcher now carries that project's own campaign
+status (`completed/total`, color-coded, with the full hop count in the
+tooltip) — not just the active project. Design memory, the living brief and
+the editor-follow lane are scoped by project, so two projects cannot leak a
+preference or a followed file into each other.

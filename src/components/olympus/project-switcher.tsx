@@ -105,6 +105,20 @@ export default function ProjectSwitcher() {
                     <span className={cn('text-[11px] font-mono font-semibold flex-1 truncate', active ? 'text-olympus-gold' : 'text-olympus-text')}>
                       {displayName(p)}
                     </span>
+                    {p.brief && p.brief.total > 0 && (
+                      <span
+                        className={cn(
+                          'text-[8px] font-mono uppercase tracking-wide px-1 py-0.5 rounded ring-1',
+                          p.brief.status === 'running' ? 'text-olympus-gold ring-olympus-gold/30 bg-olympus-gold/10'
+                            : p.brief.status === 'parked' ? 'text-olympus-red ring-olympus-red/30 bg-olympus-red/10'
+                              : p.brief.status === 'done' ? 'text-olympus-green ring-olympus-green/30 bg-olympus-green/10'
+                                : 'text-olympus-text-dim ring-olympus-gold/15',
+                        )}
+                        data-tip={`${p.brief.completed}/${p.brief.total} hops · ${p.brief.status}`}
+                      >
+                        {p.brief.completed}/{p.brief.total}
+                      </span>
+                    )}
                     {active && <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-green">{t('common.active', language)}</span>}
                     <span className="text-[8px] font-mono text-olympus-text-dim/70" data-tip={new Date(p.last_active).toLocaleString()}>{timeAgo(p.last_active)}</span>
                   </div>

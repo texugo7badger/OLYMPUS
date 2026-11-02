@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listProjects, createProject, getActiveProject, getActiveProjectSlug } from '@/lib/project-context';
 import { detectProjectStacks, projectSummary, readProjectPackage } from '@/lib/project-summary';
+import { buildProjectBrief } from '@/lib/project-brief';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,9 +17,12 @@ export async function GET() {
     const projects = listProjects().map((p) => {
       const pkg = readProjectPackage(p.path);
       const stacks = Array.from(new Set([...(p.stacks || []), ...detectProjectStacks(p.path, pkg)]));
+      const brief = buildProjectBrief(p.path);
       return {
         ...p,
         stacks,
+        // v0.0.45 — every project carries its own status at a glance.
+        brief: { status: brief.status, completed: brief.completed, total: brief.total, parked: brief.parked, updatedAt: brief.updatedAt },
         description: projectSummary({ slug: p.slug, pkg, root: p.path, stacks, port: p.livePreviewPort }),
       };
     });

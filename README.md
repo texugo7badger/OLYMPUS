@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.44, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.45, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,12 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.45 — many projects, one truth.** The project switcher shows each
+project's own campaign status (`2/17`, parked/running/done) next to its name,
+not just the active one. Design memory, the brief and the editor-follow lane
+are scoped per project, so two projects never share a status, a preference or
+a followed file.
 
 **v0.0.44 — agent access, proven.** The Atelier proves that agents can
 actually reach the media: the vault is readable and writable, the newest asset

@@ -128,6 +128,8 @@ export interface ProjectNote {
   vscodium_workspace?: string;
   /** Phase 2 (Live Preview): dev-server port. Default 3000. */
   livePreviewPort?: number;
+  /** v0.0.45 — the project's own campaign status at a glance. */
+  brief?: { status: 'running' | 'parked' | 'done' | 'idle'; completed: number; total: number; parked: number; updatedAt: string | null };
 }
 
 export type ProjectFilterMode = 'strict' | 'cross-stack' | 'browsing';
