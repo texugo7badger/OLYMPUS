@@ -82,6 +82,31 @@ from a hue + harmony, with contrast floors (text ≥ 7:1, dim ≥ 4.5:1, accent
 ≥ 3:1). Apply it and every surface follows — including the OS icon.
 
 
+## Voice — the gods speak, and they listen
+
+**They speak.** The free, open-source [`edge-tts`](https://github.com/rany2/edge-tts)
+lane gives each of the ten gods a distinct, calm neural voice in the selected
+language — no API key. Apollo is warm and measured, Hephaestus is deep and
+slow, Hermes is quick and light. The Pattern Studio's orb is an organic plasma
+sphere that expands while the god speaks, tinted by the active god; the
+terminal speaks the final reply once per run.
+
+**They listen.** Choose any audio input on your machine in the studio, press
+the mic, and speak. The clip is transcribed locally by
+[`faster-whisper`](https://github.com/SYSTRAN/faster-whisper) (Whisper base via
+ffmpeg → 16 kHz PCM), and the transcript is sent as your question. The god
+answers in persona and speaks the answer. **No audio leaves the machine** for
+STT.
+
+The voice answers **only what you ask** — it does not narrate the walk. If the
+neural lane is missing, the app falls back to the browser voice and says so;
+`GET /api/olympus/voice/status` reports the honest state of TTS, STT and
+ffmpeg.
+
+**Requirements:** `pip install --user --break-system-packages edge-tts faster-whisper`
+and `ffmpeg` on PATH. The first transcription downloads the Whisper base model
+(~74 MB); it is cached by faster-whisper.
+
 ## What is OLYMPUS?
 
 OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencode.ai). It runs as a standalone **Electron desktop app** on Linux. Other platforms should use WSL. OLYMPUS routes each task to the cheapest LLM that can handle it, cascades token compression across five layers (including the Symphony latent protocol), and learns from every action via a self-curating **VaultBrain**.

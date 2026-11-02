@@ -160,3 +160,13 @@ palette). The original mark stays the only app/system identity.
 The language selector applies instantly to the whole interface and to the
 chat. God names, domains, reference categories, the build queue, the projects
 and the Pattern Studio follow it. See the [Languages section](../README.md#languages--olympus-is-global).
+
+### v0.0.35 — voice in and out
+
+The studio now shows the **honest voice state** (`/api/olympus/voice/status`):
+ten neural voices when `edge-tts` is installed, otherwise the browser fallback.
+Choose any **microphone** from the selector, press the mic, speak, and the clip
+is transcribed locally by `faster-whisper` — the transcript becomes your
+question and the god answers in persona, out loud. No audio leaves the machine
+for STT. The mic is disabled when the local STT lane is unavailable, never a
+dead button.
