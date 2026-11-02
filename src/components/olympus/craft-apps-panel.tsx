@@ -18,11 +18,13 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import OlympusLoader from './olympus-loader';
-import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload, Palette, Sparkles } from 'lucide-react';
+import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload, Palette, Sparkles, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
 import ArtcraftStyleBoard from './artcraft-style-board';
 import DesignBuildsPanel from './design-builds-panel';
+import ReferencePreview from './reference-preview';
+import { previewSpec } from '@/lib/reference-previews';
 
 interface CraftApp {
   id: string;
@@ -102,6 +104,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const [uiRefs, setUiRefs] = useState<UiRef[]>([]);
   const [refSearch, setRefSearch] = useState('');
   const [refView, setRefView] = useState<UiRef | null>(null);
+  const [refVariant, setRefVariant] = useState('');
   // v0.0.32 — live previews: at most 3 iframes (60fps), hover promotes one.
   const [refCat, setRefCat] = useState('all');
   const [pendingRef, setPendingRef] = useState<{ name: string; demoUrl: string; category: string; library: string } | null>(null);
@@ -355,14 +358,30 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   >copy lane</button>
                   <a href={refView.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold px-1 shrink-0"><ExternalLink size={10} /></a>
                 </div>
-                {(refView.probe.frameable || refView.probe.inconclusive) ? (
-                  <iframe src={refView.demoUrl} className="flex-1 w-full bg-white" title={refView.name} data-tip={refView.name} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals" />
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center p-8">
-                    <p className="text-olympus-text text-xs font-mono">{refView.name}: {refView.probe.ok ? 'the demo blocks embedding (upstream frame policy)' : refView.probe.httpStatus === 404 ? 'demo not found at the catalog URL (404) — use the fetch lane' : 'demo unreachable right now'}</p>
-                    <a href={refView.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] font-mono px-2.5 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25"><ExternalLink size={10} /> open the demo externally</a>
-                  </div>
-                )}
+                {/* v0.0.34 — the component ONLY. No vendor page, no login
+                    banner, no site chrome. The study is native and interactive. */}
+                <div className="flex-1 min-h-[280px] bg-olympus-card">
+                  <ReferencePreview referenceId={refView.id} label={refView.name} variant={refVariant || previewSpec(refView.id).variants[0]} />
+                </div>
+                <div className="shrink-0 flex items-center gap-1.5 flex-wrap px-3 py-2 border-t border-olympus-gold/10 bg-olympus-panel/80">
+                  <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">variation</span>
+                  {previewSpec(refView.id).variants.map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setRefVariant(v)}
+                      aria-pressed={(refVariant || previewSpec(refView.id).variants[0]) === v}
+                      className={cn(
+                        'text-[9px] font-mono px-2 py-0.5 rounded-full border transition-colors',
+                        (refVariant || previewSpec(refView.id).variants[0]) === v
+                          ? 'border-olympus-gold/60 bg-olympus-gold/15 text-olympus-gold'
+                          : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text',
+                      )}
+                    >{v}</button>
+                  ))}
+                  <span className="text-[8px] font-mono text-olympus-text-dim hidden md:inline">· interactive — move the pointer</span>
+                  <button onClick={() => applyReference(refView)} className="ml-auto text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">use</button>
+                  <button onClick={() => void queueReference(refView)} className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">send to queue</button>
+                </div>
               </div>
             ) : (
               <>
@@ -632,10 +651,13 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
 }
 
 /**
- * v0.0.32 — a reference card with a LIVE preview. At most three iframes run
- * at once (the parent enforces it); the card asks for a slot when it enters
- * the viewport and promotes itself on hover. The iframe is pointer-events-none
- * so the card stays one click target; the detail view has the full embed.
+ * v0.0.34 — a reference card showing the COMPONENT, not the vendor page.
+ *
+ * The whole 220px stage is a native, interactive study (category-specific
+ * canvas renderer). Every control lives BELOW the stage in OLYMPUS chrome:
+ * the variations are OLYMPUS buttons, and use / queue / details sit in the
+ * footer. No iframe, no login banner, no site chrome — and all visible cards
+ * animate at once, so the grid can be scanned without hovering.
  */
 function ReferenceCard({
   reference,
@@ -648,49 +670,42 @@ function ReferenceCard({
   onUse: () => void;
   onQueue: () => void;
 }) {
-  const [hovered, setHovered] = useState(false);
-  // One animated icon at a time (the hovered card) — 24 simultaneous SVG
-  // animations would cost the frame budget for no information.
-  const preview = hovered ? '/build-icons/design.svg' : '/build-icons/static/design.svg';
+  const spec = previewSpec(reference.id);
+  const [variant, setVariant] = useState(spec.variants[0]);
   return (
-    <div
-      className="rounded-lg bg-olympus-card border border-olympus-gold/10 hover:border-olympus-gold/40 transition-colors text-left group overflow-hidden"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <button onClick={onOpen} className="w-full text-left">
-        <div className="relative h-[230px] w-full overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(212,165,116,0.10),transparent_60%)]">
-          {hovered ? (
-            // The REAL component page, cropped to the demo area (no login
-            // banner): one iframe at a time, loaded on hover, 60fps.
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <iframe
-                src={reference.demoUrl}
-                title={`${reference.name} live component`}
-                loading="lazy"
-                sandbox="allow-scripts allow-same-origin"
-                style={{ position: 'absolute', top: -150, left: '50%', marginLeft: -300, width: 1500, height: 2600, border: 0, transform: 'scale(0.4)', transformOrigin: 'top left' }}
-              />
-            </div>
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <img src={preview} alt="" width={84} height={84} loading="lazy" />
-            </div>
-          )}
-          <span className="absolute top-1 right-1 text-[7px] font-mono px-1 py-0.5 rounded bg-olympus-bg/80 text-olympus-cyan uppercase">live</span>
+    <div className="rounded-lg bg-olympus-card border border-olympus-gold/10 hover:border-olympus-gold/40 transition-colors text-left group overflow-hidden">
+      <div className="relative h-[220px] w-full overflow-hidden">
+        <ReferencePreview referenceId={reference.id} label={reference.name} variant={variant} />
+      </div>
+      <div className="px-3 pt-2">
+        <div className="flex items-center gap-1.5">
+          <button onClick={onOpen} className="text-[12px] font-mono font-semibold text-olympus-text truncate hover:text-olympus-gold text-left">{reference.name}</button>
+          {!reference.free && <span className="text-[7px] font-mono px-1 rounded bg-olympus-amber-soft/10 text-olympus-amber-soft ring-1 ring-olympus-amber-soft/25 shrink-0 uppercase">premium</span>}
+          <span className="ml-auto text-[7px] font-mono text-olympus-cyan/70 uppercase tracking-wide shrink-0">live study</span>
         </div>
-        <div className="px-2.5 pt-1.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[12px] font-mono font-semibold text-olympus-text truncate group-hover:text-olympus-gold">{reference.name}</span>
-            {!reference.free && <span className="text-[7px] font-mono px-1 rounded bg-olympus-amber-soft/10 text-olympus-amber-soft ring-1 ring-olympus-amber-soft/25 shrink-0 uppercase">premium</span>}
-          </div>
-          <div className="text-[8px] font-mono text-olympus-cyan/80 uppercase tracking-wide mt-0.5">{reference.library} · {reference.category}</div>
-          <p className="text-[10px] font-mono text-olympus-text-dim mt-1 leading-relaxed line-clamp-2">{reference.what}</p>
-        </div>
-      </button>
-      <div className="flex items-center gap-1 px-2.5 pb-2 pt-1.5">
+        <div className="text-[8px] font-mono text-olympus-cyan/80 uppercase tracking-wide mt-0.5">{reference.library} · {reference.category}</div>
+        <p className="text-[10px] font-mono text-olympus-text-dim mt-1 leading-relaxed line-clamp-2">{reference.what}</p>
+      </div>
+      <div className="flex items-center gap-1 flex-wrap px-3 pt-1.5">
+        <span className="text-[7px] font-mono uppercase tracking-wide text-olympus-text-dim">variation</span>
+        {spec.variants.map((v) => (
+          <button
+            key={v}
+            onClick={() => setVariant(v)}
+            aria-pressed={variant === v}
+            className={cn(
+              'text-[8px] font-mono px-1.5 py-0.5 rounded-full border transition-colors',
+              variant === v
+                ? 'border-olympus-gold/60 bg-olympus-gold/15 text-olympus-gold'
+                : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text',
+            )}
+          >{v}</button>
+        ))}
+      </div>
+      <div className="flex items-center gap-1 px-3 pb-2 pt-1.5">
         <button onClick={onUse} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">use</button>
         <button onClick={onQueue} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">send to queue</button>
+        <button onClick={onOpen} data-tip="Open the component details" aria-label={`Open ${reference.name} details`} className="ml-auto text-olympus-text-dim hover:text-olympus-gold p-1.5 rounded hover:bg-olympus-gold/10"><Maximize2 size={12} /></button>
       </div>
     </div>
   );
