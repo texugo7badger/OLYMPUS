@@ -17,9 +17,13 @@
 
 export type BuildTier = 'hot' | 'warm' | 'cold';
 
+export type BuildCategory = 'design' | 'code' | 'qa' | 'security' | 'data' | 'infra' | 'integration' | 'planning' | 'memory' | 'curation' | 'custom';
+
 export interface DesignBuild {
   id: string;
   name: string;
+  /** v0.0.32 — the hub groups by sector; user builds derive it. */
+  category?: BuildCategory;
   /** What task class this build is for (keywords the matcher reads). */
   signature: string;
   god: string;
@@ -32,6 +36,8 @@ export interface DesignBuild {
   /** Seed tier before evidence; the matcher may promote/demote. */
   tier: BuildTier;
   source: 'seed' | 'user';
+  /** v0.0.32 — the sharing base: a user build may be published later. */
+  shared?: boolean;
   note?: string;
 }
 
@@ -132,7 +138,82 @@ export const SEED_DESIGN_BUILDS: DesignBuild[] = [
     mcps: ['brave-search'], verify: ['lint:copy', 'review'], tier: 'cold',
     source: 'seed', note: 'References from the web, voice from the user, never filler.',
   },
+  {
+    id: 'api-surface', name: 'API surface', signature: 'api rest endpoint route handler validation contract',
+    god: 'hephaestus', demigods: ['api-designer'], skills: ['api-design', 'backend-patterns'],
+    mcps: ['context7'], verify: ['tsc', 'lint', 'route:responds'], tier: 'warm',
+    source: 'seed', note: 'Contract first: the route, the error shape and the types land together.',
+  },
+  {
+    id: 'migration-safe', name: 'Safe migration', signature: 'migration schema database prisma postgres column backfill',
+    god: 'persephone', demigods: ['migration-engineer'], skills: ['database-migrations', 'postgres-patterns'],
+    mcps: ['postgres', 'context7'], verify: ['migrate:up', 'migrate:down', 'data:count'], tier: 'warm',
+    source: 'seed', note: 'Reversible, counted, and never destructive without a dry run.',
+  },
+  {
+    id: 'security-audit', name: 'Security audit', signature: 'security audit vulnerability secret injection authz xss',
+    god: 'artemis', demigods: ['security-reviewer', 'secrets-scanner'], skills: ['security-review', 'security-scan'],
+    mcps: ['github'], verify: ['scan:0-high', 'secrets:0', 'report'], tier: 'warm',
+    source: 'seed', note: 'Evidence or it did not happen: the scan output is the report.',
+  },
+  {
+    id: 'test-suite', name: 'Test suite', signature: 'test unit integration e2e coverage regression fixture',
+    god: 'dionysus', demigods: ['unit-test-author', 'e2e-runner'], skills: ['test-driven-development', 'e2e-testing'],
+    mcps: ['playwright'], verify: ['tests:green', 'coverage:60'], tier: 'warm',
+    source: 'seed', note: 'Red first; the suite is the proof, not the promise.',
+  },
+  {
+    id: 'ci-pipeline', name: 'CI pipeline', signature: 'ci pipeline github actions build deploy release workflow',
+    god: 'prometheus', demigods: ['release-engineer'], skills: ['deployment-patterns', 'docker-patterns'],
+    mcps: ['github', 'docker'], verify: ['workflow:valid', 'build:green'], tier: 'cold',
+    source: 'seed', note: 'A pipeline that fails loudly beats a happy path that hides the break.',
+  },
+  {
+    id: 'mcp-integration', name: 'MCP integration', signature: 'mcp server tool connector protocol jsonrpc integration',
+    god: 'hermes', demigods: ['mcp-builder'], skills: ['mcp-server-patterns', 'api-design'],
+    mcps: ['context7'], verify: ['handshake:ok', 'tools:list', 'probe:alive'], tier: 'warm',
+    source: 'seed', note: 'The handshake and a real tools/list are the gate.',
+  },
+  {
+    id: 'knowledge-ingest', name: 'Knowledge ingest', signature: 'knowledge docs context library ingestion notes cite',
+    god: 'callimachus', demigods: ['docs-verifier', 'instinct-curator'], skills: ['knowledge-ops', 'continuous-learning-v2'],
+    mcps: ['context7', 'memory'], verify: ['note:cited', 'index:rebuilt'], tier: 'cold',
+    source: 'seed', note: 'Versioned, cited, curated; a guessed API is worse than unknown.',
+  },
+  {
+    id: 'docs-curation', name: 'Docs curation', signature: 'docs readme architecture changelog documentation update',
+    god: 'callimachus', demigods: ['technical-writer'], skills: ['writing-guidelines', 'knowledge-ops'],
+    mcps: ['filesystem'], verify: ['docs:links', 'docs:truth'], tier: 'cold',
+    source: 'seed', note: 'Every claim sourced; the docs move with the tag.',
+  },
+  {
+    id: 'incident-drill', name: 'Incident drill', signature: 'incident outage rollback recovery chaos failover drill',
+    god: 'prometheus', demigods: ['incident-responder', 'sre'], skills: ['deployment-patterns', 'error-handling'],
+    mcps: ['docker'], verify: ['drill:recovered', 'report'], tier: 'cold',
+    source: 'seed', note: 'A drill that has not failed a service has not tested recovery.',
+  },
+  {
+    id: 'spec-first', name: 'Spec first', signature: 'spec requirements plan acceptance criteria scope interview',
+    god: 'apollo', demigods: ['spec-author', 'architect'], skills: ['writing-plans', 'intent-driven-development'],
+    mcps: ['context7'], verify: ['spec:approved', 'scope:closed'], tier: 'warm',
+    source: 'seed', note: 'The user approves the spec before a line exists.',
+  },
+
 ];
+
+const SEED_CATEGORY: Record<string, BuildCategory> = {
+  'hero-editorial': 'design', 'dashboard-system': 'design', 'auth-flow': 'design',
+  'motion-layer': 'design', 'a11y-audit': 'design', 'data-viz': 'data',
+  'theme-system': 'design', 'responsive-pass': 'design', 'brand-identity': 'design',
+  'visual-asset': 'design', 'craft-prototype': 'design', 'copy-direction': 'design',
+  'api-surface': 'code', 'migration-safe': 'data', 'security-audit': 'security',
+  'test-suite': 'qa', 'ci-pipeline': 'infra', 'mcp-integration': 'integration',
+  'knowledge-ingest': 'memory', 'docs-curation': 'curation', 'incident-drill': 'infra',
+  'spec-first': 'planning',
+};
+for (const seed of SEED_DESIGN_BUILDS) {
+  if (!seed.category && SEED_CATEGORY[seed.id]) seed.category = SEED_CATEGORY[seed.id];
+}
 
 const STOP = new Set(['the', 'and', 'for', 'with', 'from', 'that', 'this', 'into', 'your', 'uma', 'com', 'para', 'dos', 'das', 'que']);
 
@@ -213,6 +294,8 @@ export function normalizeUserBuild(input: unknown, now = Date.now()): DesignBuil
     verify: list(raw.verify, 8),
     tier: VALID_TIER.includes(raw.tier as BuildTier) ? (raw.tier as BuildTier) : 'cold',
     source: 'user',
+    ...(typeof raw.category === 'string' ? { category: raw.category as BuildCategory } : {}),
+    ...(raw.shared === true ? { shared: true } : {}),
     ...(typeof raw.note === 'string' && raw.note.trim() ? { note: raw.note.trim().slice(0, 240) } : {}),
   };
 }
@@ -233,4 +316,20 @@ export function buildPrompt(build: DesignBuildWithStats): string {
     'Equip this loadout for the task; if a tool in it is unavailable, say which and why before substituting.',
   ];
   return lines.filter(Boolean).join('\n');
+}
+
+/**
+ * v0.0.32 — the auto-description shown in the hub and the detail view. It
+ * names the loadout, the evidence and the intent — never a marketing line.
+ */
+export function describeBuild(build: DesignBuildWithStats): string {
+  const agents = build.demigods.length
+    ? `${build.demigods.length} parallel agent${build.demigods.length === 1 ? '' : 's'} (${build.demigods.join(', ')})`
+    : 'a solo god';
+  const evidence = build.stats.samples > 0
+    ? `${build.stats.samples} sample${build.stats.samples === 1 ? '' : 's'}, ${(build.stats.rate * 100).toFixed(0)}% smoothed success → ${build.stats.tier}`
+    : `no evidence yet — seed tier ${build.tier}`;
+  const skills = build.skills.length ? build.skills.join(', ') : 'no skills';
+  const mcps = build.mcps.length ? build.mcps.join(', ') : 'no MCPs';
+  return `${build.god} leads ${agents} for “${build.signature}”. Skills: ${skills}. MCPs: ${mcps}. ${build.note ? `${build.note} ` : ''}Evidence: ${evidence}.`;
 }

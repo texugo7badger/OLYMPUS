@@ -123,6 +123,21 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ---
 
 
+
+## Golden rule — simple, fluid, 60 FPS (2026-11-02)
+
+Every surface follows the same bar: **simple to read, fluid at 60 FPS,
+practical, and beautiful in motion**. Concretely:
+
+- Animate transform/opacity only; never layout properties. Static twins for
+  grids (the animated twin is for the active/hovered element). No `backdrop-blur`
+  on large surfaces. Long lists virtualize or cap.
+- One primary action per surface; the user should not have to read a manual.
+- A loading state always uses the branded loader (never a bare spinner).
+- Stable mode must remain usable with decorative motion off.
+
+A feature that works but stutters is not done.
+
 ## Golden rule — docs and release notes move with the tag (2026-11-01)
 
 Every version ships its documentation in the SAME release: `TOKEN-ECONOMY.md`
