@@ -17,8 +17,9 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload } from 'lucide-react';
+import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ArtcraftStyleBoard from './artcraft-style-board';
 
 interface CraftApp {
   id: string;
@@ -72,7 +73,7 @@ type View =
   | { kind: 'grid' }
   | { kind: 'app'; app: CraftApp; src: string; local: boolean; probe: Probe | null }
   | { kind: 'get'; app: CraftApp; probe: Probe | null };
-type PaneTab = 'apps' | 'references';
+type PaneTab = 'apps' | 'references' | 'style';
 
 interface UiRef {
   id: string;
@@ -283,6 +284,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
         <div className="flex items-center gap-0.5">
           <button onClick={() => { setTab('apps'); setRefView(null); }} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'apps' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><LayoutGrid size={10} /> apps</button>
           <button onClick={() => setTab('references')} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'references' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><Lightbulb size={10} /> references</button>
+          <button onClick={() => { setTab('style'); setRefView(null); }} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'style' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><Palette size={10} /> style</button>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           {view.kind !== 'grid' && (
@@ -298,7 +300,10 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
 
       {/* Body */}
       <div className="flex-1 min-h-0 relative">
-        {tab === 'references' ? (
+        {tab === 'style' ? (
+          /* v0.0.32 (Epic Q) — the STYLE BOARD: tokens + prompt + queue */
+          <ArtcraftStyleBoard references={uiRefs.map((r) => ({ name: r.name, demoUrl: r.demoUrl, category: r.category, library: r.library }))} />
+        ) : tab === 'references' ? (
           /* W-J: the REFERENCES tab — the curated inspiration catalog */
           <div className="absolute inset-0 flex flex-col">
             {refView ? (
