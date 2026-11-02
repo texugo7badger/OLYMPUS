@@ -5,6 +5,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import OlympusLoader from './olympus-loader';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { DollarSign, Zap, Server, CheckCircle2, ChevronRight, ChevronDown, Cpu, FileText, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -267,9 +268,8 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 
  if (!data) {
  return (
- <div className="h-full flex flex-col items-center justify-center text-olympus-text-dim bg-olympus-bg gap-2">
- <div className="w-8 h-8 rounded-full border-2 border-olympus-gold/30 border-t-olympus-gold animate-spin" />
- <span className="text-[10px] font-mono">loading costs…</span>
+ <div className="h-full flex items-center justify-center bg-olympus-bg">
+ <OlympusLoader size={96} label="loading costs" />
  </div>
  );
  }

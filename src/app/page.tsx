@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import OlympusLoader from '@/components/olympus/olympus-loader';
 import { getPanelLoadingCount, panelLoadingBump, subscribePanelLoading } from '@/lib/panel-loading-bus';
+import { initTheme } from '@/lib/theme-store';
 
 /* ------------------------------------------------------------------ */
 /* ChunkErrorBoundary — catches ChunkLoadError from Turbopack HMR.     */
@@ -242,7 +243,31 @@ export default function OlympusWorkspace() {
   const [pendingPanels, setPendingPanels] = useState(() => getPanelLoadingCount());
   const [windowLoaded, setWindowLoaded] = useState(false);
   const bootStartedAt = useRef(0);
+  // v0.0.32 — warm the panel endpoints once the shell is idle: opening a
+  // menu should paint data, not a spinner. Bounded, best-effort, no retries.
   useEffect(() => {
+    const warm = () => {
+      const urls = [
+        '/api/olympus/health', '/api/olympus/graph', '/api/olympus/brain-stats',
+        '/api/olympus/mcp/state', '/api/olympus/costs', '/api/olympus/run-state',
+        '/api/olympus/episodes?limit=60', '/api/olympus/tasks', '/api/olympus/craft-apps',
+        '/api/olympus/design-builds',
+      ];
+      for (const url of urls) {
+        try { void fetch(url, { cache: 'no-store' }).catch(() => {}); } catch { /* offline */ }
+      }
+    };
+    const ric = (window as any).requestIdleCallback as ((cb: () => void, opts?: { timeout: number }) => number) | undefined;
+    if (ric) {
+      const id = ric(warm, { timeout: 2500 });
+      return () => { (window as any).cancelIdleCallback?.(id); };
+    }
+    const timer = setTimeout(warm, 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    void initTheme();
     bootStartedAt.current = performance.now();
     const unsubscribe = subscribePanelLoading(setPendingPanels);
     const onLoad = () => setWindowLoaded(true);

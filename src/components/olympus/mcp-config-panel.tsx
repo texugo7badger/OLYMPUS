@@ -5,6 +5,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import OlympusLoader from './olympus-loader';
 import {
   Plug, RefreshCw, Lock, Unlock, CheckCircle2, XCircle, Key, AlertCircle,
   ExternalLink, Activity, Wrench, Download, RotateCcw, Ban, ShieldCheck,

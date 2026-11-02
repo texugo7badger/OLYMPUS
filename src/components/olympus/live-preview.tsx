@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import OlympusLoader from './olympus-loader';
 import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2 } from 'lucide-react';
 import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';

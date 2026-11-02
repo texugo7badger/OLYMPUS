@@ -5,6 +5,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import OlympusLoader from './olympus-loader';
 import { BrainCog, Zap, Activity, ArrowUp, ArrowDown, Minus, BrainCircuit, Sparkles, Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AnimatedNumber from './animated-number';
@@ -166,7 +167,7 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  <BrainCog size={16} className="text-olympus-gold animate-pulse" />
  <h2 className="text-sm font-semibold text-olympus-gold">God Intelligence Dashboard</h2>
  </div>
- <div className="text-[11px] text-olympus-text-dim font-mono">Loading brain stats...</div>
+ <OlympusLoader size={92} label="loading brain stats" />
  </div>
  );
  }

@@ -30,6 +30,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import OlympusLoader from './olympus-loader';
 import {
   BarChart3, Activity, Zap, Coins, Clock, CheckCircle2, AlertCircle, RefreshCw, Loader2,
 } from 'lucide-react';
@@ -138,7 +139,7 @@ export default function BenchmarksPanel() {
           <BarChart3 size={16} className="text-olympus-gold animate-pulse" />
           <h2 className="text-sm font-semibold text-olympus-gold">Benchmarks</h2>
         </div>
-        <div className="text-[11px] text-olympus-text-dim font-mono">Loading...</div>
+        <OlympusLoader size={92} label="loading benchmarks" />
       </div>
     );
   }

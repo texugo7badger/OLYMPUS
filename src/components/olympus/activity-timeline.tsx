@@ -5,6 +5,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import OlympusLoader from './olympus-loader';
 import { useOlympus, GOD_ICONS } from '@/lib/olympus-store';
 import { useDocVisible } from '@/lib/use-doc-visible';
 import { groupEpisodesByCampaign, campaignLabel, campaignDuration, type CampaignGroup } from '@/lib/campaign-groups';
@@ -295,7 +296,7 @@ export default function ActivityTimeline() {
       <div className="relative">
         <div className="absolute left-3 top-0 bottom-0 w-px bg-linear-to-b from-olympus-gold/30 via-olympus-gold/10 to-transparent" />
         {loading && (
-          <div className="text-center py-8 text-olympus-text-dim text-xs font-mono">loading episodes…</div>
+          <OlympusLoader size={56} label="loading episodes" />
         )}
         {/* Issue 4 — clean empty state on first load */}
         {!loading && filtered.length === 0 && (
