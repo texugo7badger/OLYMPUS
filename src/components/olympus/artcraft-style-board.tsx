@@ -441,7 +441,7 @@ export default function ArtcraftStyleBoard({
                     <button
                       key={l.id}
                       onClick={() => chooseLogo(l.svg)}
-                      title={l.name}
+                      data-tip={l.name}
                       aria-pressed={active}
                       className={cn('rounded border p-1 flex flex-col items-center gap-0.5 transition-colors', active ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/10 hover:border-olympus-gold/35')}
                     >

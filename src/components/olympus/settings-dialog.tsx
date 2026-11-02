@@ -880,7 +880,7 @@ export default function SettingsDialog() {
                     key={icon.id}
                     onClick={() => setTheme({ iconId: icon.id })}
                     aria-pressed={theme.iconId === icon.id}
-                    title={icon.name}
+                    data-tip={icon.name}
                     className={cn('w-7 h-7 rounded border flex items-center justify-center', theme.iconId === icon.id ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/15 hover:border-olympus-gold/40')}
                   >
                     <img src={icon.src} alt={icon.name} className="w-4 h-4" />

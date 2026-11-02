@@ -87,7 +87,7 @@ ok('the settings UI and the status bar consume the system', () => {
   const css = readFileSync(new URL('../src/app/globals.css', import.meta.url), 'utf-8');
   assert.match(settings, /Appearance/);
   assert.match(settings, /stable mode/i);
-  assert.match(status, /iconById\(theme\.iconId\)/);
+  assert.match(status, /ThemedLogo/);
   assert.match(css, /\[data-motion="stable"\]/);
   // The runtime variables are the ones the utilities reference; a literal
   // hex in a utility would ignore the theme (the bug this test exists for).

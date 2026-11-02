@@ -45,7 +45,7 @@ ok('the palette is the OLYMPUS one', () => {
 });
 
 ok('the component serves fullscreen and mini variants', () => {
-  assert.match(component, /\/olympus-loader\.svg/);
+  assert.match(component, /viewBox="0 0 512 512"/);
   assert.match(component, /fullscreen/);
   assert.match(component, /loading the pantheon/);
 });
@@ -61,7 +61,8 @@ ok('the app shows the overlay on every boot and the mini loader per panel', () =
 });
 
 ok('the brain atlas loops the loader and reacts to the live hop stream', () => {
-  assert.match(brain, /\/olympus-loader\.svg/);
+  assert.match(brain, /OlympusLoader/);
+  assert.match(brain, /themedOlympusPalette/);
   assert.match(brain, /hops\/stream/);
   assert.match(brain, /liveEvent/);
 });

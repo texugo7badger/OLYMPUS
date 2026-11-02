@@ -137,7 +137,7 @@ export default function BuildTalentPage({ onClose, onCreated }: { onClose: () =>
                         <button
                           key={opt}
                           onClick={() => toggle(slot, opt)}
-                          title={opt}
+                          data-tip={opt}
                           aria-pressed={on}
                           className={cn(
                             'group relative w-12 h-12 rounded-full border flex items-center justify-center transition-all duration-150',

@@ -2399,7 +2399,7 @@ const MessageRenderer = memo(function MessageRenderer({
           {message.imagePath && (
             <div
               className="mb-1.5 inline-flex max-w-full items-center gap-2 rounded-lg border border-olympus-gold/20 bg-olympus-card/60 p-1.5 pr-3"
-              title={message.imageSavedPath ? `saved → ${message.imageSavedPath}` : undefined}
+              data-tip={message.imageSavedPath ? `saved → ${message.imageSavedPath}` : undefined}
             >
               <img
                 src={message.imagePath}
