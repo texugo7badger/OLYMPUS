@@ -77,6 +77,16 @@ export default function DesignBuildsPanel() {
       if (!localStorage.getItem(TUTORIAL_KEY)) setTutorial({ open: true, step: 0 });
     } catch { /* private mode */ }
   }, []);
+  // A global full-screen surface (studio, settings) must never be blocked by
+  // the build tutorial sitting underneath it.
+  useEffect(() => {
+    const close = () => {
+      setTutorial({ open: false, step: 0 });
+      try { localStorage.setItem(TUTORIAL_KEY, '1'); } catch { /* private */ }
+    };
+    window.addEventListener('olympus:close-tutorial', close);
+    return () => window.removeEventListener('olympus:close-tutorial', close);
+  }, []);
 
   const closeTutorial = useCallback(() => {
     setTutorial({ open: false, step: 0 });
@@ -252,7 +262,7 @@ export default function DesignBuildsPanel() {
 
       {/* The first-run tutorial */}
       {tutorial.open && (
-        <div className="fixed inset-0 z-[290] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Build tutorial">
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Build tutorial">
           <div className="w-full max-w-md rounded-xl border border-olympus-gold/30 bg-olympus-bg p-4">
             <div className="flex items-center gap-1.5 mb-2">
               <Sparkles size={12} className="text-olympus-gold" />

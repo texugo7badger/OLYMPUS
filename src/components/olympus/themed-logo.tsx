@@ -50,14 +50,31 @@ export default function ThemedLogo({ iconId, size = 20 }: { iconId: string; size
       </svg>
     );
   }
-  // classic
+  // classic — the EXACT geometry of public/logo.svg scaled to the 128 viewBox:
+  // same rings, same peak, same eight god dots (radii and opacity included),
+  // Callimachus above and Atlas at the base. Only the colors change.
+  const dot = (x: number, y: number, r: number, fill: string, opacity = 1) => (
+    <circle cx={x} cy={y} r={r} fill={fill} opacity={opacity} />
+  );
   return (
     <svg {...common}>
-      <circle cx="64" cy="64" r="56" stroke={c.gold} strokeWidth="1.5" fill="none" opacity=".4" />
-      <circle cx="64" cy="64" r="48" stroke={c.gold} strokeWidth="1" fill="none" opacity=".25" />
+      <circle cx="64" cy="64" r="56" stroke={c.gold} strokeWidth="0.75" fill="none" opacity=".4" />
+      <circle cx="64" cy="64" r="48" stroke={c.gold} strokeWidth="0.5" fill="none" opacity=".25" />
       <path d="M 64 38 L 84 84 L 72 84 L 64 66 L 56 84 L 44 84 Z" fill={c.gold} />
-      <circle cx="64" cy="30" r="2.6" fill={c.purple} />
-      <circle cx="64" cy="84" r="2.6" fill={c.gold} />
+      {dot(64, 30, 1.5, c.purple)}
+      {dot(64, 84, 1.5, c.gold)}
+      {dot(64, 12, 2, c.gold)}
+      {dot(100.8, 27.2, 1.75, c.gold, 0.85)}
+      {dot(116, 64, 2, c.gold)}
+      {dot(100.8, 100.8, 1.75, c.gold, 0.85)}
+      {dot(64, 116, 2, c.gold)}
+      {dot(27.2, 100.8, 1.75, c.gold, 0.85)}
+      {dot(12, 64, 2, c.gold)}
+      {dot(27.2, 27.2, 1.75, c.gold, 0.85)}
+      <g stroke={c.gold} strokeWidth="0.25" opacity=".15">
+        <path d="M64 64V12M64 64H116M64 64V116M64 64H12" />
+        <path d="M64 64L100.8 27.2M64 64L100.8 100.8M64 64L27.2 27.2M64 64L27.2 100.8" />
+      </g>
     </svg>
   );
 }

@@ -71,6 +71,31 @@ export const BUILD_CATEGORIES: BuildCategory[] = [
 
 export const BUILD_LIMITS = { skills: 3, mcps: 3, demigods: 5 } as const;
 
+/** v0.0.34 — each category maps to a theme palette key (not a hardcoded hex).
+ *  The talent page, the editor and the carousel read this instead of
+ *  `category.color`, so a palette change repaints the whole build surface. */
+export const BUILD_CATEGORY_TINT: Record<string, 'gold' | 'cyan' | 'green' | 'red' | 'purple' | 'blue' | 'amberSoft' | 'teal'> = {
+  planning: 'gold',
+  code: 'cyan',
+  qa: 'green',
+  security: 'red',
+  design: 'purple',
+  data: 'blue',
+  infra: 'amberSoft',
+  integration: 'teal',
+  memory: 'gold',
+  curation: 'purple',
+};
+
+/** The themed URL for an animated (or static) build icon. `v` busts the
+ *  browser cache when the palette changes. */
+export function buildIconUrl(category: Pick<BuildCategory, 'id'>, animated: boolean, version?: string): string {
+  const params = new URLSearchParams({ id: category.id });
+  if (!animated) params.set('static', '1');
+  if (version) params.set('v', version);
+  return `/api/olympus/build-icon?${params.toString()}`;
+}
+
 export function categoryById(id: string): BuildCategory | null {
   return BUILD_CATEGORIES.find((c) => c.id === id) ?? null;
 }

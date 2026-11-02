@@ -815,10 +815,8 @@ let themedIcon: Electron.NativeImage | null = null;
 /** The palette the user picked in Settings → Appearance (theme.json). */
 /** The icon family the user picked (classic | orbit | peak | monogram). */
 function readThemeIconId(): string {
-  try {
-    const raw = JSON.parse(readFileSync(THEME_FILE, 'utf-8'));
-    return typeof raw?.iconId === 'string' ? raw.iconId : 'classic';
-  } catch { return 'classic'; }
+  // v0.0.34 — the original mark is the only identity; the selector is gone.
+  return 'classic';
 }
 
 function readThemePalette(): typeof DEFAULT_PALETTE {
@@ -1075,11 +1073,19 @@ button:hover{background:#D4A57433}
   // closing the window hides it instead of quitting. Double-click restores.
   if (!tray) {
     try {
-      const iconPath = existsSync(join(appRoot, 'public', 'logo-32x32.png'))
-        ? join(appRoot, 'public', 'logo-32x32.png')
-        : join(appRoot, 'public', 'logo.png');
-      const icon = nativeImage.createFromPath(iconPath);
-      tray = new Tray(icon.resize({ width: 16, height: 16 }));
+      // v0.0.34 — the tray opens with the ORIGINAL mark in the active
+      // palette (not the static gold fallback); notifications still paint
+      // their type color on top and restore this mark afterwards.
+      const themed = defaultTrayImage();
+      if (!themed.isEmpty()) {
+        tray = new Tray(themed);
+      } else {
+        const iconPath = existsSync(join(appRoot, 'public', 'logo-32x32.png'))
+          ? join(appRoot, 'public', 'logo-32x32.png')
+          : join(appRoot, 'public', 'logo.png');
+        const icon = nativeImage.createFromPath(iconPath);
+        tray = new Tray(icon.resize({ width: 16, height: 16 }));
+      }
       tray.setToolTip('OLYMPUS — click to restore');
       const contextMenu = Menu.buildFromTemplate([
         { label: 'Show OLYMPUS', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } else createWindow(); } },
@@ -1637,6 +1643,14 @@ if (!gotLock) {
   app.on('before-quit', () => { writeHibernationMarker(false); stopHibernationWatch(); });
 
   app.whenReady().then(async () => {
+    // v0.0.34 — the microphone is a first-class input: allow the studio's
+    // getUserMedia/MediaRecorder lane (permission prompts still appear where
+    // the platform requires them).
+    try {
+      const allowed = new Set(['media', 'microphone', 'audioCapture', 'notifications', 'clipboard-read', 'clipboard-sanitized-write', 'fullscreen']);
+      session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(allowed.has(permission)));
+      session.defaultSession.setPermissionCheckHandler((_wc, permission) => allowed.has(permission));
+    } catch { /* optional */ }
     startNotifyTail();
     try { themedWindowIcon(); syncDesktopIcon(); } catch { /* optional */ }
     // #V0.0.20: Auto-heal on boot — reconcile llm-providers.json with

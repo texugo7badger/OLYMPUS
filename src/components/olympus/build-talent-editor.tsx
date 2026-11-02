@@ -14,11 +14,16 @@
 import { useMemo, useState } from 'react';
 import { Check, Loader2, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BUILD_CATEGORIES, BUILD_LIMITS } from '@/lib/build-categories';
+import { BUILD_CATEGORIES, BUILD_LIMITS, buildIconUrl } from '@/lib/build-categories';
+import { useTheme } from '@/lib/theme-store';
+import { resolvePalette } from '@/lib/theme';
 
 const GODS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
 
 export default function BuildTalentEditor({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+  const [theme] = useTheme();
+  const palette = resolvePalette(theme);
+  const iconVersion = `${palette.gold}${palette.bg}`;
   const [activeId, setActiveId] = useState(BUILD_CATEGORIES[0]?.id ?? 'design');
   const [name, setName] = useState('');
   const [god, setGod] = useState('athena');
@@ -92,7 +97,7 @@ export default function BuildTalentEditor({ open, onClose, onCreated }: { open: 
                     className={cn('relative rounded-lg border p-1.5 flex flex-col items-center gap-0.5 transition-all', selected ? 'border-olympus-gold/60 bg-olympus-gold/10 -translate-y-0.5' : 'border-olympus-gold/10 hover:border-olympus-gold/35')}
                     aria-pressed={selected}
                   >
-                    <img src={cat.iconStatic} alt="" width={34} height={34} loading="lazy" />
+                    <img src={buildIconUrl(cat, cat.id === activeId, iconVersion)} alt="" width={34} height={34} loading="lazy" />
                     <span className="text-[8px] font-mono text-olympus-text-dim uppercase">{cat.name}</span>
                     {count > 0 && <span className="absolute top-0.5 right-0.5 text-[7px] font-mono px-1 rounded-full bg-olympus-gold/20 text-olympus-gold">{count}</span>}
                   </button>
@@ -102,7 +107,7 @@ export default function BuildTalentEditor({ open, onClose, onCreated }: { open: 
 
             <div className="mt-3 rounded-lg border border-olympus-gold/15 bg-olympus-panel/50 p-2.5">
               <div className="flex items-center gap-1.5 mb-1.5">
-                <img src={active.icon} alt="" width={18} height={18} />
+                <img src={buildIconUrl(active, true, iconVersion)} alt="" width={18} height={18} />
                 <span className="text-[10px] font-mono font-semibold text-olympus-text uppercase">{active.name}</span>
                 <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">{active.skills.length + active.mcps.length + active.demigods.length} options</span>
               </div>

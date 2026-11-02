@@ -439,9 +439,19 @@ ${uiReferencesBlock}`
     const knowledgeBlock = action === 'prompt'
       ? composeKnowledgeBlock({ god: agent, stacks: classification.stack ?? [], text: promptText })
       : '';
+    // v0.0.34 — the Settings language reaches the CHAT too: the terminal
+    // sends x-olympus-language and the god answers (and writes UI copy) in it.
+    const uiLanguage = req.headers.get('x-olympus-language') || 'en';
+    const languageNames: Record<string, string> = {
+      en: 'English', 'pt-BR': 'Português (Brazil)', es: 'Español', fr: 'Français',
+      de: 'Deutsch', ja: '日本語', zh: '中文',
+    };
+    const languageMarker = action === 'prompt'
+      ? `\n\n[OLYMPUS-LANGUAGE ${uiLanguage}] The interface language is ${languageNames[uiLanguage] ?? 'English'}. ALL user-facing prose in your reply — explanations, plans, questions, summaries, choices and UI copy — must be written in ${languageNames[uiLanguage] ?? 'English'}. Code, identifiers, file paths, commands and upstream component names stay as-is.`
+      : '';
     const runText = unattended
-      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker
-      : sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker;
+      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker + languageMarker
+      : sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker + languageMarker;
 
     return streamWarm(req, {
       conversationId,

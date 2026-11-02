@@ -70,6 +70,7 @@ interface DesignOption {
   imageUrl?: string;
   colors?: Array<{ role: string; hex: string }>;
   text?: string;
+  recommended?: boolean;
 }
 
 interface PendingChoice {
@@ -100,17 +101,20 @@ function parsePending(): PendingChoice | null {
       if (ev.action !== 'design-choice-requested' || !ev.review_id) continue;
       if (resolved.has(ev.review_id)) continue;
       const options: DesignOption[] = Array.isArray(ev.options)
-        ? ev.options.filter((o: any) => o && typeof o.label === 'string').slice(0, 6)
+        ? ev.options.filter((o: any) => o && typeof o.label === 'string').slice(0, 3)
         : Array.isArray(ev.candidates)
           ? ev.candidates.map((c: any, n: number) => ({ id: `candidate-${n + 1}`, label: String(c?.name || `Option ${n + 1}`), description: String(c?.description || ''), kind: 'reference' }))
           : [];
       if (options.length === 0) continue;
+      let seenRecommended = false;
+      for (const o of options) { if (o.recommended === true && !seenRecommended) seenRecommended = true; else o.recommended = false; }
+      if (!seenRecommended && options[0]) options[0].recommended = true;
       return {
         reviewId: String(ev.review_id),
         god: String(ev.god || 'athena'),
         taskContext: String(ev.task_context || ev.meta?.taskContext || ''),
         options,
-        suggestions: Array.isArray(ev.suggestions) ? ev.suggestions.filter((s: any) => typeof s === 'string').slice(0, 6) : [],
+        suggestions: Array.isArray(ev.suggestions) ? ev.suggestions.filter((s: any) => typeof s === 'string').slice(0, 3) : [],
         allowRefine: ev.allow_refine !== false,
         project: typeof ev.project === 'string' ? ev.project : (ev.meta?.project ?? null),
         ts: String(ev.ts || new Date().toISOString()),

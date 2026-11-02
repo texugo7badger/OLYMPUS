@@ -11,8 +11,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Layers, Loader2, Palette, RefreshCw, Send, Sparkles } from 'lucide-react';
+import { Check, Layers, Loader2, Palette, RefreshCw, Send, Sparkles, BookOpen, MousePointerClick } from 'lucide-react';
 import { generateLogos, generatePalettes } from '@/lib/design-generator';
+import { DESIGN_PRINCIPLES, DESIGN_SYSTEMS, TYPE_LABEL, DENSITY_LABEL, RADIUS_LABEL, MOTION_LABEL } from '@/lib/design-wisdom';
+import LivePreview from './live-preview';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
 import {
@@ -55,6 +57,10 @@ export default function ArtcraftStyleBoard({
   const [queueing, setQueueing] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [note, setNote] = useState<string | null>(null);
+  // v0.0.34 — the preview has two lanes: the instant token mock and the REAL
+  // project dev server (URL bar, back/forward, reload, mark-to-edit).
+  const [previewTab, setPreviewTab] = useState<'design' | 'live'>('design');
+  const [selectedPart, setSelectedPart] = useState<string | null>(null);
   // v0.0.32 — the identity generator (palettes + logo marks from the name).
   const [genSalt, setGenSalt] = useState(0);
   const [chosenLogo, setChosenLogo] = useState<string | null>(null);
@@ -85,15 +91,33 @@ export default function ArtcraftStyleBoard({
   );
   const [palettes, setPalettes] = useState<ReturnType<typeof generatePalettes>>([]);
   const [logos, setLogos] = useState<ReturnType<typeof generateLogos>>([]);
+  const [logoIndex, setLogoIndex] = useState(0);
+  const [autoPick, setAutoPick] = useState(true);
   const [editing, setEditing] = useState(false);
   // Athena's read: deterministic suggestions from the project seed, always
   // available (no LLM cost) and explained by the project's own stacks.
   const athenaSuggestions = useMemo(() => generatePalettes(`${projectSlug}-athena`, 3), [projectSlug]);
+  // v0.0.34 — Athena's decision: at most THREE project-specific directions,
+  // one clearly recommended. The user can pick one; in hibernation the
+  // recommended one is applied automatically.
+  const decisionOptions = useMemo(() => {
+    const pool = generatePalettes(`${projectName} ${projectStacks.join(' ')}`, 3);
+    const styles = [
+      { typography: 'geometric-sans' as const, density: 'comfortable' as const, radius: 'soft' as const, motion: 'subtle' as const },
+      { typography: 'humanist-sans' as const, density: 'compact' as const, radius: 'sharp' as const, motion: 'subtle' as const },
+      { typography: 'serif-display' as const, density: 'spacious' as const, radius: 'pill' as const, motion: 'expressive' as const },
+    ];
+    return pool.slice(0, 3).map((p, i) => ({ ...p, recommended: i === 0, tokens: { custom: p.colors, ...styles[i] } }));
+  }, [projectName, projectStacks]);
+  useEffect(() => {
+    setAutoPick(localStorage.getItem('olympus:design-auto-pick') !== '0');
+  }, []);
   const generateIdentity = useCallback(() => {
     const nextSalt = genSalt + 1;
     setGenSalt(nextSalt);
     setPalettes(generatePalettes(`${projectSlug}-${nextSalt}`, 6));
     setLogos(generateLogos({ name: projectName, accent: colors.accent, bg: colors.bg, text: colors.text }));
+    setLogoIndex(0);
   }, [genSalt, projectSlug, projectName, colors.accent, colors.bg, colors.text]);
 
   const load = useCallback(async () => {
@@ -163,6 +187,16 @@ export default function ArtcraftStyleBoard({
       return next;
     });
   }, [persist, picked, allRefs]);
+
+  useEffect(() => {
+    const onHidden = () => {
+      if (document.visibilityState !== 'hidden' || !autoPick || !decisionOptions[0]) return;
+      update(decisionOptions[0].tokens);
+      setNote(`Hibernation: ${decisionOptions[0].name} (Athena's recommendation) applied`);
+    };
+    document.addEventListener('visibilitychange', onHidden);
+    return () => document.removeEventListener('visibilitychange', onHidden);
+  }, [autoPick, decisionOptions]);
 
   const toggleRef = useCallback((ref: StyleReference) => {
     setPicked((prev) => {
@@ -321,8 +355,18 @@ export default function ArtcraftStyleBoard({
             <Layers size={12} className="text-olympus-gold" />
             <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">live preview</span>
             <span className="text-[8px] font-mono text-olympus-text-dim truncate">{projectName} — updates as you edit</span>
+            <div className="ml-auto flex items-center gap-1">
+              <button onClick={() => setPreviewTab('design')} className={cn('text-[8px] font-mono px-2 py-0.5 rounded-full border', previewTab === 'design' ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/10 text-olympus-text-dim')}>design</button>
+              <button onClick={() => setPreviewTab('live')} className={cn('text-[8px] font-mono px-2 py-0.5 rounded-full border', previewTab === 'live' ? 'border-olympus-cyan/50 bg-olympus-cyan/10 text-olympus-cyan' : 'border-olympus-gold/10 text-olympus-text-dim')}>live</button>
+            </div>
           </header>
 
+          <div className={cn('flex-1 min-h-0', previewTab === 'live' && 'min-h-[320px]')}>
+          {previewTab === 'live' ? (
+            <div className="h-full min-h-[320px] rounded-lg overflow-hidden border border-olympus-gold/15">
+              <LivePreview />
+            </div>
+          ) : (
           <div className="flex-1 min-h-[190px] rounded-lg overflow-hidden border border-olympus-gold/15" style={{ background: colors.bg }}>
             <div className="flex items-center gap-1.5 px-2 py-1" style={{ background: colors.surface, borderBottom: `1px solid ${colors.accent}22` }}>
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: colors.accent }} />
@@ -330,7 +374,11 @@ export default function ArtcraftStyleBoard({
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: colors.muted }} />
               <span className="ml-2 text-[7px] font-mono truncate" style={{ color: colors.muted }}>{projectSlug}.local</span>
             </div>
-            <div className="p-3" style={{ color: colors.text }}>
+            <div
+              className={cn('p-3 transition-all', selectedPart === 'hero' && 'ring-1 ring-inset')}
+              style={{ color: colors.text, ...(selectedPart === 'hero' ? { boxShadow: `inset 0 0 0 1px ${colors.accent}88` } : {}) }}
+              onClick={() => setSelectedPart('hero')}
+            >
               <div className="flex items-center gap-1.5">
                 {chosenLogo
                   ? <img src={`data:image/svg+xml;utf8,${encodeURIComponent(chosenLogo)}`} alt="" width={26} height={26} className="rounded" />
@@ -341,12 +389,12 @@ export default function ArtcraftStyleBoard({
               <h3 className="mt-3 text-[16px] font-semibold leading-tight" style={{ color: colors.text }}>Build something precise.</h3>
               <p className="mt-1 text-[9px] leading-relaxed" style={{ color: colors.muted }}>This page uses the project&apos;s palette, type and spacing — not the OLYMPUS chrome.</p>
               <div className="mt-2 flex items-center gap-1.5">
-                <span className="text-[8px] font-mono px-2 py-1 rounded" style={{ background: colors.accent, color: colors.bg }}>get started</span>
-                <span className="text-[8px] font-mono px-2 py-1 rounded border" style={{ borderColor: `${colors.accent}66`, color: colors.accent }}>learn more</span>
+                <span onClick={(e) => { e.stopPropagation(); setSelectedPart('primary button'); }} className={cn('text-[8px] font-mono px-2 py-1 rounded cursor-pointer', selectedPart === 'primary button' && 'ring-2 ring-offset-1')} style={{ background: colors.accent, color: colors.bg, ...(selectedPart === 'primary button' ? { boxShadow: `0 0 0 2px ${colors.accent}55` } : {}) }}>get started</span>
+                <span onClick={(e) => { e.stopPropagation(); setSelectedPart('secondary button'); }} className={cn('text-[8px] font-mono px-2 py-1 rounded border cursor-pointer', selectedPart === 'secondary button' && 'ring-2 ring-offset-1')} style={{ borderColor: `${colors.accent}66`, color: colors.accent }}>learn more</span>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-1.5">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="rounded p-1.5" style={{ background: colors.surface }}>
+                  <div key={i} onClick={(e) => { e.stopPropagation(); setSelectedPart(`card ${i + 1}`); }} className={cn('rounded p-1.5 cursor-pointer', selectedPart === `card ${i + 1}` && 'ring-2')} style={{ background: colors.surface, ...(selectedPart === `card ${i + 1}` ? { boxShadow: `0 0 0 2px ${colors.accent}55` } : {}) }}>
                     <span className="block h-1 w-8 rounded-full mb-1" style={{ background: colors.accent }} />
                     <span className="block h-1 w-12 rounded-full" style={{ background: colors.muted, opacity: 0.5 }} />
                     <span className="block h-1 w-9 rounded-full mt-1" style={{ background: colors.muted, opacity: 0.35 }} />
@@ -354,6 +402,14 @@ export default function ArtcraftStyleBoard({
                 ))}
               </div>
             </div>
+          </div>
+            )}
+            {previewTab === 'design' && (
+              <div className="flex items-center gap-1 mt-1 text-[8px] font-mono text-olympus-text-dim">
+                <MousePointerClick size={9} className="text-olympus-gold" />
+                {selectedPart ? <>selected: <span className="text-olympus-gold">{selectedPart}</span> · click another component</> : 'click a component in the preview to select it'}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 mt-2">
@@ -470,25 +526,26 @@ export default function ArtcraftStyleBoard({
               )}
             </div>
             <div>
-              <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">logo marks</div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {logos.map((l) => {
-                  const src = `data:image/svg+xml;utf8,${encodeURIComponent(l.svg)}`;
-                  const active = chosenLogo === l.svg;
-                  return (
-                    <button
-                      key={l.id}
-                      onClick={() => chooseLogo(l.svg)}
-                      data-tip={l.name}
-                      aria-pressed={active}
-                      className={cn('rounded border p-1 flex flex-col items-center gap-0.5 transition-colors', active ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/10 hover:border-olympus-gold/35')}
-                    >
-                      <img src={src} alt={l.name} width={56} height={56} className="rounded" />
-                      <span className="text-[8px] font-mono text-olympus-text-dim uppercase truncate max-w-full">{l.name}</span>
-                    </button>
-                  );
-                })}
+              <div className="flex items-center gap-1 mb-1">
+                <span className="text-[8px] font-mono text-olympus-text-dim uppercase">logo mark</span>
+                <span className="text-[7px] font-mono text-olympus-text-dim">one at a time · from {projectName}</span>
               </div>
+              {(() => {
+                const l = logos[logoIndex % Math.max(1, logos.length)];
+                if (!l) return <p className="text-[8px] font-mono text-olympus-text-dim">generate a mark for this project.</p>;
+                const src = `data:image/svg+xml;utf8,${encodeURIComponent(l.svg)}`;
+                const active = chosenLogo === l.svg;
+                return (
+                  <div className={cn('rounded-lg border p-2 flex flex-col items-center gap-1.5', active ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/10')}>
+                    <img src={src} alt={l.name} width={108} height={108} className="rounded" />
+                    <span className="text-[8px] font-mono text-olympus-text-dim uppercase tracking-wide">{l.name}</span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setLogoIndex((i) => (i + 1) % Math.max(1, logos.length))} className="text-[8px] font-mono px-1.5 py-0.5 rounded border border-olympus-gold/25 text-olympus-text-dim hover:text-olympus-text">another</button>
+                      <button onClick={() => chooseLogo(l.svg)} className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30">use this</button>
+                    </div>
+                  </div>
+                );
+              })()}
               {chosenLogo && (
                 <div className="mt-1 flex items-center gap-1.5">
                   <img src={`data:image/svg+xml;utf8,${encodeURIComponent(chosenLogo)}`} alt="chosen logo" width={40} height={40} />
@@ -501,6 +558,80 @@ export default function ArtcraftStyleBoard({
           )}
         </section>
 
+        {/* v0.0.34 — OPEN DESIGN WISDOM: the charter distilled into decisions
+            the board can apply, plus the reference-system token recipes. */}
+        <section className="rounded border border-olympus-purple/20 bg-olympus-panel/60 p-2.5 lg:col-span-2">
+          <header className="flex items-center gap-1.5 mb-1.5">
+            <BookOpen size={11} className="text-olympus-purple" />
+            <span className="text-[10px] font-mono font-semibold text-olympus-purple uppercase">Open Design wisdom</span>
+            <span className="text-[8px] font-mono text-olympus-text-dim">the designer charter, distilled · every rule applies to this board</span>
+            <span className="ml-auto text-[7px] font-mono text-olympus-text-dim">full lane: the opendesign MCP · Athena</span>
+          </header>
+          <div className="mb-2 rounded-lg border border-olympus-gold/20 bg-olympus-gold/5 p-2">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Sparkles size={10} className="text-olympus-gold" />
+              <span className="text-[9px] font-mono font-semibold text-olympus-gold uppercase">Athena&apos;s decision</span>
+              <span className="text-[8px] font-mono text-olympus-text-dim">at most 3 · one recommended</span>
+              <button
+                onClick={() => { const next = !autoPick; setAutoPick(next); try { localStorage.setItem('olympus:design-auto-pick', next ? '1' : '0'); } catch { /* private */ } }}
+                className={cn('ml-auto text-[7px] font-mono px-1.5 py-0.5 rounded-full border', autoPick ? 'border-olympus-green/40 text-olympus-green bg-olympus-green/10' : 'border-olympus-gold/20 text-olympus-text-dim')}
+                data-tip="When OLYMPUS hibernates, the gods pick their recommended option"
+              >hibernate: {autoPick ? 'auto-pick recommended' : 'ask me'}</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
+              {decisionOptions.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => { update(opt.tokens); setNote(`${opt.name} applied${opt.recommended ? ' (Athena recommends)' : ''}`); }}
+                  className={cn('rounded-lg border p-2 text-left transition-colors', opt.recommended ? 'border-olympus-gold/55 bg-olympus-gold/10' : 'border-olympus-gold/10 bg-olympus-card hover:border-olympus-gold/35')}
+                >
+                  <span className="flex items-center gap-1">
+                    {opt.recommended && <span className="text-[7px] font-mono uppercase text-olympus-gold">★ recommended</span>}
+                    {!opt.recommended && <span className="text-[7px] font-mono uppercase text-olympus-text-dim">alternative</span>}
+                  </span>
+                  <span className="flex gap-1 mt-1">
+                    {[opt.colors.bg, opt.colors.surface, opt.colors.accent, opt.colors.text].map((c) => (
+                      <span key={c} className="w-4 h-4 rounded-sm ring-1 ring-black/30" style={{ background: c }} />
+                    ))}
+                  </span>
+                  <span className="block text-[9px] font-mono text-olympus-text mt-1 truncate">{opt.name}</span>
+                  <span className="block text-[7px] font-mono text-olympus-text-dim truncate">{TYPE_LABEL[opt.tokens.typography]} · {DENSITY_LABEL[opt.tokens.density]} · {RADIUS_LABEL[opt.tokens.radius]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 max-h-[210px] overflow-y-auto custom-scroll pr-1">
+            {DESIGN_PRINCIPLES.map((p, i) => (
+              <div key={p.id} className="rounded-lg border border-olympus-gold/10 bg-olympus-card px-2 py-1.5">
+                <div className="flex items-center gap-1">
+                  <span className="text-[7px] font-mono text-olympus-purple/70 tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="text-[9px] font-mono font-semibold text-olympus-text">{p.title}</span>
+                  {p.apply && (
+                    <button
+                      onClick={() => { update(p.apply!); setNote(`${p.title} applied to the board`); }}
+                      className="ml-auto text-[7px] font-mono px-1 py-0.5 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20"
+                    >apply</button>
+                  )}
+                </div>
+                <p className="text-[8px] font-mono text-olympus-text-dim leading-relaxed mt-0.5 line-clamp-2">{p.body}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center gap-1 flex-wrap">
+            <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mr-1">systems</span>
+            {DESIGN_SYSTEMS.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => { update(s.tokens); setNote(`${s.name} recipe applied`); }}
+                data-tip={s.note}
+                className="text-[8px] font-mono px-1.5 py-0.5 rounded-full border border-olympus-gold/15 text-olympus-text-dim hover:border-olympus-purple/45 hover:text-olympus-purple"
+              >{s.name}</button>
+            ))}
+            <span className="ml-auto text-[7px] font-mono text-olympus-text-dim">
+              {TYPE_LABEL[tokens.typography]} · {DENSITY_LABEL[tokens.density]} · {RADIUS_LABEL[tokens.radius]} · {MOTION_LABEL[tokens.motion]}
+            </span>
+          </div>
+        </section>
 
       </div>
     </div>

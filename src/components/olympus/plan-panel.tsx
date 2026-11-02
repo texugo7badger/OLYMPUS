@@ -21,6 +21,8 @@
 
 import { CheckCircle2, Circle, Loader2, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage, t } from '@/lib/i18n';
+import TaskSigil, { sigilFor } from './task-sigil';
 
 export type PlanStatus = 'pending' | 'in_progress' | 'done';
 
@@ -96,30 +98,30 @@ interface PlanPanelProps {
 }
 
 export default function PlanPanel({ items, onToggle }: PlanPanelProps) {
+  const language = useLanguage();
   if (items.length === 0) return null;
 
   const done = items.filter(i => i.status === 'done').length;
-  const active = items.find(i => i.status === 'in_progress');
+  const pct = Math.round((done / Math.max(1, items.length)) * 100);
 
   return (
     <div className="border-t border-olympus-gold/10 bg-olympus-panel/60">
-      <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide flex items-center gap-1">
-        <ListChecks size={10} style={{ color: '#D4A574' }} />
-        <span>Plan</span>
-        <span className="ml-auto normal-case tracking-normal">{done}/{items.length}</span>
+      <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide flex items-center gap-1.5">
+        <ListChecks size={10} className="text-olympus-gold" />
+        <span>{t('terminal.buildQueue', language)}</span>
+        <span className="text-olympus-text-dim/70 normal-case">· {t('terminal.chosenTasks', language)}</span>
+        <span className="ml-auto normal-case tracking-normal tabular-nums">{done}/{items.length}</span>
+        <span className="w-14 h-1 rounded-full bg-olympus-bg overflow-hidden ring-1 ring-olympus-gold/10" aria-hidden>
+          <span className="block h-full w-full rounded-full bg-olympus-gold origin-left transition-transform duration-500" style={{ transform: `scaleX(${pct / 100})` }} />
+        </span>
       </div>
 
-      {active && (
-        <div className="px-2 pb-1 text-[9px] font-mono truncate" style={{ color: '#7BAE8E' }}>
-          ▸ {active.content}
-        </div>
-      )}
-
-      <div className="pb-1">
+      <div className="flex gap-1.5 px-2 pb-2 overflow-x-auto custom-scroll overscroll-x-contain">
         {items.map(item => {
           const nested = !!item.god && item.god !== 'apollo';
           const isDone = item.status === 'done';
           const isActive = item.status === 'in_progress';
+          const kind = sigilFor(item.content, item.god);
           const Glyph = isDone ? CheckCircle2 : isActive ? Loader2 : Circle;
 
           return (
@@ -128,30 +130,60 @@ export default function PlanPanel({ items, onToggle }: PlanPanelProps) {
               type="button"
               onClick={() => onToggle(item.id)}
               data-tip={isDone ? 'Mark pending' : 'Mark done'}
+              aria-pressed={isDone}
               className={cn(
-                'w-full text-left px-2 py-1 flex items-start gap-1.5 transition-colors hover:bg-olympus-gold/5',
-                nested && 'pl-4',
+                'group relative shrink-0 w-[204px] text-left rounded-lg border p-2 transition-transform duration-200 hover:-translate-y-0.5',
+                isDone
+                  ? 'border-olympus-green/20 bg-olympus-card/50 opacity-60'
+                  : isActive
+                    ? 'border-olympus-gold/45 bg-olympus-gold/10 shadow-sm'
+                    : 'border-olympus-gold/12 bg-olympus-card hover:border-olympus-gold/35',
               )}
             >
-              <Glyph
-                size={11}
-                className={cn(
-                  'shrink-0 mt-px',
-                  isDone ? 'text-olympus-green' : isActive ? 'text-olympus-gold animate-spin' : 'text-olympus-text-dim',
-                )}
-              />
-              <span
-                className={cn(
-                  'text-[9px] font-mono',
-                  isDone ? 'text-olympus-text-dim line-through' : isActive ? 'text-olympus-text' : 'text-olympus-text-dim',
-                )}
-              >
-                {item.content}
-              </span>
-              {nested && item.god && (
-                <span className="text-[8px] font-mono ml-auto shrink-0 text-olympus-text-dim">
-                  {DISPLAY_NAMES[item.god] || item.god}
+              <div className="flex items-start gap-1.5">
+                <span className={cn(
+                  'w-7 h-7 rounded-md flex items-center justify-center shrink-0 ring-1',
+                  isDone ? 'bg-olympus-bg/40 ring-olympus-green/25' : 'bg-olympus-bg/55 ring-olympus-gold/15',
+                )}>
+                  <TaskSigil kind={kind} size={22} active={isActive} />
                 </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1 text-[7px] font-mono uppercase tracking-wider text-olympus-cyan/70">
+                    {t('common.build', language)} · {kind}{nested && item.god ? ` · ${DISPLAY_NAMES[item.god] || item.god}` : ''}
+                  </span>
+                  <span className={cn(
+                    'block text-[9.5px] font-mono leading-snug mt-0.5 line-clamp-2',
+                    isDone ? 'text-olympus-text-dim line-through' : 'text-olympus-text',
+                  )}>
+                    {item.content}
+                  </span>
+                </span>
+                <Glyph
+                  size={11}
+                  className={cn(
+                    'shrink-0 mt-0.5',
+                    isDone ? 'text-olympus-green' : isActive ? 'text-olympus-gold animate-spin' : 'text-olympus-text-dim/70',
+                  )}
+                />
+              </div>
+              <div className="flex items-center gap-1 mt-1.5">
+                {item.god && (
+                  <span className={cn(
+                    'text-[7px] font-mono px-1 py-0.5 rounded ring-1 truncate',
+                    isDone ? 'text-olympus-text-dim ring-olympus-text-dim/15' : 'text-olympus-gold ring-olympus-gold/20 bg-olympus-gold/5',
+                  )}>
+                    {DISPLAY_NAMES[item.god] || item.god}
+                  </span>
+                )}
+                <span className={cn(
+                  'ml-auto text-[7px] font-mono uppercase tracking-wide',
+                  isDone ? 'text-olympus-green' : isActive ? 'text-olympus-gold' : 'text-olympus-text-dim/70',
+                )}>
+                  {isDone ? t('common.done', language) : isActive ? t('common.inFlight', language) : t('common.queued', language)}
+                </span>
+              </div>
+              {isActive && (
+                <span className="absolute left-2 right-2 bottom-0 h-px bg-olympus-gold/60 animate-pulse" aria-hidden />
               )}
             </button>
           );

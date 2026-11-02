@@ -62,7 +62,7 @@ ok('normalize rejects garbage but keeps valid state', () => {
 ok('applyTheme writes every CSS variable + data attributes', () => {
   const props = new Map();
   const attrs = new Map();
-  applyTheme({ ...DEFAULT_THEME, presetId: 'paper', iconId: 'orbit', motion: 'stable' }, {
+  applyTheme({ ...DEFAULT_THEME, presetId: 'paper', iconId: 'classic', motion: 'stable' }, {
     setAttribute: (n, v) => attrs.set(n, v),
     style: { setProperty: (n, v) => props.set(n, v) },
   });
@@ -73,7 +73,7 @@ ok('applyTheme writes every CSS variable + data attributes', () => {
   assert.equal(attrs.get('data-theme'), 'paper');
   assert.equal(attrs.get('data-mode'), 'light');
   assert.equal(attrs.get('data-motion'), 'stable');
-  assert.equal(attrs.get('data-icon'), 'orbit');
+  assert.equal(attrs.get('data-icon'), 'classic', 'the original mark is the only identity');
 });
 
 ok('the four icon presets exist on disk', () => {

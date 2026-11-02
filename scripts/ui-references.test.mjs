@@ -93,8 +93,8 @@ async function main() {
     fs.existsSync(path.join(OLYMPUS, 'src/app/api/olympus/ui-references/route.ts')),
     'the tab has no data route');
   const panelSrc = read('src/components/olympus/craft-apps-panel.tsx');
-  expect('J4: the Craft pane gains the References tab (search + the live demo embed + the copy-lane)',
-    panelSrc.includes("'references'") && panelSrc.includes('ui-references') && panelSrc.includes('copy lane'),
+  expect('J4: the Craft pane gains the References tab (search + the native study + the copy-lane)',
+    panelSrc.includes("'references'") && panelSrc.includes('ui-references') && panelSrc.includes('common.copyLane') && panelSrc.includes('ReferencePreview'),
     'the user cannot browse the references in-app');
   const refRouteSrc = read('src/app/api/olympus/ui-references/route.ts');
   expect('J4: the route probes the demo embedability (the honest frame verdict)',

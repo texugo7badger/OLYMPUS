@@ -33,6 +33,7 @@ interface DesignOption {
   imageUrl?: string;
   colors?: Array<{ role: string; hex: string }>;
   text?: string;
+  recommended?: boolean;
 }
 
 interface PendingChoice {
@@ -178,8 +179,11 @@ export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
               <div className="flex items-center gap-1.5 min-w-0">
                 {isSelected ? <Check size={11} className="text-olympus-purple shrink-0" /> : <Palette size={11} className="text-olympus-gold shrink-0" />}
                 <span className="text-[11px] font-mono font-semibold text-olympus-text truncate">{o.label}</span>
+                {o.recommended && (
+                  <span className="text-[7px] font-mono px-1 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 shrink-0 ml-auto">★ recommended</span>
+                )}
                 {o.kind && (
-                  <span className={cn('text-[8px] font-mono px-1 py-0.5 rounded ring-1 shrink-0 ml-auto', kindClass)}>
+                  <span className={cn('text-[8px] font-mono px-1 py-0.5 rounded ring-1 shrink-0', o.recommended ? '' : 'ml-auto', kindClass)}>
                     {o.kind}
                   </span>
                 )}

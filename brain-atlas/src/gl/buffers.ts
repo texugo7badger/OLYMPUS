@@ -112,6 +112,7 @@
  */
 
 import type { BrainGraph, BrainNode, LobeName } from "../types.ts";
+import { lobeColorsForPalette } from "../lobe-colors.ts";
 import type { SurfacePoint } from "../shape.ts";
 import { hexToRgb01 } from "./color.ts";
 
@@ -246,18 +247,6 @@ export const LOBE_INDEX: Record<LobeName, number> = {
   stem: 5
 };
 
-/**
- * LOBE_KIND: maps lobe name → palette.kinds key to look up the lobe color.
- * Matches render-core.ts LOBE_KIND and the spec's lobeColor definition.
- */
-const LOBE_KIND: Record<LobeName, string> = {
-  frontal: "project",
-  parietal: "concept",
-  temporal: "person",
-  occipital: "source",
-  cerebellum: "dailyNote",
-  stem: "index"
-};
 
 // ---- Types ----
 
@@ -380,8 +369,8 @@ export interface NodeBuffer {
 // ---- Helpers ----
 
 function lobeColor(lobe: LobeName, graph: BrainGraph): [number, number, number] {
-  const kindKey = LOBE_KIND[lobe];
-  const hex = graph.activePalette.kinds[kindKey] ?? graph.activePalette.hud;
+  // Same distinct-region resolver as the Canvas2D renderer (v0.0.34).
+  const hex = lobeColorsForPalette(graph.activePalette)[lobe] ?? graph.activePalette.hud;
   return hexToRgb01(hex);
 }
 

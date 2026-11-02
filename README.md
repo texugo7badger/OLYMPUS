@@ -7,10 +7,80 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.32, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.34, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
+
+
+## Screens
+
+<div align="center">
+
+| The Brain Atlas | The Pattern Studio |
+|---|---|
+| <img src="screenshots/01-brain.png" width="480" alt="OLYMPUS Brain Atlas — the regions in their own palette colors" /> | <img src="screenshots/04-studio.png" width="480" alt="OLYMPUS Pattern Studio — thoughts, connections, voice and chat" /> |
+
+| Every reference is a live study | The Style Board + Open Design wisdom |
+|---|---|
+| <img src="screenshots/02-references.png" width="480" alt="OLYMPUS References — 859 components, native interactive studies" /> | <img src="screenshots/03-style.png" width="480" alt="OLYMPUS Style Board — tokens, live preview and design wisdom" /> |
+
+| The Build Hub / talent carousel | Settings — appearance + language |
+|---|---|
+| <img src="screenshots/05-builds.png" width="480" alt="OLYMPUS Build Hub — themed talent icons" /> | <img src="screenshots/06-settings.png" width="480" alt="OLYMPUS Settings — the global language selector" /> |
+
+</div>
+
+A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.34 — the chameleon release.** The original OLYMPUS mark now follows the
+palette everywhere (app bar, favicon, window, tray, dock) — same SVG, same
+rings, same dots, only the colors change. The Pattern Studio maps every hop,
+verify and park as a **thought node** around the mark, with living cells and
+Van Gogh brushstrokes behind it; each god has a **calm neural voice** and a
+plasma-ring orb that expands while speaking. The studio chat answers the live
+walk (and introduces each god) in the selected language, and **all ten gods
+speak** through the free `edge-tts` lane. The reference catalog now carries
+**859 OriginKit + Skiper components**, deduped by name, with infinite scroll
+and a native interactive study on every card. Settings is a **real global
+language** (seven languages, instant, including the chat and the gods' names),
+the project Style Board gains Open Design wisdom and a browser-grade live
+preview, every talent icon follows the theme, and clicking a project opens a
+full profile card.
+
+## Languages — OLYMPUS is global
+
+The Settings selector applies instantly to the app chrome, the terminal, the
+build queue, the projects, the reference catalog, the Pattern Studio and the
+gods' replies. The chat carries the language to the model; the voices are
+chosen from the same language.
+
+| | | | | | | |
+|---|---|---|---|---|---|---|
+| **English** | **Português** | **Español** | **Français** | **Deutsch** | **日本語** | **中文** |
+
+God names and domains localize too — *Apolo, Atena, Hefesto, Perséfone* in
+Português; *Apollon, Athéna, Héphaïstos* in Français; *アポロン, アテナ* in
+日本語. Missing keys fall back to English, so a partial dictionary never
+renders blank.
+
+## Themes — twelve families and a palette lab
+
+Every theme repaints the app, the terminal, the brain, the loader, the tray and
+the system icon. The full gallery lives in [screenshots/THEMES.md](screenshots/THEMES.md);
+click a card to open it.
+
+| | | |
+|---|---|---|
+| [<img src="screenshots/themes/olympus.svg" width="220" alt="Olympus" />](screenshots/themes/olympus.svg) | [<img src="screenshots/themes/obsidian.svg" width="220" alt="Obsidian" />](screenshots/themes/obsidian.svg) | [<img src="screenshots/themes/ember.svg" width="220" alt="Ember" />](screenshots/themes/ember.svg) |
+| [<img src="screenshots/themes/violet.svg" width="220" alt="Violet" />](screenshots/themes/violet.svg) | [<img src="screenshots/themes/forest.svg" width="220" alt="Forest" />](screenshots/themes/forest.svg) | [<img src="screenshots/themes/ice.svg" width="220" alt="Ice" />](screenshots/themes/ice.svg) |
+| [<img src="screenshots/themes/parchment.svg" width="220" alt="Parchment" />](screenshots/themes/parchment.svg) | [<img src="screenshots/themes/paper.svg" width="220" alt="Paper" />](screenshots/themes/paper.svg) | [<img src="screenshots/themes/mist.svg" width="220" alt="Mist" />](screenshots/themes/mist.svg) |
+| [<img src="screenshots/themes/blossom.svg" width="220" alt="Blossom" />](screenshots/themes/blossom.svg) | [<img src="screenshots/themes/sand.svg" width="220" alt="Sand" />](screenshots/themes/sand.svg) | [<img src="screenshots/themes/mint.svg" width="220" alt="Mint" />](screenshots/themes/mint.svg) |
+
+Beyond the presets, the **palette lab** generates all 14 colors of a family
+from a hue + harmony, with contrast floors (text ≥ 7:1, dim ≥ 4.5:1, accent
+≥ 3:1). Apply it and every surface follows — including the OS icon.
+
 
 ## What is OLYMPUS?
 
@@ -37,7 +107,7 @@ OLYMPUS runs as a **standalone desktop application** — it opens its own window
 ```bash
 # 1. Download the latest AppImage from GitHub Releases:
 #    https://github.com/texugo7badger/olympus/releases
-#    OLYMPUS-0.0.32-linux-x86_64.AppImage (~482 MB)
+#    OLYMPUS-0.0.34-linux-x86_64.AppImage (~482 MB)
 
 # 2. Make it executable and run:
 chmod +x OLYMPUS-*.AppImage

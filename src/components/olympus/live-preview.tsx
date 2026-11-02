@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import OlympusLoader from './olympus-loader';
-import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
@@ -46,6 +46,11 @@ export default function LivePreview() {
   const [urlDraft, setUrlDraft] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
   const urlFocusedRef = useRef(false);
+  // v0.0.34 — browser-grade history: back/forward through the URLs the user
+  // navigated to, a reload key for the frame, and a visible position.
+  const [historyStack, setHistoryStack] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [iframeKey, setIframeKey] = useState(0);
 
   const port = activeProject?.livePreviewPort || DEFAULT_PORT;
   // #102: the pre-first-probe guess ONLY — once a probe settles, effectiveUrl
@@ -150,6 +155,41 @@ export default function LivePreview() {
   useEffect(() => {
     if (!urlFocusedRef.current) setUrlDraft(customUrl ?? effectiveUrl);
   }, [effectiveUrl, customUrl]);
+  useEffect(() => {
+    if (historyStack.length === 0) {
+      setHistoryStack([effectiveUrl]);
+      setHistoryIndex(0);
+    }
+  }, [effectiveUrl, historyStack.length]);
+
+  const pushHistory = useCallback((url: string) => {
+    setHistoryStack((prev) => {
+      const base = prev.slice(0, historyIndex + 1);
+      if (base[base.length - 1] !== url) base.push(url);
+      setHistoryIndex(base.length - 1);
+      return base;
+    });
+  }, [historyIndex]);
+
+  const goHistory = useCallback((dir: -1 | 1) => {
+    const next = historyIndex + dir;
+    if (next < 0 || next >= historyStack.length) return;
+    const url = historyStack[next];
+    let probed: string | null = null;
+    try { probed = new URL(effectiveUrl).toString(); } catch { /* malformed */ }
+    setHistoryIndex(next);
+    setUrlError(null);
+    setIframeLoaded(false);
+    setIframeKey((k) => k + 1);
+    setUrlDraft(url);
+    if (url === probed) {
+      setCustomUrl(null);
+      try { localStorage.removeItem(urlStorageKey); } catch { /* storage unavailable */ }
+    } else {
+      setCustomUrl(url);
+      try { localStorage.setItem(urlStorageKey, url); } catch { /* storage unavailable */ }
+    }
+  }, [historyIndex, historyStack, effectiveUrl, urlStorageKey]);
 
   const commitUrl = useCallback(() => {
     const result = normalizePreviewUrl(urlDraft);
@@ -161,6 +201,8 @@ export default function LivePreview() {
     try { probed = new URL(effectiveUrl).toString(); } catch { /* probe url malformed */ }
     setUrlError(null);
     setIframeLoaded(false);
+    setIframeKey((k) => k + 1);
+    pushHistory(result.url);
     if (result.url === probed) {
       setCustomUrl(null);
       try { localStorage.removeItem(urlStorageKey); } catch { /* storage unavailable */ }
@@ -168,7 +210,7 @@ export default function LivePreview() {
       setCustomUrl(result.url);
       try { localStorage.setItem(urlStorageKey, result.url); } catch { /* storage unavailable */ }
     }
-  }, [urlDraft, effectiveUrl, urlStorageKey]);
+  }, [urlDraft, effectiveUrl, urlStorageKey, pushHistory]);
 
   const resetUrl = useCallback(() => {
     setCustomUrl(null);
@@ -212,6 +254,28 @@ export default function LivePreview() {
           project lane, and "reset" returns to the probed origin. */}
       <div className="shrink-0 border-b border-olympus-gold/10 bg-olympus-bg/60 px-3 py-1">
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button
+              onClick={() => goHistory(-1)}
+              disabled={historyIndex <= 0}
+              aria-label="Back"
+              data-tip="Back"
+              className="p-1 rounded text-olympus-text-dim hover:text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-30 disabled:hover:bg-transparent"
+            ><ChevronLeft size={12} /></button>
+            <button
+              onClick={() => goHistory(1)}
+              disabled={historyIndex >= historyStack.length - 1}
+              aria-label="Forward"
+              data-tip="Forward"
+              className="p-1 rounded text-olympus-text-dim hover:text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-30 disabled:hover:bg-transparent"
+            ><ChevronRight size={12} /></button>
+            <button
+              onClick={() => { setIframeLoaded(false); setIframeKey((k) => k + 1); }}
+              aria-label="Reload preview"
+              data-tip="Reload"
+              className="p-1 rounded text-olympus-text-dim hover:text-olympus-gold hover:bg-olympus-gold/10"
+            ><RefreshCw size={11} /></button>
+          </div>
           <span className="text-[9px] font-mono text-olympus-text-dim shrink-0">url</span>
           <input
             type="text"
@@ -276,7 +340,7 @@ export default function LivePreview() {
 
       <div ref={containerRef} className={cn('flex-1 min-h-0 relative', markMode && 'cursor-crosshair')} onClick={handleContainerClick}>
         {(isRunning || customUrl) && (
-          <iframe src={frameUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" data-tip="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
+          <iframe key={iframeKey} src={frameUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" data-tip="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
         )}
         {showOverlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-olympus-bg">

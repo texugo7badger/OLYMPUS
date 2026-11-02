@@ -18,11 +18,14 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import OlympusLoader from './olympus-loader';
-import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload, Palette, Sparkles } from 'lucide-react';
+import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload, Palette, Sparkles, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
 import ArtcraftStyleBoard from './artcraft-style-board';
 import DesignBuildsPanel from './design-builds-panel';
+import ReferencePreview from './reference-preview';
+import { previewFor } from '@/lib/reference-previews';
+import { useLanguage, t, categoryName, searchTerms } from '@/lib/i18n';
 
 interface CraftApp {
   id: string;
@@ -91,6 +94,7 @@ interface UiRef {
 }
 
 export default function CraftAppsPanel({ initialApp }: { initialApp?: string | null }) {
+  const language = useLanguage();
   const [apps, setApps] = useState<CraftApp[]>([]);
   const [studio, setStudio] = useState<CraftApp | null>(null);
   const [probes, setProbes] = useState<Record<string, Probe>>({});
@@ -102,13 +106,17 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const [uiRefs, setUiRefs] = useState<UiRef[]>([]);
   const [refSearch, setRefSearch] = useState('');
   const [refView, setRefView] = useState<UiRef | null>(null);
+  const [refVariant, setRefVariant] = useState('');
   // v0.0.32 — live previews: at most 3 iframes (60fps), hover promotes one.
   const [refCat, setRefCat] = useState('all');
+  const [refLib, setRefLib] = useState('all');
+  const [refLimit, setRefLimit] = useState(60);
   const [pendingRef, setPendingRef] = useState<{ name: string; demoUrl: string; category: string; library: string } | null>(null);
   // #198 — the OriginKit free-tier budget (10 fetches/day), surfaced in the
   // References tab so exhaustion never looks like a broken lane.
   const [originkitBudget, setOriginkitBudget] = useState<{ limit: number; remaining: number; exhausted: boolean; resetAt: string } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async (check = false) => {
     setLoading(true);
@@ -138,10 +146,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
     } catch { /* the honest empty */ }
   }, []);
   useEffect(() => { loadRefs(''); }, [loadRefs]);
-  useEffect(() => {
-    const t = setTimeout(() => loadRefs(refSearch), 350);
-    return () => clearTimeout(t);
-  }, [refSearch, loadRefs]);
+  useEffect(() => { setRefLimit(60); }, [refCat, refLib, refSearch]);
 
   // #198 — poll the budget while the References tab is open (a god may fetch
   // while the user watches; the count stays honest).
@@ -280,10 +285,40 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
 
   const fmtMb = (b?: number) => (b ? `${(b / 1e6).toFixed(1)} MB` : '');
 
-  // v0.0.32 — reference categories + the live-preview slot policy (max 3
-  // iframes; a card entering the viewport asks for a slot, hover promotes).
+  // v0.0.34 — the full catalog (860+). Filter by category AND library, then
+  // page the grid (60 at a time) so the DOM stays light; the preview canvas
+  // mounts only near the viewport.
   const refCats = ['all', ...Array.from(new Set(uiRefs.map((r) => r.category)))];
-  const visibleRefs = uiRefs.filter((r) => refCat === 'all' || r.category === refCat);
+  const query = refSearch.trim().toLowerCase();
+  const queryTerms = searchTerms(refSearch, language);
+  const filteredRefs = uiRefs.filter((r) => {
+    if (refCat !== 'all' && r.category !== refCat) return false;
+    if (refLib !== 'all' && r.library !== refLib) return false;
+    if (!query) return true;
+    const hay = `${r.id} ${r.name} ${r.category} ${r.what} ${categoryName(r.category, language)}`.toLowerCase();
+    return hay.includes(query) || queryTerms.some((term) => hay.includes(term));
+  });
+  const visibleRefs = filteredRefs.slice(0, refLimit);
+
+  // v0.0.34 — infinite scroll: the sentinel loads the next 60 a little
+  // BEFORE the user reaches it (900px). No button, no jank: the cards mount
+  // lazily and the preview canvas only exists near the viewport.
+  useEffect(() => {
+    if (tab !== 'references' || refView) return;
+    const el = loadMoreRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setRefLimit((n) => Math.min(n + 60, filteredRefs.length));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setRefLimit((n) => Math.min(n + 60, filteredRefs.length));
+      }
+    }, { rootMargin: '900px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [tab, refView, filteredRefs.length, visibleRefs.length]);
   // v0.0.32 — the Originkit demo requires a session; embedding it showed a
   // login wall. Use = carry the reference into the project's Style Board;
   // Queue = a design task for Athena (priority high).
@@ -352,17 +387,33 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                     onClick={() => { try { navigator.clipboard.writeText(refView.fetchLane); } catch { /* best-effort */ } }}
                     data-tip="Copy the fetch/install lane"
                     className="ml-auto text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20 shrink-0"
-                  >copy lane</button>
+                  >{t('common.copyLane', language)}</button>
                   <a href={refView.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold px-1 shrink-0"><ExternalLink size={10} /></a>
                 </div>
-                {(refView.probe.frameable || refView.probe.inconclusive) ? (
-                  <iframe src={refView.demoUrl} className="flex-1 w-full bg-white" title={refView.name} data-tip={refView.name} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals" />
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center p-8">
-                    <p className="text-olympus-text text-xs font-mono">{refView.name}: {refView.probe.ok ? 'the demo blocks embedding (upstream frame policy)' : refView.probe.httpStatus === 404 ? 'demo not found at the catalog URL (404) — use the fetch lane' : 'demo unreachable right now'}</p>
-                    <a href={refView.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] font-mono px-2.5 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25"><ExternalLink size={10} /> open the demo externally</a>
-                  </div>
-                )}
+                {/* v0.0.34 — the component ONLY. No vendor page, no login
+                    banner, no site chrome. The study is native and interactive. */}
+                <div className="flex-1 min-h-[280px] bg-olympus-card">
+                  <ReferencePreview referenceId={refView.id} label={refView.name} variant={refVariant || previewFor(refView).variants[0]} kind={previewFor(refView).kind} />
+                </div>
+                <div className="shrink-0 flex items-center gap-1.5 flex-wrap px-3 py-2 border-t border-olympus-gold/10 bg-olympus-panel/80">
+                  <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">{t('common.variation', language)}</span>
+                  {previewFor(refView).variants.map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setRefVariant(v)}
+                      aria-pressed={(refVariant || previewFor(refView).variants[0]) === v}
+                      className={cn(
+                        'text-[9px] font-mono px-2 py-0.5 rounded-full border transition-colors',
+                        (refVariant || previewFor(refView).variants[0]) === v
+                          ? 'border-olympus-gold/60 bg-olympus-gold/15 text-olympus-gold'
+                          : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text',
+                      )}
+                    >{v}</button>
+                  ))}
+                  <span className="text-[8px] font-mono text-olympus-text-dim hidden md:inline">· interactive — move the pointer</span>
+                  <button onClick={() => applyReference(refView)} className="ml-auto text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
+                  <button onClick={() => void queueReference(refView)} className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">{t('common.queue', language)}</button>
+                </div>
               </div>
             ) : (
               <>
@@ -370,9 +421,22 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   <input
                     value={refSearch}
                     onChange={(e) => setRefSearch(e.target.value)}
-                    placeholder="search references — black hole, smoky text, carousel, tooltip…"
+                    placeholder={t('references.search', language)}
                     className="w-full bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-gold/50"
                   />
+                  <div className="flex items-center gap-1 mt-1.5">
+                    <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">library</span>
+                    {['all', 'originkit', 'skiper'].map((lib) => (
+                      <button
+                        key={lib}
+                        onClick={() => setRefLib(lib)}
+                        className={cn('text-[8px] font-mono px-1.5 py-0.5 rounded-full border uppercase tracking-wide transition-colors', refLib === lib ? 'border-olympus-cyan/50 bg-olympus-cyan/10 text-olympus-cyan' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}
+                      >
+                        {lib === 'all' ? 'all' : lib === 'originkit' ? 'OriginKit' : 'Skiper'}
+                      </button>
+                    ))}
+                    <span className="ml-auto text-[8px] font-mono text-olympus-text-dim tabular-nums">{t('references.count', language, { n: filteredRefs.length.toLocaleString() })}</span>
+                  </div>
                   <div className="flex items-center gap-1 mt-1.5 overflow-x-auto custom-scroll pb-0.5">
                     {refCats.map((cat) => (
                       <button
@@ -380,12 +444,12 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                         onClick={() => setRefCat(cat)}
                         className={cn('shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-full border uppercase tracking-wide transition-colors', refCat === cat ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}
                       >
-                        {cat} {cat !== 'all' && <span className="opacity-60">{uiRefs.filter((r) => r.category === cat).length}</span>}
+                        {cat === 'all' ? t('common.all', language) : categoryName(cat, language)} {cat !== 'all' && <span className="opacity-60">{uiRefs.filter((r) => (refLib === 'all' || r.library === refLib) && r.category === cat).length}</span>}
                       </button>
                     ))}
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-1">
-                    <p className="text-[8px] font-mono text-olympus-text-dim">OriginKit (free key MCP) + Skiper UI (shadcn registry) — curated inspiration; the [OLYMPUS-DESIGN] marker carries the marquee list to the gods.</p>
+                    <p className="text-[8px] font-mono text-olympus-text-dim">{t('references.hint', language)}</p>
                     {originkitBudget && (
                       <span
                         data-tip={originkitBudget.exhausted
@@ -405,7 +469,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scroll p-3">
-                  <div className="grid grid-cols-2 xl:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                     {visibleRefs.map((r) => (
                       <ReferenceCard
                         key={r.id}
@@ -416,7 +480,18 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                       />
                     ))}
                   </div>
-                  {visibleRefs.length === 0 && <p className="text-center py-8 text-olympus-text-dim text-xs font-mono">no references match — try a broader term</p>}
+                  {visibleRefs.length === 0 && <p className="text-center py-8 text-olympus-text-dim text-xs font-mono">{t('references.noMatch', language)}</p>}
+                  {visibleRefs.length > 0 && visibleRefs.length < filteredRefs.length && (
+                    <div ref={loadMoreRef} className="h-10 flex items-center justify-center gap-2 text-[9px] font-mono text-olympus-text-dim">
+                      <span className="w-1.5 h-1.5 rounded-full bg-olympus-gold animate-pulse" />
+                      loading the next references… {(filteredRefs.length - visibleRefs.length).toLocaleString()} left
+                    </div>
+                  )}
+                  {visibleRefs.length > 0 && visibleRefs.length >= filteredRefs.length && (
+                    <div className="h-10 flex items-center justify-center text-[9px] font-mono text-olympus-text-dim">
+                      end of the catalog · {t('references.count', language, { n: filteredRefs.length.toLocaleString() })}
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -446,7 +521,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
               </button>
             )}
             {/* The 13 apps grid — the vendored truth per card */}
-            <div className="grid grid-cols-2 xl:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
               {apps.map((a) => {
                 const v = vendor[a.id];
                 const job = jobFor(a.id);
@@ -632,10 +707,13 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
 }
 
 /**
- * v0.0.32 — a reference card with a LIVE preview. At most three iframes run
- * at once (the parent enforces it); the card asks for a slot when it enters
- * the viewport and promotes itself on hover. The iframe is pointer-events-none
- * so the card stays one click target; the detail view has the full embed.
+ * v0.0.34 — a reference card showing the COMPONENT, not the vendor page.
+ *
+ * The whole 220px stage is a native, interactive study (category-specific
+ * canvas renderer). Every control lives BELOW the stage in OLYMPUS chrome:
+ * the variations are OLYMPUS buttons, and use / queue / details sit in the
+ * footer. No iframe, no login banner, no site chrome — and all visible cards
+ * animate at once, so the grid can be scanned without hovering.
  */
 function ReferenceCard({
   reference,
@@ -648,33 +726,46 @@ function ReferenceCard({
   onUse: () => void;
   onQueue: () => void;
 }) {
-  const [hovered, setHovered] = useState(false);
-  // One animated icon at a time (the hovered card) — 24 simultaneous SVG
-  // animations would cost the frame budget for no information.
-  const preview = hovered ? '/build-icons/design.svg' : '/build-icons/static/design.svg';
+  const language = useLanguage();
+  const spec = previewFor(reference);
+  const [variant, setVariant] = useState(spec.variants[0]);
   return (
     <div
       className="rounded-lg bg-olympus-card border border-olympus-gold/10 hover:border-olympus-gold/40 transition-colors text-left group overflow-hidden"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '360px' }}
     >
-      <button onClick={onOpen} className="w-full text-left">
-        <div className="relative h-[96px] w-full bg-[radial-gradient(circle_at_30%_20%,rgba(212,165,116,0.10),transparent_60%)] flex items-center justify-center">
-          <img src={preview} alt="" width={54} height={54} loading="lazy" />
-          <span className="absolute top-1 right-1 text-[7px] font-mono px-1 py-0.5 rounded bg-olympus-bg/80 text-olympus-cyan uppercase">live</span>
+      <div className="relative h-[220px] w-full overflow-hidden">
+        <ReferencePreview referenceId={reference.id} label={reference.name} variant={variant} kind={spec.kind} />
+      </div>
+      <div className="px-3 pt-2">
+        <div className="flex items-center gap-1.5">
+          <button onClick={onOpen} className="text-[12px] font-mono font-semibold text-olympus-text truncate hover:text-olympus-gold text-left">{reference.name}</button>
+          {!reference.free && <span className="text-[7px] font-mono px-1 rounded bg-olympus-amber-soft/10 text-olympus-amber-soft ring-1 ring-olympus-amber-soft/25 shrink-0 uppercase">premium</span>}
+          <span className="ml-auto text-[7px] font-mono text-olympus-cyan/70 uppercase tracking-wide shrink-0">{t('common.liveStudy', language)}</span>
         </div>
-        <div className="px-2.5 pt-1.5">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-mono font-semibold text-olympus-text truncate group-hover:text-olympus-gold">{reference.name}</span>
-            {!reference.free && <span className="text-[7px] font-mono px-1 rounded bg-olympus-amber-soft/10 text-olympus-amber-soft ring-1 ring-olympus-amber-soft/25 shrink-0 uppercase">premium</span>}
-          </div>
-          <div className="text-[8px] font-mono text-olympus-cyan/80 uppercase tracking-wide mt-0.5">{reference.library} · {reference.category}</div>
-          <p className="text-[9px] font-mono text-olympus-text-dim mt-1 leading-relaxed line-clamp-2">{reference.what}</p>
-        </div>
-      </button>
-      <div className="flex items-center gap-1 px-2.5 pb-2 pt-1.5">
-        <button onClick={onUse} className="flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">use</button>
-        <button onClick={onQueue} className="flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">send to queue</button>
+        <div className="text-[8px] font-mono text-olympus-cyan/80 uppercase tracking-wide mt-0.5">{reference.library} · {reference.category}</div>
+        <p className="text-[10px] font-mono text-olympus-text-dim mt-1 leading-relaxed line-clamp-2">{reference.what}</p>
+      </div>
+      <div className="flex items-center gap-1 flex-wrap px-3 pt-1.5">
+        <span className="text-[7px] font-mono uppercase tracking-wide text-olympus-text-dim">{t('common.variation', language)}</span>
+        {spec.variants.map((v) => (
+          <button
+            key={v}
+            onClick={() => setVariant(v)}
+            aria-pressed={variant === v}
+            className={cn(
+              'text-[8px] font-mono px-1.5 py-0.5 rounded-full border transition-colors',
+              variant === v
+                ? 'border-olympus-gold/60 bg-olympus-gold/15 text-olympus-gold'
+                : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text',
+            )}
+          >{v}</button>
+        ))}
+      </div>
+      <div className="flex items-center gap-1 px-3 pb-2 pt-1.5">
+        <button onClick={onUse} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
+        <button onClick={onQueue} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">{t('common.queue', language)}</button>
+        <button onClick={onOpen} data-tip="Open the component details" aria-label={`Open ${reference.name} details`} className="ml-auto text-olympus-text-dim hover:text-olympus-gold p-1.5 rounded hover:bg-olympus-gold/10"><Maximize2 size={12} /></button>
       </div>
     </div>
   );

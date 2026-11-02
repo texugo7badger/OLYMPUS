@@ -9,7 +9,7 @@ import { useOlympus, GOD_ICONS } from '@/lib/olympus-store';
 import {
  Wifi, WifiOff, DollarSign, Key, Terminal,
  Minus, Square, X, Copy, PanelLeftClose, PanelLeftOpen,
- Lightbulb, Gauge, Layers, Users,
+ Lightbulb, Gauge, Layers, Users, Sparkles as StudioIcon, Mic,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -23,8 +23,8 @@ import { useDocVisible } from '@/lib/use-doc-visible';
 import ThemedLogo from './themed-logo';
 import NotificationCenter from './notification-center';
 import ImmersivePanel from './immersive-panel';
-import { Sparkles as StudioIcon } from 'lucide-react';
 import { useTheme } from '@/lib/theme-store';
+import { useLanguage, t } from '@/lib/i18n';
 
 interface ProviderInfo {
  name: string; isFree: boolean; displayName: string; capsDisplay: string;
@@ -66,6 +66,7 @@ export default function StatusBar({
   const docVisible = useDocVisible();
  const activeGod = useOlympus(s => s.activeGod);
   const [theme] = useTheme();
+  const language = useLanguage();
   const [studio, setStudio] = useState(false);
  // W-D1: the idle fallback reads the user's SELECTED god (its own comment
  // always claimed it) — activeGod alone is the live session, reset to
@@ -171,11 +172,11 @@ export default function StatusBar({
 	 {/* LEFT SIDE: logo + window controls + Compact Brain + focus mode + nav info */}
  <div className="flex items-center gap-3 min-w-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
  <div className="flex items-center gap-1.5 text-olympus-gold font-semibold shrink-0">
- <ThemedLogo iconId={theme.iconId} size={20} />
+ <ThemedLogo iconId="classic" size={20} />
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.32'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.34'}
    </span>
 )}
  </div>
@@ -196,6 +197,18 @@ export default function StatusBar({
 
  {/* v0.0.32 — notifications + the sleep contract. */}
 		 <NotificationCenter />
+		 {/* v0.0.34 — the ART & CREATIVITY mode, always visible: the studio
+		     opens the particle/voice surface (TTS in the chosen language). */}
+		 <button
+		   onClick={() => setStudio(true)}
+		   aria-label={t('status.artStudioTip', language)}
+		   data-tip={t('status.artStudioTip', language)}
+		   className="flex items-center gap-1.5 h-5 px-2 rounded-full shrink-0 bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20 transition-colors"
+		 >
+		   <StudioIcon size={11} className="text-olympus-gold" />
+		   <span className="text-[9px] font-mono font-semibold">{t('status.artStudio', language)}</span>
+		   <Mic size={9} className="text-olympus-cyan" />
+		 </button>
 		 {studio && <ImmersivePanel onClose={() => setStudio(false)} />}
 
 		 {/* Compact Brain button — to the RIGHT of Focus Mode. */}

@@ -52,7 +52,8 @@ export interface ThemeIcon {
 }
 
 export const THEME_ICONS: ThemeIcon[] = [
-  { id: 'classic', name: 'Classic peak', src: '/logo.svg' },
+  // The original mark is the priority identity — app bar, window, tray, dock.
+  { id: 'classic', name: 'Original OLYMPUS (recommended)', src: '/logo.svg' },
   { id: 'orbit', name: 'Orbit', src: '/icons/olympus-orbit.svg' },
   { id: 'peak', name: 'Minimal peak', src: '/icons/olympus-peak.svg' },
   { id: 'monogram', name: 'Monogram', src: '/icons/olympus-monogram.svg' },
@@ -188,7 +189,10 @@ export function normalizeThemeState(input: unknown): ThemeState {
     mode: presetById(preset).mode,
     accent,
     ...(custom ? { custom } : {}),
-    iconId: typeof raw.iconId === 'string' && THEME_ICONS.some((i) => i.id === raw.iconId) ? raw.iconId : 'classic',
+    // v0.0.34 — the ORIGINAL OLYMPUS mark is the only identity: the icon
+    // family selector is gone, and old stores are coerced to classic so the
+    // app bar, tray, window, dock and favicon all show the same logo.
+    iconId: 'classic',
     motion: isMotionMode(raw.motion) ? raw.motion : 'full',
   };
 }
@@ -236,6 +240,19 @@ export function applyTheme(state: ThemeState, root: ApplyTarget): ThemeState {
   root.setAttribute('data-mode', normalized.mode);
   root.setAttribute('data-motion', normalized.motion);
   root.setAttribute('data-icon', normalized.iconId);
+  // v0.0.34 — the boot surface follows the saved mode BEFORE React paints:
+  // the .dark class, color-scheme and the browser/PWA theme-color all move.
+  try {
+    const el = root as unknown as { classList?: { toggle: (c: string, on: boolean) => void }; style: { colorScheme?: string } };
+    el.classList?.toggle('dark', normalized.mode === 'dark');
+    if (el.style) el.style.colorScheme = normalized.mode;
+  } catch { /* non-DOM target */ }
+  try {
+    if (typeof document !== 'undefined') {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', palette.bg);
+    }
+  } catch { /* non-DOM */ }
   return normalized;
 }
 
@@ -262,8 +279,25 @@ export interface ThemePayload extends ThemeState {
   icons: ThemeIcon[];
 }
 
-/** A tiny themed favicon (the peak in the accent) for the browser/window tab. */
+/**
+ * The themed favicon — the ORIGINAL mark in the active palette (two rings,
+ * the peak, the eight gods in orbit, Callimachus above and Atlas at the
+ * base), matching the status bar and the system icon.
+ */
 export function themedFaviconSvg(state: ThemeState): string {
   const c = resolvePalette(state);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${c.bg}"/><circle cx="32" cy="32" r="24" fill="none" stroke="${c.gold}" stroke-width="1.5" opacity=".5"/><path d="M32 18 L46 46 L39 46 L32 32 L25 46 L18 46 Z" fill="${c.gold}"/><circle cx="32" cy="15" r="2.4" fill="${c.purple}"/></svg>`;
+  const dot = (x: number, y: number, r: number, fill: string, opacity = 1) =>
+    `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"${opacity < 1 ? ` opacity="${opacity}"` : ''}/>`;
+  // public/logo.svg scaled 0.25 into a 64px badge — same points, same radii.
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="31" fill="${c.bg}"/>`
+    + `<circle cx="32" cy="32" r="28" fill="none" stroke="${c.gold}" stroke-width="0.375" opacity=".4"/>`
+    + `<circle cx="32" cy="32" r="24" fill="none" stroke="${c.gold}" stroke-width="0.25" opacity=".25"/>`
+    + `<path d="M32 19 L42 42 L36 42 L32 33 L28 42 L22 42 Z" fill="${c.gold}"/>`
+    + dot(32, 15, 0.75, c.purple) + dot(32, 42, 0.75, c.gold)
+    + dot(32, 6, 1, c.gold) + dot(50.4, 13.6, 0.875, c.gold, 0.85)
+    + dot(58, 32, 1, c.gold) + dot(50.4, 50.4, 0.875, c.gold, 0.85)
+    + dot(32, 58, 1, c.gold) + dot(13.6, 50.4, 0.875, c.gold, 0.85)
+    + dot(6, 32, 1, c.gold) + dot(13.6, 13.6, 0.875, c.gold, 0.85)
+    + `<g stroke="${c.gold}" stroke-width="0.125" opacity=".15"><path d="M32 32V6M32 32H58M32 32V58M32 32H6M32 32L50.4 13.6M32 32L50.4 50.4M32 32L13.6 50.4M32 32L13.6 13.6"/></g>`
+    + `</svg>`;
 }

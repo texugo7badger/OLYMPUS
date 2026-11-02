@@ -270,10 +270,9 @@ export default function ContextIndicator({
           className={cn(
             'flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono',
             'transition-all',
-            'ring-1 ring-olympus-gold/30 bg-olympus-gold/10 hover:bg-olympus-gold/20',
+            'bg-olympus-gold text-olympus-bg font-semibold ring-1 ring-olympus-gold/50 hover:brightness-110',
             starting && 'opacity-70 cursor-wait',
           )}
-          style={{ color: '#D4A574' }}
           aria-label="Start a fresh session — clears the conversation and restarts the warm server"
         >
           {starting ? (

@@ -5,6 +5,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLanguage, t, godName, godDomain } from '@/lib/i18n';
 import { useOlympus, GOD_ICONS, GOD_DOMAINS } from '@/lib/olympus-store';
 import { Cpu, Zap, Clock, TrendingUp, Activity as ActivityIcon, BookOpenText, FileText, FlaskConical, Plus, Check, Trash2, Flag, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -74,6 +75,7 @@ export default function GodDetail() {
  const GodIcon = god ? GOD_ICONS[god] : null;
  const domain = god ? GOD_DOMAINS[god] : null;
  const [dispatch, setDispatch] = useState<DispatchInfo | null>(null);
+ const language = useLanguage();
  const [stats, setStats] = useState<GodStats | null>(null);
  // v0.0.32 — the human's intent between dispatches (planning / attention).
  const [notes, setNotes] = useState<GodNote[]>([]);
@@ -254,8 +256,8 @@ export default function GodDetail() {
  <GodIcon size={22} className="text-olympus-gold" />
  </div>
  <div className="min-w-0">
- <h2 className="text-base font-semibold text-olympus-gold">{god ? god.charAt(0).toUpperCase() + god.slice(1) : ''}</h2>
- {domain && <p className="text-[10px] text-olympus-text-dim font-mono truncate">{domain}</p>}
+ <h2 className="text-base font-semibold text-olympus-gold">{godName(god, language)}</h2>
+ {domain && <p className="text-[10px] text-olympus-text-dim font-mono truncate">{godDomain(god, language) || domain}</p>}
  </div>
  </div>
  </div>
@@ -264,15 +266,15 @@ export default function GodDetail() {
  {/* Live stats — all 9 gods (including Callimachus, which now dispatches) */}
  {stats && (
  <div className="grid grid-cols-2 gap-1.5">
- <Stat label="Dispatches" value={String(stats.dispatchCount)} icon={ActivityIcon} color="text-olympus-gold" />
+ <Stat label={t('god.dispatches', language)} value={String(stats.dispatchCount)} icon={ActivityIcon} color="text-olympus-gold" />
  <Stat
- label="Short-circuit hits"
+ label={t('god.shortCircuit', language)}
  value={`${(stats.shortCircuitHitRate * 100).toFixed(0)}%`}
  icon={Zap}
  color={stats.shortCircuitHitRate > 0.3 ? 'text-olympus-green' : 'text-olympus-text-dim'}
  />
  <Stat
- label={`Success (${stats.dispatchCount} disp.)`}
+ label={`${t('god.success', language)} (${stats.dispatchCount} disp.)`}
  value={stats.successRate.allTime === null ? '—' : `${(stats.successRate.allTime * 100).toFixed(0)}%`}
  icon={TrendingUp}
  color={stats.successRate.allTime === null ? 'text-olympus-text-dim' :
@@ -280,7 +282,7 @@ export default function GodDetail() {
  stats.successRate.allTime > 0.6 ? 'text-olympus-amber-soft' : 'text-olympus-red'}
  />
  <Stat
- label="Avg latency"
+ label={t('god.avgLatency', language)}
  value={stats.avgDurationMs !== null ? formatDuration(stats.avgDurationMs) : '—'}
  icon={Clock}
  color="text-olympus-cyan"
@@ -297,7 +299,7 @@ export default function GodDetail() {
  <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card/50 p-2.5">
    <div className="flex items-center gap-1.5 mb-1.5">
      <ClipboardList size={11} className="text-olympus-gold" />
-     <span className="text-[10px] font-semibold text-olympus-text-dim uppercase tracking-wide">planning &amp; attention</span>
+     <span className="text-[10px] font-semibold text-olympus-text-dim uppercase tracking-wide">{t('god.planning', language)}</span>
      {notes.filter((n) => !n.done && n.kind === 'attention').length > 0 && (
        <span className="ml-auto flex items-center gap-1 text-[9px] font-mono text-olympus-red">
          <Flag size={9} /> {notes.filter((n) => !n.done && n.kind === 'attention').length} open
@@ -319,7 +321,7 @@ export default function GodDetail() {
        value={noteText}
        onChange={(e) => setNoteText(e.target.value)}
        onKeyDown={(e) => { if (e.key === 'Enter') void addNote(); }}
-       placeholder="e.g. the next plan must land the login before the deck"
+       placeholder={t('god.notesPlaceholder', language)}
        className="flex-1 min-w-0 bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[10px] font-mono text-olympus-text placeholder:text-olympus-text-dim outline-none focus:border-olympus-gold/50"
      />
      <button
@@ -345,7 +347,7 @@ export default function GodDetail() {
      </div>
    )}
    {notes.length === 0 && (
-     <p className="mt-1.5 text-[9px] font-mono text-olympus-text-dim">No notes — leave a plan line or an attention flag for this god.</p>
+     <p className="mt-1.5 text-[9px] font-mono text-olympus-text-dim">{t('god.noNotes', language)}</p>
    )}
  </div>
 
@@ -363,7 +365,7 @@ export default function GodDetail() {
  <div>
  <div className="flex items-center gap-1.5 mb-2 text-[10px] font-semibold text-olympus-text-dim uppercase tracking-wide">
  <Cpu size={11} className="text-olympus-gold" />
- demigods ({dispatch.demigods.length})
+ {t('god.demigods', language)} ({dispatch.demigods.length})
  </div>
  <div className="space-y-1">
  {dispatch.demigods.map((a, i) => {
@@ -409,9 +411,9 @@ export default function GodDetail() {
  {/* Empty state for gods with no demigods */}
  {dispatch && dispatch.demigods.length === 0 && (
  <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card/40 p-3 text-center">
- <p className="text-[11px] text-olympus-text font-mono mb-1">No demigods</p>
+ <p className="text-[11px] text-olympus-text font-mono mb-1">{t('god.noDemigods', language)}</p>
  <p className="text-[10px] text-olympus-text-dim font-mono">
- {god.charAt(0).toUpperCase() + god.slice(1)} handles tasks directly without delegating to demigods.
+ {t('god.noDemigodsBody', language, { god: godName(god, language) })}
  </p>
  </div>
  )}
@@ -419,7 +421,7 @@ export default function GodDetail() {
  {/* Skills arsenal — clickable chips */}
  {dispatch && dispatch.skills.length > 0 && (
  <div>
- <div className="text-[10px] font-semibold text-olympus-text-dim uppercase tracking-wide mb-1.5">Skills</div>
+ <div className="text-[10px] font-semibold text-olympus-text-dim uppercase tracking-wide mb-1.5">{t('god.skills', language)}</div>
  <div className="flex flex-wrap gap-1">
  {dispatch.skills.map(s => (
  <span
@@ -436,7 +438,7 @@ export default function GodDetail() {
  {/* MCPs — clickable chips */}
  {dispatch && dispatch.mcps.length > 0 && (
  <div>
- <div className="text-[10px] font-semibold text-olympus-text-dim uppercase tracking-wide mb-1.5">MCPs</div>
+ <div className="text-[10px] font-semibold text-olympus-text-dim uppercase tracking-wide mb-1.5">{t('god.mcps', language)}</div>
  <div className="flex flex-wrap gap-1">
  {dispatch.mcps.map(m => (
  <span
@@ -530,9 +532,9 @@ export default function GodDetail() {
  {references && references.length === 0 && (
  <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card/40 p-3 text-center">
  <BookOpenText size={16} className="text-olympus-text-dim mx-auto mb-1.5" />
- <p className="text-[11px] text-olympus-text font-mono mb-1">No knowledge docs</p>
+ <p className="text-[11px] text-olympus-text font-mono mb-1">{t('god.noKnowledge', language)}</p>
  <p className="text-[10px] text-olympus-text-dim font-mono">
- {god.charAt(0).toUpperCase() + god.slice(1)} has no reference docs assigned yet.
+ {t('god.noKnowledgeBody', language, { god: godName(god, language) })}
  </p>
  </div>
  )}

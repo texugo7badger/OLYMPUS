@@ -21,6 +21,7 @@
  */
 
 import { readOriginkitBudget, formatOriginkitReset } from '@/lib/originkit-budget';
+import { EXPANDED_REFERENCE_ROWS } from '@/lib/ui-references-expanded';
 
 export type UiRefLibrary = 'originkit' | 'skiper';
 
@@ -42,7 +43,7 @@ export interface UiReference {
 
 /** The marquee catalog — curated, not exhaustive (the full libraries live
  *  upstream; this is the curated eye the gods draw from). */
-export const UI_REFERENCES: UiReference[] = [
+const CURATED_REFERENCES: UiReference[] = [
   // ── OriginKit — interactive elements ────────────────────────────────────
   { id: 'black-hole', name: 'Black Hole', library: 'originkit', category: 'Interactive elements', what: 'A gravitational point that warps and pulls surrounding particles — a living hero centerpiece.', demoUrl: 'https://www.originkit.dev/components/blackhole', fetchLane: 'originkit MCP: fetch blackhole (free API key)', free: true },
   { id: 'fluid-trail', name: 'Fluid Trail', library: 'originkit', category: 'Interactive elements', what: 'The cursor drags a fluid, physics-smooth ribbon — tactile pointer feedback.', demoUrl: 'https://www.originkit.dev/components/fluidtrail', fetchLane: 'originkit MCP: fetch fluidtrail (free API key)', free: true },
@@ -73,6 +74,33 @@ export const UI_REFERENCES: UiReference[] = [
   { id: 'skiper-token-swap', name: 'Aave Token Swap', library: 'skiper', category: 'Finance & data', what: 'The DeFi-grade swap interaction — dense data, zero friction.', demoUrl: 'https://skiper-ui.com/v1/skiper22', fetchLane: 'npx shadcn add @skiper-ui/skiper22 (PREMIUM — paid upstream)', free: false },
   { id: 'skiper-cursor-trail', name: 'Image Cursor Trail', library: 'skiper', category: 'Motion & reveal', what: 'The cursor drags a trail of images — the gallery you can feel.', demoUrl: 'https://skiper-ui.com/v1/skiper18', fetchLane: 'npx shadcn add @skiper-ui/skiper18 (PREMIUM — paid upstream)', free: false },
 ];
+
+/**
+ * The FULL catalog (v0.0.34): the hand-curated entries first — their exact
+ * names, descriptions and free/premium flags win — then every component from
+ * the OriginKit and Skiper catalogs. Duplicate ids are dropped so a React
+ * key can never repeat. Reference previews are assigned at render time by
+ * category/keyword (see reference-previews.ts), not stored per row.
+ */
+const seenReferenceIds = new Set<string>();
+const seenReferenceNames = new Set<string>();
+const normName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+export const UI_REFERENCES: UiReference[] = [
+  ...CURATED_REFERENCES,
+  ...EXPANDED_REFERENCE_ROWS.map(([id, name, library, category, what, demoUrl, free, fetchLane]) => ({
+    id, name, library, category, what, demoUrl, free, fetchLane,
+  })),
+].filter((r) => {
+  if (seenReferenceIds.has(r.id)) return false;
+  // The curated id (black-hole) and the upstream slug (blackhole) are the
+  // same component — dedupe by normalized NAME too, so the catalog never
+  // shows two cards for the same reference.
+  const key = normName(r.name);
+  if (seenReferenceNames.has(key)) return false;
+  seenReferenceIds.add(r.id);
+  seenReferenceNames.add(key);
+  return true;
+});
 
 /** The library metadata (for the pane headers + the doc). */
 export const UI_REF_LIBRARIES = [

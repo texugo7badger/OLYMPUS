@@ -25,8 +25,16 @@ export async function GET(req: NextRequest) {
     refs = refs.filter((r) =>
       `${r.name} ${r.category} ${r.what} ${r.id}`.toLowerCase().includes(q));
   }
-  // The live probe of the demo URLs (parallel, bounded) — the embed verdict.
-  const probes = await Promise.all(refs.map((r) => probeCraftApp(r.demoUrl, 8_000)));
-  const withProbes = refs.map((r, i) => ({ ...r, probe: { ok: probes[i].ok, frameable: probes[i].frameable, inconclusive: probes[i].inconclusive === true, httpStatus: probes[i].httpStatus } }));
+  // v0.0.34 — the catalog is now ALL of OriginKit + Skiper (860+ entries).
+  // Probing every demo URL on every load would be 860 network calls; the
+  // card no longer embeds the vendor page, so the probe is OPT-IN and
+  // bounded. Default: a neutral verdict, no network.
+  const wantsProbe = req.nextUrl.searchParams.get('probe') === '1' && refs.length <= 32;
+  const withProbes = wantsProbe
+    ? await Promise.all(refs.map(async (r) => {
+        const p = await probeCraftApp(r.demoUrl, 8_000);
+        return { ...r, probe: { ok: p.ok, frameable: p.frameable, inconclusive: p.inconclusive === true, httpStatus: p.httpStatus } };
+      }))
+    : refs.map((r) => ({ ...r, probe: { ok: true, frameable: false, inconclusive: true, httpStatus: null } }));
   return NextResponse.json({ ok: true, references: withProbes, libraries: UI_REF_LIBRARIES }, { headers: NO_CACHE_HEADERS });
 }

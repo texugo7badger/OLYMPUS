@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="OLYMPUS Mist theme">
+  <rect width="640" height="360" rx="18" fill="#D3E3E4"/>
+  <rect x="18" y="18" width="604" height="30" rx="8" fill="#DFECEC"/>
+  <circle cx="34" cy="33" r="5" fill="#2A727E"/>
+  <text x="48" y="37" font-family="ui-monospace,monospace" font-size="12" fill="#152225">OLYMPUS · Mist</text>
+  <text x="560" y="37" font-family="ui-monospace,monospace" font-size="10" fill="#475C5F">light</text>
+  <rect x="18" y="60" width="180" height="282" rx="10" fill="#DFECEC"/>
+  <rect x="210" y="60" width="412" height="160" rx="10" fill="#EAF4F4"/>
+  <rect x="210" y="232" width="200" height="110" rx="10" fill="#EAF4F4"/>
+  <rect x="422" y="232" width="200" height="110" rx="10" fill="#EAF4F4"/>
+  <path d="M300 176 L326 112 L352 176 L338 176 L326 146 L314 176 Z" fill="#2A727E"/>
+  <circle cx="326" cy="96" r="4" fill="#6A4F86"/>
+  <rect x="230" y="196" width="120" height="8" rx="4" fill="#2A727E" opacity=".9"/>
+  <rect x="230" y="210" width="70" height="5" rx="2.5" fill="#475C5F" opacity=".6"/>
+  <rect x="228" y="248" width="80" height="7" rx="3" fill="#2A727E"/>
+  <rect x="228" y="262" width="120" height="5" rx="2.5" fill="#475C5F" opacity=".5"/>
+  <rect x="440" y="248" width="80" height="7" rx="3" fill="#2A727E"/>
+  <rect x="440" y="262" width="120" height="5" rx="2.5" fill="#475C5F" opacity=".5"/>
+  <g><rect x="28" y="90" width="34" height="18" rx="4" fill="#2A727E"/><rect x="70" y="90" width="34" height="18" rx="4" fill="#25636E"/><rect x="112" y="90" width="34" height="18" rx="4" fill="#3E5F83"/><rect x="154" y="90" width="34" height="18" rx="4" fill="#3F7553"/><rect x="28" y="116" width="34" height="18" rx="4" fill="#6A4F86"/><rect x="70" y="116" width="34" height="18" rx="4" fill="#2F7A69"/><rect x="112" y="116" width="34" height="18" rx="4" fill="#94443C"/><rect x="154" y="116" width="34" height="18" rx="4" fill="#2A727E"/></g>
+  <text x="28" y="330" font-family="ui-monospace,monospace" font-size="9" fill="#475C5F">mist · text #152225 · dim #475C5F</text>
+</svg>
