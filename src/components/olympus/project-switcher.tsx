@@ -1,5 +1,11 @@
 /**
  * License: AGPL-3.0-or-later (original OLYMPUS code).
+ *
+ * v0.0.34 — the Projects folder follows the theme and every row opens a
+ * PROFILE. The old version hardcoded #D4A574/#B8B8B8/#8B8B8B, so the folder
+ * stayed gold while the user's palette changed; it also hid the stacks in a
+ * hover tooltip. Now the list carries description + stack chips + last
+ * activity inline, and clicking a project opens ProjectProfileCard.
  */
 
 'use client';
@@ -8,81 +14,123 @@ import { useEffect, useRef, useState } from 'react';
 import { FolderPlus, Folder, ChevronDown, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOlympus, type ProjectNote } from '@/lib/olympus-store';
+import ProjectProfileCard from './project-profile-card';
 
-const GOD_COLOR = '#D4A574';
-const STACK_ICONS: Record<string, string> = { react: 'React', next: 'Next.js', vue: 'Vue', svelte: 'Svelte', node: 'Node.js', bun: 'Bun', python: 'Python', rust: 'Rust', go: 'Go', typescript: 'TS', javascript: 'JS', tailwind: 'Tailwind', postgres: 'Postgres', mongodb: 'MongoDB', redis: 'Redis', docker: 'Docker', kubernetes: 'K8s', vercel: 'Vercel', aws: 'AWS', gcp: 'GCP', azure: 'Azure' };
+const STACK_LABELS: Record<string, string> = { react: 'React', next: 'Next.js', vue: 'Vue', svelte: 'Svelte', node: 'Node.js', bun: 'Bun', python: 'Python', rust: 'Rust', go: 'Go', typescript: 'TS', javascript: 'JS', tailwind: 'Tailwind', postgres: 'Postgres', mongodb: 'MongoDB', redis: 'Redis', docker: 'Docker', kubernetes: 'K8s', vercel: 'Vercel', aws: 'AWS', gcp: 'GCP', azure: 'Azure' };
 
-/**
- * Project Switcher.
- *
- * impeccable refactor:
- * - Removed the hover tooltip on the trigger button. The button label
- * already shows the active project name (or "No Project"). A second
- * hover popup restating the same info added noise.
- * - The dropdown itself still shows full descriptions per project —
- * that's where context belongs, not on the trigger.
- */
+function timeAgo(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return '';
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
 export default function ProjectSwitcher() {
- const projects = useOlympus(s => s.availableProjects);
- const activeProject = useOlympus(s => s.activeProject);
- const setActiveProject = useOlympus(s => s.setActiveProject);
- const refreshProjects = useOlympus(s => s.refreshProjects);
- const setNewProjectDialogOpen = useOlympus(s => s.setNewProjectDialogOpen);
- const [dropdownOpen, setDropdownOpen] = useState(false);
- const [hoveredProject, setHoveredProject] = useState<string | null>(null);
- const dropdownRef = useRef<HTMLDivElement>(null);
+  const projects = useOlympus((s) => s.availableProjects);
+  const activeProject = useOlympus((s) => s.activeProject);
+  const refreshProjects = useOlympus((s) => s.refreshProjects);
+  const setNewProjectDialogOpen = useOlympus((s) => s.setNewProjectDialogOpen);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [profileSlug, setProfileSlug] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
- useEffect(() => { refreshProjects(); }, [refreshProjects]);
- useEffect(() => { function h(e: MouseEvent) { if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false); } document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
+  useEffect(() => { refreshProjects(); }, [refreshProjects]);
+  useEffect(() => {
+    function h(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
+    }
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
 
- // the old switchProject() function used to
- // POST to /api/olympus/vscodium/launch on every project switch, but that
- // endpoint was removed when the VSCodium frame was deleted. Switching
- // projects now just updates the active context; the user clicks "Open in
- // Editor" on the Editor Bridge tab to launch their configured editor on
- // the new project's path. See EDITORS.md for the supported editors.
- async function switchProject(p: ProjectNote) {
- setActiveProject(p); setDropdownOpen(false);
- }
+  const displayName = (p: ProjectNote | null | undefined): string => {
+    if (!p) return 'No Project';
+    const name = (p.name || '').trim();
+    if (!name) return p.slug;
+    return name.toLowerCase() === p.slug.toLowerCase() ? p.slug : name;
+  };
 
- // v0.0.31 (R31-13) — THE AIME/aime SPECIMEN. The project note carried the
- // legacy uppercase name while the slug (and the folder the user renamed)
- // is lowercase. When the two only differ by case, the slug is canonical.
- const displayName = (p: ProjectNote | null | undefined): string => {
- if (!p) return 'No Project';
- const name = (p.name || '').trim();
- if (!name) return p.slug;
- return name.toLowerCase() === p.slug.toLowerCase() ? p.slug : name;
- };
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setDropdownOpen(!dropdownOpen)}
+        aria-label="Switch project"
+        aria-expanded={dropdownOpen}
+        className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-olympus-gold/10 transition-colors group"
+      >
+        <Folder size={11} className="text-olympus-gold" />
+        <span className="text-olympus-gold font-semibold max-w-[120px] truncate">{displayName(activeProject)}</span>
+        <ChevronDown size={10} className={cn('text-olympus-text-dim transition-transform', dropdownOpen && 'rotate-180')} />
+      </button>
 
- return (
- <div className="relative" ref={dropdownRef}>
- <button
- onClick={() => setDropdownOpen(!dropdownOpen)}
- aria-label="Switch project"
- className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-olympus-gold/10 transition-colors group"
- >
- <Folder size={11} style={{ color: GOD_COLOR }} />
- <span className="text-olympus-gold font-semibold max-w-[120px] truncate">{displayName(activeProject)}</span>
- <ChevronDown size={10} className={cn('text-olympus-text-dim transition-transform', dropdownOpen && 'rotate-180')} />
- </button>
- {dropdownOpen && (
- <div className="absolute top-full left-0 mt-1 w-80 bg-olympus-panel border border-olympus-gold/20 rounded-lg shadow-md z-50 overflow-hidden">
- <div className="px-3 py-2 border-b border-olympus-gold/10 flex items-center justify-between">
- <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">Projects</span>
- <button onClick={() => { setNewProjectDialogOpen(true); setDropdownOpen(false); }} className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-olympus-gold/15 ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25 transition-colors" style={{ color: GOD_COLOR }}><FolderPlus size={10} /> New</button>
- </div>
- <div className="max-h-64 overflow-y-auto custom-scroll">
- {projects.length === 0 ? <div className="px-3 py-6 text-center text-[11px] font-mono text-olympus-text-dim">No projects yet.<br />Click "New" to create one.</div> : projects.map(p => (
- <div key={p.slug} className={cn('relative px-3 py-2 transition-colors group', activeProject?.slug === p.slug ? 'bg-olympus-gold/10' : 'hover:bg-olympus-gold/5')} onClick={() => switchProject(p)} onMouseEnter={() => setHoveredProject(p.slug)} onMouseLeave={() => setHoveredProject(null)}>
- <div className="flex items-center gap-2"><Folder size={12} style={{ color: activeProject?.slug === p.slug ? GOD_COLOR : '#8B8B8B' }} /><span className="text-[11px] font-mono font-semibold flex-1 truncate" style={{ color: activeProject?.slug === p.slug ? GOD_COLOR : '#B8B8B8' }}>{displayName(p)}</span>{activeProject?.slug === p.slug && <span className="text-[9px] font-mono text-olympus-green">ACTIVE</span>}</div>
- <div className="text-[10px] font-mono text-olympus-text-dim truncate ml-5">{p.description || '(no description)'}</div>
- {hoveredProject === p.slug && p.stacks.length > 0 && (<div className="absolute top-full left-0 mt-1 w-full bg-olympus-bg border border-olympus-gold/30 rounded-lg p-2 z-10 shadow-md"><div className="text-[9px] font-mono text-olympus-text-dim mb-1.5 flex items-center gap-1"><Layers size={9} style={{ color: GOD_COLOR }} /> STACKS</div><div className="flex flex-wrap gap-1">{p.stacks.map(s => <span key={s} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 ring-1 ring-olympus-gold/20" style={{ color: GOD_COLOR }}>{STACK_ICONS[s.toLowerCase()] || s}</span>)}</div></div>)}
- </div>))}
- </div>
- <div className="px-3 py-1.5 border-t border-olympus-gold/10 text-[9px] font-mono text-olympus-text-dim">Brain is global — instincts accumulate across all projects</div>
- </div>
- )}
- </div>
- );
+      {dropdownOpen && (
+        <div className="absolute top-full left-0 mt-1 w-96 bg-olympus-panel border border-olympus-gold/20 rounded-lg shadow-md z-50 overflow-hidden">
+          <div className="px-3 py-2 border-b border-olympus-gold/10 flex items-center justify-between">
+            <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">
+              Projects <span className="text-olympus-gold/70">· {projects.length}</span>
+            </span>
+            <button
+              onClick={() => { setNewProjectDialogOpen(true); setDropdownOpen(false); }}
+              className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25 transition-colors"
+            >
+              <FolderPlus size={10} /> New
+            </button>
+          </div>
+
+          <div className="max-h-[22rem] overflow-y-auto custom-scroll">
+            {projects.length === 0 ? (
+              <div className="px-3 py-6 text-center text-[11px] font-mono text-olympus-text-dim">
+                No projects yet.<br />Click &quot;New&quot; to create one.
+              </div>
+            ) : projects.map((p) => {
+              const active = activeProject?.slug === p.slug;
+              return (
+                <button
+                  key={p.slug}
+                  onClick={() => { setProfileSlug(p.slug); setDropdownOpen(false); }}
+                  className={cn(
+                    'w-full text-left px-3 py-2 transition-colors border-b border-olympus-gold/5 last:border-0',
+                    active ? 'bg-olympus-gold/10 hover:bg-olympus-gold/15' : 'hover:bg-olympus-gold/5',
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Folder size={12} className={active ? 'text-olympus-gold' : 'text-olympus-text-dim'} />
+                    <span className={cn('text-[11px] font-mono font-semibold flex-1 truncate', active ? 'text-olympus-gold' : 'text-olympus-text')}>
+                      {displayName(p)}
+                    </span>
+                    {active && <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-green">active</span>}
+                    <span className="text-[8px] font-mono text-olympus-text-dim/70" title={new Date(p.last_active).toLocaleString()}>{timeAgo(p.last_active)}</span>
+                  </div>
+                  <div className="text-[10px] font-mono text-olympus-text-dim truncate mt-0.5 ml-5">
+                    {p.description || '(no description)'}
+                  </div>
+                  {p.stacks.length > 0 && (
+                    <div className="flex items-center gap-1 mt-1 ml-5 flex-wrap">
+                      <Layers size={8} className="text-olympus-gold/70" />
+                      {p.stacks.slice(0, 4).map((s) => (
+                        <span key={s} className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-gold/10 text-olympus-text-dim ring-1 ring-olympus-gold/15">
+                          {STACK_LABELS[s.toLowerCase()] || s}
+                        </span>
+                      ))}
+                      {p.stacks.length > 4 && <span className="text-[8px] font-mono text-olympus-text-dim">+{p.stacks.length - 4}</span>}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="px-3 py-1.5 border-t border-olympus-gold/10 text-[9px] font-mono text-olympus-text-dim">
+            Click a project to open its profile · brain is global
+          </div>
+        </div>
+      )}
+
+      {profileSlug && <ProjectProfileCard slug={profileSlug} onClose={() => setProfileSlug(null)} />}
+    </div>
+  );
 }
