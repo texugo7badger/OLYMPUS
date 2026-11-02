@@ -41,6 +41,7 @@ import { registerNativeTerminal } from './native-terminal.js';
 import { resolveBootMode } from './boot-mode.js';
 import { registerTerminalBridge, shutdownTerminalBridge } from './terminal-bridge.js';
 import { ensureLinuxSandboxReady } from './linux-sandbox.js';
+import { NOTIFY_COLORS, NOTIFY_LABELS, isNotifyType, trayPng, type NotifyType } from './desktop-notify.js';
 
 // __dirname / __filename are available natively in CommonJS (electron/tsconfig.json
 // compiles with module: CommonJS). No need for the import.meta.url shim.
@@ -604,7 +605,55 @@ function postPower(action: 'suspend' | 'resume'): Promise<any> {
   });
 }
 
-function notifyDesktop(title: string, body: string): void {
+const TRAY_RESET_MS = 20_000;
+const NOTIFY_FILE = join(nodeOs.homedir(), '.olympus', 'desktop-notifications.jsonl');
+let trayIcons: Map<NotifyType, Electron.NativeImage> | null = null;
+let trayResetTimer: ReturnType<typeof setTimeout> | null = null;
+let notifyOffset = 0;
+
+function defaultTrayImage(): Electron.NativeImage {
+  const iconPath = existsSync(join(appRoot, 'public', 'logo-32x32.png'))
+    ? join(appRoot, 'public', 'logo-32x32.png')
+    : join(appRoot, 'public', 'logo.png');
+  const img = nativeImage.createFromPath(iconPath);
+  return img.isEmpty() ? img : img.resize({ width: 16, height: 16 });
+}
+
+/** Paint the tray dot for a notification type; null restores the logo. */
+function setTrayIndicator(type: NotifyType | null): void {
+  if (!tray) return;
+  try {
+    if (!type) {
+      const img = defaultTrayImage();
+      if (!img.isEmpty()) tray.setImage(img);
+      tray.setToolTip('OLYMPUS — click to restore');
+      return;
+    }
+    trayIcons ??= new Map();
+    let img = trayIcons.get(type);
+    if (!img || img.isEmpty()) {
+      img = nativeImage.createFromBuffer(trayPng(NOTIFY_COLORS[type])).resize({ width: 16, height: 16 });
+      trayIcons.set(type, img);
+    }
+    tray.setImage(img);
+    tray.setToolTip(`OLYMPUS — ${NOTIFY_LABELS[type]}`);
+  } catch { /* the tray is optional */ }
+}
+
+function flashTray(type: NotifyType): void {
+  setTrayIndicator(type);
+  if (trayResetTimer) clearTimeout(trayResetTimer);
+  trayResetTimer = setTimeout(() => { trayResetTimer = null; setTrayIndicator(null); }, TRAY_RESET_MS);
+  trayResetTimer.unref?.();
+}
+
+/**
+ * v0.0.32 (Epic M) — the type colours the tray dot and the notification, so
+ * "ready" (green), "error" (red), "design" (purple), "walk" (cyan),
+ * "compact" (orange) and "curate" (yellow) are distinguishable at a glance.
+ */
+function notifyDesktop(type: NotifyType, title: string, body: string): void {
+  flashTray(type);
   try {
     if (!Notification.isSupported()) return;
     const iconPath = join(appRoot, 'public', 'logo-256x256.png');
@@ -612,6 +661,31 @@ function notifyDesktop(title: string, body: string): void {
     n.on('click', () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } });
     n.show();
   } catch { /* notifications are optional */ }
+}
+
+/**
+ * The Next side appends one JSON line per event; the main tails the file so
+ * every surface (routes, tools, walker) can notify the tray without IPC.
+ */
+function startNotifyTail(): void {
+  const timer = setInterval(() => {
+    try {
+      const buf = readFileSync(NOTIFY_FILE);
+      if (buf.length < notifyOffset) notifyOffset = 0;
+      if (buf.length === notifyOffset) return;
+      const fresh = buf.subarray(notifyOffset).toString('utf-8');
+      notifyOffset = buf.length;
+      for (const line of fresh.split('\n')) {
+        if (!line.trim()) continue;
+        try {
+          const ev = JSON.parse(line);
+          if (!isNotifyType(ev?.type)) continue;
+          notifyDesktop(ev.type, String(ev.title ?? 'OLYMPUS'), String(ev.body ?? ''));
+        } catch { /* a torn line is ignored, never fatal */ }
+      }
+    } catch { /* no file yet */ }
+  }, 2_000);
+  timer.unref?.();
 }
 
 
@@ -670,7 +744,7 @@ function hibernateNow(): void {
     mainWindow = null;
   }
   startHibernationWatch();
-  notifyDesktop('OLYMPUS hibernating', 'The window is closed; the campaign keeps running and you will be notified on done/park.');
+  notifyDesktop('walk', 'OLYMPUS hibernating', 'The window is closed; the campaign keeps running and you will be notified on done/park.');
   console.log('[olympus:hibernate] renderer destroyed, chat server stopped, campaign stays alive');
 }
 
@@ -690,11 +764,11 @@ function startHibernationWatch(): void {
     const prev = lastKey.split('|');
     lastKey = key;
     if (parked && parked.hopId !== prev[2]) {
-      notifyDesktop('OLYMPUS — hop parked', `${parked.hopId} (${parked.reason ?? 'parked'}). The campaign continues; open OLYMPUS to resume.`);
+      notifyDesktop('error', 'OLYMPUS — hop parked', `${parked.hopId} (${parked.reason ?? 'parked'}). The campaign continues; open OLYMPUS to resume.`);
     } else if (completed > Number(prev[1] ?? 0)) {
-      notifyDesktop('OLYMPUS — hop done', `${completed} hop(s) ok.`);
+      notifyDesktop('ready', 'OLYMPUS — hop done', `${completed} hop(s) ok.`);
     } else {
-      notifyDesktop('OLYMPUS', d?.line ?? 'Campaign state changed.');
+      notifyDesktop('walk', 'OLYMPUS', d?.line ?? 'Campaign state changed.');
     }
   }, 15_000);
   hibernationWatch.unref?.();
@@ -1395,6 +1469,7 @@ if (!gotLock) {
   app.on('before-quit', () => { writeHibernationMarker(false); stopHibernationWatch(); });
 
   app.whenReady().then(async () => {
+    startNotifyTail();
     // #V0.0.20: Auto-heal on boot — reconcile llm-providers.json with
     // active-strategy.json, repair opencode DB, prune stale lane-health.
     try {
@@ -1469,6 +1544,7 @@ if (!gotLock) {
           const d = await postPower('resume');
           const c = d?.campaign;
           notifyDesktop(
+            'walk',
             'OLYMPUS resumed',
             c
               ? `Campaign ${c.project}: ${c.completed}/${c.total} hops${c.parked ? ` — parked at ${c.parked}` : ''}. Nothing was lost.`

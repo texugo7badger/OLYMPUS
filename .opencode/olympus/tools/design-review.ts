@@ -182,6 +182,20 @@ const DESIGN_REVIEW_TOOL: ToolDefinition = tool({
         },
       };
       fs.appendFileSync(feedPath, JSON.stringify(event) + "\n", "utf-8");
+      // v0.0.32 (Epic M) — the purple tray dot. Best-effort: the app may be
+      // closed or the port may be another instance; never break the tool.
+      try {
+        void fetch("http://127.0.0.1:3737/api/olympus/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "design",
+            title: "OLYMPUS — design choice",
+            body: `Athena proposed ${Array.isArray(options) ? options.length : 0} option(s) for ${activeProjectSlug() ?? "the project"}.`,
+          }),
+          signal: AbortSignal.timeout(800),
+        }).catch(() => {});
+      } catch { /* optional */ }
 
       return {
         output: JSON.stringify({

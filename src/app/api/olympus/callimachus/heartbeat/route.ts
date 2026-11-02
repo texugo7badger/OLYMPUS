@@ -12,6 +12,7 @@ import os from 'os';
 import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 // Run vault prune as part of the heartbeat.
 import { runVaultPrune, loadVaultPolicy } from '@/lib/vault-policy';
+import { appendDesktopNotify } from '@/lib/desktop-notify';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,11 @@ const CALLIMACHUS_LOCK = path.join(OLYMPUS_HOME, 'callimachus.lock');
  * The cooldown is enforced via the lockfile's mtime.
  */
 export async function POST(req: NextRequest) {
+  appendDesktopNotify({
+    type: 'curate',
+    title: 'OLYMPUS — Callimachus curating',
+    body: 'The brain maintenance loop is running (instincts, knowledge, vault).',
+  });
   try {
     const body = await req.json().catch(() => ({}));
     const deep = body.deep === true;

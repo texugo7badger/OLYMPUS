@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 // Use spawnOpencode() for cross-platform support.
 import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
+import { appendDesktopNotify } from '@/lib/desktop-notify';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,11 @@ export const dynamic = 'force-dynamic';
  * Spawns `opencode run /callimachus-heartbeat --deep --agent callimachus`.
  */
 export async function POST(req: NextRequest) {
+  appendDesktopNotify({
+    type: 'compact',
+    title: 'OLYMPUS — compacting',
+    body: 'Callimachus is compacting the context to start a clean window.',
+  });
   // spawnOpencode handles Windows shell:true + stdin:'ignore'.
   // #104 (the complete class, SERVE-1 Batch C): the compact shim runs
   // Callimachus in the workspace lane — never the repo root.

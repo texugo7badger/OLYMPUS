@@ -47,7 +47,17 @@ if (fs.existsSync(auditPath)) {
 const cfg = JSON.parse(fs.readFileSync(join(ROOT, 'opencode.json'), 'utf-8'));
 const mcp = cfg.mcp || {};
 const enabled = Object.entries(mcp).filter(([, v]) => v?.enabled === true).map(([k]) => k).sort();
-check('M2 curated set enabled', JSON.stringify(enabled) === JSON.stringify([...CURATED].sort()), enabled.join(','));
+// The curated six are the DEFAULT; a user may enable the keyed servers
+// (Originkit, Brave, fal, GitHub, Figma, Grafana) without breaking the law.
+// Anything else enabled is a stray.
+const KEYED = new Set(['originkit', 'brave-search', 'fal', 'github', 'figma', 'grafana']);
+const missingCurated = CURATED.filter((n) => !enabled.includes(n));
+const strayEnabled = enabled.filter((n) => !CURATED.includes(n) && !KEYED.has(n));
+check(
+  'M2 curated six enabled (keyed extras allowed)',
+  missingCurated.length === 0 && strayEnabled.length === 0,
+  `enabled=${enabled.join(',')} missing=${missingCurated.join(',') || '-'} stray=${strayEnabled.join(',') || '-'}`,
+);
 const halfEnabled = Object.entries(mcp).filter(([, v]) => v?.enabled !== undefined && typeof v.enabled !== 'boolean');
 check('M3 no half-enabled MCP state', halfEnabled.length === 0);
 
