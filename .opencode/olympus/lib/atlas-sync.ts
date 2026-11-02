@@ -51,7 +51,16 @@ const STATE_FILE = path.join(OLYMPUS_HOME, "sync-map.json");
 const LIVE_FEED = path.join(getVaultRoot(), "06_Activity_Feed", "live.jsonl");
 
 export type SyncOrigin = "project" | "dispatch";
-export type SyncStatus = "received" | "routed" | "done" | "failed" | "unknown";
+/**
+ * received → routed → done | failed | lost.
+ *
+ * `lost` is NOT a failure: the process ended before the turn settled, so the
+ * OUTCOME is unknown while the WORK may have finished. It exists so the panel
+ * can say LOST (amber) instead of a red FAILED the user did not cause — the
+ * 775-false-failures class (R31-13). The old writer spelled it `unknown`; it
+ * is normalized to `lost` on read.
+ */
+export type SyncStatus = "received" | "routed" | "done" | "failed" | "lost";
 
 export interface SyncMapEntry {
   /** Unique entry id (sync-<uuid>). */
@@ -505,22 +514,22 @@ export function finalizeAtlasOnProcessExit(): ExitFinalizeReport {
         // no finalized record for it — failed, never vanished.
         atlasWrite({
           id: e.id, origin: e.origin, source: e.source, ts: e.ts,
-          intent: e.intent, status: "unknown",
+          intent: e.intent, status: "lost",
           meta: e.meta,
           updatedTs: new Date().toISOString(),
           updatedReason: "process exit — dispatch outcome unknown (the process ended before the tracker settled; this is not a failure)",
         } as SyncMapEntryInput);
-        report.syncEntriesTransitioned.push({ id: e.id, from: e.status, to: "unknown" });
+        report.syncEntriesTransitioned.push({ id: e.id, from: e.status, to: "lost" });
       }
     } else if (e.origin === "project" && e.status === "received") {
       atlasWrite({
         id: e.id, origin: e.origin, source: e.source, ts: e.ts,
-        intent: e.intent, status: "unknown",
+        intent: e.intent, status: "lost",
         meta: e.meta,
         updatedTs: new Date().toISOString(),
         updatedReason: "process exit — prompt outcome unknown (the process ended before the idle signal; this is not a failure)",
       } as SyncMapEntryInput);
-      report.syncEntriesTransitioned.push({ id: e.id, from: "received", to: "unknown" });
+      report.syncEntriesTransitioned.push({ id: e.id, from: "received", to: "lost" });
     }
   }
 

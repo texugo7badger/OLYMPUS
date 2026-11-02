@@ -35,6 +35,28 @@ interface SyncEntry {
   seq?: number;
 }
 
+/**
+ * The lifecycle contract is received → routed → done | failed | lost.
+ * `lost` means the process ended before the turn settled: the outcome is
+ * unknown, the work may have finished. Legacy rows spelled it `unknown` or
+ * mislabeled a process exit as `failed`; both normalize here, so the API
+ * NEVER emits a status outside the contract.
+ */
+function isLostEntry(e: SyncEntry): boolean {
+  const status = String(e.status ?? '').toLowerCase();
+  if (status === 'lost' || status === 'unknown') return true;
+  return status === 'failed'
+    && /(process exit|died mid-flight)/i.test(String(e.updatedReason ?? ''));
+}
+
+function resolveSyncStatus(e: SyncEntry): 'received' | 'routed' | 'done' | 'failed' | 'lost' {
+  if (isLostEntry(e)) return 'lost';
+  const status = String(e.status ?? '').toLowerCase();
+  if (status === 'done' || status === 'failed' || status === 'routed') return status;
+  // An entry exists because a prompt/dispatch was received; never fabricate.
+  return 'received';
+}
+
 export async function GET(req: NextRequest) {
   const limit = Math.min(200, Math.max(10, Number(req.nextUrl.searchParams.get('limit')) || 50));
   try {
@@ -57,12 +79,11 @@ export async function GET(req: NextRequest) {
         intent: String(e.intent ?? '').replace(/\s+/g, ' ').slice(0, 160),
         // v0.0.31 (R31-13) — THE 775 FALSE FAILURES.
         // The old exit path marked every still-open prompt "failed" (process
-        // exit ≠ the work failed). Forward, the writer uses `unknown`; for
-        // history, an exit-attributed failure is presented for what it is.
-        status: (String(e.status ?? 'unknown') === 'failed'
-          && /(process exit|died mid-flight)/i.test(String(e.updatedReason ?? '')))
-          ? 'unknown'
-          : String(e.status ?? 'unknown'),
+        // exit ≠ the work failed). The writer now lands `lost` (a distinct
+        // terminal state, never red); legacy `unknown` rows normalize to it.
+        // The status ALWAYS stays inside the contract set.
+        status: resolveSyncStatus(e),
+        lost: isLostEntry(e),
         error: typeof e.meta?.error === 'string' ? e.meta.error.slice(0, 160) : null,
       }));
     return NextResponse.json({

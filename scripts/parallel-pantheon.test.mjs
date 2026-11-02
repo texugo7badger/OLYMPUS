@@ -136,7 +136,9 @@ check('P1 Atlas held under concurrent writes: 4 concurrent god lanes + 2 scenari
   G.map?.entries >= 6, `entries=${G.map?.entries}`);
 check('P1 sync-map integrity: chain valid, zero tamper', G.map?.chainValid === true && (G.map?.tampered || []).length === 0, JSON.stringify({ c: G.map?.chainValid, t: G.map?.tampered }));
 check('P1 every entry has a lifecycle status from the contract set',
-  (G.map?.statuses || []).every(s => ['received', 'routed', 'done', 'failed'].includes(s)), JSON.stringify(G.map?.statuses));
+  // received -> routed -> done | failed | lost. `lost` = the process ended
+  // before the turn settled (outcome unknown, not a work failure).
+  (G.map?.statuses || []).every(s => ['received', 'routed', 'done', 'failed', 'lost'].includes(s)), JSON.stringify(G.map?.statuses));
 check('P1 bus under load: ordered (strictly increasing seq) + all 4 gods heartbeated', G.bus?.seqsStrictlyIncreasing === true && G.bus?.godStates >= 4, JSON.stringify(G.bus));
 console.log(`      scenario evidence: entries=${G.map?.entries} (project=${G.map?.projectOrigins}, dispatch=${G.map?.dispatchOrigins}) · bus events=${G.bus?.events} · godStates=${G.bus?.godStates}`);
 

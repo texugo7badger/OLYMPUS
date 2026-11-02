@@ -84,7 +84,7 @@ async function main() {
   // ── N3: the free-strategies websearch lane (brave-search) ───────────────
   const mcpJson = read('.mcp.json');
   expect('N3: the brave-search MCP is registered (the free websearch lane)',
-    mcpJson.includes('"brave-search"') && mcpJson.includes('mcp-brave-search') && mcpJson.includes('BRAVE_API_KEY'),
+    mcpJson.includes('"brave-search"') && mcpJson.includes('@brave/brave-search-mcp-server') && mcpJson.includes('BRAVE_API_KEY'),
     'the free strategies stay search-blind');
   const reqsSrc = read('src/lib/mcp-api-requirements.ts');
   expect('N3: BRAVE_API_KEY joins the requirements map (the Originkit free-key pattern)',
