@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useOlympus, type ProjectNote } from '@/lib/olympus-store';
 import ProjectProfileCard from './project-profile-card';
 import { useLanguage, t } from '@/lib/i18n';
+import { StackShelf } from './stack-icon';
 
 const STACK_LABELS: Record<string, string> = { react: 'React', next: 'Next.js', vue: 'Vue', svelte: 'Svelte', node: 'Node.js', bun: 'Bun', python: 'Python', rust: 'Rust', go: 'Go', typescript: 'TS', javascript: 'JS', tailwind: 'Tailwind', postgres: 'Postgres', mongodb: 'MongoDB', redis: 'Redis', docker: 'Docker', kubernetes: 'K8s', vercel: 'Vercel', aws: 'AWS', gcp: 'GCP', azure: 'Azure' };
 
@@ -49,11 +50,11 @@ export default function ProjectSwitcher() {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
+  // v0.0.38 — the FOLDER is the name. A project called “AIME” in the note is
+  // `aime` here, exactly like its directory; no mixed-case aliases.
   const displayName = (p: ProjectNote | null | undefined): string => {
     if (!p) return 'No Project';
-    const name = (p.name || '').trim();
-    if (!name) return p.slug;
-    return name.toLowerCase() === p.slug.toLowerCase() ? p.slug : name;
+    return String(p.slug || p.name || '').trim().toLowerCase();
   };
 
   return (
@@ -111,14 +112,9 @@ export default function ProjectSwitcher() {
                     {p.description || t('common.noDescription', language)}
                   </div>
                   {p.stacks.length > 0 && (
-                    <div className="flex items-center gap-1 mt-1 ml-5 flex-wrap">
-                      <Layers size={8} className="text-olympus-gold/70" />
-                      {p.stacks.slice(0, 4).map((s) => (
-                        <span key={s} className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-gold/10 text-olympus-text-dim ring-1 ring-olympus-gold/15">
-                          {STACK_LABELS[s.toLowerCase()] || s}
-                        </span>
-                      ))}
-                      {p.stacks.length > 4 && <span className="text-[8px] font-mono text-olympus-text-dim">+{p.stacks.length - 4}</span>}
+                    <div className="flex items-center gap-1.5 mt-1.5 ml-5 flex-wrap">
+                      <Layers size={8} className="text-olympus-gold/70 shrink-0" />
+                      <StackShelf stacks={p.stacks} size={11} max={7} />
                     </div>
                   )}
                 </button>

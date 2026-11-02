@@ -4,15 +4,26 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { listProjects, createProject, getActiveProject, getActiveProjectSlug } from '@/lib/project-context';
+import { detectProjectStacks, projectSummary, readProjectPackage } from '@/lib/project-summary';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const projects = listProjects();
+    // v0.0.38 — the folder is the identity. The note's creation prompt is NOT
+    // a description; each project gets its detected stacks and a real summary.
+    const projects = listProjects().map((p) => {
+      const pkg = readProjectPackage(p.path);
+      const stacks = Array.from(new Set([...(p.stacks || []), ...detectProjectStacks(p.path, pkg)]));
+      return {
+        ...p,
+        stacks,
+        description: projectSummary({ slug: p.slug, pkg, root: p.path, stacks, port: p.livePreviewPort }),
+      };
+    });
     const activeSlug = getActiveProjectSlug();
-    const active = activeSlug ? getActiveProject() : null;
+    const active = activeSlug ? projects.find((p) => p.slug === activeSlug) ?? getActiveProject() : null;
     return NextResponse.json({ projects, active });
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }); }
 }

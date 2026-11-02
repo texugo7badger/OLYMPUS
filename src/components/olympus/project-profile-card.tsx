@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useOlympus, type ProjectNote } from '@/lib/olympus-store';
 import OlympusLoader from './olympus-loader';
+import StackIcon, { stackLabel } from './stack-icon';
 
 interface RecentFile {
   path: string;
@@ -165,7 +166,8 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
   if (!mounted) return null;
 
   const isActive = profile?.active ?? activeProject?.slug === slug;
-  const name = profile?.project.name || slug;
+  // v0.0.38 — the folder name, lowercase, is the identity.
+  const name = String(slug || profile?.project.name || '').toLowerCase();
   const truncated = profile?.stats.truncated;
 
   return createPortal(
@@ -232,13 +234,15 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                 <p className="text-[11px] font-mono text-olympus-text leading-relaxed">{profile.description}</p>
               )}
 
-              {/* Stack chips */}
+              {/* Stack shelf — official marks, one tile each */}
               {profile.stacks.length > 0 && (
                 <div>
                   <div className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim mb-1.5"><Layers size={10} className="text-olympus-gold" /> stack</div>
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-1.5">
                     {profile.stacks.map((s) => (
-                      <span key={s} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 text-olympus-gold ring-1 ring-olympus-gold/20">{s}</span>
+                      <span key={s} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-card text-olympus-text-dim ring-1 ring-olympus-gold/15">
+                        <StackIcon stack={s} size={12} tile /> {stackLabel(s)}
+                      </span>
                     ))}
                     {profile.manifest?.version && (
                       <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/20">{profile.manifest.name || 'pkg'} {profile.manifest.version}</span>

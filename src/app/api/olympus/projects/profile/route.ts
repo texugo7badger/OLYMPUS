@@ -18,6 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import { getProject, getActiveProjectSlug, reconcileProjectPath } from '@/lib/project-context';
+import { detectProjectStacks, folderName, projectSummary } from '@/lib/project-summary';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -146,9 +147,11 @@ export async function GET(req: NextRequest) {
   const exists = !!root && fs.existsSync(root);
   const isDir = exists && fs.statSync(root).isDirectory();
 
-  const stacks = note.stacks || [];
   const manifestFile = isDir ? path.join(root, 'package.json') : '';
   const pkg = manifestFile && fs.existsSync(manifestFile) ? readJson(manifestFile) : null;
+  // The note's `stacks` is what the user declared at creation; detection adds
+  // what the folder actually uses. The union is the honest stack shelf.
+  const stacks = Array.from(new Set([...(note.stacks || []), ...detectProjectStacks(root, pkg)]));
   const scripts = pkg?.scripts && typeof pkg.scripts === 'object' ? Object.keys(pkg.scripts).slice(0, 24) : [];
 
   const manifestNames = [
@@ -166,13 +169,22 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     active: getActiveProjectSlug() === note.slug,
-    project: note,
+    project: { ...note, name: folderName(note.slug), stacks },
+    folder: folderName(note.slug),
     path: root,
     pathSource: reconciled?.source ?? 'note',
     exists,
     isDir,
     stacks,
-    description: note.description || pkg?.description || '',
+    // A summary, not the prompt that created the project.
+    description: projectSummary({
+      slug: note.slug,
+      pkg,
+      root: isDir ? root : undefined,
+      stacks,
+      files: stats.files,
+      port: note.livePreviewPort,
+    }),
     stats,
     manifest: pkg ? {
       name: typeof pkg.name === 'string' ? pkg.name : '',
