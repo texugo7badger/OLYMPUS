@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.42, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.43, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,12 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.43 — design memory & critique.** A reference can now be saved as a
+**named preference** with its reason, scoped to the project; the catalog
+filters to memory and the detail copies a real implementation prompt or asks
+Athena to **critique** the reference against the project's current style.
+Memory lives at `~/.olympus/design-memory.json`, capped, deduped, atomic.
 
 **v0.0.42 — the editor follows the agent.** Opt-in follow mode opens each
 file a god writes inside the active project in your editor (Zed, VSCode,
