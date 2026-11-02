@@ -97,13 +97,14 @@ export default function StackIcon({
     </span>
   );
 
-  if (!tile) return <span className={cn('inline-flex shrink-0', className)} title={stackLabel(stack)}>{mark}</span>;
+  if (!tile) return <span className={cn('inline-flex shrink-0', className)} data-tip={stackLabel(stack)} data-tip-side="bottom">{mark}</span>;
 
   return (
     <span
       className={cn('inline-flex shrink-0 items-center justify-center rounded-md bg-white/95 ring-1 ring-black/5', className)}
       style={{ width: size + 10, height: size + 10 }}
-      title={stackLabel(stack)}
+      data-tip={stackLabel(stack)}
+      data-tip-side="bottom"
     >
       {mark}
     </span>
