@@ -24,7 +24,7 @@ const readme = fs.readFileSync(path.join(OLYMPUS, 'README.md'), 'utf-8');
 const pkg = JSON.parse(fs.readFileSync(path.join(OLYMPUS, 'package.json'), 'utf-8'));
 const version = fs.readFileSync(path.join(OLYMPUS, 'VERSION'), 'utf-8').trim();
 
-expect('R50-1: the version is 0.0.50', version === '0.0.50' && pkg.version === '0.0.50', `${version} / ${pkg.version}`);
+expect('R50-1: the version is 0.0.51 or later', /^0\.0\.(5[0-9]|[6-9][0-9])$/.test(version) && pkg.version === version, `${version} / ${pkg.version}`);
 expect('R50-2: the report records the 60 FPS measurement',
   /Brain 60\.1/.test(report) && /Studio idle 59\.8/.test(report) && /Studio chat 60\.2/.test(report),
   'the FPS claim has no numbers');

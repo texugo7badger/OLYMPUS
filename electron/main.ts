@@ -1646,6 +1646,13 @@ if (gpuExplicitlyOff || (gpuMarkerPersisted && !resetGpu)) {
   console.log('[olympus:electron] hardware acceleration ENABLED — target 60 FPS');
 }
 
+// v0.0.50 — the Wayland backend can deadlock before app.whenReady() (the
+// 2026-11-02 specimen). XWayland is the reliable default; override with
+// OLYMPUS_OZONE=wayland.
+if (process.platform === 'linux' && !process.env.OLYMPUS_OZONE) {
+  app.commandLine.appendSwitch('ozone-platform', 'x11');
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   // A hidden-to-tray instance owns the lock; ITS second-instance handler

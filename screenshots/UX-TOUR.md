@@ -304,3 +304,11 @@ ladder, the measured evidence (60 FPS, 39-round soak PASS, p95 ≤ 85 ms, RSS
 are **not** run — the 8-hour/100-hop certification and the AppImage. GO for a
 v1.0 release candidate after those gates; NO-GO for calling this build
 "certified v1.0".
+
+### v0.0.51 — launch reliability on Wayland
+
+Electron's Wayland backend could deadlock before `app.whenReady()` (the
+2026-11-02 specimen: main process alive at 33% CPU, no Next server, no
+window). OLYMPUS launches on **XWayland** by default; `OLYMPUS_OZONE=wayland`
+opts back in. GPU acceleration remains the default with the two-crash software
+fallback.

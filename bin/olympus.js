@@ -396,9 +396,13 @@ function startElectron(extraArgs = []) {
   const resetGpu = process.argv.includes('--reset-gpu');
   const gpuMarker = join(homedir(), '.olympus', 'gpu-fallback');
   const forceSoftware = process.argv.includes('--disable-gpu') || (!resetGpu && existsSync(gpuMarker));
+  // v0.0.50 — Wayland hang guard: Electron's Wayland backend can deadlock
+  // before app.whenReady() (the 2026-11-02 specimen: main alive, 33% CPU, no
+  // Next, no window). XWayland is reliable; allow an explicit override.
+  const ozone = process.env.OLYMPUS_OZONE || 'x11';
   let electronArgs = forceSoftware
-    ? ['--class=olympus', '--disable-gpu', '--disable-gpu-sandbox', ROOT, ...extraArgs]
-    : ['--class=olympus', ROOT, ...extraArgs];
+    ? ['--class=olympus', '--ozone-platform=' + ozone, '--disable-gpu', '--disable-gpu-sandbox', ROOT, ...extraArgs]
+    : ['--class=olympus', '--ozone-platform=' + ozone, ROOT, ...extraArgs];
   if (process.platform === 'linux') {
     const chromeSandbox = join(ROOT, 'node_modules', 'electron', 'dist', 'chrome-sandbox');
     let sandboxOk = false;

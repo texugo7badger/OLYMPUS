@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.50, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.51, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,12 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.51 — launch reliability on Wayland.** Electron's Wayland backend can
+deadlock before the app is ready (the 2026-11-02 specimen: main alive, 33%
+CPU, no Next, no window). OLYMPUS now launches on **XWayland** by default
+(`OLYMPUS_OZONE=wayland` opts back in), with GPU acceleration still the
+default and the two-crash software fallback unchanged.
 
 **v0.0.50 — v1.0 readiness, honestly.** The ladder from v0.0.38 to here is
 measured, not narrated: 60 FPS with GPU acceleration, a resource governor, a
