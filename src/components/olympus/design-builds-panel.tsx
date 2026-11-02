@@ -203,7 +203,7 @@ export default function DesignBuildsPanel() {
                     </div>
                     <p className="mt-1 text-[8px] font-mono text-olympus-text-dim/85 leading-relaxed line-clamp-2">{describeBuild(b)}</p>
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                      {[...b.skills, ...b.mcps, ...b.demigods].slice(0, 8).map((chip) => (
+                      {[...new Set([...b.skills, ...b.mcps, ...b.demigods])].slice(0, 8).map((chip) => (
                         <span key={chip} className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-bg/60 border border-olympus-gold/10 text-olympus-text-dim">{chip}</span>
                       ))}
                     </div>
@@ -236,7 +236,7 @@ export default function DesignBuildsPanel() {
               <span className="rounded bg-olympus-card px-1.5 py-1">smoothed <b className="text-olympus-gold">{(detail.stats.rate * 100).toFixed(0)}%</b></span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
-              {[...detail.skills, ...detail.mcps, ...detail.demigods].map((chip) => (
+              {[...new Set([...detail.skills, ...detail.mcps, ...detail.demigods])].map((chip) => (
                 <span key={chip} className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-card border border-olympus-gold/15 text-olympus-text-dim">{chip}</span>
               ))}
             </div>
