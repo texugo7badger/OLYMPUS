@@ -10,6 +10,7 @@ declare global {
     /** Present only when running inside the Electron wrapper. */
     olympus?: {
       isElectron: () => boolean;
+      hibernate: () => Promise<boolean>;
       isDev: () => boolean;
       getAppVersion: () => string;
       openExternal: (url: string) => void;
@@ -120,6 +121,7 @@ declare global {
     /** Compatibility alias for `window.olympus`. */
     electron?: {
       isElectron: () => boolean;
+      hibernate: () => Promise<boolean>;
       isDev: () => boolean;
       version: () => string;
       openExternal: (url: string) => void;

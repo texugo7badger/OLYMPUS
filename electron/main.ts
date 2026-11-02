@@ -653,6 +653,9 @@ function flashTray(type: NotifyType): void {
   setTrayIndicator(type);
   trayNotificationActive = true;
   if (trayResetTimer) clearTimeout(trayResetTimer);
+  // While the window is hidden the dot STAYS (the user must be able to see
+  // that something happened from the tray); it clears when the window shows.
+  if (mainWindow && !mainWindow.isVisible()) return;
   trayResetTimer = setTimeout(() => {
     trayResetTimer = null;
     trayNotificationActive = false;
@@ -1034,6 +1037,11 @@ button:hover{background:#D4A57433}
   } else {
     mainWindow.loadURL(BASE_URL);
   }
+
+  mainWindow.on('show', () => {
+    trayNotificationActive = false;
+    setTrayIndicator(null);
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -1589,6 +1597,11 @@ if (!gotLock) {
   console.log('[olympus:electron] another instance is running — asking it to show the window');
   app.quit();
 } else {
+  ipcMain.handle('olympus:hibernate', () => {
+    hibernateNow();
+    return true;
+  });
+
   app.on('second-instance', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -1665,6 +1678,14 @@ if (!gotLock) {
     // Epic N — OS suspend/resume. The marker lands before the freeze; the
     // resume call reconciles the campaign view and notifies the tray.
     try {
+      powerMonitor.on('lock-screen', () => {
+        try {
+          const raw = JSON.parse(readFileSync(join(nodeOs.homedir(), '.olympus', 'power-prefs.json'), 'utf-8'));
+          if (raw?.autoHibernateOnLock === false) return;
+        } catch { /* default: hibernate */ }
+        console.log('[olympus:power] screen locked — hibernating (the campaign stays)');
+        hibernateNow();
+      });
       powerMonitor.on('suspend', () => {
         console.log('[olympus:power] OS suspend — marker written');
         writePowerMarker('suspend');

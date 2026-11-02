@@ -22,6 +22,9 @@ const olympusApi = {
    */
   isElectron: (): boolean => true,
 
+  /** v0.0.32 — destroy the window and keep the campaign (the sleep contract). */
+  hibernate: (): Promise<boolean> => ipcRenderer.invoke('olympus:hibernate'),
+
   /**
    * Returns true when running in dev mode (npm run electron:dev). False when
    * packaged (npm run electron:build).

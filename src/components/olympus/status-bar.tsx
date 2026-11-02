@@ -21,6 +21,7 @@ import OlympusTooltip from './olympus-tooltip';
 import { useWorkingGods } from '@/lib/use-working-gods';
 import { useDocVisible } from '@/lib/use-doc-visible';
 import ThemedLogo from './themed-logo';
+import NotificationCenter from './notification-center';
 import { useTheme } from '@/lib/theme-store';
 
 interface ProviderInfo {
@@ -190,7 +191,10 @@ export default function StatusBar({
  {focusMode ? <PanelLeftOpen size={12} /> : <PanelLeftClose size={12} />}
  </button>
 
- {/* Compact Brain button — to the RIGHT of Focus Mode. */}
+ {/* v0.0.32 — notifications + the sleep contract. */}
+		 <NotificationCenter />
+
+		 {/* Compact Brain button — to the RIGHT of Focus Mode. */}
  <CompactBrainButton />
 
  <div className="w-px h-3 bg-olympus-gold/15 shrink-0" />

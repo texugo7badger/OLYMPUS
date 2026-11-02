@@ -1,0 +1,202 @@
+/**
+ * notification-center.tsx — v0.0.32 (Epic M).
+ *
+ * The tray dot tells the user something happened; this panel tells them WHAT
+ * and takes them there. Every event carries a type; the row links to the exact
+ * pane (delivery → Craft, curate → Brain, campaign → Activity). The panel also
+ * owns the sleep contract: auto-hibernate on OS lock (persisted) and a
+ * "hibernate now" button that asks the Electron main.
+ *
+ * License: AGPL-3.0-or-later (original OLYMPUS code).
+ */
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Bell, ChevronRight, Loader2, Moon, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useOlympus } from '@/lib/olympus-store';
+import type { NotifyType } from '@/lib/desktop-notify';
+
+interface NotifyEvent {
+  ts: string;
+  type: NotifyType;
+  title: string;
+  body: string;
+}
+
+const TONE: Record<NotifyType, { dot: string; text: string; pane: 'timeline' | 'craft-apps' | 'brain' | 'cost' }> = {
+  ready: { dot: 'bg-olympus-green', text: 'text-olympus-green', pane: 'timeline' },
+  error: { dot: 'bg-olympus-red', text: 'text-olympus-red', pane: 'timeline' },
+  design: { dot: 'bg-olympus-purple', text: 'text-olympus-purple', pane: 'craft-apps' },
+  walk: { dot: 'bg-olympus-cyan', text: 'text-olympus-cyan', pane: 'timeline' },
+  compact: { dot: 'bg-olympus-amber-soft', text: 'text-olympus-amber-soft', pane: 'cost' },
+  curate: { dot: 'bg-olympus-gold', text: 'text-olympus-gold', pane: 'brain' },
+};
+
+const SEEN_KEY = 'olympus:notify-seen';
+
+function relTime(iso: string): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return '';
+  const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.round(s / 60)}m`;
+  if (s < 86400) return `${Math.round(s / 3600)}h`;
+  return `${Math.round(s / 86400)}d`;
+}
+
+export default function NotificationCenter() {
+  const [open, setOpen] = useState(false);
+  const [events, setEvents] = useState<NotifyEvent[]>([]);
+  const [seenAt, setSeenAt] = useState<string>(() => {
+    try { return localStorage.getItem(SEEN_KEY) || ''; } catch { return ''; }
+  });
+  const [autoHibernate, setAutoHibernate] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const setLeftPane = useOlympus((s) => s.setLeftPane);
+  const docVisible = useOlympus((s) => s.leftPane) !== undefined; // keeps the component client-only
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch('/api/olympus/notify?limit=30', { cache: 'no-store' });
+      const d = await r.json();
+      if (d?.ok && Array.isArray(d.events)) setEvents(d.events);
+    } catch { /* offline */ }
+  }, []);
+
+  const loadPrefs = useCallback(async () => {
+    try {
+      const r = await fetch('/api/olympus/power/auto-hibernate', { cache: 'no-store' });
+      const d = await r.json();
+      if (d?.ok) setAutoHibernate(d.prefs?.autoHibernateOnLock !== false);
+    } catch { /* default stays */ }
+  }, []);
+
+  useEffect(() => {
+    void load();
+    void loadPrefs();
+    const iv = setInterval(() => { if (document.visibilityState !== 'hidden') void load(); }, 15_000);
+    return () => clearInterval(iv);
+  }, [load, loadPrefs]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener('mousedown', onDown);
+    return () => window.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  const unread = events.filter((e) => !seenAt || e.ts > seenAt).length;
+
+  const markSeen = () => {
+    const latest = events[0]?.ts ?? new Date().toISOString();
+    setSeenAt(latest);
+    try { localStorage.setItem(SEEN_KEY, latest); } catch { /* private mode */ }
+  };
+
+  const toggleAuto = async (value: boolean) => {
+    setAutoHibernate(value);
+    try {
+      await fetch('/api/olympus/power/auto-hibernate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoHibernateOnLock: value }),
+      });
+    } catch { /* the local state stands */ }
+  };
+
+  const hibernateNow = async () => {
+    setBusy(true);
+    try {
+      const api = (window as any).olympus;
+      if (api?.hibernate) await api.hibernate();
+      else await fetch('/api/olympus/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'walk', title: 'OLYMPUS — hibernate', body: 'The desktop app owns hibernation; open the tray menu if the window stays.' }),
+      });
+    } catch { /* optional */ }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <button
+        onClick={() => { setOpen((v) => !v); if (!open) markSeen(); }}
+        className="relative flex items-center gap-1 px-1.5 py-1 rounded text-olympus-text-dim hover:text-olympus-gold transition-colors"
+        aria-label={`Notifications${unread ? ` (${unread} unread)` : ''}`}
+        aria-expanded={open}
+      >
+        <Bell size={11} />
+        <span className="text-[9px] font-mono hidden sm:inline">notify</span>
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-3 h-3 px-0.5 rounded-full bg-olympus-red text-[7px] font-mono text-white flex items-center justify-center">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-full mt-1 w-80 max-w-[calc(100vw-1rem)] max-h-[420px] overflow-hidden rounded-lg border border-olympus-gold/25 bg-olympus-panel shadow-2xl z-[120] flex flex-col">
+          <header className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-olympus-gold/10">
+            <Bell size={10} className="text-olympus-gold" />
+            <span className="text-[9px] font-mono font-semibold uppercase tracking-wide text-olympus-gold">notifications</span>
+            <button onClick={markSeen} className="ml-auto text-[8px] font-mono text-olympus-text-dim hover:text-olympus-text">mark read</button>
+            <button onClick={() => setOpen(false)} aria-label="Close notifications" className="text-olympus-text-dim hover:text-olympus-red"><X size={11} /></button>
+          </header>
+
+          <div className="flex-1 min-h-0 overflow-auto custom-scroll">
+            {events.length === 0 && (
+              <p className="px-2.5 py-6 text-center text-[9px] font-mono text-olympus-text-dim">nothing yet — the tray will color when something happens</p>
+            )}
+            {events.map((e, i) => {
+              const tone = TONE[e.type] ?? TONE.walk;
+              return (
+                <button
+                  key={`${e.ts}-${i}`}
+                  onClick={() => { setLeftPane(tone.pane); setOpen(false); }}
+                  className="w-full text-left px-2.5 py-1.5 border-b border-olympus-gold/5 hover:bg-olympus-gold/5 transition-colors flex items-start gap-1.5"
+                >
+                  <span className={cn('w-1.5 h-1.5 rounded-full mt-1 shrink-0', tone.dot)} />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1">
+                      <span className={cn('text-[9px] font-mono font-semibold truncate', tone.text)}>{e.title}</span>
+                      <span className="ml-auto text-[8px] font-mono text-olympus-text-dim shrink-0">{relTime(e.ts)}</span>
+                    </span>
+                    <span className="block text-[9px] font-mono text-olympus-text-dim truncate">{e.body}</span>
+                  </span>
+                  <ChevronRight size={10} className="text-olympus-text-dim mt-0.5 shrink-0" />
+                </button>
+              );
+            })}
+          </div>
+
+          <footer className="px-2.5 py-1.5 border-t border-olympus-gold/10 flex items-center gap-2">
+            <Moon size={10} className="text-olympus-purple" />
+            <span className="text-[8px] font-mono text-olympus-text-dim" data-tip="When the screen locks or logs out, close the window and keep the campaign running">
+              hibernate on lock
+            </span>
+            <button
+              onClick={() => void toggleAuto(!autoHibernate)}
+              aria-pressed={autoHibernate}
+              className={cn('ml-auto w-7 h-3.5 rounded-full transition-colors relative', autoHibernate ? 'bg-olympus-green/70' : 'bg-olympus-gold/20')}
+              aria-label="Auto-hibernate on lock"
+            >
+              <span className={cn('absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all', autoHibernate ? 'left-3.5' : 'left-0.5')} />
+            </button>
+            <button
+              onClick={() => void hibernateNow()}
+              disabled={busy}
+              className="flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30 hover:bg-olympus-purple/25 disabled:opacity-50"
+            >
+              {busy ? <Loader2 size={9} className="animate-spin" /> : <Moon size={9} />} now
+            </button>
+          </footer>
+        </div>
+      )}
+    </div>
+  );
+}
