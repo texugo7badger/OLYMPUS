@@ -53,9 +53,14 @@ async function main() {
 
   // ── J3: the originkit MCP — the 8-step checklist ────────────────────────
   const ocJson = JSON.parse(read('opencode.json'));
-  expect('J3: opencode.json registers the originkit MCP (remote, DISABLED, the honest note)',
-    ocJson.mcp?.originkit?.url === 'https://mcp.originkit.dev/vellumai' && ocJson.mcp?.originkit?.enabled === false,
-    'the originkit MCP is unregistered or default-on');
+  // The DEFAULT is off (the honest note), but the maintainer may enable it
+  // from the panel — the invariant is: never enabled WITHOUT its key header.
+  const originkit = ocJson.mcp?.originkit;
+  expect('J3: opencode.json registers originkit (remote; enabled only with the Bearer header)',
+    originkit?.url === 'https://mcp.originkit.dev/vellumai'
+      && originkit?.type === 'remote'
+      && (originkit?.enabled === false || originkit?.headers?.Authorization === 'Bearer {env:ORIGINKIT_API_KEY}'),
+    'the originkit MCP is unregistered, or enabled without the key header');
   const reqMap = read('src/lib/mcp-api-requirements.ts');
   expect('J3: the shared requirements map carries originkit (the FREE key)',
     /names: \['originkit'\]/.test(reqMap) && reqMap.includes('ORIGINKIT_API_KEY'),
