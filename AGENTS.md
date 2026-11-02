@@ -147,6 +147,13 @@ Release body for the tag** — never committed as `release-notes-vX.md` in the
 repository root (`repo:privacy` enforces it). A tag without its release body,
 or a release whose docs contradict the code, is an incomplete release.
 
+## Release naming (standing rule — effective v0.0.37)
+
+The GitHub Release **title** is exactly `OLYMPUS vX.Y.Z` — no tagline, no
+em dash, no extra words. All highlights, measurements and honest limits go in
+the **release body** (the notes file). The tag is `vX.Y.Z`. A release whose
+title carries a subtitle is a batch defect: fix the title in the same action.
+
 ## Issue Taxonomy (standing rule — effective 2026-10-03, retroactive)
 
 Every issue is complete at creation time:
