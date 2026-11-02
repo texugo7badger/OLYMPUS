@@ -27,6 +27,11 @@ ok('the speak route is the free edge-tts lane', () => {
   assert.match(src, /audio\/mpeg/);
 });
 
+ok('the honest voice status route exists', () => {
+  assert.ok(existsSync(new URL('../src/app/api/olympus/voice/status/route.ts', import.meta.url)));
+  assert.match(read('src/app/api/olympus/voice/status/route.ts'), /faster_whisper/);
+});
+
 ok('the STT route and script exist (local faster-whisper)', () => {
   assert.ok(existsSync(new URL('../src/app/api/olympus/voice/listen/route.ts', import.meta.url)));
   assert.match(read('src/app/api/olympus/voice/listen/route.ts'), /stt-whisper\.py/);
