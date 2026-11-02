@@ -16,7 +16,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Mic, Sparkles, X } from 'lucide-react';
+import { Mic, Send, Sparkles, Volume2, X } from 'lucide-react';
 import { resolvePalette } from '@/lib/theme';
 import { useTheme } from '@/lib/theme-store';
 import { useOlympus } from '@/lib/olympus-store';
@@ -38,10 +38,28 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const [inflight, setInflight] = useState<InFlight[]>([]);
   const [lang, setLang] = useState('en');
   const [voice, setVoice] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [say, setSay] = useState('');
 
   useEffect(() => {
     try { setLang(localStorage.getItem('olympus:language') || 'en'); } catch { /* private */ }
   }, []);
+
+  // v0.0.32 — the first voice slice: speech synthesis in the selected
+  // language. The orb animates while speaking; voice is OFF by default.
+  const speak = useCallback((text: string) => {
+    if (!text || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text.slice(0, 400));
+      u.lang = lang;
+      u.rate = 1.02;
+      u.onstart = () => setSpeaking(true);
+      u.onend = () => setSpeaking(false);
+      u.onerror = () => setSpeaking(false);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch { /* voice optional */ }
+  }, [lang]);
 
   const pickLang = useCallback((value: string) => {
     setLang(value);
@@ -147,7 +165,14 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
       es.onmessage = (e) => {
         try {
           const ev = JSON.parse(e.data);
-          if (ev?.type === 'hop_start' || ev?.type === 'hop_done' || ev?.type === 'hop_parked') burst();
+          if (ev?.type === 'hop_start' || ev?.type === 'hop_done' || ev?.type === 'hop_parked') {
+            burst();
+            if (voice) {
+              const god = ev?.god || 'a god';
+              const hop = ev?.hop || ev?.hopId || 'a hop';
+              speak(ev.type === 'hop_done' ? `${god} finished ${hop}` : ev.type === 'hop_parked' ? `${god} parked ${hop}` : `${god} started ${hop}`);
+            }
+          }
         } catch { /* torn */ }
       };
     } catch { /* optional */ }
@@ -166,7 +191,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
       window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', onVis);
     };
-  }, [palette.gold, palette.cyan, palette.purple, palette.green, palette.amberSoft, theme.motion]);
+  }, [palette.gold, palette.cyan, palette.purple, palette.green, palette.amberSoft, theme.motion, voice, speak]);
 
   return (
     <div
@@ -224,7 +249,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
             aria-pressed={voice}
             aria-label="Voice orb"
             className="relative w-24 h-24 rounded-full flex items-center justify-center"
-            style={{ background: palette.bg, boxShadow: `0 0 32px ${palette.cyan}55` }}
+            style={{ background: palette.bg, boxShadow: `0 0 ${speaking ? 46 : 32}px ${speaking ? palette.gold : palette.cyan}66` }}
           >
             <span
               className="absolute inset-0 rounded-full"
@@ -234,7 +259,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
               }}
             />
             <span className="absolute inset-1 rounded-full" style={{ background: palette.bg }} />
-            <Mic size={22} className="relative" style={{ color: voice ? palette.gold : palette.textDim }} />
+            <Mic size={22} className={speaking ? 'relative animate-pulse' : 'relative'} style={{ color: voice ? palette.gold : palette.textDim }} />
           </button>
           <select
             value={lang}
@@ -245,7 +270,22 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
           >
             {LANGS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
-          <p className="text-[8px] font-mono text-center" style={{ color: palette.textDim }}>voice arrives in a later release — the orb and the language stay here.</p>
+          <div className="w-full flex items-center gap-1">
+            <input
+              value={say}
+              onChange={(e) => setSay(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { speak(say); setSay(''); } }}
+              placeholder="say something…"
+              className="flex-1 min-w-0 rounded px-1.5 py-1 text-[9px] font-mono outline-none"
+              style={{ background: palette.bg, color: palette.text, border: `1px solid ${palette.gold}33` }}
+            />
+            <button onClick={() => { speak(say); setSay(''); }} aria-label="Speak" className="rounded p-1" style={{ color: palette.gold }}>
+              <Send size={11} />
+            </button>
+          </div>
+          <p className="text-[8px] font-mono text-center flex items-center gap-1" style={{ color: speaking ? palette.gold : palette.textDim }}>
+            <Volume2 size={9} /> {voice ? (speaking ? 'speaking…' : 'voice on — hop events are spoken') : 'voice off — the orb and the language stay here'}
+          </p>
         </aside>
       </div>
     </div>
