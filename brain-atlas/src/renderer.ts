@@ -285,7 +285,13 @@ export class BrainRenderer extends RenderCore {
       * (isHover ? 1.18 : isFocus ? 1.25 : 1);
     const fade = Math.max(0.32, 1 - projected.depth * 0.75);
     const dim = node.status === "archived" ? 0.30 : node.status === "dormantRelevant" ? 0.55 : 1;
-    const alpha = fade * dim * lobeMul(node._lobeName);
+    let alpha = fade * dim * lobeMul(node._lobeName);
+    // v0.0.32 — LIGHT THEMES WASH THE NODES OUT: alpha blending pale colors
+    // on a paper background left the brain unreadable. On a light palette,
+    // lift the alpha and use the ink for the core instead of white.
+    const bgLum = hexLuminance(graph.activePalette.bg);
+    const lightBg = bgLum > 0.55;
+    if (lightBg) alpha = Math.min(1, alpha * 1.55 + 0.22);
     if (alpha < 0.05) return;
 
     const haloRadius = radius * (working ? 5.4 : 3.6) * graph.CHAOS.halo;
@@ -301,7 +307,9 @@ export class BrainRenderer extends RenderCore {
     ctx.beginPath();
     ctx.arc(projected.sx, projected.sy, radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = `rgba(255,255,255,${Math.min(1, alpha)})`;
+    ctx.fillStyle = lightBg
+      ? hexA(graph.activePalette.text, Math.min(1, alpha))
+      : `rgba(255,255,255,${Math.min(1, alpha)})`;
     ctx.beginPath();
     ctx.arc(projected.sx, projected.sy, Math.max(0.7, radius * 0.42), 0, Math.PI * 2);
     ctx.fill();
@@ -425,4 +433,15 @@ function lerpHex(a: string, b: string, t: number): string {
 
 function rgbaFromRgb(rgb: string, alpha: number): string {
   return rgb.replace("rgb(", "rgba(").replace(")", `,${alpha})`);
+}
+
+/** v0.0.32 — the light-theme contrast switch for the canvas. */
+function hexLuminance(hex: string): number {
+  const h = hex.startsWith('#') ? hex.slice(1) : hex;
+  if (h.length !== 6) return 0;
+  const ch = (i: number) => {
+    const c = parseInt(h.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
 }
