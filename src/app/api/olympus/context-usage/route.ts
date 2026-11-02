@@ -44,6 +44,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireReadAuth } from '@/lib/auth';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+import { resolveModelWindow } from '@/lib/model-context';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -59,7 +60,6 @@ export const dynamic = 'force-dynamic';
 // overestimate the limit, the indicator just reads low; if we underestimate
 // it, the indicator reads high. The former is the safer failure mode (we
 // don't bother the user with a false alarm).
-const DEFAULT_CONTEXT_LIMIT = 200_000;
 
 /**
  * Candidate locations for OpenCode's model catalog — the authoritative
@@ -109,7 +109,7 @@ function loadModelsJson(): any | null {
  * model id; otherwise we scan every provider.
  *
  * Returns null when the model isn't in the catalog or the file is missing —
- * the caller then keeps DEFAULT_CONTEXT_LIMIT.
+ * the caller then keeps the documented window (never a fabricated 200k).
  */
 function resolveModelsJsonContext(modelId?: string, providerId?: string): number | null {
   if (!modelId) return null;
@@ -307,27 +307,28 @@ function readUsageFromDb(sessionId?: string): {
         }
       } catch { model = undefined; }
 
-      // Limit: metadata.contextWindow if present, else the live free-model
-      // list context, else the model catalog's declared window, else the
-      // default.
-      let limit = DEFAULT_CONTEXT_LIMIT;
+      // Limit: ONE resolver (R32-01). A guessed 200k is worse than "—".
+      let sessionLimit: number | null = null;
       try {
         const md = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
         if (md) {
           const ctx = md.contextWindow ?? md.context_window ?? md.modelInfo?.context_window ?? md.model_info?.context_window;
-          if (Number.isFinite(Number(ctx)) && Number(ctx) > 0) limit = Number(ctx);
+          if (Number.isFinite(Number(ctx)) && Number(ctx) > 0) sessionLimit = Number(ctx);
         }
       } catch {}
-      if (limit === DEFAULT_CONTEXT_LIMIT) {
-        const fmCtx = resolveFreeModelContext(model);
-        if (fmCtx != null) limit = fmCtx;
-      }
-      if (limit === DEFAULT_CONTEXT_LIMIT) {
-        const mjCtx = resolveModelsJsonContext(model, providerId);
-        if (mjCtx != null) limit = mjCtx;
-      }
+      const window = resolveModelWindow(model, {
+        sessionLimit,
+        freeListLimit: resolveFreeModelContext(model),
+        catalogLimit: resolveModelsJsonContext(model, providerId),
+      });
 
-      return { used, limit, model, sessionId: row.id };
+      return {
+        used,
+        limit: window.context,
+        model,
+        sessionId: row.id,
+        ...(window.context === 0 ? { unknown: true } : {}),
+      };
     } finally {
       db.close();
     }
@@ -484,19 +485,13 @@ function extractUsage(session: any): {
     session?.context_window ??
     session?.contextLimit ??
     session?.limit;
-  let limit = num(limitRaw);
-  if (limit <= 0) {
-    // No per-session context window — fall back to the live free-model list
-    // (1M for Nemotron Ultra etc.), then the model catalog's declared
-    // window, before the 200k default.
-    const fmCtx = resolveFreeModelContext(model);
-    if (fmCtx != null) {
-      limit = fmCtx;
-    } else {
-      const mjCtx = resolveModelsJsonContext(model);
-      limit = mjCtx != null ? mjCtx : DEFAULT_CONTEXT_LIMIT;
-    }
-  }
+  // R32-01 — ONE resolver; unknown stays unknown (the UI renders "—").
+  const window = resolveModelWindow(model, {
+    sessionLimit: limitRaw,
+    freeListLimit: resolveFreeModelContext(model),
+    catalogLimit: resolveModelsJsonContext(model),
+  });
+  const limit = window.context;
 
   // ---- Used (token count) ----
   // 1. Explicit total aggregate
@@ -539,9 +534,9 @@ function extractUsage(session: any): {
   // cap is generous because compaction can briefly push usage past 100%
   // before the old messages are evicted.
   if (!Number.isFinite(used) || used < 0) used = 0;
-  if (used > limit * 2) used = limit * 2;
+  if (limit > 0 && used > limit * 2) used = limit * 2;
 
-  return { used, limit, model, sessionId };
+  return { used, limit, model, sessionId, ...(limit === 0 ? { unknown: true } : {}) };
 }
 
 /**
@@ -551,7 +546,8 @@ function extractUsage(session: any): {
 function emptyResponse(): ContextUsageResponse {
   return {
     used: 0,
-    limit: DEFAULT_CONTEXT_LIMIT,
+    // Never a fabricated 200k: an unknown window is 0 and renders "—".
+    limit: 0,
     percentage: 0,
     quality: 'good',
     // The old shape told the UI "0%" — a lie when the session source is
@@ -590,14 +586,16 @@ export async function GET(req: NextRequest) {
       pct > CRIT_PCT ? 'critical' :
       pct > WARN_PCT ? 'warning' :
       'good';
+    const dbUnknown = dbResult.limit === 0;
     return NextResponse.json({
-      used: Math.min(dbResult.used, dbResult.limit * 2),
+      used: dbUnknown ? dbResult.used : Math.min(dbResult.used, dbResult.limit * 2),
       limit: dbResult.limit,
       percentage,
       quality,
       sessionId: dbResult.sessionId,
       model: dbResult.model,
       sessionMtime: new Date().toISOString(),
+      ...(dbUnknown ? { unknown: true } : {}),
     } satisfies ContextUsageResponse, { headers: NO_CACHE_HEADERS });
   }
 
@@ -649,6 +647,7 @@ export async function GET(req: NextRequest) {
     limit,
     percentage,
     quality,
+    ...(limit === 0 ? { unknown: true } : {}),
     sessionId,
     model,
     sessionMtime: new Date(best.mtime).toISOString(),
