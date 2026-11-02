@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.34, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.35, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -32,6 +32,15 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.35 — the voice & hygiene release.** The free neural voice lane now
+speaks through the terminal and the studio, the Pattern Studio lets you choose
+a microphone and talk to the gods (local Whisper STT — no audio leaves the
+machine), and the plasma orb reacts to the real waveform. The repo is clean:
+the battery is green (106 PASS / 0 FAIL / 1 declared skip), `tsc`/`lint` are
+clean, the runtime config is committed, and the README/header/badges carry the
+current version. The chameleon identity, 859-reference catalog and
+seven-language interface from v0.0.34 are unchanged.
 
 **v0.0.34 — the chameleon release.** The original OLYMPUS mark now follows the
 palette everywhere (app bar, favicon, window, tray, dock) — same SVG, same
