@@ -237,6 +237,7 @@ export default function ArtcraftStyleBoard({
             <Palette size={12} className="text-olympus-gold" />
             <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">style board</span>
             <span className="text-[8px] font-mono text-olympus-text-dim truncate">{projectSlug}</span>
+            {picked.size > 0 && <span className="text-[8px] font-mono text-olympus-cyan">· {picked.size} ref</span>}
             {saving ? <Loader2 size={10} className="animate-spin text-olympus-gold ml-auto" /> : savedAt ? <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">saved</span> : null}
           </header>
 
@@ -409,9 +410,16 @@ export default function ArtcraftStyleBoard({
             </div>
             <div className="grid grid-cols-3 gap-1">
               {athenaSuggestions.map((p) => (
-                <button key={p.id} onClick={() => update({ custom: p.colors })} className="rounded border border-olympus-gold/10 px-1.5 py-1 text-left hover:border-olympus-purple/40">
-                  <span className="flex gap-1">{[p.colors.bg, p.colors.surface, p.colors.accent].map((c) => <span key={c} className="w-2.5 h-2.5 rounded-sm ring-1 ring-black/30" style={{ background: c }} />)}</span>
-                  <span className="block text-[7px] font-mono text-olympus-text-dim mt-0.5 truncate">{p.name}</span>
+                <button key={p.id} onClick={() => update({ custom: p.colors })} className="group rounded-lg border border-olympus-gold/10 overflow-hidden text-left hover:border-olympus-purple/50 hover:-translate-y-0.5 transition-transform">
+                  <span className="block h-12 p-1.5" style={{ background: p.colors.bg }}>
+                    <span className="block h-1 w-8 rounded-full mb-1" style={{ background: p.colors.accent }} />
+                    <span className="block h-1 w-12 rounded-full mb-1" style={{ background: p.colors.text, opacity: 0.7 }} />
+                    <span className="block h-4 rounded" style={{ background: p.colors.surface }} />
+                  </span>
+                  <span className="flex items-center gap-1 px-1.5 py-1">
+                    <span className="text-[8px] font-mono text-olympus-text-dim truncate">{p.name}</span>
+                    <span className="ml-auto text-[7px] font-mono text-olympus-purple uppercase">apply</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -475,7 +483,7 @@ export default function ArtcraftStyleBoard({
                       aria-pressed={active}
                       className={cn('rounded border p-1 flex flex-col items-center gap-0.5 transition-colors', active ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/10 hover:border-olympus-gold/35')}
                     >
-                      <img src={src} alt={l.name} width={44} height={44} className="rounded" />
+                      <img src={src} alt={l.name} width={56} height={56} className="rounded" />
                       <span className="text-[8px] font-mono text-olympus-text-dim uppercase truncate max-w-full">{l.name}</span>
                     </button>
                   );
@@ -493,39 +501,7 @@ export default function ArtcraftStyleBoard({
           )}
         </section>
 
-        {/* reference picker */}
-        <section className="rounded border border-olympus-gold/15 bg-olympus-panel/60 p-2.5 lg:col-span-2">
-          <header className="flex items-center gap-1.5 mb-1.5">
-            <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">references</span>
-            <span className="text-[8px] font-mono text-olympus-text-dim">link only — never a copied asset without a license</span>
-            <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">{picked.size} selected</span>
-          </header>
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <input
-              value={webQuery}
-              onChange={(e) => setWebQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') void searchWeb(); }}
-              placeholder="search the web for a visual reference — e.g. editorial dashboard, warm brutalist, glass cards"
-              className={cn(field, 'flex-1')}
-            />
-            <button onClick={() => void searchWeb()} disabled={webBusy} className="flex items-center gap-1 text-[9px] font-mono px-2 py-1 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20 disabled:opacity-50">
-              {webBusy ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} web
-            </button>
-          </div>
-          {webError && <p className="text-[8px] font-mono text-olympus-amber-soft mb-1">{webError}</p>}
-          <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3 max-h-40 overflow-auto">
-            {allRefs.length === 0 && <p className="text-[9px] font-mono text-olympus-text-dim">no references loaded</p>}
-            {allRefs.map((r) => (
-              <label key={r.demoUrl} className="flex items-start gap-1.5 rounded border border-olympus-gold/10 px-1.5 py-1 cursor-pointer hover:border-olympus-gold/30">
-                <input type="checkbox" checked={picked.has(r.demoUrl)} onChange={() => toggleRef(r)} className="mt-0.5 accent-[#D4A574]" />
-                <span className="min-w-0">
-                  <span className="block text-[9px] font-mono text-olympus-text truncate">{r.name}</span>
-                  <span className="block text-[8px] font-mono text-olympus-text-dim truncate">{r.category ?? r.library ?? ''}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </section>
+
       </div>
     </div>
   );

@@ -130,7 +130,7 @@ export interface ThemeMarkColors {
  * inside a disc) rendered with the PNG encoder — no dependency, no SVG
  * rasterizer. 256px by default; the taskbar downsamples cleanly.
  */
-export function themeMarkPng(colors: ThemeMarkColors, size = 256): Buffer {
+export function themeMarkPng(colors: ThemeMarkColors, size = 256, iconId = 'classic'): Buffer {
   const [ar, ag, ab] = hexToRgb(colors.accent);
   const [pr, pg, pb] = hexToRgb(colors.purple);
   const [br, bgc, bb] = hexToRgb(colors.bg);
@@ -153,6 +153,13 @@ export function themeMarkPng(colors: ThemeMarkColors, size = 256): Buffer {
   };
   const dotR = size * 0.035;
   const dotY = size * 0.17;
+  // The selected logo family must reach the OS icon too.
+  const orbit = iconId === 'orbit';
+  const peakOnly = iconId === 'peak';
+  const monogram = iconId === 'monogram';
+  const orbitDots = orbit
+    ? [[0.5, 0.20], [0.78, 0.5], [0.5, 0.80], [0.22, 0.5]].map(([x, y]) => [size * x, size * y])
+    : [];
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
       const i = (y * size + x) * 4;
@@ -162,8 +169,15 @@ export function themeMarkPng(colors: ThemeMarkColors, size = 256): Buffer {
       const isRing = d > outer - ring;
       let r = br, g = bgc, b = bb;
       if (isRing) { r = ar; g = ag; b = ab; }
-      if (!isRing && insideTriangle(x, y)) { r = ar; g = ag; b = ab; }
-      if (Math.hypot(x - cx, y - dotY) <= dotR) { r = pr; g = pg; b = pb; }
+      if (monogram && !isRing && Math.abs(Math.hypot(x - cx, y - cy) - size * 0.30) < size * 0.012) { r = ar; g = ag; b = ab; }
+      if (!peakOnly && !orbit && !monogram && !isRing && insideTriangle(x, y)) { r = ar; g = ag; b = ab; }
+      if (peakOnly && !isRing && insideTriangle(x, y)) { r = ar; g = ag; b = ab; }
+      if (orbit) {
+        for (const [ox, oy] of orbitDots) {
+          if (Math.hypot(x - ox, y - oy) <= size * 0.045) { r = ar; g = ag; b = ab; }
+        }
+      }
+      if (!orbit && Math.hypot(x - cx, y - dotY) <= dotR) { r = pr; g = pg; b = pb; }
       rgba[i] = r; rgba[i + 1] = g; rgba[i + 2] = b; rgba[i + 3] = 255;
     }
   }

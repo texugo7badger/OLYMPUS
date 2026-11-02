@@ -203,19 +203,19 @@ export default function CustomFrames() {
  };
 
  return (
- <div className="w-full h-full flex bg-[#0A0E16]">
+ <div className="w-full h-full flex bg-olympus-bg">
  {/* Sidebar -- frame list */}
- <div className="w-48 shrink-0 border-r border-[#D4A574]/10 bg-[#0E1320] overflow-y-auto custom-scroll">
- <div className="px-3 py-2 text-[10px] font-semibold text-[#8B8B8B] uppercase tracking-wide sticky top-0 bg-[#0E1320] border-b border-[#D4A574]/10 flex items-center justify-between z-10">
+ <div className="w-48 shrink-0 border-r border-olympus-gold/10 bg-olympus-panel overflow-y-auto custom-scroll">
+ <div className="px-3 py-2 text-[10px] font-semibold text-olympus-text-dim uppercase tracking-wide sticky top-0 bg-olympus-panel border-b border-olympus-gold/10 flex items-center justify-between z-10">
  <span>Custom Frames</span>
  <div className="flex items-center gap-1.5">
  <OlympusTooltip content="Manage frames" side="bottom">
- <button onClick={() => setManageOpen(true)} className="text-[#8B8B8B] hover:text-[#D4A574] transition-colors">
+ <button onClick={() => setManageOpen(true)} className="text-olympus-text-dim hover:text-olympus-gold transition-colors">
  <Settings size={11} />
  </button>
  </OlympusTooltip>
  <OlympusTooltip content="Add custom frame by URL" side="bottom">
- <button onClick={() => { setAddOpen(true); setAddFrameError(null); }} className="text-[#D4A574] hover:text-[#D4A574]/80 transition-colors">
+ <button onClick={() => { setAddOpen(true); setAddFrameError(null); }} className="text-olympus-gold hover:text-olympus-gold/80 transition-colors">
  <Plus size={11} />
  </button>
  </OlympusTooltip>
@@ -225,7 +225,7 @@ export default function CustomFrames() {
  {enabledFrames.length === 0 ? (
  <div className="px-3 py-4 text-center">
  <Globe size={18} className="text-olympus-text-dim mx-auto mb-2" />
- <p className="text-[10px] text-[#8B8B8B] font-mono leading-relaxed">
+ <p className="text-[10px] text-olympus-text-dim font-mono leading-relaxed">
  No frames yet.<br />Click + to add a URL.
  </p>
  </div>
@@ -241,7 +241,7 @@ export default function CustomFrames() {
  ))
  )}
  </div>
- <div className="px-3 py-2 mt-2 border-t border-[#D4A574]/10 text-[9px] text-[#8B8B8B] font-mono leading-relaxed">
+ <div className="px-3 py-2 mt-2 border-t border-olympus-gold/10 text-[9px] text-olympus-text-dim font-mono leading-relaxed">
  {enabledFrames.length} active · {customFrames.length - enabledFrames.length} disabled · {customFrames.length} total.
  </div>
  </div>
@@ -258,12 +258,12 @@ export default function CustomFrames() {
  </div>
  )}
  {!active && (
- <div className="absolute inset-0 flex flex-col items-center justify-center text-[#8B8B8B] gap-3">
- <Globe size={32} className="text-[#D4A574]/40" />
+ <div className="absolute inset-0 flex flex-col items-center justify-center text-olympus-text-dim gap-3">
+ <Globe size={32} className="text-olympus-gold/40" />
  <p className="text-xs font-mono">No frame selected.</p>
  <button
  onClick={() => { setAddOpen(true); setAddFrameError(null); }}
- className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#D4A574]/20 text-[#D4A574] hover:bg-[#D4A574]/30 text-[11px] font-mono"
+ className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-olympus-gold/20 text-olympus-gold hover:bg-olympus-gold/30 text-[11px] font-mono"
  >
  <Plus size={12} /> Add a frame
  </button>
@@ -298,8 +298,8 @@ function FrameListItem({ frame, active, onClick, onDelete }: {
  return (
  <div
  className={cn(
- 'group w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono hover:bg-[#D4A574]/5 transition-colors ',
- active && 'bg-[#D4A574]/10 text-[#D4A574]',
+ 'group w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono hover:bg-olympus-gold/5 transition-colors ',
+ active && 'bg-olympus-gold/10 text-olympus-gold',
  )}
  onClick={onClick}
  >
@@ -318,7 +318,7 @@ function FrameListItem({ frame, active, onClick, onDelete }: {
  <span className="truncate flex-1">{frame.displayName}</span>
  <button
  onClick={(e) => { e.stopPropagation(); onDelete(); }}
- className="opacity-0 group-hover:opacity-100 text-[#8B8B8B] hover:text-[#C4756A] transition-all"
+ className="opacity-0 group-hover:opacity-100 text-olympus-text-dim hover:text-olympus-red transition-all"
  aria-label="Delete frame"
  >
  <Trash2 size={11} />
@@ -331,20 +331,20 @@ function FrameView({ frame, onRefresh }: { frame: Frame; onRefresh: () => void }
  const ref = useRef<any>(null);
 
  return (
- <div className="w-full h-full flex flex-col bg-[#0A0E16]">
- <div className="h-7 shrink-0 flex items-center gap-2 px-3 bg-[#0E1320] border-b border-[#D4A574]/10 text-[10px] font-mono text-[#8B8B8B]">
+ <div className="w-full h-full flex flex-col bg-olympus-bg">
+ <div className="h-7 shrink-0 flex items-center gap-2 px-3 bg-olympus-panel border-b border-olympus-gold/10 text-[10px] font-mono text-olympus-text-dim">
  <Globe size={10} />
  <span className="truncate flex-1">{frame.url}</span>
  <OlympusTooltip content="Open in system browser" side="bottom">
  <button
  onClick={() => window.olympus?.openExternal?.(frame.url)}
- className="text-[#8B8B8B] hover:text-[#D4A574] transition-colors"
+ className="text-olympus-text-dim hover:text-olympus-gold transition-colors"
  >
  <ExternalLink size={11} />
  </button>
  </OlympusTooltip>
  <OlympusTooltip content="Reload frame" side="bottom">
- <button onClick={onRefresh} className="text-[#8B8B8B] hover:text-[#D4A574] transition-colors">
+ <button onClick={onRefresh} className="text-olympus-text-dim hover:text-olympus-gold transition-colors">
  <RefreshCw size={11} />
  </button>
  </OlympusTooltip>
@@ -389,48 +389,48 @@ function AddFrameDialog({ open, onOpenChange, onAdd, externalError }: {
 
  return (
  <Dialog open={open} onOpenChange={onOpenChange}>
- <DialogContent className="bg-[#0E1320] border-[#D4A574]/20 text-[#B8B8B8] max-w-md">
+ <DialogContent className="bg-olympus-panel border-olympus-gold/20 text-olympus-text max-w-md">
  <DialogHeader>
- <DialogTitle className="text-[#D4A574] flex items-center gap-2">
+ <DialogTitle className="text-olympus-gold flex items-center gap-2">
  <Plus size={16} /> Add Custom Frame
  </DialogTitle>
- <DialogDescription className="text-[#8B8B8B]">
+ <DialogDescription className="text-olympus-text-dim">
  Add any website or localhost URL as an embedded frame.
  </DialogDescription>
  </DialogHeader>
  <div className="space-y-3 py-2">
  <div>
- <Label className="text-[#8B8B8B] text-[10px] font-mono uppercase">Display Name</Label>
+ <Label className="text-olympus-text-dim text-[10px] font-mono uppercase">Display Name</Label>
  <Input
  value={displayName}
  onChange={e => setDisplayName(e.target.value)}
  placeholder="GitHub"
- className="bg-[#0A0E16] border-[#D4A574]/20 text-[#B8B8B8] mt-1"
+ className="bg-olympus-bg border-olympus-gold/20 text-olympus-text mt-1"
  autoFocus
  />
  </div>
  <div>
- <Label className="text-[#8B8B8B] text-[10px] font-mono uppercase">URL</Label>
+ <Label className="text-olympus-text-dim text-[10px] font-mono uppercase">URL</Label>
  <Input
  value={url}
  onChange={e => setUrl(e.target.value)}
  placeholder="https://github.com"
- className="bg-[#0A0E16] border-[#D4A574]/20 text-[#B8B8B8] mt-1 font-mono text-[11px]"
+ className="bg-olympus-bg border-olympus-gold/20 text-olympus-text mt-1 font-mono text-[11px]"
  onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); }}
  />
  </div>
  {error && (
- <div className="flex items-start gap-2 text-[10px] font-mono text-[#C4756A] bg-[#C4756A]/10 border border-[#C4756A]/20 rounded px-2 py-1.5">
+ <div className="flex items-start gap-2 text-[10px] font-mono text-olympus-red bg-olympus-red/10 border border-olympus-red/20 rounded px-2 py-1.5">
  <AlertCircle size={11} className="shrink-0 mt-0.5" />
  <span>{error}</span>
  </div>
  )}
  </div>
  <DialogFooter>
- <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-[#8B8B8B] hover:text-[#B8B8B8]">
+ <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-olympus-text-dim hover:text-olympus-text">
  Cancel
  </Button>
- <Button onClick={handleSubmit} className="bg-[#D4A574]/20 text-[#D4A574] hover:bg-[#D4A574]/30 border-[#D4A574]/30">
+ <Button onClick={handleSubmit} className="bg-olympus-gold/20 text-olympus-gold hover:bg-olympus-gold/30 border-olympus-gold/30">
  Add Frame
  </Button>
  </DialogFooter>
@@ -449,47 +449,47 @@ function ManageFramesDialog({ open, onOpenChange, frames, disabledIds, onToggle,
 }) {
  return (
  <Dialog open={open} onOpenChange={onOpenChange}>
- <DialogContent className="bg-[#0E1320] border-[#D4A574]/20 text-[#B8B8B8] max-w-md">
+ <DialogContent className="bg-olympus-panel border-olympus-gold/20 text-olympus-text max-w-md">
  <DialogHeader>
- <DialogTitle className="text-[#D4A574] flex items-center gap-2">
+ <DialogTitle className="text-olympus-gold flex items-center gap-2">
  <Settings size={16} /> Manage Frames
  </DialogTitle>
- <DialogDescription className="text-[#8B8B8B]">
+ <DialogDescription className="text-olympus-text-dim">
  Enable or disable your custom URL frames.
  </DialogDescription>
  </DialogHeader>
  <div className="space-y-1 py-2 max-h-[300px] overflow-y-auto custom-scroll">
  {frames.length === 0 ? (
- <div className="text-center py-6 text-[10px] font-mono text-[#8B8B8B]">
+ <div className="text-center py-6 text-[10px] font-mono text-olympus-text-dim">
  No custom frames to manage.
  </div>
  ) : (
  frames.map(f => {
  const enabled = !disabledIds.has(f.id);
  return (
- <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[#D4A574]/5 group">
- <Globe size={12} className={cn('shrink-0', enabled ? 'text-[#8B8B8B]' : 'text-olympus-text-dim')} />
- <span className={cn('text-[11px] font-mono truncate flex-1', enabled ? 'text-[#B8B8B8]' : 'text-olympus-text-dim line-through')}>{f.displayName}</span>
+ <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-olympus-gold/5 group">
+ <Globe size={12} className={cn('shrink-0', enabled ? 'text-olympus-text-dim' : 'text-olympus-text-dim')} />
+ <span className={cn('text-[11px] font-mono truncate flex-1', enabled ? 'text-olympus-text' : 'text-olympus-text-dim line-through')}>{f.displayName}</span>
  <span className="text-[9px] font-mono text-olympus-text-dim truncate max-w-[120px]">{f.url}</span>
  {/* Toggle switch */}
  <button
  onClick={() => onToggle(f.id)}
  className={cn(
  'relative w-8 h-4 rounded-full transition-colors shrink-0',
- enabled ? 'bg-[#D4A574]/40' : 'bg-[#3A3F4D]',
+ enabled ? 'bg-olympus-gold/40' : 'bg-olympus-card',
  )}
  aria-label={enabled ? 'Disable frame' : 'Enable frame'}
  >
  <span
  className={cn(
  'absolute top-0.5 w-3 h-3 rounded-full transition-all',
- enabled ? 'left-4 bg-[#D4A574]' : 'left-0.5 bg-[#8B8B8B]',
+ enabled ? 'left-4 bg-olympus-gold' : 'left-0.5 bg-olympus-text-dim',
  )}
  />
  </button>
  <button
  onClick={() => onDelete(f.id)}
- className="opacity-0 group-hover:opacity-100 text-[#8B8B8B] hover:text-[#C4756A] transition-all shrink-0"
+ className="opacity-0 group-hover:opacity-100 text-olympus-text-dim hover:text-olympus-red transition-all shrink-0"
  aria-label="Delete frame"
  >
  <Trash2 size={11} />
@@ -500,7 +500,7 @@ function ManageFramesDialog({ open, onOpenChange, frames, disabledIds, onToggle,
  )}
  </div>
  <DialogFooter>
- <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-[#D4A574] hover:bg-[#D4A574]/10">
+ <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-olympus-gold hover:bg-olympus-gold/10">
  Done
  </Button>
  </DialogFooter>

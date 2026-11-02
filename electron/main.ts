@@ -813,6 +813,14 @@ let themeMtimeMs = 0;
 let themedIcon: Electron.NativeImage | null = null;
 
 /** The palette the user picked in Settings → Appearance (theme.json). */
+/** The icon family the user picked (classic | orbit | peak | monogram). */
+function readThemeIconId(): string {
+  try {
+    const raw = JSON.parse(readFileSync(THEME_FILE, 'utf-8'));
+    return typeof raw?.iconId === 'string' ? raw.iconId : 'classic';
+  } catch { return 'classic'; }
+}
+
 function readThemePalette(): typeof DEFAULT_PALETTE {
   try {
     const raw = JSON.parse(readFileSync(THEME_FILE, 'utf-8'));
@@ -835,7 +843,7 @@ function readThemePalette(): typeof DEFAULT_PALETTE {
 function themedWindowIcon(): Electron.NativeImage | null {
   try {
     const palette = readThemePalette();
-    const png = themeMarkPng({ accent: palette.accent, purple: palette.purple, bg: palette.bg }, 256);
+    const png = themeMarkPng({ accent: palette.accent, purple: palette.purple, bg: palette.bg }, 256, readThemeIconId());
     themedIcon = nativeImage.createFromBuffer(png);
     try {
       writeFileSync(join(nodeOs.homedir(), '.olympus', 'theme-icon.png'), png);
