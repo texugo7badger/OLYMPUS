@@ -63,6 +63,7 @@
  */
 
 import { cn } from '@/lib/utils';
+import OlympusLoader from './olympus-loader';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   LOBE_CENTERS,
@@ -1015,14 +1016,7 @@ export default function BrainAtlas3D() {
           fully interactive. */}
       <div className="absolute bottom-3 left-3 z-10 flex flex-col items-start gap-1 pointer-events-none">
         <div className="relative">
-          <img
-            src="/olympus-loader.svg"
-            width={78}
-            height={78}
-            alt=""
-            draggable={false}
-            className="opacity-80 select-none drop-shadow-[0_0_18px_rgba(212,165,116,0.20)]"
-          />
+          <OlympusLoader bare size={78} className="opacity-90 drop-shadow-[0_0_18px_rgba(212,165,116,0.20)]" />
           <span className="absolute bottom-1 right-1 flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide text-olympus-green">
             <span className="w-1.5 h-1.5 rounded-full bg-olympus-green animate-pulse" />
             live

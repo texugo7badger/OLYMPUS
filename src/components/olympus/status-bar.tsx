@@ -20,6 +20,8 @@ import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip';
 import { useWorkingGods } from '@/lib/use-working-gods';
 import { useDocVisible } from '@/lib/use-doc-visible';
+import { iconById } from '@/lib/theme';
+import { useTheme } from '@/lib/theme-store';
 
 interface ProviderInfo {
  name: string; isFree: boolean; displayName: string; capsDisplay: string;
@@ -60,6 +62,7 @@ export default function StatusBar({
   // #231 — the status bar is always mounted; never poll in a hidden tab.
   const docVisible = useDocVisible();
  const activeGod = useOlympus(s => s.activeGod);
+  const [theme] = useTheme();
  // W-D1: the idle fallback reads the user's SELECTED god (its own comment
  // always claimed it) — activeGod alone is the live session, reset to
  // apollo on every submit.
@@ -164,7 +167,7 @@ export default function StatusBar({
 	 {/* LEFT SIDE: logo + window controls + Compact Brain + focus mode + nav info */}
  <div className="flex items-center gap-3 min-w-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
  <div className="flex items-center gap-1.5 text-olympus-gold font-semibold shrink-0">
- <img src="/logo.svg" alt="OLYMPUS" className="size-5" />
+ <img src={iconById(theme.iconId).src} alt="OLYMPUS" className="size-5" />
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">

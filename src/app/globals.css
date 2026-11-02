@@ -388,3 +388,18 @@
 /* ::after pseudo-element — a pseudo-element cannot escape a tiny      */
 /* positioned parent (the vertical "timeout after 5000ms" bug).        */
 /* ------------------------------------------------------------------ */
+
+/* v0.0.32 — Stable mode (Settings → Appearance). Decorative motion off;
+   spinners, loading and status pulses stay (they carry meaning). */
+[data-motion="stable"] .animate-pulse,
+[data-motion="stable"] .animate-bounce,
+[data-motion="stable"] .animate-ping {
+  animation: none !important;
+}
+[data-motion="stable"] .brain-atlas-menu-enter,
+[data-motion="stable"] .brain-atlas-menu-exit {
+  animation: none !important;
+}
+/* Light mode: the status bar and panels inherit the theme variables; only the
+   hard-coded near-black text needs a nudge for legibility. */
+[data-mode="light"] .text-\[\#5A5A5A\] { color: var(--color-olympus-text-dim); }

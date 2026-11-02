@@ -41,7 +41,7 @@ import { registerNativeTerminal } from './native-terminal.js';
 import { resolveBootMode } from './boot-mode.js';
 import { registerTerminalBridge, shutdownTerminalBridge } from './terminal-bridge.js';
 import { ensureLinuxSandboxReady } from './linux-sandbox.js';
-import { NOTIFY_COLORS, NOTIFY_LABELS, isNotifyType, trayPng, type NotifyType } from './desktop-notify.js';
+import { NOTIFY_COLORS, NOTIFY_LABELS, isNotifyType, themeMarkPng, trayPng, type NotifyType } from './desktop-notify.js';
 
 // __dirname / __filename are available natively in CommonJS (electron/tsconfig.json
 // compiles with module: CommonJS). No need for the import.meta.url shim.
@@ -538,13 +538,16 @@ function ensureLinuxDesktopEntry(): void {
 }
 
 function buildWindowOptions(): Electron.BrowserWindowConstructorOptions {
-  const appIcon = resolveIcon();
+  // v0.0.32 — the window/taskbar icon follows the Appearance palette.
+  const themed = themedWindowIcon();
+  const appIcon = themed && !themed.isEmpty() ? themed : resolveIcon();
+  const palette = readThemePalette();
   const options: Electron.BrowserWindowConstructorOptions = {
     width: 1600,
     height: 1000,
     minWidth: 900,
     minHeight: 600,
-    backgroundColor: OLYMPUS_BG,
+    backgroundColor: palette.bg,
     title: 'OLYMPUS',
     icon: appIcon.isEmpty() ? undefined : appIcon,
     show: false,
@@ -632,7 +635,8 @@ function setTrayIndicator(type: NotifyType | null): void {
     trayIcons ??= new Map();
     let img = trayIcons.get(type);
     if (!img || img.isEmpty()) {
-      img = nativeImage.createFromBuffer(trayPng(NOTIFY_COLORS[type])).resize({ width: 16, height: 16 });
+      const palette = readThemePalette();
+      img = nativeImage.createFromBuffer(trayPng(NOTIFY_COLORS[type], 32, palette.accent)).resize({ width: 16, height: 16 });
       trayIcons.set(type, img);
     }
     tray.setImage(img);
@@ -669,6 +673,7 @@ function notifyDesktop(type: NotifyType, title: string, body: string): void {
  */
 function startNotifyTail(): void {
   const timer = setInterval(() => {
+    refreshThemeIfChanged();
     try {
       const buf = readFileSync(NOTIFY_FILE);
       if (buf.length < notifyOffset) notifyOffset = 0;
@@ -785,14 +790,80 @@ function stopHibernationWatch(): void {
  * while Next compiles. Without it the window was blank/white until the first
  * navigation answered.
  */
+
+const THEME_FILE = join(nodeOs.homedir(), '.olympus', 'theme.json');
+const DEFAULT_PALETTE = {
+  accent: '#D4A574', purple: '#9B7BAE', cyan: '#6BAEB5', green: '#7BAE8E',
+  amber: '#C4A265', bg: '#0A0E16', text: '#B8B8B8',
+};
+let themeMtimeMs = 0;
+let themedIcon: Electron.NativeImage | null = null;
+
+/** The palette the user picked in Settings → Appearance (theme.json). */
+function readThemePalette(): typeof DEFAULT_PALETTE {
+  try {
+    const raw = JSON.parse(readFileSync(THEME_FILE, 'utf-8'));
+    const p = raw?.palette ?? {};
+    return {
+      accent: typeof p.gold === 'string' ? p.gold : DEFAULT_PALETTE.accent,
+      purple: typeof p.purple === 'string' ? p.purple : DEFAULT_PALETTE.purple,
+      cyan: typeof p.cyan === 'string' ? p.cyan : DEFAULT_PALETTE.cyan,
+      green: typeof p.green === 'string' ? p.green : DEFAULT_PALETTE.green,
+      amber: typeof p.amberSoft === 'string' ? p.amberSoft : DEFAULT_PALETTE.amber,
+      bg: typeof p.bg === 'string' ? p.bg : DEFAULT_PALETTE.bg,
+      text: typeof p.text === 'string' ? p.text : DEFAULT_PALETTE.text,
+    };
+  } catch {
+    return DEFAULT_PALETTE;
+  }
+}
+
+/** The window/taskbar icon, generated in the user's palette (cached). */
+function themedWindowIcon(): Electron.NativeImage | null {
+  try {
+    const palette = readThemePalette();
+    const png = themeMarkPng({ accent: palette.accent, purple: palette.purple, bg: palette.bg }, 256);
+    themedIcon = nativeImage.createFromBuffer(png);
+    return themedIcon;
+  } catch {
+    return null;
+  }
+}
+
+/** Re-read theme.json; repaint the window/tray when the user changed it. */
+function refreshThemeIfChanged(): void {
+  try {
+    const st = statSync(THEME_FILE);
+    if (st.mtimeMs === themeMtimeMs) return;
+    themeMtimeMs = st.mtimeMs;
+    const icon = themedWindowIcon();
+    if (icon && mainWindow) {
+      try { mainWindow.setIcon(icon); } catch { /* platform */ }
+    }
+    if (tray) {
+      const palette = readThemePalette();
+      trayIcons = null; // the dots ring in the new accent
+      tray.setImage(nativeImage.createFromBuffer(trayPng(palette.accent, 32, palette.accent)).resize({ width: 16, height: 16 }));
+      tray.setToolTip('OLYMPUS — click to restore');
+    }
+  } catch { /* no theme file */ }
+}
+
 function splashDataUrl(): string {
   try {
-    const svg = readFileSync(join(appRoot, 'public', 'olympus-loader.svg'), 'utf-8');
+    const palette = readThemePalette();
+    const svg = readFileSync(join(appRoot, 'public', 'olympus-loader.svg'), 'utf-8')
+      .split('#D4A574').join(palette.accent)
+      .split('#9B7BAE').join(palette.purple)
+      .split('#6BAEB5').join(palette.cyan)
+      .split('#7BAE8E').join(palette.green)
+      .split('#C4A265').join(palette.amber)
+      .split('#0B0B0D').join(palette.bg);
     const b64 = Buffer.from(svg, 'utf-8').toString('base64');
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>OLYMPUS</title>
-<style>html,body{margin:0;height:100%;background:#0B0B0D;overflow:hidden}
+<style>html,body{margin:0;height:100%;background:${palette.bg};overflow:hidden}
 body{display:flex;align-items:center;justify-content:center}
-img{width:min(58vmin,420px);height:auto;filter:drop-shadow(0 0 24px rgba(212,165,116,.18))}</style>
+img{width:min(58vmin,420px);height:auto;filter:drop-shadow(0 0 24px ${palette.accent}2e)}</style>
 </head><body><img src="data:image/svg+xml;base64,${b64}" alt="OLYMPUS — loading"></body></html>`;
     return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
   } catch {

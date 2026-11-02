@@ -14,7 +14,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useOlympus, GOD_ICONS, GOD_IDS, type LLMStrategy } from '@/lib/olympus-store';
-import { Settings, Save, Loader2, Check, AlertCircle, AlertTriangle, Zap, BarChart3, Lock, Plus, X, Trash2, Calculator } from 'lucide-react';
+import { Settings, Save, Loader2, Check, AlertCircle, AlertTriangle, Zap, BarChart3, Lock, Plus, X, Trash2, Calculator, Palette, Sun, Moon } from 'lucide-react';
+import { THEME_ICONS, THEME_PRESETS, resolvePalette } from '@/lib/theme';
+import { useTheme } from '@/lib/theme-store';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { strategyApiRequirement, modelClassesForStrategy } from '@/lib/model-strategies';
@@ -406,6 +408,7 @@ export default function SettingsDialog() {
   const setStoreStrategy = useOlympus(s => s.setLlmStrategy);
 
   const [data, setData] = useState<SettingsData | null>(null);
+  const [theme, setTheme] = useTheme();
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [customGodModels, setCustomGodModels] = useState<Record<string, Record<string, string>>>({});
   const [strategy, setStrategy] = useState<LLMStrategy>('go-balanced');
@@ -419,6 +422,11 @@ export default function SettingsDialog() {
   // ~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl.
   const [benchRecording, setBenchRecording] = useState(false);
   const [benchSessionLabel, setBenchSessionLabel] = useState('');
+  // v0.0.32 — a new benchmark session (name optional; the project fills it).
+  const [showNewSession, setShowNewSession] = useState(false);
+  const [newSessionName, setNewSessionName] = useState('');
+  const [newSessionBusy, setNewSessionBusy] = useState(false);
+  const activeProject = useOlympus((st) => st.activeProject);
   const [benchSaving, setBenchSaving] = useState(false);
   // v0.0.23 — the interactive Strategy Builder (search by model/provider).
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -681,6 +689,40 @@ export default function SettingsDialog() {
 
   // save the benchmark recording config.
   // Called immediately when the toggle changes (no need to click Save).
+  // v0.0.32 — start a new benchmark session: name optional, project fills
+  // the rest, costs count from `startedAt`, and recording follows the toggle.
+  const startNewSession = async () => {
+    setNewSessionBusy(true);
+    try {
+      const r = await fetch('/api/olympus/benchmarks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          newSession: true,
+          sessionName: newSessionName,
+          recordingEnabled: benchRecording,
+        }),
+      });
+      const d = await r.json();
+      if (d?.ok && d.config) {
+        setBenchSessionLabel(d.config.sessionLabel ?? '');
+        toast.success(`New benchmark session: ${d.config.sessionLabel}`, {
+          description: benchRecording
+            ? 'Recording is ON — costs count from this moment.'
+            : 'Recording is OFF — the cost totals still restart from this moment.',
+        });
+        setShowNewSession(false);
+        setNewSessionName('');
+      } else {
+        toast.error(d?.error ?? 'Could not start the session');
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not start the session');
+    } finally {
+      setNewSessionBusy(false);
+    }
+  };
+
   const saveBenchmark = async (recordingEnabled: boolean, sessionLabel: string) => {
     setBenchSaving(true);
     try {
@@ -778,6 +820,81 @@ export default function SettingsDialog() {
                 </div>
               </div>
             )}
+
+            {/* v0.0.32 — Appearance: mode, 12 presets, accent, icon, stable. */}
+            <section>
+              <div className="flex items-center gap-2 mb-2">
+                <Palette size={12} className="text-olympus-gold" />
+                <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">Appearance</h3>
+                <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">applies instantly everywhere</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 mb-2">
+                <button
+                  onClick={() => setTheme({ mode: 'dark', presetId: THEME_PRESETS.find((p) => p.mode === 'dark')!.id })}
+                  className={cn('flex items-center gap-1 px-2 py-1 rounded border text-[9px] font-mono uppercase', theme.mode === 'dark' ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text')}
+                ><Moon size={10} /> dark</button>
+                <button
+                  onClick={() => setTheme({ mode: 'light', presetId: THEME_PRESETS.find((p) => p.mode === 'light')!.id })}
+                  className={cn('flex items-center gap-1 px-2 py-1 rounded border text-[9px] font-mono uppercase', theme.mode === 'light' ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text')}
+                ><Sun size={10} /> light</button>
+                <label className="ml-auto flex items-center gap-1.5 text-[9px] font-mono text-olympus-text-dim uppercase">
+                  accent
+                  <input
+                    type="color"
+                    value={theme.accent ?? resolvePalette(theme).gold}
+                    onChange={(e) => setTheme({ accent: e.target.value })}
+                    className="w-7 h-6 bg-transparent border border-olympus-gold/20 rounded cursor-pointer"
+                    aria-label="accent color"
+                  />
+                  {theme.accent && <button onClick={() => setTheme({ accent: null })} className="normal-case text-olympus-cyan hover:underline">reset</button>}
+                </label>
+              </div>
+
+              <div className="grid grid-cols-3 gap-1.5">
+                {THEME_PRESETS.filter((p) => p.mode === theme.mode).map((preset) => {
+                  const selected = theme.presetId === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      onClick={() => setTheme({ presetId: preset.id })}
+                      className={cn('rounded border px-2 py-1.5 text-left transition-colors', selected ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/15 hover:border-olympus-gold/40')}
+                      aria-pressed={selected}
+                    >
+                      <span className="flex items-center gap-1">
+                        {[preset.colors.bg, preset.colors.card, preset.colors.gold].map((c) => (
+                          <span key={c} className="w-3 h-3 rounded-sm ring-1 ring-black/30" style={{ background: c }} />
+                        ))}
+                      </span>
+                      <span className="block text-[9px] font-mono text-olympus-text mt-1 truncate">{preset.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="text-[9px] font-mono text-olympus-text-dim uppercase">icon</span>
+                {THEME_ICONS.map((icon) => (
+                  <button
+                    key={icon.id}
+                    onClick={() => setTheme({ iconId: icon.id })}
+                    aria-pressed={theme.iconId === icon.id}
+                    title={icon.name}
+                    className={cn('w-7 h-7 rounded border flex items-center justify-center', theme.iconId === icon.id ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/15 hover:border-olympus-gold/40')}
+                  >
+                    <img src={icon.src} alt={icon.name} className="w-4 h-4" />
+                  </button>
+                ))}
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-[9px] font-mono text-olympus-text-dim uppercase" data-tip="Simple animations: decorative motion off, spinners and status kept">stable mode</span>
+                  <Switch
+                    checked={theme.motion === 'stable'}
+                    onCheckedChange={(v) => setTheme({ motion: v ? 'stable' : 'full' })}
+                    aria-label="Stable mode"
+                  />
+                </div>
+              </div>
+            </section>
 
             {/* LLM Strategy — segmented control */}
             <section>
@@ -955,6 +1072,13 @@ export default function SettingsDialog() {
                   Benchmark Recording
                 </h3>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowNewSession((v) => !v)}
+                    className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded border border-olympus-gold/30 text-olympus-gold hover:bg-olympus-gold/10"
+                    data-tip="Start a new benchmark session and restart the cost totals from zero"
+                  >
+                    <Plus size={9} /> new
+                  </button>
                   <span className={cn('text-[10px] font-mono', benchRecording ? 'text-olympus-green' : 'text-olympus-text-dim')}>
                     {benchRecording ? 'RECORDING' : 'OFF'}
                   </span>
@@ -969,6 +1093,33 @@ export default function SettingsDialog() {
                 </div>
               </div>
               <div className="space-y-1.5">
+                {showNewSession && (
+                  <div className="rounded border border-olympus-gold/25 bg-olympus-gold/5 p-2 space-y-1.5">
+                    <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed">
+                      A new session restarts the cost totals from zero (history stays on disk).
+                      Empty name → <code className="text-olympus-gold">{activeProject?.slug ?? 'session'}-YYYY-MM-DD</code>
+                      {' '}with the project&apos;s description and stacks.
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        value={newSessionName}
+                        onChange={(e) => setNewSessionName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') void startNewSession(); }}
+                        placeholder={`${activeProject?.slug ?? 'session'}-YYYY-MM-DD (auto)`}
+                        className="bg-olympus-bg border-olympus-gold/20 text-olympus-text font-mono text-[10px] h-7"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => void startNewSession()}
+                        disabled={newSessionBusy}
+                        className="h-7 text-[9px] font-mono bg-olympus-gold/15 text-olympus-gold hover:bg-olympus-gold/25 border border-olympus-gold/30"
+                      >
+                        {newSessionBusy ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} className="mr-1" />} continue
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setShowNewSession(false)} className="h-7 text-[9px] font-mono text-olympus-text-dim">cancel</Button>
+                    </div>
+                  </div>
+                )}
                 <Label className="text-[9px] text-olympus-text-dim font-mono uppercase">
                   Session label (optional)
                 </Label>

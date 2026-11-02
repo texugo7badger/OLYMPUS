@@ -74,7 +74,7 @@ function chunk(kind: string, data: Buffer): Buffer {
   return Buffer.concat([len, type, data, crc]);
 }
 
-function encodePng(width: number, height: number, rgba: Buffer): Buffer {
+export function encodePng(width: number, height: number, rgba: Buffer): Buffer {
   const header = Buffer.alloc(13);
   header.writeUInt32BE(width, 0);
   header.writeUInt32BE(height, 4);
@@ -97,9 +97,9 @@ function encodePng(width: number, height: number, rgba: Buffer): Buffer {
  * A 32×32 tray dot: the type color, a 2 px gold ring, transparent outside.
  * Simple on purpose — it must read at 16 px in a dark tray.
  */
-export function trayPng(color: string, size = 32): Buffer {
+export function trayPng(color: string, size = 32, ringColor = GOLD): Buffer {
   const [r, g, b] = hexToRgb(color);
-  const [gr, gg, gb] = hexToRgb(GOLD);
+  const [gr, gg, gb] = hexToRgb(ringColor);
   const rgba = Buffer.alloc(size * size * 4);
   const c = (size - 1) / 2;
   const outer = c - 0.5;
@@ -114,6 +114,57 @@ export function trayPng(color: string, size = 32): Buffer {
       rgba[i + 1] = isRing ? gg : g;
       rgba[i + 2] = isRing ? gb : b;
       rgba[i + 3] = 255;
+    }
+  }
+  return encodePng(size, size, rgba);
+}
+
+export interface ThemeMarkColors {
+  accent: string;
+  purple: string;
+  bg: string;
+}
+
+/**
+ * The window/taskbar icon in the user's palette: the OLYMPUS mark (a peak
+ * inside a disc) rendered with the PNG encoder — no dependency, no SVG
+ * rasterizer. 256px by default; the taskbar downsamples cleanly.
+ */
+export function themeMarkPng(colors: ThemeMarkColors, size = 256): Buffer {
+  const [ar, ag, ab] = hexToRgb(colors.accent);
+  const [pr, pg, pb] = hexToRgb(colors.purple);
+  const [br, bgc, bb] = hexToRgb(colors.bg);
+  const rgba = Buffer.alloc(size * size * 4);
+  const cx = (size - 1) / 2;
+  const cy = (size - 1) / 2;
+  const outer = size * 0.48;
+  const ring = size * 0.035;
+  // Triangle: apex (0.5, 0.24), base (0.24, 0.80)–(0.76, 0.80).
+  const ax = size * 0.5, ay = size * 0.24;
+  const bx = size * 0.24, by = size * 0.80;
+  const dx = size * 0.76, dy = size * 0.80;
+  const insideTriangle = (x: number, y: number): boolean => {
+    const d1 = (x - dx) * (ay - dy) - (ax - dx) * (y - dy);
+    const d2 = (x - bx) * (by - dy) - (bx - dx) * (y - dy);
+    const d3 = (x - ax) * (ay - by) - (ax - bx) * (y - by);
+    const hasNeg = d1 < 0 || d2 < 0 || d3 < 0;
+    const hasPos = d1 > 0 || d2 > 0 || d3 > 0;
+    return !(hasNeg && hasPos);
+  };
+  const dotR = size * 0.035;
+  const dotY = size * 0.17;
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const i = (y * size + x) * 4;
+      const d = Math.hypot(x - cx, y - cy);
+      if (d > outer) continue;
+      // ring
+      const isRing = d > outer - ring;
+      let r = br, g = bgc, b = bb;
+      if (isRing) { r = ar; g = ag; b = ab; }
+      if (!isRing && insideTriangle(x, y)) { r = ar; g = ag; b = ab; }
+      if (Math.hypot(x - cx, y - dotY) <= dotR) { r = pr; g = pg; b = pb; }
+      rgba[i] = r; rgba[i + 1] = g; rgba[i + 2] = b; rgba[i + 3] = 255;
     }
   }
   return encodePng(size, size, rgba);

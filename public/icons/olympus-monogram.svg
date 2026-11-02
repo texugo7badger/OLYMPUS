@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="OLYMPUS monogram">
+  <circle cx="64" cy="64" r="50" fill="none" stroke="#D4A574" stroke-width="2" opacity=".55"/>
+  <path d="M 64 22 L 92 96 L 36 96 Z" fill="none" stroke="#D4A574" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M 64 54 L 76 82 L 52 82 Z" fill="#D4A574" opacity=".8"/>
+  <circle cx="64" cy="22" r="4" fill="#9B7BAE"/>
+  <circle cx="36" cy="96" r="2.6" fill="#D4A574"/>
+  <circle cx="92" cy="96" r="2.6" fill="#D4A574"/>
+</svg>

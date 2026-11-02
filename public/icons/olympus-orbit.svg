@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="OLYMPUS orbit">
+  <g fill="none" stroke="#D4A574">
+    <ellipse cx="64" cy="64" rx="56" ry="22" stroke-width="1.2" opacity=".45" transform="rotate(-24 64 64)"/>
+    <ellipse cx="64" cy="64" rx="56" ry="22" stroke-width="1" opacity=".28" transform="rotate(38 64 64)"/>
+    <circle cx="64" cy="64" r="34" stroke-width="1" opacity=".35"/>
+  </g>
+  <path d="M 64 42 L 84 88 L 71 88 L 64 70 L 57 88 L 44 88 Z" fill="#D4A574"/>
+  <circle cx="64" cy="34" r="2.6" fill="#9B7BAE"/>
+  <circle cx="64" cy="88" r="2.6" fill="#D4A574"/>
+  <circle cx="112" cy="48" r="3" fill="#6BAEB5"/>
+  <circle cx="20" cy="86" r="2.6" fill="#7BAE8E"/>
+  <circle cx="96" cy="108" r="2" fill="#C4A265"/>
+</svg>
