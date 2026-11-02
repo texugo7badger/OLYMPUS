@@ -12,10 +12,20 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bell, ChevronRight, Loader2, Moon, X } from 'lucide-react';
+import { Bell, ChevronRight, Loader2, Moon, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
 import type { NotifyType } from '@/lib/desktop-notify';
+import { useLanguage, t, godName, godDomain } from '@/lib/i18n';
+import { speakAs } from '@/lib/voice';
+
+interface LearningItem {
+  id: string;
+  type: 'instinct' | 'knowledge' | 'skill' | 'mcp';
+  name: string;
+  god: string;
+  summary: string;
+}
 
 interface NotifyEvent {
   ts: string;
@@ -48,6 +58,8 @@ function relTime(iso: string): string {
 export default function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const [events, setEvents] = useState<NotifyEvent[]>([]);
+  const [learnings, setLearnings] = useState<LearningItem[]>([]);
+  const language = useLanguage();
   const [seenAt, setSeenAt] = useState<string>(() => {
     try { return localStorage.getItem(SEEN_KEY) || ''; } catch { return ''; }
   });
@@ -82,6 +94,10 @@ export default function NotificationCenter() {
 
   useEffect(() => {
     if (!open) return;
+    fetch('/api/olympus/learning/recent?limit=4', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => setLearnings(Array.isArray(d?.learnings) ? d.learnings : []))
+      .catch(() => { /* offline */ });
     const onDown = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     };
@@ -149,6 +165,27 @@ export default function NotificationCenter() {
           </header>
 
           <div className="flex-1 min-h-0 overflow-auto custom-scroll">
+            {learnings.length > 0 && (
+              <div className="border-b border-olympus-green/15 bg-olympus-green/5">
+                <div className="flex items-center gap-1 px-2.5 pt-1.5 text-[8px] font-mono uppercase tracking-wide text-olympus-green">
+                  <Sparkles size={9} /> {t('learning.title', language)}
+                </div>
+                {learnings.slice(0, 4).map((l) => (
+                  <button
+                    key={l.id}
+                    onClick={() => { void speakAs(`${t('learning.learned', language)} ${l.name}. ${l.summary}. ${t('learning.improved', language, { domain: godDomain(l.god, language) })}`, l.god, language); }}
+                    className="w-full text-left px-2.5 py-1 border-t border-olympus-green/5 hover:bg-olympus-green/10 flex items-start gap-1.5"
+                    data-tip="Click to hear what the god learned"
+                  >
+                    <span className="text-[7px] font-mono uppercase px-1 rounded bg-olympus-green/15 text-olympus-green shrink-0">{l.type}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[9px] font-mono text-olympus-text truncate">{l.name}</span>
+                      <span className="block text-[8px] font-mono text-olympus-text-dim truncate">{godName(l.god, language)} · click to hear it</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
             {events.length === 0 && (
               <p className="px-2.5 py-6 text-center text-[9px] font-mono text-olympus-text-dim">nothing yet — the tray will color when something happens</p>
             )}
