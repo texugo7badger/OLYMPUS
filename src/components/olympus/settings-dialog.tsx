@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { strategyApiRequirement, modelClassesForStrategy } from '@/lib/model-strategies';
 import StrategyBuilder from './strategy-builder';
+import ResourceGovernorCard from './resource-governor-card';
 
 /* ------------------------------------------------------------------ */
 /* Settings Dialog — minimalist refactor.                              */
@@ -1211,6 +1212,8 @@ export default function SettingsDialog() {
                 </div>
               </div>
             </section>
+
+            <ResourceGovernorCard />
 
             {error && (
               <div className="flex items-center gap-1.5 text-[10px] font-mono text-olympus-red">

@@ -38,6 +38,7 @@ import {
   existsSync, mkdirSync, openSync, readFileSync, readdirSync, unlinkSync, writeFileSync, appendFileSync, closeSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
+import { admitWorkload } from '@/lib/resource-governor';
 import { join } from 'node:path';
 import net from 'node:net';
 import { probeDevServer, type DevServerProbe } from './dev-server-probe';
@@ -308,6 +309,19 @@ export async function start(projectSlug: string, port?: number, rootOverride?: s
       ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: null,
       projectPath: null, state: null,
       error: `refusing to spawn inside the OLYMPUS root (${projectPath}) — the never-the-repo guard (#99)`,
+    };
+  }
+
+  // R39-01 (v0.0.39) — the resource governor. A dev server is a heavy
+  // optional workload (Next + its compiler + browser); starting it while the
+  // host is already red is how the machine starts swapping. The refusal names
+  // the real numbers and the reclaim path.
+  const admission = admitWorkload(900, `dev server for '${projectSlug}'`);
+  if (!admission.ok) {
+    return {
+      ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: null,
+      projectPath: null, state: null,
+      error: admission.reason || 'the resource governor refused the dev server',
     };
   }
 
