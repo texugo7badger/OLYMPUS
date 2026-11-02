@@ -9,7 +9,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Palette, Search, Sparkles, Upload, Image as ImageIcon, Tag, X, Loader2, PenTool, ExternalLink, Box, Wand2 } from 'lucide-react';
+import { Palette, Search, Sparkles, Upload, Image as ImageIcon, Tag, X, Loader2, PenTool, ExternalLink, Box, Wand2, ShieldCheck, RefreshCw } from 'lucide-react';
 import Forge2D from './forge-2d';
 import Forge3D from './forge-3d';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,9 @@ export default function AtelierPanel() {
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [dropping, setDropping] = useState(false);
+  // v0.0.44 — the agent-access proof: the vault is not a promise, it opens.
+  const [proof, setProof] = useState<null | { ok: boolean; dir: string; assets: number; readable: boolean; writable: boolean; newest: { path: string; bytes: number } | null; mcp: string[] }>(null);
+  const [proving, setProving] = useState(false);
   const [genPrompt, setGenPrompt] = useState('');
   // W-B IMAGE-GEN: the model selector + seed (the LIVE ladder) + the edit lane.
   const [models, setModels] = useState<Array<{ id: string; label: string; tier: string; priceHint: string; available: boolean; needsKey: string | null; supportsEdit: boolean }>>([]);
@@ -82,6 +85,16 @@ export default function AtelierPanel() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  const prove = useCallback(async () => {
+    setProving(true);
+    try {
+      const r = await fetch('/api/olympus/atelier/proof', { cache: 'no-store' });
+      const d = await r.json();
+      setProof(d);
+    } catch { setProof(null); }
+    finally { setProving(false); }
+  }, []);
+  useEffect(() => { void prove(); }, [prove]);
   // W-B: the model catalog (the keys in hand decide what's available).
   useEffect(() => {
     fetch('/api/olympus/atelier/models', { cache: 'no-store' })
@@ -180,6 +193,22 @@ export default function AtelierPanel() {
         <Palette size={16} className="text-olympus-gold" />
         <h2 className="text-sm font-semibold text-olympus-gold">Atelier</h2>
         <span className="text-[9px] text-olympus-text-dim font-mono ml-auto">{assets.length} assets · Hephaestus · the forge lanes</span>
+      </div>
+
+      {/* v0.0.44 — AGENT ACCESS PROOF: a real byte from the newest asset, the
+          vault path, and the MCPs that can read it. Not a claim. */}
+      <div className="flex items-center gap-2 rounded-lg border border-olympus-green/20 bg-olympus-green/5 px-3 py-1.5 mb-3">
+        <ShieldCheck size={11} className={proof?.ok ? 'text-olympus-green' : 'text-olympus-amber-soft'} />
+        <span className="text-[9px] font-mono text-olympus-text">
+          agent access: <b className={proof?.ok ? 'text-olympus-green' : 'text-olympus-amber-soft'}>{proof ? (proof.ok ? 'verified' : 'unverified') : 'checking…'}</b>
+        </span>
+        <span className="text-[8px] font-mono text-olympus-text-dim truncate" data-tip={proof?.dir || ''}>
+          {proof ? `${proof.assets} assets · ${proof.readable ? 'read' : 'no read'}${proof.writable ? '/write' : ''}${proof.newest ? ` · ${(proof.newest.bytes / 1024).toFixed(0)} KB newest` : ''}` : 'reading the vault'}
+        </span>
+        <span className="ml-auto text-[8px] font-mono text-olympus-text-dim hidden md:inline">{proof?.mcp?.join(' · ')}</span>
+        <button onClick={() => void prove()} disabled={proving} data-tip="Re-read the vault and the newest asset byte" className="text-olympus-text-dim hover:text-olympus-green p-1 disabled:opacity-50" aria-label="Re-prove agent access">
+          <RefreshCw size={10} className={proving ? 'animate-spin' : ''} />
+        </button>
       </div>
 
       {/* The drop zone */}

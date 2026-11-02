@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.43, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.44, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,13 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.44 — agent access, proven.** The Atelier proves that agents can
+actually reach the media: the vault is readable and writable, the newest asset
+is opened byte-by-byte, and the check names the two MCP lanes that see it
+(`filesystem`, `olympus-craft`). The generation ladder stays honest — the free
+Pollinations lane is `$0`, BYOK fal/Google show their own price before a
+generate.
 
 **v0.0.43 — design memory & critique.** A reference can now be saved as a
 **named preference** with its reason, scoped to the project; the catalog

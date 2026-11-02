@@ -244,3 +244,12 @@ implementation prompt with the motion, the link and the identity rule) and
 smallest change that would make it belong). The catalog filters to the saved
 memory; the store is `~/.olympus/design-memory.json`, capped, deduped and
 atomic.
+
+### v0.0.44 — agent access, proven
+
+The Atelier header carries the proof: the media vault's read/write state, the
+asset count, the newest asset's size and the MCP lanes that can see it
+(`filesystem`, `olympus-craft`). "verified" only appears when the route opened
+a real byte from the newest asset; an empty vault says unverified. The
+generation ladder remains honest: Pollinations is `$0`, BYOK fal/Google carry
+their own price.
