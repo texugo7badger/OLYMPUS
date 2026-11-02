@@ -1,5 +1,6 @@
 import { assignLobePositions, Brain3D, KIND_TO_LOBE } from "./shape.ts";
 import { allLobesEnabled, type LobeVisibility } from "./lobe-visibility.ts";
+import { lobeColorsForPalette } from "./lobe-colors.ts";
 import { clampPinnedNodePosition, type PerformancePreset, type PinnedNodePosition } from "./settings.ts";
 import type { BrainEdge, BrainGraph, BrainNode, LobeName, ProjectedPoint, Vec3 } from "./types.ts";
 
@@ -73,15 +74,6 @@ export const PERFORMANCE_FRAME_DELAYS: Record<PerformancePreset, number> = {
   balanced: 1000 / 30,
   batterySaver: 1000 / 20,
   mobile: 1000 / 15
-};
-
-const LOBE_KIND: Record<LobeName, string> = {
-  frontal: "project",
-  parietal: "concept",
-  temporal: "person",
-  occipital: "source",
-  cerebellum: "dailyNote",
-  stem: "index"
 };
 
 export abstract class RenderCore {
@@ -598,7 +590,9 @@ export abstract class RenderCore {
   }
 
   protected lobeColor(lobe: LobeName, graph: BrainGraph): string {
-    return graph.activePalette.kinds[LOBE_KIND[lobe] ?? "concept"] ?? graph.activePalette.hud;
+    // v0.0.34 — six DISTINCT region colors, resolved once per palette
+    // (and guaranteed different even in monochromatic themes).
+    return lobeColorsForPalette(graph.activePalette)[lobe] ?? graph.activePalette.hud;
   }
 
   protected spawnSignals(now: number, graph: BrainGraph, interLobeEdges: BrainEdge[]): void {

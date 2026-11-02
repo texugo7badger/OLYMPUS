@@ -87,9 +87,12 @@ export class BrainRenderer extends RenderCore {
       .map((node) => ({ node, ...project(node._3dLobe as Vec3) }));
     const edgeProjs = this.projectEdges(graph, project);
 
-    // Pass: cloud (far half, z > 0), additive.
+    // Pass: cloud (far half, z > 0). Additive on dark palettes keeps the
+    // hues; on a light palette additive blending saturates every lobe color
+    // to white — so light themes draw the region dots source-over.
+    const lightBg = hexLuminance(graph.activePalette.bg) > 0.55;
     if (this.passEnabled("cloud")) {
-      ctx.globalCompositeOperation = "lighter";
+      ctx.globalCompositeOperation = lightBg ? "source-over" : "lighter";
       for (const cp of cloudProj) {
         if (cp.pr.z <= 0) continue;
         this.drawCloudPoint(ctx, cp, true, graph, lobeMul);
@@ -110,9 +113,9 @@ export class BrainRenderer extends RenderCore {
       }
     }
 
-    // Pass: cloud (near half, z <= 0), additive.
+    // Pass: cloud (near half, z <= 0).
     if (this.passEnabled("cloud")) {
-      ctx.globalCompositeOperation = "lighter";
+      ctx.globalCompositeOperation = lightBg ? "source-over" : "lighter";
       for (const cp of cloudProj) {
         if (cp.pr.z > 0) continue;
         this.drawCloudPoint(ctx, cp, false, graph, lobeMul);
@@ -133,8 +136,8 @@ export class BrainRenderer extends RenderCore {
       }
     }
 
-    // Pass: signals (additive particle trails).
-    if (this.passEnabled("signals")) this.drawSignals(ctx, now, project, lobeMul);
+    // Pass: signals (particle trails; additive only on dark palettes).
+    if (this.passEnabled("signals")) this.drawSignals(ctx, now, project, lobeMul, graph);
 
     // Pass: labels (lobe labels + node labels).
     if (this.passEnabled("labels")) {
@@ -164,7 +167,10 @@ export class BrainRenderer extends RenderCore {
       }
     }
 
-    ctx.globalCompositeOperation = "lighter";
+    // Same rule as the cloud: additive haze turns into a white wash on
+    // light paper, so light themes composite the region tints normally.
+    const lightBg = hexLuminance(graph.activePalette.bg) > 0.55;
+    ctx.globalCompositeOperation = lightBg ? "source-over" : "lighter";
     for (const item of visuals.sort((a, b) => b.pr.z - a.pr.z)) {
       const color = this.lobeColor(item.lobe, graph);
       const radius = item.lobeCenter.r * scale * 1.4 * item.pr.scale;
@@ -191,15 +197,20 @@ export class BrainRenderer extends RenderCore {
     lobeMul: (lobe?: LobeName) => number
   ): void {
     const lobe = cp.p.lobe ?? "parietal";
-    // Minimalist brain cloud — faint, subtle surface.
-    // v0.0.32 — on light palettes the cloud points vanished (paper + alpha
-    // 0.2). Lift the base alpha so the silhouette still reads as a brain.
+    // Minimalist brain cloud — the region hue, not a white field.
+    // v0.0.34 — on light palettes the additive pass washed every lobe color
+    // to white. Light themes composite source-over, lift the alpha, deepen
+    // the hue toward the ink and grow the dot slightly, so frontal (gold),
+    // parietal (blue), temporal (amber), occipital (purple), cerebellum
+    // (green) and the stem (dim) stay readable against the paper.
     const lightBg = hexLuminance(graph.activePalette.bg) > 0.55;
-    const alphaBase = far ? (lightBg ? 0.42 : 0.20) : (lightBg ? 0.62 : 0.38);
+    const baseColor = this.lobeColor(lobe, graph);
+    const color = lightBg ? lerpHex(baseColor, graph.activePalette.fg, 0.16) : baseColor;
+    const alphaBase = far ? (lightBg ? 0.46 : 0.20) : (lightBg ? 0.66 : 0.38);
     const alpha = (1 - cp.pr.depth) * alphaBase * cp.tw * lobeMul(lobe);
-    ctx.fillStyle = hexA(this.lobeColor(lobe, graph), alpha);
+    ctx.fillStyle = hexA(color, alpha);
     ctx.beginPath();
-    ctx.arc(cp.pr.sx, cp.pr.sy, far ? 0.95 : 1.2, 0, Math.PI * 2);
+    ctx.arc(cp.pr.sx, cp.pr.sy, lightBg ? (far ? 1.15 : 1.5) : (far ? 0.95 : 1.2), 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -337,9 +348,10 @@ export class BrainRenderer extends RenderCore {
     ctx: CanvasRenderingContext2D,
     now: number,
     project: (point: Vec3) => ProjectedPoint,
-    lobeMul: (lobe?: LobeName) => number
+    lobeMul: (lobe?: LobeName) => number,
+    graph: BrainGraph
   ): void {
-    ctx.globalCompositeOperation = "lighter";
+    ctx.globalCompositeOperation = hexLuminance(graph.activePalette.bg) > 0.55 ? "source-over" : "lighter";
     for (const signal of this.signals) {
       if (!signal.a._3dLobe || !signal.b._3dLobe) continue;
       const tNorm = (now - signal.born) / signal.dur;
@@ -417,8 +429,11 @@ function nodeRadius(node: BrainNode): number {
   return 2.6 + Math.min(3.4, (node.degree || 0) * 0.42);
 }
 
-function hexA(hex: string, alpha: number): string {
-  const h = hex.replace("#", "");
+function hexA(color: string, alpha: number): string {
+  // Accept both #rrggbb and the rgb(r,g,b) form returned by lerpHex — the old
+  // version parsed "rgb(..." as hex, producing rgba(NaN,…) and black dots.
+  if (color.startsWith("rgb(")) return color.replace("rgb(", "rgba(").replace(")", `,${alpha})`);
+  const h = color.replace("#", "");
   return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${alpha})`;
 }
 
