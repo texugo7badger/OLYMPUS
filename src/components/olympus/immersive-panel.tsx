@@ -19,8 +19,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, Send, Sparkles, Volume2, X, Waypoints } from 'lucide-react';
 import { resolvePalette } from '@/lib/theme';
 import { useTheme } from '@/lib/theme-store';
-import { useOlympus } from '@/lib/olympus-store';
-import { useLanguage, setLanguage, t, speechLocale, LANGUAGES } from '@/lib/i18n';
+import { useOlympus, GOD_IDS, GOD_ICONS } from '@/lib/olympus-store';
+import { useLanguage, setLanguage, t, speechLocale, LANGUAGES, godName } from '@/lib/i18n';
 import ThemedLogo from './themed-logo';
 
 interface Particle { x: number; y: number; vx: number; vy: number; r: number; c: number; a: number }
@@ -36,6 +36,21 @@ interface Thought {
   radius: number;
 }
 
+/** One calm voice per god. Pitch/rate only — the browser picks the closest
+ *  installed voice for the selected language, so no external TTS is needed. */
+const GOD_VOICE: Record<string, { pitch: number; rate: number }> = {
+  apollo: { pitch: 0.92, rate: 0.96 },
+  atlas: { pitch: 0.78, rate: 0.9 },
+  artemis: { pitch: 1.06, rate: 1.0 },
+  athena: { pitch: 1.02, rate: 0.97 },
+  dionysus: { pitch: 1.12, rate: 1.04 },
+  hephaestus: { pitch: 0.7, rate: 0.88 },
+  hermes: { pitch: 1.05, rate: 1.06 },
+  persephone: { pitch: 0.96, rate: 0.93 },
+  prometheus: { pitch: 0.84, rate: 0.96 },
+  callimachus: { pitch: 1.0, rate: 0.9 },
+};
+
 export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const [theme] = useTheme();
   const palette = resolvePalette(theme);
@@ -45,24 +60,59 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const [thoughts, setThoughts] = useState<Thought[]>([]);
   const thoughtSeq = useRef(0);
   const language = useLanguage();
+  const [activeGod, setActiveGod] = useState('apollo');
   const [voice, setVoice] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [say, setSay] = useState('');
+  const [chat, setChat] = useState<Array<{ role: 'user' | 'god'; text: string; god?: string }>>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatBusy, setChatBusy] = useState(false);
 
-  // v0.0.34 — speech uses the shared language store (and its BCP-47 tag).
-  const speak = useCallback((text: string) => {
+  // v0.0.34 — one calm, distinct voice per god. The orb form and color follow
+  // the active god; the browser voice is chosen from the selected language.
+  const speak = useCallback((text: string, god?: string) => {
     if (!text || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
+      const voiceGod = (god || activeGod).toLowerCase();
+      const profile = GOD_VOICE[voiceGod] ?? GOD_VOICE.apollo;
       const u = new SpeechSynthesisUtterance(text.slice(0, 400));
       u.lang = speechLocale(language);
-      u.rate = 1.02;
+      u.pitch = profile.pitch;
+      u.rate = profile.rate;
+      const prefix = speechLocale(language).slice(0, 2).toLowerCase();
+      const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(prefix));
+      const godIndex = Math.max(0, GOD_IDS.indexOf(voiceGod));
+      if (voices.length) u.voice = voices[godIndex % voices.length];
       u.onstart = () => setSpeaking(true);
       u.onend = () => setSpeaking(false);
       u.onerror = () => setSpeaking(false);
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     } catch { /* voice optional */ }
-  }, [language]);
+  }, [language, activeGod]);
+
+  const askStudio = useCallback(async () => {
+    const question = chatInput.trim();
+    if (!question || chatBusy) return;
+    setChatInput('');
+    setChat((prev) => [...prev, { role: 'user' as const, text: question }].slice(-8));
+    setChatBusy(true);
+    try {
+      const r = await fetch('/api/olympus/studio/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-olympus-language': language },
+        body: JSON.stringify({ question, god: activeGod, language }),
+      });
+      const d = await r.json();
+      const answer = String(d?.answer || 'I could not read the live walk state.');
+      setChat((prev) => [...prev, { role: 'god' as const, text: answer, god: activeGod }].slice(-8));
+      if (voice) speak(answer, activeGod);
+    } catch {
+      setChat((prev) => [...prev, { role: 'god' as const, text: 'The studio could not reach the walk state.', god: activeGod }].slice(-8));
+    } finally {
+      setChatBusy(false);
+    }
+  }, [chatInput, chatBusy, activeGod, language, voice, speak]);
 
   const pickLang = useCallback((value: string) => {
     setLanguage(value as typeof language);
@@ -77,6 +127,8 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     };
     return map[key] ?? palette.cyan;
   }, [palette]);
+  const orbTint = godTint(activeGod);
+  const ActiveGodIcon = GOD_ICONS[activeGod] ?? Sparkles;
 
   // Live gods: the run-state in flight list (5s poll; no churn when hidden).
   useEffect(() => {
@@ -199,19 +251,29 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
                     : type === 'hop_parked'
                       ? `${god || 'god'} · parked · ${ev?.reason || 'resume available'}`
                       : `${god || 'god'} · started`;
-            setThoughts((prev) => [...prev, {
-              id: `${type}:${hop}:${ev?.ts || Date.now()}`,
-              kind: type,
-              god,
-              label: hop,
-              detail,
-              ts: String(ev?.ts || new Date().toISOString()),
-              angle,
-              radius,
-            }].slice(-16));
+            setThoughts((prev) => {
+              // SHARED THOUGHTS: start/verify/done/park for the same hop are
+              // one node that evolves, not four duplicated cards.
+              const existing = prev.findIndex((t) => t.label === hop);
+              const next: Thought = {
+                id: `${hop}:${ev?.campaignId || 'walk'}`,
+                kind: type,
+                god,
+                label: hop,
+                detail,
+                ts: String(ev?.ts || new Date().toISOString()),
+                angle,
+                radius,
+              };
+              if (existing >= 0) {
+                const evolved = { ...prev[existing], ...next, angle: prev[existing].angle, radius: prev[existing].radius };
+                return [...prev.slice(0, existing), ...prev.slice(existing + 1), evolved].slice(-16);
+              }
+              return [...prev, next].slice(-16);
+            });
             burst({ x: 0.5 + Math.cos(angle) * radius, y: 0.5 + Math.sin(angle) * radius * 0.8 });
             if (voice && (type === 'hop_start' || type === 'hop_done' || type === 'hop_parked')) {
-              speak(type === 'hop_done' ? `${god || 'a god'} finished ${hop}` : type === 'hop_parked' ? `${god || 'a god'} parked ${hop}` : `${god || 'a god'} started ${hop}`);
+              speak(type === 'hop_done' ? `${god || 'a god'} finished ${hop}` : type === 'hop_parked' ? `${god || 'a god'} parked ${hop}` : `${god || 'a god'} started ${hop}`, god);
             }
           }
         } catch { /* torn */ }
@@ -318,7 +380,8 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
             return (
               <div
                 key={th.id}
-                className="absolute pointer-events-none rounded-lg border px-2 py-1 max-w-[150px] transition-opacity duration-500"
+                onClick={() => setActiveGod(th.god || 'apollo')}
+                className="absolute pointer-events-auto cursor-pointer rounded-lg border px-2 py-1 max-w-[150px] transition-opacity duration-500 hover:scale-[1.03]"
                 style={{
                   left: `${nx}%`,
                   top: `${ny}%`,
@@ -354,25 +417,63 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
         </main>
 
         {/* the voice orb */}
-        <aside className="rounded-xl border p-3 flex flex-col items-center justify-center gap-3" style={{ borderColor: `${palette.gold}22`, background: `${palette.panel}99` }}>
-          <div className="text-[9px] font-mono uppercase tracking-wide" style={{ color: palette.gold }}>{t('studio.voice', language)}</div>
+        <aside className="rounded-xl border p-3 flex flex-col items-center justify-start gap-2 overflow-y-auto custom-scroll" style={{ borderColor: `${palette.gold}22`, background: `${palette.panel}99` }}>
+          <div className="text-[9px] font-mono uppercase tracking-wide" style={{ color: palette.gold }}>
+            {t('studio.voice', language)} · {godName(activeGod, language)}
+          </div>
           <button
             onClick={() => setVoice((v) => !v)}
             aria-pressed={voice}
-            aria-label="Voice orb"
-            className="relative w-24 h-24 rounded-full flex items-center justify-center"
-            style={{ background: palette.bg, boxShadow: `0 0 ${speaking ? 46 : 32}px ${speaking ? palette.gold : palette.cyan}66` }}
+            aria-label={`Voice of ${godName(activeGod, language)}`}
+            className="relative w-28 h-28 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: palette.bg, boxShadow: `0 0 ${speaking ? 58 : 30}px ${orbTint}66` }}
           >
-            <span
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: `conic-gradient(from 0deg, ${palette.cyan}, ${palette.purple}, ${palette.gold}, ${palette.cyan})`,
-                animation: theme.motion === 'stable' ? undefined : 'olympus-plasma 9s linear infinite',
-              }}
-            />
-            <span className="absolute inset-1 rounded-full" style={{ background: palette.bg }} />
-            <Mic size={22} className={speaking ? 'relative animate-pulse' : 'relative'} style={{ color: voice ? palette.gold : palette.textDim }} />
+            <span className="absolute inset-0 rounded-full overflow-hidden">
+              <span
+                className="absolute inset-0"
+                style={{
+                  background: `conic-gradient(from 0deg, ${orbTint}, ${palette.purple}, ${palette.gold}, ${palette.cyan}, ${orbTint})`,
+                  animation: theme.motion === 'stable' ? undefined : 'olympus-plasma 8s linear infinite',
+                }}
+              />
+              <span className="absolute inset-[2px] rounded-full" style={{ background: palette.bg }} />
+              <span
+                className="absolute inset-[2px] rounded-full"
+                style={{
+                  background: `radial-gradient(circle at 50% 50%, transparent 52%, ${orbTint}33 59%, transparent 68%)`,
+                  opacity: speaking ? 1 : 0.55,
+                  animation: speaking && theme.motion !== 'stable' ? 'pulse 1.2s ease-in-out infinite' : undefined,
+                }}
+              />
+              {Array.from({ length: 14 }).map((_, i) => (
+                <span
+                  key={i}
+                  className="absolute inset-0"
+                  style={{
+                    transform: `rotate(${(i / 14) * 360}deg)`,
+                    animation: theme.motion === 'stable' ? undefined : `olympus-plasma ${5 + (i % 5) * 0.8}s linear infinite${i % 2 ? ' reverse' : ''}`,
+                  }}
+                >
+                  <span
+                    className="absolute left-1/2 top-[2px] rounded-full"
+                    style={{ width: 1.6, height: 1.6, background: i % 3 === 0 ? palette.gold : orbTint, transform: 'translateX(-50%)', opacity: 0.55 + (i % 3) * 0.15 }}
+                  />
+                </span>
+              ))}
+            </span>
+            <span className="absolute inset-[13px] rounded-full" style={{ background: `radial-gradient(circle at 50% 38%, ${orbTint}2A, transparent 72%)` }} />
+            <ActiveGodIcon size={26} className={speaking ? 'relative animate-pulse' : 'relative'} style={{ color: voice ? orbTint : palette.textDim }} />
+            <Mic size={9} className="absolute bottom-5" style={{ color: voice ? palette.gold : palette.textDim }} />
           </button>
+          <select
+            value={activeGod}
+            onChange={(e) => setActiveGod(e.target.value)}
+            className="w-full rounded px-1.5 py-1 text-[9px] font-mono outline-none"
+            style={{ background: palette.bg, color: palette.text, border: `1px solid ${orbTint}44` }}
+            aria-label="God voice"
+          >
+            {GOD_IDS.map((g) => <option key={g} value={g}>{godName(g, language)}</option>)}
+          </select>
           <select
             value={language}
             onChange={(e) => pickLang(e.target.value)}
@@ -398,6 +499,45 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
           <p className="text-[8px] font-mono text-center flex items-center gap-1" style={{ color: speaking ? palette.gold : palette.textDim }}>
             <Volume2 size={9} /> {voice ? (speaking ? t('studio.speaking', language) : t('studio.voiceOn', language)) : t('studio.voiceOff', language)}
           </p>
+
+          {/* The discreet studio chat: asks the live walk, answers as the
+              active god, and speaks the answer when voice is on. */}
+          <div className="w-full mt-1 pt-2 border-t" style={{ borderColor: `${palette.gold}22` }}>
+            <div className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide mb-1" style={{ color: orbTint }}>
+              <Waypoints size={9} /> studio chat · {godName(activeGod, language)}
+            </div>
+            <div className="max-h-28 overflow-y-auto custom-scroll space-y-1 mb-1.5">
+              {chat.length === 0 ? (
+                <p className="text-[8px] font-mono leading-relaxed" style={{ color: palette.textDim }}>
+                  ask “summarize what is being done” — the answer comes from the live walk, in your language.
+                </p>
+              ) : chat.map((m, i) => (
+                <div key={`${m.role}:${i}`} className={m.role === 'user' ? 'text-right' : 'text-left'}>
+                  <span
+                    className="inline-block rounded-lg px-1.5 py-1 text-[8px] font-mono whitespace-pre-wrap text-left max-w-full"
+                    style={{
+                      background: m.role === 'user' ? `${palette.gold}18` : `${godTint(m.god || activeGod)}14`,
+                      color: m.role === 'user' ? palette.text : palette.text,
+                      border: `1px solid ${m.role === 'user' ? palette.gold : godTint(m.god || activeGod)}33`,
+                    }}
+                  >{m.text}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void askStudio(); } }}
+                placeholder={t('terminal.placeholder', language)}
+                className="flex-1 min-w-0 rounded px-1.5 py-1 text-[8px] font-mono outline-none"
+                style={{ background: palette.bg, color: palette.text, border: `1px solid ${orbTint}33` }}
+              />
+              <button onClick={() => void askStudio()} disabled={chatBusy || !chatInput.trim()} aria-label="Ask the studio" className="rounded p-1 disabled:opacity-40" style={{ color: orbTint }}>
+                {chatBusy ? <span className="text-[9px] animate-pulse">…</span> : <Send size={11} />}
+              </button>
+            </div>
+          </div>
         </aside>
       </div>
     </div>
