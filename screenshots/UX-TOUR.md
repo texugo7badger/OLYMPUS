@@ -186,3 +186,18 @@ The boot/fullscreen loader and the brain's bottom-left live mark now use the
 chameleon geometry: gradient peak, cyan inner ring, eight palette-colored dots
 and a gradient wordmark. Stable mode renders the same mark as a static frame;
 the palette is the only thing that changes.
+
+### v0.0.38 — 60 FPS, the folder identity, the 60-minute project
+
+- Hardware acceleration is the default again: measured ~60 FPS on the Brain
+  Atlas and the Pattern Studio (previously 14–20 FPS in software). The canvas
+  batches links, caps DPR, drops the per-frame gradients and pauses when
+  hidden; the orb carries fewer filaments; the voice analyser updates React
+  at ~10 Hz. `--disable-gpu` remains an explicit escape hatch and two GPU
+  crashes persist the software fallback.
+- OLYMPUS opens fullscreen; F11 / Ctrl+Shift+F toggles it.
+- A project is its folder: `aime`, with a real summary (package/README, never
+  the creation prompt) and the official stack marks under it.
+- Campaigns carry a 60-minute wall-clock budget; new hops stop at the
+  deadline with a named resume point, and the live preview follows each
+  finished part (auto-follow toggle, part name in the footer).
