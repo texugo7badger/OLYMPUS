@@ -47,11 +47,24 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
   const [queueing, setQueueing] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [note, setNote] = useState<string | null>(null);
+  // v0.0.32 — web references (Brave, link-only, provenance kept).
+  const [webQuery, setWebQuery] = useState('');
+  const [webBusy, setWebBusy] = useState(false);
+  const [webResults, setWebResults] = useState<Array<StyleReference & { imageUrl?: string | null }>>([]);
+  const [webError, setWebError] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const allRefs = useMemo(() => {
+    const seen = new Set<string>();
+    return [...references, ...webResults].filter((r) => {
+      if (!r.demoUrl || seen.has(r.demoUrl)) return false;
+      seen.add(r.demoUrl);
+      return true;
+    });
+  }, [references, webResults]);
   const selectedRefs = useMemo(
-    () => references.filter((r) => picked.has(r.demoUrl)),
-    [references, picked],
+    () => allRefs.filter((r) => picked.has(r.demoUrl)),
+    [allRefs, picked],
   );
   const colors = resolveColors(tokens);
   const prompt = useMemo(
@@ -104,24 +117,45 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
   const update = useCallback((patch: Partial<StyleTokens>) => {
     setTokens((prev) => {
       const next = normalizeStyleTokens({ ...prev, ...patch });
-      const refs = references.filter((ref) => picked.has(ref.demoUrl));
+      const refs = allRefs.filter((ref) => picked.has(ref.demoUrl));
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => { void persist(next, refs); }, 700);
       return next;
     });
-  }, [persist, picked, references]);
+  }, [persist, picked, allRefs]);
 
   const toggleRef = useCallback((ref: StyleReference) => {
     setPicked((prev) => {
       const next = new Set(prev);
       if (next.has(ref.demoUrl)) next.delete(ref.demoUrl);
       else next.add(ref.demoUrl);
-      const chosen = references.filter((r) => next.has(r.demoUrl));
+      const chosen = allRefs.filter((r) => next.has(r.demoUrl));
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => { void persist(tokens, chosen); }, 400);
       return next;
     });
-  }, [persist, references, tokens]);
+  }, [persist, allRefs, tokens]);
+
+  const searchWeb = useCallback(async () => {
+    const q = webQuery.trim();
+    if (q.length < 2) return;
+    setWebBusy(true);
+    setWebError(null);
+    try {
+      const r = await fetch(`/api/olympus/artcraft/web?q=${encodeURIComponent(q)}`, { cache: 'no-store' });
+      const d = await r.json();
+      if (d?.ok) {
+        setWebResults(Array.isArray(d.results) ? d.results : []);
+        if ((d.results ?? []).length === 0) setWebError('no results');
+      } else {
+        setWebError(d?.needsKey ? 'BRAVE_API_KEY missing — add it in API Keys' : (d?.error ?? 'search failed'));
+      }
+    } catch (e: any) {
+      setWebError(e?.message || 'search failed');
+    } finally {
+      setWebBusy(false);
+    }
+  }, [webQuery]);
 
   const copy = useCallback(async () => {
     try {
@@ -292,9 +326,22 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
             <span className="text-[8px] font-mono text-olympus-text-dim">link only — never a copied asset without a license</span>
             <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">{picked.size} selected</span>
           </header>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <input
+              value={webQuery}
+              onChange={(e) => setWebQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void searchWeb(); }}
+              placeholder="search the web for a visual reference — e.g. editorial dashboard, warm brutalist, glass cards"
+              className={cn(field, 'flex-1')}
+            />
+            <button onClick={() => void searchWeb()} disabled={webBusy} className="flex items-center gap-1 text-[9px] font-mono px-2 py-1 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20 disabled:opacity-50">
+              {webBusy ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} web
+            </button>
+          </div>
+          {webError && <p className="text-[8px] font-mono text-olympus-amber-soft mb-1">{webError}</p>}
           <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3 max-h-40 overflow-auto">
-            {references.length === 0 && <p className="text-[9px] font-mono text-olympus-text-dim">no references loaded</p>}
-            {references.map((r) => (
+            {allRefs.length === 0 && <p className="text-[9px] font-mono text-olympus-text-dim">no references loaded</p>}
+            {allRefs.map((r) => (
               <label key={r.demoUrl} className="flex items-start gap-1.5 rounded border border-olympus-gold/10 px-1.5 py-1 cursor-pointer hover:border-olympus-gold/30">
                 <input type="checkbox" checked={picked.has(r.demoUrl)} onChange={() => toggleRef(r)} className="mt-0.5 accent-[#D4A574]" />
                 <span className="min-w-0">
