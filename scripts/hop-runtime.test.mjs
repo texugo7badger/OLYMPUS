@@ -513,8 +513,19 @@ async function main() {
   // DEFAULT constant elsewhere in the file is the sane-default home, not a
   // violation).
   expect('R3: the dispatcher threads the resolved ceiling into the transport (no hard-coded ceiling at the call site)',
-    /resolveHopTimeoutMs\(\)/.test(walkerSrc) && /timeoutMs:\s*resolveHopTimeoutMs\(\)/.test(walkerSrc) && !/timeoutMs:\s*\d+ \* 60_000/.test(walkerSrc),
+    /resolveHopTimeoutMs\(\)/.test(walkerSrc) && /timeoutMs:[\s\S]{0,220}?resolveHopTimeoutMs\(\)/.test(walkerSrc) && !/timeoutMs:\s*\d+ \* 60_000/.test(walkerSrc),
     'the call site still hard-codes the ceiling');
+  // v0.0.38 — the 60-minute project budget: default, clamp, and the hop
+  // ceiling clipped to the time that remains (never another 15 min at 59').
+  expect('R38: campaign budget defaults to 60 min and never exceeds it',
+    typeof mod.resolveCampaignBudgetMs === 'function'
+      && mod.resolveCampaignBudgetMs({}) === 60 * 60_000
+      && mod.resolveCampaignBudgetMs({ OLYMPUS_CAMPAIGN_BUDGET_MS: '7200000' }) === 60 * 60_000
+      && mod.resolveCampaignBudgetMs({ OLYMPUS_CAMPAIGN_BUDGET_MS: '60000' }) === 5 * 60_000,
+    'the budget resolver is missing or unbounded');
+  expect('R38: the timeout call site is clipped by the deadline',
+    /Math\.min\(resolveHopTimeoutMs\(\), Math\.max\(60_000, ctx\.deadlineAt - Date\.now\(\)\)\)/.test(walkerSrc),
+    'a hop started at minute 59 still asks for a full ceiling');
 
   // ── 8. PLANO-MASTER-1 B3 (#117): the PRODUCT FLOW walks the plan ────────
   // The user's UAT, verbatim: 19 planned hops -> 0 walked -> "Task completed.

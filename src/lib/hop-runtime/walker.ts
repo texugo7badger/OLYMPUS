@@ -58,6 +58,24 @@ export function resolveHopConcurrency(env: NodeJS.ProcessEnv = process.env): num
   return 2;
 }
 
+/**
+ * v0.0.38 — THE 60-MINUTE PROJECT BUDGET.
+ *
+ * A campaign is a project slice, not an overnight vigil. The walker launches
+ * hops against a wall-clock deadline (default 60 min; env-tunable down to 5
+ * min, never above 60) and every hop's own ceiling is clipped to the time
+ * that remains. At the deadline the walk STOPS LAUNCHING and reports the
+ * resume point named `campaign-budget` — it never parks forever and never
+ * spends 90–120 minutes on one project.
+ */
+export const DEFAULT_CAMPAIGN_BUDGET_MS = 60 * 60_000;
+export const MIN_CAMPAIGN_BUDGET_MS = 5 * 60_000;
+export function resolveCampaignBudgetMs(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number.parseInt(env.OLYMPUS_CAMPAIGN_BUDGET_MS ?? '', 10);
+  if (Number.isFinite(n) && n > 0) return Math.max(MIN_CAMPAIGN_BUDGET_MS, Math.min(n, DEFAULT_CAMPAIGN_BUDGET_MS));
+  return DEFAULT_CAMPAIGN_BUDGET_MS;
+}
+
 export function nextConcurrency(current: number, outcome: 'ok' | 'overload' | 'hang'): number {
   const cur = Math.max(1, Math.min(current, MAX_HOP_CONCURRENCY));
   if (outcome === 'ok') return Math.min(cur + 1, MAX_HOP_CONCURRENCY);
@@ -176,6 +194,9 @@ export type HopDispatcher = (hop: PlanHop, ctx: {
   laneRoot: string;
   /** The composed prompt: the slice + the file pointers — never full context. */
   prompt: string;
+  /** v0.0.38 — the campaign's wall-clock deadline (ms since epoch). Each
+   *  hop's ceiling is clipped to the time that remains. */
+  deadlineAt?: number;
 }) => Promise<HopDispatchResult>;
 
 /** The repo root for the arsenal loader — the hop-runtime module's own
@@ -555,7 +576,7 @@ type LaneOutcome =
 async function attemptLane(
   lane: string,
   hop: PlanHop,
-  ctx: { laneRoot: string; prompt: string; transport: HopTransport },
+  ctx: { laneRoot: string; prompt: string; transport: HopTransport; deadlineAt?: number },
   retriesAbsorbedStart: number,
 ): Promise<LaneOutcome> {
   const plan = resolveRetryPlan();
@@ -581,7 +602,11 @@ async function attemptLane(
       agent: hopAgent,
       model: lane,
       cwd: ctx.laneRoot,
-      timeoutMs: resolveHopTimeoutMs(),
+      // The campaign budget clips the hop ceiling: a hop started at minute
+      // 59 gets the minute it has left, not another 15.
+      timeoutMs: ctx.deadlineAt
+        ? Math.min(resolveHopTimeoutMs(), Math.max(60_000, ctx.deadlineAt - Date.now()))
+        : resolveHopTimeoutMs(),
       firstByteMs: resolveHopFirstByteMs(),
       silenceMs: resolveHopSilenceMs(),
       onNotice: (msg) => console.log(`[hop-transport] ${msg}`),
@@ -1110,6 +1135,11 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     return row;
   };
 
+  // v0.0.38 — the campaign deadline. The clock starts with the walk, not with
+  // the first hop: planning, retries and parks all consume the same 60 min.
+  const deadlineAt = Date.now() + resolveCampaignBudgetMs();
+  let budgetTimer: ReturnType<typeof setTimeout> | null = null;
+
   await new Promise<void>((resolveWalk) => {
     const inFlight = new Map<string, WalkTask>();
     let concurrency = resolveHopConcurrency();
@@ -1142,6 +1172,23 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     };
     const launch = () => {
       if (stopped) return;
+      // Hard budget: never launch a new hop after the deadline. In-flight
+      // hops finish (their ceiling was clipped); pending hops stay resumable.
+      if (Date.now() >= deadlineAt) {
+        stopped = true;
+        const nextPending = pending.find((h) => !completed.has(h.id) && !quarantined.has(h.id) && !inFlight.has(h.id));
+        if (!parkedHop && nextPending) {
+          parkedHop = {
+            hopId: nextPending.id,
+            reason: 'campaign-budget',
+            ts: new Date().toISOString(),
+            error: `campaign budget of ${Math.round(resolveCampaignBudgetMs() / 60_000)} min reached — resume from this hop (nothing was lost)`,
+          };
+          emit({ type: 'hop_parked', hop: nextPending.id, god: nextPending.god, reason: 'campaign-budget', error: parkedHop.error });
+        }
+        persistState();
+        return;
+      }
       while (inFlight.size < concurrency) {
         // #POOL-CONTENTION: count the in-flight hops per provider lane; a
         // saturated lane's hops wait (other-pool hops can still launch).
@@ -1203,7 +1250,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           try {
             result = next.kind === 'script'
               ? await runScriptHop(next, laneRoot)
-              : await dispatch(next, { laneRoot, prompt: await composeHopPromptWithRag(next, laneRoot) });
+              : await dispatch(next, { laneRoot, prompt: await composeHopPromptWithRag(next, laneRoot), deadlineAt });
           } catch (e) {
             result = {
               ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,
@@ -1287,6 +1334,8 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       // the campaign. The result tells the truth.
       const stopWalkHeartbeat = (inFlight as any).__stopHeartbeat as (() => void) | undefined;
       if (stopWalkHeartbeat) stopWalkHeartbeat();
+      if (budgetTimer) clearTimeout(budgetTimer);
+      budgetTimer = null;
       resolveWalk();
     };
     const stopHeartbeat = (inFlight as any).__stopHeartbeat as (() => void) | undefined;
@@ -1303,6 +1352,24 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       if (inFlight.size > 0) persistState();
     }, 45_000);
     (inFlight as any).__stopHeartbeat = () => clearInterval(heartbeat);
+    // The timer is the hard wall: it flips `stopped` and names the resume
+    // point even if every hop is silent.
+    const budgetLeft = Math.max(1_000, deadlineAt - Date.now());
+    budgetTimer = setTimeout(() => {
+      if (stopped) return;
+      stopped = true;
+      const nextPending = pending.find((h) => !completed.has(h.id) && !quarantined.has(h.id) && !inFlight.has(h.id));
+      if (!parkedHop && nextPending) {
+        parkedHop = {
+          hopId: nextPending.id,
+          reason: 'campaign-budget',
+          ts: new Date().toISOString(),
+          error: `campaign budget of ${Math.round(resolveCampaignBudgetMs() / 60_000)} min reached — resume from this hop (nothing was lost)`,
+        };
+        emit({ type: 'hop_parked', hop: nextPending.id, god: nextPending.god, reason: 'campaign-budget', error: parkedHop.error });
+      }
+      persistState();
+    }, budgetLeft);
     launch();
     void settle();
   });

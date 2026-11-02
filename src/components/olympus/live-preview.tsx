@@ -51,6 +51,34 @@ export default function LivePreview() {
   const [historyStack, setHistoryStack] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [iframeKey, setIframeKey] = useState(0);
+  // v0.0.38 — PARTS IN THE PREVIEW. Each finished hop is a part of the
+  // project; when it lands the preview follows it (debounced), unless the
+  // user turns the follow off. The footer names the part.
+  const [autoFollow, setAutoFollow] = useState<boolean>(() => {
+    try { return window.localStorage.getItem('olympus:preview-follow') !== '0'; } catch { return true; }
+  });
+  const [lastPart, setLastPart] = useState<string | null>(null);
+  useEffect(() => {
+    try { window.localStorage.setItem('olympus:preview-follow', autoFollow ? '1' : '0'); } catch { /* private */ }
+  }, [autoFollow]);
+  useEffect(() => {
+    if (!autoFollow || !docVisible) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource('/api/olympus/hops/stream');
+      es.onmessage = (e) => {
+        try {
+          const ev = JSON.parse(e.data);
+          if (ev?.type !== 'hop_done') return;
+          setLastPart(String(ev.hop || 'part'));
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => setIframeKey((k) => k + 1), 1500);
+        } catch { /* torn frame */ }
+      };
+    } catch { /* no stream: the preview stays interactive */ }
+    return () => { es?.close(); if (timer) clearTimeout(timer); };
+  }, [autoFollow, docVisible]);
 
   const port = activeProject?.livePreviewPort || DEFAULT_PORT;
   // #102: the pre-first-probe guess ONLY — once a probe settles, effectiveUrl
@@ -377,7 +405,18 @@ export default function LivePreview() {
             : isRunning ? `:${port} · ${status?.responseTimeMs ?? 0}ms` : `:${port} · offline`}
           {status?.manager?.running ? ' · durable host' : ''}
         </span>
-        <span className="text-olympus-text-dim">live · no auto-refresh · interactive</span>
+        <span className="flex items-center gap-2">
+          {lastPart && <span className="text-olympus-green">part {lastPart} ✓</span>}
+          <button
+            onClick={() => setAutoFollow((v) => !v)}
+            aria-pressed={autoFollow}
+            data-tip="Reload the preview when a hop delivers a new part"
+            className={cn('hover:text-olympus-gold transition-colors', autoFollow ? 'text-olympus-cyan' : 'text-olympus-text-dim')}
+          >
+            {autoFollow ? 'auto-follow parts' : 'manual refresh'}
+          </button>
+          <span className="text-olympus-text-dim">· interactive</span>
+        </span>
       </div>
     </div>
   );

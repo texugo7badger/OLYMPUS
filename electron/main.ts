@@ -553,6 +553,9 @@ function buildWindowOptions(): Electron.BrowserWindowConstructorOptions {
     show: false,
     autoHideMenuBar: true,
     frame: false,
+    // v0.0.38 — OLYMPUS opens FULLSCREEN by default (the user's ask); F11 or
+    // Cmd/Ctrl+Shift+F exits, and OLYMPUS_WINDOWED=1 starts windowed.
+    fullscreen: process.env.OLYMPUS_WINDOWED !== '1',
     webPreferences: {
       webviewTag: true,
       nodeIntegration: false,
@@ -923,6 +926,16 @@ function createWindow() {
     console.log('[olympus:hibernate] waking — window recreated');
   }
   mainWindow = new BrowserWindow(buildWindowOptions());
+
+  // F11 / Ctrl+Shift+F toggles fullscreen; the default is fullscreen.
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (input.type !== 'keyDown') return;
+    const isF11 = input.key === 'F11';
+    const isChord = (input.control || input.meta) && input.shift && input.key.toLowerCase() === 'f';
+    if (isF11 || isChord) {
+      mainWindow?.setFullScreen(!mainWindow.isFullScreen());
+    }
+  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
@@ -1607,22 +1620,30 @@ app.setName('OLYMPUS');
 const GPU_FALLBACK_MARKER = join(nodeOs.homedir(), '.olympus', 'gpu-fallback');
 const GPU_FALLBACK_ARG = '--olympus-disable-gpu';
 
-// #GPU-DISABLE: disable GPU unconditionally on this machine. The AMD Radeon
-// RX 6600 crashes Electron's GPU process on launch (error_code=1002).
-// The user can re-enable with --reset-gpu.
-if (!process.argv.includes('--reset-gpu')) {
+// GPU policy (v0.0.38): hardware acceleration is the DEFAULT. The creative
+// mode's canvas + plasma orb hold 60 FPS with the GPU and fall to ~20 FPS in
+// software, so software is only the FALLBACK: an explicit --disable-gpu, the
+// persisted marker from two crashes, or --olympus-disable-gpu (the relaunch
+// path). `--reset-gpu` removes the marker and retries hardware acceleration.
+const gpuMarkerPersisted = existsSync(GPU_FALLBACK_MARKER);
+const gpuExplicitlyOff = process.argv.includes('--disable-gpu') || process.argv.includes(GPU_FALLBACK_ARG);
+const resetGpu = process.argv.includes('--reset-gpu');
+if (resetGpu) {
+  try { unlinkSync(GPU_FALLBACK_MARKER); } catch { /* already gone */ }
+  console.log('[olympus:electron] --reset-gpu: GPU fallback marker cleared — trying hardware acceleration again.');
+}
+if (gpuExplicitlyOff || (gpuMarkerPersisted && !resetGpu)) {
   try {
     app.disableHardwareAcceleration();
     app.commandLine.appendSwitch('disable-gpu');
     app.commandLine.appendSwitch('disable-gpu-sandbox');
     app.commandLine.appendSwitch('disable-software-rasterizer');
-    console.log('[olympus:electron] hardware acceleration DISABLED (GPU incompatible with this machine — run with --reset-gpu to retry)');
+    console.log('[olympus:electron] hardware acceleration DISABLED (software fallback — run with --reset-gpu to retry)');
   } catch (err) {
     console.error('[olympus:electron] GPU disable failed:', err);
   }
 } else {
-  try { unlinkSync(GPU_FALLBACK_MARKER); } catch { /* already gone */ }
-  console.log('[olympus:electron] --reset-gpu: GPU fallback marker cleared — trying hardware acceleration again.');
+  console.log('[olympus:electron] hardware acceleration ENABLED — target 60 FPS');
 }
 
 const gotLock = app.requestSingleInstanceLock();
