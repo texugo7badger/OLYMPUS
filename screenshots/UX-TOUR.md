@@ -209,3 +209,11 @@ OLYMPUS process census (count + RSS), load vs cores, and the honest verdict.
 `reclaim` stops the optional chat fleet; the next prompt recreates it. A new
 dev server is refused when it would leave less than 1.2 GB free, and the
 refusal shows the measured numbers instead of a generic failure.
+
+### v0.0.40 — the stability harness
+
+`npm run soak` (60 min) or `npm run soak:short` (2 min) probes the five
+load-bearing endpoints, records latency, memory and the process census, and
+fails on a non-2xx, a budget overrun, memory below 900 MB or unbounded RSS.
+The measured 40-round run is in [STABILITY.md](../STABILITY.md); the 8-hour /
+100-hop certification is explicitly not claimed.
