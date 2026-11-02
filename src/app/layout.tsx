@@ -34,6 +34,32 @@ const APP_VERSION: string = (() => {
   }
 })();
 
+/**
+ * THEME BOOT (v0.0.34) — the first paint uses the LAST saved theme.
+ * theme-store writes a resolved palette cache on every change; this script
+ * runs before React and applies it to <html> (CSS variables, .dark class,
+ * color-scheme and the theme-color meta). No dark flash.
+ */
+const THEME_BOOT_SCRIPT = `(function(){try{
+  var root=document.documentElement;
+  var cache=null;
+  try{cache=JSON.parse(localStorage.getItem('olympus:theme-palette')||'null');}catch(e){}
+  if(cache){
+    for(var k in cache){ if(k.charAt(0)==='_') continue; root.style.setProperty('--olympus-'+k,cache[k]); root.style.setProperty('--color-olympus-'+k,cache[k]); }
+    if(cache._mode){ root.setAttribute('data-mode',cache._mode); root.classList.toggle('dark',cache._mode==='dark'); root.style.colorScheme=cache._mode; }
+    if(cache.bg){ var m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content',cache.bg); }
+    if(cache.bg) root.style.backgroundColor=cache.bg;
+  } else {
+    root.classList.add('dark'); root.setAttribute('data-mode','dark'); root.style.colorScheme='dark';
+  }
+  try{
+    var t=JSON.parse(localStorage.getItem('olympus:theme')||'{}');
+    if(t.mode){ root.setAttribute('data-mode',t.mode); root.classList.toggle('dark',t.mode==='dark'); root.style.colorScheme=t.mode; }
+    if(t.presetId) root.setAttribute('data-theme',t.presetId);
+    if(t.motion) root.setAttribute('data-motion',t.motion);
+  }catch(e){}
+}catch(e){}})();`;
+
 export const metadata: Metadata = {
   title: "OLYMPUS",
   description:
@@ -115,11 +141,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      data-theme="dark"
+      data-mode="dark"
       data-darkreader-lock="dark"
       suppressHydrationWarning
-      className="dark"
-      style={{ colorScheme: "dark" }}
     >
       <head>
         {/* Standard dark-mode signal */}
@@ -136,6 +160,8 @@ export default function RootLayout({
             file-based ones and could cause stale-cache issues. */}
         {/* W-M: the version stamp — the status-bar badge source of truth */}
         <script dangerouslySetInnerHTML={{ __html: `window.__OLYMPUS_VERSION__=${JSON.stringify(APP_VERSION)};` }} />
+        {/* The last saved theme paints BEFORE React (no dark flash). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         {/* Synchronous script - runs before React hydration, disables
             DarkReader if it's already loaded, and sets flags for
             content-script-based versions */}

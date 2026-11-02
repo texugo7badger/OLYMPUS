@@ -49,7 +49,7 @@
   </g>
 
   <text x="360" y="132" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="82" font-weight="750" letter-spacing="6" fill="url(#word)">OLYMPUS</text>
-  <text x="364" y="172" font-family="ui-monospace, 'SF Mono', monospace" font-size="13" letter-spacing="4" fill="#B8B8B8">TEN GODS · 122 DEMIGODS · ONE LIVING MACHINE</text>
+  <text x="364" y="172" font-family="ui-monospace, 'SF Mono', monospace" font-size="13" letter-spacing="4" fill="#B8B8B8">TEN GODS · 122 DEMIGODS · 28 MCPs · ONE LIVING MACHINE</text>
   <text x="364" y="202" font-family="ui-monospace, 'SF Mono', monospace" font-size="11" letter-spacing="1.5" fill="#7BAE8E">AGPL-3.0 · LOCAL-FIRST · 60 FPS · THE BRAIN NEVER FORGETS</text>
 
   <!-- Seven languages, the Settings row made visible -->

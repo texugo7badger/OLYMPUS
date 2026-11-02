@@ -240,6 +240,19 @@ export function applyTheme(state: ThemeState, root: ApplyTarget): ThemeState {
   root.setAttribute('data-mode', normalized.mode);
   root.setAttribute('data-motion', normalized.motion);
   root.setAttribute('data-icon', normalized.iconId);
+  // v0.0.34 — the boot surface follows the saved mode BEFORE React paints:
+  // the .dark class, color-scheme and the browser/PWA theme-color all move.
+  try {
+    const el = root as unknown as { classList?: { toggle: (c: string, on: boolean) => void }; style: { colorScheme?: string } };
+    el.classList?.toggle('dark', normalized.mode === 'dark');
+    if (el.style) el.style.colorScheme = normalized.mode;
+  } catch { /* non-DOM target */ }
+  try {
+    if (typeof document !== 'undefined') {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', palette.bg);
+    }
+  } catch { /* non-DOM */ }
   return normalized;
 }
 

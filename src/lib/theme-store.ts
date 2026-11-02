@@ -16,6 +16,7 @@ import {
   applyTheme,
   normalizeThemeState,
   presetById,
+  resolvePalette,
   themedFaviconSvg,
   type ThemeState,
 } from './theme';
@@ -67,7 +68,10 @@ export function setThemeState(patch: Partial<ThemeState>, opts: { persist?: bool
   if (patch.presetId && !patch.mode) merged.mode = presetById(merged.presetId).mode;
   state = merged;
   repaint(state);
-  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch { /* private mode */ }
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    localStorage.setItem('olympus:theme-palette', JSON.stringify({ ...resolvePalette(state), _mode: state.mode }));
+  } catch { /* private mode */ }
   emit();
   if (opts.persist !== false) {
     try {
@@ -89,6 +93,7 @@ export async function initTheme(): Promise<void> {
     if (raw) {
       state = normalizeThemeState(JSON.parse(raw));
       repaint(state);
+      try { localStorage.setItem('olympus:theme-palette', JSON.stringify({ ...resolvePalette(state), _mode: state.mode })); } catch { /* private */ }
       emit();
     }
   } catch { /* corrupt → default */ }
@@ -99,7 +104,10 @@ export async function initTheme(): Promise<void> {
     if (d?.ok && d.state) {
       state = normalizeThemeState(d.state);
       repaint(state);
-      try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch { /* private mode */ }
+      try {
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    localStorage.setItem('olympus:theme-palette', JSON.stringify({ ...resolvePalette(state), _mode: state.mode }));
+  } catch { /* private mode */ }
       emit();
     }
   } catch { /* offline: the local theme stands */ }
