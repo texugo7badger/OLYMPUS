@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.32, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.33, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -31,7 +31,7 @@ A guided tour of every surface (with the references catalog and the Craft
 dashboard) lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). The
 screenshots are captured from the running app by `npm run shots` — no mockups.
 
-**v0.0.32 highlights:** twelve theme presets plus a palette lab (full 14-color
+**v0.0.33 highlights:** twelve theme presets plus a palette lab (full 14-color
 families with contrast floors) that repaint the app, the terminal, the brain,
 the loader, the tray and the system icon; **251 default builds** plus the
 hot/warm/cold learning loop; a swipeable talent carousel over the whole
@@ -84,7 +84,7 @@ OLYMPUS runs as a **standalone desktop application** — it opens its own window
 ```bash
 # 1. Download the latest AppImage from GitHub Releases:
 #    https://github.com/texugo7badger/olympus/releases
-#    OLYMPUS-0.0.32-linux-x86_64.AppImage (~482 MB)
+#    OLYMPUS-0.0.33-linux-x86_64.AppImage (~482 MB)
 
 # 2. Make it executable and run:
 chmod +x OLYMPUS-*.AppImage
