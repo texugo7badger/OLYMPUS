@@ -225,3 +225,12 @@ The project profile now carries the **brief**: status (running / parked / done
 the next parts, the docs, the walk's memory files and the measured brain scope
 (115 instincts · 39 knowledge · 321 skills on this machine). The card's
 labels follow the selected language (English + PT-BR).
+
+### v0.0.42 — the editor follows the agent
+
+The Editor Bridge gains **follow the agent** (off by default): when a god
+writes or edits a file inside the active project, OLYMPUS opens it in the
+configured editor (VSCode-family at `file:line` via `-g`; Zed at
+`file:line`). Bursts are debounced, the same file is not reopened within 5s,
+the feed pauses while the window is hidden, and `/api/olympus/editor/open`
+refuses traversal, non-files and anything outside the project root.

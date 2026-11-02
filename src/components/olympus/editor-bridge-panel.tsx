@@ -39,6 +39,8 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { useFollowAgentSetting } from './follow-agent';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,6 +72,7 @@ interface StatusResponse {
 
 export default function EditorBridgePanel({ active = true }: { active?: boolean }) {
   const activeProject = useOlympus(s => s.activeProject);
+  const [followAgent, setFollowAgent] = useFollowAgentSetting();
 
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -184,6 +187,16 @@ export default function EditorBridgePanel({ active = true }: { active?: boolean 
               No active project. Create one with the + button in the top bar.
             </div>
           )}
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-olympus-gold/15 bg-olympus-card/40 px-3 py-2.5 mb-3">
+            <div className="min-w-0">
+              <div className="text-[10px] font-mono font-semibold text-olympus-text">follow the agent</div>
+              <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed">
+                Open each file a god writes inside this project, live. Off by default.
+              </div>
+            </div>
+            <Switch checked={followAgent} onCheckedChange={setFollowAgent} aria-label="Follow the agent in the editor" />
+          </div>
 
           <div className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide mb-2">
             Configured Editor

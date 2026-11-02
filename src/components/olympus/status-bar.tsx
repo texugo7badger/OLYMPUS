@@ -22,6 +22,7 @@ import { useWorkingGods } from '@/lib/use-working-gods';
 import { useDocVisible } from '@/lib/use-doc-visible';
 import ThemedLogo from './themed-logo';
 import NotificationCenter from './notification-center';
+import FollowAgent from './follow-agent';
 import ImmersivePanel from './immersive-panel';
 import { useTheme } from '@/lib/theme-store';
 import { useLanguage, t } from '@/lib/i18n';
@@ -176,7 +177,7 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.41'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.42'}
    </span>
 )}
  </div>
@@ -197,6 +198,8 @@ export default function StatusBar({
 
  {/* v0.0.32 — notifications + the sleep contract. */}
 		 <NotificationCenter />
+		 {/* v0.0.42 — the editor follows the agent when the user opts in. */}
+		 <FollowAgent />
 		 {/* v0.0.34 — the ART & CREATIVITY mode, always visible: the studio
 		     opens the particle/voice surface (TTS in the chosen language). */}
 		 <button

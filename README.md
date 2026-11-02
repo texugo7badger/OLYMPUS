@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.41, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.42, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,13 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.42 — the editor follows the agent.** Opt-in follow mode opens each
+file a god writes inside the active project in your editor (Zed, VSCode,
+VSCodium, Cursor), at the line when one is known. The subscriber reads the
+activity feed, pauses when the window is hidden, debounces bursts and never
+reopens the same file within 5s. The API resolves real paths and refuses
+anything outside the project root.
 
 **v0.0.41 — the living project brief.** A project profile now answers what
 the project is *doing*: campaign status, completed/total hops, the parked hop
