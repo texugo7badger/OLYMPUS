@@ -1,14 +1,34 @@
 # OLYMPUS Token Economy
 
-> **Measured reality — v0.0.30 (2026-10-31).** The compression claims below
+> **Measured reality — v0.0.31 (2026-11-01).** The compression claims below
 > are **design intent**, not measured wins. The live audit found: short-circuit
 > gate **0/2,999** evaluations (the tag-similarity × confidence math cannot
 > reach 0.85 except on near-identical tags); 5h cache read **89.7M** vs 1.04M
 > output (**86:1**); 107 MCP tools loaded while the AIME plan declared four.
-> MCP tiering today is **permission-only**; v0.0.30 adds a campaign manifest
+> MCP tiering started as **permission-only**; v0.0.30 added a campaign manifest
 > that filters the lane config, but the hot/warm/cold **loading** described
 > below is still not a measured input reduction. Treat every percentage in
-> this file as `[DESIGN-MATH]` until the next benchmark says otherwise.
+> this file as `[DESIGN-MATH]` until a benchmark says otherwise.
+>
+> **v0.0.31 measured strip (2026-11-01, local tree):**
+> - MCP: **28** registry rows, **6 enabled / 39 tools** measured (`mcp/health`,
+>   git 12 + filesystem 9 + memory 9 + olympus-craft 6 + context7 2 +
+>   sequential-thinking 1). Enabling the two keyed servers (Originkit, Brave)
+>   gives **8 alive / 41 tools, 0 enabled-but-dead**. The old "44" was the
+>   v0.0.30 census; the tooltip and this file now carry the measured 39.
+> - Hops: real tokens come from the **`session_v2` row**, not the ACK
+>   (v3-feed-api: **94,043 in / 9,853 out**, 1,070 s). A warm ACK that stalls
+>   fails over to spawn **once** (R31-01); the ceiling is 1,500,000 ms.
+> - Lean hop agents: `<god>-hop` carries file/shell tools only, not the god's
+>   22 orchestration tools (R31-09).
+> - AIME campaign `cmp_mvye6fx0jpd8l0`: **16/39 completed**, 4 quarantined
+>   (g3 killed by an operator error; v8/p3 hit the 25-min ceiling while still
+>   listing files), systemic stop after ≥50 % parks. No data lost.
+> - Retention: **10.4 GB** reclaimed by `doctor --fix` (8.8 GB stale build
+>   archive + 1.6 GB pre-v2 DB backup; three newest DB backups kept).
+> - Hibernation (first slice): window destroyed + app chat server stopped;
+>   campaign stays on its lane hop server. The **< 1.5 GB** target is the
+>   headless worker (v0.0.41), not measured yet.
 
 
 > How OLYMPUS achieves high quality at low cost — from zero (your own hardware) to the GO plan. 5-layer compression · Hot/Warm/Cold tiers · Instinct short-circuits · Symphony Layer 5 · Zero-cost economics.

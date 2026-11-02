@@ -376,7 +376,7 @@ export default function MCPConfigPanel() {
             onClick={() => bulk('reset-curated')}
             disabled={bulkBusy !== null}
             className="flex items-center gap-1 text-[8.5px] font-mono px-1.5 py-0.5 rounded ring-1 ring-olympus-gold/25 text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
-            data-tip="Enable the measured six (44 tools) and disable everything else"
+            data-tip="Enable the measured six (39 tools) and disable everything else"
             data-tip-side="bottom"
           >
             <RotateCcw size={9} /> Reset to curated

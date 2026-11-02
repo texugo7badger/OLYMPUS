@@ -45,7 +45,7 @@ Rules that are not optional:
 - `enabled: false` is an explicit opt-out; it is not the same as removing the
   entry.
 
-## The curated default (6 servers · 44 tools)
+## The curated default (6 servers · 39 tools, measured 2026-11-01)
 
 | Server | Tools | Why |
 |---|---|---|
