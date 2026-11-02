@@ -31,6 +31,8 @@ export interface StyleTokens {
   palette: PaletteId;
   /** Optional override of the accent only (the user's color pick). */
   accent?: string;
+  /** v0.0.32 — a generated palette for THIS project (wins over the preset). */
+  custom?: StylePalette;
   typography: TypographyId;
   density: DensityId;
   radius: RadiusId;
@@ -79,6 +81,14 @@ export const STYLE_PRESETS: Record<PaletteId, { label: string; colors: StylePale
   },
 };
 
+/**
+ * v0.0.32 — the PROJECT default. The Style Board belongs to the open project,
+ * not to OLYMPUS: a neutral slate until the user generates or edits a palette.
+ */
+export const PROJECT_NEUTRAL: StylePalette = {
+  bg: '#0F1115', surface: '#151922', accent: '#6B8FB5', text: '#E2E6EA', muted: '#8792A2',
+};
+
 export const DEFAULT_TOKENS: StyleTokens = {
   palette: 'olympus',
   typography: 'geometric-sans',
@@ -101,9 +111,16 @@ function pick<T extends string>(value: unknown, allowed: T[], fallback: T): T {
 export function normalizeStyleTokens(input: unknown): StyleTokens {
   const raw = (input && typeof input === 'object' ? input : {}) as Partial<StyleTokens>;
   const accent = typeof raw.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(raw.accent) ? raw.accent : undefined;
+  const customRaw = (raw as any).custom;
+  const custom: StylePalette | undefined =
+    customRaw && typeof customRaw === 'object' &&
+    ['bg', 'surface', 'accent', 'text', 'muted'].every((k) => typeof customRaw[k] === 'string' && /^#[0-9a-fA-F]{6}$/.test(customRaw[k]))
+      ? { bg: customRaw.bg, surface: customRaw.surface, accent: customRaw.accent, text: customRaw.text, muted: customRaw.muted }
+      : undefined;
   return {
     palette: pick(raw.palette, PALETTES, DEFAULT_TOKENS.palette),
     ...(accent ? { accent } : {}),
+    ...(custom ? { custom } : {}),
     typography: pick(raw.typography, TYPOGRAPHIES, DEFAULT_TOKENS.typography),
     density: pick(raw.density, DENSITIES, DEFAULT_TOKENS.density),
     radius: pick(raw.radius, RADII, DEFAULT_TOKENS.radius),
@@ -113,7 +130,7 @@ export function normalizeStyleTokens(input: unknown): StyleTokens {
 
 /** The resolved colors for a token set (accent override wins). */
 export function resolveColors(tokens: StyleTokens): StylePalette {
-  const base = STYLE_PRESETS[tokens.palette]?.colors ?? STYLE_PRESETS.olympus.colors;
+  const base = tokens.custom ?? STYLE_PRESETS[tokens.palette]?.colors ?? STYLE_PRESETS.olympus.colors;
   return { ...base, ...(tokens.accent ? { accent: tokens.accent } : {}) };
 }
 

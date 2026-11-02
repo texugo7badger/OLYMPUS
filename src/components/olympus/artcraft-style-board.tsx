@@ -11,12 +11,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Copy, Loader2, Palette, Send, Sparkles } from 'lucide-react';
+import { Check, Copy, Loader2, Palette, RefreshCw, Send, Sparkles } from 'lucide-react';
+import { generateLogos, generatePalettes } from '@/lib/design-generator';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
 import {
   DEFAULT_TOKENS,
-  STYLE_PRESETS,
+  PROJECT_NEUTRAL,
   buildStylePrompt,
   normalizeStyleTokens,
   resolveColors,
@@ -35,10 +36,18 @@ interface QueueItem {
   status: string;
 }
 
-export default function ArtcraftStyleBoard({ references = [] }: { references?: StyleReference[] }) {
+export default function ArtcraftStyleBoard({
+  references = [],
+  pendingRef = null,
+  onPendingConsumed,
+}: {
+  references?: StyleReference[];
+  pendingRef?: StyleReference | null;
+  onPendingConsumed?: () => void;
+}) {
   const projectSlug = useOlympus((s) => s.activeProject?.slug ?? 'project');
   const projectName = useOlympus((s) => s.activeProject?.name ?? 'the project');
-  const [tokens, setTokens] = useState<StyleTokens>(DEFAULT_TOKENS);
+  const [tokens, setTokens] = useState<StyleTokens>({ ...DEFAULT_TOKENS, custom: PROJECT_NEUTRAL });
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [priority, setPriority] = useState<Priority>('high');
   const [saving, setSaving] = useState(false);
@@ -47,6 +56,10 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
   const [queueing, setQueueing] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [note, setNote] = useState<string | null>(null);
+  // v0.0.32 — the identity generator (palettes + logo marks from the name).
+  const [genSalt, setGenSalt] = useState(0);
+  const [chosenLogo, setChosenLogo] = useState<string | null>(null);
+  const logoRef = useRef<string | null>(null);
   // v0.0.32 — web references (Brave, link-only, provenance kept).
   const [webQuery, setWebQuery] = useState('');
   const [webBusy, setWebBusy] = useState(false);
@@ -71,16 +84,26 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
     () => buildStylePrompt({ project: projectName, tokens, references: selectedRefs }),
     [projectName, tokens, selectedRefs],
   );
+  const [palettes, setPalettes] = useState<ReturnType<typeof generatePalettes>>([]);
+  const [logos, setLogos] = useState<ReturnType<typeof generateLogos>>([]);
+  const [editing, setEditing] = useState(false);
+  const generateIdentity = useCallback(() => {
+    const nextSalt = genSalt + 1;
+    setGenSalt(nextSalt);
+    setPalettes(generatePalettes(`${projectSlug}-${nextSalt}`, 6));
+    setLogos(generateLogos({ name: projectName, accent: colors.accent, bg: colors.bg, text: colors.text }));
+  }, [genSalt, projectSlug, projectName, colors.accent, colors.bg, colors.text]);
 
   const load = useCallback(async () => {
     try {
       const r = await fetch(`/api/olympus/artcraft?project=${encodeURIComponent(projectSlug)}`, { cache: 'no-store' });
       const d = await r.json();
       if (d?.ok) {
-        setTokens(normalizeStyleTokens(d.tokens));
+        setTokens(normalizeStyleTokens({ ...(d.tokens ?? {}), custom: d.tokens?.custom ?? PROJECT_NEUTRAL }));
         const urls: string[] = Array.isArray(d.references) ? d.references.map((x: any) => String(x?.demoUrl ?? '')) : [];
         setPicked(new Set(urls.filter(Boolean)));
         setSavedAt(d.updatedAt ?? null);
+        if (typeof d.logo === 'string') { setChosenLogo(d.logo); logoRef.current = d.logo; }
       }
       const q = await fetch(`/api/olympus/artcraft/queue?project=${encodeURIComponent(projectSlug)}`, { cache: 'no-store' });
       const qd = await q.json();
@@ -92,13 +115,22 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
 
   useEffect(() => { void load(); }, [load]);
 
-  const persist = useCallback(async (nextTokens: StyleTokens, nextRefs: StyleReference[]) => {
+  // A reference carried from the catalog ("use") lands here: selected and
+  // persisted with the direction.
+  useEffect(() => {
+    if (!pendingRef) return;
+    setPicked((prev) => new Set(prev).add(pendingRef.demoUrl));
+    setNote(`${pendingRef.name} added to the direction`);
+    onPendingConsumed?.();
+  }, [pendingRef, onPendingConsumed]);
+
+  const persist = useCallback(async (nextTokens: StyleTokens, nextRefs: StyleReference[], nextLogo?: string | null) => {
     setSaving(true);
     try {
       const r = await fetch('/api/olympus/artcraft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: projectSlug, tokens: nextTokens, references: nextRefs }),
+        body: JSON.stringify({ project: projectSlug, tokens: nextTokens, references: nextRefs, ...(nextLogo ?? logoRef.current ? { logo: nextLogo ?? logoRef.current } : {}) }),
       });
       const d = await r.json();
       if (d?.ok) {
@@ -113,6 +145,12 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
       setSaving(false);
     }
   }, [projectSlug]);
+
+  const chooseLogo = useCallback((svg: string) => {
+    setChosenLogo(svg);
+    logoRef.current = svg;
+    void persist(tokens, selectedRefs, svg);
+  }, [persist, tokens, selectedRefs]);
 
   const update = useCallback((patch: Partial<StyleTokens>) => {
     setTokens((prev) => {
@@ -175,7 +213,7 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project: projectSlug,
-          title: `${projectName} — ${STYLE_PRESETS[tokens.palette].label}`,
+          title: `${projectName} — design direction`,
           prompt,
           tokens,
           references: selectedRefs,
@@ -210,25 +248,30 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
             {saving ? <Loader2 size={10} className="animate-spin text-olympus-gold ml-auto" /> : savedAt ? <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">saved</span> : null}
           </header>
 
-          <div className="grid grid-cols-2 gap-1.5 mb-2">
-            {(Object.keys(STYLE_PRESETS) as PaletteId[]).map((id) => {
-              const p = STYLE_PRESETS[id];
-              const active = tokens.palette === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => update({ palette: id, accent: undefined })}
-                  className={cn('text-left rounded border px-2 py-1.5 transition-colors', active ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/15 hover:border-olympus-gold/40')}
-                >
-                  <span className="flex items-center gap-1">
-                    {[p.colors.bg, p.colors.surface, p.colors.accent].map((c) => (
-                      <span key={c} className="w-2.5 h-2.5 rounded-sm ring-1 ring-black/30" style={{ background: c }} />
-                    ))}
-                  </span>
-                  <span className="block text-[9px] font-mono text-olympus-text mt-1 leading-tight">{p.label}</span>
-                </button>
-              );
-            })}
+          {/* v0.0.32 — the PROJECT palette: neutral by default, generated or edited by the user. No OLYMPUS branding here. */}
+          <div className="rounded border border-olympus-gold/15 bg-olympus-bg/40 p-2 mb-2">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <span className="text-[9px] font-mono uppercase tracking-wide text-olympus-text-dim">project palette</span>
+              <button onClick={() => setEditing((v) => !v)} className="ml-auto text-[8px] font-mono px-1.5 py-0.5 rounded border border-olympus-gold/25 text-olympus-text-dim hover:text-olympus-text">
+                {editing ? 'done' : 'edit'}
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {(['bg', 'surface', 'accent', 'text', 'muted'] as const).map((key) => (
+                <label key={key} className="flex flex-col items-center gap-0.5">
+                  <input
+                    type="color"
+                    value={colors[key]}
+                    disabled={!editing}
+                    onChange={(e) => update({ custom: { ...colors, [key]: e.target.value } })}
+                    className={cn('w-7 h-7 rounded border border-olympus-gold/20 bg-transparent', editing ? 'cursor-pointer' : 'cursor-default opacity-90')}
+                    aria-label={`${key} color`}
+                  />
+                  <span className="text-[7px] font-mono uppercase text-olympus-text-dim">{key}</span>
+                </label>
+              ))}
+            </div>
+            {editing && <p className="mt-1 text-[8px] font-mono text-olympus-text-dim">These colors drive the prompt, the logo variants and the generated pages.</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-1.5">
@@ -305,6 +348,32 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
             >
               {queueing ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />} queue
             </button>
+            <button
+              onClick={async () => {
+                setQueueing(true);
+                try {
+                  const r = await fetch('/api/olympus/artcraft/queue', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      project: projectSlug,
+                      title: `${projectName} — design review`,
+                      priority: 'high',
+                      tokens,
+                      references: selectedRefs,
+                      prompt: `Review this project's design direction WITH me. What works, what does not, and what would you change? Ask me the three most important questions before changing anything.\n\n${prompt}`,
+                    }),
+                  });
+                  const d = await r.json();
+                  if (d?.ok) setNote('Athena will review this direction');
+                  else setNote(d?.error ?? 'queue failed');
+                } catch (e: any) { setNote(e?.message || 'queue failed'); }
+                finally { setQueueing(false); }
+              }}
+              className="flex items-center gap-1 text-[9px] font-mono px-2 py-1 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30 hover:bg-olympus-purple/25"
+            >
+              <Sparkles size={10} /> ask Athena
+            </button>
           </div>
           {note && <p className="text-[8px] font-mono text-olympus-amber-soft mt-1">{note}</p>}
           {queue.length > 0 && (
@@ -316,6 +385,81 @@ export default function ArtcraftStyleBoard({ references = [] }: { references?: S
                 </p>
               ))}
             </div>
+          )}
+        </section>
+
+        {/* v0.0.32 — IDENTITY: generated palettes + logo marks from the name. */}
+        <section className="rounded border border-olympus-gold/15 bg-olympus-panel/60 p-2.5 lg:col-span-2">
+          <header className="flex items-center gap-1.5 mb-1.5">
+            <Sparkles size={11} className="text-olympus-gold" />
+            <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">identity — {projectName}</span>
+            <span className="text-[8px] font-mono text-olympus-text-dim">palettes + logo marks for THIS project</span>
+            <button onClick={generateIdentity} className="ml-auto flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 text-olympus-gold ring-1 ring-olympus-gold/25 hover:bg-olympus-gold/20">
+              <RefreshCw size={9} /> {palettes.length ? 'regenerate' : 'generate'}
+            </button>
+          </header>
+          {palettes.length === 0 && (
+            <div className="py-4 text-center">
+              <p className="text-[9px] font-mono text-olympus-text-dim">Generate a palette and a logo family from the project name — nothing is generated until you ask.</p>
+            </div>
+          )}
+          {palettes.length > 0 && (
+          <div className="grid gap-2 lg:grid-cols-2">
+            <div>
+              <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">palettes</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {palettes.map((p) => {
+                  const active = tokens.custom?.bg === p.colors.bg && tokens.custom?.accent === p.colors.accent;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => update({ custom: p.colors })}
+                      className={cn('rounded border px-2 py-1.5 text-left transition-colors', active ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/10 hover:border-olympus-gold/35')}
+                      aria-pressed={active}
+                    >
+                      <span className="flex gap-1">
+                        {[p.colors.bg, p.colors.surface, p.colors.accent].map((c) => (
+                          <span key={c} className="w-4 h-4 rounded-sm ring-1 ring-black/30" style={{ background: c }} />
+                        ))}
+                      </span>
+                      <span className="block text-[9px] font-mono text-olympus-text mt-1 truncate">{p.name} <span className="text-[7px] text-olympus-text-dim">{p.dark ? 'dark' : 'light'}</span></span>
+                    </button>
+                  );
+                })}
+              </div>
+              {tokens.custom && (
+                <button onClick={() => update({ custom: undefined })} className="mt-1 text-[8px] font-mono text-olympus-cyan hover:underline">back to presets</button>
+              )}
+            </div>
+            <div>
+              <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">logo marks</div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {logos.map((l) => {
+                  const src = `data:image/svg+xml;utf8,${encodeURIComponent(l.svg)}`;
+                  const active = chosenLogo === l.svg;
+                  return (
+                    <button
+                      key={l.id}
+                      onClick={() => chooseLogo(l.svg)}
+                      title={l.name}
+                      aria-pressed={active}
+                      className={cn('rounded border p-1 flex flex-col items-center gap-0.5 transition-colors', active ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/10 hover:border-olympus-gold/35')}
+                    >
+                      <img src={src} alt={l.name} width={44} height={44} className="rounded" />
+                      <span className="text-[8px] font-mono text-olympus-text-dim uppercase truncate max-w-full">{l.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {chosenLogo && (
+                <div className="mt-1 flex items-center gap-1.5">
+                  <img src={`data:image/svg+xml;utf8,${encodeURIComponent(chosenLogo)}`} alt="chosen logo" width={40} height={40} />
+                  <button onClick={() => { try { void navigator.clipboard.writeText(chosenLogo); setNote('logo SVG copied'); } catch { setNote('clipboard blocked'); } }} className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25">copy SVG</button>
+                  <span className="text-[8px] font-mono text-olympus-text-dim">saved with the style</span>
+                </div>
+              )}
+            </div>
+          </div>
           )}
         </section>
 

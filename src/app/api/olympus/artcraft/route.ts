@@ -44,12 +44,13 @@ function readJson<T>(file: string): T | null {
 
 export async function GET(req: NextRequest) {
   const slug = safeSlug(req.nextUrl.searchParams.get('project'));
-  const saved = readJson<{ tokens?: unknown; references?: unknown; updatedAt?: string }>(stylePath(slug));
+  const saved = readJson<{ tokens?: unknown; references?: unknown; logo?: unknown; updatedAt?: string }>(stylePath(slug));
   return NextResponse.json({
     ok: true,
     project: slug,
     tokens: normalizeStyleTokens(saved?.tokens ?? DEFAULT_TOKENS),
     references: Array.isArray(saved?.references) ? saved.references : [],
+    logo: typeof saved?.logo === 'string' ? saved.logo : null,
     updatedAt: typeof saved?.updatedAt === 'string' ? saved.updatedAt : null,
   }, { headers: NO_CACHE_HEADERS });
 }
@@ -74,17 +75,23 @@ export async function POST(req: NextRequest) {
           ...(typeof r.library === 'string' ? { library: r.library.slice(0, 40) } : {}),
         }))
     : [];
+  // v0.0.32 — the chosen logo mark (our own generated SVG only).
+  const logo = typeof body?.logo === 'string' && body.logo.trim().startsWith('<svg') && body.logo.length <= 24_000
+    ? body.logo
+    : undefined;
   const file = stylePath(slug);
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
+    const previous = readJson<{ logo?: unknown }>(file);
     fs.writeFileSync(file, JSON.stringify({
       project: slug,
       tokens,
       references,
+      ...(logo ? { logo } : typeof previous?.logo === 'string' ? { logo: previous.logo } : {}),
       updatedAt: new Date().toISOString(),
     }, null, 2) + '\n', 'utf-8');
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, project: slug, tokens, references }, { headers: NO_CACHE_HEADERS });
+  return NextResponse.json({ ok: true, project: slug, tokens, references, ...(logo ? { logo } : {}) }, { headers: NO_CACHE_HEADERS });
 }
