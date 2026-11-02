@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="OLYMPUS design build category">
+  <defs>
+    <style>
+      .spin { transform-origin: 48px 48px; animation: spin 14s linear infinite; }
+      .pulse { animation: pulse 2.8s ease-in-out infinite; }
+      .pulse2 { animation: pulse 2.8s ease-in-out infinite; animation-delay: .6s; }
+      .travel { animation: travel 3.2s ease-in-out infinite; }
+      .scan { animation: scan 2.6s ease-in-out infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+      @keyframes travel { 0%,100% { transform: translate(0,0); opacity: .4; } 50% { transform: translate(0,-18px); opacity: 1; } }
+      @keyframes scan { 0%,100% { transform: translateY(-10px); opacity: .25; } 50% { transform: translateY(12px); opacity: .9; } }
+      @media (prefers-reduced-motion: reduce) { .spin,.pulse,.pulse2,.travel,.scan { animation: none; } }
+    </style>
+  </defs>
+  <circle cx="48" cy="48" r="44" fill="none" stroke="#9B7BAE" stroke-width="1" opacity=".22"/>
+  <circle cx="48" cy="48" r="20" fill="none" stroke="#9B7BAE" stroke-width="2" opacity=".6"/><g class="spin"><circle cx="48" cy="18" r="4" fill="#9B7BAE"/><circle cx="74" cy="60" r="3.4" fill="#D4A574"/><circle cx="22" cy="60" r="3.4" fill="#6BAEB5"/></g><path d="M48 34 L60 60 L36 60 Z" fill="#9B7BAE" opacity=".85"/>
+</svg>

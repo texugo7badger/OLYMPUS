@@ -44,6 +44,14 @@ export interface PlanHop {
   mcp?: string;
   /** Optional demigod dispatched by this hop (for UI visibility, #225). */
   demigod?: string;
+  /**
+   * v0.0.32 (Epic P) — the BUILD. A hop may equip up to 3 skills and 3 MCPs,
+   * and lead up to 5 demigods IN PARALLEL (one god, several specialists per
+   * mini-task). The singular fields above stay for older plans/UI.
+   */
+  skills?: string[];
+  mcps?: string[];
+  demigods?: string[];
   /** Optional DAG edges: hop ids that must complete first. Absent/empty = root. */
   after?: string[];
   /** The verify policy. Deterministic-first (0 tokens); 'llm' is the opt-in
@@ -160,6 +168,13 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
         errors.push(`${where}.after: must be an array of hop ids`);
       } else after = [...h.after];
     }
+    const list = (value: unknown, cap: number): string[] =>
+      Array.isArray(value)
+        ? [...new Set(value.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).map((x) => x.trim()))].slice(0, cap)
+        : [];
+    const skills = [...new Set([...(list(h.skills, 3)), ...(typeof h.skill === 'string' && h.skill.trim() ? [h.skill.trim()] : [])])].slice(0, 3);
+    const mcps = [...new Set([...(list(h.mcps, 3)), ...(typeof h.mcp === 'string' && h.mcp.trim() ? [h.mcp.trim()] : [])])].slice(0, 3);
+    const demigods = [...new Set([...(list(h.demigods, 5)), ...(typeof h.demigod === 'string' && h.demigod.trim() ? [h.demigod.trim()] : [])])].slice(0, 5);
     hops.push({
       id, kind,
       god: kind === 'script'
@@ -173,6 +188,9 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
       skill: typeof h.skill === 'string' ? h.skill : undefined,
       mcp: typeof h.mcp === 'string' ? h.mcp : undefined,
       demigod: typeof h.demigod === 'string' ? h.demigod : undefined,
+      ...(skills.length ? { skills } : {}),
+      ...(mcps.length ? { mcps } : {}),
+      ...(demigods.length ? { demigods } : {}),
       after, verify: { review, checks }, budgetTokens: budget,
     });
   }

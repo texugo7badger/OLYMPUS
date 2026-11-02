@@ -15,6 +15,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { X, Brain, FilePen, Coins, Clock, ChevronDown, ChevronRight, Wrench, RotateCcw, Sparkles, ShieldCheck } from 'lucide-react';
 import { GOD_ICONS } from '@/lib/olympus-store';
+import OlympusLoader from './olympus-loader';
 import { cn } from '@/lib/utils';
 
 export interface TaskRecord {
@@ -24,6 +25,12 @@ export interface TaskRecord {
   artifacts: string[];
   verify: unknown;
   budgetTokens: number | null;
+  /** v0.0.32 — the BUILD: god + up to 5 parallel demigods, 3 skills, 3 MCPs. */
+  skill?: string | null;
+  mcp?: string | null;
+  skills?: string[];
+  mcps?: string[];
+  demigods?: string[];
   status: string;
   parkedReason?: string | null;
   ts?: string;
@@ -139,7 +146,7 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
 
         {/* Body */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scroll px-4 py-3 space-y-3">
-          {loading && <div className="text-center py-8 text-olympus-text-dim text-xs font-mono">loading the task sheet…</div>}
+          {loading && <OlympusLoader size={64} label="loading the task sheet" />}
           {!loading && !task && (
             <div className="text-center py-8 text-olympus-text-dim text-xs font-mono">
               No task record for “{hopId}” in the active lane.
@@ -147,6 +154,46 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
           )}
           {task && (
             <>
+              {/* v0.0.32 — THE BUILDER: what this mini-task actually equipped. */}
+              {(task.demigods?.length || task.skills?.length || task.mcps?.length) ? (
+                <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card/60 p-2.5">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Wrench size={11} className="text-olympus-gold" />
+                    <span className="text-[10px] font-semibold text-olympus-text uppercase tracking-wide">builder</span>
+                    <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">one god · up to 5 parallel demigods · 3 skills · 3 MCPs</span>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <div>
+                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">subagents ({(task.demigods || []).length}/5)</div>
+                      <div className="flex flex-wrap gap-1">
+                        {(task.demigods || []).length === 0 && <span className="text-[9px] font-mono text-olympus-text-dim">— solo</span>}
+                        {(task.demigods || []).map((d) => (
+                          <span key={d} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/10 border border-olympus-purple/25 text-olympus-purple">{d}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">skills ({(task.skills || []).length}/3)</div>
+                      <div className="flex flex-wrap gap-1">
+                        {(task.skills || []).length === 0 && <span className="text-[9px] font-mono text-olympus-text-dim">—</span>}
+                        {(task.skills || []).map((k) => (
+                          <span key={k} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 border border-olympus-cyan/25 text-olympus-cyan">{k}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">mcps ({(task.mcps || []).length}/3)</div>
+                      <div className="flex flex-wrap gap-1">
+                        {(task.mcps || []).length === 0 && <span className="text-[9px] font-mono text-olympus-text-dim">—</span>}
+                        {(task.mcps || []).map((m) => (
+                          <span key={m} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 border border-olympus-gold/25 text-olympus-gold">{m}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               {/* Telemetry strip */}
               <div className="grid grid-cols-4 gap-2">
                 <div className="rounded-lg p-2 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-cyan/15">

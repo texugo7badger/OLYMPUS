@@ -204,6 +204,23 @@ export function composeHopPrompt(hop: PlanHop, laneRoot: string): string {
   }
   lines.push(`Budget: at most ${hop.budgetTokens ?? MAX_HOP_BUDGET_TOKENS} output tokens — a small hop, one god, artifacts on disk.`);
   lines.push('The spine verifies the artifacts deterministically (file-exists / build / lint). Sessions are lanes; the disk carries the campaign.');
+  // v0.0.32 (Epic P) — THE BUILD: up to 3 skills, 3 MCPs and 5 parallel
+  // demigods for this mini-task. The god orchestrates them by fit.
+  const buildSkills = hop.skills ?? (hop.skill ? [hop.skill] : []);
+  const buildMcps = hop.mcps ?? (hop.mcp ? [hop.mcp] : []);
+  const buildDemigods = hop.demigods ?? (hop.demigod ? [hop.demigod] : []);
+  if (buildSkills.length || buildMcps.length || buildDemigods.length) {
+    lines.push('', '[HOP BUILD]', `god: ${hop.god}`);
+    if (buildDemigods.length) {
+      lines.push(`demigods (parallel, max 5): ${buildDemigods.join(', ')} — dispatch each by fit via olympus-dispatch, in ONE wave; verify their artifacts before you finish.`);
+    }
+    if (buildSkills.length) {
+      lines.push(`skills (max 3): ${buildSkills.join(', ')} — apply them; name which one drove each decision.`);
+    }
+    if (buildMcps.length) {
+      lines.push(`mcps: ${buildMcps.join(', ')} — use only these servers for this hop; say so if one is unavailable.`);
+    }
+  }
   // #SACRED-RUNTIME (the 10:16 specimen): the build-green god read the
   // residue-cleanup doctrine and DELETED the walk's own machinery mid-hop
   // (rm opencode.json dispatch-plan.json .olympus-* .opencode…) — the next

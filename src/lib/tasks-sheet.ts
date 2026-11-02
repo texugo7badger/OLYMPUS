@@ -52,6 +52,12 @@ export interface TaskRecord {
   artifacts: string[];
   verify: unknown;
   budgetTokens: number | null;
+  /** v0.0.32 — the BUILD this task ran with (skills ≤3, MCPs ≤3, demigods ≤5). */
+  skill?: string | null;
+  mcp?: string | null;
+  skills?: string[];
+  mcps?: string[];
+  demigods?: string[];
   status: string;
   parkedReason?: string | null;
   ts?: string;
@@ -336,6 +342,11 @@ export function buildTasksSheet(opts: {
       artifacts: Array.isArray(h?.artifacts) ? h.artifacts.map(String) : [],
       verify: h?.verify ?? null,
       budgetTokens: typeof h?.budgetTokens === 'number' ? h.budgetTokens : null,
+      skill: typeof h?.skill === 'string' ? h.skill : (Array.isArray(h?.skills) ? String(h.skills[0]) : null),
+      mcp: typeof h?.mcp === 'string' ? h.mcp : (Array.isArray(h?.mcps) ? String(h.mcps[0]) : null),
+      skills: Array.isArray(h?.skills) ? h.skills.map(String).slice(0, 3) : (typeof h?.skill === 'string' ? [h.skill] : []),
+      mcps: Array.isArray(h?.mcps) ? h.mcps.map(String).slice(0, 3) : (typeof h?.mcp === 'string' ? [h.mcp] : []),
+      demigods: Array.isArray(h?.demigods) ? h.demigods.map(String).slice(0, 5) : (typeof h?.demigod === 'string' ? [h.demigod] : []),
       status,
       parkedReason: isParked ? (state.parked?.reason ?? null) : null,
       ts: tel?.ts,
