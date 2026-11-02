@@ -91,15 +91,33 @@ export default function ArtcraftStyleBoard({
   );
   const [palettes, setPalettes] = useState<ReturnType<typeof generatePalettes>>([]);
   const [logos, setLogos] = useState<ReturnType<typeof generateLogos>>([]);
+  const [logoIndex, setLogoIndex] = useState(0);
+  const [autoPick, setAutoPick] = useState(true);
   const [editing, setEditing] = useState(false);
   // Athena's read: deterministic suggestions from the project seed, always
   // available (no LLM cost) and explained by the project's own stacks.
   const athenaSuggestions = useMemo(() => generatePalettes(`${projectSlug}-athena`, 3), [projectSlug]);
+  // v0.0.34 — Athena's decision: at most THREE project-specific directions,
+  // one clearly recommended. The user can pick one; in hibernation the
+  // recommended one is applied automatically.
+  const decisionOptions = useMemo(() => {
+    const pool = generatePalettes(`${projectName} ${projectStacks.join(' ')}`, 3);
+    const styles = [
+      { typography: 'geometric-sans' as const, density: 'comfortable' as const, radius: 'soft' as const, motion: 'subtle' as const },
+      { typography: 'humanist-sans' as const, density: 'compact' as const, radius: 'sharp' as const, motion: 'subtle' as const },
+      { typography: 'serif-display' as const, density: 'spacious' as const, radius: 'pill' as const, motion: 'expressive' as const },
+    ];
+    return pool.slice(0, 3).map((p, i) => ({ ...p, recommended: i === 0, tokens: { custom: p.colors, ...styles[i] } }));
+  }, [projectName, projectStacks]);
+  useEffect(() => {
+    setAutoPick(localStorage.getItem('olympus:design-auto-pick') !== '0');
+  }, []);
   const generateIdentity = useCallback(() => {
     const nextSalt = genSalt + 1;
     setGenSalt(nextSalt);
     setPalettes(generatePalettes(`${projectSlug}-${nextSalt}`, 6));
     setLogos(generateLogos({ name: projectName, accent: colors.accent, bg: colors.bg, text: colors.text }));
+    setLogoIndex(0);
   }, [genSalt, projectSlug, projectName, colors.accent, colors.bg, colors.text]);
 
   const load = useCallback(async () => {
@@ -169,6 +187,16 @@ export default function ArtcraftStyleBoard({
       return next;
     });
   }, [persist, picked, allRefs]);
+
+  useEffect(() => {
+    const onHidden = () => {
+      if (document.visibilityState !== 'hidden' || !autoPick || !decisionOptions[0]) return;
+      update(decisionOptions[0].tokens);
+      setNote(`Hibernation: ${decisionOptions[0].name} (Athena's recommendation) applied`);
+    };
+    document.addEventListener('visibilitychange', onHidden);
+    return () => document.removeEventListener('visibilitychange', onHidden);
+  }, [autoPick, decisionOptions]);
 
   const toggleRef = useCallback((ref: StyleReference) => {
     setPicked((prev) => {
@@ -498,25 +526,26 @@ export default function ArtcraftStyleBoard({
               )}
             </div>
             <div>
-              <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">logo marks</div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {logos.map((l) => {
-                  const src = `data:image/svg+xml;utf8,${encodeURIComponent(l.svg)}`;
-                  const active = chosenLogo === l.svg;
-                  return (
-                    <button
-                      key={l.id}
-                      onClick={() => chooseLogo(l.svg)}
-                      data-tip={l.name}
-                      aria-pressed={active}
-                      className={cn('rounded border p-1 flex flex-col items-center gap-0.5 transition-colors', active ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/10 hover:border-olympus-gold/35')}
-                    >
-                      <img src={src} alt={l.name} width={56} height={56} className="rounded" />
-                      <span className="text-[8px] font-mono text-olympus-text-dim uppercase truncate max-w-full">{l.name}</span>
-                    </button>
-                  );
-                })}
+              <div className="flex items-center gap-1 mb-1">
+                <span className="text-[8px] font-mono text-olympus-text-dim uppercase">logo mark</span>
+                <span className="text-[7px] font-mono text-olympus-text-dim">one at a time · from {projectName}</span>
               </div>
+              {(() => {
+                const l = logos[logoIndex % Math.max(1, logos.length)];
+                if (!l) return <p className="text-[8px] font-mono text-olympus-text-dim">generate a mark for this project.</p>;
+                const src = `data:image/svg+xml;utf8,${encodeURIComponent(l.svg)}`;
+                const active = chosenLogo === l.svg;
+                return (
+                  <div className={cn('rounded-lg border p-2 flex flex-col items-center gap-1.5', active ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/10')}>
+                    <img src={src} alt={l.name} width={108} height={108} className="rounded" />
+                    <span className="text-[8px] font-mono text-olympus-text-dim uppercase tracking-wide">{l.name}</span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setLogoIndex((i) => (i + 1) % Math.max(1, logos.length))} className="text-[8px] font-mono px-1.5 py-0.5 rounded border border-olympus-gold/25 text-olympus-text-dim hover:text-olympus-text">another</button>
+                      <button onClick={() => chooseLogo(l.svg)} className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30">use this</button>
+                    </div>
+                  </div>
+                );
+              })()}
               {chosenLogo && (
                 <div className="mt-1 flex items-center gap-1.5">
                   <img src={`data:image/svg+xml;utf8,${encodeURIComponent(chosenLogo)}`} alt="chosen logo" width={40} height={40} />
@@ -538,6 +567,39 @@ export default function ArtcraftStyleBoard({
             <span className="text-[8px] font-mono text-olympus-text-dim">the designer charter, distilled · every rule applies to this board</span>
             <span className="ml-auto text-[7px] font-mono text-olympus-text-dim">full lane: the opendesign MCP · Athena</span>
           </header>
+          <div className="mb-2 rounded-lg border border-olympus-gold/20 bg-olympus-gold/5 p-2">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Sparkles size={10} className="text-olympus-gold" />
+              <span className="text-[9px] font-mono font-semibold text-olympus-gold uppercase">Athena&apos;s decision</span>
+              <span className="text-[8px] font-mono text-olympus-text-dim">at most 3 · one recommended</span>
+              <button
+                onClick={() => { const next = !autoPick; setAutoPick(next); try { localStorage.setItem('olympus:design-auto-pick', next ? '1' : '0'); } catch { /* private */ } }}
+                className={cn('ml-auto text-[7px] font-mono px-1.5 py-0.5 rounded-full border', autoPick ? 'border-olympus-green/40 text-olympus-green bg-olympus-green/10' : 'border-olympus-gold/20 text-olympus-text-dim')}
+                data-tip="When OLYMPUS hibernates, the gods pick their recommended option"
+              >hibernate: {autoPick ? 'auto-pick recommended' : 'ask me'}</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
+              {decisionOptions.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => { update(opt.tokens); setNote(`${opt.name} applied${opt.recommended ? ' (Athena recommends)' : ''}`); }}
+                  className={cn('rounded-lg border p-2 text-left transition-colors', opt.recommended ? 'border-olympus-gold/55 bg-olympus-gold/10' : 'border-olympus-gold/10 bg-olympus-card hover:border-olympus-gold/35')}
+                >
+                  <span className="flex items-center gap-1">
+                    {opt.recommended && <span className="text-[7px] font-mono uppercase text-olympus-gold">★ recommended</span>}
+                    {!opt.recommended && <span className="text-[7px] font-mono uppercase text-olympus-text-dim">alternative</span>}
+                  </span>
+                  <span className="flex gap-1 mt-1">
+                    {[opt.colors.bg, opt.colors.surface, opt.colors.accent, opt.colors.text].map((c) => (
+                      <span key={c} className="w-4 h-4 rounded-sm ring-1 ring-black/30" style={{ background: c }} />
+                    ))}
+                  </span>
+                  <span className="block text-[9px] font-mono text-olympus-text mt-1 truncate">{opt.name}</span>
+                  <span className="block text-[7px] font-mono text-olympus-text-dim truncate">{TYPE_LABEL[opt.tokens.typography]} · {DENSITY_LABEL[opt.tokens.density]} · {RADIUS_LABEL[opt.tokens.radius]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 max-h-[210px] overflow-y-auto custom-scroll pr-1">
             {DESIGN_PRINCIPLES.map((p, i) => (
               <div key={p.id} className="rounded-lg border border-olympus-gold/10 bg-olympus-card px-2 py-1.5">
