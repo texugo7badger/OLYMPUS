@@ -23,6 +23,10 @@ import { getSkillIndex, type SkillHit } from "./src/skill-index.js";
 import { GOD_MCP_TIERS, flatAllowlistForGod } from "./src/mcp-tiers.js";
 
 let promptDefenseBaseline: string | null = null;
+// v0.0.53 — the gate result must CHANGE the turn, not just decorate an
+// options object. chat.params stores the hit for the session; the system
+// transform injects the proven action before the model call.
+const pendingInstinctHits = new Map<string, { id: string; body: string; confidence: number }>();
 
 function getPromptDefenseBaseline(pluginDir: string): string | null {
   if (promptDefenseBaseline !== null) return promptDefenseBaseline;
@@ -234,6 +238,18 @@ const plugin: Plugin = async (input, options) => {
           }
         }
 
+        // v0.0.53 — inject the proven instinct action. The old gate wrote
+        // `output.options.olympus_instinct_gate` and NOTHING consumed it; a
+        // "short-circuit" had no effect on the turn. This is the effect.
+        const hit = hookInput.sessionID ? pendingInstinctHits.get(hookInput.sessionID) : undefined;
+        if (hit && output.system) {
+          output.system.push(`[INSTINCT SHORT-CIRCUIT — ${hit.id}]\n${hit.body}\nFollow this proven action; do not re-deliberate it. Verify it still fits this specific task before acting. (confidence ${hit.confidence.toFixed(2)})`);
+          pendingInstinctHits.delete(hookInput.sessionID!);
+          if (process.env.OLYMPUS_DEBUG === "1") {
+            console.error(`[olympus-router] instinct short-circuit injected for ${hookInput.sessionID}: ${hit.id}`);
+          }
+        }
+
         const baseline = getPromptDefenseBaseline(pluginDir);
         if (baseline && output.system && output.system.length > 0) {
           const last = output.system.length - 1;
@@ -304,6 +320,13 @@ const plugin: Plugin = async (input, options) => {
           tokens_saved: 0, // the honest measured zero — the resonance loop backfills real dispatch deltas, never a fabricated estimate
         });
         output.options = output.options ?? {};
+        if (result.short_circuit && result.matching_instinct) {
+          pendingInstinctHits.set(hookInput.sessionID, {
+            id: result.matching_instinct.id,
+            body: result.matching_instinct.body,
+            confidence: result.confidence,
+          });
+        }
         output.options.olympus_instinct_gate = {
           confidence: result.confidence,
           short_circuit: result.short_circuit,

@@ -31,6 +31,9 @@ export interface HopTransportRequest {
   /** v0.0.52 — absolute per-attempt cap. The campaign deadline passes the
    *  remaining budget here so a hop can never extend past the project. */
   hardTimeoutMs?: number;
+  /** v0.0.53 — exploration budget: too many tool calls means the hop is
+   *  listing files instead of writing artifacts. */
+  toolBudget?: number;
   firstByteMs: number;
   silenceMs: number;
   onNotice?: (msg: string) => void;
@@ -145,6 +148,8 @@ export class WarmHopTransport implements HopTransport {
       model: req.model,
       text: req.prompt,
       timeoutMs: req.timeoutMs,
+      hardTimeoutMs: req.hardTimeoutMs,
+      toolBudget: req.toolBudget,
       firstByteMs: req.firstByteMs,
       silenceMs: req.silenceMs,
       onNotice: req.onNotice,

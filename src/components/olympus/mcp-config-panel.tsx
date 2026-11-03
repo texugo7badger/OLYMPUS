@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ApiConfigDialog from './api-config-dialog';
+import { useOlympus } from '@/lib/olympus-store';
+import type { MarketMcp } from '@/lib/mcp-market';
 
 /* ------------------------------------------------------------------ */
 /* MCPConfigPanel — the ONE honest MCP surface (v0.0.25).              */
@@ -88,6 +90,13 @@ const NEEDS = new Set<HealthStatus>(['needs-auth', 'needs-service', 'needs-binar
 const isUnavailable = (s: HealthStatus) => NEEDS.has(s) || s === 'optional-unavailable';
 
 export default function MCPConfigPanel() {
+  const activeProject = useOlympus((s) => s.activeProject);
+  const [marketOpen, setMarketOpen] = useState(false);
+  const [marketQuery, setMarketQuery] = useState('');
+  const [market, setMarket] = useState<MarketMcp[]>([]);
+  const [marketUrl, setMarketUrl] = useState('https://mcpservers.org/');
+  const [marketBusy, setMarketBusy] = useState<string | null>(null);
+  const [marketNote, setMarketNote] = useState<string | null>(null);
   const [apiConfigOpen, setApiConfigOpen] = useState(false);
   const [servers, setServers] = useState<McpServerInfo[]>([]);
   const [summary, setSummary] = useState<HealthSummary | null>(null);
@@ -343,6 +352,69 @@ export default function MCPConfigPanel() {
           Enable or disable individual MCP servers. The enabled set is what OpenCode reads from
           <code className="text-olympus-gold/80"> opencode.json</code>; a new session picks it up.
         </div>
+
+        {/* v0.0.53 — the MCP market: a verified free-first seed + the live
+            directory for the other 9,800. Adding writes opencode.json. */}
+        <details
+          open={marketOpen}
+          onToggle={(e) => {
+            const open = (e.currentTarget as HTMLDetailsElement).open;
+            setMarketOpen(open);
+            if (!open) return;
+            fetch(`/api/olympus/mcp/market?q=${encodeURIComponent(marketQuery)}`, { cache: 'no-store' })
+              .then((r) => r.json())
+              .then((d) => { setMarket(Array.isArray(d?.servers) ? d.servers : []); setMarketUrl(String(d?.searchUrl || 'https://mcpservers.org/')); })
+              .catch(() => setMarketNote('market unavailable — check the network'));
+          }}
+          className="rounded-lg border border-olympus-cyan/20 bg-olympus-cyan/5 px-2.5 py-2 mb-2"
+        >
+          <summary className="cursor-pointer text-[9px] font-mono font-semibold uppercase tracking-wide text-olympus-cyan select-none">
+            MCP market · add a server
+            <span className="ml-1 font-normal normal-case tracking-normal text-olympus-text-dim">free-first seed + 9,800+ directory</span>
+          </summary>
+          <div className="mt-2 space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <input
+                value={marketQuery}
+                onChange={(e) => setMarketQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { fetch(`/api/olympus/mcp/market?q=${encodeURIComponent(marketQuery)}`, { cache: 'no-store' }).then((r) => r.json()).then((d) => setMarket(Array.isArray(d?.servers) ? d.servers : [])).catch(() => {}); } }}
+                placeholder="search the seed — filesystem, browser, database…"
+                className="flex-1 bg-olympus-bg border border-olympus-gold/20 rounded px-2 py-1 text-[9px] font-mono text-olympus-text outline-none focus:border-olympus-gold/50"
+              />
+              <a href={marketUrl} target="_blank" rel="noopener noreferrer" className="text-[8px] font-mono text-olympus-cyan hover:underline shrink-0">open directory ↗</a>
+            </div>
+            {marketNote && <p className="text-[8px] font-mono text-olympus-amber-soft">{marketNote}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+              {market.slice(0, 6).map((m) => (
+                <div key={m.id} className="rounded border border-olympus-gold/10 bg-olympus-bg/60 px-2 py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-mono text-olympus-text truncate">{m.name}</span>
+                    {m.free ? <span className="text-[7px] font-mono uppercase px-1 rounded bg-olympus-green/15 text-olympus-green">free</span> : <span className="text-[7px] font-mono uppercase px-1 rounded bg-olympus-amber-soft/15 text-olympus-amber-soft">{m.needsKey}</span>}
+                    <button
+                      onClick={async () => {
+                        setMarketBusy(m.id); setMarketNote(null);
+                        const cmd = (m.command ?? []).map((t) => t === '[PATH]' ? (activeProject?.path || '.') : t);
+                        try {
+                          const r = await fetch('/api/olympus/mcp/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: m.id, type: m.type, command: cmd, url: m.url }) });
+                          const d = await r.json();
+                          if (d?.ok) { setMarketNote(`${m.name} added — restart the session to load it`); setMarket((prev) => prev.filter((x) => x.id !== m.id)); }
+                          else setMarketNote(d?.error || 'could not add');
+                        } catch { setMarketNote('could not add'); }
+                        finally { setMarketBusy(null); }
+                      }}
+                      disabled={marketBusy !== null}
+                      className="ml-auto text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 text-olympus-gold ring-1 ring-olympus-gold/25 hover:bg-olympus-gold/20 disabled:opacity-40 shrink-0"
+                    >
+                      {marketBusy === m.id ? 'adding…' : 'add'}
+                    </button>
+                  </div>
+                  <p className="text-[8px] font-mono text-olympus-text-dim leading-relaxed mt-0.5 line-clamp-2">{m.description}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[8px] font-mono text-olympus-text-dim">Adding writes <code className="text-olympus-gold/80">opencode.json</code>; keys are never invented. Use the directory for anything outside the verified seed.</p>
+          </div>
+        </details>
 
         {/* Health strip — the honest summary, not a wall of red dots */}
         {summary && (

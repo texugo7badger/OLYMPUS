@@ -77,6 +77,15 @@ export function resolveCampaignBudgetMs(env: NodeJS.ProcessEnv = process.env): n
   return DEFAULT_CAMPAIGN_BUDGET_MS;
 }
 
+/** v0.0.53 — the exploration budget: a bounded number of distinct tool calls
+ *  per hop. 14 is above a normal 5-10 file read/build loop and below the
+ *  20-27-step listing loops that burned 25-45 minutes. */
+export const DEFAULT_HOP_TOOL_BUDGET = 14;
+export function resolveHopToolBudget(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number.parseInt(env.OLYMPUS_HOP_TOOL_BUDGET ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(40, n) : DEFAULT_HOP_TOOL_BUDGET;
+}
+
 export function nextConcurrency(current: number, outcome: 'ok' | 'overload' | 'hang'): number {
   const cur = Math.max(1, Math.min(current, MAX_HOP_CONCURRENCY));
   if (outcome === 'ok') return Math.min(cur + 1, MAX_HOP_CONCURRENCY);
@@ -215,9 +224,11 @@ function resolveHopRepoRoot(): string {
  * receives the campaign's full context — the artifacts on disk carry it.
  */
 export function composeHopPrompt(hop: PlanHop, laneRoot: string): string {
+  // v0.0.53 — stable prefix first: the contract/arsenal blocks are identical
+  // for every hop of a god, so the provider cache can reuse them. The
+  // variable task is the LAST block, marked for the instinct gate.
+  const taskBlock = ['[OLYMPUS-TASK]', hop.prompt, '[/OLYMPUS-TASK]'];
   const lines = [
-    hop.prompt,
-    '',
     '[HOP CONTRACT]',
     `Project lane root: ${laneRoot}`,
   ];
@@ -261,6 +272,7 @@ export function composeHopPrompt(hop: PlanHop, laneRoot: string): string {
   if (arsenal) {
     lines.push('', arsenal);
   }
+  lines.push('', ...taskBlock);
   return lines.join('\n');
 }
 
@@ -626,6 +638,7 @@ async function attemptLane(
       hardTimeoutMs: ctx.deadlineAt
         ? Math.max(60_000, Math.min(hardCeilingMs(resolveHopTimeoutMs()), ctx.deadlineAt - Date.now()))
         : hardCeilingMs(resolveHopTimeoutMs()),
+      toolBudget: resolveHopToolBudget(),
       firstByteMs: resolveHopFirstByteMs(),
       silenceMs: resolveHopSilenceMs(),
       onNotice: (msg) => console.log(`[hop-transport] ${msg}`),

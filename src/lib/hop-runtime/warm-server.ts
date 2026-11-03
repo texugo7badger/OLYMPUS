@@ -608,6 +608,8 @@ export async function runWarmHop(opts: {
   text: string;
   timeoutMs: number;
   hardTimeoutMs?: number;
+  /** v0.0.53 — max distinct tool calls before the turn is aborted. */
+  toolBudget?: number;
   firstByteMs: number;
   silenceMs: number;
   onNotice?: (msg: string) => void;
@@ -657,10 +659,30 @@ export async function runWarmHop(opts: {
   const permissions = new Map<string, string>();
   let sawFirstByte = false;
   let lastEventAt = Date.now();
+  // v0.0.53 — the exploration budget. A hop that keeps listing files is not
+  // working; it is burning the provider window. Count DISTINCT tool parts and
+  // abort once, then let deterministic verify decide whether artifacts exist.
+  const toolBudget = Math.max(1, opts.toolBudget ?? 14);
+  const seenToolParts = new Set<string>();
+  let toolBudgetHit = false;
+  const abortTurn = () => {
+    if (toolBudgetHit) return;
+    toolBudgetHit = true;
+    errors.push(`tool-budget-exceeded (OLYMPUS_HOP_TOOL_BUDGET ${toolBudget}): the turn kept calling tools without finishing — exploration is not progress; verify the artifacts or park`);
+    try { void httpRequest(server.port, server.password, 'POST', v2Path(server, `/session/${sessionId}/abort`), undefined, 5_000); } catch { /* gone */ }
+    opts.onNotice?.(`tool budget ${toolBudget} exceeded — aborting the exploration loop`);
+  };
   const sse = openSse(server, (ev) => {
     if (!sawFirstByte) sawFirstByte = true;
     lastEventAt = Date.now();
     server.lastUsed = Date.now();
+    if (ev?.type === 'message.part.updated' && ev?.properties?.part?.type === 'tool') {
+      const partId = String(ev.properties.part.id ?? '');
+      if (partId && !seenToolParts.has(partId)) {
+        seenToolParts.add(partId);
+        if (seenToolParts.size > toolBudget) abortTurn();
+      }
+    }
     if (ev?.type === 'error') {
       errors.push(typeof ev.error === 'string' ? ev.error : JSON.stringify(ev.error ?? ev).slice(0, 400));
     }

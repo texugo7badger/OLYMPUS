@@ -7,7 +7,7 @@
  * MIT License — see CREDITS.md
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-export declare const CONFIDENCE_THRESHOLD = 0.85;
+export declare const CONFIDENCE_THRESHOLD = 0.6;
 export declare function registerSessionAgent(sessionID: string, agent: string, god?: string): void;
 /**
  * W-A RAG-CERT A5: the un-stub. The old form hardcoded

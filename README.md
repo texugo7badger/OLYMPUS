@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.52, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.53, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,15 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.53 — Talent Studio + guided instincts.** The talent carousel is now a
+creation studio: a deterministic animated sigil per talent, three capped slots
+(skills/MCPs/agents), eight forkable community presets, JSON export, and a
+free-first MCP market wired to `opencode.json` (9,800+ directory linked). The
+instinct gate reads `trigger` tags, scores coverage instead of an unreachable
+0.85, and actually injects the proven action; every hop carries a task marker
+and a 14-tool exploration budget. Cost gains 5h/24h/7d/30d windows, tokens/s
+and an honest “quota unverified”.
 
 **v0.0.52 — quiet mark, 900 references.** The desktop badge stopped
 replaying history (the “18” was 21 stale notifications re-shown every boot);

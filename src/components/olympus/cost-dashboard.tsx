@@ -35,7 +35,7 @@ interface ProviderInfo {
  cost_per_1m_tokens: { input: number; output: number };
 }
 interface CostSummary {
- totalSpend: number; totalReqs: number; totalInput: number; totalOutput: number;
+ totalSpend: number; totalReqs: number; totalInput: number; totalOutput: number; window?: { id: string; label: string; sinceMs: number; now: number };
  avgLatency: number; avgSuccess: number; cap5h: number | null; pctOfCap: number | null;
  activeGods: number; costs: GodCost[]; provider: ProviderInfo;
  /** v0.0.29 — the split pair: provider-reported charge vs list-price value.
@@ -158,6 +158,7 @@ async function fetchAllDispatchCatalogs(): Promise<Record<string, GodDispatchInf
 /* ------------------------------------------------------------------ */
 export default function CostDashboard({ active = true }: { active?: boolean }) {
  const [data, setData] = useState<CostSummary | null>(null);
+ const [costWindow, setCostWindow] = useState<'5h' | '24h' | '7d' | '30d' | 'session'>('5h');
  const [dispatch, setDispatch] = useState<Record<string, GodDispatchInfo>>({});
  // W2-C (v0.0.4): live hop counts per god — component-scope state (the
  // loader + interval live in the mount effect below).
@@ -181,7 +182,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  const timeout = setTimeout(() => ctrl.abort(), 5000);
  // Cache: 'no-store' so the dashboard always reflects
  // the latest cost.jsonl events instead of a stale Next.js fetch cache.
- const r = await fetch('/api/olympus/costs', { signal: ctrl.signal, cache: 'no-store' });
+ const r = await fetch(`/api/olympus/costs?window=${costWindow}`, { signal: ctrl.signal, cache: 'no-store' });
  clearTimeout(timeout);
  if (!r.ok) throw new Error(`API ${r.status}`);
  const d = await r.json();
@@ -264,7 +265,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
     window.removeEventListener('olympus:strategy-changed', onStrategyChange);
     window.removeEventListener('olympus:demigods-changed', onDemigodsChanged);
   };
- }, [active]);
+ }, [active, costWindow]);
 
  if (!data) {
  return (
@@ -347,6 +348,15 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  </div>
  )}
 
+ {/* v0.0.53 — the REAL cost window: step, list and invoice stay separate. */}
+ <div className="flex items-center gap-1 mb-2">
+  <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">window</span>
+  {(['5h','24h','7d','30d','session'] as const).map((w) => (
+   <button key={w} onClick={() => setCostWindow(w)} className={cn('text-[9px] font-mono px-1.5 py-0.5 rounded-full border', costWindow === w ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}>{w}</button>
+  ))}
+  <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">{data?.window?.label ?? costWindow} · step/list/invoice separated</span>
+ </div>
+
  {/* Provider banner — single line */}
  <div className={cn(
  'rounded-lg border p-2.5 mb-3 flex items-center gap-2 text-[11px] font-mono',
@@ -359,6 +369,9 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  {prov.isFree && (
  <span className="text-[9px] px-1.5 py-0.5 rounded bg-olympus-green/20 text-olympus-green ring-1 ring-olympus-green/30">FREE</span>
  )}
+ {data.cap5h == null && (
+ <span className="text-[8px] font-mono text-olympus-text-dim" data-tip="The provider does not report a 5h cap; measured requests are real, the quota is not guessed">quota unverified</span>
+ )}
  </div>
 
 	 {/* Summary cards — 4 cost-focused metrics */}
@@ -366,7 +379,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 	 {prov.isFree ? (
 	 <SummaryCard
 	 icon={FileText}
-	 label="Tokens (5h)"
+	 label={`Tokens (${costWindow})`}
 	 value={fmt(totalTokens)}
 	 sub={hasRealCosts ? 'input + output' : 'idle — free, no spend'}
 	 color="green"
@@ -374,7 +387,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 	 ) : (
 	 <SummaryCard
 	 icon={DollarSign}
-	 label="Step cost (5h)"
+	 label={`Step cost (${costWindow})`}
 	 value={fmtUsd(displaySpend)}
 	 sub={hasListValue ? `list ${fmtUsd(listValueUsd)} · invoice unknown` : 'invoice unknown'}
 	 pct={data.pctOfCap ?? undefined}
@@ -384,9 +397,9 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 	 <SummaryCard icon={Zap} label="Requests" value={fmt(data.totalReqs)} sub={`${data.activeGods} gods active`} color="gold" />
 	 <SummaryCard icon={Cpu} label="Sub-agent capacity" value={String(totalSubAgentRoutes)} sub="demigod catalog across all gods" color="teal" />
 	 {prov.isFree ? (
-	 <SummaryCard icon={CheckCircle2} label="Token rate" value={hasRealCosts ? `${fmt(tokenRate)}/h` : '—'} sub="5h avg" color="green" />
+	 <SummaryCard icon={CheckCircle2} label="Token rate" value={hasRealCosts ? `${fmt(tokenRate)}/h` : '—'} sub={hasRealCosts && data.window ? `${(totalTokens / Math.max(1, (data.window.now - data.window.sinceMs) / 1000)).toFixed(2)} tok/s` : `${costWindow} avg`} color="green" />
 	 ) : (
-	 <SummaryCard icon={CheckCircle2} label="Step cost/h" value={hasRealCosts ? `${fmtUsd(burnRate)}/h` : '—'} sub={hasListValue ? `list ${fmtUsd(listValueUsd / 5)}/h` : '5h avg'} color="green" />
+	 <SummaryCard icon={CheckCircle2} label="Step cost/h" value={hasRealCosts ? `${fmtUsd(burnRate)}/h` : '—'} sub={hasListValue ? `list ${fmtUsd(listValueUsd / 5)}/h` : `${costWindow} avg`} color="green" />
 	 )}
 	 </div>
 

@@ -12,7 +12,11 @@ import { readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync } from
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-export const CONFIDENCE_THRESHOLD = 0.85;
+// v0.0.53 — 0.85 was mathematically unreachable for a natural-language query
+// (the old denominator was max(queryTags, instinctTags)). The gate now scores
+// the INSTINCT's coverage and requires at least two matching tags; 0.60 is the
+// calibrated floor, not a lowering to make a demo pass.
+export const CONFIDENCE_THRESHOLD = 0.6;
 
 const VAULT_ROOT = process.env.OLYMPUS_VAULT_ROOT ?? join(homedir(), "OLYMPUS-VAULT");
 const INSTINCTS_ROOT = join(VAULT_ROOT, "05_Auto_Learning", "instincts");
@@ -173,7 +177,11 @@ function loadInstincts(scope: "god" | "sub-agent", agentName: string): Instinct[
           id: String(frontmatter.id ?? file.replace(/\.md$/, "")),
           agent: String(frontmatter.agent ?? agentName),
           scope: (frontmatter.scope as "god" | "sub-agent") ?? scope,
-          tags: (frontmatter.tags as string[]) ?? [],
+          // God instincts carry `trigger`, not `tags`; the old reader left
+          // every god's tags empty, so every score was 0 by construction.
+          tags: (Array.isArray(frontmatter.tags) && (frontmatter.tags as string[]).length > 0)
+            ? (frontmatter.tags as string[])
+            : extractTags(`${String(frontmatter.trigger ?? '')} ${String(frontmatter.id ?? file.replace(/\.md$/, ''))}`),
           confidence: Number(frontmatter.confidence ?? 1.0),
           dispatch_count: Number(frontmatter.dispatch_count ?? 0),
           last_invoked_at: (frontmatter.last_invoked_at as string) ?? null,
@@ -187,14 +195,25 @@ function loadInstincts(scope: "god" | "sub-agent", agentName: string): Instinct[
   return instincts;
 }
 
-function tagSimilarity(queryTags: string[], instinctTags: string[]): number {
-  if (queryTags.length === 0 || instinctTags.length === 0) return 0;
+/**
+ * v0.0.53 — coverage of the INSTINCT, not the max of both lengths.
+ *
+ * The old formula divided by max(queryTags, instinctTags): a natural-language
+ * query has dozens of tags, so even 100% of the instinct's tags produced
+ * ~0.10-0.20 and 0.85 was unreachable. Coverage asks "how much of this proven
+ * trigger is present?", which is the question the gate actually needs.
+ * At least two hits and half the trigger are required; one generic word is
+ * never a short-circuit.
+ */
+function tagMatch(queryTags: string[], instinctTags: string[]): { sim: number; hits: number; coverage: number } {
+  if (queryTags.length === 0 || instinctTags.length === 0) return { sim: 0, hits: 0, coverage: 0 };
   const instinctSet = new Set(instinctTags.map((t) => t.toLowerCase()));
   let hits = 0;
   for (const tag of queryTags) {
     if (instinctSet.has(tag.toLowerCase())) hits++;
   }
-  return hits / Math.max(queryTags.length, instinctTags.length);
+  const coverage = hits / instinctTags.length;
+  return { sim: hits >= 2 && coverage >= 0.5 ? coverage : 0, hits, coverage };
 }
 
 function extractTags(query: string): string[] {
@@ -210,13 +229,17 @@ export function queryInstincts(
   topK = 3,
 ): InstinctQueryResult {
   const instincts = loadInstincts(scope, agentName);
-  const queryTags = query.includes(",")
-    ? query.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
-    : extractTags(query);
+  // The hop prompt marks its task explicitly; a chat has no marker, so take
+  // the tail (the user's ask) rather than the strategy/arsenal preamble.
+  const marker = /\[OLYMPUS-TASK\]([\s\S]*?)\[\/OLYMPUS-TASK\]/i.exec(query);
+  const task = marker ? marker[1] : query.length > 800 ? query.slice(-800) : query;
+  const queryTags = task.includes(",")
+    ? task.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
+    : extractTags(task);
   const scored = instincts.map((instinct) => {
-    const sim = tagSimilarity(queryTags, instinct.tags);
-    const score = sim * instinct.confidence;
-    return { instinct, sim, score };
+    const match = tagMatch(queryTags, instinct.tags);
+    const score = match.sim * instinct.confidence;
+    return { instinct, sim: match.sim, score, hits: match.hits };
   });
   scored.sort((a, b) => b.score - a.score);
   const top = scored[0];

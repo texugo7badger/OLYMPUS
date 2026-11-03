@@ -18,7 +18,11 @@ exports.isScopeAllowed = isScopeAllowed;
 const node_fs_1 = require("node:fs");
 const node_path_1 = require("node:path");
 const node_os_1 = require("node:os");
-exports.CONFIDENCE_THRESHOLD = 0.85;
+// v0.0.53 — 0.85 was mathematically unreachable for a natural-language query
+// (the old denominator was max(queryTags, instinctTags)). The gate now scores
+// the INSTINCT's coverage and requires at least two matching tags; 0.60 is the
+// calibrated floor, not a lowering to make a demo pass.
+exports.CONFIDENCE_THRESHOLD = 0.6;
 const VAULT_ROOT = process.env.OLYMPUS_VAULT_ROOT ?? (0, node_path_1.join)((0, node_os_1.homedir)(), "OLYMPUS-VAULT");
 const INSTINCTS_ROOT = (0, node_path_1.join)(VAULT_ROOT, "05_Auto_Learning", "instincts");
 /** The 10 gods — the scope boundary: an agent in this set runs as a god
@@ -137,7 +141,11 @@ function loadInstincts(scope, agentName) {
                     id: String(frontmatter.id ?? file.replace(/\.md$/, "")),
                     agent: String(frontmatter.agent ?? agentName),
                     scope: frontmatter.scope ?? scope,
-                    tags: frontmatter.tags ?? [],
+                    // God instincts carry `trigger`, not `tags`; the old reader left
+                    // every god's tags empty, so every score was 0 by construction.
+                    tags: (Array.isArray(frontmatter.tags) && frontmatter.tags.length > 0)
+                        ? frontmatter.tags
+                        : extractTags(`${String(frontmatter.trigger ?? '')} ${String(frontmatter.id ?? file.replace(/\.md$/, ''))}`),
                     confidence: Number(frontmatter.confidence ?? 1.0),
                     dispatch_count: Number(frontmatter.dispatch_count ?? 0),
                     last_invoked_at: frontmatter.last_invoked_at ?? null,
@@ -151,16 +159,27 @@ function loadInstincts(scope, agentName) {
     }
     return instincts;
 }
-function tagSimilarity(queryTags, instinctTags) {
+/**
+ * v0.0.53 — coverage of the INSTINCT, not the max of both lengths.
+ *
+ * The old formula divided by max(queryTags, instinctTags): a natural-language
+ * query has dozens of tags, so even 100% of the instinct's tags produced
+ * ~0.10-0.20 and 0.85 was unreachable. Coverage asks "how much of this proven
+ * trigger is present?", which is the question the gate actually needs.
+ * At least two hits and half the trigger are required; one generic word is
+ * never a short-circuit.
+ */
+function tagMatch(queryTags, instinctTags) {
     if (queryTags.length === 0 || instinctTags.length === 0)
-        return 0;
+        return { sim: 0, hits: 0, coverage: 0 };
     const instinctSet = new Set(instinctTags.map((t) => t.toLowerCase()));
     let hits = 0;
     for (const tag of queryTags) {
         if (instinctSet.has(tag.toLowerCase()))
             hits++;
     }
-    return hits / Math.max(queryTags.length, instinctTags.length);
+    const coverage = hits / instinctTags.length;
+    return { sim: hits >= 2 && coverage >= 0.5 ? coverage : 0, hits, coverage };
 }
 function extractTags(query) {
     const stopwords = new Set(["the", "a", "an", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "may", "might", "must", "can", "shall", "to", "of", "in", "for", "on", "with", "as", "by", "at", "from", "up", "about", "into", "through", "during", "before", "after", "above", "below", "and", "or", "but", "not", "no", "yes", "this", "that", "these", "those", "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them", "my", "your", "his", "its", "our", "their", "what", "which", "who", "when", "where", "why", "how", "all", "each", "every", "both", "few", "more", "most", "other", "some", "such", "only", "own", "same", "so", "than", "too", "very", "just", "now"]);
@@ -169,13 +188,17 @@ function extractTags(query) {
 }
 function queryInstincts(scope, agentName, query, topK = 3) {
     const instincts = loadInstincts(scope, agentName);
-    const queryTags = query.includes(",")
-        ? query.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
-        : extractTags(query);
+    // The hop prompt marks its task explicitly; a chat has no marker, so take
+    // the tail (the user's ask) rather than the strategy/arsenal preamble.
+    const marker = /\[OLYMPUS-TASK\]([\s\S]*?)\[\/OLYMPUS-TASK\]/i.exec(query);
+    const task = marker ? marker[1] : query.length > 800 ? query.slice(-800) : query;
+    const queryTags = task.includes(",")
+        ? task.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
+        : extractTags(task);
     const scored = instincts.map((instinct) => {
-        const sim = tagSimilarity(queryTags, instinct.tags);
-        const score = sim * instinct.confidence;
-        return { instinct, sim, score };
+        const match = tagMatch(queryTags, instinct.tags);
+        const score = match.sim * instinct.confidence;
+        return { instinct, sim: match.sim, score, hits: match.hits };
     });
     scored.sort((a, b) => b.score - a.score);
     const top = scored[0];

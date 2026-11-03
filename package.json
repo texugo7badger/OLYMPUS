@@ -1,6 +1,6 @@
 {
   "name": "olympus",
-  "version": "0.0.52",
+  "version": "0.0.53",
   "description": "Olympus — automated multi-agent operating system built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
   "author": "OLYMPUS Contributors",
   "license": "AGPL-3.0-or-later",
@@ -88,7 +88,8 @@
     "opencode:gate": "node scripts/opencode-gate.mjs",
     "repo:privacy": "node scripts/check-repo-privacy.mjs",
     "shots": "electron scripts/capture-ui.cjs --no-sandbox",
-    "themes:gallery": "tsx scripts/theme-gallery.mjs"
+    "themes:gallery": "tsx scripts/theme-gallery.mjs",
+    "campaign:report": "node scripts/campaign-report.mjs"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
