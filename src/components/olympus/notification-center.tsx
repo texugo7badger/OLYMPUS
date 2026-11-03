@@ -65,6 +65,10 @@ export default function NotificationCenter() {
   });
   const [autoHibernate, setAutoHibernate] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [hibOpen, setHibOpen] = useState(false);
+  const [hibHours, setHibHours] = useState(8);
+  const [hibAuto, setHibAuto] = useState(true);
+  const [hibBusy, setHibBusy] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const setLeftPane = useOlympus((s) => s.setLeftPane);
   const docVisible = useOlympus((s) => s.leftPane) !== undefined; // keeps the component client-only
@@ -235,13 +239,60 @@ export default function NotificationCenter() {
               <span className={cn('absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all', autoHibernate ? 'left-3.5' : 'left-0.5')} />
             </button>
             <button
-              onClick={() => void hibernateNow()}
+              onClick={() => setHibOpen(true)}
               disabled={busy}
               className="flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30 hover:bg-olympus-purple/25 disabled:opacity-50"
             >
               {busy ? <Loader2 size={9} className="animate-spin" /> : <Moon size={9} />} now
             </button>
           </footer>
+        </div>
+      )}
+
+      {/* v0.0.55 — the night contract: how long may OLYMPUS work alone? */}
+      {hibOpen && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Hibernation plan">
+          <div className="w-full max-w-sm rounded-xl border border-olympus-purple/30 bg-olympus-panel p-4 shadow-2xl">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Moon size={13} className="text-olympus-purple" />
+              <span className="text-[11px] font-mono font-semibold text-olympus-text">Hibernate & keep working</span>
+              <button onClick={() => setHibOpen(false)} aria-label="Close hibernation plan" className="ml-auto text-olympus-text-dim hover:text-olympus-red"><X size={13} /></button>
+            </div>
+            <p className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mb-3">
+              The window closes; the campaign stays alive. How long may OLYMPUS work alone?
+            </p>
+            <div className="grid grid-cols-6 gap-1 mb-2">
+              {[1,2,4,6,8,12].map((h) => (
+                <button key={h} onClick={() => setHibHours(h)} className={cn('text-[10px] font-mono py-1 rounded border', hibHours === h ? 'border-olympus-purple/60 bg-olympus-purple/15 text-olympus-purple' : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text')}>{h}h</button>
+              ))}
+            </div>
+            <button onClick={() => setHibAuto((v) => !v)} className="w-full flex items-center gap-2 rounded border border-olympus-gold/15 px-2 py-1.5 mb-3 text-left">
+              <span className={cn('w-7 h-3.5 rounded-full relative transition-colors', hibAuto ? 'bg-olympus-green/70' : 'bg-olympus-gold/20')}>
+                <span className={cn('absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all', hibAuto ? 'left-3.5' : 'left-0.5')} />
+              </span>
+              <span className="text-[9px] font-mono text-olympus-text">resolve parked and continue until done</span>
+            </button>
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setHibOpen(false)} className="text-[9px] font-mono px-2 py-1 rounded text-olympus-text-dim hover:text-olympus-text">cancel</button>
+              <button
+                onClick={async () => {
+                  setHibBusy(true);
+                  try {
+                    await fetch('/api/olympus/power/hibernate-plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hours: hibHours, autoResume: hibAuto }) });
+                    const api = (window as any).olympus;
+                    if (api?.hibernate) await api.hibernate();
+                    else await fetch('/api/olympus/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'walk', title: 'OLYMPUS — hibernation', body: `Authorized ${hibHours}h; the desktop app owns the window.` }) });
+                    setHibOpen(false);
+                  } catch { /* the plan is best-effort */ }
+                  finally { setHibBusy(false); }
+                }}
+                disabled={hibBusy}
+                className="ml-auto flex items-center gap-1 text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30 disabled:opacity-50"
+              >
+                {hibBusy ? <Loader2 size={9} className="animate-spin" /> : <Moon size={9} />} work {hibHours}h alone
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -41,7 +41,7 @@ export default function BuildTalentPage({
 }: {
   onClose: () => void;
   onCreated: () => void;
-  initialBuild?: { name?: string; god?: string; signature?: string; skills?: string[]; mcps?: string[]; demigods?: string[] };
+  initialBuild?: { name?: string; god?: string; signature?: string; skills?: string[]; mcps?: string[]; demigods?: string[]; params?: { temperature?: number; speed?: 'fast' | 'balanced' | 'quality'; budgetTokens?: number; quality?: 'max' | 'balanced' } };
 }) {
   const [name, setName] = useState(initialBuild?.name ? `${initialBuild.name} v2` : '');
   const [god, setGod] = useState(initialBuild?.god ?? 'athena');
@@ -55,6 +55,11 @@ export default function BuildTalentPage({
   const [arsenal, setArsenal] = useState<Record<Slot, string[]>>({ skills: [], mcps: [], demigods: [] });
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  // v0.0.56 — the talent's execution profile: how it spends quality/speed.
+  const [temperature, setTemperature] = useState(initialBuild?.params?.temperature ?? 0.7);
+  const [speed, setSpeed] = useState<'fast' | 'balanced' | 'quality'>(initialBuild?.params?.speed ?? 'balanced');
+  const [budgetTokens, setBudgetTokens] = useState(initialBuild?.params?.budgetTokens ?? 16384);
+  const [quality, setQuality] = useState<'max' | 'balanced'>(initialBuild?.params?.quality ?? 'max');
 
   const sets: Record<Slot, [Set<string>, (s: Set<string>) => void]> = {
     skills: [skills, setSkills], mcps: [mcps, setMcps], demigods: [demigods, setDemigods],
@@ -103,7 +108,7 @@ export default function BuildTalentPage({
       const r = await fetch('/api/olympus/design-builds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, god, signature, skills: [...skills], mcps: [...mcps], demigods: [...demigods], note: `Talent Studio · ${power} points` }),
+        body: JSON.stringify({ name, god, signature, skills: [...skills], mcps: [...mcps], demigods: [...demigods], params: { temperature, speed, budgetTokens, quality }, note: `Talent Studio · ${power} points` }),
       });
       const d = await r.json();
       if (d?.ok) { onCreated(); onClose(); }
@@ -113,7 +118,7 @@ export default function BuildTalentPage({
   };
 
   const exportTalent = async () => {
-    const payload = { kind: 'olympus-talent', version: 1, name, god, signature, skills: [...skills], mcps: [...mcps], demigods: [...demigods], note };
+    const payload = { kind: 'olympus-talent', version: 1, name, god, signature, skills: [...skills], mcps: [...mcps], demigods: [...demigods], params: { temperature, speed, budgetTokens, quality }, note };
     try { await navigator.clipboard.writeText(JSON.stringify(payload, null, 2)); toast.success('talent JSON copied — share it'); }
     catch { toast.error('clipboard blocked'); }
   };
@@ -149,6 +154,27 @@ export default function BuildTalentPage({
           </select>
           <label className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">task signature</label>
           <textarea value={signature} onChange={(e) => setSignature(e.target.value)} rows={3} placeholder="landing hero pricing auth migration…" className={cn(field, 'resize-none leading-relaxed')} />
+          <div className="rounded-lg border border-olympus-gold/15 bg-olympus-bg/40 p-2 space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">execution profile</span>
+              <span className="ml-auto text-[7px] font-mono text-olympus-green">quality: {quality}</span>
+            </div>
+            <label className="flex items-center gap-1.5 text-[8px] font-mono text-olympus-text-dim">
+              temp
+              <input type="range" min={0.1} max={1} step={0.1} value={temperature} onChange={(e) => setTemperature(Number(e.target.value))} className="flex-1 accent-[#D4A574]" />
+              <span className="text-olympus-text tabular-nums w-6 text-right">{temperature.toFixed(1)}</span>
+            </label>
+            <div className="flex items-center gap-1">
+              {(['fast','balanced','quality'] as const).map((s) => (
+                <button key={s} onClick={() => setSpeed(s)} className={cn('text-[8px] font-mono px-1.5 py-0.5 rounded-full border', speed === s ? 'border-olympus-cyan/50 bg-olympus-cyan/10 text-olympus-cyan' : 'border-olympus-gold/10 text-olympus-text-dim')}>{s}</button>
+              ))}
+              <select value={budgetTokens} onChange={(e) => setBudgetTokens(Number(e.target.value))} className="ml-auto bg-olympus-bg border border-olympus-gold/20 rounded px-1 py-0.5 text-[8px] font-mono text-olympus-text outline-none" aria-label="Output token budget">
+                {[8192, 16384, 32768, 65536].map((n) => <option key={n} value={n}>{n / 1024}k out</option>)}
+              </select>
+            </div>
+            <p className="text-[7px] font-mono text-olympus-text-dim leading-relaxed">lower temp = fewer retries; higher temp = more variation. Budget caps output, not quality.</p>
+          </div>
+
           <div className="grid grid-cols-3 gap-1.5">
             {(['skills', 'mcps', 'demigods'] as Slot[]).map((slot) => {
               const [set] = sets[slot];

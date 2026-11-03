@@ -34,6 +34,13 @@ export interface DesignBuild {
   mcps: string[];
   /** Optional lane hint (a model id or class). */
   model?: string;
+  /** v0.0.56 — the talent's execution profile. */
+  params?: {
+    temperature: number;
+    speed: 'fast' | 'balanced' | 'quality';
+    budgetTokens: number;
+    quality: 'max' | 'balanced';
+  };
   verify: string[];
   /** Seed tier before evidence; the matcher may promote/demote. */
   tier: BuildTier;
@@ -324,6 +331,12 @@ export function normalizeUserBuild(input: unknown, now = Date.now()): DesignBuil
     skills: list(raw.skills),
     mcps: list(raw.mcps),
     ...(typeof raw.model === 'string' && raw.model.trim() ? { model: raw.model.trim().slice(0, 80) } : {}),
+    ...(raw.params && typeof raw.params === 'object' ? { params: {
+      temperature: Math.max(0.1, Math.min(1, Number(raw.params.temperature) || 0.7)),
+      speed: raw.params.speed === 'fast' ? 'fast' as const : raw.params.speed === 'quality' ? 'quality' as const : 'balanced' as const,
+      budgetTokens: Math.max(4096, Math.min(131072, Number(raw.params.budgetTokens) || 16384)),
+      quality: raw.params.quality === 'balanced' ? 'balanced' as const : 'max' as const,
+    } } : {}),
     verify: list(raw.verify, 8),
     tier: VALID_TIER.includes(raw.tier as BuildTier) ? (raw.tier as BuildTier) : 'cold',
     source: 'user',
@@ -342,6 +355,7 @@ export function buildPrompt(build: DesignBuildWithStats): string {
     `skills: ${build.skills.join(', ') || '—'}`,
     `mcps: ${build.mcps.join(', ') || '—'}`,
     build.model ? `model: ${build.model}` : 'model: the god\'s lane',
+    build.params ? `profile: temperature ${build.params.temperature} · ${build.params.speed} · ${build.params.budgetTokens} output tokens · quality ${build.params.quality}` : '',
     `verify: ${build.verify.join(', ') || 'deterministic'}`,
     `tier: ${build.stats.tier} (${build.stats.samples} sample(s), ${(build.stats.rate * 100).toFixed(0)}% smoothed success)`,
     '',

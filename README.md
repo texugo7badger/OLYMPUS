@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.55, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.56, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -39,7 +39,7 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.55 — balanced DAG + stability.** The first release-shaped version: 900 deduped
+**v0.0.56 — talent profiles + night autonomy.** The first release-shaped version: 900 deduped
 references, Talent Studio, a free-first MCP market, guided instincts, bounded
 hops, real cost windows, GitHub per project, the light-theme brain fix and a
 context indicator that reads the real session. Everything below is evidence,

@@ -33,6 +33,7 @@ import { loadHopState, saveHopState, hopStatePath, pruneStaleInFlight, type HopP
 import { composeArsenalDirective } from './arsenal';
 import { createHopTransport, type HopTransport } from './transport';
 import { hardCeilingMs } from './progress';
+import { readHibernationPlan } from '@/lib/hibernation';
 import { composeRagContext } from '../rag-inject';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -1176,8 +1177,15 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   };
 
   // v0.0.38 — the campaign deadline. The clock starts with the walk, not with
-  // the first hop: planning, retries and parks all consume the same 60 min.
-  const deadlineAt = Date.now() + resolveCampaignBudgetMs();
+  // the first hop. v0.0.55: an explicit hibernation plan (hours) authorizes a
+  // longer autonomous window; it is still capped at 24h and every hop remains
+  // clipped to it.
+  const hibPlan = readHibernationPlan();
+  const hibLeft = hibPlan ? Date.parse(hibPlan.until) - Date.now() : 0;
+  const budgetMs = hibPlan && hibLeft > 0
+    ? Math.max(60 * 60_000, Math.min(24 * 3600_000, hibLeft))
+    : resolveCampaignBudgetMs();
+  const deadlineAt = Date.now() + budgetMs;
   let budgetTimer: ReturnType<typeof setTimeout> | null = null;
 
   await new Promise<void>((resolveWalk) => {
@@ -1222,7 +1230,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
             hopId: nextPending.id,
             reason: 'campaign-budget',
             ts: new Date().toISOString(),
-            error: `campaign budget of ${Math.round(resolveCampaignBudgetMs() / 60_000)} min reached — resume from this hop (nothing was lost)`,
+            error: `campaign budget of ${Math.round(budgetMs / 60_000)} min reached — resume from this hop (nothing was lost)`,
           };
           emit({ type: 'hop_parked', hop: nextPending.id, god: nextPending.god, reason: 'campaign-budget', error: parkedHop.error });
         }
@@ -1404,7 +1412,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           hopId: nextPending.id,
           reason: 'campaign-budget',
           ts: new Date().toISOString(),
-          error: `campaign budget of ${Math.round(resolveCampaignBudgetMs() / 60_000)} min reached — resume from this hop (nothing was lost)`,
+          error: `campaign budget of ${Math.round(budgetMs / 60_000)} min reached — resume from this hop (nothing was lost)`,
         };
         emit({ type: 'hop_parked', hop: nextPending.id, god: nextPending.god, reason: 'campaign-budget', error: parkedHop.error });
       }

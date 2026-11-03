@@ -14,6 +14,7 @@
 import { useMemo, useId } from 'react';
 import { useTheme } from '@/lib/theme-store';
 import { resolvePalette } from '@/lib/theme';
+import { GOD_ICONS } from '@/lib/olympus-store';
 
 function hash(value: string): number {
   let h = 2166136261;
@@ -93,6 +94,12 @@ export default function TalentSigil({
         <path d={peak} fill={`url(#ts-peak-${uid})`} />
         <circle cx="64" cy="64" r="2.2" fill={palette.bg} opacity="0.85" />
       </g>
+      {/* v0.0.56 — each god keeps its own symbol inside its own animated sigil. */}
+      <foreignObject x="44" y="44" width="40" height="40">
+        <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: palette.text }}>
+          {(() => { const Icon = GOD_ICONS[god] ?? GOD_ICONS.apollo; return <Icon size={26} strokeWidth={1.6} />; })()}
+        </div>
+      </foreignObject>
       <g fontFamily="ui-monospace, monospace" fontSize="5" fontWeight="700" textAnchor="middle" fill={palette.text} opacity="0.8">
         <text x="64" y="118">{initials}</text>
       </g>
