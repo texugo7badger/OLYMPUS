@@ -1,6 +1,6 @@
 # OLYMPUS — v1.0 readiness
 
-> v0.0.65 · 2026-11-03 · **GO for a release candidate after two named gates**
+> v0.0.66 · 2026-11-03 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
 > this build "certified v1.0" until those gates are green.** This page is the
 > report; it does not claim what was not run.
@@ -36,16 +36,16 @@
 | v0.0.62 | Apollo auth | desktop HttpOnly cookie; terminal reset/prompt pass the LAN gate |
 | v0.0.63 | project routing + mobile P0 | approval/meta never mints a project; explicit name beats conversation memory; phone preview via LAN/HTTPS tunnel; one shared language; `/m/studio`; Greek god personas |
 | v0.0.64 | creative mode + truth | honest 0–100% (current plan) + per-god bars + explain by voice; plasma ring + hold-to-talk → Apollo; build crystal; stardrift loader; themed in-app notifications; live running tokens/duration/files; dead walker = INTERRUPTED/resume |
-| v0.0.65 | stability | mobile one-screen voice-first (/m) + details sheet; hold-to-talk with server STT; body scroll fixed; creative responsive 320→tablet; server watchdog + respawn (no more ERR_CONNECTION_REFUSED); one canvas on the phone; panel particle budget 96→64; docs/hygiene + the 22-issue status map |
+| v0.0.66 | truth | **mounted** + **visual** verify gates; source-hop gate warnings in the walk log; the phone's secure-voice card (HTTP LAN cannot use the mic; one tap opens the HTTPS tunnel); **gate go/no-go: 4,754 evaluations, 0 short-circuits — retired** (GATE.md); the measured levers documented |
 
 ## Evidence (this machine, 2026-11-03)
 
 | Claim | Evidence |
 |---|---|
-| 60 FPS creative mode (measured v0.0.61) | offscreen probe: **Brain 60.1** · **Studio idle 59.8** · **Studio chat 60.2**. v0.0.65 reduced the phone to one canvas and the panel to 64 particles; the repeatable probe is the **v0.0.71** gate |
+| 60 FPS creative mode (measured v0.0.61) | offscreen probe: **Brain 60.1** · **Studio idle 59.8** · **Studio chat 60.2**. v0.0.66 reduced the phone to one canvas and the panel to 64 particles; the repeatable probe is the **v0.0.71** gate |
 | Stability | soak **39 rounds PASS**, 5/5 probes every round, p95 ≤ 85 ms |
 | Memory bounded | available min **7,956 MB** (governor floor 1.2 GB); OLYMPUS RSS 4,457 → 4,331 MB (**−126 MB**), 32 processes |
-| Test battery | **135 PASS / 0 FAIL / 1 declared skip** (136 suites) at v0.0.65 |
+| Test battery | **136 PASS / 0 FAIL / 1 declared skip** (137 suites) at v0.0.66 |
 | Types/lint | `tsc --noEmit` and `lint` clean |
 | Security | `npm run security:audit` → **0 high / 0 critical**; 54 moderate transitive `glob/minimatch` advisories via the opencode/electron/npm tree, no safe non-breaking fix; the 3 Dependabot alerts are dismissed with that reason and 0 remain open |
 | Governor | live snapshot 15,459 MB total · 8,426 MB available · 45% · 36 processes · green |

@@ -1,18 +1,18 @@
-# The 22 open issues — status map at v0.0.65
+# The 22 open issues — status map at v0.0.66
 
-> v0.0.65 is the stability release. It closes the crash class and the mobile
+> v0.0.66 is the stability release. It closes the crash class and the mobile
 > UX class; the rest stays open with a named target. No issue is closed
 > without probe evidence.
 
-| Issue | Title | Status at v0.0.65 | Target |
+| Issue | Title | Status at v0.0.66 | Target |
 |---|---|---|---|
 | #291 | detached supervisor + auto-resume on app restart | **partial** — server watchdog + respawn + INTERRUPTED verdict; the walker still dies with the server | v0.0.71 |
 | #287 | stop hops from starting unmanaged servers/builds | open — the preview manager refuses double-spawn, hops still can | v0.0.71 |
 | #293 | stream bounded tool output/progress | **partial** — live tokens/files/last tool in the task sheet; the modal's thinking is still settle-only | v0.0.71 |
 | #288 | persist the full recipe + Hop Detail drawer | **partial** — build snapshot (model/strategy/build/talent) in the sheet | v0.0.71 |
-| #306 | source hops must run build/lint | open | v0.0.71 |
-| #305 | visual gate for UI hops | open | v0.0.71 |
-| #308 | work card GREEN but not mounted | open | v0.0.71 |
+| #306 | source hops must run build/lint | **partial** — verify supports build/lint; a source hop without a gate is named in the walk log (warning, not a hard rejection yet) | v0.0.67 |
+| #305 | visual gate for UI hops | **partial** — `visual:` reads opacity/console/login; the browser-level reviewer writes the JSON | v0.0.67 |
+| #308 | work card GREEN but not mounted | **partial** — `mounted:<artifact>::<entry>` fails dead code; plans must declare it | v0.0.67 |
 | #278 | capture tokens on the warm transport | open — recent AIME rows carry `null` | v0.0.71 |
 | #277 | per-model 5h/weekly/monthly caps | open | v0.0.72 |
 | #279 | cost:audit reconciliation gate | open | v0.0.72 |
@@ -29,7 +29,7 @@
 | #318 | user-sovereignty decision ledger + cognitive protocol | open | v0.0.74 |
 | #273 | epic(design): live preview + magic wand | open (parent) | v0.0.74 |
 
-## What v0.0.65 did close (the class, not the issue number)
+## What v0.0.66 did close (the class, not the issue number)
 
 - The app no longer sits on `ERR_CONNECTION_REFUSED`: a 10s health watchdog
   respawns a dead dev server and reloads when it answers; the `did-fail-load`

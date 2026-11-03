@@ -27,7 +27,7 @@ English, so a partial dictionary never renders blank.
   Português; *アポロン, アテナ* in 日本語).
 - **Voice** — the matching speech locale for TTS/STT.
 - **Mobile** — the companion (`/m`) and the mobile studio (`/m/studio`) are
-  complete in all seven locales (v0.0.65, 77 mobile keys); the phone adopts
+  complete in all seven locales (v0.0.66, 80 mobile keys); the phone adopts
   the desktop's language on boot and only changes it when the user picks one.
 - **God character** — epithet and tone for all ten gods in all seven locales
   (`src/lib/god-personas.ts`), injected into the studio prompt.

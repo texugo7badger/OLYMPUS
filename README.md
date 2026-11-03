@@ -47,17 +47,17 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.65 — the stability release.** The phone is one screen: hold the mic in
-the plasma ring, speak, release — the request goes to Apollo in the project's
-lane; pick a god below the ring; everything else lives in a details sheet. The
-creative mode opens the desktop surface, responsive from 320 px to tablet. The
-app now has a **server watchdog**: a dead dev server respawns instead of
-leaving `ERR_CONNECTION_REFUSED`, and the reconnect page is a last resort. The
-loader is a stardrift sphere that fills with the theme's light, the build is a
-crystal cut in the theme's colors, the progress is the honest 0–100% of the
-current plan with one bar per god, and notifications follow your palette when
-the app is visible. Everything below is evidence, not a promise; the open v1.0
-gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.66 — the truth release.** The hop verify grew the two gates that were
+missing: **mounted** (an artifact that exists but is never imported is dead
+code, not a feature) and **visual** (opacity/console/login, read from the
+review JSON). A source hop without a gate is named in the walk log, not
+silently green. The phone's voice now tells the truth: on plain HTTP LAN the
+browser blocks the mic, so `/m` shows **“voice needs HTTPS”** and opens the
+secure tunnel link with one tap. And the instinct gate has its **go/no-go**:
+4,754 evaluations, **0 short-circuits** — the claim is retired, the measured
+levers (curated MCPs, lean hops, deterministic spine, instinct RAG) are what
+remain. Everything below is evidence, not a promise; the open v1.0 gates are
+named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -90,7 +90,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**135 PASS / 0 FAIL / 1 declared skip** across 136 suites; a 100-hop
+**136 PASS / 0 FAIL / 1 declared skip** across 137 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 suites stay maintainer-local; the evidence is public. Read
@@ -126,7 +126,7 @@ renders blank. The full table and speech locales live in
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
-**v0.0.65.** The phone opens `/m` — one screen, voice first: the plasma ring
+**v0.0.66.** The phone opens `/m` — one screen, voice first: the plasma ring
 fills the view, **hold the mic in the middle**, speak, release; the server STT
 transcribes and the request goes to Apollo in the active project's lane. The
 god row below the ring picks the voice/persona; the details sheet holds the

@@ -1055,6 +1055,12 @@ interface WalkTask {
  */
 export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   const v = validateDispatchPlan(opts.plan);
+  if (v.ok && v.warnings?.length) {
+    for (const w of v.warnings.slice(0, 12)) {
+      console.log(`[hop-runtime] plan warning: ${w}`);
+      opts.onEvent?.({ type: 'log', msg: `plan warning: ${w}` } as any);
+    }
+  }
   if (!v.ok) {
     throw new Error(`[hop-runtime] garbage plan — refusing to walk:\n${v.errors.map((e) => `  - ${e}`).join('\n')}`);
   }

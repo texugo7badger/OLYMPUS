@@ -71,6 +71,17 @@ export function useHoldToTalk(opts: {
 
   const start = useCallback(async () => {
     if (recording) return;
+    // v0.0.66 — the microphone needs a SECURE CONTEXT. On plain HTTP LAN the
+    // browser blocks getUserMedia AND webkitSpeechRecognition silently; the
+    // old code just set listening=false (the "não consigo voice" specimen).
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      const host = window.location.hostname;
+      const local = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+      if (!local) {
+        onErrorRef.current?.('Voice needs HTTPS — open the secure tunnel link (or localhost).');
+        return;
+      }
+    }
     cancelledRef.current = false;
     srTextRef.current = '';
     try {

@@ -110,6 +110,57 @@ function scriptCheck(laneRoot: string, script: 'build' | 'lint'): HopCheckResult
   };
 }
 
+
+/**
+ * v0.0.66 — #308: THE MOUNT CHECK. An artifact that exists but is never
+ * imported is not a delivered feature (the work card was GREEN while the
+ * component was dead). `mounted:<artifact>::<entry>` reads the entry file and
+ * requires the artifact's module path (or basename) to appear in it.
+ */
+function mountedCheck(laneRoot: string, artifact: string, entry: string): HopCheckResult {
+  const check = `mounted:${artifact}::${entry}`;
+  const artifactAbs = laneRelative(laneRoot, artifact);
+  const entryAbs = laneRelative(laneRoot, entry);
+  if (!artifactAbs || !entryAbs) return { check, ok: false, detail: 'path escapes the lane root — refused' };
+  if (!existsSync(artifactAbs)) return { check, ok: false, detail: `MISSING — ${artifact} does not exist` };
+  if (!existsSync(entryAbs)) return { check, ok: false, detail: `MISSING — the entry ${entry} does not exist` };
+  let text = '';
+  try { text = readFileSync(entryAbs, 'utf-8'); } catch (e: any) { return { check, ok: false, detail: `unreadable: ${e?.message || e}` }; }
+  const base = artifact.replace(/\.[^.]+$/, '').replace(/^src\//, '');
+  const tail = base.split('/').slice(-2).join('/');
+  const ok = text.includes(base) || text.includes(tail) || text.includes(`/${tail.split('/').pop()}`);
+  return {
+    check, ok,
+    detail: ok ? `imported by ${entry}` : `NOT imported by ${entry} — the artifact exists but is dead code`,
+  };
+}
+
+/**
+ * v0.0.66 — #305: THE VISUAL GATE. A UI hop must leave a visual review that
+ * says the surface is visible (opacity), the console is clean and the login
+ * (when the app has one) works. `visual:<json>` reads that file; any declared
+ * false fails the hop. 0 tokens — the reviewer writes the JSON, the gate reads
+ * it.
+ */
+function visualCheck(laneRoot: string, file = 'visual-review.json'): HopCheckResult {
+  const check = `visual:${file}`;
+  const abs = laneRelative(laneRoot, file);
+  if (!abs) return { check, ok: false, detail: 'path escapes the lane root — refused' };
+  if (!existsSync(abs)) return { check, ok: false, detail: `MISSING — ${file} (opacity/console/login review)` };
+  try {
+    const r = JSON.parse(readFileSync(abs, 'utf-8'));
+    const keys = ['opacity', 'console', 'login'].filter((k) => typeof r?.[k] === 'boolean');
+    if (keys.length === 0) return { check, ok: false, detail: 'no opacity/console/login booleans in the review' };
+    const bad = keys.filter((k) => r[k] !== true);
+    return {
+      check, ok: bad.length === 0,
+      detail: bad.length === 0 ? `visual review PASS (${keys.join(', ')})` : `visual review FAIL: ${bad.join(', ')} false`,
+    };
+  } catch (e: any) {
+    return { check, ok: false, detail: `unparseable: ${e?.message || e}` };
+  }
+}
+
 /**
  * Run the hop's deterministic checks — 0 LLM tokens, 0 pools. The check
  * list = the declared verify.checks PLUS an implicit file-exists for every
@@ -134,6 +185,16 @@ export function verifyHopDeterministic(hop: PlanHop, laneRoot: string): HopVerif
       } else {
         checks.push(fileContentCheck(laneRoot, spec.slice(0, sep), spec.slice(sep + 2), prefix === 'file-contains:'));
       }
+    } else if (c.startsWith('mounted:')) {
+      const spec = c.slice('mounted:'.length);
+      const sep = spec.indexOf('::');
+      if (sep <= 0 || sep + 2 >= spec.length) {
+        checks.push({ check: c, ok: false, detail: 'invalid spec — expected mounted:<artifact>::<entry>' });
+      } else {
+        checks.push(mountedCheck(laneRoot, spec.slice(0, sep), spec.slice(sep + 2)));
+      }
+    } else if (c === 'visual' || c.startsWith('visual:')) {
+      checks.push(visualCheck(laneRoot, c === 'visual' ? 'visual-review.json' : c.slice('visual:'.length)));
     } else if (c.startsWith('design-score:')) {
       // #DESIGN-INTELLIGENCE D2: the design-review gate — reads
       // design-review.json and checks the overall score against the
@@ -157,7 +218,7 @@ export function verifyHopDeterministic(hop: PlanHop, laneRoot: string): HopVerif
         }
       }
     } else {
-      checks.push({ check: c, ok: false, detail: 'unknown check (supported: file-exists:<rel> | file-contains:<rel>::<text> | file-omits:<rel>::<text> | build | lint | design-score:<n>)' });
+      checks.push({ check: c, ok: false, detail: 'unknown check (supported: file-exists:<rel> | file-contains:<rel>::<text> | file-omits:<rel>::<text> | mounted:<artifact>::<entry> | visual[:<json>] | build | lint | design-score:<n>)' });
     }
   }
   const review = hop.verify?.review ?? 'deterministic';

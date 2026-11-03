@@ -71,7 +71,7 @@ export interface DispatchPlan {
 }
 
 export type PlanValidation =
-  | { ok: true; plan: DispatchPlan }
+  | { ok: true; plan: DispatchPlan; warnings?: string[] }
   | { ok: false; errors: string[] };
 
 const ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
@@ -225,8 +225,22 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
   }
 
   if (errors.length > 0) return { ok: false, errors };
+
+  // v0.0.66 — #306: A SOURCE HOP WITHOUT A GATE IS A CLAIM, NOT A PROOF.
+  // The plan is still accepted (a hard rejection would strand an in-flight
+  // campaign), but every gap is named so the walk log and the plan panel can
+  // show "ungated" instead of a silent green.
+  const warnings: string[] = [];
+  for (const hop of hops) {
+    const src = (hop.artifacts ?? []).some((a) => /\.(tsx?|jsx?|css|scss)$/i.test(String(a)));
+    const checks = (hop.verify?.checks ?? []).join(' ');
+    const gated = /(^|\s)(build|lint)(\s|$)|mounted:|visual|design-score:/.test(checks);
+    if (src && !gated) warnings.push(`hop '${hop.id}' writes source but declares no build/lint/mounted/visual gate`);
+  }
+
   return {
     ok: true,
+    warnings,
     plan: {
       version: 1,
       laneRoot: raw.laneRoot as string,

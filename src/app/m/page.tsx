@@ -87,6 +87,9 @@ export default function MobileCompanion() {
   const [error, setError] = useState<string | null>(null);
   const [ringSize, setRingSize] = useState(280);
   const [studioStamp, setStudioStamp] = useState('');
+  const [secure, setSecure] = useState(true);
+  const [tunnelUrl, setTunnelUrl] = useState<string | null>(null);
+  const [tunnelBusy, setTunnelBusy] = useState(false);
   const levelGate = useRef(0);
   const themeStampRef = useRef('');
 
@@ -116,6 +119,7 @@ export default function MobileCompanion() {
       setRingSize(Math.max(220, Math.min(340, Math.floor(Math.min(w * 0.78, h * 0.42)))));
     };
     fit();
+    setSecure(typeof window !== 'undefined' ? window.isSecureContext : true);
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
   }, []);
@@ -170,6 +174,10 @@ export default function MobileCompanion() {
 
   useEffect(() => {
     if (!token) return;
+    fetch('/api/olympus/mobile/tunnel', { cache: 'no-store', headers })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.running && d.url) setTunnelUrl(String(d.url)); })
+      .catch(() => { /* the secure card explains */ });
     void load();
     void pullTheme();
     const timer = setInterval(() => {
@@ -268,6 +276,33 @@ export default function MobileCompanion() {
   const speak = useCallback((text: string) => {
     void speakAs(text, god, language, setSpeaking, onLevel);
   }, [god, language, onLevel]);
+
+  // v0.0.66 — voice needs a secure context. The LAN HTTP page can still drive
+  // the app, but the mic is blocked by the browser; this opens the same
+  // session over the HTTPS tunnel (the token rides the fragment).
+  const openSecure = useCallback(async () => {
+    if (tunnelBusy) return;
+    setTunnelBusy(true);
+    setError(null);
+    try {
+      let url = tunnelUrl;
+      if (!url) {
+        const r = await fetch('/api/olympus/mobile/tunnel', {
+          method: 'POST', headers, body: JSON.stringify({ action: 'start' }),
+        });
+        const d = await r.json().catch(() => null);
+        if (r.ok && d?.url) { url = String(d.url); setTunnelUrl(url); }
+        else setError(d?.error || t('m.secureNeedsTunnel', language));
+      }
+      if (url && token) {
+        // The target is the EXTERNAL tunnel origin, not an internal route.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.assign(`${url}/m#t=${encodeURIComponent(token)}`);
+      }
+    } catch (e: any) {
+      setError(e?.message || t('m.connectionFailed', language));
+    } finally { setTunnelBusy(false); }
+  }, [tunnelBusy, tunnelUrl, headers, token, language]);
 
   const askApollo = useCallback(async (text: string) => {
     const prompt = text.trim();
@@ -383,6 +418,18 @@ export default function MobileCompanion() {
       </header>
 
       <section className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4">
+        {!secure && (
+          <div className="mb-1 w-full max-w-sm rounded-xl border border-olympus-gold/30 bg-olympus-gold/5 p-2.5 text-center">
+            <p className="text-[10px] leading-relaxed text-olympus-gold">{t('m.secureVoice', language)}</p>
+            <button
+              onClick={() => void openSecure()}
+              disabled={tunnelBusy}
+              className="mt-1.5 inline-flex items-center gap-1 rounded-lg bg-olympus-gold px-3 py-1.5 text-[10px] font-semibold text-olympus-bg disabled:opacity-40"
+            >
+              {tunnelBusy ? <Loader2 size={11} className="animate-spin" /> : <Lock size={11} />} {t('m.secureOpen', language)}
+            </button>
+          </div>
+        )}
         <button
           onClick={() => { const intro = `${godName(god, language)} — ${t('m.holdToTalk', language)}`; setLog((l) => [...l.slice(-3), intro]); if (god !== 'apollo') speak(intro); }}
           className="flex items-center gap-1.5 text-[11px] font-mono"
@@ -400,7 +447,7 @@ export default function MobileCompanion() {
           size={ringSize}
         >
           <button
-            onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); void hold.start(); }}
+            onPointerDown={(e) => { e.preventDefault(); if (!secure) { void openSecure(); return; } e.currentTarget.setPointerCapture(e.pointerId); void hold.start(); }}
             onPointerUp={(e) => { e.preventDefault(); hold.stop(false); }}
             onPointerCancel={() => hold.stop(true)}
             onContextMenu={(e) => e.preventDefault()}
