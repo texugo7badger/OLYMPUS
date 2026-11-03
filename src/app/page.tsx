@@ -275,6 +275,16 @@ export default function OlympusWorkspace() {
 
   useEffect(() => {
     void initTheme();
+    // v0.0.61 — crash-loop SAFE MODE (?safe=1): no terminal pane, no
+    // decorative surfaces. The app still walks campaigns and shows the brain.
+    try {
+      if (new URLSearchParams(window.location.search).get('safe') === '1') {
+        useOlympus.getState().setLeftPane('cost');
+        useOlympus.getState().setRightTab('editor');
+        document.documentElement.dataset.performance = 'low';
+        try { localStorage.setItem('olympus:performance', 'low'); } catch { /* private */ }
+      }
+    } catch { /* no window */ }
     bootStartedAt.current = performance.now();
     let live = true;
     const critical = [

@@ -1451,7 +1451,10 @@ export default function InteractiveTerminal() {
           id: String(m.id || `r-${Math.random().toString(36).slice(2, 9)}`),
           ts: typeof m.ts === 'string' ? m.ts : new Date().toISOString(),
         }));
-      if (restored.length > 0) setMessages(restored);
+      // v0.0.61 — bound the restored transcript. A 200-message history with
+      // huge tool outputs was re-parsed on mount and could take the renderer
+      // down; the last 30 rows carry the context the user actually reads.
+      if (restored.length > 0) setMessages(restored.slice(-30));
     } catch { /* a corrupt transcript is dropped, never fatal */ }
   }, []);
   useEffect(() => {
@@ -2404,7 +2407,10 @@ const MessageRenderer = memo(function MessageRenderer({
       message.type === 'system' ||
       message.type === 'todo'
     ) {
-      return renderMarkdown(message.text);
+      // v0.0.61 — never hand an unbounded string to the parser. 16k chars is
+      // far beyond a readable row and keeps the render path predictable.
+      const text = message.text.length > 16_000 ? `${message.text.slice(0, 16_000)}\n\n… (truncated)` : message.text;
+      return renderMarkdown(text);
     }
     return null;
   }, [message.type, message.text]);

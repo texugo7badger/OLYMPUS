@@ -39,6 +39,8 @@ export default function MobileAmbient({ theme, enabled }: { theme: ThemeState | 
     let raf = 0;
     let running = true;
     let particles: Particle[] = [];
+    const low = typeof document !== 'undefined' && document.documentElement.dataset.performance === 'low';
+    if (low) return;
     const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const dpr = Math.min(1.5, window.devicePixelRatio || 1);
     const resize = () => {

@@ -166,7 +166,7 @@ export default function BrainAtlas3D() {
   const [enabledLobes, setEnabledLobes] = useState<LobeVisibility>(allLobesEnabled());
   const [highlightLobe, setHighlightLobe] = useState<LobeName | null>(null);
   const [hoveredLobe, setHoveredLobe] = useState<LobeName | null>(null);
-  const [perfPreset, setPerfPreset] = useState<PerformancePreset>('smooth');
+  const [perfPreset, setPerfPreset] = useState<PerformancePreset>(() => (typeof document !== 'undefined' && document.documentElement.dataset.performance === 'low') ? 'batterySaver' : 'smooth');
   const [showPerfMenu, setShowPerfMenu] = useState(false);
   const [lobeStats, setLobeStats] = useState<Record<LobeName, number>>({
     frontal: 0, parietal: 0, temporal: 0, occipital: 0, cerebellum: 0, stem: 0,

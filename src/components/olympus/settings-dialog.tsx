@@ -19,6 +19,7 @@ import { THEME_PRESETS, resolvePalette } from '@/lib/theme';
 import { MoonModeIcon, SunModeIcon } from './theme-mode-icons';
 import { generateThemePalette, randomSeed, type PaletteLabSeed } from '@/lib/theme-generator';
 import { useTheme } from '@/lib/theme-store';
+import { getPerformanceMode, setPerformanceMode } from '@/lib/performance-mode';
 import { useLanguage, setLanguage, t, LANGUAGES } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -413,6 +414,7 @@ export default function SettingsDialog() {
   const setStoreStrategy = useOlympus(s => s.setLlmStrategy);
 
   const [data, setData] = useState<SettingsData | null>(null);
+  const [perfMode, setPerfMode] = useState(() => getPerformanceMode());
   const [theme, setTheme] = useTheme();
   const language = useLanguage();
   const [edits, setEdits] = useState<Record<string, string>>({});
@@ -878,6 +880,15 @@ export default function SettingsDialog() {
                   checked={theme.motion === 'stable'}
                   onCheckedChange={(v) => setTheme({ motion: v ? 'stable' : 'full' })}
                   aria-label="Stable mode"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 mt-2">
+                <span className="text-[9px] font-mono text-olympus-text-dim uppercase" data-tip="Low-end phone/PC: battery-saver brain, no particles, stable motion. Spinners and status stay.">performance mode</span>
+                <Switch
+                  checked={perfMode}
+                  onCheckedChange={(v) => { setPerfMode(v); setPerformanceMode(v); if (v) setTheme({ motion: 'stable' }); }}
+                  aria-label="Performance mode"
                 />
               </div>
 

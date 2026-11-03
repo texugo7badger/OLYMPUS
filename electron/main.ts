@@ -50,6 +50,10 @@ import { NOTIFY_COLORS, NOTIFY_LABELS, isNotifyType, themeMarkPng, trayPng, deci
 
 const PORT = 3737;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+// A crash-loop relaunch lands in SAFE mode: the terminal pane and decorative
+// surfaces are off until the user re-enables them.
+const SAFE_MODE = process.argv.includes('--olympus-safe-mode');
+const APP_URL = `${BASE_URL}${SAFE_MODE ? '?safe=1' : ''}`;
 const POLL_INTERVAL_MS = 400;
 const POLL_TIMEOUT_MS = 60_000; // 1 minute to start (Next.js dev cold start)
 
@@ -174,6 +178,9 @@ function safeConsole(kind: 'log' | 'error', ...args: any[]): void {
 // hardware acceleration disabled (Electron's documented recovery path —
 // disableHardwareAcceleration() only takes effect before app ready).
 let gpuCrashCount = 0;
+// v0.0.61 — renderer crash-loop guard (the terminal/history specimen).
+let rendererCrashTimes: number[] = [];
+let safeRelaunching = false;
 
 /**
  * Check whether a Next.js server is ALREADY listening on 127.0.0.1:3737.
@@ -415,7 +422,15 @@ function waitForNext(): Promise<void> {
         (res) => {
           res.resume();
           if (res.statusCode && res.statusCode < 500) {
-            resolve();
+            // v0.0.61 — warm the PAGE before the renderer loads. Loading `/`
+            // while Turbopack is still compiling its client chunks was the
+            // startup crash specimen (renderer SIGSEGV on first paint).
+            const warm = http.get(`${BASE_URL}/`, { timeout: 20_000 }, (pageRes) => {
+              pageRes.resume();
+              setTimeout(resolve, 900);
+            });
+            warm.on('error', () => setTimeout(resolve, 900));
+            warm.on('timeout', () => { warm.destroy(); setTimeout(resolve, 900); });
           } else {
             setTimeout(attempt, POLL_INTERVAL_MS);
           }
@@ -553,9 +568,10 @@ function buildWindowOptions(): Electron.BrowserWindowConstructorOptions {
     show: false,
     autoHideMenuBar: true,
     frame: false,
-    // v0.0.38 — OLYMPUS opens FULLSCREEN by default (the user's ask); F11 or
-    // Cmd/Ctrl+Shift+F exits, and OLYMPUS_WINDOWED=1 starts windowed.
-    fullscreen: process.env.OLYMPUS_WINDOWED !== '1',
+    // v0.0.61 — WINDOWED is the stable default. Fullscreen on this Linux
+    // stack SIGSEGVs the renderer (exit 139) with software rendering; it is
+    // now opt-in via OLYMPUS_FULLSCREEN=1 until the crash is cured.
+    fullscreen: process.env.OLYMPUS_FULLSCREEN === '1',
     webPreferences: {
       webviewTag: true,
       nodeIntegration: false,
@@ -957,12 +973,13 @@ function createWindow() {
   }
   mainWindow = new BrowserWindow(buildWindowOptions());
 
-  // F11 / Ctrl+Shift+F toggles fullscreen; the default is fullscreen.
+  // v0.0.61 — the fullscreen shortcut is disabled until the renderer SIGSEGV
+  // is cured; OLYMPUS_FULLSCREEN=1 starts fullscreen explicitly.
   mainWindow.webContents.on('before-input-event', (_event, input) => {
     if (input.type !== 'keyDown') return;
     const isF11 = input.key === 'F11';
     const isChord = (input.control || input.meta) && input.shift && input.key.toLowerCase() === 'f';
-    if (isF11 || isChord) {
+    if ((isF11 || isChord) && process.env.OLYMPUS_FULLSCREEN === '1') {
       mainWindow?.setFullScreen(!mainWindow.isFullScreen());
     }
   });
@@ -1028,10 +1045,10 @@ p{color:#8B8B8B;font-size:11px;margin:0}
         const start = Date.now();
         while (Date.now() - start < 20_000) {
           const ok = await isNextAlreadyRunning();
-          if (ok) { loadFailCount = 0; console.log('[olympus:electron] server back — reloading.'); mainWindow?.loadURL(BASE_URL); return; }
+          if (ok) { loadFailCount = 0; console.log('[olympus:electron] server back — reloading.'); mainWindow?.loadURL(APP_URL); return; }
           await new Promise((r) => setTimeout(r, 2_000));
         }
-        mainWindow?.loadURL(BASE_URL);
+        mainWindow?.loadURL(APP_URL);
       })();
       return;
     }
@@ -1109,7 +1126,7 @@ button:hover{background:#D4A57433}
         try { if (await isNextAlreadyRunning()) break; } catch { /* keep waiting */ }
         await new Promise((r) => setTimeout(r, 500));
       }
-      try { mainWindow?.loadURL(BASE_URL); } catch { /* the error page owns it */ }
+      try { mainWindow?.loadURL(APP_URL); } catch { /* the error page owns it */ }
     })();
   } else {
     mainWindow.loadURL(BASE_URL);
@@ -1183,6 +1200,9 @@ button:hover{background:#D4A57433}
     console.error('[olympus:electron] renderer gone:', details.reason);
     try { mainWindow?.destroy(); } catch { /* gone */ }
     mainWindow = null;
+    // Three crashes in two minutes is a loop, not a hiccup: the global
+    // handler relaunches in safe mode. Do not recreate here.
+    if (rendererCrashTimes.filter((t) => Date.now() - t < 120_000).length >= 3) return;
     if (!app.isQuitting && !hibernating) {
       setTimeout(() => { if (!mainWindow) createWindow(); }, 900);
     }
@@ -1693,6 +1713,10 @@ if (gpuExplicitlyOff || (gpuMarkerPersisted && !resetGpu)) {
     app.commandLine.appendSwitch('disable-gpu');
     app.commandLine.appendSwitch('disable-gpu-sandbox');
     app.commandLine.appendSwitch('disable-software-rasterizer');
+    // v0.0.61 — software WebGL (SwiftShader) was crashing the renderer on
+    // this machine. Force the Canvas2D brain fallback in software mode.
+    app.commandLine.appendSwitch('disable-webgl');
+    app.commandLine.appendSwitch('disable-webgl2');
     console.log('[olympus:electron] hardware acceleration DISABLED (software fallback — run with --reset-gpu to retry)');
   } catch (err) {
     console.error('[olympus:electron] GPU disable failed:', err);
@@ -1916,11 +1940,38 @@ if (!gotLock) {
     //     (caught globally via 'web-contents-created' so we don't need to modify createWindow).
     app.on('web-contents-created', (_event, webContents) => {
       webContents.on('render-process-gone', (_e, details) => {
+        rendererCrashTimes.push(Date.now());
+        rendererCrashTimes = rendererCrashTimes.filter((t) => Date.now() - t < 120_000);
         logError('renderer-process-crashed', new Error('Renderer process gone'), {
           reason: details.reason,
           exitCode: details.exitCode,
           url: webContents?.getURL?.() || 'unknown',
+          crashesInWindow: rendererCrashTimes.length,
         });
+        // v0.0.61 — a crash LOOP must not become a restart loop. After the
+        // third crash in two minutes, persist the GPU fallback and relaunch
+        // ONCE in safe mode (no terminal/decorative surfaces). A further
+        // crash exits with an explicit dialog instead of looping.
+        if (rendererCrashTimes.length >= 3 && !safeRelaunching) {
+          safeRelaunching = true;
+          try {
+            mkdirSync(dirname(GPU_FALLBACK_MARKER), { recursive: true });
+            writeFileSync(GPU_FALLBACK_MARKER, new Date().toISOString(), 'utf-8');
+            const args = process.argv.slice(1).filter((a) => a !== '--olympus-safe-mode');
+            args.push(GPU_FALLBACK_ARG, '--olympus-safe-mode');
+            console.error('[olympus:electron] renderer crashed 3x in 2 min — relaunching in SAFE mode');
+            app.relaunch({ args });
+            app.exit(0);
+          } catch (err) {
+            logError('safe-mode-relaunch', err);
+          }
+        } else if (rendererCrashTimes.length >= 6 && SAFE_MODE) {
+          // Safe mode also crashed: stop, never loop.
+          try {
+            dialog.showErrorBox('OLYMPUS — renderer crashed', 'The renderer crashed repeatedly. The log is at ~/.olympus/errors.log. Please report it.');
+          } catch { /* no dialog */ }
+          app.exit(1);
+        }
       });
       // #RENDERER-LOG (2026-10-24): capture the renderer's console so a
       // blank/frozen window is diagnosable instead of a mystery. The user's
