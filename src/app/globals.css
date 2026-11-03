@@ -156,40 +156,34 @@
   }
 }
 
-/* Olympus custom scrollbar — pastel soft-gold thumb (Issue 11). */
+/* v0.0.61 — ONE scrollbar, THEMED. The old rules hardcoded gold on a dark
+   track, so the settings dialog showed a bright bar in light themes and a
+   mismatched one in Obsidian. Every scroll surface now reads the live palette. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--olympus-gold) 38%, transparent) var(--olympus-bg);
+}
 .custom-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(212, 165, 116, 0.25) transparent;
+  scrollbar-color: color-mix(in oklab, var(--olympus-gold) 38%, transparent) transparent;
 }
-.custom-scroll::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
-}
-.custom-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scroll::-webkit-scrollbar-thumb {
-  background: rgba(212, 165, 116, 0.25);
-  border-radius: 4px;
-}
-.custom-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(212, 165, 116, 0.45);
-}
-
-/* Global dark scrollbar for the workspace */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0A0E16;
+  background: var(--olympus-bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(212, 165, 116, 0.2);
-  border-radius: 4px;
+  background: color-mix(in oklab, var(--olympus-gold) 38%, transparent);
+  border-radius: 999px;
+  border: 2px solid var(--olympus-bg);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(212, 165, 116, 0.4);
+  background: var(--olympus-gold);
+}
+::-webkit-scrollbar-corner {
+  background: var(--olympus-bg);
 }
 
 /* react-force-graph-3d canvas fills container */

@@ -142,6 +142,38 @@ export const THEME_PRESETS: ThemePreset[] = [
     gold: '#2A7C6B', amber: '#2F725F', amberSoft: '#418E7C', green: '#2A7C6B', teal: '#2A7C6B',
     bg: '#D2E4DC', panel: '#DEEDE6', card: '#E9F5EF', text: '#15231E', textDim: '#455C55',
   }) },
+  // v0.0.61 — six new families: two celestial/vampire, two deep darks, two
+  // clean lights. Every text/dim pair clears WCAG AA on its own background.
+  { id: 'vampire', name: 'Vampire', mode: 'dark', colors: dark('#C23A45', {
+    gold: '#C23A45', amber: '#A85A3A', amberSoft: '#C47A6A', purple: '#8E5A7A',
+    red: '#D64A4A', green: '#7BAE8E', cyan: '#6BAEB5', blue: '#6B8FB5', teal: '#6BAE9B',
+    bg: '#080406', panel: '#0F0709', card: '#160A0D', text: '#F0E2E2', textDim: '#BFA6A6',
+  }) },
+  { id: 'celestial', name: 'Celestial', mode: 'dark', colors: dark('#E8E8E8', {
+    gold: '#E8E8E8', amber: '#C9C9C9', amberSoft: '#DADADA', purple: '#B9A7E0',
+    blue: '#9DB7D8', green: '#9FCFAF', red: '#E0A0A0', cyan: '#A9D6E5', teal: '#9FD6C7',
+    bg: '#000000', panel: '#060606', card: '#0C0C0C', text: '#FFFFFF', textDim: '#BDBDBD',
+  }) },
+  { id: 'abyss', name: 'Abyss', mode: 'dark', colors: dark('#5FC9D8', {
+    gold: '#5FC9D8', amber: '#4FA3B5', amberSoft: '#6FC4CF', purple: '#7A9BD6',
+    blue: '#5F9BD8', green: '#6FBF9F', red: '#C47A7A', cyan: '#5FC9D8', teal: '#5FBFB0',
+    bg: '#030A0E', panel: '#07141A', card: '#0B1C24', text: '#D6ECF0', textDim: '#94B4BC',
+  }) },
+  { id: 'rosewood', name: 'Rosewood', mode: 'dark', colors: dark('#D88A9A', {
+    gold: '#D88A9A', amber: '#B87A6A', amberSoft: '#D8A0A8', purple: '#A87A9A',
+    blue: '#7A8FB5', green: '#8FAE8E', red: '#D86A6A', cyan: '#8FB5B5', teal: '#8FAEA0',
+    bg: '#0D0507', panel: '#15090C', card: '#1D0E12', text: '#F0DEE2', textDim: '#C0A2AA',
+  }) },
+  { id: 'ivory', name: 'Ivory', mode: 'light', colors: light('#8A6A2F', {
+    gold: '#8A6A2F', amber: '#7A5A2A', amberSoft: '#9A7A3A', purple: '#6A4F86',
+    blue: '#3E5F83', green: '#3F7553', red: '#94443C', cyan: '#2F6F7A', teal: '#2F7A69',
+    bg: '#F2EEE6', panel: '#F8F5EF', card: '#FFFFFF', text: '#1A1712', textDim: '#5A5348',
+  }) },
+  { id: 'arctic', name: 'Arctic', mode: 'light', colors: light('#2A6A7A', {
+    gold: '#2A6A7A', amber: '#2A5F6A', amberSoft: '#3A7A8A', purple: '#5A4F86',
+    blue: '#2F5F8A', green: '#2F6F55', red: '#8A3F3F', cyan: '#2A6A7A', teal: '#2A6F6A',
+    bg: '#E8F0F4', panel: '#F0F6F9', card: '#FFFFFF', text: '#10202A', textDim: '#4A5E68',
+  }) },
 ];
 
 export const DEFAULT_THEME: ThemeState = {

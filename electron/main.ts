@@ -890,6 +890,49 @@ function readThemePalette(): typeof DEFAULT_PALETTE {
   }
 }
 
+
+/** v0.0.61 — the reconnect/error pages are OLYMPUS, not a bare Electron
+ *  screen: the same animated peak, the live theme palette, no scrollbar. */
+function brandPage(opts: { title: string; detail: string; hint?: string; button?: string }): string {
+  const p = readThemePalette();
+  const hex = p.bg.replace('#', '');
+  const r = parseInt(hex.slice(0, 2), 16) || 0;
+  const g = parseInt(hex.slice(2, 4), 16) || 0;
+  const b = parseInt(hex.slice(4, 6), 16) || 0;
+  const light = (r * 299 + g * 587 + b * 114) / 1000 > 140;
+  const panel = light ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)';
+  const line = light ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)';
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>OLYMPUS</title>
+<meta name="theme-color" content="${p.bg}">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:${p.bg};color:${p.text};font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;color-scheme:${light ? 'light' : 'dark'}}
+.wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px;box-sizing:border-box;text-align:center}
+.mark{width:132px;height:132px;filter:drop-shadow(0 0 18px ${p.accent}33)}
+.orbit{transform-origin:64px 64px;animation:spin 18s linear infinite}
+.peak{transform-origin:64px 64px;animation:breathe 4.6s ease-in-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{0%,100%{transform:scale(.96);opacity:.92}50%{transform:scale(1.03);opacity:1}}
+h1{color:${p.accent};font-size:13px;margin:0;font-weight:600;letter-spacing:.22em;text-transform:uppercase}
+p{color:${p.text};opacity:.72;font-size:11px;margin:0;line-height:1.6;max-width:560px}
+.hint{margin-top:6px;padding:12px 14px;border:1px solid ${line};background:${panel};border-radius:10px;text-align:left;font-size:10px;line-height:1.7;max-width:620px}
+.hint strong{color:${p.accent};font-weight:600}
+button{margin-top:4px;padding:8px 16px;background:${p.accent}22;color:${p.accent};border:1px solid ${p.accent}66;border-radius:8px;cursor:pointer;font-family:inherit;font-size:11px;letter-spacing:.08em}
+button:hover{background:${p.accent}33}
+</style></head><body><div class="wrap">
+<svg class="mark" viewBox="0 0 128 128" role="img" aria-label="OLYMPUS">
+  <defs><linearGradient id="bp" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${p.accent}"/><stop offset="48%" stop-color="${p.purple}"/><stop offset="100%" stop-color="${p.cyan}"/></linearGradient></defs>
+  <g class="orbit"><circle cx="64" cy="64" r="52" fill="none" stroke="${p.accent}" stroke-width="0.8" stroke-dasharray="2 6" opacity=".45"/><circle cx="64" cy="12" r="2.6" fill="${p.cyan}"/></g>
+  <circle cx="64" cy="64" r="38" fill="none" stroke="${p.purple}" stroke-width="0.7" opacity=".35"/>
+  <path class="peak" d="M 64 34 L 86 86 L 73 86 L 64 62 L 55 86 L 42 86 Z" fill="url(#bp)"/>
+  <circle cx="64" cy="64" r="3" fill="${p.bg}"/>
+</svg>
+<h1>${opts.title}</h1>
+<p>${opts.detail}</p>
+${opts.hint ? `<div class="hint">${opts.hint}</div>` : ''}
+${opts.button ? `<button onclick="location.reload()">${opts.button}</button>` : ''}
+</div></body></html>`;
+}
+
 /** The window/taskbar icon, generated in the user's palette (cached). */
 function themedWindowIcon(): Electron.NativeImage | null {
   try {
@@ -1019,20 +1062,7 @@ function createWindow() {
     if ((errorCode === -102 || errorCode === -3) && loadFailCount < 8) {
       loadFailCount++;
       const attempt = loadFailCount;
-      const reconnectHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reconnecting</title>
-<style>
-body{margin:0;padding:40px;background:#0A0E16;color:#B8B8B8;font-family:ui-monospace,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6;display:flex;align-items:center;justify-content:center;height:100vh}
-.box{text-align:center}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#D4A574;margin:0 3px;animation:p 1.2s infinite ease-in-out}
-.dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}
-@keyframes p{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
-h1{color:#D4A574;font-size:14px;margin:14px 0 6px;font-weight:600;letter-spacing:.05em}
-p{color:#8B8B8B;font-size:11px;margin:0}
-</style></head><body><div class="box">
-<div><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-<h1>RECONNECTING THE WORKSPACE</h1>
-<p>attempt ${attempt} of 8 — probing the server, respawning if needed, reloading on green…</p>
-</div></body></html>`;
+      const reconnectHtml = brandPage({ title: 'Reconnecting the workspace', detail: `Attempt ${attempt} of 8 — probing the server, respawning if needed, reloading on green…` });
       mainWindow?.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(reconnectHtml));
       void (async () => {
         // Respawn when we own the server and it died.
@@ -1056,29 +1086,7 @@ p{color:#8B8B8B;font-size:11px;margin:0}
       loadFailCount = 0; // exhausted — reset for the manual Reload click.
     }
     // Build an inline error page (data: URL) so we don't depend on Next.js.
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Olympus failed to load</title>
-<style>
-body{margin:0;padding:40px;background:#0A0E16;color:#B8B8B8;font-family:ui-monospace,Menlo,Monaco,Consolas,monospace;font-size:13px;line-height:1.6}
-h1{color:#D4A574;font-size:16px;margin:0 0 16px 0;font-weight:600;letter-spacing:0.05em}
-.code{color:#C4756A;font-weight:600}
-.hint{color:#8B8B8B;margin-top:24px;padding:12px;background:#0E1320;border-left:2px solid #D4A574}
-button{margin-top:20px;padding:8px 16px;background:#D4A57422;color:#D4A574;border:1px solid #D4A57466;border-radius:4px;cursor:pointer;font-family:inherit;font-size:12px}
-button:hover{background:#D4A57433}
-</style></head><body>
-<h1>OLYMPUS — Failed to load the workspace</h1>
-<p>The Next.js dev server at <code>${BASE_URL}</code> could not be loaded.</p>
-<p>Error <span class="code">${errorCode}</span>: ${errorDescription}</p>
-<p>This usually means the dev server crashed or is still compiling. Check the console output for details.</p>
-<div class="hint">
-<strong>Try:</strong>
-<ul style="margin:8px 0 0 0;padding-left:20px">
-<li>Wait 30 seconds and reload.</li>
-<li>Close and reopen OLYMPUS (<code>olympus dev</code>).</li>
-<li>Run <code>node scripts/olympus-doctor.js</code> to verify the installation.</li>
-</ul>
-</div>
-<button onclick="location.reload()">Reload</button>
-</body></html>`;
+    const html = brandPage({ title: 'OLYMPUS — failed to load the workspace', detail: `The server at ${BASE_URL} could not be loaded (error ${errorCode}: ${errorDescription}).`, hint: 'Wait 30 seconds and reload. If it persists, run <strong>node scripts/olympus-doctor.js</strong> and check the console output.', button: 'Reload' });
     mainWindow?.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
   });
 

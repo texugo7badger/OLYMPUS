@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="OLYMPUS Celestial theme">
+  <rect width="640" height="360" rx="18" fill="#000000"/>
+  <rect x="18" y="18" width="604" height="30" rx="8" fill="#060606"/>
+  <circle cx="34" cy="33" r="5" fill="#E8E8E8"/>
+  <text x="48" y="37" font-family="ui-monospace,monospace" font-size="12" fill="#FFFFFF">OLYMPUS · Celestial</text>
+  <text x="560" y="37" font-family="ui-monospace,monospace" font-size="10" fill="#BDBDBD">dark</text>
+  <rect x="18" y="60" width="180" height="282" rx="10" fill="#060606"/>
+  <rect x="210" y="60" width="412" height="160" rx="10" fill="#0C0C0C"/>
+  <rect x="210" y="232" width="200" height="110" rx="10" fill="#0C0C0C"/>
+  <rect x="422" y="232" width="200" height="110" rx="10" fill="#0C0C0C"/>
+  <path d="M300 176 L326 112 L352 176 L338 176 L326 146 L314 176 Z" fill="#E8E8E8"/>
+  <circle cx="326" cy="96" r="4" fill="#B9A7E0"/>
+  <rect x="230" y="196" width="120" height="8" rx="4" fill="#E8E8E8" opacity=".9"/>
+  <rect x="230" y="210" width="70" height="5" rx="2.5" fill="#BDBDBD" opacity=".6"/>
+  <rect x="228" y="248" width="80" height="7" rx="3" fill="#E8E8E8"/>
+  <rect x="228" y="262" width="120" height="5" rx="2.5" fill="#BDBDBD" opacity=".5"/>
+  <rect x="440" y="248" width="80" height="7" rx="3" fill="#A9D6E5"/>
+  <rect x="440" y="262" width="120" height="5" rx="2.5" fill="#BDBDBD" opacity=".5"/>
+  <g><rect x="28" y="90" width="34" height="18" rx="4" fill="#E8E8E8"/><rect x="70" y="90" width="34" height="18" rx="4" fill="#C9C9C9"/><rect x="112" y="90" width="34" height="18" rx="4" fill="#9DB7D8"/><rect x="154" y="90" width="34" height="18" rx="4" fill="#9FCFAF"/><rect x="28" y="116" width="34" height="18" rx="4" fill="#B9A7E0"/><rect x="70" y="116" width="34" height="18" rx="4" fill="#9FD6C7"/><rect x="112" y="116" width="34" height="18" rx="4" fill="#E0A0A0"/><rect x="154" y="116" width="34" height="18" rx="4" fill="#A9D6E5"/></g>
+  <text x="28" y="330" font-family="ui-monospace,monospace" font-size="9" fill="#BDBDBD">celestial · text #FFFFFF · dim #BDBDBD</text>
+</svg>

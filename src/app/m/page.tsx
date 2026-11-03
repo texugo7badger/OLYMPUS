@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Loader2, Palette, RefreshCw, Sparkles, X } from 'lucide-react';
 import MobileAmbient from '@/components/olympus/mobile-ambient';
 import { THEME_PRESETS, applyTheme, normalizeThemeState, type ThemeState } from '@/lib/theme';
+import { LANGUAGES } from '@/lib/i18n';
 
 type Project = {
   slug: string;
@@ -64,6 +65,7 @@ export default function MobileCompanion() {
   const [themeOpen, setThemeOpen] = useState(false);
   const [themeBusy, setThemeBusy] = useState(false);
   const [ambient, setAmbient] = useState(true);
+  const [lang, setLang] = useState('en');
   const themeStampRef = useRef<string>('');
   const abortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
@@ -131,6 +133,11 @@ export default function MobileCompanion() {
       if (cached) applyLocalTheme(JSON.parse(cached));
     } catch { /* private */ }
     void pullTheme();
+    // v0.0.61 — the phone speaks the desktop's language, not the browser's.
+    fetch('/api/olympus/language', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.language) setLang(d.language); })
+      .catch(() => { /* keep en */ });
     const timer = setInterval(() => {
       if (document.visibilityState !== 'hidden' && !themeOpen) void pullTheme();
     }, 10_000);
@@ -264,7 +271,8 @@ export default function MobileCompanion() {
       return;
     }
     const rec = new SR();
-    rec.lang = navigator.language || 'en-US';
+    const speech = LANGUAGES.find((l) => l.id === lang)?.speech || navigator.language || 'en-US';
+    rec.lang = speech;
     rec.interimResults = true;
     rec.continuous = false;
     rec.onresult = (ev: any) => {
@@ -369,8 +377,11 @@ export default function MobileCompanion() {
             try {
               const said = `${campaign}. ${run?.line || ''}`;
               if (window.speechSynthesis) {
+                const speech = LANGUAGES.find((l) => l.id === lang)?.speech || navigator.language || 'en-US';
                 window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(new SpeechSynthesisUtterance(said));
+                const utter = new SpeechSynthesisUtterance(said);
+                utter.lang = speech;
+                window.speechSynthesis.speak(utter);
               }
             } catch { /* no voice */ }
           }}

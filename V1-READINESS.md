@@ -1,6 +1,6 @@
 # OLYMPUS — v1.0 readiness
 
-> v0.0.60 · 2026-11-03 · **GO for a release candidate after two named gates**
+> v0.0.61 · 2026-11-03 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
 > this build "certified v1.0" until those gates are green.** This page is the
 > report; it does not claim what was not run.
@@ -32,6 +32,7 @@
 | v0.0.58 | mobile companion | QR pairing, /m, voice, git, mobile preview; spawn tool bound |
 | v0.0.59 | talent surface | /talent one click; launch floor; window-bounded hibernation; token fill |
 | v0.0.60 | remote companion | Cloudflare tunnel, theme both ways, ambient particles, one boot loader, archive, source-only git |
+| v0.0.61 | any screen + stability | windowed default, crash-loop safe mode, performance mode, SVG docs, tests private |
 
 ## Evidence (this machine, 2026-11-03)
 
@@ -40,7 +41,7 @@
 | 60 FPS creative mode | offscreen probe: **Brain 60.1** · **Studio idle 59.8** · **Studio chat 60.2** |
 | Stability | soak **39 rounds PASS**, 5/5 probes every round, p95 ≤ 85 ms |
 | Memory bounded | available min **7,956 MB** (governor floor 1.2 GB); OLYMPUS RSS 4,457 → 4,331 MB (**−126 MB**), 32 processes |
-| Test battery | **132 PASS / 0 FAIL / 1 declared skip** (133 suites) at v0.0.60 |
+| Test battery | **132 PASS / 0 FAIL / 1 declared skip** (133 suites) at v0.0.61 |
 | Types/lint | `tsc --noEmit` and `lint` clean |
 | Security | `npm run security:audit` → **0 high / 0 critical**; 54 moderate transitive `glob/minimatch` advisories via the opencode/electron/npm tree, no safe non-breaking fix; the 3 Dependabot alerts are dismissed with that reason and 0 remain open |
 | Governor | live snapshot 15,459 MB total · 8,426 MB available · 45% · 36 processes · green |

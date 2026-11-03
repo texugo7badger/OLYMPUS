@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="OLYMPUS Rosewood theme">
+  <rect width="640" height="360" rx="18" fill="#0D0507"/>
+  <rect x="18" y="18" width="604" height="30" rx="8" fill="#15090C"/>
+  <circle cx="34" cy="33" r="5" fill="#D88A9A"/>
+  <text x="48" y="37" font-family="ui-monospace,monospace" font-size="12" fill="#F0DEE2">OLYMPUS · Rosewood</text>
+  <text x="560" y="37" font-family="ui-monospace,monospace" font-size="10" fill="#C0A2AA">dark</text>
+  <rect x="18" y="60" width="180" height="282" rx="10" fill="#15090C"/>
+  <rect x="210" y="60" width="412" height="160" rx="10" fill="#1D0E12"/>
+  <rect x="210" y="232" width="200" height="110" rx="10" fill="#1D0E12"/>
+  <rect x="422" y="232" width="200" height="110" rx="10" fill="#1D0E12"/>
+  <path d="M300 176 L326 112 L352 176 L338 176 L326 146 L314 176 Z" fill="#D88A9A"/>
+  <circle cx="326" cy="96" r="4" fill="#A87A9A"/>
+  <rect x="230" y="196" width="120" height="8" rx="4" fill="#D88A9A" opacity=".9"/>
+  <rect x="230" y="210" width="70" height="5" rx="2.5" fill="#C0A2AA" opacity=".6"/>
+  <rect x="228" y="248" width="80" height="7" rx="3" fill="#D88A9A"/>
+  <rect x="228" y="262" width="120" height="5" rx="2.5" fill="#C0A2AA" opacity=".5"/>
+  <rect x="440" y="248" width="80" height="7" rx="3" fill="#8FB5B5"/>
+  <rect x="440" y="262" width="120" height="5" rx="2.5" fill="#C0A2AA" opacity=".5"/>
+  <g><rect x="28" y="90" width="34" height="18" rx="4" fill="#D88A9A"/><rect x="70" y="90" width="34" height="18" rx="4" fill="#B87A6A"/><rect x="112" y="90" width="34" height="18" rx="4" fill="#7A8FB5"/><rect x="154" y="90" width="34" height="18" rx="4" fill="#8FAE8E"/><rect x="28" y="116" width="34" height="18" rx="4" fill="#A87A9A"/><rect x="70" y="116" width="34" height="18" rx="4" fill="#8FAEA0"/><rect x="112" y="116" width="34" height="18" rx="4" fill="#D86A6A"/><rect x="154" y="116" width="34" height="18" rx="4" fill="#8FB5B5"/></g>
+  <text x="28" y="330" font-family="ui-monospace,monospace" font-size="9" fill="#C0A2AA">rosewood · text #F0DEE2 · dim #C0A2AA</text>
+</svg>

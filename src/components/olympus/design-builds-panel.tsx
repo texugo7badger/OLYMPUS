@@ -14,9 +14,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, ChevronLeft, Flame, Loader2, Search, Share2, Snowflake, Sparkles, Sun, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronLeft, Flame, Gem, Loader2, Search, Share2, Snowflake, Sparkles, Sun, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { buildPrompt, describeBuild, type DesignBuildWithStats } from '@/lib/design-builds';
+import { buildPrompt, buildReadiness, describeBuild, type DesignBuildWithStats } from '@/lib/design-builds';
 import { BUILD_CATEGORIES } from '@/lib/build-categories';
 import BuildTalentPage from './build-talent-page';
 
@@ -152,7 +152,7 @@ export default function DesignBuildsPanel() {
         </div>
         <button onClick={() => setTutorial({ open: true, step: 0 })} className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-olympus-gold/25 text-olympus-text-dim hover:text-olympus-text">tutorial</button>
         <button onClick={() => setTalent({})} className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/15 text-olympus-purple ring-1 ring-olympus-purple/30 hover:bg-olympus-purple/25">
-          <Sparkles size={10} /> talent editor
+          <Gem size={10} /> talent editor
         </button>
         <button onClick={() => void load()} aria-label="Refresh builds" className="text-olympus-text-dim hover:text-olympus-gold"><Loader2 size={11} className={loading ? 'animate-spin' : ''} /></button>
       </header>
@@ -180,6 +180,7 @@ export default function DesignBuildsPanel() {
               {list.map((b) => {
                 const tier = TIER[b.stats.tier] ?? TIER.cold;
                 const Icon = tier.Icon;
+                const ready = buildReadiness(b).score;
                 return (
                   <button
                     key={b.id}
@@ -199,7 +200,7 @@ export default function DesignBuildsPanel() {
                       </span>
                     </div>
                     <div className="mt-0.5 text-[8px] font-mono text-olympus-text-dim">
-                      {b.god} · {b.demigods.length} agent{b.demigods.length === 1 ? '' : 's'} · {b.stats.samples} sample{b.stats.samples === 1 ? '' : 's'} · {(b.stats.rate * 100).toFixed(0)}% smoothed
+                      {b.god} · {b.demigods.length} agent{b.demigods.length === 1 ? '' : 's'} · {b.stats.samples} sample{b.stats.samples === 1 ? '' : 's'} · ready {ready}%
                     </div>
                     <p className="mt-1 text-[8px] font-mono text-olympus-text-dim/85 leading-relaxed line-clamp-2">{describeBuild(b)}</p>
                     <div className="mt-1.5 flex flex-wrap gap-1">

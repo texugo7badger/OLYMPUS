@@ -14,9 +14,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, ChevronLeft, Copy, Download, Loader2, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
+import { Check, ChevronLeft, Copy, Download, Gem, Loader2, Plus, Search, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BUILD_CATEGORIES, BUILD_LIMITS } from '@/lib/build-categories';
+import { buildReadiness } from '@/lib/design-builds';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { TALENT_PRESETS } from '@/lib/talent-presets';
 import TalentSigil from './talent-sigil';
@@ -62,6 +63,7 @@ export default function BuildTalentPage({
   const [budgetTokens, setBudgetTokens] = useState(initialBuild?.params?.budgetTokens ?? 16384);
   const [quality, setQuality] = useState<'max' | 'balanced'>(initialBuild?.params?.quality ?? 'max');
   const [category, setCategory] = useState(BUILD_CATEGORIES[0].id);
+  const readiness = buildReadiness({ name, signature, category, skills: [...skills], mcps: [...mcps], demigods: [...demigods] });
 
   const sets: Record<Slot, [Set<string>, (s: Set<string>) => void]> = {
     skills: [skills, setSkills], mcps: [mcps, setMcps], demigods: [demigods, setDemigods],
@@ -129,7 +131,7 @@ export default function BuildTalentPage({
     <div className="absolute inset-0 flex flex-col bg-olympus-bg overflow-hidden">
       <header className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-olympus-gold/15 bg-[linear-gradient(180deg,rgba(212,165,116,0.06),transparent)]">
         <button onClick={onClose} className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold"><ChevronLeft size={11} /> builds</button>
-        <Sparkles size={12} className="text-olympus-gold" />
+        <Gem size={12} className="text-olympus-gold" />
         <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-olympus-gold">talent studio</span>
         <span className="text-[8px] font-mono text-olympus-text-dim hidden sm:inline">name a combination · fork a shelf preset · publish it</span>
         <div className="ml-auto flex items-center gap-1.5">
@@ -156,6 +158,19 @@ export default function BuildTalentPage({
           </select>
           <label className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">task signature</label>
           <textarea value={signature} onChange={(e) => setSignature(e.target.value)} rows={3} placeholder="landing hero pricing auth migration…" className={cn(field, 'resize-none leading-relaxed')} />
+          <div className="rounded-lg border border-olympus-gold/15 bg-olympus-bg/40 p-2 space-y-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">build readiness</span>
+              <span className="ml-auto text-[10px] font-mono font-semibold text-olympus-green tabular-nums">{readiness.score}%</span>
+            </div>
+            <div className="h-1 rounded-full bg-olympus-bg overflow-hidden ring-1 ring-olympus-gold/10">
+              <div className="h-full rounded-full bg-olympus-green transition-[width] duration-300" style={{ width: `${readiness.score}%` }} />
+            </div>
+            <p className="text-[7.5px] font-mono text-olympus-text-dim">
+              {readiness.parts.slice(3).map((p) => `${p.label} ${p.have}/${p.need}`).join(' · ')}
+            </p>
+          </div>
+
           <div className="rounded-lg border border-olympus-gold/15 bg-olympus-bg/40 p-2 space-y-1.5">
             <div className="flex items-center gap-1.5">
               <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">execution profile</span>
@@ -232,7 +247,7 @@ export default function BuildTalentPage({
             );
           })}
           <div className="rounded-xl border border-olympus-gold/10 bg-olympus-gradient p-3">
-            <div className="flex items-center gap-1.5 text-[9px] font-mono text-olympus-gold"><Sparkles size={10} /> how the brain uses it</div>
+            <div className="flex items-center gap-1.5 text-[9px] font-mono text-olympus-gold"><Gem size={10} /> how the brain uses it</div>
             <p className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mt-1">
               A saved talent is a preference, not a promise: every dispatch still verifies its artifacts. Five wins at 80%+ promote the combination to a hot build; your edits teach the brain what fits your projects.
             </p>

@@ -69,6 +69,14 @@ export function setLanguage(lang: Language): void {
   current = lang;
   initialized = true;
   try { window.localStorage.setItem(LS_KEY, lang); } catch { /* private mode */ }
+  // v0.0.61 — the phone (and any second surface) reads the same choice.
+  try {
+    void fetch('/api/olympus/language', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: lang }),
+    }).catch(() => { /* offline */ });
+  } catch { /* no window */ }
   applyDocumentLang();
   emit();
 }

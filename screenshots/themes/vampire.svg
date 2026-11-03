@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="OLYMPUS Vampire theme">
+  <rect width="640" height="360" rx="18" fill="#080406"/>
+  <rect x="18" y="18" width="604" height="30" rx="8" fill="#0F0709"/>
+  <circle cx="34" cy="33" r="5" fill="#C23A45"/>
+  <text x="48" y="37" font-family="ui-monospace,monospace" font-size="12" fill="#F0E2E2">OLYMPUS · Vampire</text>
+  <text x="560" y="37" font-family="ui-monospace,monospace" font-size="10" fill="#BFA6A6">dark</text>
+  <rect x="18" y="60" width="180" height="282" rx="10" fill="#0F0709"/>
+  <rect x="210" y="60" width="412" height="160" rx="10" fill="#160A0D"/>
+  <rect x="210" y="232" width="200" height="110" rx="10" fill="#160A0D"/>
+  <rect x="422" y="232" width="200" height="110" rx="10" fill="#160A0D"/>
+  <path d="M300 176 L326 112 L352 176 L338 176 L326 146 L314 176 Z" fill="#C23A45"/>
+  <circle cx="326" cy="96" r="4" fill="#8E5A7A"/>
+  <rect x="230" y="196" width="120" height="8" rx="4" fill="#C23A45" opacity=".9"/>
+  <rect x="230" y="210" width="70" height="5" rx="2.5" fill="#BFA6A6" opacity=".6"/>
+  <rect x="228" y="248" width="80" height="7" rx="3" fill="#C23A45"/>
+  <rect x="228" y="262" width="120" height="5" rx="2.5" fill="#BFA6A6" opacity=".5"/>
+  <rect x="440" y="248" width="80" height="7" rx="3" fill="#6BAEB5"/>
+  <rect x="440" y="262" width="120" height="5" rx="2.5" fill="#BFA6A6" opacity=".5"/>
+  <g><rect x="28" y="90" width="34" height="18" rx="4" fill="#C23A45"/><rect x="70" y="90" width="34" height="18" rx="4" fill="#A85A3A"/><rect x="112" y="90" width="34" height="18" rx="4" fill="#6B8FB5"/><rect x="154" y="90" width="34" height="18" rx="4" fill="#7BAE8E"/><rect x="28" y="116" width="34" height="18" rx="4" fill="#8E5A7A"/><rect x="70" y="116" width="34" height="18" rx="4" fill="#6BAE9B"/><rect x="112" y="116" width="34" height="18" rx="4" fill="#D64A4A"/><rect x="154" y="116" width="34" height="18" rx="4" fill="#6BAEB5"/></g>
+  <text x="28" y="330" font-family="ui-monospace,monospace" font-size="9" fill="#BFA6A6">vampire · text #F0E2E2 · dim #BFA6A6</text>
+</svg>

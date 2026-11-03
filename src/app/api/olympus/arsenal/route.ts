@@ -30,6 +30,27 @@ function listDirs(dir: string): string[] {
   } catch { return []; }
 }
 
+/** Skills are NESTED (superpowers/writing-plans/SKILL.md, accessibility/...).
+ *  The old top-level listing missed 100+ skills, so builds referenced names
+ *  the arsenal "did not have". Walk to depth 3 and index the canonical
+ *  basename (the name the builds and the skill index use). */
+function listSkills(): string[] {
+  const base = path.join(ROOT, '.opencode', 'skills');
+  const out = new Set<string>();
+  const walk = (dir: string, depth: number) => {
+    let entries: fs.Dirent[];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (!e.isDirectory() || e.name.startsWith('.')) continue;
+      const full = path.join(dir, e.name);
+      try { if (fs.existsSync(path.join(full, 'SKILL.md'))) out.add(e.name); } catch { /* ignore */ }
+      if (depth < 3) walk(full, depth + 1);
+    }
+  };
+  walk(base, 0);
+  return [...out].sort();
+}
+
 function listDemigods(): string[] {
   const base = path.join(ROOT, '.opencode', 'prompts', 'agents', 'demigods');
   const out = new Set<string>();
@@ -54,7 +75,7 @@ export async function GET() {
     mcps = Object.keys(cfg?.mcp ?? {}).sort();
   } catch { /* absent */ }
   const body = {
-    skills: listDirs(path.join(ROOT, '.opencode', 'skills')),
+    skills: listSkills(),
     mcps,
     demigods: listDemigods(),
   };

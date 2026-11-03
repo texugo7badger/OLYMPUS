@@ -685,3 +685,11 @@ The base release — the most complete and alternative way to run OLYMPUS.
 ## v0.0.59 — 2026-11-03
 - /talent one click + status-bar button; hydration-stable sigil; god hero contrast.
 - Hop launch floor (150s); hibernation auto-resume bounded by the window; token fill from session_v2.
+
+## v0.0.61 — 2026-11-03
+- Windowed default; fullscreen opt-in while the Linux renderer crash is cured.
+- Crash-loop guard: 3 crashes/2min relaunch once in safe mode; no infinite loop.
+- Warm page before load; chat restores last 30 rows and caps Markdown at 16k.
+- Performance mode (battery-saver brain, no particles, stable motion).
+- Nakkas SVG docs: architecture, hop runtime, token economy, testing, mobile, languages.
+- TESTING/RESPONSIVE/LANGUAGES pages; test suites become maintainer-local.

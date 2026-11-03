@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.60, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.61, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -130,10 +130,10 @@ Read [MOBILE.md](MOBILE.md) for the security model and the honest limits.
 the god's own animated symbol, ten sector chips, five temperature dots, speed,
 output budget and quality — saved, exportable and in the build prompt.
 
-## Themes — twelve families and a palette lab
+## Themes — eighteen families and a palette lab
 
-Every theme repaints the app, the terminal, the brain, the loader, the tray and
-the system icon. The full gallery lives in [screenshots/THEMES.md](screenshots/THEMES.md);
+Every theme repaints the app, the terminal, the brain, the loader, the tray,
+the system icon and the scrollbars. The full gallery lives in [screenshots/THEMES.md](screenshots/THEMES.md);
 click a card to open it.
 
 | | | |
@@ -142,6 +142,8 @@ click a card to open it.
 | [<img src="screenshots/themes/violet.svg" width="220" alt="Violet" />](screenshots/themes/violet.svg) | [<img src="screenshots/themes/forest.svg" width="220" alt="Forest" />](screenshots/themes/forest.svg) | [<img src="screenshots/themes/ice.svg" width="220" alt="Ice" />](screenshots/themes/ice.svg) |
 | [<img src="screenshots/themes/parchment.svg" width="220" alt="Parchment" />](screenshots/themes/parchment.svg) | [<img src="screenshots/themes/paper.svg" width="220" alt="Paper" />](screenshots/themes/paper.svg) | [<img src="screenshots/themes/mist.svg" width="220" alt="Mist" />](screenshots/themes/mist.svg) |
 | [<img src="screenshots/themes/blossom.svg" width="220" alt="Blossom" />](screenshots/themes/blossom.svg) | [<img src="screenshots/themes/sand.svg" width="220" alt="Sand" />](screenshots/themes/sand.svg) | [<img src="screenshots/themes/mint.svg" width="220" alt="Mint" />](screenshots/themes/mint.svg) |
+| [<img src="screenshots/themes/vampire.svg" width="220" alt="Vampire" />](screenshots/themes/vampire.svg) | [<img src="screenshots/themes/celestial.svg" width="220" alt="Celestial" />](screenshots/themes/celestial.svg) | [<img src="screenshots/themes/abyss.svg" width="220" alt="Abyss" />](screenshots/themes/abyss.svg) |
+| [<img src="screenshots/themes/rosewood.svg" width="220" alt="Rosewood" />](screenshots/themes/rosewood.svg) | [<img src="screenshots/themes/ivory.svg" width="220" alt="Ivory" />](screenshots/themes/ivory.svg) | [<img src="screenshots/themes/arctic.svg" width="220" alt="Arctic" />](screenshots/themes/arctic.svg) |
 
 Beyond the presets, the **palette lab** generates all 14 colors of a family
 from a hue + harmony, with contrast floors (text ≥ 7:1, dim ≥ 4.5:1, accent

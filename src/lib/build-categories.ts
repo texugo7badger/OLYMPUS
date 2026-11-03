@@ -65,7 +65,7 @@ export const BUILD_CATEGORIES: BuildCategory[] = [
   },
   {
     id: 'curation', name: 'Curation', icon: '/build-icons/curation.svg', iconStatic: '/build-icons/static/curation.svg', color: '#B79BE0',
-    skills: ['docs-verifier', 'skill-indexer'], mcps: ['olympus-craft'], demigods: ['docs-verifier', 'pattern-extractor'],
+    skills: ['writing-guidelines', 'writing-skills'], mcps: ['olympus-craft'], demigods: ['docs-verifier', 'skill-indexer', 'pattern-extractor'],
   },
 ];
 
