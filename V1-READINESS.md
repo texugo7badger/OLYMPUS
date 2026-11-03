@@ -5,7 +5,7 @@
 > this build "certified v1.0" until those gates are green.** This page is the
 > report; it does not claim what was not run.
 
-## The ladder that shipped (v0.0.38 → v0.0.50)
+## The ladder that shipped (v0.0.38 → v0.0.58)
 
 | Version | Theme | The measured change |
 |---|---|---|
@@ -31,21 +31,22 @@
 | v0.0.57 | talent simplified | god hero, sector chips, five temperature dots |
 | v0.0.58 | mobile companion | QR pairing, /m, voice, git, mobile preview; spawn tool bound |
 
-## Evidence (this machine, 2026-11-02)
+## Evidence (this machine, 2026-11-03)
 
 | Claim | Evidence |
 |---|---|
 | 60 FPS creative mode | offscreen probe: **Brain 60.1** · **Studio idle 59.8** · **Studio chat 60.2** |
 | Stability | soak **39 rounds PASS**, 5/5 probes every round, p95 ≤ 85 ms |
 | Memory bounded | available min **7,956 MB** (governor floor 1.2 GB); OLYMPUS RSS 4,457 → 4,331 MB (**−126 MB**), 32 processes |
-| Test battery | **130 PASS / 0 FAIL / 1 declared skip** (131 suites) at v0.0.55; v0.0.56–58 targeted suites green |
+| Test battery | **131 PASS / 0 FAIL / 1 declared skip** (132 suites) at v0.0.58 |
 | Types/lint | `tsc --noEmit` and `lint` clean |
 | Security | `npm run security:audit` → **0 high / 0 critical**; 27 moderate transitive `glob/minimatch` advisories via the opencode/npm tree, no safe non-breaking fix |
 | Governor | live snapshot 15,459 MB total · 8,426 MB available · 45% · 36 processes · green |
 | Editor | VSIX `olympus-bridge-0.0.15.vsix` (9 files, 27 KB), compiled + packaged |
-| Projects | AIME probe: parked 2/17, cause `Agent not found: "athena-hop"`, next 4 hops named |
+| Projects | AIME campaign `cmp_mw0lu2wt9cwo16`: 24/41 at 09:15Z, 3 in flight, 0 parked; per-hop report in `campaign-report-aime.md` |
+| Mobile companion | `/m` rendered in Chromium 390×844 against the live server; 17 assertions in `mobile-companion` |
 
-Machine-local evidence: `~/Documents/OLYMPUS-plan/soak-v0.0.50.md`; the latest campaign report is `aime-night-report.md`.
+Machine-local evidence: `~/Documents/OLYMPUS-plan/soak-v0.0.50.md`; the latest campaign report is `~/Documents/OLYMPUS-plan/campaign-report-aime.md`.
 
 ## The two gates before a v1.0 candidate
 
