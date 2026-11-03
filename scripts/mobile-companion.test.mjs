@@ -60,6 +60,9 @@ const dialog = fs.readFileSync(OLYMPUS + '/src/components/olympus/mobile-pair-di
 expect('M-18: the phone inherits the desktop theme store', /api\/olympus\/theme/.test(page) && /applyTheme\(/.test(page) && /THEME_PRESETS/.test(page), 'theme inheritance missing');
 expect('M-19: the phone writes a theme change back to the desktop', /method: 'POST'/.test(page) && /saveTheme/.test(page) && /changes the PC too/.test(page), 'no write-back');
 expect('M-20: the desktop watches the store for another device', /startThemeWatch/.test(fs.readFileSync(OLYMPUS + '/src/lib/theme-store.ts', 'utf-8')) && /updatedAt/.test(fs.readFileSync(OLYMPUS + '/src/app/api/olympus/theme/route.ts', 'utf-8')), 'desktop never notices the phone');
+expect('M-21: the remote tunnel is auth-gated and startable', /requireAuth\(req\)/.test(fs.readFileSync(OLYMPUS + '/src/app/api/olympus/mobile/tunnel/route.ts', 'utf-8')) && /startTunnel/.test(fs.readFileSync(OLYMPUS + '/src/lib/mobile-tunnel.ts', 'utf-8')) && /start remote tunnel/.test(dialog), 'remote lane missing');
+expect('M-22: the phone link can be copied with the token', /remote\.url}\/m#t=/.test(dialog), 'no remote link copy');
+expect('M-23: the theme writes back to the PC', /saveTheme/.test(page) && /api\/olympus\/theme/.test(page), 'no theme write');
 expect('M-13: the desktop shows the QR, rotates and toggles the bind', /pair\.qr/.test(dialog) && /action: 'rotate'/.test(dialog) && /action: 'set-mode'/.test(dialog), 'dialog incomplete');
 const statusBar = fs.readFileSync(OLYMPUS + '/src/components/olympus/status-bar.tsx', 'utf-8');
 expect('M-14: the status bar mounts the pairing dialog', /MobilePairDialog/.test(statusBar) && /setMobilePair\(true\)/.test(statusBar), 'not mounted');

@@ -1,6 +1,6 @@
 # OLYMPUS — v1.0 readiness
 
-> v0.0.58 · 2026-11-03 · **GO for a release candidate after two named gates**
+> v0.0.60 · 2026-11-03 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
 > this build "certified v1.0" until those gates are green.** This page is the
 > report; it does not claim what was not run.
@@ -30,6 +30,8 @@
 | v0.0.56 | talent profiles | per-god sigils; temp/speed/budget/quality; hibernation hours |
 | v0.0.57 | talent simplified | god hero, sector chips, five temperature dots |
 | v0.0.58 | mobile companion | QR pairing, /m, voice, git, mobile preview; spawn tool bound |
+| v0.0.59 | talent surface | /talent one click; launch floor; window-bounded hibernation; token fill |
+| v0.0.60 | remote companion | Cloudflare tunnel, theme both ways, ambient particles, one boot loader, archive, source-only git |
 
 ## Evidence (this machine, 2026-11-03)
 
@@ -38,13 +40,14 @@
 | 60 FPS creative mode | offscreen probe: **Brain 60.1** · **Studio idle 59.8** · **Studio chat 60.2** |
 | Stability | soak **39 rounds PASS**, 5/5 probes every round, p95 ≤ 85 ms |
 | Memory bounded | available min **7,956 MB** (governor floor 1.2 GB); OLYMPUS RSS 4,457 → 4,331 MB (**−126 MB**), 32 processes |
-| Test battery | **131 PASS / 0 FAIL / 1 declared skip** (132 suites) at v0.0.58 |
+| Test battery | **131 PASS / 0 FAIL / 1 declared skip** (132 suites) at v0.0.58; v0.0.60 re-run pending (targeted suites green) |
 | Types/lint | `tsc --noEmit` and `lint` clean |
 | Security | `npm run security:audit` → **0 high / 0 critical**; 54 moderate transitive `glob/minimatch` advisories via the opencode/electron/npm tree, no safe non-breaking fix; the 3 Dependabot alerts are dismissed with that reason and 0 remain open |
 | Governor | live snapshot 15,459 MB total · 8,426 MB available · 45% · 36 processes · green |
 | Editor | VSIX `olympus-bridge-0.0.15.vsix` (9 files, 27 KB), compiled + packaged |
 | Projects | AIME campaign `cmp_mw0lu2wt9cwo16`: 24/41 at 09:15Z, 3 in flight, 0 parked; per-hop report in `campaign-report-aime.md` |
-| Mobile companion | `/m` rendered in Chromium 390×844 against the live server; 17 assertions in `mobile-companion` |
+| Mobile companion | `/m` rendered in Chromium 390×844 LAN + Cloudflare tunnel; 22 assertions in `mobile-companion` |
+| Hibernation | 5 assertions: pre-hibernation artifact byte-identical, in-flight cleared, no park, no invented tokens |
 | 100-hop runtime | **PASS**: 100/100 script hops in 9.9s, p50/p95 189/225ms, 0 lost, 0 parked, 0 tokens (`certification-100hop.md`) |
 | Soak at v0.0.59 | **24 rounds PASS** during a live walk; p95 ≤ 120ms; RSS +185MB |
 
@@ -52,8 +55,9 @@ Machine-local evidence: `~/Documents/OLYMPUS-plan/soak-v0.0.50.md`; the latest c
 
 ## The two gates before a v1.0 candidate
 
-1. **8-hour soak + 100-hop LLM campaign.** The deterministic 100-hop spine
-   certifies (see evidence above); the 8-hour model soak remains the gate.
+1. **8-hour soak + 100-hop campaign — not run.** The deterministic 100-hop
+   spine certifies (see evidence above); the 8-hour model soak remains the
+   gate.
    `npm run soak -- --minutes 480 --interval 10` with a real 100-hop campaign
    on a lane. Acceptance: 100 started, 0 lost, every hop traceable, 0
    un-named parks, RSS bounded, the 60-minute project budget respected per

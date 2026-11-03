@@ -37,7 +37,7 @@ expect('S4: npm exposes the soak (60 min) and soak:short',
   typeof pkg.scripts?.soak === 'string' && typeof pkg.scripts?.['soak:short'] === 'string',
   'the harness is not runnable from npm');
 expect('S5: the docs record the measured 2-minute PASS',
-  /40 rounds/.test(docs) && /8,330 MB/.test(docs) && /−121 MB|−121/.test(docs),
+  /24 rounds/.test(docs) && /7,357 MB/.test(docs) && /\+185 MB/.test(docs),
   'the measured run is not recorded');
 expect('S6: the docs do NOT claim the 8h/100-hop certification',
   /not\s+claimed|not\s+run|not\s+part of this slice/i.test(docs) && !/8-hour[^\n]*PASS/i.test(docs) && !/100-hop[^\n]*PASS/i.test(docs),

@@ -15,6 +15,11 @@ ok('GH-1: create/connect/push are explicit actions', /action === 'create'/.test(
 ok('GH-2: no stored token — gh auth is the user credential', /ghReady/.test(route) && /gh', \['auth', 'status'\]/.test(route) && !/process\.env\.[A-Z_]*TOKEN/.test(route), 'a token is stored');
 ok('GH-3: the GitHub URL is validated and no shell is used', /github/.test(route) && /repo', 'create'/.test(route) && /execFileSync/.test(route) && !/\bexecSync\(/.test(route), 'shell injection surface');
 ok('GH-4: the profile exposes create/push and commits', /githubAction\('create'/.test(fs.readFileSync(O + '/src/components/olympus/project-profile-card.tsx', 'utf-8')), 'no UI');
+ok('GH-5: a source-only .gitignore is written before any push', /GITIGNORE_LINES/.test(route) && /'node_modules\/'/.test(route) && /'\.next\/'/.test(route) && /'\.env'/.test(route) && /ensureGitignore\(root\)/.test(route), 'dependencies/secrets can be staged');
+ok('GH-6: create and push prepare the repo (init + first commit)', /function ensureRepo/.test(route) && /ensureRepo\(root\)/.test(route) && /git', \['init', '-b', 'main'\]/.test(route) && /initial OLYMPUS snapshot/.test(route), 'gh create has nothing to push');
+const projectsRoute = fs.readFileSync(O + '/src/app/api/olympus/projects/route.ts', 'utf-8');
+ok('GH-7: DELETE archives the project (never erases)', /export async function DELETE/.test(projectsRoute) && /deleteProject\(slug\)/.test(projectsRoute) && /09_Archive/.test(projectsRoute), 'no safe archive path');
+ok('GH-8: the profile exposes the two-step archive', /confirmArchive/.test(fs.readFileSync(O + '/src/components/olympus/project-profile-card.tsx', 'utf-8')), 'no archive UI');
 const plan = fs.readFileSync(O + '/src/lib/hibernation.ts', 'utf-8');
 ok('HIB-1: the night plan is bounded to 24h', /Math\.min\(24/.test(plan) && /until/.test(plan), 'unbounded night');
 console.log(f === 0 ? '\ngithub-connect: all green.' : `\ngithub-connect: ${f} failed.`); process.exit(f ? 1 : 0);
