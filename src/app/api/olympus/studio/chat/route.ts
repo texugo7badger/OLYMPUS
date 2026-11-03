@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
 import { readHopEvents } from '@/lib/hop-runtime/hop-events';
 import { getActiveProject } from '@/lib/project-context';
 import { godIntro, godFallback, godThanks, isIntroIntent, isThanksIntent } from '@/lib/god-personas';
@@ -87,6 +88,10 @@ function langOf(raw: unknown): Lang {
 }
 
 export async function POST(req: NextRequest) {
+  // v0.0.63 — this route answers from live state; on a public tunnel it must
+  // not be readable (or triggerable) by a stranger.
+  const authError = requireAuth(req);
+  if (authError) return authError;
   let body: any = {};
   try { body = await req.json(); } catch { /* empty */ }
   const question = String(body?.question || '').slice(0, 800);

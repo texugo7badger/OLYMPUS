@@ -9,13 +9,13 @@ English, so a partial dictionary never renders blank.
 
 | Locale | Native | English | Speech | Coverage |
 |---|---|---|---|---|
-| `en` | English | English | `en-US` | core + projects + studio |
-| `pt-BR` | Português | Portuguese | `pt-BR` | core + projects + studio |
-| `es` | Español | Spanish | `es-ES` | core + projects + studio |
-| `fr` | Français | French | `fr-FR` | core + projects + studio |
-| `de` | Deutsch | German | `de-DE` | core + projects + studio |
-| `ja` | 日本語 | Japanese | `ja-JP` | core + projects + studio |
-| `zh` | 中文 | Chinese | `zh-CN` | core + projects + studio |
+| `en` | English | English | `en-US` | core + projects + studio + mobile |
+| `pt-BR` | Português | Portuguese | `pt-BR` | core + projects + studio + mobile |
+| `es` | Español | Spanish | `es-ES` | core + projects + studio + mobile |
+| `fr` | Français | French | `fr-FR` | core + projects + studio + mobile |
+| `de` | Deutsch | German | `de-DE` | core + projects + studio + mobile |
+| `ja` | 日本語 | Japanese | `ja-JP` | core + projects + studio + mobile |
+| `zh` | 中文 | Chinese | `zh-CN` | core + projects + studio + mobile |
 
 ## What localizes
 
@@ -26,6 +26,11 @@ English, so a partial dictionary never renders blank.
 - **Gods** — names and domains (*Apolo, Atena, Hefesto, Perséfone* in
   Português; *アポロン, アテナ* in 日本語).
 - **Voice** — the matching speech locale for TTS/STT.
+- **Mobile** — the companion (`/m`) and the mobile studio (`/m/studio`) are
+  complete in all seven locales (v0.0.63); the phone adopts the desktop's
+  language on boot and only changes it when the user picks one.
+- **God character** — epithet and tone for all ten gods in all seven locales
+  (`src/lib/god-personas.ts`), injected into the studio prompt.
 
 ## Adding a locale
 

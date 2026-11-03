@@ -38,6 +38,11 @@ function findBinary(): string | null {
   return candidates.find((p) => { try { return fs.statSync(p).isFile(); } catch { return false; } }) ?? null;
 }
 
+/** v0.0.63 — shared with the preview tunnel (one binary discovery, one truth). */
+export function cloudflaredBinary(): string | null {
+  return findBinary();
+}
+
 function alive(pid: number): boolean {
   try { process.kill(pid, 0); return true; } catch { return false; }
 }

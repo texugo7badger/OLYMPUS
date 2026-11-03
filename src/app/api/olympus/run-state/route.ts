@@ -23,7 +23,8 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireReadAuth } from '@/lib/auth';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -105,7 +106,10 @@ function candidateLanes(slug: string | null): string[] {
   return [...new Set(out)];
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // v0.0.63 — the campaign truth is read-gated like the rest of the panel.
+  const authError = requireReadAuth(req);
+  if (authError) return authError;
   // v0.0.22 (W2) — reading the state also performs the one-time migration
   // from the legacy files; no reconcile writes on every poll.
   const strategyState = readStrategyState();

@@ -834,7 +834,7 @@ export async function maybeWalkThePlan(opts: {
  * choice button labels ("s — approve the walk") match exactly like a
  * bare "s". The old exact-word Set missed every multi-word approval.
  */
-const APPROVE_RE = /^(s\b|sim\b|y\b|yes\b|ok\b|approve\b|aprovar\b|seguir\b|continua[r]?\b|start\b|go\b)/i;
+const APPROVE_RE = /^(s\b|sim\b|y\b|yes\b|ok\b|approve\b|aprovar\b|aprovado\b|aprovada\b|seguir\b|continua[r]?\b|start\b|go\b)/i;
 const ABORT_RE = /^(n\b|nao\b|não\b|no\b|abort\b|abortar\b|parar\b|stop\b|cancela[r]?\b)/i;
 
 export interface PlanWalkAnswerResolution {

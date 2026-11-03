@@ -31,6 +31,7 @@ export const LANGUAGES = [
 export type Language = (typeof LANGUAGES)[number]['id'];
 
 const LS_KEY = 'olympus:language';
+const LS_STAMP = 'olympus:language-updated-at';
 const DEFAULT_LANGUAGE: Language = 'en';
 let current: Language = DEFAULT_LANGUAGE;
 let initialized = false;
@@ -47,11 +48,55 @@ function emit(): void {
 function init(): void {
   if (initialized || typeof window === 'undefined') return;
   initialized = true;
+  let hadLocal = false;
+  let localStamp = '';
   try {
     const stored = window.localStorage.getItem(LS_KEY);
-    if (isLanguage(stored)) current = stored;
+    if (isLanguage(stored)) { current = stored; hadLocal = true; }
+    localStamp = window.localStorage.getItem(LS_STAMP) || '';
   } catch { /* private mode */ }
   applyDocumentLang();
+  // v0.0.63 — THE BOOT RECONCILIATION. Before this, the desktop only pushed
+  // its language when the user CHANGED it: a pt-BR desktop whose
+  // ~/.olympus/language.json still said 'en' made the phone speak English.
+  // Now the desktop pushes its stored choice on boot; the companion (`/m`)
+  // only READS — the phone must never overwrite the desktop's language.
+  void reconcileLanguageOnBoot(hadLocal, localStamp);
+}
+
+let bootSynced = false;
+async function reconcileLanguageOnBoot(hadLocal: boolean, localStamp: string): Promise<void> {
+  if (bootSynced || typeof window === 'undefined') return;
+  bootSynced = true;
+  const companion = window.location.pathname.startsWith('/m');
+  try {
+    const r = await fetch('/api/olympus/language', { cache: 'no-store' });
+    const d = await r.json().catch(() => null);
+    const serverLang = isLanguage(d?.language) ? d.language : null;
+    const serverStamp = typeof d?.updatedAt === 'string' ? d.updatedAt : '';
+    // The companion never overwrites the desktop; it adopts the shared value.
+    // The desktop pushes only when its local choice is the newer one (or when
+    // it predates the stamp — the old install that never pushed).
+    const localIsNewer = !serverStamp || !localStamp || localStamp >= serverStamp;
+    if (hadLocal && !companion && localIsNewer) {
+      await fetch('/api/olympus/language', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: current }),
+      });
+      try { window.localStorage.setItem(LS_STAMP, new Date().toISOString()); } catch { /* private */ }
+      return;
+    }
+    if (serverLang && serverLang !== current) {
+      current = serverLang;
+      try {
+        window.localStorage.setItem(LS_KEY, current);
+        window.localStorage.setItem(LS_STAMP, serverStamp || new Date().toISOString());
+      } catch { /* private */ }
+      applyDocumentLang();
+      emit();
+    }
+  } catch { /* offline: the local choice stands */ }
 }
 
 function applyDocumentLang(): void {
@@ -68,7 +113,10 @@ export function setLanguage(lang: Language): void {
   if (!isLanguage(lang)) return;
   current = lang;
   initialized = true;
-  try { window.localStorage.setItem(LS_KEY, lang); } catch { /* private mode */ }
+  try {
+    window.localStorage.setItem(LS_KEY, lang);
+    window.localStorage.setItem(LS_STAMP, new Date().toISOString());
+  } catch { /* private mode */ }
   // v0.0.61 — the phone (and any second surface) reads the same choice.
   try {
     void fetch('/api/olympus/language', {
@@ -308,6 +356,7 @@ for (const [lang, dict] of Object.entries(EXTRA_DICTS)) DICTS[lang as Language] 
 import { UI_DICTS } from './i18n-ui';
 import { STUDIO_DICTS } from './i18n-studio';
 import { PROJECT_DICTS } from './i18n-projects';
+import { MOBILE_DICTS } from './i18n-mobile';
 for (const [lang, dict] of Object.entries(UI_DICTS)) {
   DICTS[lang as Language] = { ...(DICTS[lang as Language] ?? en), ...dict };
 }
@@ -316,6 +365,10 @@ for (const [lang, dict] of Object.entries(STUDIO_DICTS)) {
 }
 // v0.0.49 — the project surface is complete in all seven languages.
 for (const [lang, dict] of Object.entries(PROJECT_DICTS)) {
+  DICTS[lang as Language] = { ...(DICTS[lang as Language] ?? en), ...dict };
+}
+// v0.0.63 — the phone surface (`/m`, `/m/studio`) in all seven languages.
+for (const [lang, dict] of Object.entries(MOBILE_DICTS)) {
   DICTS[lang as Language] = { ...(DICTS[lang as Language] ?? en), ...dict };
 }
 

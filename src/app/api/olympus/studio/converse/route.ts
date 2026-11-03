@@ -13,9 +13,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
 import { ensureServer, getOrCreateSession, runWarmMessage } from '@/lib/opencode-session';
 import { readHopEvents } from '@/lib/hop-runtime/hop-events';
-import { GOD_PERSONAS } from '@/lib/god-personas';
+import { GOD_PERSONAS, godPersona } from '@/lib/god-personas';
 import { godDisplayName, godDomainText, type GodLanguage } from '@/lib/god-names';
 
 export const runtime = 'nodejs';
@@ -55,6 +56,11 @@ function liveContext(): string {
 }
 
 export async function POST(req: NextRequest) {
+  // v0.0.63 — an LLM-spending POST on a public tunnel is a door with a bill
+  // attached. The desktop passes via the HttpOnly cookie; the phone via
+  // x-olympus-token.
+  const authError = requireAuth(req);
+  if (authError) return authError;
   let body: any = {};
   try { body = await req.json(); } catch { /* empty */ }
   const message = String(body?.message || '').slice(0, 1200).trim();
@@ -65,9 +71,14 @@ export async function POST(req: NextRequest) {
   const persona = GOD_PERSONAS[god] ?? GOD_PERSONAS.apollo;
   const name = godDisplayName(god, langKey as GodLanguage);
   const domain = godDomainText(god, langKey as GodLanguage);
+  // v0.0.63 — the Greek character (epithet + tone), authored in all seven
+  // languages. The temperament sentence stays as the first-person voice.
+  const character = godPersona(god, (langKey as GodLanguage));
 
   const prompt = `[OLYMPUS-STUDIO-CHAT — CONVERSATION ONLY]
-You are ${name}, ${domain}. ${langKey === 'pt-BR' ? persona.temperament.pt : persona.temperament.en}
+You are ${name} — ${character.epithet}. ${domain}.
+Your tone: ${character.tone}.
+${langKey === 'pt-BR' ? persona.temperament.pt : persona.temperament.en}
 Speak naturally in ${lang.name}, first person, warm, calm and concise (at most 90 words).
 Do NOT use any tool. Do NOT read, write or edit files. Do NOT start a campaign or dispatch.
 Do NOT repeat the user's message verbatim and do NOT read a report like a robot: understand it and answer in your own words, with one natural follow-up when useful.

@@ -365,6 +365,49 @@ export interface IntentStageResult {
  *  "not found") instead of creating a garbage-named project from a
  *  continuation instruction. */
 const CONTINUATION_RE = /^(continue|continua[r]?|prosseguir|retomar|resume|keep going|keep working|sig[aau]\b|segue|seguindo)\b/i;
+/**
+ * v0.0.63 — approval/meta messages are NOT project declarations. "Aprovado!",
+ * "ok", "pode seguir", "deixe rodando..." must resolve a gate or inherit the
+ * active project; they must never mint a slug. The log specimen: "Aprovado!"
+ * created 02_Projects/aprovado and then captured every follow-up.
+ *
+ * APPROVAL is anchored to the WHOLE message (punctuation allowed): "Aprovado!"
+ * and "ok" are approvals; "ok aime" and "continue o projeto aime" are not —
+ * they name a project and must resolve to it.
+ */
+const APPROVAL_RE = /^(aprovado|aprovada|aprov|ok|okay|sim|s|yes|y|perfeito|pode seguir|pode continuar|continue|continuar|go|start|seguir)([\s!.,;:)\]]*)$/i;
+const META_RE = /^(deixe|deixa|mantenha|sempre que|enquanto|obrigado|valeu|show|beleza|perfeito|aprovado|aprovada|pode seguir|pode continuar|continue|continuar|agora|então|entao)\b/i;
+
+export function isApprovalMessage(prompt: string): boolean {
+  const p = (prompt || '').trim();
+  return p.length > 0 && p.length <= 80 && APPROVAL_RE.test(p);
+}
+
+export function isMetaMessage(prompt: string): boolean {
+  const p = (prompt || '').trim();
+  return p.length > 0 && p.length <= 160 && META_RE.test(p);
+}
+
+/**
+ * v0.0.63 — the EXPLICIT project in the text wins over conversation memory.
+ * The worklog specimen: "continue o projeto aime" was routed to 'aprovado'
+ * because conversationProjectMemory was consulted first. This helper is
+ * deliberately conservative: a known slug as a whole word, or a known name
+ * of >= 4 chars as a phrase.
+ */
+export function findExplicitProject(prompt: string, projects?: ProjectNote[]): ProjectNote | null {
+  const text = ` ${String(prompt || '').toLowerCase()} `;
+  const known = projects ?? listProjects();
+  const hits = known.filter((p) => {
+    const slug = p.slug.toLowerCase();
+    const name = String(p.name || '').toLowerCase();
+    const slugHit = new RegExp(`(^|[^a-z0-9-])${slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9-]|$)`).test(text);
+    const nameHit = name.length >= 4 && text.includes(` ${name} `);
+    return slugHit || nameHit;
+  });
+  return hits.sort((a, b) => b.slug.length - a.slug.length)[0] ?? null;
+}
+
 export function isContinuationMessage(prompt: string): boolean {
   // UAT-5 refinement: the guard must be CONSERVATIVE — only trigger on
   // SHORT messages that READ as continuation instructions (the 09:10:09
@@ -377,15 +420,95 @@ export function isContinuationMessage(prompt: string): boolean {
   return p.length <= 200 && CONTINUATION_RE.test(p);
 }
 
+/**
+ * v0.0.63 — THE TURN-ROUTING DECISION, pure and testable.
+ *
+ * The 2026-11-03 worklog specimen: the conversation memory held 'aprovado'
+ * (minted from the word "Aprovado!") and it beat the text "continue o
+ * projeto aime" — three turns in a row. The precedence is now explicit:
+ *
+ *   1. a project NAMED in the text      → route there (wins over memory)
+ *   2. conversation memory               → continuity, but ONLY when the
+ *      turn is not a new-task marker, not an approval, and not a meta
+ *      instruction ("deixe rodando…", "ok", "obrigado")
+ *   3. null                              → the caller runs intake (which
+ *      itself refuses to mint a slug from approval/continuation text)
+ *
+ * Returns null when the turn must go through intake.
+ */
+export function resolveKnownTurnProject(opts: {
+  text: string;
+  conversationProject?: string | null;
+  isNewTask?: boolean;
+  projects?: ProjectNote[];
+}): { slug: string; kind: 'existing'; source: 'explicit' | 'memory'; message: string } | null {
+  const text = opts.text || '';
+  // An approval is a control word, not a name: "Aprovado!" must never match
+  // a project that happens to be called 'aprovado'. It inherits memory (or
+  // falls through to intake → active project) but never names a lane.
+  const approval = isApprovalMessage(text);
+  const explicit = approval ? null : findExplicitProject(text, opts.projects);
+  if (explicit) {
+    return {
+      slug: explicit.slug,
+      kind: 'existing',
+      source: 'explicit',
+      message: `Routed to the project named in the message '${explicit.slug}' (explicit name wins over conversation memory)`,
+    };
+  }
+  const convo = opts.conversationProject ?? null;
+  if (convo && !opts.isNewTask) {
+    return {
+      slug: convo,
+      kind: 'existing',
+      source: 'memory',
+      message: `Routed to the conversation's project '${convo}' (continuity — a follow-up turn never forks a new project)`,
+    };
+  }
+  return null;
+}
+
 export async function resolveAndRegisterIntent(
   userRequest: string,
   stacks: string[],
   opts: { targetTui?: 'opencode' | 'generic' } = {},
 ): Promise<IntentStageResult> {
+  // v0.0.63 — APPROVAL IS A CONTROL WORD, NEVER A PROJECT NAME. The fuzzy
+  // classifier scores "Aprovado!" 1.00 against a project called 'Aprovado'
+  // (the ghost that captured three turns). Check the control word BEFORE
+  // any classification, and route to the active project — never create.
+  if (isApprovalMessage(userRequest)) {
+    const active = getActiveProjectSlug();
+    if (active) {
+      setActiveProject(active);
+      return { kind: 'existing', slug: active, message: `Routed to the active project '${active}' (approval is a control word — it never names or creates a project)` };
+    }
+    const projects = listProjects();
+    const recent = [...projects]
+      .filter((p) => p.last_active)
+      .sort((a, b) => String(b.last_active).localeCompare(String(a.last_active)))[0];
+    if (recent) {
+      setActiveProject(recent.slug);
+      return { kind: 'existing', slug: recent.slug, message: `Routed to the most recent project '${recent.slug}' (approval — no active pointer, newest project by activity)` };
+    }
+    return {
+      kind: 'ask',
+      candidates: projects.slice(0, 3).map((p) => ({ slug: p.slug, score: 1 })),
+      message: 'Approval noted — but there is no project to route it to. Which project? No project was created.',
+    };
+  }
   const intent = classifyFirstPrompt(userRequest);
   if (intent.kind === 'existing') {
     setActiveProject(intent.slug);
     return { kind: 'existing', slug: intent.slug, message: `Routed to existing project '${intent.slug}' (${intent.reason})` };
+  }
+  // v0.0.63 — an explicit project name in the text always wins, even when
+  // the classifier fell through to 'new' (the 'continue o projeto aime'
+  // specimen that conversation memory stole).
+  const explicit = findExplicitProject(userRequest);
+  if (explicit) {
+    setActiveProject(explicit.slug);
+    return { kind: 'existing', slug: explicit.slug, message: `Routed to the project named in the message '${explicit.slug}' (explicit name wins over conversation memory)` };
   }
   if (intent.kind === 'ask') {
     const names = intent.candidates.map((c) => `${c.slug} (${c.score.toFixed(2)})`).join(', ');
@@ -407,7 +530,7 @@ export async function resolveAndRegisterIntent(
   // there. A continuation with no name routes to the ACTIVE project; no
   // pointer → the most recently active project; nothing known → the ask,
   // now WITH the candidates listed.
-  if (intent.kind === 'new' && isContinuationMessage(userRequest)) {
+  if (intent.kind === 'new' && (isContinuationMessage(userRequest) || isApprovalMessage(userRequest) || isMetaMessage(userRequest))) {
     const projects = listProjects();
     const active = getActiveProjectSlug();
     if (active) {

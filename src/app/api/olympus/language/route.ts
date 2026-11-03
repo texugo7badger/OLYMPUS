@@ -26,9 +26,12 @@ export async function GET() {
   try {
     const raw = JSON.parse(fs.readFileSync(FILE, 'utf-8'));
     const language = IDS.has(raw?.language) ? raw.language : 'en';
-    return NextResponse.json({ ok: true, language }, { headers: NO_CACHE_HEADERS });
+    // v0.0.63 — the stamp lets the desktop decide who is newer instead of
+    // blindly overwriting the other surface.
+    const updatedAt = typeof raw?.updatedAt === 'string' ? raw.updatedAt : null;
+    return NextResponse.json({ ok: true, language, updatedAt }, { headers: NO_CACHE_HEADERS });
   } catch {
-    return NextResponse.json({ ok: true, language: 'en' }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ ok: true, language: 'en', updatedAt: null }, { headers: NO_CACHE_HEADERS });
   }
 }
 

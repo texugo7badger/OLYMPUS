@@ -1,6 +1,6 @@
 # Mobile companion
 
-> v0.0.60 · the same server, the same campaign, the same token.
+> v0.0.63 · the same server, the same campaign, the same token, the same language.
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
@@ -50,7 +50,9 @@ alternative (the `tunnel` network mode).
 | Projects | list + switch the active project |
 | Prompt | send a turn; the live stream is reduced to short log lines |
 | Voice | Web Speech API dictation; the campaign can also be read aloud |
-| Preview | opens the active project's live-preview port |
+| Preview | server-resolved URL: the desktop's LAN IPv4 on the same Wi-Fi, or a per-port HTTPS tunnel away from home; start/stop the server and the tunnel here |
+| Studio | `/m/studio` — the same particles, orb and per-god voice, stacked for one hand |
+| Resume | sends the deterministic `Nova tarefa: continue o projeto <slug>` turn |
 | Git | remote, branch and the last three commits (read-only) |
 | Cost | the 24h step-cost figure |
 | Theme | inherits the desktop theme; a choice on the phone changes the PC too |
@@ -83,7 +85,10 @@ alternative (the `tunnel` network mode).
 - The companion is a web app, not a store-native app; voice depends on the
   browser's speech engine and language.
 - Git is read-only on the phone; create/connect/push stay on the desktop.
-- The live preview is the project's own dev server; it must be running.
+- The live preview is the project's own dev server; it must be running. The
+  preview tunnel is public but unguessable — close it when you are done.
+- The phone follows the desktop's language. An explicit choice in the theme
+  sheet is the one action that changes the shared language for both surfaces.
 
 ## Verification
 
@@ -91,3 +96,9 @@ alternative (the `tunnel` network mode).
 mode, fragment-only URL, QR payload, mode round-trip, auth gates, rotate and
 mode guards, campaign/project/prompt/voice/preview/git surfaces, and the
 desktop mount.
+
+`scripts/mobile-preview.test.mjs` (v0.0.63) — 15 assertions: the reachability
+classifier (public host ⇒ tunnel, loopback/LAN ⇒ direct), tunnel truth for an
+unused port, the source pin that forbids rebuilding the URL from
+`location.hostname`, the endpoint call, the studio link and the auth gates on
+the preview route.

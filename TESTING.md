@@ -34,7 +34,13 @@ result**, never a green badge without a number.
 - **Docs & release** — README links, version stamps, release-body privacy,
   the readiness gates.
 - **Vault & brain** — instincts, knowledge, skill index, archive, backup.
-- **Mobile** — theme both ways, remote tunnel, QR, voice, preview, git.
+- **Project routing** — approval/meta never mint a slug, an explicit name
+  beats conversation memory, approval resolves a gate (not a project), and a
+  continuation still inherits (the 2026-11-03 ghost-project specimen).
+- **Mobile** — theme both ways, remote tunnel, QR, voice, preview, git; the
+  preview URL is a server answer (LAN IPv4 or per-port HTTPS tunnel), the
+  phone adopts the desktop's language and never overwrites it, and the studio
+  reuses the same particles/orb/voice.
 
 ## How a hop becomes GREEN
 
@@ -48,7 +54,7 @@ claimed here.
 
 | Evidence | Result |
 |---|---|
-| Battery | **132 PASS / 0 FAIL / 1 declared skip** (133 suites) |
+| Battery | **134 PASS / 0 FAIL / 1 declared skip** (135 suites) |
 | 100-hop spine | **100/100** in 9.9s · p50 189ms · p95 225ms · 0 tokens |
 | Soak while walking | **24 rounds PASS** · 5/5 probes · p95 ≤ 120ms |
 | Hibernation drill | pre-hibernation artifact **byte-identical**; 0 lost |

@@ -43,10 +43,15 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.62 — Apollo speaks again.** The latest stable v0.0.x: 939 deduped references (OriginKit, Skiper, Magic UI, Aceternity + learned rows), Talent Studio, a free-first MCP market, guided instincts, bounded
-hops, real cost windows, GitHub per project, the light-theme brain fix and a
-context indicator that reads the real session. Everything below is evidence,
-not a promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md).
+**v0.0.63 — stability: the project stops being invented.** Approvals and
+meta messages no longer mint a project, an explicit name in the text beats
+conversation memory, and the phone gets a preview that actually opens (LAN
+IPv4 or a per-port HTTPS tunnel, start/stop), one shared language in seven
+locales, a creativity studio of its own and the Greek character of every god.
+The 939 deduped references, Talent Studio, the free-first MCP market, guided
+instincts, bounded hops, real cost windows, GitHub per project and the real
+session context all remain. Everything below is evidence, not a promise; the
+open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md).
 
 ## Architecture at a glance
 
@@ -79,7 +84,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**132 PASS / 0 FAIL / 1 declared skip** across 133 suites; a 100-hop
+**134 PASS / 0 FAIL / 1 declared skip** across 135 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 suites stay maintainer-local; the evidence is public. Read
@@ -115,7 +120,7 @@ renders blank. The full table and speech locales live in
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
-**v0.0.60.** The phone opens the same app at `/m`: the running campaign, the
+**v0.0.63.** The phone opens the same app at `/m`: the running campaign, the
 in-flight hops, the active project, a prompt (typed or dictated), the campaign
 read aloud, the live preview and the project's git remote and last commits.
 Pairing is one QR in the status bar; the token rides the URL fragment, never a
@@ -123,6 +128,18 @@ query string. Outside the house, **start remote tunnel** gives an HTTPS
 Cloudflare link for the phone (stop it when done); the theme follows the PC
 both ways and the creativity particle field rides along. The switch to LAN mode is explicit and says a restart is
 required. Rotate the token to revoke every paired phone.
+
+The preview is a SERVER answer now, not a client-side guess. `GET
+/api/olympus/projects/preview?slug=` probes the port and returns the reachable
+URL: the desktop's LAN IPv4 on the same Wi-Fi, or a per-port HTTPS
+`cloudflared` tunnel when you are away (the old
+`http://<location.hostname>:<port>` could never work through the tunnel —
+wrong host, mixed content). Start/stop the dev server and the tunnel from the
+phone. The phone speaks the desktop's language (it reads the shared choice and
+never overwrites it), and `/m/studio` is the creativity surface: the same
+particles, orb and per-god voice, stacked for one hand. Every god keeps its
+Greek epithet and tone (Phoebus the Luminous, Kore of the Two Worlds, the
+Forethinker) in all seven languages.
 
 Read [MOBILE.md](MOBILE.md) for the security model and the honest limits.
 

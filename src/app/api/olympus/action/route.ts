@@ -8,13 +8,13 @@ import fs from 'node:fs';
 import { requireAuth } from '@/lib/auth';
 // Uses spawnOpencode() for Windows shell:true + stdin:'ignore' + local binary resolution.
 import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
-import { resolveAndRegisterIntent, stripUploadBlock } from '@/lib/project-intent';
+import { resolveAndRegisterIntent, stripUploadBlock, resolveKnownTurnProject } from '@/lib/project-intent';
 import { maybeStartDevServer } from '@/lib/dev-server-trigger';
 import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
 import { pickPlanRoot, walkRootNote } from '@/lib/hop-runtime/walk-root';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
 import { probeLane } from '@/lib/lane-probe';
-import { reconcileProjectPath, PROJECTS_DIR } from '@/lib/project-context';
+import { reconcileProjectPath, PROJECTS_DIR, setActiveProject } from '@/lib/project-context';
 import { composePlannerRag } from '@/lib/rag-inject';
 import { composeKnowledgeBlock } from '@/lib/knowledge-hints';
 import { uiReferencesMarkerBlock } from '@/lib/ui-references';
@@ -356,9 +356,18 @@ export async function POST(req: NextRequest) {
       // specimen: "Perfeito, só me retorne quando finalizar" became the
       // project 'perfeito-retorne-quando-finalizar' at the 16:59 turn).
       const convoProject = getConversationProject(conversationId);
-      if (convoProject && !isNewTaskMarker(text)) {
-        intentStage = { slug: convoProject, kind: 'existing', message: `Routed to the conversation's project '${convoProject}' (continuity — a follow-up turn never forks a new project)` };
-        rememberConversationProject(conversationId, convoProject);
+      const knownTurn = resolveKnownTurnProject({
+        text,
+        conversationProject: convoProject,
+        isNewTask: isNewTaskMarker(text),
+      });
+      if (knownTurn) {
+        // v0.0.63 — an explicit name in the text wins over memory; an
+        // approval/meta word never NAMES a project (it inherits the
+        // conversation's lane, or falls through to intake → active project).
+        intentStage = { slug: knownTurn.slug, kind: knownTurn.kind, message: knownTurn.message };
+        if (knownTurn.source === 'explicit') setActiveProject(knownTurn.slug);
+        rememberConversationProject(conversationId, knownTurn.slug);
       } else {
         try {
           // #178: the upload manifest is transport metadata — never let it
