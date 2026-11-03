@@ -23,7 +23,7 @@
 import { readOriginkitBudget, formatOriginkitReset } from '@/lib/originkit-budget';
 import { EXPANDED_REFERENCE_ROWS } from '@/lib/ui-references-expanded';
 
-export type UiRefLibrary = 'originkit' | 'skiper';
+export type UiRefLibrary = 'originkit' | 'skiper' | 'magicui';
 
 export interface UiReference {
   /** kebab id (the upstream component name). */
@@ -84,7 +84,11 @@ const CURATED_REFERENCES: UiReference[] = [
  */
 const seenReferenceIds = new Set<string>();
 const seenReferenceNames = new Set<string>();
+const seenReferenceUrls = new Set<string>();
 const normName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+// One card per real component: strip protocol/www/trailing slash/query so the
+// same demo cannot enter twice under two ids.
+const normUrl = (url: string) => String(url || '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[?#].*$/, '').replace(/\/$/, '');
 export const UI_REFERENCES: UiReference[] = [
   ...CURATED_REFERENCES,
   ...EXPANDED_REFERENCE_ROWS.map(([id, name, library, category, what, demoUrl, free, fetchLane]) => ({
@@ -97,8 +101,13 @@ export const UI_REFERENCES: UiReference[] = [
   // shows two cards for the same reference.
   const key = normName(r.name);
   if (seenReferenceNames.has(key)) return false;
+  // v0.0.52 — the same demo under two slugs (infinitegallery/infinity-canvas)
+  // is one reference, not two. URL is the identity of the live study.
+  const url = normUrl(r.demoUrl);
+  if (url && seenReferenceUrls.has(url)) return false;
   seenReferenceIds.add(r.id);
   seenReferenceNames.add(key);
+  if (url) seenReferenceUrls.add(url);
   return true;
 });
 
@@ -122,6 +131,15 @@ export const UI_REF_LIBRARIES = [
     keyUrl: null,
     license: 'Free components via the shadcn registry; PREMIUM components are paid — referenced, never vendored',
   },
+  {
+    id: 'magicui' as const,
+    name: 'Magic UI',
+    url: 'https://magicui.design',
+    mcp: null,
+    key: null,
+    keyUrl: null,
+    license: 'MIT — free components via the public shadcn registry; no key, no paid gate',
+  },
 ];
 
 /** The bounded injection for the [OLYMPUS-DESIGN] marker (~180 tokens):
@@ -129,8 +147,8 @@ export const UI_REF_LIBRARIES = [
  *  the pane + the lib. */
 export const UI_REFERENCES_MARKER_BLOCK = [
   'UI REFERENCES — curated component inspiration (pick at most ONE signature interaction per section, adapt it to the design tokens, never copy a whole demo):',
-  'motion/reveal: image-reveal (skiper) · pixel-reveal · star-burst | text: smoky-text · text-morph · weight-hover | interactive: black-hole · fluid-trail · kinetic-grid | gallery: spiral-images · coverflow-carousel · swipe-stack | microcopy: vercel-tooltip (skiper) · link-preview | surfaces: dynamic-island (skiper).',
-  'The full catalog: the Craft Apps pane > References tab. OriginKit source: the originkit MCP (ORIGINKIT_API_KEY, free); Skiper: npx shadcn add @skiper-ui/<id> (free ids; premium = paid upstream — link the demo, never copy paid source).',
+  'motion/reveal: image-reveal (skiper) · pixel-reveal · star-burst | text: smoky-text · text-morph · weight-hover | interactive: black-hole · fluid-trail · kinetic-grid | gallery: spiral-images · coverflow-carousel · swipe-stack | microcopy: vercel-tooltip (skiper) · link-preview | surfaces: dynamic-island (skiper) · marquee/magic-card/bento-grid (magicui).',
+  'The full catalog: the Craft Apps pane > References tab. OriginKit source: the originkit MCP (ORIGINKIT_API_KEY, free); Skiper: npx shadcn add @skiper-ui/<id> (free ids; premium = paid upstream — link the demo, never copy paid source); Magic UI: MIT registry (npx shadcn@latest add https://magicui.design/r/<id>.json).',
 ].join(' ');
 
 /** #198 — the [OLYMPUS-DESIGN] references block with the LIVE OriginKit

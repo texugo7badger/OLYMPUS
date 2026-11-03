@@ -44,8 +44,8 @@ expect('N5: the terminal shows an UNATTENDED chip',
 expect('N6: the action route carries body.unattended into the walk',
   /body\.unattended === true/.test(action) && /unattended: opts\.unattended === true/.test(action),
   'the switch never reaches the walk');
-expect('N7: gates auto-approve ONLY in the unattended lane',
-  /if \(opts\.unattended\)/.test(postRun) && /auto-approved — unattended/.test(postRun),
+expect('N7: gates auto-approve ONLY in the unattended/hibernation lane',
+  /if \(opts\.unattended \|\| isHibernating\(\)\)/.test(postRun) && /auto-approved — unattended/.test(postRun),
   'an attended run can be auto-approved');
 expect('N8: the overnight resume is bounded and the digest is written',
   /overnightAttempt \?\? 0/.test(postRun) && /attempt < maxAttempts/.test(postRun) && /writeOvernightDigest/.test(postRun),

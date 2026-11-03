@@ -45,6 +45,19 @@ export function notifyFilePath(home = process.env.OLYMPUS_HOME || path.join(os.h
   return path.join(home, 'desktop-notifications.jsonl');
 }
 
+/** v0.0.52 — the file is an archive, not an unbounded log. Keep 100 lines. */
+const MAX_NOTIFY_BYTES = 256 * 1024;
+const KEEP_NOTIFY_LINES = 100;
+function rotateNotifyFile(file: string): void {
+  try {
+    if (!fs.existsSync(file) || fs.statSync(file).size < MAX_NOTIFY_BYTES) return;
+    const lines = fs.readFileSync(file, 'utf-8').split('\n').filter(Boolean);
+    const tmp = `${file}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, lines.slice(-KEEP_NOTIFY_LINES).join('\n') + '\n', 'utf-8');
+    fs.renameSync(tmp, file);
+  } catch { /* a rotation failure never blocks an alert */ }
+}
+
 /**
  * Append an event. Best-effort by design: a notification is never allowed to
  * break the operation that produced it. Returns false when the write failed.
@@ -63,6 +76,7 @@ export function appendDesktopNotify(
   try {
     const file = notifyFilePath(opts.home);
     fs.mkdirSync(path.dirname(file), { recursive: true });
+    rotateNotifyFile(file);
     fs.appendFileSync(file, JSON.stringify(event) + '\n', 'utf-8');
     return true;
   } catch {

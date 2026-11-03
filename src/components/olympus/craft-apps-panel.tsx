@@ -85,7 +85,7 @@ type PaneTab = 'apps' | 'references' | 'style' | 'builds';
 interface UiRef {
   id: string;
   name: string;
-  library: 'originkit' | 'skiper';
+  library: 'originkit' | 'skiper' | 'magicui';
   category: string;
   what: string;
   demoUrl: string;
@@ -497,13 +497,13 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   />
                   <div className="flex items-center gap-1 mt-1.5">
                     <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">library</span>
-                    {['all', 'originkit', 'skiper'].map((lib) => (
+                    {['all', 'originkit', 'skiper', 'magicui'].map((lib) => (
                       <button
                         key={lib}
                         onClick={() => setRefLib(lib)}
                         className={cn('text-[8px] font-mono px-1.5 py-0.5 rounded-full border uppercase tracking-wide transition-colors', refLib === lib ? 'border-olympus-cyan/50 bg-olympus-cyan/10 text-olympus-cyan' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}
                       >
-                        {lib === 'all' ? 'all' : lib === 'originkit' ? 'OriginKit' : 'Skiper'}
+                        {lib === 'all' ? 'all' : lib === 'originkit' ? 'OriginKit' : lib === 'skiper' ? 'Skiper' : 'Magic UI'}
                       </button>
                     ))}
                     <button

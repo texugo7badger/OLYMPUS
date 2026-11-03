@@ -312,3 +312,12 @@ Electron's Wayland backend could deadlock before `app.whenReady()` (the
 window). OLYMPUS launches on **XWayland** by default; `OLYMPUS_OZONE=wayland`
 opts back in. GPU acceleration remains the default with the two-crash software
 fallback.
+
+### v0.0.52 — quiet mark, 900 references
+
+The “18” badge was the desktop replaying 21 historical notifications on every
+boot. The tail now starts at the current file size, alerts coalesce, focus
+closes them and the tray restores the OLYMPUS mark. The reference catalog is
+deduped by URL and normalized name and gains 42 Magic UI (MIT) components —
+900 total. A hop can no longer run 68 minutes: the hard cap is 30 minutes,
+clipped to the campaign deadline, and hibernation auto-resumes a park.

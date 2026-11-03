@@ -41,7 +41,7 @@ import { registerNativeTerminal } from './native-terminal.js';
 import { resolveBootMode } from './boot-mode.js';
 import { registerTerminalBridge, shutdownTerminalBridge } from './terminal-bridge.js';
 import { ensureLinuxSandboxReady } from './linux-sandbox.js';
-import { NOTIFY_COLORS, NOTIFY_LABELS, isNotifyType, themeMarkPng, trayPng, type NotifyType } from './desktop-notify.js';
+import { NOTIFY_COLORS, NOTIFY_LABELS, isNotifyType, themeMarkPng, trayPng, decideNotification, initialNotifyOffset, EMPTY_NOTIFY_STATE, type NotifyType, type NotifyPolicyState } from './desktop-notify.js';
 
 // __dirname / __filename are available natively in CommonJS (electron/tsconfig.json
 // compiles with module: CommonJS). No need for the import.meta.url shim.
@@ -617,6 +617,21 @@ let trayIcons: Map<NotifyType, Electron.NativeImage> | null = null;
 let trayResetTimer: ReturnType<typeof setTimeout> | null = null;
 let trayNotificationActive = false;
 let notifyOffset = 0;
+// v0.0.52 — the OS badge is an attention request, not a log. Keep the live
+// native notifications so focusing the window can close them (and therefore
+// clear the desktop's numeric badge), and coalesce repeats.
+let notifyPolicy: NotifyPolicyState = { ...EMPTY_NOTIFY_STATE };
+const activeNativeNotifications = new Set<Notification>();
+
+function closeNativeNotifications(): void {
+  for (const n of activeNativeNotifications) {
+    try { n.close(); } catch { /* already closed */ }
+  }
+  activeNativeNotifications.clear();
+  trayNotificationActive = false;
+  if (trayResetTimer) { clearTimeout(trayResetTimer); trayResetTimer = null; }
+  setTrayIndicator(null);
+}
 
 function defaultTrayImage(): Electron.NativeImage {
   // The base tray icon is the themed mark (the palette the user picked), not
@@ -673,12 +688,23 @@ function flashTray(type: NotifyType): void {
  * "compact" (orange) and "curate" (yellow) are distinguishable at a glance.
  */
 function notifyDesktop(type: NotifyType, title: string, body: string): void {
+  const focused = !!(mainWindow && mainWindow.isVisible() && mainWindow.isFocused());
+  const decision = decideNotification({ type, title, body, now: Date.now(), focused, state: notifyPolicy });
+  notifyPolicy = decision.state;
+  if (!decision.show) return;
   flashTray(type);
   try {
     if (!Notification.isSupported()) return;
     const iconPath = join(appRoot, 'public', 'logo-256x256.png');
     const n = new Notification({ title, body, ...(existsSync(iconPath) ? { icon: iconPath } : {}) });
-    n.on('click', () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } });
+    activeNativeNotifications.add(n);
+    const forget = () => { activeNativeNotifications.delete(n); };
+    n.on('close', forget);
+    n.on('failed', forget);
+    n.on('click', () => {
+      closeNativeNotifications();
+      if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+    });
     n.show();
   } catch { /* notifications are optional */ }
 }
@@ -688,6 +714,10 @@ function notifyDesktop(type: NotifyType, title: string, body: string): void {
  * every surface (routes, tools, walker) can notify the tray without IPC.
  */
 function startNotifyTail(): void {
+  // v0.0.52 — seed at the CURRENT size. The old offset=0 replayed the whole
+  // history on every boot (21 lines → GNOME badge "18"). History is archive,
+  // never an alert.
+  try { notifyOffset = initialNotifyOffset(statSync(NOTIFY_FILE).size); } catch { notifyOffset = 0; }
   const timer = setInterval(() => {
     refreshThemeIfChanged();
     try {
@@ -936,6 +966,12 @@ function createWindow() {
       mainWindow?.setFullScreen(!mainWindow.isFullScreen());
     }
   });
+
+  // v0.0.52 — focusing the window acknowledges the desktop alerts. Closing
+  // the native notifications is what clears the GNOME badge (the "18").
+  mainWindow.on('focus', () => { closeNativeNotifications(); });
+  mainWindow.on('show', () => { closeNativeNotifications(); });
+  mainWindow.on('restore', () => { closeNativeNotifications(); });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();

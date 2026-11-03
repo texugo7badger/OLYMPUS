@@ -362,3 +362,49 @@ export function themeMarkPng(colors: ThemeMarkColors, size = 256, iconId = 'clas
   }
   return encodePng(size, size, rgba);
 }
+
+// ── notification policy (v0.0.52) ─────────────────────────────────────────
+// The OS badge is not a log: it is a request for attention. One park is an
+// event; 18 replayed historical parks are noise. This pure policy decides
+// what deserves a native notification, without importing Electron.
+export const NOTIFY_DUPLICATE_MS = 5 * 60_000;
+export const NOTIFY_WALK_COOLDOWN_MS = 10 * 60_000;
+
+export interface NotifyPolicyState {
+  lastWalkAt: number;
+  lastKey: string;
+  lastKeyAt: number;
+}
+
+export const EMPTY_NOTIFY_STATE: NotifyPolicyState = { lastWalkAt: 0, lastKey: '', lastKeyAt: 0 };
+
+export function decideNotification(input: {
+  type: NotifyType;
+  title: string;
+  body: string;
+  now: number;
+  focused: boolean;
+  state: NotifyPolicyState;
+}): { show: boolean; reason: string; state: NotifyPolicyState } {
+  const key = `${input.type}\u0000${input.title}\u0000${input.body}`;
+  const state = { ...input.state };
+  if (input.type === 'compact') return { show: false, reason: 'compaction is ambient', state };
+  if (input.focused && input.type !== 'error') return { show: false, reason: 'window is focused', state };
+  if (state.lastKey === key && input.now - state.lastKeyAt < NOTIFY_DUPLICATE_MS) {
+    return { show: false, reason: 'duplicate within 5 min', state };
+  }
+  if (input.type === 'walk') {
+    if (input.now - state.lastWalkAt < NOTIFY_WALK_COOLDOWN_MS) {
+      return { show: false, reason: 'walk already announced', state };
+    }
+    state.lastWalkAt = input.now;
+  }
+  state.lastKey = key;
+  state.lastKeyAt = input.now;
+  return { show: true, reason: 'show', state };
+}
+
+/** The boot tail starts at the current file size: history is never replayed. */
+export function initialNotifyOffset(size: number): number {
+  return Number.isFinite(size) && size > 0 ? Math.floor(size) : 0;
+}

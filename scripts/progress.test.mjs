@@ -73,9 +73,10 @@ ok('a custom window/extension is honored', () => {
   assert.equal(d.deadline, T + 125_000);
 });
 
-ok('the hard cap is twice the base ceiling', () => {
-  assert.equal(hardCeilingMs(1_500_000), 3_000_000);
+ok('the hard cap is bounded at 30 min', () => {
+  assert.equal(hardCeilingMs(1_500_000), 1_800_000);
   assert.equal(hardCeilingMs(600_000), 1_200_000);
+  assert.equal(hardCeilingMs(3_600_000), 1_800_000);
   assert.equal(hardCeilingMs(0), 0);
 });
 

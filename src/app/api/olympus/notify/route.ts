@@ -10,7 +10,8 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import { NextResponse, NextRequest } from 'next/server';
-import { appendDesktopNotify, isNotifyType, readDesktopNotifications } from '@/lib/desktop-notify';
+import fs from 'node:fs';
+import { appendDesktopNotify, isNotifyType, readDesktopNotifications, notifyFilePath } from '@/lib/desktop-notify';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 
 export const runtime = 'nodejs';
@@ -37,4 +38,14 @@ export async function POST(req: NextRequest) {
     body: typeof body?.body === 'string' ? body.body : '',
   });
   return NextResponse.json({ ok }, { headers: NO_CACHE_HEADERS });
+}
+
+/** v0.0.52 — clear the archive so a stale badge cannot survive a restart. */
+export async function DELETE() {
+  try {
+    fs.writeFileSync(notifyFilePath(), '', 'utf-8');
+    return NextResponse.json({ ok: true, cleared: true }, { headers: NO_CACHE_HEADERS });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500, headers: NO_CACHE_HEADERS });
+  }
 }

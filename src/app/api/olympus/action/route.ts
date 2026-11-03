@@ -19,6 +19,7 @@ import { composePlannerRag } from '@/lib/rag-inject';
 import { composeKnowledgeBlock } from '@/lib/knowledge-hints';
 import { uiReferencesMarkerBlock } from '@/lib/ui-references';
 import { appendDesktopNotify } from '@/lib/desktop-notify';
+import { isHibernating } from '@/lib/hibernation';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
 // the running server + session (no cold start, context retained).
@@ -303,7 +304,7 @@ export async function POST(req: NextRequest) {
     // #64 (BATCH 13): an explicit no-questions intent in the prompt text is
     // honored at PARITY — the campaign proved the text alone is not enough
     // to suppress the brainstorming gate; the directive is.
-    const unattended = action === 'prompt' && (body.unattended === true || noQuestionsIntent(text));
+    const unattended = action === 'prompt' && (body.unattended === true || noQuestionsIntent(text) || isHibernating());
     // Issue #54: in-band classification marker. The classification event
     // (below) and the plugin-side dispatch writers share this id — the
     // agreement metric gets an exact join key instead of ts-proximity.

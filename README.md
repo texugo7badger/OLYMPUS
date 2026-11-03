@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.51, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.52, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -36,6 +36,14 @@
 </div>
 
 A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+
+**v0.0.52 — quiet mark, 900 references.** The desktop badge stopped
+replaying history (the “18” was 21 stale notifications re-shown every boot);
+native alerts now coalesce, clear on focus and leave only the OLYMPUS mark.
+The reference arsenal is deduped by URL/name and gains **42 Magic UI
+components** (MIT, public shadcn registry), bringing the catalog to **900**.
+Hops are bounded by a 30-minute hard cap clipped to the campaign deadline, and
+hibernation now auto-resumes a park instead of waiting for morning.
 
 **v0.0.51 — launch reliability on Wayland.** Electron's Wayland backend can
 deadlock before the app is ready (the 2026-11-02 specimen: main alive, 33%

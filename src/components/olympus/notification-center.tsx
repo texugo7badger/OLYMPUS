@@ -113,6 +113,15 @@ export default function NotificationCenter() {
     try { localStorage.setItem(SEEN_KEY, latest); } catch { /* private mode */ }
   };
 
+  // v0.0.52 — clear the archive and the local unread marker. The Electron
+  // main closes the native notifications on focus; this removes the history
+  // so a restart never resurrects a numeric badge.
+  const clearAll = async () => {
+    setEvents([]);
+    markSeen();
+    try { await fetch('/api/olympus/notify', { method: 'DELETE' }); } catch { /* offline */ }
+  };
+
   const toggleAuto = async (value: boolean) => {
     setAutoHibernate(value);
     try {
@@ -161,6 +170,7 @@ export default function NotificationCenter() {
             <Bell size={10} className="text-olympus-gold" />
             <span className="text-[9px] font-mono font-semibold uppercase tracking-wide text-olympus-gold">notifications</span>
             <button onClick={markSeen} className="ml-auto text-[8px] font-mono text-olympus-text-dim hover:text-olympus-text">mark read</button>
+            <button onClick={() => void clearAll()} className="text-[8px] font-mono text-olympus-text-dim hover:text-olympus-red" aria-label="Clear notifications">clear</button>
             <button onClick={() => setOpen(false)} aria-label="Close notifications" className="text-olympus-text-dim hover:text-olympus-red"><X size={11} /></button>
           </header>
 

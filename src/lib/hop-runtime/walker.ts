@@ -31,6 +31,7 @@ import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type Pl
 import { loadHopState, saveHopState, hopStatePath, pruneStaleInFlight, type HopPark } from './hop-state';
 import { composeArsenalDirective } from './arsenal';
 import { createHopTransport, type HopTransport } from './transport';
+import { hardCeilingMs } from './progress';
 import { composeRagContext } from '../rag-inject';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -586,6 +587,19 @@ async function attemptLane(
   // R31-09 — the hop runs as its lean variant (no olympus/symphony tools).
   const hopAgent = resolveHopAgentId(hop.god, ctx.laneRoot);
   for (let attempt = 0; ; attempt++) {
+    // v0.0.52 — never start a retry after the campaign deadline. The in-flight
+    // attempt is already clipped by hardTimeoutMs; this closes the retry gap.
+    if (ctx.deadlineAt && Date.now() >= ctx.deadlineAt) {
+      return {
+        kind: 'failed',
+        result: {
+          ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,
+          retriesAbsorbed, exhausted: false,
+          error: 'campaign-deadline: the project budget ended before this retry',
+          errorClass: 'campaign-deadline',
+        },
+      };
+    }
     // The per-hop runtime budget (#R3: env-tunable — OLYMPUS_HOP_TIMEOUT_MS;
     // the default stays 15 min).
     last = await ctx.transport.run({
@@ -603,10 +617,15 @@ async function attemptLane(
       model: lane,
       cwd: ctx.laneRoot,
       // The campaign budget clips the hop ceiling: a hop started at minute
-      // 59 gets the minute it has left, not another 15.
+      // 59 gets the minute it has left, not another 15. The hard cap is
+      // clipped too — v0.0.52: k1-source-audit ran 68 min because the
+      // transport could extend to 2× the base past the campaign deadline.
       timeoutMs: ctx.deadlineAt
         ? Math.min(resolveHopTimeoutMs(), Math.max(60_000, ctx.deadlineAt - Date.now()))
         : resolveHopTimeoutMs(),
+      hardTimeoutMs: ctx.deadlineAt
+        ? Math.max(60_000, Math.min(hardCeilingMs(resolveHopTimeoutMs()), ctx.deadlineAt - Date.now()))
+        : hardCeilingMs(resolveHopTimeoutMs()),
       firstByteMs: resolveHopFirstByteMs(),
       silenceMs: resolveHopSilenceMs(),
       onNotice: (msg) => console.log(`[hop-transport] ${msg}`),

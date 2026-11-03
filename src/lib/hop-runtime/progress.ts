@@ -66,7 +66,13 @@ export function decideCeiling(input: CeilingInput, opts: CeilingOptions = {}): C
   return { kill: true, extended: false, deadline: input.deadline, idleMs };
 }
 
-/** The hard cap a healthy long hop may reach (2× the base ceiling). */
+/**
+ * The hard cap a healthy long hop may reach. v0.0.52: 2× was 50 min for the
+ * 25-min base, and a live k1-source-audit ran 68 min because the campaign
+ * deadline did not clip the transport's hard cap. The cap is now bounded to
+ * 30 min; the campaign budget can clip it lower per hop.
+ */
+export const HOP_HARD_CAP_MS = 30 * 60_000;
 export function hardCeilingMs(baseTimeoutMs: number): number {
-  return Math.max(baseTimeoutMs, baseTimeoutMs * 2);
+  return Math.min(Math.max(baseTimeoutMs, baseTimeoutMs * 2), HOP_HARD_CAP_MS);
 }

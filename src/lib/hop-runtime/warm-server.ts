@@ -607,6 +607,7 @@ export async function runWarmHop(opts: {
   model?: string;
   text: string;
   timeoutMs: number;
+  hardTimeoutMs?: number;
   firstByteMs: number;
   silenceMs: number;
   onNotice?: (msg: string) => void;
@@ -747,14 +748,14 @@ export async function runWarmHop(opts: {
       // arrives asynchronously. Poll the session until it completes, while
       // the SSE watcher keeps first-byte/silence/error truth.
       let deadline = startedAt + opts.timeoutMs;
-      let hardDeadline = startedAt + hardCeilingMs(opts.timeoutMs);
+      let hardDeadline = startedAt + (opts.hardTimeoutMs ?? hardCeilingMs(opts.timeoutMs));
       let done = false;
       while (!done) {
         // Epic N: a resume extends the budget; the freeze was not the hop's fault.
         if (suspendCovers(startedAt, Date.now())) {
           startedAt = Date.now();
           deadline = startedAt + opts.timeoutMs;
-          hardDeadline = startedAt + hardCeilingMs(opts.timeoutMs);
+          hardDeadline = startedAt + (opts.hardTimeoutMs ?? hardCeilingMs(opts.timeoutMs));
         }
         if (Date.now() >= deadline) {
           // A turn that keeps emitting events is WORKING, not stuck — the
@@ -770,7 +771,7 @@ export async function runWarmHop(opts: {
           if (decision.kill) break;
           if (decision.extended) {
             deadline = decision.deadline;
-            opts.onNotice?.(`hop still progressing (last event ${Math.round(decision.idleMs / 1000)}s ago) — ceiling extended +${Math.round((decision.deadline - Date.now()) / 1000)}s (hard cap ${Math.round(hardDeadline / 1000)}s)`);
+            opts.onNotice?.(`hop still progressing (last event ${Math.round(decision.idleMs / 1000)}s ago) — ceiling extended +${Math.round((decision.deadline - Date.now()) / 1000)}s (hard cap in ${Math.max(0, Math.round((hardDeadline - Date.now()) / 1000))}s)`);
           }
         }
         await new Promise((r) => setTimeout(r, 1000));

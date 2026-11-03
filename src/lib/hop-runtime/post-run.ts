@@ -20,6 +20,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
+import { isHibernating } from '@/lib/hibernation';
 import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync, statSync } from 'node:fs';
 
 /**
@@ -749,7 +750,7 @@ export async function maybeWalkThePlan(opts: {
   // session, so the next wave starts with a clean window); when the
   // campaign finally settles, the morning digest lands in the lane and one
   // live.jsonl row per wave records the night durably.
-  if (opts.unattended) {
+  if (opts.unattended || isHibernating()) {
     const attempt = opts.overnightAttempt ?? 0;
     const maxAttempts = Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_ATTEMPTS ?? 3));
     if (parked && attempt < maxAttempts) {

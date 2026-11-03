@@ -28,6 +28,9 @@ export interface HopTransportRequest {
   model?: string;
   cwd: string;
   timeoutMs: number;
+  /** v0.0.52 — absolute per-attempt cap. The campaign deadline passes the
+   *  remaining budget here so a hop can never extend past the project. */
+  hardTimeoutMs?: number;
   firstByteMs: number;
   silenceMs: number;
   onNotice?: (msg: string) => void;
@@ -59,7 +62,7 @@ export class SpawnTransport implements HopTransport {
       let runStart = Date.now();
       let lastOutputAt = Date.now();
       let ceilingDeadline = runStart + req.timeoutMs;
-      const hardDeadline = runStart + hardCeilingMs(req.timeoutMs);
+      const hardDeadline = runStart + (req.hardTimeoutMs ?? hardCeilingMs(req.timeoutMs));
       let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
       let firstByteTimer: ReturnType<typeof setTimeout> | null = null;
       let silenceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -86,7 +89,7 @@ export class SpawnTransport implements HopTransport {
           });
           if (decision.extended) {
             ceilingDeadline = decision.deadline;
-            stderr += `\nhop-ceiling-extended: still producing output ${Math.round(decision.idleMs / 1000)}s ago; new deadline +${Math.round((decision.deadline - now) / 1000)}s (hard cap ${Math.round(hardDeadline / 1000)}s)`;
+            stderr += `\nhop-ceiling-extended: still producing output ${Math.round(decision.idleMs / 1000)}s ago; new deadline +${Math.round((decision.deadline - now) / 1000)}s (hard cap in ${Math.max(0, Math.round((hardDeadline - Date.now()) / 1000))}s)`;
             armCeiling();
             return;
           }

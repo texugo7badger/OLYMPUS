@@ -200,7 +200,7 @@ async function main() {
     'a tool is missing');
   // The LIVE handshake — initialize + tools/list over stdio JSON-RPC.
   const handshake = await new Promise((resolve) => {
-    const child = spawn('node', [path.join(OLYMPUS, 'scripts/mcp-craft-server.mjs')], { stdio: ['pipe', 'pipe', 'inherit'] });
+    const child = spawn('node', [path.join(OLYMPUS, 'scripts/mcp-craft-server.mjs')], { stdio: ['pipe', 'pipe', 'inherit'], env: { ...process.env, OLYMPUS_CRAFT_MAX_INSTANCES: '99' } });
     let buf = '';
     const timer = setTimeout(() => { child.kill(); resolve(null); }, 8000);
     child.stdout.on('data', (d) => {
