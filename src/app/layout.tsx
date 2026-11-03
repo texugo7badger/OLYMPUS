@@ -169,7 +169,7 @@ export default function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-olympus-bg text-olympus-text overflow-hidden`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-olympus-bg text-olympus-text`}
       >
         {children}
         <GlobalTooltip />

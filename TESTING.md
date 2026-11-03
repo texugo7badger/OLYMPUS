@@ -40,7 +40,9 @@ result**, never a green badge without a number.
 - **Mobile** — theme both ways, remote tunnel, QR, voice, preview, git; the
   preview URL is a server answer (LAN IPv4 or per-port HTTPS tunnel), the
   phone adopts the desktop's language and never overwrites it, and the studio
-  reuses the same particles/orb/voice.
+  reuses the same particles/orb/voice. v0.0.70: `/m` is one screen (ring +
+  hold-to-talk + god row), the body no longer blocks scroll, and the details
+  sheet holds the campaign/preview/git/cost/theme.
 - **Creative mode** — the progress model (current plan; a dead walker is
   INTERRUPTED, never running), the per-god bars, the plasma ring's real level,
   the stardrift loader's fill, the prompt queue (a user file) and the auth

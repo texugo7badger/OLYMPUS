@@ -356,7 +356,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
       canvas.height = Math.floor(canvas.clientHeight * dpr);
     };
     resize();
-    particles = Array.from({ length: 96 }, () => ({
+    particles = Array.from({ length: 64 }, () => ({
       x: Math.random(), y: Math.random(),
       vx: (Math.random() - 0.5) * 0.0006, vy: (Math.random() - 0.5) * 0.0006,
       r: 0.7 + Math.random() * 1.6, c: Math.floor(Math.random() * colors.length), a: 0.25 + Math.random() * 0.6,
@@ -386,7 +386,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
         const speed = 0.0008 + Math.random() * 0.0016;
         particles.push({ x: ox, y: oy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, r: 1 + Math.random() * 1.4, c: Math.floor(Math.random() * colors.length), a: 0.9 });
       }
-      if (particles.length > 180) particles = particles.slice(particles.length - 180);
+      if (particles.length > 120) particles = particles.slice(particles.length - 120);
     };
     const draw = () => {
       const w = canvas.width;

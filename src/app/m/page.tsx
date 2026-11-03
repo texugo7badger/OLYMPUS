@@ -1,38 +1,35 @@
 'use client';
 
 /**
- * /m — the mobile companion.
+ * /m — the mobile companion, v0.0.70: ONE SCREEN, VOICE FIRST.
  *
- * The same app, the same server, the same campaign: a phone-sized surface to
- * see what the gods are doing, switch the active project, send a prompt (by
- * typing or voice) and open the live preview.
+ * The phone is not a dashboard. The whole screen is the plasma ring: hold the
+ * mic in the middle, speak, release — the server STT transcribes and the
+ * request goes to Apollo in the active project's lane. Pick a god below the
+ * ring (the voice/persona of the answer); everything else (campaign, project,
+ * preview, git, cost, theme, language) lives in the details sheet.
  *
- * v0.0.63 — three fixes from the field:
- *   1. PREVIEW: the URL comes from `/api/olympus/projects/preview`, which
- *      knows the desktop's LAN address and can open an HTTPS tunnel for the
- *      project port. The old `http://<location.hostname>:<port>` could never
- *      work over the tunnel (wrong host, mixed content).
- *   2. LANGUAGE: every label comes from the shared dictionary, and the phone
- *      adopts the desktop's language on boot (it never overwrites it).
- *   3. CREATIVITY: `/m/studio` carries the same particles, orb and voice.
- *
- * Auth: the pairing QR carries the session token in the URL FRAGMENT. The
- * token is stored in localStorage and sent as `x-olympus-token`, which is the
- * header `requireAuth` already trusts in lan/tunnel mode. The fragment never
- * reaches the server in a request line.
+ * v0.0.70 — the old /m was a stack of cards on a page that could not scroll
+ * (the root <body> carried overflow-hidden). This screen is a fixed h-dvh
+ * surface: no page scroll is needed, the sheet scrolls, the god row scrolls
+ * horizontally, and the ring is the only canvas (60 FPS on a phone).
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  Check, ExternalLink, Loader2, Mic, Palette, Play, Radio, RefreshCw,
-  Send, Sparkles, Square, Volume2, X,
+  Check, ExternalLink, Loader2, Lock, Mic, Palette, Play,
+  Radio, RefreshCw, Settings2, Sparkles, Square, X,
 } from 'lucide-react';
-import MobileAmbient from '@/components/olympus/mobile-ambient';
-import { THEME_PRESETS, applyTheme, normalizeThemeState, type ThemeState } from '@/lib/theme';
-import { LANGUAGES, setLanguage, speechLocale, t, useLanguage, type Language } from '@/lib/i18n';
+import PlasmaRing from '@/components/olympus/plasma-ring';
+import { THEME_PRESETS, applyTheme, normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
+import { LANGUAGES, godName, setLanguage, t, useLanguage, type Language } from '@/lib/i18n';
 import { speakAs } from '@/lib/voice';
+import { useHoldToTalk } from '@/lib/use-hold-to-talk';
+import { godTintHex } from '@/lib/god-tint';
+
+const GOD_IDS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
 
 type Project = {
   slug: string;
@@ -43,7 +40,6 @@ type Project = {
 };
 
 type RunState = {
-  verdict?: string;
   line?: string;
   campaign?: { state?: string; lane?: string };
   hops?: {
@@ -57,67 +53,71 @@ type RunState = {
 
 type PreviewState = {
   ok: boolean;
-  slug: string;
-  name?: string | null;
   port: number | null;
   running: boolean;
   remote: boolean;
-  lanUrl: string | null;
-  localUrl: string;
-  tunnelUrl: string | null;
   recommendedUrl: string | null;
+  tunnelUrl: string | null;
   tunnelAvailable: boolean;
-  probeMs?: number | null;
   note: string;
   error?: string;
 };
 
 const TOKEN_KEY = 'olympus:mobile-token';
 const THEME_KEY = 'olympus:mobile-theme';
-const AMBIENT_KEY = 'olympus:mobile-ambient';
 
 export default function MobileCompanion() {
   const language = useLanguage();
   const [token, setToken] = useState<string | null>(null);
   const [tokenDraft, setTokenDraft] = useState('');
   const [projects, setProjects] = useState<Project[]>([]);
-  const [active, setActive] = useState<string>('');
+  const [active, setActive] = useState('');
   const [run, setRun] = useState<RunState | null>(null);
-  const [cost, setCost] = useState<{ spend?: number; rows?: number } | null>(null);
-  const [git, setGit] = useState<{ remote?: string | null; branch?: string | null; commits?: Array<{ hash: string; subject: string; relative: string }>; ghReady?: boolean } | null>(null);
-  const [text, setText] = useState('');
-  const [log, setLog] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [unattended, setUnattended] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // v0.0.60 — the phone is a second surface of the SAME theme: it inherits
-  // the desktop's store on load, polls for changes, and writes back.
-  const [theme, setTheme] = useState<ThemeState | null>(null);
-  const [themeOpen, setThemeOpen] = useState(false);
-  const [themeBusy, setThemeBusy] = useState(false);
-  const [ambient, setAmbient] = useState(true);
-  // v0.0.63 — the preview is a SERVER answer, not a client-side guess.
+  const [cost, setCost] = useState<{ spend?: number } | null>(null);
+  const [git, setGit] = useState<{ remote?: string | null; branch?: string | null; commits?: Array<{ hash: string; subject: string; relative: string }> } | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
-  const themeStampRef = useRef<string>('');
-  const abortRef = useRef<AbortController | null>(null);
-  const logRef = useRef<HTMLDivElement | null>(null);
+  const [theme, setTheme] = useState<ThemeState | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [god, setGod] = useState('apollo');
+  const [log, setLog] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [level, setLevel] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [ringSize, setRingSize] = useState(280);
+  const [studioStamp, setStudioStamp] = useState('');
+  const levelGate = useRef(0);
+  const themeStampRef = useRef('');
 
   // Boot: token from the QR fragment, then localStorage.
   useEffect(() => {
-    try { setAmbient(localStorage.getItem(AMBIENT_KEY) !== 'off'); } catch { /* default on */ }
     try {
       const hash = window.location.hash || '';
       const fromHash = new URLSearchParams(hash.replace(/^#/, '')).get('t');
       if (fromHash) {
         localStorage.setItem(TOKEN_KEY, fromHash);
-        // Drop the fragment from the address bar after storing it.
         history.replaceState(null, '', window.location.pathname + window.location.search);
       }
       const stored = fromHash || localStorage.getItem(TOKEN_KEY) || '';
       if (stored) setToken(stored);
     } catch { /* no storage */ }
+    try {
+      const cached = localStorage.getItem(THEME_KEY);
+      if (cached) {
+        const next = normalizeThemeState(JSON.parse(cached));
+        applyTheme(next, document.documentElement);
+        setTheme(next);
+      }
+    } catch { /* private */ }
+    const fit = () => {
+      const w = typeof window !== 'undefined' ? window.innerWidth : 390;
+      const h = typeof window !== 'undefined' ? window.innerHeight : 844;
+      setRingSize(Math.max(220, Math.min(340, Math.floor(Math.min(w * 0.78, h * 0.42)))));
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
   }, []);
 
   const headers = useMemo<Record<string, string>>(() => {
@@ -126,13 +126,8 @@ export default function MobileCompanion() {
     return h;
   }, [token]);
 
-  const applyLocalTheme = useCallback((value: ThemeState, stamp?: string | null) => {
-    const next = normalizeThemeState(value);
-    applyTheme(next, document.documentElement);
-    setTheme(next);
-    if (stamp !== undefined) themeStampRef.current = stamp || '';
-    try { localStorage.setItem(THEME_KEY, JSON.stringify(next)); } catch { /* private */ }
-  }, []);
+  const palette = useMemo(() => resolvePalette(normalizeThemeState(theme)), [theme]);
+  const tint = godTintHex(palette, god);
 
   const pullTheme = useCallback(async () => {
     try {
@@ -141,39 +136,13 @@ export default function MobileCompanion() {
       if (!d?.ok || !d.state) return;
       const stamp = String(d.updatedAt || '');
       if (stamp && stamp === themeStampRef.current) return;
-      applyLocalTheme(d.state, stamp);
-    } catch { /* offline: keep the local theme */ }
-  }, [applyLocalTheme]);
-
-  const saveTheme = useCallback(async (next: ThemeState) => {
-    applyLocalTheme(next, themeStampRef.current);
-    setThemeBusy(true);
-    try {
-      const r = await fetch('/api/olympus/theme', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(next),
-      });
-      const d = await r.json().catch(() => null);
-      if (d?.updatedAt) themeStampRef.current = d.updatedAt;
-    } catch { /* the local theme stands; the next poll retries */ }
-    finally { setThemeBusy(false); }
-  }, [applyLocalTheme, headers]);
-
-  // Boot: a cached palette paints immediately, then the desktop's store wins.
-  // The language boot lives in i18n.ts (`useLanguage` above): the phone READS
-  // the desktop's choice and never writes it back.
-  useEffect(() => {
-    try {
-      const cached = localStorage.getItem(THEME_KEY);
-      if (cached) applyLocalTheme(JSON.parse(cached));
-    } catch { /* private */ }
-    void pullTheme();
-    const timer = setInterval(() => {
-      if (document.visibilityState !== 'hidden' && !themeOpen) void pullTheme();
-    }, 10_000);
-    return () => clearInterval(timer);
-  }, [applyLocalTheme, pullTheme, themeOpen]);
+      themeStampRef.current = stamp;
+      const next = normalizeThemeState(d.state);
+      applyTheme(next, document.documentElement);
+      setTheme(next);
+      try { localStorage.setItem(THEME_KEY, JSON.stringify(next)); } catch { /* private */ }
+    } catch { /* offline */ }
+  }, []);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -191,7 +160,7 @@ export default function MobileCompanion() {
       if (rRes.ok) setRun(await rRes.json());
       if (cRes.ok) {
         const d = await cRes.json();
-        setCost({ spend: Number(d?.spend ?? d?.stepCost ?? d?.total ?? 0), rows: Number(d?.rows ?? 0) });
+        setCost({ spend: Number(d?.spend ?? d?.stepCost ?? d?.total ?? 0) });
       }
       setError(null);
     } catch (e: any) {
@@ -202,71 +171,83 @@ export default function MobileCompanion() {
   useEffect(() => {
     if (!token) return;
     void load();
+    void pullTheme();
     const timer = setInterval(() => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-      void load();
-    }, 5000);
+      if (document.visibilityState !== 'hidden') void load();
+    }, 6000);
     return () => clearInterval(timer);
-  }, [token, load]);
+  }, [token, load, pullTheme]);
 
+  // The god/voice mirror (the creative on the desktop shares this state).
   useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
-  }, [log]);
+    if (!token) return;
+    let live = true;
+    const pull = async () => {
+      try {
+        const r = await fetch('/api/olympus/studio/state', { cache: 'no-store', headers });
+        const d = await r.json().catch(() => null);
+        if (!live || !r.ok || !d?.ok) return;
+        const stamp = String(d.updatedAt || '');
+        if (stamp && stamp === studioStamp) return;
+        setStudioStamp(stamp);
+        if (typeof d.god === 'string' && GOD_IDS.includes(d.god)) setGod(d.god);
+      } catch { /* offline */ }
+    };
+    void pull();
+    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void pull(); }, 12_000);
+    return () => { live = false; clearInterval(timer); };
+  }, [token, headers, studioStamp]);
 
-  // v0.0.63 — the preview truth comes from the server (LAN address + tunnel).
-  const pullPreview = useCallback(async () => {
-    if (!token || !active) { setPreview(null); return; }
+  const pushStudio = useCallback(async (patch: { god?: string }) => {
     try {
-      const r = await fetch(`/api/olympus/projects/preview?slug=${encodeURIComponent(active)}`, { cache: 'no-store', headers });
+      const r = await fetch('/api/olympus/studio/state', {
+        method: 'POST', headers, body: JSON.stringify(patch),
+      });
       const d = await r.json().catch(() => null);
-      if (r.ok && d?.ok) setPreview(d);
-    } catch { /* the next poll retries */ }
-  }, [token, active, headers]);
+      if (d?.updatedAt) setStudioStamp(String(d.updatedAt));
+    } catch { /* the local choice stands */ }
+  }, [headers]);
 
-  useEffect(() => {
-    if (!token || !active) { setPreview(null); return; }
-    void pullPreview();
-    const timer = setInterval(() => {
-      if (document.visibilityState !== 'hidden') void pullPreview();
-    }, 12_000);
-    return () => clearInterval(timer);
-  }, [token, active, pullPreview]);
+  const switchProject = useCallback(async (slug: string) => {
+    setActive(slug);
+    setPreview(null);
+    try {
+      await fetch('/api/olympus/projects/active', {
+        method: 'PUT', headers, body: JSON.stringify({ slug }),
+      });
+      void load();
+    } catch { /* the poll corrects it */ }
+  }, [headers, load]);
 
   const previewAction = useCallback(async (action: 'start' | 'stop' | 'start-tunnel' | 'stop-tunnel') => {
     if (!active || previewBusy) return;
     setPreviewBusy(true);
-    setError(null);
     try {
-      const post = async () => {
-        const r = await fetch('/api/olympus/projects/preview', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ slug: active, action }),
-        });
-        const d = await r.json().catch(() => null);
-        if (d) setPreview(d);
-        if (!r.ok) setError(d?.error || t('m.error', language));
-        return { ok: r.ok, data: d as PreviewState | null };
-      };
-      const first = await post();
-      // A dev server takes seconds to bind: poll the probe instead of
-      // declaring "not running" the instant the spawn returns.
-      if (action === 'start' && first.ok) {
-        for (let i = 0; i < 10; i += 1) {
-          await new Promise((r) => setTimeout(r, 1500));
-          const r = await fetch(`/api/olympus/projects/preview?slug=${encodeURIComponent(active)}`, { cache: 'no-store', headers });
-          const d = await r.json().catch(() => null);
-          if (d?.ok && d.running) { setPreview(d); break; }
-        }
-      }
+      const r = await fetch('/api/olympus/projects/preview', {
+        method: 'POST', headers, body: JSON.stringify({ slug: active, action }),
+      });
+      const d = await r.json().catch(() => null);
+      if (d) setPreview(d);
+      if (!r.ok) setError(d?.error || t('m.error', language));
     } catch (e: any) {
       setError(e?.message || t('m.connectionFailed', language));
-    } finally {
-      setPreviewBusy(false);
-    }
+    } finally { setPreviewBusy(false); }
   }, [active, previewBusy, headers, language]);
 
-  // Git, per project — the phone sees the repo and the last commits. Read-only.
+  useEffect(() => {
+    if (!token || !active) { setPreview(null); return; }
+    const pull = async () => {
+      try {
+        const r = await fetch(`/api/olympus/projects/preview?slug=${encodeURIComponent(active)}`, { cache: 'no-store', headers });
+        const d = await r.json().catch(() => null);
+        if (r.ok && d?.ok) setPreview(d);
+      } catch { /* next poll */ }
+    };
+    void pull();
+    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void pull(); }, 12_000);
+    return () => clearInterval(timer);
+  }, [token, active, headers]);
+
   useEffect(() => {
     if (!token || !active) { setGit(null); return; }
     let live = true;
@@ -277,47 +258,34 @@ export default function MobileCompanion() {
     return () => { live = false; };
   }, [token, active, headers]);
 
-  const switchProject = async (slug: string) => {
-    setActive(slug);
-    setPreview(null);
-    try {
-      await fetch('/api/olympus/projects/active', {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ slug }),
-      });
-      void load();
-    } catch { /* the poll corrects it */ }
-  };
+  const onLevel = useCallback((v: number) => {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - levelGate.current < 90) return;
+    levelGate.current = now;
+    setLevel(v);
+  }, []);
 
-  const send = async (override?: string) => {
-    const prompt = (override ?? text).trim();
+  const speak = useCallback((text: string) => {
+    void speakAs(text, god, language, setSpeaking, onLevel);
+  }, [god, language, onLevel]);
+
+  const askApollo = useCallback(async (text: string) => {
+    const prompt = text.trim();
     if (!prompt || busy || !token) return;
     setBusy(true);
     setError(null);
-    setLog([`${t('m.you', language)}: ${prompt.slice(0, 160)}`]);
-    setText('');
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
+    setLog((l) => [...l.slice(-3), `${t('m.you', language)}: ${prompt}`]);
     try {
       const res = await fetch('/api/olympus/action', {
         method: 'POST',
         headers,
-        signal: ctrl.signal,
-        body: JSON.stringify({
-          action: 'prompt',
-          text: prompt,
-          unattended,
-          conversationId: active ? `mobile-${active}` : 'mobile',
-        }),
+        body: JSON.stringify({ action: 'prompt', text: prompt, conversationId: active ? `mobile-${active}` : 'mobile' }),
       });
-      if (!res.ok || !res.body) {
-        const msg = await res.text().catch(() => '');
-        throw new Error(`HTTP ${res.status}${msg ? ` — ${msg.slice(0, 160)}` : ''}`);
-      }
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let answer = '';
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -329,90 +297,57 @@ export default function MobileCompanion() {
           if (!line) continue;
           try {
             const ev = JSON.parse(line.slice(6));
-            const msg = ev?.msg || ev?.text || (ev?.part?.text ? String(ev.part.text).slice(0, 300) : '');
-            if (msg) {
-              setLog((l) => [...l.slice(-40), String(msg).replace(/\s+/g, ' ').slice(0, 300)]);
-            }
+            const msg = ev?.msg || ev?.text || (ev?.part?.text ? String(ev.part.text) : '');
+            if (msg) answer = String(msg).replace(/\s+/g, ' ').slice(0, 400);
           } catch { /* keep reading */ }
         }
       }
+      const reply = answer || 'Apollo recebeu o pedido.';
+      setLog((l) => [...l.slice(-3), reply]);
+      speak(reply);
       void load();
-      void pullPreview();
     } catch (e: any) {
-      if (e?.name === 'AbortError') setLog((l) => [...l, t('m.stopped', language)]);
-      else {
-        setError(e?.message || t('m.error', language));
-        setLog((l) => [...l, `${t('m.error', language)}: ${e?.message || ''}`]);
-      }
+      setError(e?.message || t('m.connectionFailed', language));
     } finally {
       setBusy(false);
-      abortRef.current = null;
     }
-  };
+  }, [active, busy, token, headers, language, speak, load]);
 
-  const mic = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) {
-      setError(t('m.voiceUnsupported', language));
-      return;
-    }
-    const rec = new SR();
-    rec.lang = speechLocale(language);
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.onresult = (ev: any) => {
-      let heard = '';
-      for (let i = ev.resultIndex; i < ev.results.length; i++) heard += ev.results[i][0].transcript;
-      setText((prev) => `${prev} ${heard}`.trim());
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    setListening(true);
-    rec.start();
-  };
+  const hold = useHoldToTalk({
+    language,
+    onText: (text) => void askApollo(text),
+    onError: (message) => setError(message),
+  });
 
-  const stop = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-  };
-
-  const inFlight = run?.hops?.inFlightList ?? [];
+  const campaign = run?.campaign?.state || 'none';
   const completed = Number(run?.hops?.completed ?? 0);
   const total = Number(run?.hops?.total ?? 0);
-  const pct = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
-  const campaign = run?.campaign?.state || 'none';
-  const activeProject = projects.find((p) => p.slug === active);
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   const campaignLabel =
     campaign === 'running' ? t('m.stateRunning', language)
       : campaign === 'parked' ? t('m.stateParked', language)
-        : campaign === 'done' ? t('m.stateDone', language)
-          : campaign === 'unverified' ? t('m.interrupted', language)
+        : campaign === 'unverified' ? t('m.interrupted', language)
+          : campaign === 'done' ? t('m.stateDone', language)
             : campaign === 'none' ? t('m.stateIdle', language)
               : campaign;
+  const activeProject = projects.find((p) => p.slug === active);
 
   if (!token) {
     return (
-      <main className="relative min-h-dvh bg-olympus-bg text-olympus-text flex flex-col items-center justify-center px-6 py-10">
-        <MobileAmbient theme={theme} enabled={ambient} />
-        <div className="relative z-10 w-full max-w-sm">
-          <div className="text-center mb-8">
-            <div className="mx-auto mb-4 h-14 w-14 rounded-full border border-olympus-gold/40 flex items-center justify-center text-olympus-gold text-xl font-semibold tracking-[0.2em]">
-              O
-            </div>
+      <main className="relative flex min-h-dvh flex-col items-center justify-center bg-olympus-bg px-6 py-10 text-olympus-text">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-olympus-gold/40 text-xl font-semibold tracking-[0.2em] text-olympus-gold">O</div>
             <h1 className="text-xl font-semibold tracking-[0.18em]">OLYMPUS</h1>
-            <p className="mt-2 text-xs text-olympus-text-dim leading-relaxed">
-              {t('m.connectHint', language)}
-            </p>
+            <p className="mt-2 text-xs leading-relaxed text-olympus-text-dim">{t('m.connectHint', language)}</p>
           </div>
           <input
             value={tokenDraft}
             onChange={(e) => setTokenDraft(e.target.value)}
             placeholder={t('m.tokenPlaceholder', language)}
             aria-label={t('m.tokenPlaceholder', language)}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            className="w-full rounded-xl bg-olympus-panel border border-olympus-gold/20 px-4 py-3.5 text-base outline-none focus:border-olympus-gold/60"
+            autoCapitalize="none" autoCorrect="off" spellCheck={false}
+            className="w-full rounded-xl border border-olympus-gold/20 bg-olympus-panel px-4 py-3.5 text-base outline-none focus:border-olympus-gold/60"
           />
           <button
             onClick={() => {
@@ -421,361 +356,240 @@ export default function MobileCompanion() {
               try { localStorage.setItem(TOKEN_KEY, v); } catch { /* ignore */ }
               setToken(v);
             }}
-            className="mt-3 w-full rounded-xl bg-olympus-gold text-olympus-bg font-semibold py-3.5 text-sm active:scale-[0.99] transition-transform"
-          >
-            {t('m.connect', language)}
-          </button>
-          <p className="mt-4 text-[11px] text-olympus-text-dim text-center leading-relaxed">
-            {t('m.connectNote', language)}
-          </p>
+            className="mt-3 w-full rounded-xl bg-olympus-gold py-3.5 text-sm font-semibold text-olympus-bg active:scale-[0.99]"
+          >{t('m.connect', language)}</button>
+          <p className="mt-4 text-center text-[11px] leading-relaxed text-olympus-text-dim">{t('m.connectNote', language)}</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="relative min-h-dvh bg-olympus-bg text-olympus-text pb-[env(safe-area-inset-bottom)]">
-      <MobileAmbient theme={theme} enabled={ambient} />
-      <header className="sticky top-0 z-20 border-b border-olympus-gold/10 bg-olympus-bg/95 backdrop-blur px-3 pt-[calc(env(safe-area-inset-top)+8px)] pb-2.5 flex items-center gap-2">
+    <main className="relative flex h-dvh w-full flex-col overflow-hidden bg-olympus-bg text-olympus-text">
+      <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(circle at 50% 34%, ${tint}18, transparent 62%)` }} aria-hidden="true" />
+
+      <header className="relative z-10 flex items-center gap-2 px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-1">
         <span className="h-2 w-2 shrink-0 rounded-full bg-olympus-green shadow-[0_0_8px_var(--olympus-green)]" />
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] tracking-[0.22em] font-semibold">OLYMPUS</div>
-          <div className="text-[10px] text-olympus-text-dim truncate">{active || t('m.noProject', language)} · {campaignLabel}</div>
+          <div className="text-[10px] font-semibold tracking-[0.22em]">OLYMPUS</div>
+          <div className="truncate text-[10px] text-olympus-text-dim">{active || t('m.noProject', language)} · {campaignLabel}</div>
         </div>
-        <Link
-          href="/m/studio"
-          aria-label={t('m.studio', language)}
-          className="flex items-center justify-center h-11 w-11 rounded-full border border-olympus-gold/20 text-olympus-gold active:scale-95 transition-transform"
-        >
+        <Link href="/m/studio" aria-label={t('m.studio', language)} className="flex h-11 w-11 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold">
           <Radio size={16} />
         </Link>
-        <button
-          onClick={() => {
-            setAmbient((v) => {
-              const next = !v;
-              try { localStorage.setItem(AMBIENT_KEY, next ? 'on' : 'off'); } catch { /* private */ }
-              return next;
-            });
-          }}
-          aria-label={t('m.ambient', language)}
-          aria-pressed={ambient}
-          className={`flex items-center justify-center h-11 w-11 rounded-full border ${ambient ? 'text-olympus-cyan border-olympus-cyan/30' : 'text-olympus-text-dim border-olympus-gold/15'}`}
-        >
-          <Sparkles size={16} />
-        </button>
-        <button
-          onClick={() => setThemeOpen(true)}
-          aria-label={t('m.theme', language)}
-          className="flex items-center justify-center h-11 w-11 text-olympus-gold border border-olympus-gold/15 rounded-full"
-        >
-          <Palette size={16} />
-        </button>
-        <button
-          onClick={() => {
-            void speakAs(`${campaignLabel}. ${run?.line || ''}`, 'atlas', language);
-          }}
-          aria-label={t('m.readAloud', language)}
-          className="flex items-center justify-center h-11 w-11 text-olympus-gold border border-olympus-gold/15 rounded-full"
-        >
-          <Volume2 size={16} />
+        <button onClick={() => setDetailsOpen(true)} aria-label={t('m.details', language)} className="flex h-11 w-11 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold">
+          <Settings2 size={16} />
         </button>
       </header>
 
-      <section className="relative z-10 mx-auto w-full max-w-lg px-3 pt-3 space-y-3">
-        <div className="rounded-2xl border border-olympus-gold/15 bg-olympus-panel p-4">
-          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-olympus-text-dim">
-            <span>{t('m.campaign', language)}</span>
-            <span className={campaign === 'running' ? 'text-olympus-green' : campaign === 'parked' ? 'text-olympus-gold' : 'text-olympus-text-dim'}>{campaignLabel}</span>
-          </div>
-          <div className="mt-2 text-sm leading-snug break-words">{run?.line || t('m.waitingWalker', language)}</div>
-          <div className="mt-3 h-1.5 rounded-full bg-olympus-card overflow-hidden">
-            <div className="h-full rounded-full bg-olympus-gold transition-[width] duration-500" style={{ width: `${pct}%` }} />
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[10px] text-olympus-text-dim">
-            <span>{completed}/{total} {t('m.hops', language)}</span>
-            <span>{run?.hops?.inFlight ?? inFlight.length} {t('m.inFlight', language)}</span>
-          </div>
-          {inFlight.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {inFlight.map((h) => (
-                <span key={h.hopId} className="text-[10px] rounded-full border border-olympus-gold/20 px-2 py-0.5 text-olympus-gold">
-                  {h.hopId}{h.god ? ` · ${h.god}` : ''}
-                </span>
-              ))}
-            </div>
-          )}
-          {run?.hops?.parked?.hopId && (
-            <div className="mt-3 rounded-lg border border-olympus-gold/25 bg-olympus-gold/5 px-2.5 py-2 text-[11px] text-olympus-gold">
-              {t('m.parkedAt', language)} {run.hops.parked.hopId}{run.hops.parked.reason ? ` — ${run.hops.parked.reason}` : ''}
-            </div>
-          )}
-          {active && (
-            <button
-              onClick={() => void send(`Nova tarefa: continue o projeto ${active}`)}
-              disabled={busy}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-olympus-green/40 bg-olympus-green/10 py-2.5 text-[12px] font-medium text-olympus-green disabled:opacity-40"
-            >
-              <Play size={13} /> {t('m.resume', language)}
-            </button>
-          )}
-        </div>
+      <section className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4">
+        <button
+          onClick={() => { const intro = `${godName(god, language)} — ${t('m.holdToTalk', language)}`; setLog((l) => [...l.slice(-3), intro]); if (god !== 'apollo') speak(intro); }}
+          className="flex items-center gap-1.5 text-[11px] font-mono"
+          style={{ color: tint }}
+          aria-label={t('m.gods', language)}
+        >
+          <Sparkles size={12} /> {godName(god, language)}
+        </button>
 
-        <div className="flex items-center gap-2">
-          <select
-            value={active}
-            onChange={(e) => void switchProject(e.target.value)}
-            className="flex-1 min-w-0 rounded-xl bg-olympus-panel border border-olympus-gold/15 px-3 py-3 text-sm outline-none"
-            aria-label={t('m.activeProject', language)}
+        <PlasmaRing
+          tint={tint}
+          level={hold.recording ? hold.level : level}
+          speaking={speaking}
+          recording={hold.recording}
+          size={ringSize}
+        >
+          <button
+            onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); void hold.start(); }}
+            onPointerUp={(e) => { e.preventDefault(); hold.stop(false); }}
+            onPointerCancel={() => hold.stop(true)}
+            onContextMenu={(e) => e.preventDefault()}
+            aria-label={t('m.holdToTalk', language)}
+            aria-pressed={hold.recording}
+            className="flex h-28 w-28 select-none items-center justify-center rounded-full border"
+            style={{
+              touchAction: 'none',
+              borderColor: hold.recording ? palette.red : `${tint}55`,
+              background: `radial-gradient(circle at 50% 45%, ${tint}22, transparent 72%)`,
+              boxShadow: `0 0 ${hold.recording ? 54 : 28}px ${hold.recording ? palette.red : tint}44`,
+            }}
           >
-            {projects.length === 0 && <option value="">{t('m.noProjects', language)}</option>}
-            {projects.map((p) => (
-              <option key={p.slug} value={p.slug}>{p.name || p.slug}</option>
-            ))}
-          </select>
-        </div>
+            {hold.transcribing
+              ? <Loader2 size={26} className="animate-spin" style={{ color: tint }} />
+              : hold.recording
+                ? <Mic size={30} style={{ color: palette.red }} />
+                : <Mic size={26} style={{ color: tint }} />}
+          </button>
+        </PlasmaRing>
 
-        {/* v0.0.63 — the preview, reachable from wherever the phone is. */}
-        {active && (
-          <div className="rounded-2xl border border-olympus-gold/15 bg-olympus-panel p-3">
-            <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 shrink-0 rounded-full ${preview?.running ? 'bg-olympus-green shadow-[0_0_8px_var(--olympus-green)]' : 'bg-olympus-text-dim/40'}`} />
-              <span className="text-[11px] uppercase tracking-wider text-olympus-text-dim">{t('m.preview', language)}</span>
-              {preview && (
-                <span className="ml-auto text-[10px] font-mono text-olympus-text-dim">
-                  {preview.port ? `:${preview.port}` : ''}{preview.probeMs != null ? ` · ${preview.probeMs}ms` : ''}
-                </span>
-              )}
-              {previewBusy && <Loader2 size={12} className="animate-spin text-olympus-gold" />}
-            </div>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-olympus-text-dim break-words">
-              {preview?.note || (previewBusy ? t('m.previewStarting', language) : '—')}
-            </p>
-            <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              {preview?.running && preview.recommendedUrl && (
-                <a
-                  href={preview.recommendedUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1.5 rounded-xl bg-olympus-gold px-3 py-2.5 text-[12px] font-semibold text-olympus-bg"
-                >
-                  <ExternalLink size={13} /> {t('m.preview', language)}
-                </a>
-              )}
-              {!preview?.running && (
-                <button
-                  onClick={() => void previewAction('start')}
-                  disabled={previewBusy}
-                  className="flex items-center gap-1.5 rounded-xl bg-olympus-gold px-3 py-2.5 text-[12px] font-semibold text-olympus-bg disabled:opacity-40"
-                >
-                  <Play size={13} /> {t('m.startPreview', language)}
-                </button>
-              )}
-              {preview?.running && preview.remote && !preview.tunnelUrl && (
-                <button
-                  onClick={() => void previewAction('start-tunnel')}
-                  disabled={previewBusy || !preview.tunnelAvailable}
-                  className="flex items-center gap-1.5 rounded-xl border border-olympus-gold/30 px-3 py-2.5 text-[12px] text-olympus-gold disabled:opacity-40"
-                >
-                  <Radio size={13} /> {t('m.openTunnel', language)}
-                </button>
-              )}
-              {preview?.tunnelUrl && (
-                <button
-                  onClick={() => void previewAction('stop-tunnel')}
-                  disabled={previewBusy}
-                  className="rounded-xl border border-olympus-gold/20 px-3 py-2.5 text-[11px] text-olympus-text-dim disabled:opacity-40"
-                >
-                  {t('m.closeTunnel', language)}
-                </button>
-              )}
-              {preview?.running && (
-                <button
-                  onClick={() => void previewAction('stop')}
-                  disabled={previewBusy}
-                  className="flex items-center gap-1.5 rounded-xl border border-olympus-red/30 px-3 py-2.5 text-[11px] text-olympus-red disabled:opacity-40"
-                >
-                  <Square size={12} /> {t('m.stopPreview', language)}
-                </button>
-              )}
-            </div>
-            {preview?.running && preview.remote && !preview.tunnelUrl && (
-              <p className="mt-2 text-[10px] leading-relaxed text-olympus-gold/80">{t('m.previewRemoteHint', language)}</p>
-            )}
-            {preview?.tunnelUrl && (
-              <p className="mt-2 text-[10px] leading-relaxed text-olympus-text-dim">{t('m.previewPublic', language)}</p>
-            )}
-          </div>
-        )}
+        <p className="text-center text-[10px] font-mono" style={{ color: hold.recording ? palette.red : palette.textDim }}>
+          {hold.recording ? t('m.recordingRelease', language) : hold.transcribing ? t('m.transcribing', language) : busy ? t('m.studioThinking', language) : t('m.holdToTalk', language)}
+        </p>
 
-        {git && (
-          <div className="rounded-2xl border border-olympus-gold/10 bg-olympus-card p-3">
-            <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-olympus-text-dim">
-              <span>{t('m.git', language)}</span>
-              <span>{git.branch || '—'}</span>
-            </div>
-            {git.remote ? (
-              <a href={git.remote.replace(/\.git$/, '')} target="_blank" rel="noreferrer" className="mt-1 block text-[10px] text-olympus-gold truncate">
-                {git.remote}
-              </a>
-            ) : (
-              <p className="mt-1 text-[10px] text-olympus-text-dim">{t('m.noRemote', language)}</p>
-            )}
-            {(git.commits || []).slice(0, 3).map((c) => (
-              <div key={c.hash} className="mt-1.5 flex items-start gap-2 text-[10px]">
-                <span className="font-mono text-olympus-text-dim shrink-0">{String(c.hash).slice(0, 7)}</span>
-                <span className="min-w-0 flex-1 truncate text-olympus-text">{c.subject}</span>
-                <span className="text-olympus-text-dim shrink-0">{c.relative}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="rounded-2xl border border-olympus-gold/15 bg-olympus-panel p-3">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            placeholder={t('m.askPlaceholder', language)}
-            aria-label={t('m.askPlaceholder', language)}
-            className="w-full resize-none bg-transparent text-base leading-relaxed outline-none placeholder:text-olympus-text-dim"
-          />
-          <div className="mt-2 flex items-center gap-2">
-            <button
-              onClick={mic}
-              aria-label={t('m.voiceInput', language)}
-              className={`h-11 w-11 rounded-full border flex items-center justify-center ${listening ? 'border-olympus-green text-olympus-green animate-pulse' : 'border-olympus-gold/25 text-olympus-gold'}`}
-            >
-              <Mic size={16} />
-            </button>
-            <button
-              onClick={() => setUnattended((v) => !v)}
-              className={`text-[11px] rounded-full px-3 py-2 border ${unattended ? 'border-olympus-green/50 text-olympus-green bg-olympus-green/10' : 'border-olympus-gold/15 text-olympus-text-dim'}`}
-            >
-              {t('m.autoApprove', language)}
-            </button>
-            {busy ? (
-              <button onClick={stop} className="ml-auto rounded-xl bg-olympus-card px-4 py-2.5 text-[12px] text-olympus-text">
-                {t('m.stop', language)}
-              </button>
-            ) : (
+        <div className="mt-1 flex w-full max-w-lg gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+          {GOD_IDS.map((g) => {
+            const gt = godTintHex(palette, g);
+            const on = g === god;
+            return (
               <button
-                onClick={() => void send()}
-                disabled={!text.trim()}
-                className="ml-auto flex items-center gap-1.5 rounded-xl bg-olympus-gold px-4 py-2.5 text-[12px] font-semibold text-olympus-bg disabled:opacity-40"
+                key={g}
+                onClick={() => { setGod(g); void pushStudio({ god: g }); }}
+                aria-pressed={on}
+                aria-label={godName(g, language)}
+                className="flex min-w-[58px] flex-col items-center gap-1 rounded-xl border px-1.5 py-1.5"
+                style={{ borderColor: on ? `${gt}99` : `${palette.gold}18`, background: on ? `${gt}18` : 'transparent' }}
               >
-                <Send size={13} /> {t('m.send', language)}
+                <span className="h-2 w-2 rounded-full" style={{ background: gt }} />
+                <span className="max-w-[56px] truncate text-[8px] font-mono" style={{ color: on ? gt : palette.textDim }}>{godName(g, language)}</span>
               </button>
-            )}
-          </div>
+            );
+          })}
         </div>
 
-        {error && (
-          <div className="rounded-xl border border-olympus-red/40 bg-olympus-red/10 px-3 py-2 text-[11px] text-olympus-red break-words">
-            {error}
-          </div>
-        )}
-
-        {log.length > 0 && (
-          <div ref={logRef} className="rounded-2xl border border-olympus-gold/10 bg-olympus-card p-3 max-h-52 overflow-y-auto space-y-1">
-            {log.map((line, i) => (
-              <p key={i} className="text-[11px] leading-relaxed text-olympus-text-dim break-words">{line}</p>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center justify-between text-[10px] text-olympus-text-dim px-1 pb-[calc(env(safe-area-inset-bottom)+16px)]">
-          <span>{cost ? `${t('m.cost24h', language)} · $${(cost.spend ?? 0).toFixed(2)}` : '—'}</span>
-          <span className="truncate">{activeProject?.name || active || '—'}</span>
-        </div>
+        <p className="text-[9px] font-mono text-olympus-text-dim">
+          {total > 0 ? `${pct}% · ${completed}/${total} ${t('m.hops', language)}` : campaignLabel}
+          {run?.hops?.parked?.hopId ? ` · ${t('m.parkedAt', language)} ${run.hops.parked.hopId}` : ''}
+        </p>
       </section>
 
-      {themeOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end bg-black/60"
-          onClick={() => setThemeOpen(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={t('m.themeTitle', language)}
-        >
+      <div className="relative z-10 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+        {log.slice(-3).map((line, i) => (
+          <p key={i} className="mx-auto mb-1 max-w-lg truncate text-center text-[10px] leading-relaxed text-olympus-text-dim">{line}</p>
+        ))}
+        {error && (
+          <button onClick={() => setError(null)} className="mx-auto mb-1 block max-w-lg truncate rounded-lg border border-olympus-red/40 bg-olympus-red/10 px-2 py-1 text-[10px] text-olympus-red">
+            {error}
+          </button>
+        )}
+      </div>
+
+      {detailsOpen && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={() => setDetailsOpen(false)} role="dialog" aria-modal="true" aria-label={t('m.details', language)}>
           <div
-            className="w-full max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-olympus-gold/20 bg-olympus-panel p-4 pb-[calc(env(safe-area-inset-bottom)+16px)]"
+            className="max-h-[86dvh] w-full overflow-y-auto rounded-t-2xl border-t border-olympus-gold/20 bg-olympus-panel p-4 pb-[calc(env(safe-area-inset-bottom)+16px)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 mb-1">
-              <Palette size={14} className="text-olympus-gold" />
-              <span className="text-[12px] font-semibold tracking-wide">{t('m.themeTitle', language)}</span>
-              {themeBusy && <Loader2 size={11} className="animate-spin text-olympus-gold" />}
-              <button onClick={() => setThemeOpen(false)} aria-label={t('m.close', language)} className="ml-auto text-olympus-text-dim p-2">
-                <X size={16} />
-              </button>
+            <div className="mb-2 flex items-center gap-2">
+              <Settings2 size={14} className="text-olympus-gold" />
+              <span className="text-[12px] font-semibold tracking-wide">{t('m.details', language)}</span>
+              <span className="ml-auto text-[10px] font-mono text-olympus-text-dim">{cost ? `24h · $${(cost.spend ?? 0).toFixed(2)}` : '—'}</span>
+              <button onClick={() => setDetailsOpen(false)} aria-label={t('m.close', language)} className="p-2 text-olympus-text-dim"><X size={16} /></button>
             </div>
-            <p className="text-[10px] text-olympus-text-dim mb-3 leading-relaxed">
-              {t('m.themeHint', language)}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {THEME_PRESETS.map((preset) => {
-                const isActive = theme?.presetId === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    onClick={() => void saveTheme(normalizeThemeState({ ...(theme ?? {}), presetId: preset.id, accent: null, custom: undefined }))}
-                    className={`rounded-xl border p-2.5 text-left transition-colors ${isActive ? 'border-olympus-gold/60 bg-olympus-gold/10' : 'border-olympus-gold/10 bg-olympus-bg/40'}`}
-                  >
-                    <span className="flex items-center gap-1 mb-1.5">
-                      <span className="h-3.5 w-3.5 rounded-full border border-black/20" style={{ background: preset.colors.bg }} />
-                      <span className="h-3.5 w-3.5 rounded-full border border-black/20" style={{ background: preset.colors.panel }} />
-                      <span className="h-3.5 w-3.5 rounded-full border border-black/20" style={{ background: preset.colors.gold }} />
-                      {isActive && <Check size={11} className="ml-auto text-olympus-green" />}
-                    </span>
-                    <span className="text-[10px] font-medium block truncate">{preset.name}</span>
-                    <span className="text-[8px] uppercase tracking-wider text-olympus-text-dim">{preset.mode}</span>
-                  </button>
-                );
-              })}
+
+            <div className="rounded-xl border border-olympus-gold/10 bg-olympus-card p-3">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-olympus-text-dim">
+                <span>{t('m.campaign', language)}</span>
+                <span>{campaignLabel}</span>
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed break-words">{run?.line || t('m.waitingWalker', language)}</p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-olympus-bg">
+                <div className="h-full rounded-full bg-olympus-gold" style={{ width: `${pct}%` }} />
+              </div>
+              {active && (
+                <button
+                  onClick={() => { void askApollo(`Nova tarefa: continue o projeto ${active}`); setDetailsOpen(false); }}
+                  disabled={busy}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-green/40 bg-olympus-green/10 py-2 text-[11px] text-olympus-green disabled:opacity-40"
+                >
+                  <Play size={12} /> {t('m.resume', language)}
+                </button>
+              )}
             </div>
-            <div className="mt-3 flex items-center gap-2">
-              <button
-                onClick={() => void saveTheme(normalizeThemeState({ ...(theme ?? {}), motion: 'full' }))}
-                className={`flex-1 rounded-lg border px-2 py-2 text-[10px] ${theme?.motion !== 'stable' ? 'border-olympus-gold/50 text-olympus-gold bg-olympus-gold/10' : 'border-olympus-gold/10 text-olympus-text-dim'}`}
-              >
-                {t('m.fullMotion', language)}
-              </button>
-              <button
-                onClick={() => void saveTheme(normalizeThemeState({ ...(theme ?? {}), motion: 'stable' }))}
-                className={`flex-1 rounded-lg border px-2 py-2 text-[10px] ${theme?.motion === 'stable' ? 'border-olympus-gold/50 text-olympus-gold bg-olympus-gold/10' : 'border-olympus-gold/10 text-olympus-text-dim'}`}
-              >
-                {t('m.stableMotion', language)}
-              </button>
-            </div>
-            {/* The phone follows the desktop by default; an explicit choice here
-                is the one action allowed to change the shared language. */}
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-wider text-olympus-text-dim">{t('settings.language', language)}</span>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as Language)}
-                aria-label={t('settings.language', language)}
-                className="ml-auto rounded-lg bg-olympus-bg border border-olympus-gold/20 px-2 py-1.5 text-[11px] outline-none"
-              >
-                {LANGUAGES.map((l) => (
-                  <option key={l.id} value={l.id}>{l.native}</option>
-                ))}
+
+            <div className="mt-2 flex items-center gap-2">
+              <select value={active} onChange={(e) => void switchProject(e.target.value)} aria-label={t('m.activeProject', language)} className="min-w-0 flex-1 rounded-xl border border-olympus-gold/15 bg-olympus-bg px-3 py-2.5 text-sm outline-none">
+                {projects.length === 0 && <option value="">{t('m.noProjects', language)}</option>}
+                {projects.map((p) => <option key={p.slug} value={p.slug}>{p.name || p.slug}</option>)}
               </select>
             </div>
+
+            {active && (
+              <div className="mt-2 rounded-xl border border-olympus-gold/10 bg-olympus-card p-3">
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-olympus-text-dim">
+                  <span className={`h-2 w-2 rounded-full ${preview?.running ? 'bg-olympus-green' : 'bg-olympus-text-dim/40'}`} />
+                  <span>{t('m.preview', language)}</span>
+                  {preview?.port && <span className="ml-auto font-mono">:{preview.port}</span>}
+                  {previewBusy && <Loader2 size={11} className="animate-spin text-olympus-gold" />}
+                </div>
+                <p className="mt-1 text-[10px] leading-relaxed text-olympus-text-dim break-words">{preview?.note || '—'}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {preview?.running && preview.recommendedUrl && (
+                    <a href={preview.recommendedUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded-lg bg-olympus-gold px-3 py-2 text-[11px] font-semibold text-olympus-bg"><ExternalLink size={12} /> {t('m.preview', language)}</a>
+                  )}
+                  {!preview?.running && (
+                    <button onClick={() => void previewAction('start')} disabled={previewBusy} className="flex items-center gap-1 rounded-lg bg-olympus-gold px-3 py-2 text-[11px] font-semibold text-olympus-bg disabled:opacity-40"><Play size={12} /> {t('m.startPreview', language)}</button>
+                  )}
+                  {preview?.running && preview.remote && !preview.tunnelUrl && (
+                    <button onClick={() => void previewAction('start-tunnel')} disabled={previewBusy || !preview.tunnelAvailable} className="rounded-lg border border-olympus-gold/30 px-3 py-2 text-[11px] text-olympus-gold disabled:opacity-40">{t('m.openTunnel', language)}</button>
+                  )}
+                  {preview?.tunnelUrl && (
+                    <button onClick={() => void previewAction('stop-tunnel')} disabled={previewBusy} className="rounded-lg border border-olympus-gold/20 px-3 py-2 text-[10px] text-olympus-text-dim">{t('m.closeTunnel', language)}</button>
+                  )}
+                  {preview?.running && (
+                    <button onClick={() => void previewAction('stop')} disabled={previewBusy} className="flex items-center gap-1 rounded-lg border border-olympus-red/30 px-3 py-2 text-[10px] text-olympus-red disabled:opacity-40"><Square size={11} /> {t('m.stopPreview', language)}</button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {git && (
+              <div className="mt-2 rounded-xl border border-olympus-gold/10 bg-olympus-card p-3">
+                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-olympus-text-dim"><span>{t('m.git', language)}</span><span>{git.branch || '—'}</span></div>
+                {git.remote ? (
+                  <a href={git.remote.replace(/\.git$/, '')} target="_blank" rel="noreferrer" className="mt-1 block truncate text-[10px] text-olympus-gold">{git.remote}</a>
+                ) : (
+                  <p className="mt-1 text-[10px] text-olympus-text-dim">{t('m.noRemote', language)}</p>
+                )}
+                {(git.commits || []).slice(0, 3).map((c) => (
+                  <div key={c.hash} className="mt-1 flex items-start gap-2 text-[10px]">
+                    <span className="shrink-0 font-mono text-olympus-text-dim">{String(c.hash).slice(0, 7)}</span>
+                    <span className="min-w-0 flex-1 truncate">{c.subject}</span>
+                    <span className="shrink-0 text-olympus-text-dim">{c.relative}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-wider text-olympus-text-dim">{t('settings.language', language)}</span>
+              <select value={language} onChange={(e) => setLanguage(e.target.value as Language)} aria-label={t('settings.language', language)} className="ml-auto rounded-lg border border-olympus-gold/20 bg-olympus-bg px-2 py-1.5 text-[11px] outline-none">
+                {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.native}</option>)}
+              </select>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-wider text-olympus-text-dim">{t('m.themeTitle', language)}</span>
+              <button onClick={() => void pullTheme()} className="ml-auto flex items-center gap-1 rounded-lg border border-olympus-gold/15 px-2 py-1.5 text-[10px] text-olympus-text-dim"><RefreshCw size={10} /> {t('m.reloadTheme', language)}</button>
+              <button onClick={() => setDetailsOpen(false)} className="flex items-center gap-1 rounded-lg border border-olympus-gold/15 px-2 py-1.5 text-[10px] text-olympus-gold"><Palette size={10} /> {t('m.theme', language)}</button>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {THEME_PRESETS.slice(0, 6).map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={async () => {
+                    const next = normalizeThemeState({ ...(theme ?? {}), presetId: preset.id, accent: null, custom: undefined });
+                    applyTheme(next, document.documentElement);
+                    setTheme(next);
+                    try { localStorage.setItem(THEME_KEY, JSON.stringify(next)); } catch { /* private */ }
+                    try {
+                      const r = await fetch('/api/olympus/theme', { method: 'POST', headers, body: JSON.stringify(next) });
+                      const d = await r.json().catch(() => null);
+                      if (d?.updatedAt) themeStampRef.current = String(d.updatedAt);
+                    } catch { /* the local theme stands */ }
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 p-2 text-left"
+                >
+                  <span className="h-3 w-3 rounded-full border border-black/20" style={{ background: preset.colors.bg }} />
+                  <span className="h-3 w-3 rounded-full border border-black/20" style={{ background: preset.colors.gold }} />
+                  <span className="truncate text-[9px]">{preset.name}</span>
+                  {theme?.presetId === preset.id && <Check size={10} className="ml-auto text-olympus-green" />}
+                </button>
+              ))}
+            </div>
             <button
-              onClick={() => void pullTheme()}
-              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-gold/15 px-2 py-2 text-[10px] text-olympus-text-dim"
+              onClick={() => { try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ } setToken(null); }}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-red/25 py-2 text-[10px] text-olympus-red"
             >
-              <RefreshCw size={10} /> {t('m.reloadTheme', language)}
-            </button>
-            <button
-              onClick={() => {
-                try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
-                setToken(null);
-              }}
-              className="mt-2 w-full rounded-lg border border-olympus-red/25 px-2 py-2 text-[10px] text-olympus-red"
-            >
-              {t('m.lock', language)}
+              <Lock size={11} /> {t('m.lock', language)}
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 # Mobile companion
 
-> v0.0.64 · the same server, the same campaign, the same token, the same language, the same creative mode.
+> v0.0.70 · one screen, voice first; the creative mode is the desktop surface, responsive.
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
@@ -46,10 +46,9 @@ alternative (the `tunnel` network mode).
 
 | Surface | What it does |
 |---|---|
-| Campaign | state, completion bar, in-flight hops, the park reason |
-| Projects | list + switch the active project |
-| Prompt | send a turn; the live stream is reduced to short log lines |
-| Voice | Web Speech API dictation; the campaign can also be read aloud |
+| Voice (the screen) | hold the mic inside the plasma ring → server STT → Apollo in the project's lane; the god row picks the voice/persona |
+| Details sheet | campaign, project, live preview, git, cost, theme and language — no cards on the main screen |
+| Creative | `/m/studio` — the desktop creative surface, one column on a phone, two on a tablet, progress per god + feed + queue + chat |
 | Preview | server-resolved URL: the desktop's LAN IPv4 on the same Wi-Fi, or a per-port HTTPS tunnel away from home; start/stop the server and the tunnel here |
 | Studio | `/m/studio` — the same creative mode: progress (overall + per god), the plasma ring, the build crystal, the development feed, the prompt queue and the per-god voice |
 | Voice to Apollo | hold the mic inside the ring → server STT → the request goes to Apollo in the project's lane |
@@ -82,7 +81,9 @@ alternative (the `tunnel` network mode).
 
 ## Honest limits
 
-- No push notifications: the phone polls every 5s while the tab is visible.
+- No push notifications: the phone polls every 6s while the tab is visible.
+- The minimal `/m` has one canvas (the ring) and no page scroll; the creative
+  scrolls natively (the root body no longer blocks it).
 - No offline queue: a prompt sent while the desktop is down fails loudly.
 - The companion is a web app, not a store-native app; voice depends on the
   browser's speech engine and language.

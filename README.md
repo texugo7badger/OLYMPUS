@@ -47,14 +47,17 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.64 — the creative mode is real.** The project has an honest 0–100%
-bar (of the current plan) and a bar per god, each god can explain its number
-by voice, the build is a crystal cut in the theme's colors, the loader is a
-stardrift sphere that fills with the theme's light, and notifications follow
-the palette you picked when the app is visible. The running hop now shows live
-tokens, duration, files and the last tool; a dead walker is **INTERRUPTED —
-resume**, never a ghost "running". Everything below is evidence, not a
-promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md).
+**v0.0.70 — the stability release.** The phone is one screen: hold the mic in
+the plasma ring, speak, release — the request goes to Apollo in the project's
+lane; pick a god below the ring; everything else lives in a details sheet. The
+creative mode opens the desktop surface, responsive from 320 px to tablet. The
+app now has a **server watchdog**: a dead dev server respawns instead of
+leaving `ERR_CONNECTION_REFUSED`, and the reconnect page is a last resort. The
+loader is a stardrift sphere that fills with the theme's light, the build is a
+crystal cut in the theme's colors, the progress is the honest 0–100% of the
+current plan with one bar per god, and notifications follow your palette when
+the app is visible. Everything below is evidence, not a promise; the open v1.0
+gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -123,9 +126,14 @@ renders blank. The full table and speech locales live in
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
-**v0.0.63.** The phone opens the same app at `/m`: the running campaign, the
-in-flight hops, the active project, a prompt (typed or dictated), the campaign
-read aloud, the live preview and the project's git remote and last commits.
+**v0.0.70.** The phone opens `/m` — one screen, voice first: the plasma ring
+fills the view, **hold the mic in the middle**, speak, release; the server STT
+transcribes and the request goes to Apollo in the active project's lane. The
+god row below the ring picks the voice/persona; the details sheet holds the
+campaign, the project, the live preview, git, cost, theme and language. The
+creative button opens `/m/studio`: the desktop creative surface, responsive
+from 320 px to tablet, with the progress per god, the development feed, the
+prompt queue and the same ring.
 Pairing is one QR in the status bar; the token rides the URL fragment, never a
 query string. Outside the house, **start remote tunnel** gives an HTTPS
 Cloudflare link for the phone (stop it when done); the theme follows the PC

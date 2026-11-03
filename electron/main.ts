@@ -1081,9 +1081,12 @@ function createWindow() {
       const reconnectHtml = brandPage({ title: 'Reconnecting the workspace', detail: `Attempt ${attempt} of 8 — probing the server, respawning if needed, reloading on green…` });
       mainWindow?.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(reconnectHtml));
       void (async () => {
-        // Respawn when we own the server and it died.
-        if (nextProcess && (nextProcess.exitCode !== null || nextProcess.signalCode !== null)) {
-          console.log('[olympus:electron] our Next server died — respawning…');
+        // Respawn when the server is gone. v0.0.70 — the old check required
+        // `nextProcess` to be non-null, but the exit handler NULLS it, so a
+        // dead dev server could never respawn (the 2026-11-03 specimen: the
+        // app sat on ERR_CONNECTION_REFUSED while the walk died with it).
+        if (!nextProcess || nextProcess.exitCode !== null || nextProcess.signalCode !== null) {
+          console.log('[olympus:electron] our Next server is gone — respawning…');
           try { nextProcess = spawnNext(); } catch (e) { console.error('[olympus:electron] respawn failed', e); }
         }
         // Probe with bounded patience; reload on green (a failed reload
@@ -1111,6 +1114,34 @@ function createWindow() {
   mainWindow.on('maximize', () => {
     mainWindow?.webContents.send('olympus:window-maximize-changed', true);
   });
+  // v0.0.70 — THE SERVER WATCHDOG. A dev server can die while the window is
+  // idle (OOM pressure, a hop, a manual kill); the reconnect page only fires
+  // on navigation. Probe the health lane every 10s; two misses in a row
+  // respawn the server and reload the window when it answers.
+  let healthMisses = 0;
+  const watchdog = setInterval(() => {
+    if (!mainWindow || app.isQuitting) return;
+    const req = http.get(`${BASE_URL}/api/olympus/health`, { timeout: 4000 }, (res) => {
+      res.resume();
+      if (res.statusCode && res.statusCode < 500) { healthMisses = 0; return; }
+      healthMisses += 1;
+    });
+    req.on('error', () => { healthMisses += 1; });
+    req.on('timeout', () => { req.destroy(); healthMisses += 1; });
+    if (healthMisses >= 2) {
+      healthMisses = 0;
+      console.log('[olympus:electron] watchdog: server silent — respawning');
+      try {
+        if (!nextProcess || nextProcess.exitCode !== null || nextProcess.signalCode !== null) nextProcess = spawnNext();
+      } catch (e) { console.error('[olympus:electron] watchdog respawn failed', e); }
+      setTimeout(() => {
+        try { mainWindow?.loadURL(APP_URL); } catch { /* the error page owns it */ }
+      }, 6000);
+    }
+  }, 10_000);
+  watchdog.unref?.();
+  mainWindow.on('closed', () => clearInterval(watchdog));
+
   mainWindow.on('unmaximize', () => {
     mainWindow?.webContents.send('olympus:window-maximize-changed', false);
   });

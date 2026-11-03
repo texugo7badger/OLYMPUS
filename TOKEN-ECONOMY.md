@@ -220,3 +220,12 @@ crystal and the development feed are **0 tokens**: they read the plan, the hop
 state and the activity feed. Only **explain progress** spends a model turn —
 it uses the studio converse lane (read-only, no tools), and the deterministic
 fallback cites the same numbers if the model is unavailable.
+
+
+## v0.0.70 — the one-screen phone
+
+The minimal `/m` spends **0 tokens** until you speak: the ring, the god row,
+the details sheet and the watchdog are local/HTTP reads. Each hold-to-talk is
+ONE Apollo turn (the action lane), exactly like the terminal. The creative's
+progress, feed and queue are 0 tokens; only **explain** and the studio chat
+spend a turn.

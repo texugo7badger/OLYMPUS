@@ -5,7 +5,7 @@
  *
  * The desktop's ImmersivePanel is a three-column surface (gods, constellation,
  * orb). A phone cannot host that grid, so this page keeps the SAME visual
- * language and the SAME machinery — MobileAmbient particles, PlasmaOrb, the
+ * language and the SAME machinery — PlasmaRing, the
  * per-god voice (`speakAs`), the live run-state and the studio chat — stacked
  * in one column with 44px targets.
  *
@@ -17,7 +17,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Mic, Send, Sparkles, Volume2, VolumeX } from 'lucide-react';
-import MobileAmbient from '@/components/olympus/mobile-ambient';
 import PlasmaRing from '@/components/olympus/plasma-ring';
 import ProgressStrip from '@/components/olympus/progress-strip';
 import { normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
@@ -31,7 +30,6 @@ const GOD_IDS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus
 
 const TOKEN_KEY = 'olympus:mobile-token';
 const THEME_KEY = 'olympus:mobile-theme';
-const AMBIENT_KEY = 'olympus:mobile-ambient';
 
 type RunState = {
   line?: string;
@@ -59,7 +57,6 @@ export default function MobileStudio() {
   const language = useLanguage();
   const [token, setToken] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemeState | null>(null);
-  const [ambient, setAmbient] = useState(true);
   const [god, setGod] = useState('apollo');
   const [run, setRun] = useState<RunState | null>(null);
   const [voice, setVoice] = useState(false);
@@ -80,7 +77,6 @@ export default function MobileStudio() {
 
   useEffect(() => {
     try { setToken(localStorage.getItem(TOKEN_KEY)); } catch { /* private */ }
-    try { setAmbient(localStorage.getItem(AMBIENT_KEY) !== 'off'); } catch { /* default on */ }
     setVoice(voiceEnabled());
     try {
       const cached = localStorage.getItem(THEME_KEY);
@@ -332,7 +328,9 @@ export default function MobileStudio() {
 
   return (
     <main className="relative min-h-dvh bg-olympus-bg text-olympus-text pb-[env(safe-area-inset-bottom)]">
-      <MobileAmbient theme={theme} enabled={ambient} />
+      {/* v0.0.70 — one canvas on a phone: the ring. The ambient field is a
+          static gradient here; the full particle field stays on the desktop. */}
+      <div className="pointer-events-none fixed inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${palette.gold}14, transparent 62%)` }} aria-hidden="true" />
       <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-olympus-gold/10 bg-olympus-bg/95 px-3 pt-[calc(env(safe-area-inset-top)+8px)] pb-2.5 backdrop-blur">
         <Link
           href="/m"
