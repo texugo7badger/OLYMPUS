@@ -518,12 +518,18 @@ function ensureLinuxDesktopEntry(): void {
       if (!existsSync(iconPath)) iconPath = '';
     }
 
-    // In dev mode, the 'exec' binary is the Electron binary inside
-    // node_modules. In a packaged AppImage/deb, it's the installed binary.
-    // We include --class=olympus so GNOME can match StartupWMClass.
-    const execPath = isDev
-      ? `${process.execPath} --class=olympus ${appRoot}`
-      : `${process.execPath} --class=olympus %F`;
+    // v0.0.62 — CLICKING THE ICON MUST WORK. The old entry ran Electron
+    // directly with NO --no-sandbox; on this Linux box chrome-sandbox is not
+    // setuid-root, so Electron aborted before the app started (the endless
+    // loading cursor). Prefer the installed launcher (the CLI adds the flag);
+    // otherwise include the flag and the X11 backend explicitly.
+    const launcher = join(nodeOs.homedir(), '.local', 'bin', 'olympus-desktop');
+    const useLauncher = isDev && existsSync(launcher);
+    const execPath = useLauncher
+      ? launcher
+      : isDev
+        ? `${process.execPath} --no-sandbox --ozone-platform=x11 --class=olympus ${appRoot}`
+        : `${process.execPath} --no-sandbox --ozone-platform=x11 --class=olympus %F`;
 
     const desktopFile = join(appsDir, 'olympus.desktop');
     const content = [
@@ -531,10 +537,11 @@ function ensureLinuxDesktopEntry(): void {
       'Type=Application',
       'Name=OLYMPUS',
       `Exec=${execPath}`,
+      `Path=${appRoot}`,
       'StartupWMClass=olympus',
       `Icon=${iconPath}`,
       'Terminal=false',
-      'Categories=Development;',
+      'Categories=Development;Utility;',
       'StartupNotify=true',
     ].join('\n') + '\n';
 
