@@ -45,12 +45,15 @@
 | Editor | VSIX `olympus-bridge-0.0.15.vsix` (9 files, 27 KB), compiled + packaged |
 | Projects | AIME campaign `cmp_mw0lu2wt9cwo16`: 24/41 at 09:15Z, 3 in flight, 0 parked; per-hop report in `campaign-report-aime.md` |
 | Mobile companion | `/m` rendered in Chromium 390×844 against the live server; 17 assertions in `mobile-companion` |
+| 100-hop runtime | **PASS**: 100/100 script hops in 9.9s, p50/p95 189/225ms, 0 lost, 0 parked, 0 tokens (`certification-100hop.md`) |
+| Soak at v0.0.59 | **24 rounds PASS** during a live walk; p95 ≤ 120ms; RSS +185MB |
 
 Machine-local evidence: `~/Documents/OLYMPUS-plan/soak-v0.0.50.md`; the latest campaign report is `~/Documents/OLYMPUS-plan/campaign-report-aime.md`.
 
 ## The two gates before a v1.0 candidate
 
-1. **8-hour soak + 100-hop campaign.** The harness is ready:
+1. **8-hour soak + 100-hop LLM campaign.** The deterministic 100-hop spine
+   certifies (see evidence above); the 8-hour model soak remains the gate.
    `npm run soak -- --minutes 480 --interval 10` with a real 100-hop campaign
    on a lane. Acceptance: 100 started, 0 lost, every hop traceable, 0
    un-named parks, RSS bounded, the 60-minute project budget respected per

@@ -50,6 +50,16 @@ Report: `~/Documents/OLYMPUS-plan/soak-v0.0.59.md` (machine-local evidence,
 not committed). The older idle-app check (v0.0.40: 40 rounds, RSS −121 MB)
 is still valid as the low-load reference.
 
+## 100-hop runtime certification (2026-11-03, v0.0.59)
+
+`npm run certify:100hop` builds a disposable lane with **100 script hops in 10
+dependency chains**, walks it, and asserts: 100 completed, 0 lost, 0 parked,
+100 artifacts, 100 telemetry rows, unique ids, 0 tokens, under 5 minutes.
+
+Result: **PASS — 9.9s wall clock, p50 189ms, p95 225ms, 0 tokens.** This
+certifies the deterministic spine at scale; it is **not** the 8-hour model
+soak. Report: `~/Documents/OLYMPUS-plan/certification-100hop.md`.
+
 ## The certification still owed
 
 The roadmap's v0.0.40 asks for an **8-hour soak + 100-hop campaign** and the
