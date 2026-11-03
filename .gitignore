@@ -126,3 +126,14 @@ research/
 # Maintainer-only test suites — they read the local vault, lanes and credentials.
 # The public method and the measured evidence live in TESTING.md.
 scripts/*.test.mjs
+
+# ─── Internal development data and plans — NEVER public (golden rule) ───
+# AIME/bench data, machine-local reports and session checkpoints stay on the
+# maintainer's disk. The public product docs (README, ARCHITECTURE, TESTING,
+# RESPONSIVE, LANGUAGES, MOBILE, TOKEN-ECONOMY, WORKFLOW) are the exception.
+BENCH-AIME.md
+reports/
+plans/
+*.plan.md
+*.checkpoint.md
+SESSION-CHECKPOINT*.md
