@@ -34,11 +34,20 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
   const [modeNote, setModeNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // v0.0.60 — in LAN mode the pair route requires the bearer token. The
+  // renderer gets it from the main process over IPC (never over HTTP).
+  const authHeaders = useCallback(async (): Promise<Record<string, string>> => {
+    try {
+      const token = await (window as any).olympus?.sessionToken?.();
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    } catch { return {}; }
+  }, []);
+
   const load = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch('/api/olympus/mobile/pair', { cache: 'no-store' });
+      const res = await fetch('/api/olympus/mobile/pair', { cache: 'no-store', headers: await authHeaders() });
       const d = await res.json();
       if (!res.ok || d?.ok === false) throw new Error(d?.error || `HTTP ${res.status}`);
       setPair(d);
@@ -47,7 +56,7 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [authHeaders]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -57,7 +66,7 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
     try {
       const res = await fetch('/api/olympus/mobile/pair', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify(body),
       });
       const d = await res.json();

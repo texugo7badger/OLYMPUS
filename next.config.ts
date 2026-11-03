@@ -1,3 +1,15 @@
+import os from 'node:os';
+
+/** Every non-internal IPv4 address: the phone reaches the SAME dev server at
+ *  one of these hosts, and Next 16 blocks cross-origin dev resources (client
+ *  chunks included) unless the host is declared. Without this the mobile page
+ *  renders server HTML and never hydrates — the login/theme effects do not
+ *  run. The packaged app uses `next start`, where the check does not exist. */
+const LAN_HOSTS = Object.values(os.networkInterfaces())
+  .flatMap((rows) => rows ?? [])
+  .filter((row) => row && row.family === 'IPv4' && !row.internal)
+  .map((row) => String(row.address));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Olympus v0.0.1 — minimal Next.js config
@@ -9,6 +21,13 @@ const nextConfig = {
   //
   // API routes spawn OpenCode subprocesses and stream SSE events.
   reactStrictMode: true,
+  // Remote companions (Cloudflare quick tunnel, ngrok, Tailscale) are dev
+  // origins too; without them Next blocks the client chunks and the mobile
+  // page never hydrates. Wildcards are the documented Next 16 form.
+  allowedDevOrigins: [
+    '127.0.0.1', 'localhost', ...LAN_HOSTS,
+    '*.trycloudflare.com', '*.ngrok-free.app', '*.ngrok.io', '*.ts.net', '*.local',
+  ],
   // Hide the Next.js dev indicator (the floating "N" button).
   devIndicators: false,
   // For production Electron builds (`npm run build`), enable

@@ -11,6 +11,8 @@ declare global {
     olympus?: {
       isElectron: () => boolean;
       hibernate: () => Promise<boolean>;
+      /** v0.0.60 — the LAN bearer token (main-process file read). */
+      sessionToken: () => Promise<string | null>;
       isDev: () => boolean;
       getAppVersion: () => string;
       openExternal: (url: string) => void;

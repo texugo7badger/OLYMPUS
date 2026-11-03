@@ -57,6 +57,9 @@ expect('M-17: the campaign shows the real denominator', /hops\?\.total/.test(pag
 expect('M-16: the campaign can be read aloud', /speechSynthesis/.test(page), 'tts missing');
 
 const dialog = fs.readFileSync(OLYMPUS + '/src/components/olympus/mobile-pair-dialog.tsx', 'utf-8');
+expect('M-18: the phone inherits the desktop theme store', /api\/olympus\/theme/.test(page) && /applyTheme\(/.test(page) && /THEME_PRESETS/.test(page), 'theme inheritance missing');
+expect('M-19: the phone writes a theme change back to the desktop', /method: 'POST'/.test(page) && /saveTheme/.test(page) && /changes the PC too/.test(page), 'no write-back');
+expect('M-20: the desktop watches the store for another device', /startThemeWatch/.test(fs.readFileSync(OLYMPUS + '/src/lib/theme-store.ts', 'utf-8')) && /updatedAt/.test(fs.readFileSync(OLYMPUS + '/src/app/api/olympus/theme/route.ts', 'utf-8')), 'desktop never notices the phone');
 expect('M-13: the desktop shows the QR, rotates and toggles the bind', /pair\.qr/.test(dialog) && /action: 'rotate'/.test(dialog) && /action: 'set-mode'/.test(dialog), 'dialog incomplete');
 const statusBar = fs.readFileSync(OLYMPUS + '/src/components/olympus/status-bar.tsx', 'utf-8');
 expect('M-14: the status bar mounts the pairing dialog', /MobilePairDialog/.test(statusBar) && /setMobilePair\(true\)/.test(statusBar), 'not mounted');

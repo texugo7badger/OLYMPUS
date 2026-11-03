@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Activity, BookOpen, Brain, Check, ChevronDown, Clock, Code2, Copy, ExternalLink, FileCode,
+  Activity, Archive, BookOpen, Brain, Check, ChevronDown, Clock, Code2, Copy, ExternalLink, FileCode,
   Files, Folder, GitBranch, HardDrive, Layers, ListTree, Loader2, X, Download, Share2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -149,6 +149,8 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const refreshProjects = useOlympus((s) => s.refreshProjects);
   const [copied, setCopied] = useState<string | null>(null);
   const [readmeOpen, setReadmeOpen] = useState(false);
   const activeProject = useOlympus((s) => s.activeProject);
@@ -537,6 +539,39 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
               <a href={`/api/olympus/projects/export?slug=${encodeURIComponent(slug)}`} download={`olympus-${slug}.passport.json`} className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded border border-olympus-gold/20 text-olympus-text-dim hover:text-olympus-gold">
                 <Download size={10} /> export
               </a>
+              {confirmArchive ? (
+                <>
+                  <span className="text-[9px] font-mono text-olympus-red ml-2">mover para 09_Archive?</span>
+                  <button
+                    onClick={async () => {
+                      setBusy('archive');
+                      try {
+                        const r = await fetch(`/api/olympus/projects?slug=${encodeURIComponent(slug)}`, { method: 'DELETE' });
+                        const d = await r.json();
+                        if (!r.ok || d?.ok === false) throw new Error(d?.error || 'archive failed');
+                        toast.success('projeto arquivado — arquivos preservados em 09_Archive');
+                        refreshProjects();
+                        onClose();
+                      } catch (e: any) {
+                        toast.error(e?.message || 'archive failed');
+                      } finally { setBusy(null); }
+                    }}
+                    disabled={busy === 'archive'}
+                    className="flex items-center gap-1 text-[10px] font-mono px-2.5 py-1.5 rounded bg-olympus-red/15 text-olympus-red ring-1 ring-olympus-red/35 disabled:opacity-50"
+                  >
+                    {busy === 'archive' ? <Loader2 size={10} className="animate-spin" /> : <Archive size={10} />} confirmar
+                  </button>
+                  <button onClick={() => setConfirmArchive(false)} className="text-[10px] font-mono px-2 py-1.5 text-olympus-text-dim">cancelar</button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setConfirmArchive(true)}
+                  data-tip="Arquiva o projeto em 09_Archive — os arquivos NÃO são apagados"
+                  className="flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded border border-olympus-red/20 text-olympus-red/80 hover:text-olympus-red hover:bg-olympus-red/10"
+                >
+                  <Archive size={10} /> arquivar
+                </button>
+              )}
               <button onClick={onClose} className="ml-auto text-[10px] font-mono px-3 py-1.5 rounded text-olympus-text-dim hover:text-olympus-text">{t('common.close', language)}</button>
             </div>
           </>

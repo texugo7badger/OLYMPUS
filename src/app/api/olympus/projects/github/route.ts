@@ -12,6 +12,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import { getProject, reconcileProjectPath } from '@/lib/project-context';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 
@@ -24,6 +26,69 @@ function git(root: string, args: string[]): string {
 function ghReady(): boolean {
   try { execFileSync('gh', ['auth', 'status'], { encoding: 'utf-8', timeout: 5000 }); return true; } catch { return false; }
 }
+/** The source-only contract: a project push never carries dependencies,
+ *  build output, caches, secrets or runtime hop state. Existing lines are
+ *  preserved; missing lines are appended once. */
+const GITIGNORE_LINES = [
+  'node_modules/',
+  '.next/',
+  'out/',
+  'dist/',
+  'dist-electron/',
+  'dist-electron-tsc/',
+  '.turbo/',
+  '.cache/',
+  'coverage/',
+  '.nyc_output/',
+  '.env',
+  '.env.*',
+  '!.env.example',
+  '*.log',
+  'npm-debug.log*',
+  '.DS_Store',
+  'Thumbs.db',
+  '.olympus-backups/',
+  '.olympus-hop-state.json',
+  '.olympus-hop-telemetry.jsonl',
+  '.olympus-walk.lock',
+  '.olympus-context.json',
+  '.opencode/node_modules/',
+];
+
+function ensureGitignore(root: string): string[] {
+  const file = path.join(root, '.gitignore');
+  const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf-8') : '';
+  const lines = new Set(existing.split(/\r?\n/).map((l) => l.trim()).filter(Boolean));
+  const added = GITIGNORE_LINES.filter((l) => !lines.has(l));
+  if (added.length > 0) {
+    const sep = existing && !existing.endsWith('\n') ? '\n' : '';
+    fs.writeFileSync(file, `${existing}${sep}${added.join('\n')}\n`, 'utf-8');
+  }
+  return added;
+}
+
+/** Initialize the repo when absent, stage with the source-only ignore file,
+ *  and make the first commit so `gh repo create --push` has something to push. */
+function ensureRepo(root: string): { initialized: boolean; committed: boolean; ignored: string[] } {
+  const ignored = ensureGitignore(root);
+  let initialized = false;
+  try { git(root, ['rev-parse', '--is-inside-work-tree']); } catch {
+    execFileSync('git', ['init', '-b', 'main'], { cwd: root, encoding: 'utf-8', timeout: 15000 });
+    initialized = true;
+  }
+  git(root, ['add', '-A']);
+  let committed = false;
+  try { git(root, ['diff', '--cached', '--quiet']); } catch {
+    try {
+      execFileSync('git', ['commit', '-m', 'chore: initial OLYMPUS snapshot'], { cwd: root, encoding: 'utf-8', timeout: 30000 });
+    } catch {
+      execFileSync('git', ['-c', 'user.name=OLYMPUS', '-c', 'user.email=olympus@localhost', 'commit', '-m', 'chore: initial OLYMPUS snapshot'], { cwd: root, encoding: 'utf-8', timeout: 30000 });
+    }
+    committed = true;
+  }
+  return { initialized, committed, ignored };
+}
+
 function slugFromUrl(url: string): string {
   const m = /github\.com[/:]([^/]+)\/([^/.]+)(?:\.git)?/.exec(url);
   return m ? `${m[1]}/${m[2]}` : url;
@@ -68,8 +133,14 @@ export async function POST(req: NextRequest) {
     if (action === 'create') {
       const repo = String(body?.repo || slug).replace(/[^a-zA-Z0-9._-]/g, '-').slice(0, 80);
       const visibility = body?.visibility === 'public' ? '--public' : '--private';
+      const prep = ensureRepo(root);
       const out = execFileSync('gh', ['repo', 'create', repo, visibility, '--source', root, '--remote', 'origin', '--push'], { cwd: root, encoding: 'utf-8', timeout: 120000 });
-      return NextResponse.json({ ok: true, action, repo, output: out.slice(0, 800) }, { headers: NO_CACHE_HEADERS });
+      return NextResponse.json({
+        ok: true, action, repo,
+        output: out.slice(0, 800),
+        prepared: prep,
+        note: 'source only — node_modules, .next, dist, caches, .env and hop runtime files are ignored',
+      }, { headers: NO_CACHE_HEADERS });
     }
     if (action === 'connect') {
       const url = String(body?.url || '');
@@ -80,8 +151,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, action, url }, { headers: NO_CACHE_HEADERS });
     }
     if (action === 'push') {
+      const prep = ensureRepo(root);
       const out = execFileSync('git', ['-C', root, 'push', '-u', 'origin', 'HEAD'], { encoding: 'utf-8', timeout: 120000 });
-      return NextResponse.json({ ok: true, action, output: String(out).slice(0, 800) }, { headers: NO_CACHE_HEADERS });
+      return NextResponse.json({ ok: true, action, output: String(out).slice(0, 800), prepared: prep }, { headers: NO_CACHE_HEADERS });
     }
     return NextResponse.json({ ok: false, error: "action must be 'create' | 'connect' | 'push'" }, { status: 400, headers: NO_CACHE_HEADERS });
   } catch (e: any) {

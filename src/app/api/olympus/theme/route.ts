@@ -27,9 +27,14 @@ function themePath(): string {
 export async function GET() {
   try {
     const raw = JSON.parse(fs.readFileSync(themePath(), 'utf-8'));
-    return NextResponse.json({ ok: true, state: normalizeThemeState(raw) }, { headers: NO_CACHE_HEADERS });
+    // v0.0.60 — the stamp is how the desktop notices a change made on the
+    // phone (and how the phone knows its copy is stale).
+    return NextResponse.json(
+      { ok: true, state: normalizeThemeState(raw), updatedAt: typeof raw?.updatedAt === 'string' ? raw.updatedAt : null },
+      { headers: NO_CACHE_HEADERS },
+    );
   } catch {
-    return NextResponse.json({ ok: true, state: DEFAULT_THEME }, { headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ ok: true, state: DEFAULT_THEME, updatedAt: null }, { headers: NO_CACHE_HEADERS });
   }
 }
 
@@ -40,14 +45,15 @@ export async function POST(req: NextRequest) {
   }
   const state = normalizeThemeState(body);
   const palette = resolvePalette(state);
+  const updatedAt = new Date().toISOString();
   try {
     const file = themePath();
     fs.mkdirSync(path.dirname(file), { recursive: true });
     // The resolved palette rides the file so the Electron main (splash, tray,
     // window icon) can theme itself without importing src/.
-    fs.writeFileSync(file, JSON.stringify({ ...state, palette, updatedAt: new Date().toISOString() }, null, 2) + '\n', 'utf-8');
+    fs.writeFileSync(file, JSON.stringify({ ...state, palette, updatedAt }, null, 2) + '\n', 'utf-8');
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || String(e) }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, state }, { headers: NO_CACHE_HEADERS });
+  return NextResponse.json({ ok: true, state, updatedAt }, { headers: NO_CACHE_HEADERS });
 }
