@@ -321,3 +321,11 @@ closes them and the tray restores the OLYMPUS mark. The reference catalog is
 deduped by URL and normalized name and gains 42 Magic UI (MIT) components —
 900 total. A hop can no longer run 68 minutes: the hard cap is 30 minutes,
 clipped to the campaign deadline, and hibernation auto-resumes a park.
+
+### v0.0.57 — Talent Studio, simplified
+
+The talent page keeps the old page's simple, animated god symbol at the center
+(Sun, Orbit, Hammer, Bird, Compass, Target, Wine, Flower, Flame, BookMarked),
+with the ten sectors as quiet chips and **five temperature dots** instead of a
+slider. Speed, output budget and quality stay one row; category, temperature,
+speed, budget and quality are saved/exported and included in the build prompt.

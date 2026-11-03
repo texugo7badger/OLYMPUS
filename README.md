@@ -39,8 +39,7 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.57 — Talent Studio, simplified.** The first release-shaped version: 900 deduped
-references, Talent Studio, a free-first MCP market, guided instincts, bounded
+**v0.0.57 — Talent Studio, simplified.** The latest stable v0.0.x: 900 deduped references, Talent Studio, a free-first MCP market, guided instincts, bounded
 hops, real cost windows, GitHub per project, the light-theme brain fix and a
 context indicator that reads the real session. Everything below is evidence,
 not a promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md).
