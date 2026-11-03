@@ -16,14 +16,41 @@ import { initTheme } from '@/lib/theme-store';
 /* ------------------------------------------------------------------ */
 /* ChunkErrorBoundary — catches ChunkLoadError from Turbopack HMR.     */
 /* ------------------------------------------------------------------ */
+/**
+ * v0.0.63 hotfix — THE RELOAD LOOP MUST END.
+ *
+ * The 2026-11-03 specimen: a stale `.next/dev` cache left the
+ * `activity-timeline` dynamic chunk 404ing. The boundary reloaded the page,
+ * the fresh page hit the same 404, and the app spent minutes on the boot
+ * loader — one navigation per second, 75% CPU, no error visible to the user.
+ *
+ * Two automatic reloads are a recovery; the third is a diagnosis. After
+ * CHUNK_RELOAD_MAX the boundary STOPS reloading and shows the honest card
+ * (with the cache hint). The counter resets once the shell actually boots,
+ * so a single transient chunk miss never costs the session.
+ */
+const CHUNK_RELOAD_KEY = 'olympus:chunk-reloads';
+const CHUNK_RELOAD_MAX = 2;
+
+function chunkReloadCount(): number {
+  try { return Math.max(0, Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || '0') || 0); } catch { return 0; }
+}
+function setChunkReloadCount(n: number): void {
+  try { sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Math.max(0, n))); } catch { /* private */ }
+}
+export function resetChunkReloads(): void {
+  setChunkReloadCount(0);
+}
+
 interface ChunkErrorBoundaryState {
   hasError: boolean;
   isChunkError: boolean;
+  chunkGiveUp: boolean;
 }
 class ChunkErrorBoundary extends Component<{ children: ReactNode }, ChunkErrorBoundaryState> {
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { hasError: false, isChunkError: false };
+    this.state = { hasError: false, isChunkError: false, chunkGiveUp: false };
   }
   static getDerivedStateFromError(error: any): ChunkErrorBoundaryState {
     const isChunkError =
@@ -34,15 +61,22 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, ChunkErrorBo
         error.message.includes('Loading chunk') ||
         error.message.includes('Loading CSS chunk')
       ));
-    return { hasError: true, isChunkError };
+    return { hasError: true, isChunkError, chunkGiveUp: false };
   }
   componentDidCatch(error: any) {
-    if (this.state.isChunkError) {
-      console.warn('[Olympus] ChunkLoadError detected — auto-reloading page…', error?.message);
+    if (!this.state.isChunkError) return;
+    const attempts = chunkReloadCount();
+    if (attempts < CHUNK_RELOAD_MAX) {
+      setChunkReloadCount(attempts + 1);
+      console.warn(`[Olympus] ChunkLoadError — auto-reload ${attempts + 1}/${CHUNK_RELOAD_MAX}…`, error?.message);
       setTimeout(() => {
         if (typeof window !== 'undefined') window.location.reload();
-      }, 500);
+      }, 800);
+      return;
     }
+    // The reload did not cure it. Stop the loop and say what is wrong.
+    console.warn('[Olympus] ChunkLoadError persists after reloads — stopping the loop.', error?.message);
+    this.setState({ chunkGiveUp: true });
   }
   render() {
     if (this.state.hasError && !this.state.isChunkError) {
@@ -52,7 +86,7 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, ChunkErrorBo
           <p className="text-xs font-mono">Something went wrong loading this panel.</p>
           <button
             onClick={() => {
-              this.setState({ hasError: false, isChunkError: false });
+              this.setState({ hasError: false, isChunkError: false, chunkGiveUp: false });
               if (typeof window !== 'undefined') window.location.reload();
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-olympus-gold/15 text-olympus-gold text-[11px] font-mono hover:bg-olympus-gold/25"
@@ -63,6 +97,28 @@ class ChunkErrorBoundary extends Component<{ children: ReactNode }, ChunkErrorBo
       );
     }
     if (this.state.hasError && this.state.isChunkError) {
+      if (this.state.chunkGiveUp) {
+        return (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-olympus-bg text-olympus-text-dim px-6 text-center">
+            <AlertCircle size={24} className="text-olympus-red" />
+            <p className="text-xs font-mono text-olympus-text">A panel failed to load after two reloads.</p>
+            <p className="text-[11px] font-mono max-w-md leading-relaxed">
+              The dev cache is probably stale. Restart OLYMPUS; if it persists, run
+              <code className="mx-1 text-olympus-gold">rm -rf .next/dev</code>
+              and open it again. Nothing in the vault or the campaign was touched.
+            </p>
+            <button
+              onClick={() => {
+                setChunkReloadCount(0);
+                if (typeof window !== 'undefined') window.location.reload();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-olympus-gold/15 text-olympus-gold text-[11px] font-mono hover:bg-olympus-gold/25"
+            >
+              <RefreshCw size={11} /> Reload
+            </button>
+          </div>
+        );
+      }
       return (
         <div className="w-full h-full flex items-center justify-center bg-olympus-bg text-olympus-text-dim">
           <div className="flex items-center gap-2 text-xs font-mono">
@@ -315,6 +371,11 @@ export default function OlympusWorkspace() {
       window.removeEventListener('load', onLoad);
     };
   }, []);
+  // A successful boot proves the chunk lane is healthy — clear the loop guard.
+  useEffect(() => {
+    if (!booting) resetChunkReloads();
+  }, [booting]);
+
   useEffect(() => {
     if (!booting) return;
     const elapsed = performance.now() - bootStartedAt.current;
