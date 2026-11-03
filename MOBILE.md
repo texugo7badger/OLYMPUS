@@ -1,6 +1,6 @@
 # Mobile companion
 
-> v0.0.63 · the same server, the same campaign, the same token, the same language.
+> v0.0.64 · the same server, the same campaign, the same token, the same language, the same creative mode.
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
@@ -51,7 +51,9 @@ alternative (the `tunnel` network mode).
 | Prompt | send a turn; the live stream is reduced to short log lines |
 | Voice | Web Speech API dictation; the campaign can also be read aloud |
 | Preview | server-resolved URL: the desktop's LAN IPv4 on the same Wi-Fi, or a per-port HTTPS tunnel away from home; start/stop the server and the tunnel here |
-| Studio | `/m/studio` — the same particles, orb and per-god voice, stacked for one hand |
+| Studio | `/m/studio` — the same creative mode: progress (overall + per god), the plasma ring, the build crystal, the development feed, the prompt queue and the per-god voice |
+| Voice to Apollo | hold the mic inside the ring → server STT → the request goes to Apollo in the project's lane |
+| Mirror | the god and voice switches are shared with the desktop (`studio-state.json`); the chat is private per surface |
 | Resume | sends the deterministic `Nova tarefa: continue o projeto <slug>` turn |
 | Git | remote, branch and the last three commits (read-only) |
 | Cost | the 24h step-cost figure |
@@ -89,6 +91,11 @@ alternative (the `tunnel` network mode).
   preview tunnel is public but unguessable — close it when you are done.
 - The phone follows the desktop's language. An explicit choice in the theme
   sheet is the one action that changes the shared language for both surfaces.
+- The chat transcript is local to each surface; the shared state is the god,
+  the voice switch, the progress, the queue and the feed.
+- The mic needs a secure context: the HTTPS tunnel (or localhost). On plain
+  HTTP LAN the browser blocks it and the ring says so; the text input still
+  works.
 
 ## Verification
 
@@ -96,6 +103,8 @@ alternative (the `tunnel` network mode).
 mode, fragment-only URL, QR payload, mode round-trip, auth gates, rotate and
 mode guards, campaign/project/prompt/voice/preview/git surfaces, and the
 desktop mount.
+
+![Creative mode](public/diagrams/creative.svg)
 
 `scripts/mobile-preview.test.mjs` (v0.0.63) — 15 assertions: the reachability
 classifier (public host ⇒ tunnel, loopback/LAN ⇒ direct), tunnel truth for an

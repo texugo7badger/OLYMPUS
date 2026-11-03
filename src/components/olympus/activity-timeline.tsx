@@ -407,10 +407,21 @@ function TimelineItem({ ep, isLast, onClick, hopId, hopTask }: { ep: Episode; is
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
             {Icon ? <Icon size={13} className="text-olympus-gold" /> : null}
-            <span className="text-[11px] font-mono text-olympus-gold capitalize">{ep.god}</span>
-            {ep.demigod ? (
-              <span className="text-[10px] font-mono text-olympus-cyan">→ {ep.demigod}</span>
-            ) : null}
+            {/* v0.0.64 — when a demigod carried the task, ITS name is the
+                primary label; the god stays as the small context chip. */}
+            {(() => {
+              const primary = hopTask?.demigods?.[0] || ep.demigod || null;
+              if (!primary) return <span className="text-[11px] font-mono text-olympus-gold capitalize">{ep.god}</span>;
+              return (
+                <>
+                  <span className="text-[11px] font-mono text-olympus-cyan">{primary}</span>
+                  {hopTask?.demigods && hopTask.demigods.length > 1 && (
+                    <span className="text-[8px] font-mono text-olympus-text-dim">+{hopTask.demigods.length - 1}</span>
+                  )}
+                  <span className="text-[9px] font-mono text-olympus-gold/70 capitalize">· {ep.god}</span>
+                </>
+              );
+            })()}
             {ep.action ? (
               <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/20">
                 {ep.action}

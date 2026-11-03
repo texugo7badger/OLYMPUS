@@ -1,4 +1,4 @@
-# OLYMPUS — UX tour (v0.0.34)
+# OLYMPUS — UX tour (v0.0.64)
 
 > Real screenshots from the running app: `npm run shots` (Electron, offscreen)
 > captures them from `http://127.0.0.1:3737`. No mockups.
@@ -16,7 +16,7 @@ stream next to it.
 
 ## 2. Craft — the surfaces that build the product
 
-![Craft apps](./02-references.png)
+![Craft apps](./05-references.png)
 
 The Craft dashboard gathers the vendored apps (ArtCraft Studio, PhotoCraft,
 VectorCraft, …) and the design lanes. Each app runs inside OLYMPUS after a
@@ -24,7 +24,7 @@ one-click install; the ArtCraft Studio is the composition lane.
 
 ## 3. Builds — the loadout hub
 
-![Builds](./05-builds.png)
+![Builds](./03-builds.png)
 
 **251 default builds** (51 curated + a matrix of every sector × every god ×
 skill-led/agent-led), grouped by category and filterable by god. Every card
@@ -53,7 +53,7 @@ asks for a refinement. Nothing is copied by hand.
 
 ## 5. References — real components, one click
 
-![References](./02-references.png)
+![References](./05-references.png)
 
 The catalog is fixed (24/24 demo URLs) and searchable by category. Hover a card
 to play the **real component** from the Originkit page (cropped to the demo area,
@@ -62,7 +62,7 @@ Board, **send to queue** opens a high-priority Athena task.
 
 ## 6. Appearance — one palette for the whole machine
 
-![Appearance](./06-settings.png)
+![Appearance](./06-appearance.png)
 
 Twelve presets (six dark, six light pastel) plus the **palette lab**: a hue
 slider, five harmonies, shuffle, and a full 14-key family generated with
@@ -118,7 +118,7 @@ when voice is on. Click a **learning** item (instinct, knowledge, skill or MCP)
 to hear the god explain what it learned and how it improves. The **project
 summary** button asks for the short version in one click.
 
-![References](./02-references.png)
+![References](./05-references.png)
 
 ### References — 859 components, one live study each
 
@@ -145,7 +145,7 @@ applied automatically.
 The identity generator now shows **one logo at a time**, built from the
 project name and palette, with "another" and "use this".
 
-![Builds](./05-builds.png)
+![Builds](./03-builds.png)
 
 ### Builds — the talent icons follow the machine
 
@@ -153,7 +153,7 @@ The 251-build hub and the talent carousel now tint every animated category
 icon with the active palette (server-rendered SVG recoloring, cache-busted per
 palette). The original mark stays the only app/system identity.
 
-![Settings](./06-settings.png)
+![Settings](./06-appearance.png)
 
 ### Settings — seven languages, real
 
@@ -333,9 +333,26 @@ speed, budget and quality are saved/exported and included in the build prompt.
 
 ### v0.0.58 — the companion
 
-`07-mobile.png` is the real `/m` page on a 390×844 viewport: the running
+`08-mobile.png` is the real `/m` page on a 390×844 viewport: the running
 campaign (23/41 at capture), the two in-flight hops, the project picker, the
 preview link, the prompt composer with voice, and the per-project git card.
-`07-talent-studio.png` is the real Talent Studio at `/talent` (one click
+`10-talent.png` is the real Talent Studio at `/talent` (one click
 from the status bar since v0.0.59): the god's animated symbol, the ten
 sector chips and the five temperature dots.
+
+
+## Creative mode — progress you can question (v0.0.64)
+
+![Creative mode](../public/diagrams/creative.svg)
+
+The same surface on the desktop and the phone: the live development feed, the
+honest 0–100% of the current plan, one bar per god, the build crystal, the
+prompt queue and the plasma ring. Hold the mic inside the ring to send a
+request to Apollo; tap a god's bar to hear that god explain its number.
+
+![The stardrift loader](../public/diagrams/loader.svg)
+
+![Themed notifications](../public/diagrams/notifications.svg)
+
+The captures are real (`npm run shots`, Electron offscreen): `07-creative.png`,
+`08-mobile.png` and `09-mobile-studio.png` are written from the running app.

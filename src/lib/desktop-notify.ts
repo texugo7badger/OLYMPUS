@@ -30,6 +30,42 @@ export const NOTIFY_COLORS: Record<NotifyType, string> = {
   curate: '#D4A574',  // olympus-gold — Callimachus curating
 };
 
+/**
+ * v0.0.64 — the notification speaks the user's language. The server builds
+ * the text from `~/.olympus/language.json`; English is the fallback.
+ */
+const NOTIFY_TEXT: Record<string, Record<string, string>> = {
+  en: {
+    'walk.title': 'OLYMPUS — walk starting',
+    'walk.body': '{slug}: the plan is being walked (hops run on their gods\' lanes).',
+    'park.title': 'OLYMPUS — campaign parked',
+    'park.body': '{slug}: {reason}',
+    'ready.title': 'OLYMPUS — ready',
+    'ready.body': '{detail}',
+  },
+  'pt-BR': {
+    'walk.title': 'OLYMPUS — caminhada iniciando',
+    'walk.body': '{slug}: o plano está sendo caminhado (cada hop roda na lane do seu deus).',
+    'park.title': 'OLYMPUS — campanha parada',
+    'park.body': '{slug}: {reason}',
+    'ready.title': 'OLYMPUS — pronto',
+    'ready.body': '{detail}',
+  },
+};
+
+export function notifyText(lang: string, key: string, vars: Record<string, string | number> = {}): string {
+  const dict = NOTIFY_TEXT[lang] ?? NOTIFY_TEXT.en;
+  const raw = dict[key] ?? NOTIFY_TEXT.en[key] ?? key;
+  return raw.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
+}
+
+export function readLanguage(home = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus')): string {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(home, 'language.json'), 'utf-8'));
+    return typeof raw?.language === 'string' ? raw.language : 'en';
+  } catch { return 'en'; }
+}
+
 export interface DesktopNotification {
   ts: string;
   type: NotifyType;

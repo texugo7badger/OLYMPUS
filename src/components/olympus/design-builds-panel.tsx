@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { buildPrompt, buildReadiness, describeBuild, type DesignBuildWithStats } from '@/lib/design-builds';
 import { BUILD_CATEGORIES } from '@/lib/build-categories';
 import BuildTalentPage from './build-talent-page';
+import BuildCrystal from './build-crystal';
 
 const TIER: Record<string, { label: string; className: string; Icon: any }> = {
   hot: { label: 'hot', className: 'border-olympus-green/45 text-olympus-green bg-olympus-green/10', Icon: Flame },
@@ -192,6 +193,7 @@ export default function DesignBuildsPanel() {
                     )}
                   >
                     <div className="flex items-center gap-1.5">
+                      <BuildCrystal build={{ name: b.name, id: b.id, god: b.god, crystal: (b as any).crystal, tier: b.stats.tier }} size={26} />
                       <span className="text-[11px] font-mono font-semibold text-olympus-text truncate">{b.name}</span>
                       {b.source === 'user' && <span className="text-[8px] font-mono text-olympus-purple uppercase">yours</span>}
                       {b.shared && <Share2 size={9} className="text-olympus-cyan" />}

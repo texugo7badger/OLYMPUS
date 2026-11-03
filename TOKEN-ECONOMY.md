@@ -211,3 +211,12 @@ When a lane is exhausted (quota / 429 / no-route), the hop **PARKS on exhaustion
 dies with a pool burst, and the next resume re-runs only the unfinished hop.
 A warm transport (one `opencode serve` per project lane, v0.0.24) removes the
 per-hop cold start while keeping the same small-hop economics.
+
+
+## v0.0.64 — the creative surface
+
+The progress model (`project-progress.ts`), the prompt queue, the loader, the
+crystal and the development feed are **0 tokens**: they read the plan, the hop
+state and the activity feed. Only **explain progress** spends a model turn —
+it uses the studio converse lane (read-only, no tools), and the deterministic
+fallback cites the same numbers if the model is unavailable.

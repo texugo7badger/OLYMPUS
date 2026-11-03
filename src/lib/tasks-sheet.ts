@@ -28,6 +28,7 @@
  */
 
 import fs from 'fs';
+import os from 'node:os';
 import path from 'path';
 import { getVaultRoot } from './vault-root';
 import { getProviderInfo } from './olympus';
@@ -64,6 +65,17 @@ export interface TaskRecord {
   /** W-D2: when this hop STARTED (the inFlight ground truth — running hops
    *  have no settled telemetry row, so this is the timer's only source). */
   startedAt?: string;
+  /** v0.0.64 — the last tool the running hop called (live feed). */
+  lastTool?: string | null;
+  /** true while the values come from the live feed, not the settle row. */
+  live?: boolean;
+  /** v0.0.64 — THE BUILD USED: the god's live model, the active strategy and
+   *  the registry build the hop matches (god + skills/MCPs/demigods). */
+  model?: string | null;
+  strategy?: string | null;
+  buildName?: string | null;
+  buildMatch?: 'declared' | 'matched' | null;
+  talent?: { temperature?: number; speed?: string; budgetTokens?: number; quality?: string } | null;
   tokensIn?: number | null;
   tokensOut?: number | null;
   durationMs?: number;
@@ -179,6 +191,62 @@ function filesInWindow(feedPath: string, god: string, fromMs: number, toMs: numb
 }
 
 /**
+ * v0.0.64 — LIVE HOP STATS. The feed is written while the hop runs (the
+ * tool.execute.after hook), so the task sheet can show REAL tokens/files
+ * before the settle row exists. Tokens here are a LOWER BOUND (tool-call
+ * level, the provider's step totals land at settle) — labelled as such in
+ * the modal, never presented as the final bill.
+ */
+function liveStatsInWindow(
+  feedPath: string,
+  god: string,
+  fromMs: number,
+  toMs: number,
+): { tokensIn: number; tokensOut: number; files: TaskFile[]; lastTool: string | null } {
+  let raw = '';
+  try {
+    const size = fs.statSync(feedPath).size;
+    const take = Math.min(size, 2 * 1024 * 1024);
+    const fh = fs.openSync(feedPath, 'r');
+    const buf = Buffer.alloc(take);
+    fs.readSync(fh, buf, 0, take, Math.max(0, size - take));
+    fs.closeSync(fh);
+    raw = buf.toString('utf-8');
+    if (size > take) raw = raw.slice(raw.indexOf('\n') + 1);
+  } catch { return { tokensIn: 0, tokensOut: 0, files: [], lastTool: null }; }
+  const key = String(god || '').toLowerCase();
+  let tokensIn = 0, tokensOut = 0, lastTool: string | null = null;
+  const files: TaskFile[] = [];
+  const seen = new Set<string>();
+  for (const line of raw.trim().split('\n').filter(Boolean).slice(-12000)) {
+    let ev: any;
+    try { ev = JSON.parse(line); } catch { continue; }
+    if (ev?.action !== 'tool_call') continue;
+    const meta = ev?.meta && typeof ev.meta === 'object' ? ev.meta : {};
+    const agent = String(meta.agent || ev?.god || '').toLowerCase();
+    if (agent !== key) continue;
+    let t = 0;
+    try { t = new Date(ev.ts).getTime(); } catch { continue; }
+    if (!Number.isFinite(t) || t < fromMs || t > toMs) continue;
+    const tk = meta.tokens;
+    if (tk && typeof tk === 'object') {
+      if (typeof tk.input === 'number' && Number.isFinite(tk.input)) tokensIn += tk.input;
+      if (typeof tk.output === 'number' && Number.isFinite(tk.output)) tokensOut += tk.output;
+    }
+    lastTool = String(meta.tool || 'tool');
+    const file = meta.file;
+    if (typeof file === 'string' && file) {
+      const fkey = `${meta.tool || ''}:${file}`;
+      if (!seen.has(fkey)) {
+        seen.add(fkey);
+        files.push({ file, tool: String(meta.tool || 'tool'), ts: String(ev.ts) });
+      }
+    }
+  }
+  return { tokensIn, tokensOut, files, lastTool };
+}
+
+/**
  * Live demigod dispatches per god — the PARALLELISM-OF-PARALLELISM surface.
  * #184: each record joins the dispatch (task/skill/MCP) with its outcome
  * (status/tokens/duration) by dispatch_id, so parallel demigods under one
@@ -238,6 +306,68 @@ function demigodsByGod(feedPath: string, now: number): Record<string, DemigodLiv
  * projectsDir), the feed path, and `now` (the test seam — production passes
  * nothing and gets Date.now()).
  */
+/**
+ * v0.0.64 — THE BUILD SNAPSHOT.
+ *
+ * The hop plan carries god/demigods/skills/MCPs but NOT the model, the
+ * strategy or the Talent Studio build. This resolves them from the live
+ * files: the god's model in opencode.json, the active strategy id, and the
+ * registry build with the best god+skills/MCPs overlap (seed + user).
+ * "matched" is honest: the hop did not declare a build, it fits one.
+ */
+function buildSnapshot(god: string, hop: any): {
+  model: string | null; strategy: string | null;
+  buildName: string | null; buildMatch: 'declared' | 'matched' | null;
+  talent: { temperature?: number; speed?: string; budgetTokens?: number; quality?: string } | null;
+} {
+  const root = process.env.OLYMPUS_ROOT || process.cwd();
+  const home = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
+  let model: string | null = null;
+  let strategy: string | null = null;
+  try {
+    const cfg = JSON.parse(fs.readFileSync(path.join(root, 'opencode.json'), 'utf-8'));
+    const m = cfg?.agent?.[god]?.model;
+    if (typeof m === 'string' && m) model = m;
+  } catch { /* no config */ }
+  try {
+    const st = JSON.parse(fs.readFileSync(path.join(home, 'active-strategy.json'), 'utf-8'));
+    if (typeof st?.strategy === 'string') strategy = st.strategy;
+  } catch { /* no strategy file */ }
+
+  let builds: any[] = [];
+  try {
+    builds = builds.concat(JSON.parse(fs.readFileSync(path.join(home, 'design-builds.json'), 'utf-8'))?.builds ?? []);
+  } catch { /* no user builds */ }
+  try {
+    // The seed registry is pure data; import lazily to keep this module light.
+    const { SEED_DESIGN_BUILDS } = require('./design-builds') as typeof import('./design-builds');
+    builds = builds.concat(SEED_DESIGN_BUILDS);
+  } catch { /* no seeds */ }
+
+  const skills = new Set([...(Array.isArray(hop?.skills) ? hop.skills : []), ...(hop?.skill ? [hop.skill] : [])].map((x: any) => String(x).toLowerCase()));
+  const mcps = new Set([...(Array.isArray(hop?.mcps) ? hop.mcps : []), ...(hop?.mcp ? [hop.mcp] : [])].map((x: any) => String(x).toLowerCase()));
+  const declared = typeof hop?.buildId === 'string' ? hop.buildId : (typeof hop?.build === 'string' ? hop.build : null);
+  let best: any = null;
+  let bestScore = 0;
+  for (const b of builds) {
+    if (!b || String(b.god || '').toLowerCase() !== god) continue;
+    let score = 1;
+    for (const sk of b.skills ?? []) if (skills.has(String(sk).toLowerCase())) score += 2;
+    for (const mc of b.mcps ?? []) if (mcps.has(String(mc).toLowerCase())) score += 2;
+    if (declared && (b.id === declared || b.name === declared)) score += 10;
+    if (score > bestScore) { bestScore = score; best = b; }
+  }
+  if (!best) return { model, strategy, buildName: null, buildMatch: null, talent: null };
+  const matched = declared && (best.id === declared || best.name === declared);
+  return {
+    model,
+    strategy,
+    buildName: String(best.name || best.id || ''),
+    buildMatch: matched ? 'declared' : (bestScore > 1 ? 'matched' : null),
+    talent: best.params ?? null,
+  };
+}
+
 export function buildTasksSheet(opts: {
   lane?: string | null;
   projectsDir?: string;
@@ -327,6 +457,11 @@ export function buildTasksSheet(opts: {
     else if (startRec) status = lock.alive ? 'running' : 'lost';
     const startedAt = (status === 'running' || status === 'lost') && startRec ? String(startRec.startedAt) : undefined;
     const prompt = typeof h?.prompt === 'string' ? h.prompt : '';
+    // v0.0.64 — RUNNING HOPS HAVE REAL DATA: the feed is live while the hop
+    // runs, so tokens/files/lastTool come from the window startedAt→now.
+    const live = status === 'running' && startedAt
+      ? liveStatsInWindow(feedPath, String(h?.god || '').toLowerCase(), new Date(startedAt).getTime(), now + 60_000)
+      : null;
     const files: TaskFile[] = tel
       ? filesInWindow(
           feedPath,
@@ -334,7 +469,7 @@ export function buildTasksSheet(opts: {
           new Date(tel.ts).getTime() - (tel.durationMs || 0),
           new Date(tel.ts).getTime() + 60_000,
         )
-      : [];
+      : (live?.files ?? []);
     const t: TaskRecord = {
       id: String(h?.id ?? ''),
       god: String(h?.god ?? 'apollo').toLowerCase(),
@@ -351,9 +486,12 @@ export function buildTasksSheet(opts: {
       parkedReason: isParked ? (state.parked?.reason ?? null) : null,
       ts: tel?.ts,
       startedAt,
-      tokensIn: tel?.tokensIn ?? null,
-      tokensOut: tel?.tokensOut ?? null,
-      durationMs: tel?.durationMs,
+      tokensIn: tel?.tokensIn ?? (live ? live.tokensIn : null),
+      tokensOut: tel?.tokensOut ?? (live ? live.tokensOut : null),
+      durationMs: tel?.durationMs ?? (status === 'running' && startedAt ? Math.max(0, now - new Date(startedAt).getTime()) : undefined),
+      lastTool: live?.lastTool ?? null,
+      live: Boolean(live),
+      ...buildSnapshot(String(h?.god ?? 'apollo').toLowerCase(), h),
       retriesAbsorbed: tel?.retriesAbsorbed ?? 0,
       reasoning: tel?.reasoning ?? null,
       sessionId: tel?.sessionId ?? null,

@@ -18,6 +18,7 @@ import { Check, ChevronLeft, Copy, Download, Gem, Loader2, Plus, Search, Trash2,
 import { cn } from '@/lib/utils';
 import { BUILD_CATEGORIES, BUILD_LIMITS } from '@/lib/build-categories';
 import { buildReadiness } from '@/lib/design-builds';
+import BuildCrystal, { CRYSTAL_FORMS, crystalFormFor } from './build-crystal';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { TALENT_PRESETS } from '@/lib/talent-presets';
 import TalentSigil from './talent-sigil';
@@ -63,6 +64,8 @@ export default function BuildTalentPage({
   const [budgetTokens, setBudgetTokens] = useState(initialBuild?.params?.budgetTokens ?? 16384);
   const [quality, setQuality] = useState<'max' | 'balanced'>(initialBuild?.params?.quality ?? 'max');
   const [category, setCategory] = useState(BUILD_CATEGORIES[0].id);
+  // v0.0.64 — the build's crystal: deterministic until the user picks a cut.
+  const [crystal, setCrystal] = useState<string>('');
   const readiness = buildReadiness({ name, signature, category, skills: [...skills], mcps: [...mcps], demigods: [...demigods] });
 
   const sets: Record<Slot, [Set<string>, (s: Set<string>) => void]> = {
@@ -112,7 +115,7 @@ export default function BuildTalentPage({
       const r = await fetch('/api/olympus/design-builds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, god, signature, category, skills: [...skills], mcps: [...mcps], demigods: [...demigods], params: { temperature, speed, budgetTokens, quality }, note: `Talent Studio · ${power} points` }),
+        body: JSON.stringify({ name, god, signature, category, crystal: crystal || crystalFormFor({ name, god }), skills: [...skills], mcps: [...mcps], demigods: [...demigods], params: { temperature, speed, budgetTokens, quality }, note: `Talent Studio · ${power} points` }),
       });
       const d = await r.json();
       if (d?.ok) { onCreated(); onClose(); }
@@ -215,9 +218,23 @@ export default function BuildTalentPage({
           {/* v0.0.57 — the old talent page's simple, animated hero: the god's
               own symbol, large, with the sector as a quiet label. */}
           <div className="rounded-xl border border-olympus-gold/15 bg-olympus-panel/40 py-4 flex flex-col items-center gap-1.5" style={{ background: 'radial-gradient(circle at 50% 12%, color-mix(in oklab, var(--olympus-gold) 16%, transparent), transparent 62%)' }}>
-            {(() => { const Icon = GOD_ICONS[god] ?? GOD_ICONS.apollo; return <Icon size={54} strokeWidth={1.35} className="text-olympus-gold drop-shadow-[0_0_18px_rgba(212,165,116,0.25)]" />; })()}
-            <span className="text-[12px] font-mono font-semibold uppercase tracking-[0.2em] text-olympus-text">{god}</span>
+            <BuildCrystal build={{ name, god, crystal: crystal || undefined, tier: 'warm' }} size={92} interactive />
+            <span className="flex items-center gap-1.5 text-[12px] font-mono font-semibold uppercase tracking-[0.2em] text-olympus-text">
+              {(() => { const Icon = GOD_ICONS[god] ?? GOD_ICONS.apollo; return <Icon size={13} className="text-olympus-gold" />; })()}
+              {god}
+            </span>
             <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">{BUILD_CATEGORIES.find((c) => c.id === category)?.name ?? 'general'} · {power} points</span>
+            <div className="flex flex-wrap justify-center gap-1 mt-1">
+              {CRYSTAL_FORMS.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setCrystal(f)}
+                  aria-label={`crystal cut ${f}`}
+                  aria-pressed={(crystal || crystalFormFor({ name, god })) === f}
+                  className={cn('text-[7px] font-mono px-1.5 py-0.5 rounded-full border uppercase tracking-wide', (crystal || crystalFormFor({ name, god })) === f ? 'border-olympus-cyan/60 bg-olympus-cyan/10 text-olympus-cyan' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}
+                >{f}</button>
+              ))}
+            </div>
             <div className="flex flex-wrap justify-center gap-1 mt-1">
               {BUILD_CATEGORIES.map((c) => (
                 <button key={c.id} onClick={() => setCategory(c.id)} className={cn('text-[8px] font-mono px-1.5 py-0.5 rounded-full border uppercase', category === c.id ? 'border-olympus-gold/60 bg-olympus-gold/15 text-olympus-gold' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}>{c.name}</button>

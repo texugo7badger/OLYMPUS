@@ -386,8 +386,9 @@ export default function MobileCompanion() {
     campaign === 'running' ? t('m.stateRunning', language)
       : campaign === 'parked' ? t('m.stateParked', language)
         : campaign === 'done' ? t('m.stateDone', language)
-          : campaign === 'none' ? t('m.stateIdle', language)
-            : campaign;
+          : campaign === 'unverified' ? t('m.interrupted', language)
+            : campaign === 'none' ? t('m.stateIdle', language)
+              : campaign;
 
   if (!token) {
     return (

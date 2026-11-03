@@ -716,6 +716,15 @@ function notifyDesktop(type: NotifyType, title: string, body: string): void {
   notifyPolicy = decision.state;
   if (!decision.show) return;
   flashTray(type);
+  // v0.0.64 — the in-app toast follows the user's theme. A native toast is
+  // painted by the OS (GNOME dark, etc.) and cannot carry theme.json; when
+  // the window is visible, the renderer shows the themed card instead.
+  if (mainWindow && mainWindow.isVisible()) {
+    try {
+      mainWindow.webContents.send('olympus:notify', { type, title, body, ts: new Date().toISOString() });
+      return;
+    } catch { /* fall through to native */ }
+  }
   try {
     if (!Notification.isSupported()) return;
     const iconPath = join(appRoot, 'public', 'logo-256x256.png');

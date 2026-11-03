@@ -179,7 +179,7 @@ export async function GET(req: NextRequest) {
     campaign.state === 'running' ? 'RUNNING'
     : parked ? 'PARKED'
     : campaign.state === 'unverified' ? 'UNVERIFIED'
-    : diskInFlight.length > 0 ? 'UNVERIFIED'
+    : diskInFlight.length > 0 ? 'INTERRUPTED'
     : 'IDLE';
 
   // The single human line — the StatusBar renders exactly this. RUNNING now
@@ -193,7 +193,9 @@ export async function GET(req: NextRequest) {
         ? `PARKED · ${parked?.hopId ?? '?'} · ${parked?.reason ?? 'no recorded cause'}`
         : verdict === 'UNVERIFIED'
           ? 'UNVERIFIED — state on disk, but no process could be confirmed'
-          : 'IDLE';
+          : verdict === 'INTERRUPTED'
+            ? `INTERRUPTED · ${lostInFlight.map((h: any) => h.hopId).slice(0, 4).join(', ')}${lostInFlight.length > 4 ? ` +${lostInFlight.length - 4}` : ''} — no live process; resume to re-dispatch`
+            : 'IDLE';
 
   return NextResponse.json({
     slug,

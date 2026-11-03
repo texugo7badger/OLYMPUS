@@ -34,6 +34,8 @@ export interface DesignBuild {
   mcps: string[];
   /** Optional lane hint (a model id or class). */
   model?: string;
+  /** v0.0.64 — the crystal cut (the build's visual identity). */
+  crystal?: string;
   /** v0.0.56 — the talent's execution profile. */
   params?: {
     temperature: number;
@@ -357,6 +359,7 @@ export function normalizeUserBuild(input: unknown, now = Date.now()): DesignBuil
     tier: VALID_TIER.includes(raw.tier as BuildTier) ? (raw.tier as BuildTier) : 'cold',
     source: 'user',
     ...(typeof raw.category === 'string' ? { category: raw.category as BuildCategory } : {}),
+    ...(typeof (raw as any).crystal === 'string' && (raw as any).crystal.trim() ? { crystal: String((raw as any).crystal).trim().slice(0, 16) } : {}),
     ...(raw.shared === true ? { shared: true } : {}),
     ...(typeof raw.note === 'string' && raw.note.trim() ? { note: raw.note.trim().slice(0, 240) } : {}),
   };

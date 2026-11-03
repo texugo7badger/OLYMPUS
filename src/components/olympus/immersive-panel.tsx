@@ -25,7 +25,8 @@ import { toast } from 'sonner';
 import { speakAs } from '@/lib/voice';
 import { godIntro } from '@/lib/god-personas';
 import ThemedLogo from './themed-logo';
-import PlasmaOrb from './plasma-orb';
+import PlasmaRing from './plasma-ring';
+import ProgressStrip from './progress-strip';
 
 interface Particle { x: number; y: number; vx: number; vy: number; r: number; c: number; a: number }
 interface Cell { x: number; y: number; r: number; phase: number; splitAt: number; c: number; drift: number }
@@ -68,6 +69,8 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const thoughtSeq = useRef(0);
   const language = useLanguage();
   const [activeGod, setActiveGod] = useState('apollo');
+  const [projectSlug, setProjectSlug] = useState('');
+  const studioStampRef = useRef('');
   // v0.0.34 — the studio opens with voice on (unless the user turned it off):
   // a chat answer is also spoken with the active god's voice.
   const [voice, setVoice] = useState(() => {
@@ -209,6 +212,43 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
 
   // Live gods: the run-state in flight list (5s poll; no churn when hidden).
   useEffect(() => {
+    fetch('/api/olympus/projects', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.active?.slug) setProjectSlug(String(d.active.slug)); })
+      .catch(() => { /* the strip hides */ });
+  }, []);
+
+  // v0.0.64 — the studio mirrors the phone: god + voice are shared.
+  useEffect(() => {
+    let live = true;
+    const pull = async () => {
+      try {
+        const r = await fetch('/api/olympus/studio/state', { cache: 'no-store' });
+        const d = await r.json().catch(() => null);
+        if (!live || !r.ok || !d?.ok) return;
+        const stamp = String(d.updatedAt || '');
+        if (stamp && stamp === studioStampRef.current) return;
+        studioStampRef.current = stamp;
+        if (typeof d.god === 'string' && GOD_IDS.includes(d.god)) setActiveGod(d.god);
+        if (typeof d.voice === 'boolean') setVoice(d.voice);
+      } catch { /* offline */ }
+    };
+    void pull();
+    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void pull(); }, 15_000);
+    return () => { live = false; clearInterval(timer); };
+  }, []);
+
+  const pushStudio = useCallback(async (patch: { god?: string; voice?: boolean }) => {
+    try {
+      const r = await fetch('/api/olympus/studio/state', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+      });
+      const d = await r.json().catch(() => null);
+      if (d?.updatedAt) studioStampRef.current = String(d.updatedAt);
+    } catch { /* the local choice stands */ }
+  }, []);
+
+  useEffect(() => {
     const load = () => {
       if (document.visibilityState === 'hidden') return;
       fetch('/api/olympus/run-state', { cache: 'no-store' })
@@ -245,6 +285,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   }, [activeGod, language, voice, speak]);
   const introduceGod = useCallback((g: string) => {
     setActiveGod(g);
+    void pushStudio({ god: g });
     const intro = godIntro(g, language);
     setChat((prev) => [...prev, { role: 'god' as const, text: intro, god: g }].slice(-8));
     if (voice) speak(intro, g);
@@ -733,12 +774,23 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
 
         {/* the voice orb */}
         <aside className="rounded-xl border p-3 flex flex-col items-center justify-start gap-2 overflow-y-auto custom-scroll" style={{ borderColor: `${palette.gold}22`, background: `${palette.panel}99` }}>
+          {projectSlug && (
+            <ProgressStrip
+              slug={projectSlug}
+              god={activeGod}
+              language={language}
+              onExplain={(text, g) => {
+                setChat((prev) => [...prev, { role: 'god' as const, text, god: g }].slice(-8));
+                if (voice) speak(text, g);
+              }}
+            />
+          )}
           <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wide" style={{ color: palette.gold }}>
             <ActiveGodIcon size={13} style={{ color: orbTint }} />
             {t('studio.voice', language)} · {godName(activeGod, language)}
           </div>
           <button
-            onClick={() => setVoice((v) => { const next = !v; try { window.localStorage.setItem('olympus:voice-enabled', next ? '1' : '0'); } catch { /* private */ } return next; })}
+            onClick={() => setVoice((v) => { const next = !v; try { window.localStorage.setItem('olympus:voice-enabled', next ? '1' : '0'); } catch { /* private */ } void pushStudio({ voice: next }); return next; })}
             aria-pressed={voice}
             aria-label={`Voice of ${godName(activeGod, language)}`}
             className="relative w-40 h-40 rounded-full flex items-center justify-center shrink-0"
@@ -747,8 +799,9 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
               boxShadow: `0 0 ${speaking ? 64 : 34}px ${orbTint}55, inset 0 0 0 1px ${orbTint}33`,
             }}
           >
-            <span className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle at 50% 45%, ${orbTint}18, transparent 72%)` }} />
-            <PlasmaOrb tint={orbTint} speaking={speaking && voice} level={voiceLevel} size={160} />
+            <PlasmaRing tint={orbTint} speaking={speaking && voice} level={voiceLevel} size={160}>
+              <ActiveGodIcon size={40} style={{ color: orbTint }} />
+            </PlasmaRing>
           </button>
           <select
             value={activeGod}

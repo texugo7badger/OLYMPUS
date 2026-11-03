@@ -305,6 +305,7 @@ const olympusApi = {
       'olympus:update-download-progress',
       'olympus:update-downloaded',
       'olympus:update-error',
+      'olympus:notify',
     ];
     if (!allowed.includes(channel)) return;
     const wrapped = (_e: unknown, ...args: unknown[]) => callback(...args);

@@ -18,7 +18,7 @@ import { reconcileProjectPath, PROJECTS_DIR, setActiveProject } from '@/lib/proj
 import { composePlannerRag } from '@/lib/rag-inject';
 import { composeKnowledgeBlock } from '@/lib/knowledge-hints';
 import { uiReferencesMarkerBlock } from '@/lib/ui-references';
-import { appendDesktopNotify } from '@/lib/desktop-notify';
+import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 import { isHibernating } from '@/lib/hibernation';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
@@ -1247,11 +1247,14 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
             const laneRoot = wr.root;
             const rootNote = walkRootNote(wr);
             if (rootNote) send({ type: 'log', msg: rootNote, ts: new Date().toISOString() });
-            appendDesktopNotify({
-              type: 'walk',
-              title: 'OLYMPUS — walk starting',
-              body: `${opts.intent.slug}: the plan is being walked (hops run on their gods' lanes).`,
-            });
+            {
+              const lang = readLanguage();
+              appendDesktopNotify({
+                type: 'walk',
+                title: notifyText(lang, 'walk.title'),
+                body: notifyText(lang, 'walk.body', { slug: opts.intent.slug }),
+              });
+            }
             try {
               const t = await maybeStartDevServer(opts.intent.slug, laneRoot);
               send({

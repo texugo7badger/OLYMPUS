@@ -18,12 +18,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Mic, Send, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import MobileAmbient from '@/components/olympus/mobile-ambient';
-import PlasmaOrb from '@/components/olympus/plasma-orb';
+import PlasmaRing from '@/components/olympus/plasma-ring';
+import ProgressStrip from '@/components/olympus/progress-strip';
 import { normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
 import { speechLocale, t, useLanguage } from '@/lib/i18n';
 import { godPersona } from '@/lib/god-personas';
 import { godName } from '@/lib/i18n';
 import { GOD_VOICE, setVoiceEnabled, speakAs, voiceEnabled } from '@/lib/voice';
+import { useHoldToTalk } from '@/lib/use-hold-to-talk';
 
 const GOD_IDS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
 
@@ -68,6 +70,11 @@ export default function MobileStudio() {
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeSlug, setActiveSlug] = useState('');
+  const [queue, setQueue] = useState<Array<{ id: string; text: string; status: string; createdAt: string }>>([]);
+  const [queueText, setQueueText] = useState('');
+  const [feed, setFeed] = useState<Array<{ type: string; title: string; body: string; ts: string }>>([]);
+  const studioStampRef = useRef('');
   const levelGate = useRef(0);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -83,6 +90,10 @@ export default function MobileStudio() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.ok && d.state) setTheme(d.state); })
       .catch(() => { /* offline */ });
+    fetch('/api/olympus/projects', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.active?.slug) setActiveSlug(String(d.active.slug)); })
+      .catch(() => { /* the progress strip hides */ });
   }, []);
 
   const headers = useMemo<Record<string, string>>(() => {
@@ -104,6 +115,79 @@ export default function MobileStudio() {
     const timer = setInterval(load, 5000);
     return () => clearInterval(timer);
   }, [token, headers]);
+
+  // v0.0.64 — the studio mirrors the other surface (god + voice).
+  const pullStudio = useCallback(async () => {
+    try {
+      const r = await fetch('/api/olympus/studio/state', { cache: 'no-store', headers });
+      const d = await r.json().catch(() => null);
+      if (!r.ok || !d?.ok) return;
+      const stamp = String(d.updatedAt || '');
+      if (stamp && stamp === studioStampRef.current) return;
+      studioStampRef.current = stamp;
+      if (typeof d.god === 'string' && GOD_IDS.includes(d.god)) setGod(d.god);
+      if (typeof d.voice === 'boolean') { setVoice(d.voice); setVoiceEnabled(d.voice); }
+    } catch { /* offline */ }
+  }, [headers]);
+
+  const pushStudio = useCallback(async (patch: { god?: string; voice?: boolean }) => {
+    try {
+      const r = await fetch('/api/olympus/studio/state', {
+        method: 'POST', headers, body: JSON.stringify(patch),
+      });
+      const d = await r.json().catch(() => null);
+      if (d?.updatedAt) studioStampRef.current = String(d.updatedAt);
+    } catch { /* the local choice stands */ }
+  }, [headers]);
+
+  const loadQueue = useCallback(async () => {
+    if (!activeSlug) return;
+    try {
+      const r = await fetch(`/api/olympus/prompt-queue?project=${encodeURIComponent(activeSlug)}`, { cache: 'no-store', headers });
+      const d = await r.json().catch(() => null);
+      if (r.ok && d?.ok) setQueue(Array.isArray(d.items) ? d.items : []);
+    } catch { /* next poll */ }
+  }, [activeSlug, headers]);
+
+  const loadFeed = useCallback(async () => {
+    try {
+      const r = await fetch('/api/olympus/notify?limit=6', { cache: 'no-store', headers });
+      const d = await r.json().catch(() => null);
+      if (r.ok && d?.ok) setFeed(Array.isArray(d.events) ? d.events : []);
+    } catch { /* next poll */ }
+  }, [headers]);
+
+  useEffect(() => {
+    void pullStudio();
+    void loadQueue();
+    void loadFeed();
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'hidden') { void pullStudio(); void loadQueue(); void loadFeed(); }
+    }, 10_000);
+    return () => clearInterval(timer);
+  }, [pullStudio, loadQueue, loadFeed]);
+
+  const enqueue = async () => {
+    const text = queueText.trim();
+    if (!text || !activeSlug) return;
+    setQueueText('');
+    try {
+      const r = await fetch('/api/olympus/prompt-queue', {
+        method: 'POST', headers, body: JSON.stringify({ project: activeSlug, text }),
+      });
+      const d = await r.json().catch(() => null);
+      if (r.ok && d?.ok) setQueue(Array.isArray(d.items) ? d.items : []);
+      else setError(d?.error || t('m.connectionFailed', language));
+    } catch (e: any) { setError(e?.message || t('m.connectionFailed', language)); }
+  };
+
+  const sendQueued = async (id: string, text: string) => {
+    await askApollo(text);
+    try {
+      await fetch('/api/olympus/prompt-queue', { method: 'PATCH', headers, body: JSON.stringify({ id, status: 'sent' }) });
+      void loadQueue();
+    } catch { /* the item stays queued; the user can retry */ }
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ block: 'end' });
@@ -130,6 +214,7 @@ export default function MobileStudio() {
       const next = !v;
       setVoiceEnabled(next);
       if (!next && typeof window !== 'undefined') window.speechSynthesis?.cancel();
+      void pushStudio({ voice: next });
       return next;
     });
   };
@@ -190,6 +275,56 @@ export default function MobileStudio() {
     rec.start();
   };
 
+  // v0.0.64 — the ring's mic sends a real request to Apollo (action lane),
+  // not a read-only studio question.
+  const askApollo = useCallback(async (text: string) => {
+    const prompt = text.trim();
+    if (!prompt || busy) return;
+    setChat((prev) => [...prev, { role: 'user' as const, text: prompt }].slice(-10));
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/olympus/action', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ action: 'prompt', text: prompt, conversationId: activeSlug ? `mobile-${activeSlug}` : 'mobile' }),
+      });
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let answer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop() || '';
+        for (const frame of frames) {
+          const line = frame.split('\n').find((l) => l.startsWith('data: '));
+          if (!line) continue;
+          try {
+            const ev = JSON.parse(line.slice(6));
+            const msg = ev?.msg || ev?.text || (ev?.part?.text ? String(ev.part.text) : '');
+            if (msg) answer = String(msg).replace(/\s+/g, ' ').slice(0, 600);
+          } catch { /* keep reading */ }
+        }
+      }
+      setChat((prev) => [...prev, { role: 'god' as const, text: answer || 'Apollo recebeu o pedido.', god: 'apollo' }].slice(-10));
+      if (voice && answer) speak(answer);
+    } catch (e: any) {
+      setError(e?.message || t('m.connectionFailed', language));
+    } finally {
+      setBusy(false);
+    }
+  }, [activeSlug, busy, headers, language, speak, voice]);
+
+  const hold = useHoldToTalk({
+    language,
+    onText: (text) => void askApollo(text),
+    onError: (message) => setError(message),
+  });
+
   const inFlight = run?.hops?.inFlightList ?? [];
   const completed = Number(run?.hops?.completed ?? 0);
   const total = Number(run?.hops?.total ?? 0);
@@ -221,6 +356,17 @@ export default function MobileStudio() {
       </header>
 
       <section className="relative z-10 mx-auto w-full max-w-lg px-3 pt-3 space-y-3">
+        {activeSlug && (
+          <ProgressStrip
+            slug={activeSlug}
+            god={god}
+            language={language}
+            onExplain={(text, g) => {
+              setChat((prev) => [...prev, { role: 'god' as const, text, god: g }].slice(-10));
+              if (voice) speak(text);
+            }}
+          />
+        )}
         {/* the god + the orb */}
         <div className="rounded-2xl border border-olympus-gold/15 bg-olympus-panel p-4">
           <div className="flex items-center gap-2">
@@ -229,18 +375,38 @@ export default function MobileStudio() {
             <span className="truncate text-[10px] text-olympus-text-dim">{persona.epithet}</span>
           </div>
           <div className="mt-3 flex flex-col items-center">
-            <button
-              onClick={() => { const intro = `${persona.name} — ${persona.epithet}. ${persona.domain}. ${persona.tone}.`; setChat((p) => [...p, { role: 'god' as const, text: intro, god }].slice(-10)); if (voice) speak(intro); }}
-              aria-label={`${t('m.studioSpeak', language)} · ${persona.name}`}
-              className="relative flex h-44 w-44 items-center justify-center rounded-full"
-              style={{
-                background: 'radial-gradient(circle at 50% 45%, #0B0B16 0%, #06060C 56%, rgba(6,6,12,0.55) 72%, transparent 80%)',
-                boxShadow: `0 0 ${speaking ? 64 : 34}px ${tint}55, inset 0 0 0 1px ${tint}33`,
-              }}
+            <PlasmaRing
+              tint={tint}
+              level={hold.recording ? hold.level : level}
+              speaking={speaking && voice}
+              recording={hold.recording}
+              size={220}
             >
-              <span className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle at 50% 45%, ${tint}18, transparent 72%)` }} />
-              <PlasmaOrb tint={tint} speaking={speaking && voice} level={level} size={176} />
-            </button>
+              <button
+                onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); void hold.start(); }}
+                onPointerUp={(e) => { e.preventDefault(); hold.stop(false); }}
+                onPointerCancel={() => hold.stop(true)}
+                onContextMenu={(e) => e.preventDefault()}
+                aria-label={t('m.holdToTalk', language)}
+                aria-pressed={hold.recording}
+                className="flex h-24 w-24 select-none items-center justify-center rounded-full border text-center"
+                style={{
+                  touchAction: 'none',
+                  borderColor: hold.recording ? palette.red : `${tint}55`,
+                  background: `radial-gradient(circle at 50% 45%, ${tint}22, transparent 72%)`,
+                  boxShadow: `0 0 ${hold.recording ? 46 : 26}px ${hold.recording ? palette.red : tint}44`,
+                }}
+              >
+                {hold.transcribing
+                  ? <Loader2 size={22} className="animate-spin" style={{ color: tint }} />
+                  : hold.recording
+                    ? <Mic size={24} style={{ color: palette.red }} />
+                    : <Mic size={22} style={{ color: tint }} />}
+              </button>
+            </PlasmaRing>
+            <p className="mt-1 text-center text-[9px] font-mono" style={{ color: hold.recording ? palette.red : palette.textDim }}>
+              {hold.recording ? t('m.recordingRelease', language) : hold.transcribing ? t('m.transcribing', language) : t('m.holdToTalk', language)}
+            </p>
             <div className="mt-2 grid w-full grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
               <span className="text-olympus-text-dim">{t('m.domain', language)}</span>
               <span className="truncate text-olympus-text">{persona.domain}</span>
@@ -249,7 +415,7 @@ export default function MobileStudio() {
             </div>
             <select
               value={god}
-              onChange={(e) => setGod(e.target.value)}
+              onChange={(e) => { setGod(e.target.value); void pushStudio({ god: e.target.value }); }}
               aria-label={t('m.studioGods', language)}
               className="mt-3 w-full rounded-xl border border-olympus-gold/20 bg-olympus-bg px-3 py-2.5 text-sm outline-none"
               style={{ borderColor: `${tint}44` }}
@@ -291,6 +457,65 @@ export default function MobileStudio() {
             </p>
           )}
         </div>
+
+        {/* v0.0.64 — the development feed (project notifications). */}
+        {feed.length > 0 && (
+          <div className="rounded-2xl border border-olympus-gold/10 bg-olympus-card p-3">
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-olympus-text-dim">
+              <span>{t('m.development', language)}</span>
+              <span>{feed.length}</span>
+            </div>
+            <div className="mt-1.5 space-y-1">
+              {feed.slice(0, 6).map((ev, i) => (
+                <div key={`${ev.ts}:${i}`} className="flex items-start gap-1.5 text-[10px]">
+                  <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: ev.type === 'error' ? palette.red : ev.type === 'walk' ? palette.cyan : ev.type === 'design' ? palette.purple : palette.green }} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-olympus-text">{ev.title}</span>
+                    <span className="block truncate text-olympus-text-dim">{ev.body}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* v0.0.64 — the shared prompt queue: enqueue now, send when ready. */}
+        {activeSlug && (
+          <div className="rounded-2xl border border-olympus-gold/10 bg-olympus-card p-3">
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-olympus-text-dim">
+              <span>{t('m.queue', language)}</span>
+              <span>{queue.filter((q) => q.status === 'queued').length}</span>
+            </div>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <input
+                value={queueText}
+                onChange={(e) => setQueueText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void enqueue(); } }}
+                placeholder={t('m.queuePlaceholder', language)}
+                aria-label={t('m.queuePlaceholder', language)}
+                className="min-w-0 flex-1 rounded-lg border border-olympus-gold/20 bg-olympus-bg px-2.5 py-2 text-[12px] outline-none placeholder:text-olympus-text-dim"
+              />
+              <button onClick={() => void enqueue()} disabled={!queueText.trim()} className="rounded-lg bg-olympus-gold/15 px-3 py-2 text-[10px] font-mono text-olympus-gold ring-1 ring-olympus-gold/30 disabled:opacity-40">
+                {t('m.enqueue', language)}
+              </button>
+            </div>
+            {queue.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {queue.slice(-6).map((q) => (
+                  <div key={q.id} className="flex items-center gap-1.5 rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 px-2 py-1.5">
+                    <span className={`text-[8px] font-mono uppercase ${q.status === 'sent' ? 'text-olympus-green' : 'text-olympus-cyan'}`}>{q.status}</span>
+                    <span className="min-w-0 flex-1 truncate text-[10px] text-olympus-text">{q.text}</span>
+                    {q.status === 'queued' && (
+                      <button onClick={() => void sendQueued(q.id, q.text)} disabled={busy} className="rounded px-1.5 py-0.5 text-[8px] font-mono text-olympus-gold ring-1 ring-olympus-gold/25 disabled:opacity-40">
+                        {t('m.sendNow', language)}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* the conversation */}
         <div className="rounded-2xl border border-olympus-gold/15 bg-olympus-panel p-3">

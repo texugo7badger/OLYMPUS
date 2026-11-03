@@ -41,6 +41,10 @@ result**, never a green badge without a number.
   preview URL is a server answer (LAN IPv4 or per-port HTTPS tunnel), the
   phone adopts the desktop's language and never overwrites it, and the studio
   reuses the same particles/orb/voice.
+- **Creative mode** — the progress model (current plan; a dead walker is
+  INTERRUPTED, never running), the per-god bars, the plasma ring's real level,
+  the stardrift loader's fill, the prompt queue (a user file) and the auth
+  gates on the new routes (`creative.test.mjs`, 12 checks).
 
 ## How a hop becomes GREEN
 
@@ -54,7 +58,7 @@ claimed here.
 
 | Evidence | Result |
 |---|---|
-| Battery | **134 PASS / 0 FAIL / 1 declared skip** (135 suites) |
+| Battery | **135 PASS / 0 FAIL / 1 declared skip** (136 suites) |
 | 100-hop spine | **100/100** in 9.9s · p50 189ms · p95 225ms · 0 tokens |
 | Soak while walking | **24 rounds PASS** · 5/5 probes · p95 ≤ 120ms |
 | Hibernation drill | pre-hibernation artifact **byte-identical**; 0 lost |

@@ -27,15 +27,19 @@
 
 | References · Violet | Build Hub · Ice |
 |---|---|
-| <img src="screenshots/02-references.png" width="480" alt="OLYMPUS References in the Violet theme — 939 live studies" /> | <img src="screenshots/05-builds.png" width="480" alt="OLYMPUS Build Hub — builds, cards and the talent entry" /> |
+| <img src="screenshots/05-references.png" width="480" alt="OLYMPUS References in the Violet theme — 939 live studies" /> | <img src="screenshots/03-builds.png" width="480" alt="OLYMPUS Build Hub — builds, cards and the talent entry" /> |
 
 | Settings · Parchment | Live preview & design |
 |---|---|
-| <img src="screenshots/06-settings.png" width="480" alt="OLYMPUS Settings in the Parchment theme" /> | <img src="screenshots/03-style.png" width="480" alt="OLYMPUS design board — direction, live preview and brand" /> |
+| <img src="screenshots/06-appearance.png" width="480" alt="OLYMPUS Settings in the Parchment theme" /> | <img src="screenshots/04-style.png" width="480" alt="OLYMPUS design board — direction, live preview and brand" /> |
 
-| Talent Studio · the god's own symbol | Mobile companion |
+| Creative mode · progress, ring and queue | Mobile companion |
 |---|---|
-| <img src="screenshots/07-talent-studio.png" width="480" alt="OLYMPUS Talent Studio with Athena's animated sigil, sector chips and five temperature dots" /> | <img src="screenshots/07-mobile.png" width="220" alt="OLYMPUS mobile companion showing the running AIME campaign" /> |
+| <img src="screenshots/07-creative.png" width="480" alt="OLYMPUS creative mode — the honest progress bars, the plasma ring and the build crystal" /> | <img src="screenshots/08-mobile.png" width="220" alt="OLYMPUS mobile companion showing the AIME campaign and the live preview" /> |
+
+| Mobile creative · the same surface in one hand |
+|---|
+| <img src="screenshots/09-mobile-studio.png" width="240" alt="OLYMPUS mobile creative mode — progress per god, the plasma ring and hold-to-talk" /> |
 
 </div>
 
@@ -43,15 +47,14 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.63 — stability: the project stops being invented.** Approvals and
-meta messages no longer mint a project, an explicit name in the text beats
-conversation memory, and the phone gets a preview that actually opens (LAN
-IPv4 or a per-port HTTPS tunnel, start/stop), one shared language in seven
-locales, a creativity studio of its own and the Greek character of every god.
-The 939 deduped references, Talent Studio, the free-first MCP market, guided
-instincts, bounded hops, real cost windows, GitHub per project and the real
-session context all remain. Everything below is evidence, not a promise; the
-open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md).
+**v0.0.64 — the creative mode is real.** The project has an honest 0–100%
+bar (of the current plan) and a bar per god, each god can explain its number
+by voice, the build is a crystal cut in the theme's colors, the loader is a
+stardrift sphere that fills with the theme's light, and notifications follow
+the palette you picked when the app is visible. The running hop now shows live
+tokens, duration, files and the last tool; a dead walker is **INTERRUPTED —
+resume**, never a ghost "running". Everything below is evidence, not a
+promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md).
 
 ## Architecture at a glance
 
@@ -84,7 +87,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**134 PASS / 0 FAIL / 1 declared skip** across 135 suites; a 100-hop
+**135 PASS / 0 FAIL / 1 declared skip** across 136 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 suites stay maintainer-local; the evidence is public. Read
@@ -146,6 +149,30 @@ Read [MOBILE.md](MOBILE.md) for the security model and the honest limits.
 **Talent Studio** is a first-class route (`/talent`) and a status-bar button:
 the god's own animated symbol, ten sector chips, five temperature dots, speed,
 output budget and quality — saved, exportable and in the build prompt.
+
+## Creative mode — progress you can question
+
+![Creative mode](public/diagrams/creative.svg)
+
+The creativity screen (desktop and phone) is the same surface: the live
+development feed, the progress bar (completed ÷ the **current plan** — a new
+prompt can lower it because the plan grew), one bar per god, the build crystal,
+the prompt queue, and the plasma ring. **Hold the mic inside the ring**, speak,
+release: the server STT transcribes and the request goes to Apollo in the
+project's lane. Tap a god's bar and that god explains its number, aloud, in
+your language. The phone mirrors the god and voice switches of the desktop.
+
+**The loader is the theme's logo.** A sphere of stars drifts around the peak;
+the light fills it as the app boots. Same component on PC and phone, 60 FPS,
+static in stable mode.
+
+![The stardrift loader](public/diagrams/loader.svg)
+
+**Notifications follow your palette.** When the app is visible, the toast is
+themed (type accent + your bg/panel/text); when it is hidden, the OS owns the
+notification and follows the system theme — stated, not hidden.
+
+![Themed notifications](public/diagrams/notifications.svg)
 
 ## Themes — eighteen families and a palette lab
 

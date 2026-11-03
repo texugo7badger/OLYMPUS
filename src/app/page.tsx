@@ -10,6 +10,7 @@ import { Terminal as TerminalIcon, Library, LayoutGrid, AlertCircle, RefreshCw, 
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import OlympusLoader from '@/components/olympus/olympus-loader';
+import NotificationToast from '@/components/olympus/notification-toast';
 import { getPanelLoadingCount, panelLoadingBump, subscribePanelLoading } from '@/lib/panel-loading-bus';
 import { initTheme } from '@/lib/theme-store';
 
@@ -670,7 +671,14 @@ export default function OlympusWorkspace() {
   return (
     <ChunkErrorBoundary>
     <div suppressHydrationWarning className="h-screen w-screen flex flex-col bg-olympus-bg text-olympus-text overflow-hidden">
-      {booting && <OlympusLoader fullscreen leaving={bootLeaving} />}
+      <NotificationToast />
+      {booting && (
+        <OlympusLoader
+          fullscreen
+          leaving={bootLeaving}
+          progress={Math.min(0.96, (windowLoaded ? 0.3 : 0.08) + (dataReady ? 0.34 : 0) + (sseConnected ? 0.2 : 0) + (pendingPanels === 0 ? 0.12 : 0))}
+        />
+      )}
       <StatusBar health={brainHealth ?? health} />
 
       <div suppressHydrationWarning className="flex-1 flex min-h-0">

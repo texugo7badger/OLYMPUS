@@ -37,6 +37,15 @@ export interface TaskRecord {
   /** W-D2: when this hop STARTED (the inFlight ground truth — the running
    *  timer's source; telemetry rows land only at settle). */
   startedAt?: string;
+  /** v0.0.64 — live feed values (tool-call tokens, last tool) while running. */
+  lastTool?: string | null;
+  live?: boolean;
+  /** v0.0.64 — the build snapshot (model + strategy + registry build). */
+  model?: string | null;
+  strategy?: string | null;
+  buildName?: string | null;
+  buildMatch?: 'declared' | 'matched' | null;
+  talent?: { temperature?: number; speed?: string; budgetTokens?: number; quality?: string } | null;
   tokensIn?: number | null;
   tokensOut?: number | null;
   durationMs?: number;
@@ -87,6 +96,13 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
   const [loading, setLoading] = useState(true);
   const [showThinking, setShowThinking] = useState(true);
   const [openFile, setOpenFile] = useState<string | null>(null);
+  // v0.0.64 — the running timer must TICK, not freeze at the first read.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (task?.status !== 'running') return;
+    const timer = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [task?.status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +148,12 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
         <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-olympus-gold/10 bg-olympus-panel">
           {Icon ? <Icon size={15} className="text-olympus-gold" /> : <Sparkles size={15} className="text-olympus-gold" />}
           <span className="text-[13px] font-mono font-semibold text-olympus-gold capitalize">{task?.god ?? '…'}</span>
+          {task?.demigods?.length ? (
+            <>
+              <span className="text-olympus-text-dim">·</span>
+              <span className="text-[12px] font-mono text-olympus-cyan">{task.demigods[0]}{task.demigods.length > 1 ? ` +${task.demigods.length - 1}` : ''}</span>
+            </>
+          ) : null}
           <span className="text-olympus-text-dim">·</span>
           <span className="text-[13px] font-mono text-olympus-text">{hopId}</span>
           {task && (
@@ -194,19 +216,57 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
                 </div>
               ) : null}
 
+              {/* v0.0.64 — THE BUILD USED: model + strategy + registry build. */}
+              {(task.model || task.strategy || task.buildName) ? (
+                <div className="rounded-lg border border-olympus-cyan/20 bg-olympus-cyan/5 p-2.5">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Sparkles size={11} className="text-olympus-cyan" />
+                    <span className="text-[10px] font-semibold text-olympus-text uppercase tracking-wide">build</span>
+                    {task.buildMatch && (
+                      <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 border border-olympus-cyan/25 text-olympus-cyan">
+                        {task.buildMatch === 'declared' ? 'declared' : 'matched'}
+                      </span>
+                    )}
+                    <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">snapshot at launch</span>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div>
+                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">build</div>
+                      <div className="text-[11px] font-mono text-olympus-text">{task.buildName || '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">model / strategy</div>
+                      <div className="text-[11px] font-mono text-olympus-cyan">{task.model || '—'}{task.strategy ? ` · ${task.strategy}` : ''}</div>
+                    </div>
+                  </div>
+                  {task.talent && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {typeof task.talent.temperature === 'number' && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-bg border border-olympus-gold/15 text-olympus-text-dim">temp {task.talent.temperature}</span>}
+                      {task.talent.speed && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-bg border border-olympus-gold/15 text-olympus-text-dim">{task.talent.speed}</span>}
+                      {typeof task.talent.budgetTokens === 'number' && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-bg border border-olympus-gold/15 text-olympus-text-dim">{(task.talent.budgetTokens / 1000).toFixed(0)}k tok</span>}
+                      {task.talent.quality && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-bg border border-olympus-gold/15 text-olympus-text-dim">{task.talent.quality}</span>}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
               {/* Telemetry strip */}
               <div className="grid grid-cols-4 gap-2">
                 <div className="rounded-lg p-2 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-cyan/15">
                   <div className="flex items-center gap-1 mb-0.5"><Coins size={10} className="text-olympus-cyan" /><span className="text-[8px] font-mono text-olympus-text-dim uppercase">tokens</span></div>
                   <div className="text-[12px] font-bold font-mono text-olympus-cyan">{fmtTokens(task.tokensIn)} / {fmtTokens(task.tokensOut)}</div>
                   <div className="text-[8px] font-mono text-olympus-text-dim">
-                    in / out{typeof task.estimatedCostUsd === 'number' ? ` · ~$${task.estimatedCostUsd.toFixed(4)}` : ''}
+                    {task.live ? 'live · tool calls' : 'in / out'}{typeof task.estimatedCostUsd === 'number' ? ` · ~$${task.estimatedCostUsd.toFixed(4)}` : ''}
                   </div>
                 </div>
                 <div className="rounded-lg p-2 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-gold/15">
                   <div className="flex items-center gap-1 mb-0.5"><Clock size={10} className="text-olympus-gold" /><span className="text-[8px] font-mono text-olympus-text-dim uppercase">duration</span></div>
-                  <div className="text-[12px] font-bold font-mono text-olympus-gold">{fmtDuration(task.durationMs)}</div>
-                  <div className="text-[8px] font-mono text-olympus-text-dim">{task.ts ? new Date(task.ts).toLocaleTimeString('en-US', { hour12: false }) : ''}</div>
+                  <div className="text-[12px] font-bold font-mono text-olympus-gold">
+                    {fmtDuration(task.status === 'running' && task.startedAt ? Math.max(0, nowMs - new Date(task.startedAt).getTime()) : task.durationMs)}
+                  </div>
+                  <div className="text-[8px] font-mono text-olympus-text-dim">
+                    {task.status === 'running' ? 'running' : (task.ts ? new Date(task.ts).toLocaleTimeString('en-US', { hour12: false }) : '')}
+                  </div>
                 </div>
                 <div className="rounded-lg p-2 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-purple/15">
                   <div className="flex items-center gap-1 mb-0.5"><RotateCcw size={10} className="text-olympus-purple" /><span className="text-[8px] font-mono text-olympus-text-dim uppercase">retries</span></div>
@@ -216,7 +276,7 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
                 <div className="rounded-lg p-2 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-red/15">
                   <div className="flex items-center gap-1 mb-0.5"><Wrench size={10} className="text-olympus-red" /><span className="text-[8px] font-mono text-olympus-text-dim uppercase">files</span></div>
                   <div className="text-[12px] font-bold font-mono text-olympus-red">{task.files.length}</div>
-                  <div className="text-[8px] font-mono text-olympus-text-dim">touched</div>
+                  <div className="text-[8px] font-mono text-olympus-text-dim">{task.lastTool ? `last: ${task.lastTool}` : 'touched'}</div>
                 </div>
               </div>
 

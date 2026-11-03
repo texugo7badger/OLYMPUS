@@ -248,6 +248,7 @@ export function searchTerms(query: string, lang: Language = getLanguage()): stri
 type Dict = Record<string, string>;
 
 const en: Dict = {
+  'common.loadingPantheon': 'loading the pantheon', 'common.loadingSubtitle': '10 gods · 122 demigods · the vault is waking',
   'common.use': 'use', 'common.queue': 'send to queue', 'common.close': 'close', 'common.open': 'open',
   'common.copy': 'copy', 'common.search': 'search', 'common.loadMore': 'load more', 'common.all': 'all',
   'common.library': 'library', 'common.variation': 'variation', 'common.liveStudy': 'live study',
@@ -295,6 +296,7 @@ const en: Dict = {
 };
 
 const ptBR: Dict = {
+  'common.loadingPantheon': 'carregando o panteão', 'common.loadingSubtitle': '10 deuses · 122 semideuses · o vault está despertando',
   'common.use': 'usar', 'common.queue': 'enviar para a fila', 'common.close': 'fechar', 'common.open': 'abrir',
   'common.copy': 'copiar', 'common.search': 'buscar', 'common.loadMore': 'carregar mais', 'common.all': 'todos',
   'common.library': 'biblioteca', 'common.variation': 'variação', 'common.liveStudy': 'estudo ao vivo',
