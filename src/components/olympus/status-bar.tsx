@@ -159,7 +159,9 @@ export default function StatusBar({
 	 const totalTokens = cost?.totalTokens ?? 0;
  const ActiveGodIcon = fallbackGod ? GOD_ICONS[fallbackGod] : null;
 
- const compact = winWidth < 1200;
+ // v0.0.59 — the bar carries mobile + talent now; below 1680px the brain
+ // labels collapse to icons+numbers so the cost block never overlaps them.
+ const compact = winWidth < 1680;
  const hideProject = winWidth < 900;
  const iconOnly = winWidth < 700;
  const hideVersion = winWidth < 1100;
@@ -340,7 +342,7 @@ export default function StatusBar({
 	   : fmtUsd(realUsd)}
 	 </span>
 	 <span
-	   className="text-olympus-text-dim text-[10px] hidden sm:inline"
+	   className="text-olympus-text-dim text-[10px] hidden min-[1800px]:inline"
 	   data-tip={
 	     `Invoice: not exposed by the provider (GO subscription). ` +
 	     `Step cost ${fmtUsd(realUsd)} (OpenCode's per-step model-price field) · ` +
