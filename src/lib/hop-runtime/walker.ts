@@ -28,6 +28,7 @@ import { join, isAbsolute } from 'node:path';
 import { spawn } from 'node:child_process';
 import { syncLaneFile } from '@/lib/lane-config';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
+import { balancePlan } from './plan-balance';
 import { loadHopState, saveHopState, hopStatePath, pruneStaleInFlight, type HopPark } from './hop-state';
 import { composeArsenalDirective } from './arsenal';
 import { createHopTransport, type HopTransport } from './transport';
@@ -1045,7 +1046,14 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   if (!v.ok) {
     throw new Error(`[hop-runtime] garbage plan — refusing to walk:\n${v.errors.map((e) => `  - ${e}`).join('\n')}`);
   }
-  const plan = v.plan;
+  // v0.0.55 — the DAG balance pass: only unambiguous artifacts move, never
+  // script hops. A single god owning >40% of a plan serializes the critical
+  // path on that pool (the AIME Athena-16 specimen).
+  const balanced = balancePlan(v.plan);
+  const plan = balanced.plan;
+  if (balanced.changes.length > 0) {
+    console.log(`[hop-runtime] DAG balance: ${balanced.changes.map((c) => `${c.hop} ${c.from}->${c.to}`).join(', ')}`);
+  }
   const laneRoot = plan.laneRoot;
   const stateDir = opts.stateDir ?? laneRoot;
   const dispatch = opts.dispatcher ?? spawnHopDispatcher;
