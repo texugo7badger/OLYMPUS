@@ -36,6 +36,7 @@ expect('T-4: the studio saves, forks, exports and caps slots',
   'the creation loop is missing');
 expect('T-5: the old carousel is gone', !/snap-mandatory|scroller|goTo\(active/.test(page), 'the carousel still owns the page');
 expect('T-5b: each god keeps its own animated symbol', /GOD_ICONS/.test(fs.readFileSync(OLYMPUS + '/src/components/olympus/talent-sigil.tsx', 'utf-8')) && /foreignObject/.test(fs.readFileSync(OLYMPUS + '/src/components/olympus/talent-sigil.tsx', 'utf-8')), 'generic sigil');
+expect('T-5d: the god hero and dotted temperature are simple and visible', /GOD_ICONS\[god\]/.test(page) && /temperature \$\{v\}/.test(page) && /role="radiogroup"/.test(page), 'generic hero or slider');
 expect('T-5c: temperature/speed/budget/quality are editable and saved', /temperature/.test(page) && /budgetTokens/.test(page) && /params: \{ temperature, speed, budgetTokens, quality \}/.test(page), 'no execution profile');
 expect('T-6: the MCP seed is free-first and complete', MCP_MARKET.length >= 8 && MCP_MARKET.slice(0, 5).every((m) => m.free) && MCP_MARKET.every((m) => m.id && m.description && m.docs), `${MCP_MARKET.length}`);
 expect('T-7: market search is local and the full directory is linked',

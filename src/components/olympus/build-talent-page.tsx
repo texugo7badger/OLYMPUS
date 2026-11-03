@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, ChevronLeft, Copy, Download, Loader2, Plus, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BUILD_CATEGORIES, BUILD_LIMITS } from '@/lib/build-categories';
+import { GOD_ICONS } from '@/lib/olympus-store';
 import { TALENT_PRESETS } from '@/lib/talent-presets';
 import TalentSigil from './talent-sigil';
 import { toast } from 'sonner';
@@ -60,6 +61,7 @@ export default function BuildTalentPage({
   const [speed, setSpeed] = useState<'fast' | 'balanced' | 'quality'>(initialBuild?.params?.speed ?? 'balanced');
   const [budgetTokens, setBudgetTokens] = useState(initialBuild?.params?.budgetTokens ?? 16384);
   const [quality, setQuality] = useState<'max' | 'balanced'>(initialBuild?.params?.quality ?? 'max');
+  const [category, setCategory] = useState(BUILD_CATEGORIES[0].id);
 
   const sets: Record<Slot, [Set<string>, (s: Set<string>) => void]> = {
     skills: [skills, setSkills], mcps: [mcps, setMcps], demigods: [demigods, setDemigods],
@@ -108,7 +110,7 @@ export default function BuildTalentPage({
       const r = await fetch('/api/olympus/design-builds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, god, signature, skills: [...skills], mcps: [...mcps], demigods: [...demigods], params: { temperature, speed, budgetTokens, quality }, note: `Talent Studio · ${power} points` }),
+        body: JSON.stringify({ name, god, signature, category, skills: [...skills], mcps: [...mcps], demigods: [...demigods], params: { temperature, speed, budgetTokens, quality }, note: `Talent Studio · ${power} points` }),
       });
       const d = await r.json();
       if (d?.ok) { onCreated(); onClose(); }
@@ -118,7 +120,7 @@ export default function BuildTalentPage({
   };
 
   const exportTalent = async () => {
-    const payload = { kind: 'olympus-talent', version: 1, name, god, signature, skills: [...skills], mcps: [...mcps], demigods: [...demigods], params: { temperature, speed, budgetTokens, quality }, note };
+    const payload = { kind: 'olympus-talent', version: 1, name, god, signature, category, skills: [...skills], mcps: [...mcps], demigods: [...demigods], params: { temperature, speed, budgetTokens, quality }, note };
     try { await navigator.clipboard.writeText(JSON.stringify(payload, null, 2)); toast.success('talent JSON copied — share it'); }
     catch { toast.error('clipboard blocked'); }
   };
@@ -159,11 +161,15 @@ export default function BuildTalentPage({
               <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">execution profile</span>
               <span className="ml-auto text-[7px] font-mono text-olympus-green">quality: {quality}</span>
             </div>
-            <label className="flex items-center gap-1.5 text-[8px] font-mono text-olympus-text-dim">
-              temp
-              <input type="range" min={0.1} max={1} step={0.1} value={temperature} onChange={(e) => setTemperature(Number(e.target.value))} className="flex-1 accent-[#D4A574]" />
-              <span className="text-olympus-text tabular-nums w-6 text-right">{temperature.toFixed(1)}</span>
-            </label>
+            <div className="flex items-center gap-1.5 text-[8px] font-mono text-olympus-text-dim">
+              <span>temp</span>
+              <div className="flex items-center gap-1" role="radiogroup" aria-label="Temperature">
+                {[0.2,0.4,0.6,0.8,1.0].map((v) => (
+                  <button key={v} onClick={() => setTemperature(v)} role="radio" aria-checked={Math.abs(temperature - v) < 0.05} aria-label={`temperature ${v}`} className={cn('w-2.5 h-2.5 rounded-full border transition-colors', temperature + 0.05 >= v ? 'bg-olympus-gold border-olympus-gold' : 'bg-transparent border-olympus-gold/25 hover:border-olympus-gold/60')} />
+                ))}
+              </div>
+              <span className="text-olympus-text tabular-nums ml-auto">{temperature.toFixed(1)}</span>
+            </div>
             <div className="flex items-center gap-1">
               {(['fast','balanced','quality'] as const).map((s) => (
                 <button key={s} onClick={() => setSpeed(s)} className={cn('text-[8px] font-mono px-1.5 py-0.5 rounded-full border', speed === s ? 'border-olympus-cyan/50 bg-olympus-cyan/10 text-olympus-cyan' : 'border-olympus-gold/10 text-olympus-text-dim')}>{s}</button>
@@ -191,6 +197,18 @@ export default function BuildTalentPage({
 
         {/* Slots */}
         <section className="flex flex-col gap-2.5 min-w-0">
+          {/* v0.0.57 — the old talent page's simple, animated hero: the god's
+              own symbol, large, with the sector as a quiet label. */}
+          <div className="rounded-xl border border-olympus-gold/15 bg-[radial-gradient(circle_at_50%_20%,var(--olympus-gold),transparent_58%)] bg-olympus-panel/40 py-4 flex flex-col items-center gap-1.5">
+            {(() => { const Icon = GOD_ICONS[god] ?? GOD_ICONS.apollo; return <Icon size={54} strokeWidth={1.35} className="text-olympus-gold drop-shadow-[0_0_18px_rgba(212,165,116,0.25)]" />; })()}
+            <span className="text-[12px] font-mono font-semibold uppercase tracking-[0.2em] text-olympus-text">{god}</span>
+            <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">{BUILD_CATEGORIES.find((c) => c.id === category)?.name ?? 'general'} · {power} points</span>
+            <div className="flex flex-wrap justify-center gap-1 mt-1">
+              {BUILD_CATEGORIES.map((c) => (
+                <button key={c.id} onClick={() => setCategory(c.id)} className={cn('text-[8px] font-mono px-1.5 py-0.5 rounded-full border uppercase', category === c.id ? 'border-olympus-gold/60 bg-olympus-gold/15 text-olympus-gold' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}>{c.name}</button>
+              ))}
+            </div>
+          </div>
           {(['skills', 'mcps', 'demigods'] as Slot[]).map((slot) => {
             const [set] = sets[slot];
             return (
