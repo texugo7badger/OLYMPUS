@@ -104,7 +104,7 @@
     "fflate": "^0.8.3",
     "gray-matter": "^4.0.3",
     "handlebars": "^4.7.10",
-    "isomorphic-git": "^1.40.0",
+    "isomorphic-git": "^1.44.8",
     "node-pty": "^1.1.0",
     "qrcode": "^1.5.4",
     "sqlite-vec": "^0.1.9",
