@@ -1,10 +1,10 @@
-# The 22 open issues — status map at v0.0.70
+# The 22 open issues — status map at v0.0.65
 
-> v0.0.70 is the stability release. It closes the crash class and the mobile
+> v0.0.65 is the stability release. It closes the crash class and the mobile
 > UX class; the rest stays open with a named target. No issue is closed
 > without probe evidence.
 
-| Issue | Title | Status at v0.0.70 | Target |
+| Issue | Title | Status at v0.0.65 | Target |
 |---|---|---|---|
 | #291 | detached supervisor + auto-resume on app restart | **partial** — server watchdog + respawn + INTERRUPTED verdict; the walker still dies with the server | v0.0.71 |
 | #287 | stop hops from starting unmanaged servers/builds | open — the preview manager refuses double-spawn, hops still can | v0.0.71 |
@@ -29,7 +29,7 @@
 | #318 | user-sovereignty decision ledger + cognitive protocol | open | v0.0.74 |
 | #273 | epic(design): live preview + magic wand | open (parent) | v0.0.74 |
 
-## What v0.0.70 did close (the class, not the issue number)
+## What v0.0.65 did close (the class, not the issue number)
 
 - The app no longer sits on `ERR_CONNECTION_REFUSED`: a 10s health watchdog
   respawns a dead dev server and reloads when it answers; the `did-fail-load`

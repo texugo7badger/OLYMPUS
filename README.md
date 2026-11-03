@@ -47,7 +47,7 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.70 — the stability release.** The phone is one screen: hold the mic in
+**v0.0.65 — the stability release.** The phone is one screen: hold the mic in
 the plasma ring, speak, release — the request goes to Apollo in the project's
 lane; pick a god below the ring; everything else lives in a details sheet. The
 creative mode opens the desktop surface, responsive from 320 px to tablet. The
@@ -126,7 +126,7 @@ renders blank. The full table and speech locales live in
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
-**v0.0.70.** The phone opens `/m` — one screen, voice first: the plasma ring
+**v0.0.65.** The phone opens `/m` — one screen, voice first: the plasma ring
 fills the view, **hold the mic in the middle**, speak, release; the server STT
 transcribes and the request goes to Apollo in the active project's lane. The
 god row below the ring picks the voice/persona; the details sheet holds the
