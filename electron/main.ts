@@ -1162,19 +1162,29 @@ button:hover{background:#D4A57433}
     }
   }
 
-  // Minimize to tray instead of closing.
-  let trayHintShown = false;
+  // v0.0.61 — CLOSE MEANS CLOSE. The old handler hid every close to the tray;
+  // the user clicked X and the app "refused to close" (it was in the tray).
+  // Background work has its own explicit contract (hibernate). Only a
+  // hibernating app keeps the window hidden on close; otherwise X quits.
   mainWindow.on('close', (event) => {
-    if (!app.isQuitting) {
+    if (app.isQuitting) return;
+    if (hibernating) {
       event.preventDefault();
       mainWindow?.hide();
-      if (!trayHintShown) {
-        trayHintShown = true;
-        notifyDesktop('walk', 'OLYMPUS is still running', 'The window is in the tray. Click the icon (or run `olympus dev` again) to restore it.');
-      }
-      // Notify the renderer that it's now in background mode (reduce polling).
-      mainWindow?.webContents.send('olympus:background-mode', true);
-      console.log('[olympus:electron] window hidden to tray (running in background)');
+      console.log('[olympus:electron] window hidden to tray (hibernating)');
+      return;
+    }
+    app.isQuitting = true;
+    app.quit();
+  });
+
+  // A dead renderer must never leave a zombie window that cannot be closed.
+  mainWindow.webContents.on('render-process-gone', (_e, details) => {
+    console.error('[olympus:electron] renderer gone:', details.reason);
+    try { mainWindow?.destroy(); } catch { /* gone */ }
+    mainWindow = null;
+    if (!app.isQuitting && !hibernating) {
+      setTimeout(() => { if (!mainWindow) createWindow(); }, 900);
     }
   });
 
