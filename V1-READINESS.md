@@ -48,6 +48,7 @@
 | Editor | VSIX `olympus-bridge-0.0.15.vsix` (9 files, 27 KB), compiled + packaged |
 | Projects | AIME campaign `cmp_mw0lu2wt9cwo16`: 24/41 at 09:15Z, 3 in flight, 0 parked; per-hop report in `campaign-report-aime.md` |
 | Mobile companion | `/m` rendered in Chromium 390×844 LAN + Cloudflare tunnel; 22 assertions in `mobile-companion` |
+| References | **939** deduped (OriginKit 755 · Skiper 103 · Magic UI 42 · Aceternity 39) + learned user rows merged at runtime |
 | Hibernation | 5 assertions: pre-hibernation artifact byte-identical, in-flight cleared, no park, no invented tokens |
 | 100-hop runtime | **PASS**: 100/100 script hops in 9.9s, p50/p95 189/225ms, 0 lost, 0 parked, 0 tokens (`certification-100hop.md`) |
 | Soak at v0.0.59 | **24 rounds PASS** during a live walk; p95 ≤ 120ms; RSS +185MB |

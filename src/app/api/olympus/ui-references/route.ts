@@ -19,7 +19,23 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get('q') || '').toLowerCase().trim();
   const lib = req.nextUrl.searchParams.get('library');
-  let refs = UI_REFERENCES;
+  // v0.0.61 — the catalog grows without a release: a god that studies a new
+  // source in a project POSTs it to /learn, and the user file is merged here.
+  let refs = [...UI_REFERENCES];
+  try {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const file = path.join(os.homedir(), '.olympus', 'ui-references-user.json');
+    const user = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    if (Array.isArray(user?.references)) {
+      for (const r of user.references) {
+        if (!r || typeof r.id !== 'string' || typeof r.demoUrl !== 'string') continue;
+        if (refs.some((x) => x.id === r.id || x.demoUrl === r.demoUrl || x.name.toLowerCase() === String(r.name || '').toLowerCase())) continue;
+        refs.push({ ...r, learned: true });
+      }
+    }
+  } catch { /* no learned refs yet */ }
   if (lib) refs = refs.filter((r) => r.library === lib);
   if (q) {
     refs = refs.filter((r) =>

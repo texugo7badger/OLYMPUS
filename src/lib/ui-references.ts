@@ -23,7 +23,7 @@
 import { readOriginkitBudget, formatOriginkitReset } from '@/lib/originkit-budget';
 import { EXPANDED_REFERENCE_ROWS } from '@/lib/ui-references-expanded';
 
-export type UiRefLibrary = 'originkit' | 'skiper' | 'magicui';
+export type UiRefLibrary = 'originkit' | 'skiper' | 'magicui' | 'aceternity';
 
 export interface UiReference {
   /** kebab id (the upstream component name). */
@@ -139,6 +139,15 @@ export const UI_REF_LIBRARIES = [
     key: null,
     keyUrl: null,
     license: 'MIT — free components via the public shadcn registry; no key, no paid gate',
+  },
+  {
+    id: 'aceternity' as const,
+    name: 'Aceternity UI',
+    url: 'https://ui.aceternity.com',
+    mcp: null,
+    key: null,
+    keyUrl: null,
+    license: 'Free components via the docs; premium templates are paid — referenced, never vendored',
   },
 ];
 
