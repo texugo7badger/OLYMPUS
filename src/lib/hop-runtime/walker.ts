@@ -73,6 +73,12 @@ export function resolveHopConcurrency(env: NodeJS.ProcessEnv = process.env): num
  */
 export const DEFAULT_CAMPAIGN_BUDGET_MS = 60 * 60_000;
 export const MIN_CAMPAIGN_BUDGET_MS = 5 * 60_000;
+/** v0.0.59 — the launch floor. A hop launched with seconds left on the
+ *  campaign clock is a guaranteed ceiling-kill park (the 12:28 AIME specimen
+ *  launched k2-hd-covers and ft2-featured-rail 11s before the deadline; both
+ *  parked two minutes later). Below this slice the walk stops CLEANLY and
+ *  names the resume point instead of spending tokens on a doomed turn. */
+export const MIN_HOP_LAUNCH_MS = 150_000;
 export function resolveCampaignBudgetMs(env: NodeJS.ProcessEnv = process.env): number {
   const n = Number.parseInt(env.OLYMPUS_CAMPAIGN_BUDGET_MS ?? '', 10);
   if (Number.isFinite(n) && n > 0) return Math.max(MIN_CAMPAIGN_BUDGET_MS, Math.min(n, DEFAULT_CAMPAIGN_BUDGET_MS));
@@ -1224,9 +1230,12 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     };
     const launch = () => {
       if (stopped) return;
-      // Hard budget: never launch a new hop after the deadline. In-flight
-      // hops finish (their ceiling was clipped); pending hops stay resumable.
-      if (Date.now() >= deadlineAt) {
+      // Hard budget: never launch a new hop after the deadline, and never
+      // launch one with less than the useful slice left — that only buys a
+      // ceiling-kill park. In-flight hops finish (their ceiling was clipped);
+      // pending hops stay resumable.
+      const budgetLeft = deadlineAt - Date.now();
+      if (budgetLeft < MIN_HOP_LAUNCH_MS) {
         stopped = true;
         const nextPending = pending.find((h) => !completed.has(h.id) && !quarantined.has(h.id) && !inFlight.has(h.id));
         if (!parkedHop && nextPending) {
@@ -1234,7 +1243,9 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
             hopId: nextPending.id,
             reason: 'campaign-budget',
             ts: new Date().toISOString(),
-            error: `campaign budget of ${Math.round(budgetMs / 60_000)} min reached — resume from this hop (nothing was lost)`,
+            error: budgetLeft > 0
+              ? `campaign budget has ${Math.round(budgetLeft / 1000)}s left — below the ${Math.round(MIN_HOP_LAUNCH_MS / 1000)}s launch floor; resume from this hop (nothing was lost)`
+              : `campaign budget of ${Math.round(budgetMs / 60_000)} min reached — resume from this hop (nothing was lost)`,
           };
           emit({ type: 'hop_parked', hop: nextPending.id, god: nextPending.god, reason: 'campaign-budget', error: parkedHop.error });
         }

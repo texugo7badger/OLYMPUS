@@ -45,6 +45,7 @@ expect('D-6: the ceiling log prints remaining seconds, not epoch',
   !/hard cap \$\{Math\.round\(hardDeadline \/ 1000\)\}s/.test(transport + warm)
     && /hardDeadline - Date\.now\(\)/.test(transport + warm),
   'the 1793673850s message can return');
+expect('D-11: a hop is never launched with less than the useful slice left', /MIN_HOP_LAUNCH_MS = 150_000/.test(walker) && /budgetLeft < MIN_HOP_LAUNCH_MS/.test(walker) && /launch floor/.test(walker), 'the 12:28 doomed-launch specimen can repeat');
 expect('D-8: the exploration budget defaults to 14 and is bounded', walkerMod.DEFAULT_HOP_TOOL_BUDGET === 14 && walkerMod.resolveHopToolBudget({ OLYMPUS_HOP_TOOL_BUDGET: '99' }) === 40 && walkerMod.resolveHopToolBudget({}) === 14, 'tool budget drifted');
 expect('D-9: the warm transport counts distinct tool parts and aborts once', /seenToolParts/.test(warm) && /seenToolParts\.size > toolBudget/.test(warm) && /tool-budget-exceeded/.test(warm), 'the exploration loop is unbounded');
 expect('D-10: the walker passes the tool budget to the transport', /toolBudget: resolveHopToolBudget\(\)/.test(walker), 'the budget never reaches the lane');
