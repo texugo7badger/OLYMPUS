@@ -534,7 +534,7 @@ export interface WarmHopResult {
  * hop reported null. The truth is in `session_v2.tokens_*` (cumulative for
  * the session). Read-only; never blocks the turn.
  */
-async function readSessionTotals(
+export async function readSessionTotals(
   sessionId: string | null,
 ): Promise<{ input: number; output: number; cacheRead: number; reasoning: number } | null> {
   if (!sessionId) return null;

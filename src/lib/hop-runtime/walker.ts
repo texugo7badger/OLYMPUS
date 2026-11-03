@@ -34,6 +34,7 @@ import { composeArsenalDirective } from './arsenal';
 import { createHopTransport, type HopTransport } from './transport';
 import { hardCeilingMs } from './progress';
 import { readHibernationPlan } from '@/lib/hibernation';
+import { readSessionTotals } from './warm-server';
 import { composeRagContext } from '../rag-inject';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -1320,6 +1321,18 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
               retriesAbsorbed: 0, exhausted: false,
               error: e instanceof Error ? e.message : String(e),
             };
+          }
+          // v0.0.59 — token truth after the turn: a spawn hop can finish with
+          // a null token pair when the JSON stream did not carry step totals.
+          // The session row in the hop DB is the same source the warm path
+          // trusts; fill the gap instead of reporting “—”.
+          if (!result.ok || result.tokensIn == null || result.tokensOut == null) {
+            try {
+              const totals = await readSessionTotals(result.sessionId ?? null);
+              if (totals && (totals.input > 0 || totals.output > 0)) {
+                result = { ...result, tokensIn: result.tokensIn ?? totals.input, tokensOut: result.tokensOut ?? totals.output };
+              }
+            } catch { /* a missing row is not a hop failure */ }
           }
           // #241 — the scheduler learns from the hop that just settled.
           concurrency = nextConcurrency(concurrency, result.ok
