@@ -75,6 +75,10 @@ required. Rotate the token to revoke every paired phone.
 
 Read [MOBILE.md](MOBILE.md) for the security model and the honest limits.
 
+**Talent Studio** is a first-class route (`/talent`) and a status-bar button:
+the god's own animated symbol, ten sector chips, five temperature dots, speed,
+output budget and quality — saved, exportable and in the build prompt.
+
 ## Themes — twelve families and a palette lab
 
 Every theme repaints the app, the terminal, the brain, the loader, the tray and
