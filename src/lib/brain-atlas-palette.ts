@@ -170,19 +170,27 @@ export function themedOlympusPalette(): BrainPalette {
   const purple = get('--olympus-purple', OLYMPUS_PALETTE.kinds.source);
   const red = get('--olympus-red', OLYMPUS_PALETTE.kinds.incident);
   const dim = get('--olympus-text-dim', OLYMPUS_PALETTE.kinds.index);
+  const bg = get('--olympus-bg', OLYMPUS_PALETTE.bg);
+  const fg = get('--olympus-text', OLYMPUS_PALETTE.fg);
+  // v0.0.54 — LIGHT THEMES: pastel nodes/regions washed out on paper. The
+  // palette is the single source for the canvas, so deepen every semantic hue
+  // toward the theme's ink before the renderer draws it. Dark themes keep the
+  // exact same colors as before.
+  const light = isLightHex(bg);
+  const deep = (hex: string) => light ? mixHex(hex, fg, 0.44) : hex;
   return {
     ...OLYMPUS_PALETTE,
-    bg: get('--olympus-bg', OLYMPUS_PALETTE.bg),
-    bgFar: get('--olympus-bg', OLYMPUS_PALETTE.bgFar),
-    fg: get('--olympus-text', OLYMPUS_PALETTE.fg),
-    hud: gold,
+    bg,
+    bgFar: bg,
+    fg,
+    hud: deep(gold),
     kinds: {
       ...OLYMPUS_PALETTE.kinds,
-      person: gold, project: gold, decision: gold, organization: gold,
-      concept: blue, tool: blue,
-      question: amberSoft, workThread: amber,
-      dailyNote: green, source: purple, repo: purple,
-      incident: red, index: dim, unknown: dim,
+      person: deep(gold), project: deep(gold), decision: deep(gold), organization: deep(gold),
+      concept: deep(blue), tool: deep(blue),
+      question: deep(amberSoft), workThread: deep(amber),
+      dailyNote: deep(green), source: deep(purple), repo: deep(purple),
+      incident: deep(red), index: deep(dim), unknown: deep(dim),
     },
   };
 }
@@ -192,12 +200,50 @@ export function themedLobeTints(): Record<string, string> {
   if (typeof document === 'undefined') return LOBE_TINTS;
   const css = getComputedStyle(document.documentElement);
   const get = (name: string, fallback: string): string => css.getPropertyValue(name).trim() || fallback;
+  const bg = get('--olympus-bg', OLYMPUS_PALETTE.bg);
+  const fg = get('--olympus-text', OLYMPUS_PALETTE.fg);
+  const light = isLightHex(bg);
+  const deep = (hex: string) => light ? mixHex(hex, fg, 0.44) : hex;
   return {
-    frontal: get('--olympus-gold', LOBE_TINTS.frontal),
-    parietal: get('--olympus-blue', LOBE_TINTS.parietal),
-    temporal: get('--olympus-amber', LOBE_TINTS.temporal),
-    occipital: get('--olympus-purple', LOBE_TINTS.occipital),
-    cerebellum: get('--olympus-green', LOBE_TINTS.cerebellum),
-    stem: get('--olympus-text-dim', LOBE_TINTS.stem),
+    frontal: deep(get('--olympus-gold', LOBE_TINTS.frontal)),
+    parietal: deep(get('--olympus-blue', LOBE_TINTS.parietal)),
+    temporal: deep(get('--olympus-amber', LOBE_TINTS.temporal)),
+    occipital: deep(get('--olympus-purple', LOBE_TINTS.occipital)),
+    cerebellum: deep(get('--olympus-green', LOBE_TINTS.cerebellum)),
+    stem: deep(get('--olympus-text-dim', LOBE_TINTS.stem)),
   };
+}
+
+/** v0.0.54 — the working-god signal hues on the same light-safe ramp. */
+export function themedGodSignalColors(): Record<string, string> {
+  if (typeof document === 'undefined') return {};
+  const css = getComputedStyle(document.documentElement);
+  const get = (name: string, fallback: string): string => css.getPropertyValue(name).trim() || fallback;
+  const bg = get('--olympus-bg', OLYMPUS_PALETTE.bg);
+  const fg = get('--olympus-text', OLYMPUS_PALETTE.fg);
+  const light = isLightHex(bg);
+  const deep = (hex: string) => light ? mixHex(hex, fg, 0.44) : hex;
+  return {
+    apollo: deep(get('--olympus-gold', '#D4A574')),
+    atlas: deep(get('--olympus-blue', '#7FB3C8')),
+    hephaestus: deep(get('--olympus-red', '#C4756A')),
+    athena: deep(get('--olympus-green', '#7BAE8E')),
+    hermes: deep(get('--olympus-cyan', '#8FA8C8')),
+    artemis: deep(get('--olympus-teal', '#9EC4A0')),
+    dionysus: deep(get('--olympus-purple', '#A88BC8')),
+    persephone: deep(get('--olympus-amber-soft', '#C89FB8')),
+    prometheus: deep(get('--olympus-amber', '#D8946A')),
+    callimachus: deep(get('--olympus-text-dim', '#9AA8B8')),
+  };
+}
+
+/** A hex is "light paper" when its relative luminance is above 0.55. */
+function isLightHex(hex: string): boolean {
+  const h = String(hex || '').replace('#', '');
+  if (h.length !== 6) return false;
+  const ch = (i: number) => {
+    const c = parseInt(h.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4) > 0.55;
 }

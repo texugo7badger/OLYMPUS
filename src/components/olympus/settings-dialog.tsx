@@ -970,6 +970,7 @@ export default function SettingsDialog() {
               <div className="flex items-center gap-2 mb-2">
                 <Zap size={12} className="text-olympus-gold" />
                 <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">{t('settings.llmStrategy', language)}</h3>
+                <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 text-olympus-gold ring-1 ring-olympus-gold/20" data-tip="The strategy currently applied to opencode.json">active: {strategy}</span>
                 <Button
                   variant="ghost"
                   onClick={() => { setOpen(false); setBuilderOpen(true); }}
@@ -1003,6 +1004,7 @@ export default function SettingsDialog() {
                     <button
                       key={s.id}
                       disabled={blocked}
+                      aria-pressed={isActive}
                       onClick={() => setStrategy(s.id as LLMStrategy)}
                       className={cn(
                         'rounded-md border p-2 text-left transition-all overflow-hidden',

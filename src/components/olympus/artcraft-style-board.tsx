@@ -269,7 +269,8 @@ export default function ArtcraftStyleBoard({
         <section className="rounded border border-olympus-gold/15 bg-olympus-panel/60 p-2.5">
           <header className="flex items-center gap-1.5 mb-2">
             <Palette size={12} className="text-olympus-gold" />
-            <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">style board</span>
+            <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">design</span>
+            <span className="text-[7px] font-mono text-olympus-text-dim hidden sm:inline">one direction · live preview · send to the gods</span>
             <span className="text-[8px] font-mono text-olympus-text-dim truncate">{projectSlug}</span>
             {picked.size > 0 && <span className="text-[8px] font-mono text-olympus-cyan">· {picked.size} ref</span>}
             {saving ? <Loader2 size={10} className="animate-spin text-olympus-gold ml-auto" /> : savedAt ? <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">saved</span> : null}
@@ -483,15 +484,18 @@ export default function ArtcraftStyleBoard({
         </section>
 
         {/* v0.0.32 — IDENTITY: generated palettes + logo marks from the name. */}
-        <section className="rounded border border-olympus-gold/15 bg-olympus-panel/60 p-2.5 lg:col-span-2">
-          <header className="flex items-center gap-1.5 mb-1.5">
+        <details className="rounded border border-olympus-gold/15 bg-olympus-panel/60 p-2.5 lg:col-span-2">
+          <summary className="cursor-pointer flex items-center gap-1.5 mb-1.5">
             <Sparkles size={11} className="text-olympus-gold" />
-            <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">identity — {projectName}</span>
-            <span className="text-[8px] font-mono text-olympus-text-dim">palettes + logo marks for THIS project</span>
+            <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">brand identity — {projectName}</span>
+            <span className="text-[7px] font-mono text-olympus-text-dim">palette + one logo mark</span>
+          </summary>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-[8px] font-mono text-olympus-text-dim">palettes + one logo mark for THIS project</span>
             <button onClick={generateIdentity} className="ml-auto flex items-center gap-1 text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 text-olympus-gold ring-1 ring-olympus-gold/25 hover:bg-olympus-gold/20">
               <RefreshCw size={9} /> {palettes.length ? 'regenerate' : 'generate'}
             </button>
-          </header>
+          </div>
           {palettes.length === 0 && (
             <div className="py-4 text-center">
               <p className="text-[9px] font-mono text-olympus-text-dim">Generate a palette and a logo family from the project name — nothing is generated until you ask.</p>
@@ -556,17 +560,16 @@ export default function ArtcraftStyleBoard({
             </div>
           </div>
           )}
-        </section>
+        </details>
 
         {/* v0.0.34 — OPEN DESIGN WISDOM: the charter distilled into decisions
             the board can apply, plus the reference-system token recipes. */}
-        <section className="rounded border border-olympus-purple/20 bg-olympus-panel/60 p-2.5 lg:col-span-2">
-          <header className="flex items-center gap-1.5 mb-1.5">
+        <details className="rounded border border-olympus-purple/20 bg-olympus-panel/60 p-2.5 lg:col-span-2">
+          <summary className="cursor-pointer flex items-center gap-1.5 mb-1.5">
             <BookOpen size={11} className="text-olympus-purple" />
-            <span className="text-[10px] font-mono font-semibold text-olympus-purple uppercase">Open Design wisdom</span>
-            <span className="text-[8px] font-mono text-olympus-text-dim">the designer charter, distilled · every rule applies to this board</span>
-            <span className="ml-auto text-[7px] font-mono text-olympus-text-dim">full lane: the opendesign MCP · Athena</span>
-          </header>
+            <span className="text-[10px] font-mono font-semibold text-olympus-purple uppercase">why these choices</span>
+            <span className="text-[7px] font-mono text-olympus-text-dim">Athena decision + the design charter</span>
+          </summary>
           <div className="mb-2 rounded-lg border border-olympus-gold/20 bg-olympus-gold/5 p-2">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Sparkles size={10} className="text-olympus-gold" />
@@ -631,7 +634,7 @@ export default function ArtcraftStyleBoard({
               {TYPE_LABEL[tokens.typography]} · {DENSITY_LABEL[tokens.density]} · {RADIUS_LABEL[tokens.radius]} · {MOTION_LABEL[tokens.motion]}
             </span>
           </div>
-        </section>
+        </details>
 
       </div>
     </div>

@@ -73,7 +73,7 @@ import {
   setLobeEnabled,
   setAllLobes,
 } from '@/lib/olympus-brain-adapter';
-import { OLYMPUS_PALETTE, LOBE_TINTS, hexA, themedOlympusPalette } from '@/lib/brain-atlas-palette';
+import { OLYMPUS_PALETTE, LOBE_TINTS, hexA, themedOlympusPalette, themedGodSignalColors } from '@/lib/brain-atlas-palette';
 import { resolvePalette } from '@/lib/theme';
 import { useTheme } from '@/lib/theme-store';
 import { useOlympus } from '@/lib/olympus-store';
@@ -671,9 +671,10 @@ export default function BrainAtlas3D() {
   useEffect(() => {
     const ids = new Set<string>();
     const colors: Record<string, string> = {};
+    const themedSignals = themedGodSignalColors();
     for (const g of workingGods) {
       ids.add(`god:${g}`);
-      colors[g] = GOD_SIGNAL_COLORS[g] ?? '#D4A574';
+      colors[g] = themedSignals[g] ?? GOD_SIGNAL_COLORS[g] ?? '#D4A574';
     }
     // Only ids the CURRENT graph renders can glow (the filters may hide a
     // lobe); an unknown id would silently do nothing but still rebuild.

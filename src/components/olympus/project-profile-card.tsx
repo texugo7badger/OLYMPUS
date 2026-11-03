@@ -16,7 +16,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Activity, BookOpen, Brain, Check, ChevronDown, Clock, Code2, Copy, ExternalLink, FileCode,
@@ -111,6 +111,28 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
   const language = useLanguage();
   // v0.0.48 — the passport: share/export the project's identity.
   const [sharing, setSharing] = useState(false);
+  const [github, setGithub] = useState<any>(null);
+  const [repoName, setRepoName] = useState('');
+  const [visibility, setVisibility] = useState<'private' | 'public'>('private');
+  const [githubBusy, setGithubBusy] = useState(false);
+  const loadGithub = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/olympus/projects/github?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
+      const d = await r.json();
+      if (d?.ok) { setGithub(d); setRepoName((prev) => prev || d.repo?.split('/').pop() || slug); }
+    } catch { /* offline */ }
+  }, [slug]);
+  useEffect(() => { void loadGithub(); }, [loadGithub]);
+  const githubAction = async (action: 'create' | 'connect' | 'push', payload: Record<string, unknown> = {}) => {
+    setGithubBusy(true);
+    try {
+      const r = await fetch('/api/olympus/projects/github', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug, action, ...payload }) });
+      const d = await r.json();
+      if (d?.ok) { toast.success(`GitHub: ${action} ok`); await loadGithub(); }
+      else toast.error(d?.error || 'GitHub action failed');
+    } catch { toast.error('GitHub action failed'); }
+    finally { setGithubBusy(false); }
+  };
   const sharePassport = async () => {
     setSharing(true);
     try {
@@ -349,6 +371,42 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
                   </div>
                 </div>
               )}
+
+              {/* v0.0.54 — one repository per project, through the user's gh. */}
+              <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card/40 p-2.5 space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <GitBranch size={10} className="text-olympus-gold" />
+                  <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">github repository</span>
+                  {github?.ghReady === false && <span className="ml-auto text-[8px] font-mono text-olympus-amber-soft">gh auth login required</span>}
+                  {github?.repo && <a href={github.githubUrl} target="_blank" rel="noopener noreferrer" className="ml-auto flex items-center gap-1 text-[8px] font-mono text-olympus-cyan hover:underline">{github.repo} ↗</a>}
+                </div>
+                {github?.repo ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[8px] font-mono text-olympus-text-dim truncate flex-1">{github.branch || 'branch ?'} · {github.commits?.length ?? 0} recent commits</span>
+                    <button onClick={() => void githubAction('push')} disabled={githubBusy} className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 text-olympus-gold ring-1 ring-olympus-gold/25 disabled:opacity-40">push</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <input value={repoName} onChange={(e) => setRepoName(e.target.value)} placeholder={slug} className="flex-1 min-w-[120px] bg-olympus-bg border border-olympus-gold/20 rounded px-1.5 py-1 text-[8px] font-mono text-olympus-text outline-none" />
+                    <select value={visibility} onChange={(e) => setVisibility(e.target.value as 'private' | 'public')} className="bg-olympus-bg border border-olympus-gold/20 rounded px-1 py-1 text-[8px] font-mono text-olympus-text outline-none">
+                      <option value="private">private</option>
+                      <option value="public">public</option>
+                    </select>
+                    <button onClick={() => void githubAction('create', { repo: repoName, visibility })} disabled={githubBusy || !repoName.trim() || github?.ghReady === false} className="text-[8px] font-mono px-1.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 disabled:opacity-40">create + push</button>
+                  </div>
+                )}
+                {github?.repo && github.commits?.length > 0 && (
+                  <div className="space-y-0.5">
+                    {github.commits.slice(0, 3).map((c: any) => (
+                      <div key={c.hash} className="flex items-center gap-1.5 text-[8px] font-mono text-olympus-text-dim">
+                        <span className="text-olympus-gold">{c.hash}</span>
+                        <span className="truncate">{c.subject}</span>
+                        <span className="ml-auto shrink-0">{c.relative}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">

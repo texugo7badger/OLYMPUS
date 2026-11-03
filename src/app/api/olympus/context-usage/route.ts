@@ -45,6 +45,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireReadAuth } from '@/lib/auth';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 import { resolveModelWindow } from '@/lib/model-context';
+import { LLM_STRATEGIES, DEFAULT_LLM_STRATEGY } from '@/lib/model-strategies';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -263,12 +264,24 @@ function readUsageFromDb(sessionId?: string): {
       // zeros and carry no total — skipped by the > 0 filter). Fallback to
       // the cumulative sum only when no message rows exist (pre-v2 DBs).
       let used: number | null = null;
+      let model: string | undefined;
+      let providerId: string | undefined;
       try {
         const msgs = db
           .prepare(`SELECT data FROM ${messageTable} WHERE session_id = ? ORDER BY time_created DESC LIMIT 5`)
           .all(row.id) as Array<{ data: string }>;
         for (const m of msgs) {
           const d = JSON.parse(m.data);
+          // v0.0.54 — a session row can have model=NULL (older/rotated
+          // sessions), which made the window unresolved and the indicator 0.
+          // The message carries the exact model that produced the tokens.
+          if (!model && d?.model) {
+            if (typeof d.model === 'string') model = d.model;
+            else if (typeof d.model?.id === 'string') {
+              model = d.model.id;
+              if (typeof d.model.providerID === 'string') providerId = d.model.providerID;
+            }
+          }
           const t = Number(d?.tokens?.total);
           if (Number.isFinite(t) && t > 0) { used = t; break; }
           // v2 assistant rows carry { input, output, reasoning, cache:{read,write} }
@@ -294,8 +307,6 @@ function readUsageFromDb(sessionId?: string): {
 
       // Model: the session.model column is a JSON blob like
       // {"id":"openai/gpt-oss-120b","providerID":"groq",...} — surface the id.
-      let model: string | undefined;
-      let providerId: string | undefined;
       try {
         if (typeof row.model === 'string') {
           const parsed = JSON.parse(row.model);
@@ -316,11 +327,31 @@ function readUsageFromDb(sessionId?: string): {
           if (Number.isFinite(Number(ctx)) && Number(ctx) > 0) sessionLimit = Number(ctx);
         }
       } catch {}
-      const window = resolveModelWindow(model, {
+      let window = resolveModelWindow(model, {
         sessionLimit,
         freeListLimit: resolveFreeModelContext(model),
         catalogLimit: resolveModelsJsonContext(model, providerId),
       });
+      // v0.0.54 — the last honest fallback: the active strategy's terminal
+      // model. The session may predate the model column; the contract's
+      // Apollo lane is still the window the user is actually paying for.
+      if (window.context === 0) {
+        try {
+          let strategyId = DEFAULT_LLM_STRATEGY as string;
+          try {
+            const providers = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.olympus', 'llm-providers.json'), 'utf-8'));
+            if (typeof providers?.strategy === 'string') strategyId = providers.strategy;
+          } catch { /* default */ }
+          const cfg = LLM_STRATEGIES[strategyId as keyof typeof LLM_STRATEGIES] ?? LLM_STRATEGIES[DEFAULT_LLM_STRATEGY as keyof typeof LLM_STRATEGIES];
+          const fallbackModel = cfg?.terminalModel?.split('/').pop() ?? cfg?.reasoningModel ?? 'deepseek-v4.1-flash';
+          window = resolveModelWindow(fallbackModel, {
+            sessionLimit,
+            freeListLimit: resolveFreeModelContext(fallbackModel),
+            catalogLimit: resolveModelsJsonContext(fallbackModel, providerId),
+          });
+          if (!model) model = fallbackModel;
+        } catch { /* keep unknown */ }
+      }
 
       return {
         used,

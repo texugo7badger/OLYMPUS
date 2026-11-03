@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.53, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.54, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -23,173 +23,27 @@
 
 | The Brain Atlas · Obsidian | The Pattern Studio · Ember |
 |---|---|
-| <img src="screenshots/01-brain.png" width="480" alt="OLYMPUS Brain Atlas in the Obsidian theme — cyan regions, eight gods in orbit" /> | <img src="screenshots/04-studio.png" width="480" alt="OLYMPUS Pattern Studio in the Ember theme — thoughts, living cells, plasma orb, voice and chat" /> |
+| <img src="screenshots/01-brain.png" width="480" alt="OLYMPUS Brain Atlas in the Obsidian theme" /> | <img src="screenshots/04-studio.png" width="480" alt="OLYMPUS Pattern Studio in the Ember theme" /> |
 
-| Every reference is a live study · Violet | The Style Board + Open Design wisdom · Forest |
+| References · Violet | Build Hub · Ice |
 |---|---|
-| <img src="screenshots/02-references.png" width="480" alt="OLYMPUS References in the Violet theme — 859 components, native interactive studies" /> | <img src="screenshots/03-style.png" width="480" alt="OLYMPUS Style Board in the Forest theme — tokens, live preview and design wisdom" /> |
+| <img src="screenshots/02-references.png" width="480" alt="OLYMPUS References in the Violet theme — 900 live studies" /> | <img src="screenshots/05-builds.png" width="480" alt="OLYMPUS Build Hub — builds, cards and the talent entry" /> |
 
-| The Build Hub / talent carousel · Ice | Settings — appearance + language · Parchment |
+| Settings · Parchment | Live preview & design |
 |---|---|
-| <img src="screenshots/05-builds.png" width="480" alt="OLYMPUS Build Hub in the Ice theme — the animated talent carousel" /> | <img src="screenshots/06-settings.png" width="480" alt="OLYMPUS Settings in the Parchment theme — the global language selector" /> |
+| <img src="screenshots/06-settings.png" width="480" alt="OLYMPUS Settings in the Parchment theme" /> | <img src="screenshots/03-style.png" width="480" alt="OLYMPUS design board — direction, live preview and brand" /> |
 
 </div>
 
-A guided tour of every surface lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app by `npm run shots` — no mockups.
+A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app — no mockups.
 
-**v0.0.53 — Talent Studio + guided instincts.** The talent carousel is now a
-creation studio: a deterministic animated sigil per talent, three capped slots
-(skills/MCPs/agents), eight forkable community presets, JSON export, and a
-free-first MCP market wired to `opencode.json` (9,800+ directory linked). The
-instinct gate reads `trigger` tags, scores coverage instead of an unreachable
-0.85, and actually injects the proven action; every hop carries a task marker
-and a 14-tool exploration budget. Cost gains 5h/24h/7d/30d windows, tokens/s
-and an honest “quota unverified”.
+## Latest
 
-**v0.0.52 — quiet mark, 900 references.** The desktop badge stopped
-replaying history (the “18” was 21 stale notifications re-shown every boot);
-native alerts now coalesce, clear on focus and leave only the OLYMPUS mark.
-The reference arsenal is deduped by URL/name and gains **42 Magic UI
-components** (MIT, public shadcn registry), bringing the catalog to **900**.
-Hops are bounded by a 30-minute hard cap clipped to the campaign deadline, and
-hibernation now auto-resumes a park instead of waiting for morning.
-
-**v0.0.51 — launch reliability on Wayland.** Electron's Wayland backend can
-deadlock before the app is ready (the 2026-11-02 specimen: main alive, 33%
-CPU, no Next, no window). OLYMPUS now launches on **XWayland** by default
-(`OLYMPUS_OZONE=wayland` opts back in), with GPU acceleration still the
-default and the two-crash software fallback unchanged.
-
-**v0.0.50 — v1.0 readiness, honestly.** The ladder from v0.0.38 to here is
-measured, not narrated: 60 FPS with GPU acceleration, a resource governor, a
-soak harness (39 rounds PASS, p95 ≤ 85 ms, RSS −126 MB), a 60-minute project
-budget, the living project brief, design memory, the editor follow/send lanes,
-the unattended contract, project passports and a project surface in seven
-languages. The two gates before calling a build *v1.0* — the 8-hour/100-hop
-certification and the AppImage — are named as **not run** in
-[V1-READINESS.md](V1-READINESS.md). No fake green.
-
-**v0.0.49 — seven languages, one focus ring.** The project surface is now
-complete in **all seven languages** (brief, scope, instincts, knowledge,
-skills, status, dirty/clean, critique), and the app honors
-`prefers-reduced-motion` globally while giving every interactive surface a
-visible keyboard focus ring. The pass is measured by a new 14-assertion suite.
-
-**v0.0.48 — projects that travel.** A project can be shared as a **passport**:
-identity, stacks, summary, live brief, docs and design memory — never the code
-tree or your absolute paths. The profile card copies or downloads it; the
-project switcher imports a passport as a new lane (existing projects are never
-overwritten) and its design memory comes along.
-
-**v0.0.47 — unattended, bounded, visible.** Settings carries the explicit
-**Run without me** switch: the plan-walk gate auto-approves, design choices
-follow the recommendation and a parked wave resumes up to 3 times — while the
-60-minute campaign budget and the resource governor still apply and the
-morning digest still lands. The terminal shows an `UNATTENDED` chip and reads
-the switch at send time; every auto-approval is logged.
-
-**v0.0.46 — the editor speaks to the gods.** The VSCode-family extension
-(0.0.15) gains **Send Selection to a God** — a paste-ready block with the
-relative file, line range and selected code, copied to the clipboard with
-OLYMPUS focused (never typed silently) — and **Show Live Hop Context**, which
-reads the real run-state and names the running hops. The VSIX is packaged and
-checked into `extensions/vscode-olympus/`.
-
-**v0.0.45 — many projects, one truth.** The project switcher shows each
-project's own campaign status (`2/17`, parked/running/done) next to its name,
-not just the active one. Design memory, the brief and the editor-follow lane
-are scoped per project, so two projects never share a status, a preference or
-a followed file.
-
-**v0.0.44 — agent access, proven.** The Atelier proves that agents can
-actually reach the media: the vault is readable and writable, the newest asset
-is opened byte-by-byte, and the check names the two MCP lanes that see it
-(`filesystem`, `olympus-craft`). The generation ladder stays honest — the free
-Pollinations lane is `$0`, BYOK fal/Google show their own price before a
-generate.
-
-**v0.0.43 — design memory & critique.** A reference can now be saved as a
-**named preference** with its reason, scoped to the project; the catalog
-filters to memory and the detail copies a real implementation prompt or asks
-Athena to **critique** the reference against the project's current style.
-Memory lives at `~/.olympus/design-memory.json`, capped, deduped, atomic.
-
-**v0.0.42 — the editor follows the agent.** Opt-in follow mode opens each
-file a god writes inside the active project in your editor (Zed, VSCode,
-VSCodium, Cursor), at the line when one is known. The subscriber reads the
-activity feed, pauses when the window is hidden, debounces bursts and never
-reopens the same file within 5s. The API resolves real paths and refuses
-anything outside the project root.
-
-**v0.0.41 — the living project brief.** A project profile now answers what
-the project is *doing*: campaign status, completed/total hops, the parked hop
-and its named cause, the next parts, the docs that describe it, the walk's
-memory files and the measured brain scope (instincts · knowledge · skills).
-The profile card is localized (English + PT-BR labels), and the summary opens
-with the folder identity — `aime`, not “AIME”.
-
-**v0.0.40 — the stability harness.** `npm run soak` probes health, power,
-resources, run-state and projects on a cadence and fails on the truth:
-non-2xx, a budget overrun, available memory below 900 MB, or OLYMPUS RSS
-growth beyond `max(600 MB, 25%)`. The measured 2-minute run (40 rounds) is
-recorded in [STABILITY.md](STABILITY.md): every probe green, p95 ≤ 85 ms,
-RSS −121 MB. The 8-hour / 100-hop certification is **not** claimed yet; the
-protocol and the un-drilled disk case are named honestly.
-
-**v0.0.39 — the host budget.** A resource governor reads the machine's own
-memory and the OLYMPUS process census, classifies pressure green/amber/red,
-and refuses a new dev server when it would leave less than 1.2 GB free — with
-the real numbers and the reclaim path in the refusal. Settings carries the
-live memory bar, the process count/RSS and a one-click reclaim that stops the
-optional chat fleet (the next prompt recreates it). The governor is cached for
-4s, pauses when the window is hidden, and never guesses.
-
-**v0.0.38 — 60 FPS & the project's own identity.** Hardware acceleration is
-the default again (measured 60 FPS on the Brain Atlas and the creative mode;
-software rendering is only the fallback after two GPU crashes, and
-`--reset-gpu` retries it). The creative canvas batches its proximity links and
-replaces per-frame gradients, the plasma orb carries fewer filaments, and the
-voice level no longer re-renders the panel 60 times a second. OLYMPUS opens
-**fullscreen**, and F11 / Ctrl+Shift+F toggles it. A project is its folder:
-**aime**, not “AIME”, with a summary taken from its README/package — never the
-prompt that created it — and the official stack marks under the description.
-A campaign carries a **60-minute wall-clock budget**: new hops stop at the
-deadline with a named resume point, parts land in the live preview as they
-finish, and a parked hop can never hold a project hostage.
-
-**v0.0.36 — the chameleon mark.** The animated boot loader and the brain's live mark are
-chameleon too. The original geometry is now a
-chameleon: the exact `logo.svg` geometry, but the peak is a gold→purple→cyan
-gradient, the inner ring is cyan, and each of the eight orbit dots carries its
-own palette color. It applies to the app bar, the favicon and the
-window/tray/dock PNG (which now receives the full palette); the static
-`logo.svg`/`.png`/`.ico` carry the multicolor brand. The geometry is untouched
-— only the colors became a family — and the loader, the brain mark and the
-system icon all follow it.
-
-**v0.0.35 — the voice & hygiene release.** The free neural voice lane now
-speaks through the terminal and the studio, the Pattern Studio lets you choose
-a microphone and talk to the gods (local Whisper STT — no audio leaves the
-machine), and the plasma orb reacts to the real waveform. The repo is clean:
-the battery is green (106 PASS / 0 FAIL / 1 declared skip), `tsc`/`lint` are
-clean, the runtime config is committed, and the README/header/badges carry the
-current version. The chameleon identity, 859-reference catalog and
-seven-language interface from v0.0.34 are unchanged.
-
-**v0.0.34 — the chameleon release.** The original OLYMPUS mark now follows the
-palette everywhere (app bar, favicon, window, tray, dock) — same SVG, same
-rings, same dots, only the colors change. The Pattern Studio maps every hop,
-verify and park as a **thought node** around the mark, with living cells and
-Van Gogh brushstrokes behind it; each god has a **calm neural voice** and a
-plasma-ring orb that expands while speaking. The studio chat answers the live
-walk (and introduces each god) in the selected language, and **all ten gods
-speak** through the free `edge-tts` lane. The reference catalog now carries
-**859 OriginKit + Skiper components**, deduped by name, with infinite scroll
-and a native interactive study on every card. Settings is a **real global
-language** (seven languages, instant, including the chat and the gods' names),
-the project Style Board gains Open Design wisdom and a browser-grade live
-preview, every talent icon follows the theme, and clicking a project opens a
-full profile card.
+**v0.0.54 — the stabilization pass.** The first release-shaped version: 900 deduped
+references, Talent Studio, a free-first MCP market, guided instincts, bounded
+hops, real cost windows, GitHub per project, the light-theme brain fix and a
+context indicator that reads the real session. Everything below is evidence,
+not a promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md).
 
 ## Languages — OLYMPUS is global
 
