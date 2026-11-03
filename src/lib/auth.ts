@@ -181,8 +181,12 @@ export function requireAuth(req: NextRequest): NextResponse | null {
 
   const authHeader = req.headers.get('authorization') || '';
   const xOlympusToken = req.headers.get('x-olympus-token') || '';
+  // v0.0.61 — the DESKTOP renderer authenticates with an HttpOnly cookie set
+  // by the Electron main. The phone still uses the header. Without this, every
+  // desktop fetch in LAN mode (session reset, prompts, theme) returned 401.
+  const cookieToken = (() => { try { return req.cookies?.get?.('olympus_token')?.value || ''; } catch { return ''; } })();
   const providedToken =
-    authHeader.startsWith('Bearer ') ? authHeader.slice(7) : xOlympusToken;
+    authHeader.startsWith('Bearer ') ? authHeader.slice(7) : (xOlympusToken || cookieToken);
 
   if (!providedToken || providedToken !== expectedToken) {
     return NextResponse.json(

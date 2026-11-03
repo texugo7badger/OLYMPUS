@@ -1774,6 +1774,17 @@ if (!gotLock) {
       session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(allowed.has(permission)));
       session.defaultSession.setPermissionCheckHandler((_wc, permission) => allowed.has(permission));
     } catch { /* optional */ }
+    // v0.0.61 — the desktop's own API calls must pass the LAN auth gate.
+    // The token is set as an HttpOnly, SameSite=Strict cookie in THIS session;
+    // the phone still uses the x-olympus-token header. No token reaches JS.
+    try {
+      const token = readFileSync(join(nodeOs.homedir(), '.olympus', 'session-token'), 'utf-8').trim();
+      if (token) {
+        for (const url of [BASE_URL, 'http://localhost:3737']) {
+          void session.defaultSession.cookies.set({ url, name: 'olympus_token', value: token, httpOnly: true, sameSite: 'strict' }).catch(() => {});
+        }
+      }
+    } catch { /* local mode without a token */ }
     startNotifyTail();
     try { themedWindowIcon(); syncDesktopIcon(); } catch { /* optional */ }
     // #V0.0.20: Auto-heal on boot — reconcile llm-providers.json with
