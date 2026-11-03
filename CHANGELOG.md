@@ -693,3 +693,8 @@ The base release — the most complete and alternative way to run OLYMPUS.
 - Performance mode (battery-saver brain, no particles, stable motion).
 - Nakkas SVG docs: architecture, hop runtime, token economy, testing, mobile, languages.
 - TESTING/RESPONSIVE/LANGUAGES pages; test suites become maintainer-local.
+
+## v0.0.62 — 2026-11-03
+- Desktop auth cookie: the terminal's reset-session and every desktop API call
+  pass the LAN gate; the phone keeps the bearer header.
+- Verified: pair 200, reset-session 200, a real prompt streamed to Apollo.

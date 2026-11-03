@@ -1,6 +1,6 @@
 # OLYMPUS — v1.0 readiness
 
-> v0.0.61 · 2026-11-03 · **GO for a release candidate after two named gates**
+> v0.0.62 · 2026-11-03 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
 > this build "certified v1.0" until those gates are green.** This page is the
 > report; it does not claim what was not run.
@@ -33,6 +33,7 @@
 | v0.0.59 | talent surface | /talent one click; launch floor; window-bounded hibernation; token fill |
 | v0.0.60 | remote companion | Cloudflare tunnel, theme both ways, ambient particles, one boot loader, archive, source-only git |
 | v0.0.61 | any screen + stability | windowed default, crash-loop safe mode, performance mode, SVG docs, tests private |
+| v0.0.62 | Apollo auth | desktop HttpOnly cookie; terminal reset/prompt pass the LAN gate |
 
 ## Evidence (this machine, 2026-11-03)
 
