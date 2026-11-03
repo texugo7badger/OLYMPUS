@@ -70,7 +70,9 @@ renders blank.
 in-flight hops, the active project, a prompt (typed or dictated), the campaign
 read aloud, the live preview and the project's git remote and last commits.
 Pairing is one QR in the status bar; the token rides the URL fragment, never a
-query string. The switch to LAN mode is explicit and says a restart is
+query string. Outside the house, **start remote tunnel** gives an HTTPS
+Cloudflare link for the phone (stop it when done); the theme follows the PC
+both ways and the creativity particle field rides along. The switch to LAN mode is explicit and says a restart is
 required. Rotate the token to revoke every paired phone.
 
 Read [MOBILE.md](MOBILE.md) for the security model and the honest limits.

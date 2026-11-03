@@ -25,6 +25,21 @@ The QR stays valid across restarts because the token lives at
 `~/.olympus/session-token` (0600). **Rotate** in the same dialog revokes every
 paired phone immediately.
 
+## Outside the house (remote)
+
+The companion also works on mobile data. The desktop starts a **Cloudflare
+quick tunnel** (no account, no stored credential):
+
+1. Desktop → phone icon → **start remote tunnel**.
+2. The dialog shows the `https://…trycloudflare.com` URL and a **link** button
+   that copies `…/m#t=<token>` — open that on the phone.
+3. **stop the tunnel** when you are done; the URL is a public door.
+
+The tunnel process is detached and survives app restarts; its URL is stored in
+`~/.olympus/mobile-tunnel.json`. A quick tunnel gets a new URL when restarted,
+so re-copy the link after a restart. Tailscale/SSH remains the private
+alternative (the `tunnel` network mode).
+
 ## What the phone can do
 
 | Surface | What it does |
@@ -36,6 +51,8 @@ paired phone immediately.
 | Preview | opens the active project's live-preview port |
 | Git | remote, branch and the last three commits (read-only) |
 | Cost | the 24h step-cost figure |
+| Theme | inherits the desktop theme; a choice on the phone changes the PC too |
+| Ambient | the creativity page's drifting particle field (44 particles, pauses when hidden) |
 
 ## Security model
 

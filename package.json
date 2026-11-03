@@ -90,7 +90,8 @@
     "shots": "electron scripts/capture-ui.cjs --no-sandbox",
     "themes:gallery": "tsx scripts/theme-gallery.mjs",
     "campaign:report": "node scripts/campaign-report.mjs",
-    "certify:100hop": "tsx scripts/certify-100hop.ts"
+    "certify:100hop": "tsx scripts/certify-100hop.ts",
+    "mobile:tunnel": "tsx scripts/mobile-tunnel.ts"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
