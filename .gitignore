@@ -122,3 +122,7 @@ Todas as estrat*deram erro* Ajuda..md
 # Maintainer-only docs/research/planning — they live on the maintainer's machine, never in the repo.
 docs/
 research/
+
+# Maintainer-only test suites — they read the local vault, lanes and credentials.
+# The public method and the measured evidence live in TESTING.md.
+scripts/*.test.mjs

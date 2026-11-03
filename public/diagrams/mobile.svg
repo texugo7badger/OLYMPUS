@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760">
+  <rect width="100%" height="100%" fill="#07090C"/>
+  <text x="60" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700" letter-spacing="6" text-anchor="start" fill="#D4A574" opacity="1">OLYMPUS</text>
+  <text x="1140" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="2" text-anchor="end" fill="#8A94A6" opacity="1">MOBILE COMPANION · v0.0.61</text>
+  <text x="60" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22" font-weight="600" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">the same campaign, from anywhere</text>
+  <text x="60" y="120" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="400" letter-spacing="1.6" text-anchor="start" fill="#8A94A6" opacity="1">LAN at home · Cloudflare tunnel outside · one token</text>
+  <rect x="60" y="150" width="300" height="520" rx="28" fill="#05070A" stroke="#D4A574" stroke-width="1.2" opacity="1"/>
+  <rect x="80" y="190" width="260" height="450" rx="18" fill="#0B0E13" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <rect x="180" y="164" width="60" height="6" rx="3" fill="#1C2044" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="100" y="222" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="3" text-anchor="start" fill="#D4A574" opacity="1">OLYMPUS</text>
+  <text x="100" y="240" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">aime · running</text>
+  <rect x="100" y="260" width="220" height="92" rx="10" fill="#10141A" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="112" y="282" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="1.6" text-anchor="start" fill="#8A94A6" opacity="1">CAMPAIGN</text>
+  <text x="308" y="282" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="0" text-anchor="end" fill="#7BAE8E" opacity="1">RUNNING</text>
+  <text x="112" y="304" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">34/41 hops</text>
+  <rect x="112" y="316" width="196" height="6" rx="3" fill="#1C2044" stroke="none" stroke-width="1" opacity="1"/>
+  <rect x="112" y="316" width="164" height="6" rx="3" fill="#67C9E8" stroke="none" stroke-width="1" opacity="1"/>
+  <text x="112" y="338" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">k4-organic-fill · persephone</text>
+  <rect x="100" y="362" width="220" height="64" rx="10" fill="#10141A" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="112" y="384" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="1.6" text-anchor="start" fill="#8A94A6" opacity="1">THEME</text>
+  <text x="112" y="404" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="400" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">obsidian · dark</text>
+  <text x="308" y="404" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="400" letter-spacing="0" text-anchor="end" fill="#D4A574" opacity="1">↔</text>
+  <rect x="100" y="436" width="220" height="64" rx="10" fill="#10141A" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="112" y="458" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="1.6" text-anchor="start" fill="#8A94A6" opacity="1">AMBIENT</text>
+  <text x="112" y="478" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">44 particles · paused hidden</text>
+  <rect x="100" y="510" width="220" height="50" rx="10" fill="#10141A" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="112" y="532" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="1.6" text-anchor="start" fill="#8A94A6" opacity="1">PROMPT · VOICE</text>
+  <text x="112" y="550" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">type or dictate · auto-approve</text>
+  <rect x="100" y="570" width="220" height="50" rx="10" fill="#10141A" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="112" y="592" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="1.6" text-anchor="start" fill="#8A94A6" opacity="1">PREVIEW · GIT</text>
+  <text x="112" y="610" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">port · remote · last commits</text>
+  <line x1="360" y1="300" x2="464" y2="300" stroke="#67C9E8" stroke-width="1" opacity="0.8"/>
+  <polygon points="468,300 463,305 473,305" fill="#D4A574" opacity="0.8"/>
+  <text x="370" y="290" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="1.4" text-anchor="start" fill="#67C9E8" opacity="1">LAN</text>
+  <line x1="360" y1="340" x2="464" y2="340" stroke="#8E9BD6" stroke-width="1" stroke-dasharray="4 4" opacity="0.8"/>
+  <polygon points="468,340 463,345 473,345" fill="#D4A574" opacity="0.8"/>
+  <text x="370" y="330" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="1.4" text-anchor="start" fill="#8E9BD6" opacity="1">HTTPS tunnel</text>
+  <rect x="470" y="230" width="360" height="230" rx="12" fill="#0B0E13" stroke="#D4A574" stroke-width="1" opacity="1"/>
+  <text x="488" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="2.4" text-anchor="start" fill="#D4A574" opacity="1">OLYMPUS SERVER</text>
+  <text x="488" y="286" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">:3737</text>
+  <text x="488" y="310" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">Next + walker + vault</text>
+  <text x="488" y="332" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">one campaign · one disk</text>
+  <rect x="488" y="352" width="150" height="34" rx="17" fill="#0E1118" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="563" y="373" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="middle" fill="#7BAE8E" opacity="1">same token</text>
+  <rect x="648" y="352" width="150" height="34" rx="17" fill="#0E1118" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="723" y="373" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="middle" fill="#D4A574" opacity="1">same theme</text>
+  <line x1="830" y1="320" x2="894" y2="320" stroke="#D4A574" stroke-width="1" opacity="0.7"/>
+  <polygon points="898,320 893,315 893,325" fill="#D4A574" opacity="0.8"/>
+  <rect x="900" y="230" width="240" height="230" rx="12" fill="#0B0E13" stroke="#8E9BD6" stroke-width="1" opacity="1"/>
+  <text x="918" y="256" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="2.4" text-anchor="start" fill="#8E9BD6" opacity="1">SAME STATE</text>
+  <text x="918" y="286" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">campaign</text>
+  <text x="918" y="300" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">run-state · pid + heartbeat</text>
+  <text x="918" y="324" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">projects</text>
+  <text x="918" y="338" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">active + brief</text>
+  <text x="918" y="362" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">theme</text>
+  <text x="918" y="376" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">store · both ways</text>
+  <text x="918" y="400" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">git</text>
+  <text x="918" y="414" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="8" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">remote + commits</text>
+  <rect x="900" y="480" width="240" height="190" rx="12" fill="#0B0E13" stroke="#C4756A" stroke-width="1" opacity="1"/>
+  <text x="918" y="506" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="2.4" text-anchor="start" fill="#C4756A" opacity="1">SECURITY</text>
+  <text x="918" y="532" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">· token rides the URL fragment</text>
+  <text x="918" y="556" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">· pair route is auth-gated</text>
+  <text x="918" y="580" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">· rotate revokes every phone</text>
+  <text x="918" y="604" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">· stop the tunnel when done</text>
+  <text x="60" y="706" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="1.1" text-anchor="start" fill="#8A94A6" opacity="1">theme changes on the phone change the PC; the ambient field follows the palette</text>
+  <text x="60" y="744" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="1.2" text-anchor="start" fill="#8A94A6" opacity="1">OLYMPUS · the desk and the phone are two surfaces of one machine</text>
+</svg>

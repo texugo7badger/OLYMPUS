@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760">
+  <rect width="100%" height="100%" fill="#07090C"/>
+  <text x="60" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700" letter-spacing="6" text-anchor="start" fill="#D4A574" opacity="1">OLYMPUS</text>
+  <text x="1140" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="2" text-anchor="end" fill="#8A94A6" opacity="1">EVIDENCE · v0.0.61</text>
+  <text x="60" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22" font-weight="600" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">the claim carries its proof</text>
+  <text x="60" y="120" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="400" letter-spacing="1.6" text-anchor="start" fill="#8A94A6" opacity="1">suites · live drills · measured campaigns · named gaps</text>
+  <rect x="60" y="150" width="250" height="104" rx="12" fill="#10141A" stroke="#D4A574" stroke-width="1" opacity="1"/>
+  <text x="78" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="34" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">133</text>
+  <text x="78" y="222" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="1.4" text-anchor="start" fill="#8A94A6" opacity="1">suites</text>
+  <rect x="330" y="150" width="250" height="104" rx="12" fill="#10141A" stroke="#7BAE8E" stroke-width="1" opacity="1"/>
+  <text x="348" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="34" font-weight="700" letter-spacing="0" text-anchor="start" fill="#7BAE8E" opacity="1">132</text>
+  <text x="348" y="222" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="1.4" text-anchor="start" fill="#8A94A6" opacity="1">pass</text>
+  <rect x="600" y="150" width="250" height="104" rx="12" fill="#10141A" stroke="#8E9BD6" stroke-width="1" opacity="1"/>
+  <text x="618" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="34" font-weight="700" letter-spacing="0" text-anchor="start" fill="#8E9BD6" opacity="1">1</text>
+  <text x="618" y="222" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="1.4" text-anchor="start" fill="#8A94A6" opacity="1">declared skip</text>
+  <rect x="870" y="150" width="250" height="104" rx="12" fill="#10141A" stroke="#67C9E8" stroke-width="1" opacity="1"/>
+  <text x="888" y="196" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="34" font-weight="700" letter-spacing="0" text-anchor="start" fill="#67C9E8" opacity="1">0</text>
+  <text x="888" y="222" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="1.4" text-anchor="start" fill="#8A94A6" opacity="1">fail</text>
+  <rect x="60" y="286" width="520" height="250" rx="12" fill="#0B0E13" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="78" y="312" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="2.4" text-anchor="start" fill="#67C9E8" opacity="1">WHAT IS TESTED</text>
+  <rect x="78" y="338" width="232" height="30" rx="15" fill="#0E1118" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="194" y="357" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0.6" text-anchor="middle" fill="#D6DEE5" opacity="1">hop runtime</text>
+  <rect x="324" y="338" width="232" height="30" rx="15" fill="#0E1118" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="440" y="357" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0.6" text-anchor="middle" fill="#D6DEE5" opacity="1">UI &amp; a11y</text>
+  <rect x="78" y="380" width="232" height="30" rx="15" fill="#0E1118" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="194" y="399" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0.6" text-anchor="middle" fill="#D6DEE5" opacity="1">cost &amp; telemetry</text>
+  <rect x="324" y="380" width="232" height="30" rx="15" fill="#0E1118" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="440" y="399" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0.6" text-anchor="middle" fill="#D6DEE5" opacity="1">security &amp; auth</text>
+  <rect x="78" y="422" width="232" height="30" rx="15" fill="#0E1118" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="194" y="441" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0.6" text-anchor="middle" fill="#D6DEE5" opacity="1">i18n</text>
+  <rect x="324" y="422" width="232" height="30" rx="15" fill="#0E1118" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="440" y="441" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0.6" text-anchor="middle" fill="#D6DEE5" opacity="1">docs &amp; release</text>
+  <rect x="78" y="464" width="232" height="30" rx="15" fill="#0E1118" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="194" y="483" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0.6" text-anchor="middle" fill="#D6DEE5" opacity="1">mobile companion</text>
+  <rect x="324" y="464" width="232" height="30" rx="15" fill="#0E1118" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="440" y="483" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0.6" text-anchor="middle" fill="#D6DEE5" opacity="1">vault &amp; brain</text>
+  <text x="78" y="514" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">tests are maintainer-local; the evidence is public</text>
+  <rect x="610" y="286" width="530" height="250" rx="12" fill="#0B0E13" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="628" y="312" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="2.4" text-anchor="start" fill="#D4A574" opacity="1">LIVE EVIDENCE</text>
+  <text x="628" y="338" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="0" text-anchor="start" fill="#7BAE8E" opacity="1">100-hop spine</text>
+  <text x="800" y="338" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">100/100 · 9.9s · p50 189ms</text>
+  <text x="628" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="0" text-anchor="start" fill="#67C9E8" opacity="1">soak while walking</text>
+  <text x="800" y="382" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">24 rounds · p95 ≤ 120ms</text>
+  <text x="628" y="426" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">AIME campaign</text>
+  <text x="800" y="426" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">34/41 · p50 18.0 min · f3 47s retry</text>
+  <text x="628" y="470" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="0" text-anchor="start" fill="#8E9BD6" opacity="1">hibernation drill</text>
+  <text x="800" y="470" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">5/5 · artifact byte-identical</text>
+  <rect x="60" y="556" width="1080" height="130" rx="12" fill="#0B0E13" stroke="#1C2044" stroke-width="1" opacity="1"/>
+  <text x="78" y="582" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="2.4" text-anchor="start" fill="#8E9BD6" opacity="1">THE SHAPE</text>
+  <rect x="80" y="598" width="246" height="58" rx="10" fill="#0E1118" stroke="#D4A574" stroke-width="1" opacity="1"/>
+  <text x="92" y="620" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">unit</text>
+  <text x="92" y="638" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">pure functions · parsers · schemas</text>
+  <rect x="346" y="598" width="246" height="58" rx="10" fill="#0E1118" stroke="#67C9E8" stroke-width="1" opacity="1"/>
+  <text x="358" y="620" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="0" text-anchor="start" fill="#67C9E8" opacity="1">integration</text>
+  <text x="358" y="638" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">routes · walker · transports</text>
+  <rect x="612" y="598" width="246" height="58" rx="10" fill="#0E1118" stroke="#7BAE8E" stroke-width="1" opacity="1"/>
+  <text x="624" y="620" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="0" text-anchor="start" fill="#7BAE8E" opacity="1">live drill</text>
+  <text x="624" y="638" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">100 hops · hibernation · soak</text>
+  <rect x="878" y="598" width="246" height="58" rx="10" fill="#0E1118" stroke="#8E9BD6" stroke-width="1" opacity="1"/>
+  <text x="890" y="620" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="0" text-anchor="start" fill="#8E9BD6" opacity="1">campaign</text>
+  <text x="890" y="638" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">AIME · real gods · real artifacts</text>
+  <text x="60" y="724" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="1.1" text-anchor="start" fill="#8A94A6" opacity="1">the two open gates are named, not hidden: AppImage and the 8-hour / 100-hop LLM soak</text>
+  <text x="60" y="744" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="1.2" text-anchor="start" fill="#8A94A6" opacity="1">OLYMPUS · a green suite is evidence; a measured campaign is proof</text>
+</svg>

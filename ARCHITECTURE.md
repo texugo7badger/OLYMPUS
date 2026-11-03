@@ -1,8 +1,10 @@
 # OLYMPUS Architecture
 
-> OLYMPUS v0.0.30 — multi-agent AI operating system on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 122 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
+> OLYMPUS v0.0.61 — multi-agent AI operating system on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 122 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
 >
-> Counts in this document are the v0.0.30 truth: 132 agents (10 gods incl. Atlas + 122 demigods), 321 top-level skills, 28 MCP servers, 44 curated tools. The context indicator reads OpenCode 2.2.5's `session_v2` SQLite tables.
+> Counts in this document are the v0.0.61 truth: 132 agents (10 gods incl. Atlas + 122 demigods), 334 top-level skills, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
+
+![OLYMPUS architecture](public/diagrams/architecture.svg)
 
 ## Overview
 

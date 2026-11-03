@@ -1,14 +1,19 @@
 # OLYMPUS Token Economy
 
-> **Measured reality — v0.0.31 (2026-11-01).** The compression claims below
-> are **design intent**, not measured wins. The live audit found: short-circuit
+![Token economy](public/diagrams/token-economy.svg)
+
+> **Measured reality — v0.0.61 (2026-11-03).** The compression claims below
+> are **design intent**, not measured wins. The v0.0.31 audit (kept as
+> history) found: short-circuit
 > gate **0/2,999** evaluations (the tag-similarity × confidence math cannot
 > reach 0.85 except on near-identical tags); 5h cache read **89.7M** vs 1.04M
 > output (**86:1**); 107 MCP tools loaded while the AIME plan declared four.
 > MCP tiering started as **permission-only**; v0.0.30 added a campaign manifest
 > that filters the lane config, but the hot/warm/cold **loading** described
 > below is still not a measured input reduction. Treat every percentage in
-> this file as `[DESIGN-MATH]` until a benchmark says otherwise.
+> this file as `[DESIGN-MATH]` until a benchmark says otherwise. v0.0.61
+> ships the curated **6 servers / 39 tools** default and a ledger-measured
+> cache-hit rate; the AIME campaign report is the current spend evidence.
 >
 > **v0.0.31 measured strip (2026-11-01, local tree):**
 > - MCP: **28** registry rows, **6 enabled / 39 tools** measured (`mcp/health`,

@@ -1,6 +1,8 @@
 # Mobile companion
 
-> v0.0.58 · the same server, the same campaign, the same token.
+> v0.0.60 · the same server, the same campaign, the same token.
+
+![Mobile companion](public/diagrams/mobile.svg)
 
 OLYMPUS is a desktop app, but the walk does not need the desk. The companion
 is **the app itself at `/m`** — no second backend, no second database, no

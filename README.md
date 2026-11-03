@@ -43,12 +43,58 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.60 — the companion leaves the house.** The latest stable v0.0.x: 900 deduped references, Talent Studio, a free-first MCP market, guided instincts, bounded
+**v0.0.61 — one machine, any screen.** The latest stable v0.0.x: 900 deduped references, Talent Studio, a free-first MCP market, guided instincts, bounded
 hops, real cost windows, GitHub per project, the light-theme brain fix and a
 context indicator that reads the real session. Everything below is evidence,
 not a promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md).
 
+## Architecture at a glance
+
+![OLYMPUS architecture](public/diagrams/architecture.svg)
+
+Ten gods plan, dispatch and execute through **Symphony**; a deterministic
+spine walks small hops with artifacts on disk; the vault carries the brain.
+The same Next server serves the desktop and the phone. Deep dive:
+[ARCHITECTURE.md](ARCHITECTURE.md).
+
+## How a walk runs
+
+![The hop runtime](public/diagrams/hop-runtime.svg)
+
+A plan becomes a DAG, the DAG is balanced (max 40% per god), the walker runs
+at most three hops, the transport prefers warm and falls back to spawn, and
+**verification decides** — never the model's claim. Budgets: 60-minute
+campaign, 30-minute hop, 14 tool calls, 16k output tokens. A park names its
+cause and resumes from disk.
+
+## Token economy
+
+![Token economy](public/diagrams/token-economy.svg)
+
+Context is compressed and cited; the ledger separates **step cost**, **list
+value** and the **invoice** (unknown on GO — never invented); cache hit is
+measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
+
+## Testing & evidence
+
+![Evidence](public/diagrams/testing.svg)
+
+**132 PASS / 0 FAIL / 1 declared skip** across 133 suites; a 100-hop
+deterministic certification (100/100, 9.9s); a soak that passed while a
+campaign was walking; a hibernation drill with byte-identical artifacts. The
+suites stay maintainer-local; the evidence is public. Read
+[TESTING.md](TESTING.md).
+
+## Responsive by design
+
+Phone, tablet, desktop and TV are one machine. `/m` is the premium phone
+surface; the desktop shell is resizable; the status bar collapses; performance
+mode is one switch for low-end hardware. The breakpoints, rules and the queue
+live in [RESPONSIVE.md](RESPONSIVE.md).
+
 ## Languages — OLYMPUS is global
+
+![Seven languages](public/diagrams/languages.svg)
 
 The Settings selector applies instantly to the app chrome, the terminal, the
 build queue, the projects, the reference catalog, the Pattern Studio and the
@@ -62,11 +108,14 @@ chosen from the same language.
 God names and domains localize too — *Apolo, Atena, Hefesto, Perséfone* in
 Português; *Apollon, Athéna, Héphaïstos* in Français; *アポロン, アテナ* in
 日本語. Missing keys fall back to English, so a partial dictionary never
-renders blank.
+renders blank. The full table and speech locales live in
+[LANGUAGES.md](LANGUAGES.md).
 
 ## Mobile companion — the walk leaves the desk
 
-**v0.0.58.** The phone opens the same app at `/m`: the running campaign, the
+![Mobile companion](public/diagrams/mobile.svg)
+
+**v0.0.60.** The phone opens the same app at `/m`: the running campaign, the
 in-flight hops, the active project, a prompt (typed or dictated), the campaign
 read aloud, the live preview and the project's git remote and last commits.
 Pairing is one QR in the status bar; the token rides the URL fragment, never a
