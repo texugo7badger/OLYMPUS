@@ -9,9 +9,10 @@ import { useOlympus, GOD_ICONS } from '@/lib/olympus-store';
 import {
  Wifi, WifiOff, DollarSign, Key, Terminal,
  Minus, Square, X, Copy, PanelLeftClose, PanelLeftOpen,
- Lightbulb, Gauge, Layers, Users, Sparkles as StudioIcon, Mic, Smartphone,
+ Lightbulb, Gauge, Layers, Users, Sparkles as StudioIcon, Mic, Smartphone, Gem,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 
 const CompactBrainButton = dynamic(() => import('./compact-brain-button'), { ssr: false });
 const ProjectSwitcher = dynamic(() => import('./project-switcher'), { ssr: false });
@@ -69,6 +70,7 @@ export default function StatusBar({
  const activeGod = useOlympus(s => s.activeGod);
   const [theme] = useTheme();
   const language = useLanguage();
+  const router = useRouter();
   const [studio, setStudio] = useState(false);
   const [mobilePair, setMobilePair] = useState(false);
  // W-D1: the idle fallback reads the user's SELECTED god (its own comment
@@ -226,6 +228,16 @@ export default function StatusBar({
 		   <Smartphone size={12} />
 		 </button>
 		 {mobilePair && <MobilePairDialog onClose={() => setMobilePair(false)} />}
+		 {/* v0.0.59 — the Talent Studio is one click away, not three. */}
+		 <button
+		   onClick={() => { router.push('/talent'); }}
+		   aria-label="Open the Talent Studio"
+		   data-tip="Talent Studio — name a combination, fork a preset"
+		   className="flex items-center gap-1 h-5 px-1.5 rounded-full shrink-0 text-olympus-gold/80 ring-1 ring-olympus-gold/20 hover:bg-olympus-gold/10 hover:text-olympus-gold transition-colors"
+		 >
+		   <Gem size={10} />
+		   <span className="text-[9px] font-mono font-semibold">talent</span>
+		 </button>
 
 		 {/* Compact Brain button — to the RIGHT of Focus Mode. */}
  <CompactBrainButton />

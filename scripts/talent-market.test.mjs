@@ -47,6 +47,12 @@ expect('T-8: add writes the OpenCode v2 shape and refuses overwrite',
   /type: 'local'/.test(add) && /command/.test(add) && /already exists/.test(add) && /renameSync/.test(add),
   'a bad config can be written');
 const panel = fs.readFileSync(OLYMPUS + '/src/components/olympus/mcp-config-panel.tsx', 'utf-8');
+expect('T-10: the Talent Studio is one click away at /talent', (() => {
+  const route = fs.readFileSync(OLYMPUS + '/src/app/talent/page.tsx', 'utf-8');
+  const bar = fs.readFileSync(OLYMPUS + '/src/components/olympus/status-bar.tsx', 'utf-8');
+  return /BuildTalentPage/.test(route) && /router\.push\('\/talent'\)/.test(bar);
+})(), 'the studio is buried in Craft → Builds');
+expect('T-11: the sigil coordinates are rounded (hydration-stable)', /Math\.round\(n \* 1000\) \/ 1000/.test(fs.readFileSync(OLYMPUS + '/src/components/olympus/talent-sigil.tsx', 'utf-8')), 'float last-digit mismatch');
 expect('T-9: MCP Configuration mounts the market',
   /MCP market/.test(panel) && /mcp\/market/.test(panel) && /mcp\/add/.test(panel),
   'the market is invisible');

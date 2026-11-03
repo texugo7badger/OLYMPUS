@@ -199,7 +199,7 @@ export default function BuildTalentPage({
         <section className="flex flex-col gap-2.5 min-w-0">
           {/* v0.0.57 — the old talent page's simple, animated hero: the god's
               own symbol, large, with the sector as a quiet label. */}
-          <div className="rounded-xl border border-olympus-gold/15 bg-[radial-gradient(circle_at_50%_20%,var(--olympus-gold),transparent_58%)] bg-olympus-panel/40 py-4 flex flex-col items-center gap-1.5">
+          <div className="rounded-xl border border-olympus-gold/15 bg-olympus-panel/40 py-4 flex flex-col items-center gap-1.5" style={{ background: 'radial-gradient(circle at 50% 12%, color-mix(in oklab, var(--olympus-gold) 16%, transparent), transparent 62%)' }}>
             {(() => { const Icon = GOD_ICONS[god] ?? GOD_ICONS.apollo; return <Icon size={54} strokeWidth={1.35} className="text-olympus-gold drop-shadow-[0_0_18px_rgba(212,165,116,0.25)]" />; })()}
             <span className="text-[12px] font-mono font-semibold uppercase tracking-[0.2em] text-olympus-text">{god}</span>
             <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">{BUILD_CATEGORIES.find((c) => c.id === category)?.name ?? 'general'} · {power} points</span>
