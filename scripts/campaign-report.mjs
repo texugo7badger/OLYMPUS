@@ -17,6 +17,10 @@ import path from 'node:path';
 const args = process.argv.slice(2);
 const arg = (name, fallback) => { const i = args.indexOf(`--${name}`); return i >= 0 && args[i + 1] ? args[i + 1] : fallback; };
 const LANE = arg('lane', path.join(os.homedir(), 'OLYMPUS-VAULT', '02_Projects', 'aime'));
+// v0.0.58 — the default view is THIS campaign: the durable state names the
+// hops that belong to it. `--all` keeps the historical lane view (old plans
+// and old campaigns share the telemetry file; mixing them hid the truth).
+const ALL = args.includes('--all');
 const OUT = arg('out', path.join(os.homedir(), 'Documents', 'OLYMPUS-plan', `campaign-report-${path.basename(LANE)}.md`));
 const read = (f) => { try { return fs.readFileSync(f, 'utf-8'); } catch { return null; } };
 const json = (f) => { try { return JSON.parse(read(f) || 'null'); } catch { return null; } };
@@ -28,8 +32,16 @@ const activity = (read(path.join(os.homedir(), 'OLYMPUS-VAULT', '06_Activity_Fee
 
 const hops = new Map((plan?.hops || []).map((h) => [String(h.id), h]));
 const done = new Set((state?.completed || []).map(String));
+const mine = new Set([
+  ...(state?.completed || []).map(String),
+  ...((state?.parked?.hopId ? [state.parked.hopId] : [])),
+  ...((state?.inFlight || []).map((h) => (typeof h === 'string' ? h : h?.hopId)).filter(Boolean).map(String)),
+]);
 const rows = new Map();
-for (const r of telemetry) if (!rows.has(String(r.hop)) || String(r.ts) > String(rows.get(String(r.hop)).ts)) rows.set(String(r.hop), r);
+for (const r of telemetry) {
+  if (!ALL && mine.size > 0 && !mine.has(String(r.hop))) continue;
+  if (!rows.has(String(r.hop)) || String(r.ts) > String(rows.get(String(r.hop)).ts)) rows.set(String(r.hop), r);
+}
 const costBySession = new Map();
 for (const c of costs) {
   const sid = String(c.session_id || '');
@@ -47,11 +59,17 @@ function toolCallsFor(row) {
   return activity.filter((a) => a?.action === 'tool_call' && Date.parse(a.ts) >= start && Date.parse(a.ts) <= end && (!god || String(a.god || '').startsWith(god))).length;
 }
 
+// The durable state is the campaign truth; telemetry supplies the numbers.
+// A hop that failed once and was later completed reads `completed`, and a hop
+// the state calls parked keeps that name even if a probe row disagrees.
+const parkedId = state?.parked?.hopId ? String(state.parked.hopId) : null;
+const runningIds = new Set((state?.inFlight || []).map((h) => (typeof h === 'string' ? h : h?.hopId)).filter(Boolean).map(String));
+const stateStatus = (id) => done.has(id) ? 'completed' : (parkedId === id ? `parked-${state?.parked?.reason || 'unknown'}` : (runningIds.has(id) ? 'running' : 'pending'));
 const enriched = [...rows.values()].map((r) => {
   const c = r.sessionId ? costBySession.get(String(r.sessionId)) : null;
   const durationMin = Number(r.durationMs || 0) / 60_000;
   const outPerSec = Number(r.tokensOut || 0) > 0 && Number(r.durationMs || 0) > 0 ? Number(r.tokensOut) / (Number(r.durationMs) / 1000) : null;
-  return { ...r, durationMin, outPerSec, cost: c?.spend ?? null, tools: toolCallsFor(r) };
+  return { ...r, status: stateStatus(String(r.hop)), durationMin, outPerSec, cost: c?.spend ?? null, tools: toolCallsFor(r) };
 });
 
 function med(values) { const a = values.filter((n) => Number.isFinite(n)).sort((x, y) => x - y); if (!a.length) return 0; return a[Math.floor((a.length - 1) / 2)]; }

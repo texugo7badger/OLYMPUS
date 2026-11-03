@@ -1,6 +1,6 @@
 # OLYMPUS — v1.0 readiness
 
-> v0.0.57 · 2026-11-03 · **GO for a release candidate after two named gates**
+> v0.0.58 · 2026-11-03 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
 > this build "certified v1.0" until those gates are green.** This page is the
 > report; it does not claim what was not run.
@@ -29,6 +29,7 @@
 | v0.0.55 | balanced DAG | max 40% non-script hops per god |
 | v0.0.56 | talent profiles | per-god sigils; temp/speed/budget/quality; hibernation hours |
 | v0.0.57 | talent simplified | god hero, sector chips, five temperature dots |
+| v0.0.58 | mobile companion | QR pairing, /m, voice, git, mobile preview; spawn tool bound |
 
 ## Evidence (this machine, 2026-11-02)
 
@@ -37,7 +38,7 @@
 | 60 FPS creative mode | offscreen probe: **Brain 60.1** · **Studio idle 59.8** · **Studio chat 60.2** |
 | Stability | soak **39 rounds PASS**, 5/5 probes every round, p95 ≤ 85 ms |
 | Memory bounded | available min **7,956 MB** (governor floor 1.2 GB); OLYMPUS RSS 4,457 → 4,331 MB (**−126 MB**), 32 processes |
-| Test battery | **130 PASS / 0 FAIL / 1 declared skip** (131 suites) at v0.0.55; v0.0.56/57 targeted suites green |
+| Test battery | **130 PASS / 0 FAIL / 1 declared skip** (131 suites) at v0.0.55; v0.0.56–58 targeted suites green |
 | Types/lint | `tsc --noEmit` and `lint` clean |
 | Security | `npm run security:audit` → **0 high / 0 critical**; 27 moderate transitive `glob/minimatch` advisories via the opencode/npm tree, no safe non-breaking fix |
 | Governor | live snapshot 15,459 MB total · 8,426 MB available · 45% · 36 processes · green |

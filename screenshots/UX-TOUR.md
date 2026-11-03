@@ -329,3 +329,13 @@ The talent page keeps the old page's simple, animated god symbol at the center
 with the ten sectors as quiet chips and **five temperature dots** instead of a
 slider. Speed, output budget and quality stay one row; category, temperature,
 speed, budget and quality are saved/exported and included in the build prompt.
+
+
+### v0.0.58 — the companion
+
+`07-mobile.png` is the real `/m` page on a 390×844 viewport: the running
+campaign (23/41 at capture), the two in-flight hops, the project picker, the
+preview link, the prompt composer with voice, and the per-project git card.
+`07-talent-studio.png` is the real Talent Studio reached through
+Craft → Builds → talent editor: the god's animated symbol, the ten sector
+chips and the five temperature dots.

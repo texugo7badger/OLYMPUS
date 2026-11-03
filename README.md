@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.57, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.58, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -33,13 +33,17 @@
 |---|---|
 | <img src="screenshots/06-settings.png" width="480" alt="OLYMPUS Settings in the Parchment theme" /> | <img src="screenshots/03-style.png" width="480" alt="OLYMPUS design board — direction, live preview and brand" /> |
 
+| Talent Studio · the god's own symbol | Mobile companion |
+|---|---|
+| <img src="screenshots/07-talent-studio.png" width="480" alt="OLYMPUS Talent Studio with Athena's animated sigil, sector chips and five temperature dots" /> | <img src="screenshots/07-mobile.png" width="220" alt="OLYMPUS mobile companion showing the running AIME campaign" /> |
+
 </div>
 
 A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app — no mockups.
 
 ## Latest
 
-**v0.0.57 — Talent Studio, simplified.** The latest stable v0.0.x: 900 deduped references, Talent Studio, a free-first MCP market, guided instincts, bounded
+**v0.0.58 — mobile companion + the spawn tool bound.** The latest stable v0.0.x: 900 deduped references, Talent Studio, a free-first MCP market, guided instincts, bounded
 hops, real cost windows, GitHub per project, the light-theme brain fix and a
 context indicator that reads the real session. Everything below is evidence,
 not a promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md).
@@ -59,6 +63,17 @@ God names and domains localize too — *Apolo, Atena, Hefesto, Perséfone* in
 Português; *Apollon, Athéna, Héphaïstos* in Français; *アポロン, アテナ* in
 日本語. Missing keys fall back to English, so a partial dictionary never
 renders blank.
+
+## Mobile companion — the walk leaves the desk
+
+**v0.0.58.** The phone opens the same app at `/m`: the running campaign, the
+in-flight hops, the active project, a prompt (typed or dictated), the campaign
+read aloud, the live preview and the project's git remote and last commits.
+Pairing is one QR in the status bar; the token rides the URL fragment, never a
+query string. The switch to LAN mode is explicit and says a restart is
+required. Rotate the token to revoke every paired phone.
+
+Read [MOBILE.md](MOBILE.md) for the security model and the honest limits.
 
 ## Themes — twelve families and a palette lab
 

@@ -455,11 +455,28 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  {/* Token breakdown — kept (cost-relevant) */}
  <div className="mt-3 rounded-lg border border-olympus-gold/15 bg-olympus-card p-3">
  <div className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide mb-2">Token throughput</div>
- <div className="grid grid-cols-3 gap-3">
- <TokenStat label="Input" value={data.totalInput} color="text-olympus-cyan" />
- <TokenStat label="Output" value={data.totalOutput} color="text-olympus-gold" />
- <TokenStat label="Cached" value={data.costs.reduce((s, c) => s + c.cachedTokens, 0)} color="text-olympus-purple" />
- </div>
+ {(() => {
+   const cached = data.costs.reduce((s, c) => s + c.cachedTokens, 0);
+   const input = data.totalInput;
+   // Cache-hit rate, MEASURED: cached / (fresh input + cached). Providers
+   // differ on whether `input` already includes cache reads; this ratio is
+   // the one the ledger can prove, and it is labelled as such.
+   const hit = input + cached > 0 ? (cached / (input + cached)) * 100 : null;
+   return (
+     <div className="grid grid-cols-4 gap-3">
+       <TokenStat label="Input" value={input} color="text-olympus-cyan" />
+       <TokenStat label="Output" value={data.totalOutput} color="text-olympus-gold" />
+       <TokenStat label="Cached" value={cached} color="text-olympus-purple" />
+       <div>
+         <div className="text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide">Cache hit</div>
+         <div className="text-[15px] font-mono font-semibold tabular-nums text-olympus-green">
+           {hit === null ? '—' : `${hit.toFixed(1)}%`}
+         </div>
+         <div className="text-[8px] font-mono text-olympus-text-dim">ledger-measured</div>
+       </div>
+     </div>
+   );
+ })()}
  </div>
  </div>
  );

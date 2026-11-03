@@ -9,13 +9,14 @@ import { useOlympus, GOD_ICONS } from '@/lib/olympus-store';
 import {
  Wifi, WifiOff, DollarSign, Key, Terminal,
  Minus, Square, X, Copy, PanelLeftClose, PanelLeftOpen,
- Lightbulb, Gauge, Layers, Users, Sparkles as StudioIcon, Mic,
+ Lightbulb, Gauge, Layers, Users, Sparkles as StudioIcon, Mic, Smartphone,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const CompactBrainButton = dynamic(() => import('./compact-brain-button'), { ssr: false });
 const ProjectSwitcher = dynamic(() => import('./project-switcher'), { ssr: false });
 const ApiConfigDialog = dynamic(() => import('./api-config-dialog'), { ssr: false });
+const MobilePairDialog = dynamic(() => import('./mobile-pair-dialog'), { ssr: false });
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip';
 import { useWorkingGods } from '@/lib/use-working-gods';
@@ -69,6 +70,7 @@ export default function StatusBar({
   const [theme] = useTheme();
   const language = useLanguage();
   const [studio, setStudio] = useState(false);
+  const [mobilePair, setMobilePair] = useState(false);
  // W-D1: the idle fallback reads the user's SELECTED god (its own comment
  // always claimed it) — activeGod alone is the live session, reset to
  // apollo on every submit.
@@ -177,7 +179,7 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.57'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.58'}
    </span>
 )}
  </div>
@@ -213,6 +215,17 @@ export default function StatusBar({
 		   <Mic size={9} className="text-olympus-cyan" />
 		 </button>
 		 {studio && <ImmersivePanel onClose={() => setStudio(false)} />}
+		 {/* v0.0.58 — the mobile companion on the same server: QR pairing,
+		     campaign, projects, prompt and voice from the phone. */}
+		 <button
+		   onClick={() => setMobilePair(true)}
+		   aria-label="Mobile companion pairing"
+		   data-tip="Pair the mobile companion (QR)"
+		   className="flex items-center justify-center h-5 w-6 rounded text-olympus-text-dim hover:text-olympus-gold hover:bg-olympus-gold/10 transition-colors shrink-0"
+		 >
+		   <Smartphone size={12} />
+		 </button>
+		 {mobilePair && <MobilePairDialog onClose={() => setMobilePair(false)} />}
 
 		 {/* Compact Brain button — to the RIGHT of Focus Mode. */}
  <CompactBrainButton />

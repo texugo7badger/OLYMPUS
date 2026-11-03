@@ -669,3 +669,9 @@ The base release — the most complete and alternative way to run OLYMPUS.
 
 ## v0.0.52 — 2026-11-03
 - Notification replay/badge fixed; 30-min hop cap; hibernation auto-resume.
+
+## v0.0.58 — 2026-11-03
+- Mobile companion (/m): QR pairing, campaign, projects, prompt, voice, preview, git.
+- Pairing uses the existing session token in the URL fragment; auth-gated route; rotate revokes.
+- Spawn transport enforces the 14-tool budget (v0.0.53 covered warm only).
+- campaign-report defaults to the current campaign; --all keeps history.

@@ -1,0 +1,198 @@
+'use client';
+
+/**
+ * MobilePairDialog — the desktop half of the companion (v0.0.58).
+ *
+ * Shows one QR that carries the LAN URL + the existing session token in the
+ * fragment, the mode (local/lan/tunnel), a copy for the raw URL, token
+ * rotation (revokes every paired phone) and the explicit LAN switch.
+ *
+ * License: AGPL-3.0-or-later (original OLYMPUS code).
+ */
+import { useCallback, useEffect, useState } from 'react';
+import { Smartphone, Copy, RefreshCw, X, Loader2, Wifi, ShieldCheck } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+type Pair = {
+  ok?: boolean;
+  mode?: string;
+  port?: number;
+  addresses?: string[];
+  token?: string;
+  url?: string;
+  qr?: string | null;
+  lanReady?: boolean;
+  note?: string;
+  error?: string;
+};
+
+export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
+  const [pair, setPair] = useState<Pair | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [reveal, setReveal] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [modeNote, setModeNote] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/olympus/mobile/pair', { cache: 'no-store' });
+      const d = await res.json();
+      if (!res.ok || d?.ok === false) throw new Error(d?.error || `HTTP ${res.status}`);
+      setPair(d);
+    } catch (e: any) {
+      setError(e?.message || 'could not build the pair payload');
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const post = async (body: Record<string, unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/olympus/mobile/pair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const d = await res.json();
+      if (!res.ok || d?.ok === false) throw new Error(d?.error || `HTTP ${res.status}`);
+      setPair(d);
+      if (d?.restartRequired) setModeNote(d.note || 'Restart OLYMPUS to apply the new bind.');
+    } catch (e: any) {
+      setError(e?.message || 'pairing update failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(label);
+      setTimeout(() => setCopied(null), 1600);
+    } catch { /* clipboard denied */ }
+  };
+
+  const token = pair?.token || '';
+  const masked = token ? `${token.slice(0, 6)}…${token.slice(-4)}` : '—';
+
+  return (
+    <div className="fixed inset-0 z-[420] flex items-center justify-center bg-black/65 p-4" role="dialog" aria-modal="true" aria-label="Mobile companion pairing">
+      <div className="w-full max-w-md rounded-2xl border border-olympus-gold/20 bg-olympus-panel shadow-2xl overflow-hidden">
+        <header className="flex items-center gap-2 px-4 py-3 border-b border-olympus-gold/10">
+          <Smartphone size={14} className="text-olympus-gold" />
+          <span className="text-[12px] font-mono font-semibold text-olympus-text">Mobile companion</span>
+          <button onClick={onClose} aria-label="Close mobile pairing" className="ml-auto text-olympus-text-dim hover:text-olympus-red">
+            <X size={14} />
+          </button>
+        </header>
+
+        <div className="p-4 space-y-3">
+          <p className="text-[10px] font-mono text-olympus-text-dim leading-relaxed">
+            Scan with the phone camera. The same server, the same campaign: see the walk, switch
+            projects, send a prompt by text or voice, open the preview.
+          </p>
+
+          {error && (
+            <div className="rounded-lg border border-olympus-red/40 bg-olympus-red/10 px-2.5 py-2 text-[10px] font-mono text-olympus-red">
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-olympus-gold/10 bg-olympus-bg/50 p-3">
+            {busy && !pair ? (
+              <div className="h-40 w-40 flex items-center justify-center">
+                <Loader2 size={22} className="animate-spin text-olympus-gold" />
+              </div>
+            ) : pair?.qr ? (
+              <img src={pair.qr} alt="Mobile companion pairing QR" width={180} height={180} className="rounded-lg" />
+            ) : (
+              <div className="h-40 w-40 flex items-center justify-center text-center text-[10px] font-mono text-olympus-text-dim px-3">
+                no QR — use the URL and token below
+              </div>
+            )}
+            <div className="w-full flex items-center gap-1.5">
+              <code className="flex-1 min-w-0 truncate text-[9px] font-mono text-olympus-text">{pair?.url || '—'}</code>
+              <button
+                onClick={() => pair?.url && void copy(pair.url, 'url')}
+                disabled={!pair?.url}
+                className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 text-olympus-gold disabled:opacity-40"
+              >
+                <Copy size={9} /> {copied === 'url' ? 'copied' : 'copy'}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-[9px] font-mono">
+            <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5', pair?.lanReady ? 'bg-olympus-green/10 text-olympus-green' : 'bg-olympus-amber-soft/10 text-olympus-amber-soft')}>
+              <Wifi size={9} /> {pair?.mode || 'local'}
+            </span>
+            <span className="text-olympus-text-dim">port {pair?.port || 3737}</span>
+            <span className="ml-auto text-olympus-text-dim">{pair?.addresses?.length || 0} LAN address(es)</span>
+          </div>
+
+          <div className="rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 px-2.5 py-2 space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck size={10} className="text-olympus-green" />
+              <span className="text-[9px] font-mono uppercase tracking-wide text-olympus-text-dim">session token</span>
+              <button onClick={() => setReveal((v) => !v)} className="ml-auto text-[9px] font-mono text-olympus-text-dim hover:text-olympus-text">
+                {reveal ? 'hide' : 'reveal'}
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <code className="flex-1 min-w-0 truncate text-[9px] font-mono text-olympus-text">{reveal ? token : masked}</code>
+              <button
+                onClick={() => token && void copy(token, 'token')}
+                disabled={!token}
+                className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 text-olympus-gold disabled:opacity-40"
+              >
+                <Copy size={9} /> {copied === 'token' ? 'copied' : 'copy'}
+              </button>
+              <button
+                onClick={() => void post({ action: 'rotate' })}
+                disabled={busy}
+                aria-label="Rotate token (revokes paired phones)"
+                className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-red/10 text-olympus-red disabled:opacity-40"
+              >
+                <RefreshCw size={9} className={busy ? 'animate-spin' : ''} /> rotate
+              </button>
+            </div>
+            <p className="text-[8px] font-mono text-olympus-text-dim leading-relaxed">
+              Rotating revokes every paired phone. The token is stored at ~/.olympus/session-token (0600).
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => void post({ action: 'set-mode', mode: 'lan' })}
+              disabled={busy || pair?.mode === 'lan'}
+              className="flex-1 rounded-lg bg-olympus-gold/15 text-olympus-gold border border-olympus-gold/30 px-2 py-1.5 text-[9px] font-mono disabled:opacity-40"
+            >
+              enable LAN
+            </button>
+            <button
+              onClick={() => void post({ action: 'set-mode', mode: 'local' })}
+              disabled={busy || pair?.mode === 'local'}
+              className="flex-1 rounded-lg bg-olympus-bg border border-olympus-gold/10 px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim disabled:opacity-40"
+            >
+              loopback only
+            </button>
+          </div>
+
+          {modeNote && (
+            <p className="text-[9px] font-mono text-olympus-amber-soft leading-relaxed">{modeNote}</p>
+          )}
+          {pair?.note && !modeNote && (
+            <p className="text-[9px] font-mono text-olympus-text-dim leading-relaxed">{pair.note}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

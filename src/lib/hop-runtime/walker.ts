@@ -500,6 +500,10 @@ export function classifyCeilingKill(stderrText: string): CeilingKillClassificati
   if (errHead.includes(HOP_FIRST_BYTE_MARKER)) {
     return { kind: 'provider-overload', error: errHead };
   }
+  // v0.0.58 — the spawn path's tool-budget kill is NAMED, not a generic hang.
+  if (errHead.includes('hop-tool-budget-exceeded')) {
+    return { kind: 'hang', error: errHead.slice(-600) };
+  }
   const kind: CeilingKillClassification['kind'] =
     classifyRetry({ code: -1, error: errHead, statusCode: undefined } as never) === 'provider-overload'
       ? 'provider-overload'

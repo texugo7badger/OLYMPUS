@@ -52,6 +52,38 @@ export interface HopTransport {
   run(req: HopTransportRequest): Promise<HopTransportResult>;
 }
 
+/** The spawn path's tool counter — exported so the suite can prove the bound
+ *  without spawning a real model turn. Feed stdout chunks; `exceeded()` turns
+ *  true the moment the budget is crossed. Handles both CLI dialects:
+ *  `{"type":"tool_use","id":...}` (v1) and the v2 part events. */
+export function createToolBudgetCounter(budget: number) {
+  const limit = Math.max(1, budget);
+  const seen = new Set<string>();
+  let count = 0;
+  let lineBuf = '';
+  let exceeded = false;
+  const feed = (chunk: string): boolean => {
+    lineBuf += chunk;
+    const lines = lineBuf.split('\n');
+    lineBuf = lines.pop() || '';
+    for (const line of lines) {
+      if (exceeded || !line.includes('tool')) continue;
+      if (!/"type"\s*:\s*"tool(_use|_call)?"/.test(line)) continue;
+      const id = /"(?:id|partID)"\s*:\s*"([^"]+)"/.exec(line)?.[1] || '';
+      if (id) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+      } else if (!/"type"\s*:\s*"tool_use"/.test(line)) {
+        continue;
+      }
+      count += 1;
+      if (count > limit) exceeded = true;
+    }
+    return exceeded;
+  };
+  return { feed, exceeded: () => exceeded, count: () => count, limit };
+}
+
 /** The spawn path — the pre-v0.0.24 behavior, byte-for-byte. */
 export class SpawnTransport implements HopTransport {
   readonly mode = 'spawn' as const;
@@ -116,11 +148,21 @@ export class SpawnTransport implements HopTransport {
           stderr += `\nhop-first-byte-timeout (OLYMPUS_HOP_SILENCE_MS ${req.silenceMs}ms rolling): the turn went SILENT mid-run after producing output — a step's provider request stalled (transient pool contention — retries absorb it)`;
         }, req.silenceMs);
       };
+      // v0.0.58 — the tool budget must hold on the SPAWN path too. v0.0.53
+      // enforced it on the warm transport only; the AIME resume then rode
+      // `opencode run` and explored for 20+ minutes with no bound.
+      const tools = createToolBudgetCounter(req.toolBudget ?? 14);
+      let budgetHit = false;
       armCeiling();
       armFirstByte();
       child.stdout?.on('data', (d) => {
         if (firstByteAt === null && String(d).trim()) firstByteAt = Date.now();
         stdout += String(d);
+        if (!budgetHit && tools.feed(String(d))) {
+          budgetHit = true;
+          stderr += `\nhop-tool-budget-exceeded (OLYMPUS_HOP_TOOL_BUDGET ${tools.limit}): the turn kept calling tools without finishing — exploration is not progress; verify the artifacts or park`;
+          try { child.kill('SIGKILL'); } catch { /* gone */ }
+        }
         if (String(d).trim()) armSilence();
       });
       child.stderr?.on('data', (d) => { stderr += String(d); });

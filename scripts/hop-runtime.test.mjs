@@ -649,6 +649,10 @@ async function main() {
     const ckHang = mod.classifyCeilingKill('');
     expect('#111: a pure hang parks NAMED (ceiling-kill + the knob, never a bare exit null)',
       ckHang.kind === 'hang' && /ceiling-kill/.test(ckHang.error), JSON.stringify(ckHang).slice(0, 200));
+    const ckBudget = mod.classifyCeilingKill('hop-tool-budget-exceeded (OLYMPUS_HOP_TOOL_BUDGET 14): the turn kept calling tools');
+    expect('v0.0.58: a spawn tool-budget kill parks NAMED, not as a generic hang',
+      ckBudget.kind === 'hang' && /hop-tool-budget-exceeded/.test(ckBudget.error) && !/ceiling-kill/.test(ckBudget.error),
+      JSON.stringify(ckBudget).slice(0, 200));
   }
   expect('#111: the dispatcher consults the classifier on the signal-kill path (code === null)',
     /classifyCeilingKill\(/.test(walkerSrc) && /last\.code === null/.test(walkerSrc),

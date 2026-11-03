@@ -145,6 +145,14 @@ export async function GET() {
   const completed = hopState?.completed?.length ?? 0;
   const parked = hopState?.parked ?? null;
 
+  // v0.0.58 — the denominator. "23 hop(s) ok" without a total reads as a
+  // finished campaign; the plan on the lane's disk is the only honest total.
+  let planTotal: number | null = null;
+  try {
+    const planRaw = JSON.parse(fs.readFileSync(path.join(lane || '', 'dispatch-plan.json'), 'utf-8'));
+    if (Array.isArray(planRaw?.hops)) planTotal = planRaw.hops.length;
+  } catch { /* no plan on disk */ }
+
   // v0.0.22 PROVENANCE — god + model + hop + elapsed, so the strip never
   // says "something is running" without naming it.
   const provenance = readProvenance(telemetry);
@@ -199,6 +207,7 @@ export async function GET() {
     },
     hops: {
       completed,
+      total: planTotal,
       inFlight,
       /** v0.0.24 (#227): the live hops with god/lane/artifacts/elapsed. */
       inFlightList: hopState?.inFlight ?? [],

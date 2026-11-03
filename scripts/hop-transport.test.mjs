@@ -15,7 +15,7 @@
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { resolveHopTransportMode, createHopTransport, SpawnTransport, AutoTransport } from '../src/lib/hop-runtime/transport.ts';
+import { resolveHopTransportMode, createHopTransport, SpawnTransport, AutoTransport, createToolBudgetCounter } from '../src/lib/hop-runtime/transport.ts';
 import { nextConcurrency, resolveHopConcurrency, MAX_HOP_CONCURRENCY } from '../src/lib/hop-runtime/walker.ts';
 import { runWarmHop, __registerHopServerForTest, __clearHopServersForTest, WarmTransportUnavailable } from '../src/lib/hop-runtime/warm-server.ts';
 
@@ -225,6 +225,20 @@ function v2StallServer() {
   expect('T6 chat keeps the wrapped {prompt:{text}} fallback', /JSON\.stringify\(\{\s*prompt:\s*\{\s*text:\s*promptText/.test(session), 'no wrapped fallback found in opencode-session.ts');
 }
 
+
+// T7 — v0.0.58: the SPAWN path must enforce the same tool budget the warm
+// path does. Distinct part ids count once; updates to the same part do not.
+{
+  const c = createToolBudgetCounter(2);
+  expect('T7 first distinct tool counts', c.feed('{"type":"message.part.updated","properties":{"part":{"id":"a","type":"tool"}}}\n') === false && c.count() === 1);
+  expect('T7 the same part id is not a second call', c.feed('{"type":"message.part.updated","properties":{"part":{"id":"a","type":"tool","state":{"status":"completed"}}}}\n') === false && c.count() === 1);
+  expect('T7 a second distinct tool counts', c.feed('{"type":"message.part.updated","properties":{"part":{"id":"b","type":"tool"}}}\n') === false && c.count() === 2);
+  expect('T7 crossing the budget aborts', c.feed('{"type":"message.part.updated","properties":{"part":{"id":"c","type":"tool"}}}\n') === true && c.exceeded());
+  const v1 = createToolBudgetCounter(1);
+  expect('T7 the v1 tool_use dialect counts', v1.feed('{"type":"tool_use","id":"t1","name":"bash"}\n') === false && v1.feed('{"type":"tool_use","id":"t2","name":"read"}\n') === true);
+  const split = createToolBudgetCounter(1);
+  expect('T7 a JSON line split across chunks is still one tool', split.feed('{"type":"tool_use","id":"x1"') === false && split.feed(',"name":"bash"}\n{"type":"tool_use","id":"x2"}\n') === true);
+}
 
 console.log(`\nhop-transport: ${passed} passed, ${failures} failed`);
 process.exit(failures === 0 ? 0 : 1);
