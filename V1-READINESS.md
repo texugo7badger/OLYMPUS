@@ -40,7 +40,7 @@
 | Memory bounded | available min **7,956 MB** (governor floor 1.2 GB); OLYMPUS RSS 4,457 → 4,331 MB (**−126 MB**), 32 processes |
 | Test battery | **131 PASS / 0 FAIL / 1 declared skip** (132 suites) at v0.0.58 |
 | Types/lint | `tsc --noEmit` and `lint` clean |
-| Security | `npm run security:audit` → **0 high / 0 critical**; 27 moderate transitive `glob/minimatch` advisories via the opencode/npm tree, no safe non-breaking fix |
+| Security | `npm run security:audit` → **0 high / 0 critical**; 54 moderate transitive `glob/minimatch` advisories via the opencode/electron/npm tree, no safe non-breaking fix; the 3 Dependabot alerts are dismissed with that reason and 0 remain open |
 | Governor | live snapshot 15,459 MB total · 8,426 MB available · 45% · 36 processes · green |
 | Editor | VSIX `olympus-bridge-0.0.15.vsix` (9 files, 27 KB), compiled + packaged |
 | Projects | AIME campaign `cmp_mw0lu2wt9cwo16`: 24/41 at 09:15Z, 3 in flight, 0 parked; per-hop report in `campaign-report-aime.md` |

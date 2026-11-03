@@ -753,7 +753,15 @@ export async function maybeWalkThePlan(opts: {
   if (opts.unattended || isHibernating()) {
     const attempt = opts.overnightAttempt ?? 0;
     const plan = isHibernating() ? readHibernationPlan() : null;
-    const maxAttempts = plan?.autoResume ? 12 : Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_ATTEMPTS ?? 3));
+    // v0.0.59 — the night contract is bounded by the WINDOW, not a flat 12.
+    // "Keep working alone until 08:00" must survive more than 12 parks; each
+    // resume is ~2 minutes of backoff + walk, so the cap derives from the
+    // plan's remaining time (still hard-capped at 120 attempts).
+    const planLeftMs = plan ? Date.parse(plan.until) - Date.now() : 0;
+    const planAttempts = planLeftMs > 0
+      ? Math.min(120, Math.max(12, Math.ceil(planLeftMs / 120_000)))
+      : 12;
+    const maxAttempts = plan?.autoResume ? planAttempts : Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_ATTEMPTS ?? 3));
     if (parked && attempt < maxAttempts) {
       const delayMs = Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_DELAY_MS ?? 60_000));
       opts.send?.({ type: 'log', msg: `[OVERNIGHT] wave parked at '${parked.hopId}' (${parked.reason}) — auto-resume ${attempt + 1}/${maxAttempts} in ${Math.round(delayMs / 1000)}s (no human input needed).`, ts: new Date().toISOString() });
