@@ -650,3 +650,22 @@ The base release — the most complete and alternative way to run OLYMPUS.
 - Free-tier provider card no longer duplicates the provider list / models in use.
 
 [0.0.1]: https://github.com/texugo7badger/olympus/releases/tag/v0.0.1
+
+## v0.0.57 — 2026-11-03
+- Talent Studio simplified: god symbol hero, sector chips, five temperature dots.
+- Talent execution profile (temperature/speed/budget/quality) saved and exported.
+
+## v0.0.56 — 2026-11-03
+- Per-god animated sigils; night hibernation dialog (1-12h, auto-resume).
+
+## v0.0.55 — 2026-11-03
+- DAG balance: max 40% of non-script hops per god; unambiguous artifact reassignment.
+
+## v0.0.54 — 2026-11-03
+- Context indicator fixed; light-theme brain contrast; strategy sync; GitHub per project; hibernation plan API.
+
+## v0.0.53 — 2026-11-03
+- Talent Studio, MCP market, instinct gate wired, tool budget, cost windows, campaign report, 900 references.
+
+## v0.0.52 — 2026-11-03
+- Notification replay/badge fixed; 30-min hop cap; hibernation auto-resume.

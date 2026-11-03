@@ -1,6 +1,6 @@
 # OLYMPUS — v1.0 readiness
 
-> v0.0.50 · 2026-11-02 (v0.0.51 patch: the Wayland launch guard) · **GO for a release candidate after two named gates**
+> v0.0.57 · 2026-11-03 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
 > this build "certified v1.0" until those gates are green.** This page is the
 > report; it does not claim what was not run.
@@ -22,6 +22,13 @@
 | v0.0.48 | Projects that travel | passport export/import, no home paths, no overwrite |
 | v0.0.49 | Seven languages, one focus ring | complete project surface in 7 locales, reduced motion, focus-visible |
 | v0.0.50 | v1.0 readiness | this report |
+| v0.0.51 | launch reliability | XWayland default; Wayland deadlock guard |
+| v0.0.52 | quiet mark | notification replay fixed; 900 refs; 30-min cap |
+| v0.0.53 | talent & instincts | Talent Studio; MCP market; gate wired; cost windows |
+| v0.0.54 | stabilization | context 19-26%; light brain; GitHub per project; hibernate plan |
+| v0.0.55 | balanced DAG | max 40% non-script hops per god |
+| v0.0.56 | talent profiles | per-god sigils; temp/speed/budget/quality; hibernation hours |
+| v0.0.57 | talent simplified | god hero, sector chips, five temperature dots |
 
 ## Evidence (this machine, 2026-11-02)
 
@@ -30,14 +37,14 @@
 | 60 FPS creative mode | offscreen probe: **Brain 60.1** · **Studio idle 59.8** · **Studio chat 60.2** |
 | Stability | soak **39 rounds PASS**, 5/5 probes every round, p95 ≤ 85 ms |
 | Memory bounded | available min **7,956 MB** (governor floor 1.2 GB); OLYMPUS RSS 4,457 → 4,331 MB (**−126 MB**), 32 processes |
-| Test battery | **119 PASS / 0 FAIL / 1 declared skip** (120 suites) at v0.0.50 |
+| Test battery | **130 PASS / 0 FAIL / 1 declared skip** (131 suites) at v0.0.55; v0.0.56/57 targeted suites green |
 | Types/lint | `tsc --noEmit` and `lint` clean |
 | Security | `npm run security:audit` → **0 high / 0 critical**; 27 moderate transitive `glob/minimatch` advisories via the opencode/npm tree, no safe non-breaking fix |
 | Governor | live snapshot 15,459 MB total · 8,426 MB available · 45% · 36 processes · green |
 | Editor | VSIX `olympus-bridge-0.0.15.vsix` (9 files, 27 KB), compiled + packaged |
 | Projects | AIME probe: parked 2/17, cause `Agent not found: "athena-hop"`, next 4 hops named |
 
-Machine-local evidence: `~/Documents/OLYMPUS-plan/soak-v0.0.50.md`.
+Machine-local evidence: `~/Documents/OLYMPUS-plan/soak-v0.0.50.md`; the latest campaign report is `aime-night-report.md`.
 
 ## The two gates before a v1.0 candidate
 
