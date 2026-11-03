@@ -141,7 +141,14 @@ export async function GET() {
       ? { state: 'unverified' as const, lane, heartbeatAgeMs: Math.round(peeks.find((p) => p.holder)!.ageMs), holder: peeks.find((p) => p.holder)!.holder }
       : { state: 'none' as const, lane };
 
-  const inFlight = hopState?.inFlight?.length ?? 0;
+  // v0.0.60 — DISK IS NOT PROOF. The state file keeps an inFlight row until a
+  // hop settles; after a crash/reboot that row is a LOST hop, not a running
+  // one. Only a live campaign (pid + heartbeat) may present rows as running.
+  const liveCampaign = campaign.state === 'running';
+  const diskInFlight = hopState?.inFlight ?? [];
+  const activeInFlight = liveCampaign ? diskInFlight : [];
+  const lostInFlight = liveCampaign ? [] : diskInFlight;
+  const inFlight = activeInFlight.length;
   const completed = hopState?.completed?.length ?? 0;
   const parked = hopState?.parked ?? null;
 
@@ -168,7 +175,7 @@ export async function GET() {
     campaign.state === 'running' ? 'RUNNING'
     : parked ? 'PARKED'
     : campaign.state === 'unverified' ? 'UNVERIFIED'
-    : inFlight > 0 ? 'UNVERIFIED'
+    : diskInFlight.length > 0 ? 'UNVERIFIED'
     : 'IDLE';
 
   // The single human line — the StatusBar renders exactly this. RUNNING now
@@ -210,7 +217,10 @@ export async function GET() {
       total: planTotal,
       inFlight,
       /** v0.0.24 (#227): the live hops with god/lane/artifacts/elapsed. */
-      inFlightList: hopState?.inFlight ?? [],
+      inFlightList: activeInFlight,
+      /** v0.0.60 (#295): rows left on disk without a live campaign. */
+      lost: lostInFlight.map((h: any) => ({ ...h, status: 'lost', reason: 'no live campaign process (pid/heartbeat)' })),
+      lostCount: lostInFlight.length,
       campaignId: hopState?.campaignId ?? campaign?.campaignId ?? null,
       parked: parked ? { hopId: parked.hopId, reason: parked.reason, error: parked.error ?? null, ts: parked.ts } : null,
       updatedAt: hopState?.updatedAt ?? null,

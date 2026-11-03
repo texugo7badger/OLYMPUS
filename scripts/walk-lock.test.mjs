@@ -114,6 +114,14 @@ fs.mkdirSync(lane, { recursive: true });
   fs.rmSync(lockPath, { force: true });
 }
 
+{
+  const fs2 = await import('node:fs');
+  const route = fs2.readFileSync(new URL('../src/app/api/olympus/run-state/route.ts', import.meta.url), 'utf-8');
+  expect('L8: disk inFlight is RUNNING only under a live campaign; else LOST',
+    /liveCampaign/.test(route) && /activeInFlight/.test(route) && /lostCount/.test(route),
+    'a dead walker can still present a stale hop as running');
+}
+
 fs.rmSync(dir, { recursive: true, force: true });
 console.log(`\nwalk-lock: ${passed} passed, ${failures} failed`);
 process.exit(failures === 0 ? 0 : 1);

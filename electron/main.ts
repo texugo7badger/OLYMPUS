@@ -1195,6 +1195,15 @@ ipcMain.handle('olympus:open-external', (_e, url: string) => {
 
 ipcMain.handle('olympus:is-electron', () => true);
 
+// v0.0.60 — the renderer's pairing dialog needs the SAME bearer token the
+// LAN API trusts. It is read from the 0600 file in the main process and
+// handed to the renderer over IPC; never exposed as an HTTP response.
+ipcMain.handle('olympus:session-token', () => {
+  try {
+    return readFileSync(join(nodeOs.homedir(), '.olympus', 'session-token'), 'utf-8').trim() || null;
+  } catch { return null; }
+});
+
 ipcMain.handle('olympus:is-dev-async', () => isDev);
 
 ipcMain.handle('olympus:app-version-async', () => readAppVersion());

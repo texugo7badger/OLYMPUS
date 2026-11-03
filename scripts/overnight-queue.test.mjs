@@ -99,6 +99,9 @@ async function main() {
   expect('S3: the bounded auto-resume is env-tunable',
     /OLYMPUS_OVERNIGHT_RESUME_ATTEMPTS/.test(postRunSrc) && /OLYMPUS_OVERNIGHT_RESUME_DELAY_MS/.test(postRunSrc),
     'the resume chain is unbounded');
+  expect('S3b: the hibernation window, not a flat 12, bounds the resume chain',
+    /planLeftMs/.test(postRunSrc) && /Math\.ceil\(planLeftMs \/ 120_000\)/.test(postRunSrc) && /Math\.min\(120/.test(postRunSrc),
+    'an 8h plan could still die after 12 parks');
   expect('S3: the route threads the #51 unattended flag into the warm stream',
     /unattended\?: boolean;/.test(routeSrc) && /unattended: opts\.unattended === true/.test(routeSrc) && /^      unattended,$/m.test(routeSrc),
     'the overnight flag never reaches the walk');

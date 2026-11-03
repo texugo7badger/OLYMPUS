@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.58, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.60, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -43,7 +43,7 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.58 — mobile companion + the spawn tool bound.** The latest stable v0.0.x: 900 deduped references, Talent Studio, a free-first MCP market, guided instincts, bounded
+**v0.0.60 — the companion leaves the house.** The latest stable v0.0.x: 900 deduped references, Talent Studio, a free-first MCP market, guided instincts, bounded
 hops, real cost windows, GitHub per project, the light-theme brain fix and a
 context indicator that reads the real session. Everything below is evidence,
 not a promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md).
@@ -70,10 +70,16 @@ renders blank.
 in-flight hops, the active project, a prompt (typed or dictated), the campaign
 read aloud, the live preview and the project's git remote and last commits.
 Pairing is one QR in the status bar; the token rides the URL fragment, never a
-query string. The switch to LAN mode is explicit and says a restart is
+query string. Outside the house, **start remote tunnel** gives an HTTPS
+Cloudflare link for the phone (stop it when done); the theme follows the PC
+both ways and the creativity particle field rides along. The switch to LAN mode is explicit and says a restart is
 required. Rotate the token to revoke every paired phone.
 
 Read [MOBILE.md](MOBILE.md) for the security model and the honest limits.
+
+**Talent Studio** is a first-class route (`/talent`) and a status-bar button:
+the god's own animated symbol, ten sector chips, five temperature dots, speed,
+output budget and quality — saved, exportable and in the build prompt.
 
 ## Themes — twelve families and a palette lab
 

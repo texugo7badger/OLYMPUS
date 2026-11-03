@@ -1,6 +1,6 @@
 # OLYMPUS — stability protocol
 
-> v0.0.40 · The harness is shipped and measured; the 8-hour / 100-hop
+> v0.0.59 · The harness is shipped and measured; the 8-hour / 100-hop
 > certification is **not** claimed yet. This page records what was actually
 > run and what remains.
 
@@ -29,20 +29,36 @@ Thresholds:
 The report lands in the temp directory (or `--report <path>`) with p50/p95/max
 per endpoint, memory first/last/growth, the process census and every failure.
 
-## What was run (2026-11-02)
+## What was run (2026-11-03, v0.0.59)
 
 ```
-npm run soak:short   # 2 minutes, every 3s
+node scripts/soak.mjs --minutes 2 --interval 5 --json /tmp/opencode/soak-v059.json
 ```
 
-- **40 rounds · PASS** · 5/5 probes on every round.
-- p50 / p95 / max: health 34/54/65 ms · power 44/52/55 ms ·
-  resources 60/66/66 ms · run-state 73/85/85 ms · projects 65/75/75 ms.
-- Available memory: min **8,330 MB** · last 8,383 MB.
-- OLYMPUS RSS: 4,624 → 4,503 MB (**−121 MB**, no growth), 37 processes.
+This run happened **while the AIME campaign was walking** (one hop in
+flight, dev server + three opencode processes), so the baseline is heavier
+than an idle app:
 
-Report: `~/Documents/OLYMPUS-plan/soak-v0.0.40.md` (machine-local evidence,
-not committed).
+- **24 rounds · PASS** · 5/5 probes on every round.
+- p50 / p95 / max: health 33/51/159 ms · power 42/48/160 ms ·
+  resources 61/83/300 ms · run-state 69/120/179 ms · projects 74/108/217 ms.
+- Available memory: min **7,357 MB** · last 7,432 MB.
+- OLYMPUS RSS: 5,611 → 5,796 MB (**+185 MB** over 2 min; budget is
+  `max(600 MB, 25%)`), 45 processes.
+
+Report: `~/Documents/OLYMPUS-plan/soak-v0.0.59.md` (machine-local evidence,
+not committed). The older idle-app check (v0.0.40: 40 rounds, RSS −121 MB)
+is still valid as the low-load reference.
+
+## 100-hop runtime certification (2026-11-03, v0.0.59)
+
+`npm run certify:100hop` builds a disposable lane with **100 script hops in 10
+dependency chains**, walks it, and asserts: 100 completed, 0 lost, 0 parked,
+100 artifacts, 100 telemetry rows, unique ids, 0 tokens, under 5 minutes.
+
+Result: **PASS — 9.9s wall clock, p50 189ms, p95 225ms, 0 tokens.** This
+certifies the deterministic spine at scale; it is **not** the 8-hour model
+soak. Report: `~/Documents/OLYMPUS-plan/certification-100hop.md`.
 
 ## The certification still owed
 

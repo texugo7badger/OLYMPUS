@@ -3,7 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { listProjects, createProject, getActiveProject, getActiveProjectSlug } from '@/lib/project-context';
+import { listProjects, createProject, deleteProject, getProject, getActiveProject, getActiveProjectSlug } from '@/lib/project-context';
 import { detectProjectStacks, projectSummary, readProjectPackage } from '@/lib/project-summary';
 import { buildProjectBrief } from '@/lib/project-brief';
 
@@ -47,5 +47,28 @@ export async function POST(req: NextRequest) {
     const msg = e.message || 'create failed';
     const isClientError = msg.includes('already exists') || msg.includes('does not exist') || msg.includes('not a directory') || msg.includes('non-empty slug');
     return NextResponse.json({ error: msg }, { status: isClientError ? 400 : 500 });
+  }
+}
+
+/**
+ * v0.0.60 — archive a project the user no longer wants in OLYMPUS.
+ * `deleteProject` MOVES the project folder to 09_Archive/projects/<slug>-<ts>/;
+ * nothing is erased. The UI labels it "archive", not "delete forever".
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const slug = String(req.nextUrl.searchParams.get('slug') || '').trim();
+    if (!slug) return NextResponse.json({ error: 'slug is required' }, { status: 400 });
+    const note = getProject(slug);
+    if (!note) return NextResponse.json({ error: 'project not found' }, { status: 404 });
+    deleteProject(slug);
+    return NextResponse.json({
+      ok: true,
+      slug,
+      archived: true,
+      note: 'The project folder was moved to OLYMPUS-VAULT/09_Archive/projects — recoverable, never erased.',
+    });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'archive failed' }, { status: 500 });
   }
 }

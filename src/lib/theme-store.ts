@@ -85,6 +85,40 @@ export function setThemeState(patch: Partial<ThemeState>, opts: { persist?: bool
 }
 
 /** Load once: localStorage first (no flash), then the private store. */
+let themeWatchStarted = false;
+let lastServerStamp: string | null = null;
+
+/** v0.0.60 — the other device's change lands here. The poll compares the
+ *  server stamp and repaints ONLY when the state really differs, so the
+ *  desktop's own save never loops back into a repaint storm. */
+export function startThemeWatch(intervalMs = 8_000): void {
+  if (themeWatchStarted || typeof window === 'undefined') return;
+  themeWatchStarted = true;
+  const tick = async () => {
+    try {
+      if (document.visibilityState === 'hidden') return;
+      const r = await fetch('/api/olympus/theme', { cache: 'no-store' });
+      const d = await r.json();
+      if (!d?.ok) return;
+      const stamp = typeof d.updatedAt === 'string' ? d.updatedAt : '';
+      if (!stamp || stamp === lastServerStamp) return;
+      lastServerStamp = stamp;
+      const next = normalizeThemeState(d.state);
+      if (JSON.stringify(next) === JSON.stringify(state)) return;
+      state = next;
+      repaint(state);
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(state));
+        localStorage.setItem('olympus:theme-palette', JSON.stringify({ ...resolvePalette(state), _mode: state.mode }));
+      } catch { /* private mode */ }
+      emit();
+    } catch { /* offline: the local theme stands */ }
+  };
+  setInterval(tick, intervalMs);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void tick(); });
+  void tick();
+}
+
 export async function initTheme(): Promise<void> {
   if (initialized) return;
   initialized = true;
@@ -102,6 +136,7 @@ export async function initTheme(): Promise<void> {
     const r = await fetch('/api/olympus/theme', { cache: 'no-store' });
     const d = await r.json();
     if (d?.ok && d.state) {
+      lastServerStamp = typeof d.updatedAt === 'string' ? d.updatedAt : null;
       state = normalizeThemeState(d.state);
       repaint(state);
       try {
@@ -120,6 +155,8 @@ export async function initTheme(): Promise<void> {
       body: JSON.stringify(state),
     }).catch(() => {});
   } catch { /* offline */ }
+  // v0.0.60 — the phone is a second surface of the SAME theme.
+  startThemeWatch();
 }
 
 /** React hook: the current theme + a setter. */

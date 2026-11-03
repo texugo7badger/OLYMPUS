@@ -242,6 +242,13 @@ export default function OlympusWorkspace() {
   const [bootLeaving, setBootLeaving] = useState(false);
   const [pendingPanels, setPendingPanels] = useState(() => getPanelLoadingCount());
   const [windowLoaded, setWindowLoaded] = useState(false);
+  // v0.0.60 — ONE loader until EVERYTHING is ready. The old gate waited only
+  // for the dynamic chunks and the window load, so the shell revealed itself
+  // while the brain/cost/MCP data was still in flight and the user saw a
+  // second wave of loaders. The critical reads + fonts + the SSE connection
+  // are now part of readiness; the panes are already painted underneath.
+  const [dataReady, setDataReady] = useState(false);
+  const sseConnected = useOlympus(s => s.sseConnected);
   const bootStartedAt = useRef(0);
   // v0.0.32 — warm the panel endpoints once the shell is idle: opening a
   // menu should paint data, not a spinner. Bounded, best-effort, no retries.
@@ -269,11 +276,31 @@ export default function OlympusWorkspace() {
   useEffect(() => {
     void initTheme();
     bootStartedAt.current = performance.now();
+    let live = true;
+    const critical = [
+      '/api/olympus/health',
+      '/api/olympus/graph',
+      '/api/olympus/run-state',
+      '/api/olympus/costs',
+      '/api/olympus/projects',
+      '/api/olympus/mcp/state',
+      '/api/olympus/tasks',
+      '/api/olympus/design-builds',
+      '/api/olympus/episodes?limit=20',
+    ];
+    const data = Promise.allSettled(critical.map((url) => fetch(url, { cache: 'no-store' })));
+    const fonts = (document as any).fonts?.ready ?? Promise.resolve();
+    // A hard 12s cap: a dead endpoint must not trap the user behind the mark.
+    const cap = new Promise<void>((resolve) => setTimeout(resolve, 12_000));
+    Promise.race([Promise.all([data, fonts]).then(() => undefined), cap])
+      .then(() => { if (live) setDataReady(true); })
+      .catch(() => { if (live) setDataReady(true); });
     const unsubscribe = subscribePanelLoading(setPendingPanels);
     const onLoad = () => setWindowLoaded(true);
     if (document.readyState === 'complete') setWindowLoaded(true);
     else window.addEventListener('load', onLoad, { once: true });
     return () => {
+      live = false;
       unsubscribe();
       window.removeEventListener('load', onLoad);
     };
@@ -282,17 +309,17 @@ export default function OlympusWorkspace() {
     if (!booting) return;
     const elapsed = performance.now() - bootStartedAt.current;
     const minWait = Math.max(0, 1400 - elapsed);
-    // Ready = the window loaded, every mounted panel finished its chunk, and
-    // the mark had at least 1.4s (a flash is not an animation). A 15s hard cap
-    // keeps a failed chunk from trapping the user behind the loader.
-    const ready = windowLoaded && pendingPanels === 0;
-    const cap = Math.max(0, 15000 - elapsed);
+    // Ready = the window loaded, every mounted panel finished its chunk, the
+    // critical data is in, the fonts are ready and the SSE lane is live. A
+    // 20s hard cap keeps a failed endpoint/chunk from trapping the user.
+    const ready = windowLoaded && pendingPanels === 0 && dataReady && sseConnected;
+    const cap = Math.max(0, 20000 - elapsed);
     const timer = setTimeout(() => {
       setBootLeaving(true);
       setTimeout(() => setBooting(false), 520);
     }, ready ? minWait : cap);
     return () => clearTimeout(timer);
-  }, [booting, windowLoaded, pendingPanels]);
+  }, [booting, windowLoaded, pendingPanels, dataReady, sseConnected]);
   const setGraphData = useOlympus(s => s.setGraphData);
   const leftPane = useOlympus(s => s.leftPane);
   // #197: the window-visibility gate for pane polling surfaces.
@@ -348,6 +375,33 @@ export default function OlympusWorkspace() {
   useEffect(() => {
     fetch('/api/olympus/mcp/sync', { method: 'POST', cache: 'no-store' }).catch(() => {});
   }, []);
+
+  // v0.0.60 — after the ONE boot loader leaves, warm the pane chunks in the
+  // idle window. Opening Cost/Benchmarks/Vault then paints data instead of a
+  // second loader. Best-effort, bounded, never blocks the shell.
+  useEffect(() => {
+    if (booting) return;
+    let cancelled = false;
+    const warm = () => {
+      if (cancelled) return;
+      void import('@/components/olympus/cost-dashboard');
+      void import('@/components/olympus/benchmarks-panel');
+      void import('@/components/olympus/activity-timeline');
+      void import('@/components/olympus/god-detail');
+      void import('@/components/olympus/vault-summary');
+      void import('@/components/olympus/editor-bridge-panel');
+      void import('@/components/olympus/craft-apps-panel');
+      void import('@/components/olympus/sync-map-panel');
+      void import('@/components/olympus/god-intelligence-dashboard');
+    };
+    const ric = (window as any).requestIdleCallback as ((cb: () => void, opts?: { timeout: number }) => number) | undefined;
+    const id = ric ? ric(warm, { timeout: 3_000 }) : setTimeout(warm, 1_200);
+    return () => {
+      cancelled = true;
+      if (ric) (window as any).cancelIdleCallback?.(id);
+      else clearTimeout(id as ReturnType<typeof setTimeout>);
+    };
+  }, [booting]);
 
   // Load graph + health on mount
   // cache: 'no-store' on every fetch so the brain graph and health reflect

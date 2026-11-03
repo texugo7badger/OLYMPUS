@@ -9,9 +9,10 @@ import { useOlympus, GOD_ICONS } from '@/lib/olympus-store';
 import {
  Wifi, WifiOff, DollarSign, Key, Terminal,
  Minus, Square, X, Copy, PanelLeftClose, PanelLeftOpen,
- Lightbulb, Gauge, Layers, Users, Sparkles as StudioIcon, Mic, Smartphone,
+ Lightbulb, Gauge, Layers, Users, Sparkles as StudioIcon, Mic, Smartphone, Gem,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 
 const CompactBrainButton = dynamic(() => import('./compact-brain-button'), { ssr: false });
 const ProjectSwitcher = dynamic(() => import('./project-switcher'), { ssr: false });
@@ -69,6 +70,7 @@ export default function StatusBar({
  const activeGod = useOlympus(s => s.activeGod);
   const [theme] = useTheme();
   const language = useLanguage();
+  const router = useRouter();
   const [studio, setStudio] = useState(false);
   const [mobilePair, setMobilePair] = useState(false);
  // W-D1: the idle fallback reads the user's SELECTED god (its own comment
@@ -157,7 +159,9 @@ export default function StatusBar({
 	 const totalTokens = cost?.totalTokens ?? 0;
  const ActiveGodIcon = fallbackGod ? GOD_ICONS[fallbackGod] : null;
 
- const compact = winWidth < 1200;
+ // v0.0.59 — the bar carries mobile + talent now; below 1680px the brain
+ // labels collapse to icons+numbers so the cost block never overlaps them.
+ const compact = winWidth < 1680;
  const hideProject = winWidth < 900;
  const iconOnly = winWidth < 700;
  const hideVersion = winWidth < 1100;
@@ -179,7 +183,7 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.58'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.60'}
    </span>
 )}
  </div>
@@ -226,6 +230,16 @@ export default function StatusBar({
 		   <Smartphone size={12} />
 		 </button>
 		 {mobilePair && <MobilePairDialog onClose={() => setMobilePair(false)} />}
+		 {/* v0.0.59 — the Talent Studio is one click away, not three. */}
+		 <button
+		   onClick={() => { router.push('/talent'); }}
+		   aria-label="Open the Talent Studio"
+		   data-tip="Talent Studio — name a combination, fork a preset"
+		   className="flex items-center gap-1 h-5 px-1.5 rounded-full shrink-0 text-olympus-gold/80 ring-1 ring-olympus-gold/20 hover:bg-olympus-gold/10 hover:text-olympus-gold transition-colors"
+		 >
+		   <Gem size={10} />
+		   <span className="text-[9px] font-mono font-semibold">talent</span>
+		 </button>
 
 		 {/* Compact Brain button — to the RIGHT of Focus Mode. */}
  <CompactBrainButton />
@@ -328,7 +342,7 @@ export default function StatusBar({
 	   : fmtUsd(realUsd)}
 	 </span>
 	 <span
-	   className="text-olympus-text-dim text-[10px] hidden sm:inline"
+	   className="text-olympus-text-dim text-[10px] hidden min-[1800px]:inline"
 	   data-tip={
 	     `Invoice: not exposed by the provider (GO subscription). ` +
 	     `Step cost ${fmtUsd(realUsd)} (OpenCode's per-step model-price field) · ` +

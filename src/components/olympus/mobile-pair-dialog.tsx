@@ -33,12 +33,31 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [modeNote, setModeNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [remote, setRemote] = useState<{ running?: boolean; url?: string | null; pid?: number | null; binary?: string | null } | null>(null);
+  const [remoteBusy, setRemoteBusy] = useState(false);
+
+  // v0.0.60 — in LAN mode the pair route requires the bearer token. The
+  // renderer gets it from the main process over IPC (never over HTTP).
+  const authHeaders = useCallback(async (): Promise<Record<string, string>> => {
+    try {
+      const token = await (window as any).olympus?.sessionToken?.();
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    } catch { return {}; }
+  }, []);
+
+  const loadRemote = useCallback(async () => {
+    try {
+      const res = await fetch('/api/olympus/mobile/tunnel', { cache: 'no-store', headers: await authHeaders() });
+      const d = await res.json();
+      if (res.ok && d?.ok) setRemote(d);
+    } catch { /* no tunnel state */ }
+  }, [authHeaders]);
 
   const load = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch('/api/olympus/mobile/pair', { cache: 'no-store' });
+      const res = await fetch('/api/olympus/mobile/pair', { cache: 'no-store', headers: await authHeaders() });
       const d = await res.json();
       if (!res.ok || d?.ok === false) throw new Error(d?.error || `HTTP ${res.status}`);
       setPair(d);
@@ -47,7 +66,8 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
     } finally {
       setBusy(false);
     }
-  }, []);
+    void loadRemote();
+  }, [authHeaders, loadRemote]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -57,7 +77,7 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
     try {
       const res = await fetch('/api/olympus/mobile/pair', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify(body),
       });
       const d = await res.json();
@@ -69,6 +89,23 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const tunnelAction = async (action: 'start' | 'stop') => {
+    setRemoteBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/olympus/mobile/tunnel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ action }),
+      });
+      const d = await res.json();
+      if (!res.ok || d?.ok === false) throw new Error(d?.error || `HTTP ${res.status}`);
+      setRemote(d);
+    } catch (e: any) {
+      setError(e?.message || 'tunnel failed');
+    } finally { setRemoteBusy(false); }
   };
 
   const copy = async (value: string, label: string) => {
@@ -135,6 +172,45 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
             </span>
             <span className="text-olympus-text-dim">port {pair?.port || 3737}</span>
             <span className="ml-auto text-olympus-text-dim">{pair?.addresses?.length || 0} LAN address(es)</span>
+          </div>
+
+          <div className="rounded-xl border border-olympus-gold/15 bg-olympus-bg/50 px-3 py-2.5 space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Wifi size={10} className={remote?.running ? 'text-olympus-green' : 'text-olympus-text-dim'} />
+              <span className="text-[9px] font-mono uppercase tracking-wide text-olympus-text-dim">remote · internet</span>
+              <span className={cn('ml-auto text-[8px] font-mono uppercase px-1.5 py-0.5 rounded-full', remote?.running ? 'bg-olympus-green/10 text-olympus-green' : 'bg-olympus-gold/10 text-olympus-text-dim')}>
+                {remote?.running ? 'online' : 'off'}
+              </span>
+            </div>
+            {remote?.running && remote.url ? (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <code className="flex-1 min-w-0 truncate text-[9px] font-mono text-olympus-text">{remote.url}</code>
+                  <button
+                    onClick={() => void copy(`${remote.url}/m#t=${encodeURIComponent(token)}`, 'remote')}
+                    className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-green/10 text-olympus-green"
+                  >
+                    <Copy size={9} /> {copied === 'remote' ? 'copied' : 'link'}
+                  </button>
+                </div>
+                <button onClick={() => void tunnelAction('stop')} disabled={remoteBusy} className="text-[9px] font-mono text-olympus-red/80 hover:text-olympus-red disabled:opacity-40">
+                  stop the tunnel
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-[8px] font-mono text-olympus-text-dim leading-relaxed">
+                  A Cloudflare quick tunnel gives the phone an HTTPS link that works outside the house. The token still gates the prompts.
+                </p>
+                <button
+                  onClick={() => void tunnelAction('start')}
+                  disabled={remoteBusy || !remote?.binary}
+                  className="w-full rounded-lg border border-olympus-green/30 bg-olympus-green/10 text-olympus-green px-2 py-1.5 text-[9px] font-mono disabled:opacity-40"
+                >
+                  {remoteBusy ? 'starting…' : remote?.binary ? 'start remote tunnel' : 'cloudflared not installed'}
+                </button>
+              </>
+            )}
           </div>
 
           <div className="rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 px-2.5 py-2 space-y-1.5">

@@ -509,6 +509,9 @@ async function main() {
     expect('R3: zero/negative env tolerated (falls back to the default)', mod.resolveHopTimeoutMs({ OLYMPUS_HOP_TIMEOUT_MS: '0' }) === 1500000, '?');
   }
   const walkerSrc = fs.readFileSync(OLYMPUS + '/src/lib/hop-runtime/walker.ts', 'utf-8');
+  expect('v0.0.59: a null token pair is filled from the session row',
+    /readSessionTotals/.test(walkerSrc) && /tokensIn: result\.tokensIn \?\? totals\.input/.test(walkerSrc),
+    'the spawn token gap is still reported as —');
   // The contract: the runSpawn CALL SITE threads the resolved knob (a named
   // DEFAULT constant elsewhere in the file is the sane-default home, not a
   // violation).

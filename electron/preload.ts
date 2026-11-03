@@ -25,6 +25,9 @@ const olympusApi = {
   /** v0.0.32 — destroy the window and keep the campaign (the sleep contract). */
   hibernate: (): Promise<boolean> => ipcRenderer.invoke('olympus:hibernate'),
 
+  /** v0.0.60 — the LAN bearer token, read in main and handed over IPC. */
+  sessionToken: (): Promise<string | null> => ipcRenderer.invoke('olympus:session-token'),
+
   /**
    * Returns true when running in dev mode (npm run electron:dev). False when
    * packaged (npm run electron:build).

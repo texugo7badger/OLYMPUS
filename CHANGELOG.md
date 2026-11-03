@@ -675,3 +675,13 @@ The base release — the most complete and alternative way to run OLYMPUS.
 - Pairing uses the existing session token in the URL fragment; auth-gated route; rotate revokes.
 - Spawn transport enforces the 14-tool budget (v0.0.53 covered warm only).
 - campaign-report defaults to the current campaign; --all keeps history.
+
+## v0.0.60 — 2026-11-03
+- Remote companion: Cloudflare quick tunnel from the pairing dialog / `npm run mobile:tunnel`; detached, 0600 URL state.
+- Phone theme sync both ways; ambient particle field on /m; one boot loader until data/fonts/SSE; pane preloads.
+- Project archive (09_Archive, never erased); GitHub source-only .gitignore + init/first commit.
+- LAN pairing fixed (IPC token, allowedDevOrigins for LAN/tunnel); hibernation preservation drill.
+
+## v0.0.59 — 2026-11-03
+- /talent one click + status-bar button; hydration-stable sigil; god hero contrast.
+- Hop launch floor (150s); hibernation auto-resume bounded by the window; token fill from session_v2.

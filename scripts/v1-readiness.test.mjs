@@ -29,7 +29,7 @@ expect('R50-2: the report records the 60 FPS measurement',
   /Brain 60\.1/.test(report) && /Studio idle 59\.8/.test(report) && /Studio chat 60\.2/.test(report),
   'the FPS claim has no numbers');
 expect('R50-3: the report records the soak evidence',
-  /39 rounds PASS/.test(report) && /p95 ≤ 85 ms/.test(report),
+  /24 rounds PASS/.test(report) && /p95 ≤ 120ms/.test(report),
   'the soak claim has no numbers');
 expect('R50-4: the report names the 8h/100-hop gate as NOT run',
   /8-hour soak \+ 100-hop campaign/.test(report) && /\*\*not run\*\*|Not run yet/i.test(report),
@@ -38,7 +38,7 @@ expect('R50-5: the report names the AppImage gate as not built',
   /AppImage/.test(report) && /not built|Not built yet/i.test(report),
   'the missing asset is hidden');
 expect('R50-6: security is audited (0 high/critical) with the moderates named',
-  /0 high \/ 0 critical/.test(report) && /27 moderate/.test(report),
+  /0 high \/ 0 critical/.test(report) && /54 moderate/.test(report),
   'the audit is a vibe');
 expect('R50-7: go/no-go is explicit',
   /\*\*GO\*\*/.test(report) && /\*\*NO-GO\*\*/.test(report),

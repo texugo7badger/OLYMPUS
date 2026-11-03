@@ -47,7 +47,12 @@ export default function TalentSigil({
   const nodes = Array.from({ length: 8 }, (_, i) => {
     const angle = (i / 8) * Math.PI * 2 + (seed % 17) / 17;
     const radius = 42 + ((seed >> (i * 3)) & 7);
-    return { x: 64 + Math.cos(angle) * radius, y: 64 + Math.sin(angle) * radius, c: colors[(i + (seed % 4)) % colors.length], r: 1.3 + ((seed >> i) & 3) * 0.45 };
+    // v0.0.59 — round the coordinates: server and browser can disagree on
+    // the LAST float digit (99.94390641147795 vs …94), and React hydrates
+    // attributes as strings. Three decimals is visually identical and
+    // stable across runtimes.
+    const round = (n: number) => Math.round(n * 1000) / 1000;
+    return { x: round(64 + Math.cos(angle) * radius), y: round(64 + Math.sin(angle) * radius), c: colors[(i + (seed % 4)) % colors.length], r: round(1.3 + ((seed >> i) & 3) * 0.45) };
   });
   const peak = `M 64 ${30 + (seed % 7)} L ${84 + (seed % 5)} 94 L ${72 + (seed % 3)} 94 L 64 68 L ${56 - (seed % 3)} 94 L ${44 - (seed % 5)} 94 Z`;
   const initials = name.split(/[-_\s]+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || 'OL';
@@ -104,7 +109,7 @@ export default function TalentSigil({
         <text x="64" y="118">{initials}</text>
       </g>
       {nodes.map((n, i) => (
-        <circle key={i} cx={n.x} cy={n.y} r={n.r} fill={n.c} opacity={stable ? 0.8 : 0.55 + ((i + seed) % 4) * 0.1}>
+        <circle key={i} cx={n.x} cy={n.y} r={n.r} fill={n.c} opacity={(stable ? 0.8 : 0.55 + ((i + seed) % 4) * 0.1).toFixed(2)}>
           {!stable && <animate attributeName="opacity" values="0.45;0.95;0.45" dur={`${3 + (i % 4)}s`} repeatCount="indefinite" />}
         </circle>
       ))}
