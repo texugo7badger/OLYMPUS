@@ -33,17 +33,15 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.75 — the dashboard reads the lane, and the light themes turn regal.**
-God Intelligence counts what actually ran: `dispatchCount` = turns + hops from
-the active lane's telemetry (no more "0 dispatches" for the gods that walked),
-the live campaign comes from the lane's state + plan (23/34, in-flight, parked
-reason, last hop with tokens), and a hop click opens a **live** detail sheet.
-**Eclipse** replaces the old Paper slot (the inverse of Celestial: soft white
-paper, near-black ink, royal gold); **Paper** replaces Arctic (warm manga
-stock, black ink, a vermilion seal). The reference grid resets on filter and
-`npm run references:refresh` diffs the public OriginKit sitemap within the
-daily budget (0 new today). Everything below is evidence, not a promise; the
-open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.76 — talk to one god, and the orb follows the theme.** The Parthenon
+header opens a **chat with the focused god** — its own agent, its own session,
+no Apollo in the middle — with the god's last thought (the reasoning from its
+last hop) and what it is doing above the conversation. The studio's voice orb
+lost its hardcoded near-black background: on light themes it is a paper ball
+with the god's ink ring. The terminal header and composer no longer overlap at
+~1200px, and the i18n audit proves all **268 keys × 7 languages** are present.
+Everything below is evidence, not a promise; the open
+v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -76,7 +74,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**142 PASS / 0 FAIL / 1 declared skip** across 143 suites; a 100-hop
+**144 PASS / 0 FAIL / 1 declared skip** across 145 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

@@ -344,6 +344,8 @@ const ptBR: Dict = {
 };
 
 const DICTS: Partial<Record<Language, Dict>> = { en, 'pt-BR': ptBR };
+/** v0.0.76 — the audit reads the same base the runtime uses. */
+export const BASE_DICTS: Partial<Record<Language, Dict>> = { en, 'pt-BR': ptBR };
 
 export function t(key: string, lang: Language = getLanguage(), vars?: Record<string, string | number>): string {
   const raw = DICTS[lang]?.[key] ?? en[key] ?? key;

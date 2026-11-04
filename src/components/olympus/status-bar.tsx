@@ -173,7 +173,7 @@ export default function StatusBar({
  <div
  data-drag-region
 	 // Flat background (single panel color — no gradient).
-	 className="h-7 shrink-0 bg-olympus-panel border-b border-olympus-gold/10 flex items-center justify-between px-3 text-[11px] font-mono text-olympus-text-dim select-none"
+	 className="h-7 shrink-0 overflow-hidden bg-olympus-panel border-b border-olympus-gold/10 flex items-center justify-between gap-2 px-3 text-[11px] font-mono text-olympus-text-dim select-none"
  style={{ WebkitAppRegion: 'drag', paddingLeft: isMac && isElectron ? 80 : 12 } as React.CSSProperties}
  >
 	 {/* LEFT SIDE: logo + window controls + Compact Brain + focus mode + nav info */}
@@ -183,7 +183,7 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.75'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.76'}
    </span>
 )}
  </div>
@@ -330,7 +330,7 @@ export default function StatusBar({
  </div>
 
  {/* RIGHT SIDE: cost + SSE + APIs (NO window controls — they're on the left now) */}
- <div className="flex items-center gap-3 shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+ <div className="flex min-w-0 items-center gap-3 shrink-0 overflow-hidden" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
  <button
  onClick={() => setLeftPane('cost')}
  className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-olympus-gold/10 transition-colors"
@@ -342,7 +342,7 @@ export default function StatusBar({
 	   : fmtUsd(realUsd)}
 	 </span>
 	 <span
-	   className="text-olympus-text-dim text-[10px] hidden min-[1800px]:inline"
+	   className="text-olympus-text-dim text-[10px] hidden min-[1600px]:inline"
 	   data-tip={
 	     `Invoice: not exposed by the provider (GO subscription). ` +
 	     `Step cost ${fmtUsd(realUsd)} (OpenCode's per-step model-price field) · ` +

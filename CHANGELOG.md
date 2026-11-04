@@ -2,6 +2,49 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.76] — 2026-11-04
+
+### Talk to one god (the Parthenon chat)
+
+- The Parthenon header now opens a **chat with the focused god**: its own
+  agent, its own session, no Apollo in the middle. `POST
+  /api/olympus/god/chat` validates the 10 gods, runs one bounded turn
+  (`opencode run --agent <god>`), parses the JSON stream and returns the text.
+- The modal shows the god's **last thought** (the reasoning captured from its
+  last hop) and what it is doing (task status, tokens) above the conversation.
+- A god chat is a spawn per message: occasional by design, isolated from the
+  terminal's session.
+
+### The voice orb follows the theme
+
+- The studio's voice orb had a hardcoded near-black background — on the light
+  themes it read as a black hole. It now uses the palette: a paper ball with
+  the god's ink ring on light, the original dark plasma on dark.
+
+### Responsive: no more overlap
+
+- The terminal header wraps instead of overlapping the title, the context
+  indicator and the `new session` button; the CLI/gods badges hide below XL.
+- The composer textarea keeps `min-w-0` (the placeholder no longer collapses
+  into a vertical letter column at ~1200px).
+- The status bar clips instead of overlapping (`overflow-hidden`, `min-w-0`)
+  and the cost detail only shows at ≥1600px.
+
+### i18n: the seven languages are complete
+
+- `npm run i18n:audit` mirrors the runtime composition (base + west/east +
+  ui + studio + projects + mobile) and fails on any missing key.
+- It found 2 loader keys (`common.loadingPantheon`, `common.loadingSubtitle`)
+  missing in es/fr/de/ja/zh; they are now translated. **268 keys · 7
+  languages · COMPLETE.**
+
+### Evidence
+
+- `god-chat.test.mjs` 8/8, `i18n-audit.test.mjs` 1/1 (allowlist, own agent, parser, timeout, modal,
+  thought, entry point, no Apollo).
+- `tsc` + eslint clean; production build + standalone verify PASS.
+- Battery: see the release body.
+
 ## [v0.0.75] — 2026-11-04
 
 ### The dashboard reads the lane (live truth)

@@ -795,7 +795,12 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
             aria-label={`Voice of ${godName(activeGod, language)}`}
             className="relative w-40 h-40 rounded-full flex items-center justify-center shrink-0"
             style={{
-              background: 'radial-gradient(circle at 50% 45%, #0B0B16 0%, #06060C 56%, rgba(6,6,12,0.55) 72%, transparent 80%)',
+              // v0.0.76 — the orb follows the theme. The hardcoded near-black
+              // ball read as a black hole on the light themes; the light
+              // family gets a paper ball with the god's ink ring instead.
+              background: theme.mode === 'light'
+                ? `radial-gradient(circle at 50% 45%, ${palette.card} 0%, ${palette.panel} 56%, ${palette.bg}AA 72%, transparent 80%)`
+                : 'radial-gradient(circle at 50% 45%, #0B0B16 0%, #06060C 56%, rgba(6,6,12,0.55) 72%, transparent 80%)',
               boxShadow: `0 0 ${speaking ? 64 : 34}px ${orbTint}55, inset 0 0 0 1px ${orbTint}33`,
             }}
           >

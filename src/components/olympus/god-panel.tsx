@@ -15,12 +15,13 @@
 
 'use client';
 
-import { ChevronsLeft, ChevronsRight, Sparkles, type LucideIcon } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Sparkles, MessageSquare, type LucideIcon } from 'lucide-react';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import { useDocVisible } from '@/lib/use-doc-visible';
 import { useEffect, useState } from 'react';
 import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
+import GodChatModal from './god-chat-modal';
 import { useLanguage, godName, getLanguage } from '@/lib/i18n';
 import type { DemigodLive } from '@/lib/tasks-sheet';
 
@@ -105,6 +106,9 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   // state, timer, and tokens. Clicking a task opens the TASK SHEET (the
   // drill-down: thinking, files, tokens — the "what did he do" answer).
   const [tasks, setTasks] = useState<Record<string, TaskRecord[]>>({});
+  // v0.0.76 — the Parthenon chat: ask the focused god directly.
+  const [chatGod, setChatGod] = useState<string | null>(null);
+
   // W-D3: the campaign stats — the header's N/M progress + the projected
   // time-to-finish (the user's headline ask).
   const [campaignStats, setCampaignStats] = useState<null | { total: number; completed: number; parked: number; projectedRemainingMs: number }>(null);
@@ -172,6 +176,15 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
             </>
           )}
         </span>
+        <button
+          type="button"
+          onClick={() => setChatGod(focusedGod ?? ordered[0]?.god ?? 'apollo')}
+          data-tip={`Chat with ${godName(focusedGod ?? ordered[0]?.god ?? 'apollo', language as any)}`}
+          aria-label={`Chat with ${godName(focusedGod ?? ordered[0]?.god ?? 'apollo', language as any)}`}
+          className="ml-1 text-olympus-text-dim hover:text-olympus-gold transition-colors"
+        >
+          <MessageSquare size={11} />
+        </button>
         {onCollapse && (
           <button
             type="button"
@@ -343,6 +356,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
       </div>
       {children}
       {sheetHop && <TaskSheetModal hopId={sheetHop} onClose={() => setSheetHop(null)} />}
+      {chatGod && <GodChatModal godId={chatGod} onClose={() => setChatGod(null)} />}
     </>
   );
 }

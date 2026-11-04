@@ -2049,10 +2049,10 @@ export default function InteractiveTerminal() {
 
   return (
     <div className="w-full h-full bg-olympus-bg flex flex-col overflow-hidden">
-      <div className="h-8 shrink-0 flex items-center justify-between px-3 border-b border-olympus-gold/10 bg-olympus-panel">
-        <div className="flex items-center gap-1.5 text-[10px] font-mono">
-          <Landmark size={11} style={{ color: GOD_COLOR }} />
-          <span style={{ color: GOD_COLOR }} className="font-semibold">Olympus Terminal</span>
+      <div className="min-h-8 shrink-0 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 px-3 py-1 border-b border-olympus-gold/10 bg-olympus-panel">
+        <div className="flex min-w-0 items-center gap-1.5 text-[10px] font-mono">
+          <Landmark size={11} style={{ color: GOD_COLOR }} className="shrink-0" />
+          <span style={{ color: GOD_COLOR }} className="truncate font-semibold">Olympus Terminal</span>
           <span className="text-olympus-text-dim">-</span>
           {/* Only one mode now. Always "Interactive Mode" (green). */}
           <span className="text-[9px] text-olympus-green">
@@ -2079,9 +2079,9 @@ export default function InteractiveTerminal() {
             />
           </div>
         </div>
-        <div className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim">
+        <div className="flex shrink-0 items-center gap-1 text-[9px] font-mono text-olympus-text-dim">
           {/* Active CLI badge */}
-          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-olympus-gold/10 ring-1 ring-olympus-gold/20 mr-1">
+          <span className="hidden xl:flex items-center gap-1 px-1.5 py-0.5 rounded bg-olympus-gold/10 ring-1 ring-olympus-gold/20 mr-1">
             <span style={{ color: GOD_COLOR }}>CLI:</span>
             <span style={{ color: GOD_COLOR }} className="font-semibold">{activeCli}</span>
           </span>
@@ -2089,8 +2089,8 @@ export default function InteractiveTerminal() {
           {/* Removed the 2-way mode toggle (Apollo | OpenCode).
               Only the Interactive (Apollo) chat remains. The OpenCode Chat pane
               and the TUI are gone from this surface. */}
-          <Users size={9} style={{ color: GOD_COLOR }} />
-          <span>{godStateList.filter(s => s.status !== 'idle').length} gods</span>
+          <Users size={9} style={{ color: GOD_COLOR }} className="hidden xl:inline" />
+          <span className="hidden xl:inline">{godStateList.filter(s => s.status !== 'idle').length} gods</span>
           {todos.length > 0 && (
             <>
               <span className="text-olympus-text-dim">-</span>
@@ -2327,7 +2327,7 @@ export default function InteractiveTerminal() {
                 </button>
               </div>
             )}
-            <div className="flex items-end gap-2">
+            <div className="flex min-w-0 items-end gap-2">
             <span style={{ color: GOD_COLOR }} className="font-mono text-[12px] shrink-0 pb-1">$</span>
             <textarea
               ref={inputRef}
@@ -2345,7 +2345,7 @@ export default function InteractiveTerminal() {
               }}
               disabled={awaitingAnswer || awaitingContext}
               placeholder={awaitingAnswer ? 'click a choice above (or type optional context in the box under the question)...' : awaitingContext ? 'type context below (Cmd+Enter)...' : submitting ? t('terminal.queuePlaceholder', language) : t('terminal.placeholder', language)}
-              className="flex-1 bg-transparent border-0 outline-none resize-none text-[12px] font-mono leading-relaxed text-olympus-text placeholder:text-olympus-text-dim disabled:opacity-50 max-h-48 overflow-y-auto py-1"
+              className="min-w-0 flex-1 bg-transparent border-0 outline-none resize-none text-[12px] font-mono leading-relaxed text-olympus-text placeholder:text-olympus-text-dim disabled:opacity-50 max-h-48 overflow-y-auto py-1"
             />
             {/* Task 3 — the always-visible "ctx" toggle button is gone.
                 Additional context is now collected inline under each

@@ -143,7 +143,21 @@ export const EXTRA_DICTS_WEST: Record<string, Record<string, string>> = {
 
 import { EXTRA_DICTS_EAST } from './i18n-extra-east';
 
+// v0.0.76 — the loader strings were missing in the five non-English
+// languages (the audit caught them). They live here so the base dictionary
+// stays untouched.
+const LOADER_I18N: Record<string, Record<string, string>> = {
+  es: { 'common.loadingPantheon': 'cargando el panteón', 'common.loadingSubtitle': '10 dioses · 122 semidioses · la bóveda está despertando' },
+  fr: { 'common.loadingPantheon': 'chargement du panthéon', 'common.loadingSubtitle': "10 dieux · 122 demi-dieux · le vault s'éveille" },
+  de: { 'common.loadingPantheon': 'das Pantheon lädt', 'common.loadingSubtitle': '10 Götter · 122 Halbgötter · der Vault erwacht' },
+  ja: { 'common.loadingPantheon': 'パンテオンを読み込み中', 'common.loadingSubtitle': '10柱の神 · 122人の半神 · ヴォールトが目覚める' },
+  zh: { 'common.loadingPantheon': '正在加载万神殿', 'common.loadingSubtitle': '10 位神 · 122 位半神 · 宝库正在苏醒' },
+};
+
 export const EXTRA_DICTS: Record<string, Record<string, string>> = {
   ...EXTRA_DICTS_WEST,
   ...EXTRA_DICTS_EAST,
 };
+for (const [lang, dict] of Object.entries(LOADER_I18N)) {
+  EXTRA_DICTS[lang] = { ...(EXTRA_DICTS[lang] ?? {}), ...dict };
+}
