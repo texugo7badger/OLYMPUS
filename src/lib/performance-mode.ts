@@ -28,3 +28,8 @@ export function setPerformanceMode(low: boolean): void {
   applyPerformanceMode(low);
   try { window.dispatchEvent(new CustomEvent('olympus:performance', { detail: { low } })); } catch { /* no window */ }
 }
+
+/** v0.0.69 — apply the saved preference before the first paint. */
+export function bootPerformanceMode(): void {
+  try { if (getPerformanceMode()) applyPerformanceMode(true); } catch { /* private */ }
+}

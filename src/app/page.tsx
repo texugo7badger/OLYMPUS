@@ -13,6 +13,7 @@ import OlympusLoader from '@/components/olympus/olympus-loader';
 import NotificationToast from '@/components/olympus/notification-toast';
 import { getPanelLoadingCount, panelLoadingBump, subscribePanelLoading } from '@/lib/panel-loading-bus';
 import { initTheme } from '@/lib/theme-store';
+import { bootPerformanceMode } from '@/lib/performance-mode';
 
 /* ------------------------------------------------------------------ */
 /* ChunkErrorBoundary — catches ChunkLoadError from Turbopack HMR.     */
@@ -332,6 +333,7 @@ export default function OlympusWorkspace() {
 
   useEffect(() => {
     void initTheme();
+    bootPerformanceMode();
     // v0.0.61 — crash-loop SAFE MODE (?safe=1): no terminal pane, no
     // decorative surfaces. The app still walks campaigns and shows the brain.
     try {

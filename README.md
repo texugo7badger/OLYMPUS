@@ -41,21 +41,23 @@
 |---|---|
 | <img src="screenshots/09-mobile-studio.png" width="380" alt="OLYMPUS mobile creative mode — progress per god, the plasma ring and hold-to-talk" /> | <img src="screenshots/11-terminal.png" width="760" alt="OLYMPUS terminal in a fresh session — the brain atlas on the left, the clean terminal on the right" /> |
 
+| OLYMPUS with no project selected |
+|---|
+| <img src="screenshots/12-empty.png" width="960" alt="OLYMPUS with no project selected — the empty brain and the welcome terminal" /> |
+
 </div>
 
 A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app — no mockups.
 
 ## Latest
 
-**v0.0.68 — the interaction release.** The terminal transcript now shows
-**every attached file** (not only the image), the task sheet shows the
-**build's crystal** next to its name, and the live preview's **Mark** finally
-works: a transparent overlay captures the click inside the iframe (cross-origin
-clicks never bubbled), so Athena's click-to-edit gets the element and the
-instruction. The gods' voices are more distinct (the multilingual neural pool
-gives the Portuguese male gods five voices instead of one). On the phone, a
-keyboard fallback sends a request to Apollo when the mic is blocked. Everything
-below is evidence, not a promise; the open v1.0 gates are named in
+**v0.0.69 — the performance + campaign report release.** The saved
+**performance mode** is applied before the first paint (the brain atlas starts
+on battery-saver, the studio drops to 28 particles, the ambient field renders
+nothing), so a low-end PC or phone keeps the data live and the frames calm.
+The AIME campaign is measured, not narrated: **60/79 hops**, 19 pending, two
+in flight, p50 ≈ 12.9 min/hop; the lane is resumable. Everything below is
+evidence, not a promise; the open v1.0 gates are named in
 [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
@@ -125,7 +127,7 @@ renders blank. The full table and speech locales live in
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
-**v0.0.68.** The phone opens `/m` — one screen, voice first: the plasma ring
+**v0.0.69.** The phone opens `/m` — one screen, voice first: the plasma ring
 fills the view, **hold the mic in the middle**, speak, release; the server STT
 transcribes and the request goes to Apollo in the active project's lane. The
 god row below the ring picks the voice/persona; the details sheet holds the
