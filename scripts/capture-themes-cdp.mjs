@@ -32,10 +32,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const THEMES = [
   ['olympus', 'Olympus', 'dark'], ['obsidian', 'Obsidian', 'dark'], ['ember', 'Ember', 'dark'],
   ['violet', 'Violet', 'dark'], ['forest', 'Forest', 'dark'], ['ice', 'Ice', 'dark'],
-  ['parchment', 'Parchment', 'light'], ['paper', 'Paper', 'light'], ['mist', 'Mist', 'light'],
+  ['parchment', 'Parchment', 'light'], ['eclipse', 'Eclipse', 'light'], ['mist', 'Mist', 'light'],
   ['blossom', 'Blossom', 'light'], ['sand', 'Sand', 'light'], ['mint', 'Mint', 'light'],
   ['vampire', 'Vampire', 'dark'], ['celestial', 'Celestial', 'dark'], ['abyss', 'Abyss', 'dark'],
-  ['rosewood', 'Rosewood', 'dark'], ['ivory', 'Ivory', 'light'], ['arctic', 'Arctic', 'light'],
+  ['rosewood', 'Rosewood', 'dark'], ['ivory', 'Ivory', 'light'], ['paper', 'Paper', 'light'],
 ];
 
 function launchChrome() {
@@ -152,7 +152,12 @@ async function main() {
       manifest.push({ id, name, mode, file: `screenshots/themes/${id}.png`, capturedAt: new Date().toISOString() });
       console.log('shot', id, name);
     }
-    fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+    // Merge with the existing manifest: capturing a subset must not drop the
+    // other themes' evidence.
+    let previous = [];
+    try { previous = JSON.parse(fs.readFileSync(path.join(OUT, 'manifest.json'), 'utf-8')); } catch { /* first run */ }
+    const byId = new Map([...previous, ...manifest].map((t) => [t.id, t]));
+    fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify([...byId.values()], null, 2) + '\n');
     // Restore the user's theme (the capture must not change their app).
     if (original) await setTheme(original);
     console.log('manifest written', manifest.length, 'themes');

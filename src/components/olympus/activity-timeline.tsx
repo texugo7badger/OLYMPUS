@@ -91,6 +91,8 @@ export default function ActivityTimeline() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   // W1-5: the drill-down — click a hop/task row for the full sheet.
   const [sheetHop, setSheetHop] = useState<string | null>(null);
+  // v0.0.75 — the lane the clicked hop belongs to (the feed mixes campaigns).
+  const [sheetLane, setSheetLane] = useState<string | null>(null);
   // The PARITY poll (v0.0.4): the same /api/olympus/tasks the Parthenon
   // reads — the running hop rows get their live progress bar here too.
   // W-D3: the campaign stats ride the same poll — the ETA card (the
@@ -352,7 +354,7 @@ export default function ActivityTimeline() {
                     onClick={() => {
                       setActiveGod(ep.god);
                       pushEvent({ type: 'timeline_select', god: ep.god, msg: `Focused ${ep.god} from timeline`, ts: new Date().toISOString() });
-                      if (hopId) setSheetHop(hopId);
+                      if (hopId) { setSheetHop(hopId); setSheetLane((ep as any).lane ?? null); }
                     }}
                     hopId={hopId}
                     hopTask={hopTask}
@@ -377,7 +379,7 @@ export default function ActivityTimeline() {
           </div>
         )}
       </div>
-      {sheetHop && <TaskSheetModal hopId={sheetHop} onClose={() => setSheetHop(null)} />}
+      {sheetHop && <TaskSheetModal hopId={sheetHop} lane={sheetLane} onClose={() => { setSheetHop(null); setSheetLane(null); }} />}
     </div>
   );
 }

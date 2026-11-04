@@ -1,8 +1,8 @@
 # OLYMPUS Architecture
 
-> OLYMPUS v0.0.61 — multi-agent AI operating system on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 122 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
+> OLYMPUS v0.0.74 — multi-agent AI operating system on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 122 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
 >
-> Counts in this document are the v0.0.61 truth: 132 agents (10 gods incl. Atlas + 122 demigods), 334 top-level skills, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
+> Counts in this document are the v0.0.74 truth: 132 agents (10 gods incl. Atlas + 122 demigods), 334 top-level skills, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
 
 ![OLYMPUS architecture](public/diagrams/architecture.svg)
 
@@ -81,36 +81,7 @@ Live events (`GET /event`) are mapped to the same UI event shapes the one-shot C
 
 ---
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│  Electron Main Process (electron/main.ts)                      │
-│  • Spawns Next.js on localhost:3737                            │
-│  • Native BrowserWindow (1600×1000)                            │
-│  • node-pty PTYs (shared by IPC + the Terminal Bridge)         │
-│  • Terminal Bridge :3740  (token-gated, 127.0.0.1 only)        │
-│  • <webview> for embedded frames · IPC bridge                  │
-└────────────────────────────────────────────────────────────────┘
-                          ↕                            ↕
-┌────────────────────────────────────────────────────────────────┐
-│  Next.js Server (localhost:3737)                               │
-│  • API routes: /api/olympus/*, /api/vault/*, /api/symphony/*   │
-│  • /api/olympus/editor/{detect,launch,status} — editor mgmt    │
-│  • SSE streams + WebSocket bridge (:3738)                      │
-│  • React 19 + Next.js 16 dashboard                             │
-└────────────────────────────────────────────────────────────────┘
-                          ↕
-┌────────────────────────────────────────────────────────────────┐
-│  OpenCode + Agents                                             │
-│  • Warm `opencode serve` (:3777) — one persistent instance per  │
-│    app run, reused by every terminal message (no cold start)    │
-│  • 10 OLYMPUS gods → 122 demigods → 44 curated tools / 28 MCP servers │
-│  • Cascading compression (caveman → strategic-compact →        │
-│    Symphony harmonics)                                         │
-│  • Cache instrumentation (olympus-go-cache + context-cache +   │
-│    native OpenCode caching)                                    │
-│  • Self-curating brain (VaultBrain v3.0)                       │
-└────────────────────────────────────────────────────────────────┘
-```
+![The three layers](public/diagrams/architecture-layers.svg)
 
 ---
 
@@ -209,24 +180,7 @@ plugins were retired in #188/#189 — v2 covers them natively):
 
 ## Vault structure
 
-```
-~/OLYMPUS-VAULT/
-├── 00_Inbox/              # Incoming archives + uploads
-├── 01_Gods/               # Per-god reference notes
-├── 02_Projects/           # Project notes (one folder per project)
-├── 03_Index/              # Skill index (skill-vec.db, skill-vocab.json, arsenal-resonance.jsonl)
-├── 04_Knowledge/          # Reference docs (security, testing, integrations, per-stack)
-├── 05_Auto_Learning/      # Instincts + vibrations + patterns
-│   ├── instincts/<god>/{seed,empirical,_archive}/
-│   ├── instincts/sub-agents/<demigod>/{seed,empirical,_archive}/
-│   ├── vibrations/         # Symphony runtime (registry.jsonl, templates.json, metrics.json)
-│   ├── patterns/           # Cross-god dispatch chain patterns
-│   └── evolved/            # Promoted instincts
-├── 06_Activity_Feed/      # live.jsonl (every dispatch + outcome)
-├── 07_Reviews/            # Code review snapshots
-├── 08_Templates/          # Vault templates
-└── 09_Archive/            # Archived instincts (cold storage)
-```
+![The vault map](public/diagrams/vault-map.svg)
 
 ---
 

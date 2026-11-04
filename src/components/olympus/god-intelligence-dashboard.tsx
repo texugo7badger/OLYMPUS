@@ -81,6 +81,18 @@ interface BrainStats {
  totalEmpiricalInstincts: number;
  };
  sparkline: Array<{ date: string; hitRate: number; dispatches: number }>;
+ // v0.0.75 — the active lane's real campaign (state + plan), not the last
+ // campaign_start that happened to be in the activity feed.
+ campaign?: {
+  project: string;
+  campaignId: string | null;
+  completed: number;
+  total: number;
+  inFlight: string[];
+  parked: string | null;
+  parkedReason: string | null;
+  lastHop: { hop: string; status: string; ts: string; tokensIn: number | null; tokensOut: number | null } | null;
+ } | null;
  currentStrategy: string;
  recommendedStrategy: string;
  strategyReasoning: string;
@@ -190,7 +202,7 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  );
  }
 
- const { aggregate, sparkline, currentStrategy, recommendedStrategy, strategyReasoning, perGod } = stats;
+ const { aggregate, sparkline, currentStrategy, recommendedStrategy, strategyReasoning, perGod, campaign } = stats;
  const strategyDiffers = recommendedStrategy !== currentStrategy;
 
  // Find the max sparkline hitRate for scaling
@@ -208,19 +220,28 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
 
  {/* #227 — LIVE CAMPAIGN: the hops in flight RIGHT NOW (god, lane, artifacts,
      elapsed). Driven by the single hop SSE stream, not a panel poll. */}
- {(live.inFlight.length > 0 || live.campaign?.status === 'running') && (
+ {(live.inFlight.length > 0 || campaign || live.campaign?.status === 'running') && (
   <div className="rounded-lg border border-olympus-gold/30 bg-olympus-gold/5 p-3 mb-4">
    <div className="flex items-center gap-2 mb-2">
     <span className={cn('w-1.5 h-1.5 rounded-full', live.connected ? 'bg-olympus-green animate-pulse' : 'bg-olympus-amber-soft')} />
     <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase tracking-wide">Live campaign</span>
-    {live.campaign?.campaignId && (
-     <span className="text-[9px] font-mono text-olympus-text-dim">{live.campaign.campaignId}</span>
+    {(campaign?.campaignId ?? live.campaign?.campaignId) && (
+     <span className="text-[9px] font-mono text-olympus-text-dim">{campaign?.campaignId ?? live.campaign?.campaignId}</span>
     )}
-    {live.campaign?.project && <span className="text-[9px] font-mono text-olympus-text-dim">· {live.campaign.project}</span>}
+    {(campaign?.project ?? live.campaign?.project) && <span className="text-[9px] font-mono text-olympus-text-dim">· {campaign?.project ?? live.campaign?.project}</span>}
     <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">
-     {live.campaign ? `${live.campaign.completed}/${live.campaign.total} hop(s)` : `${live.inFlight.length} in flight`}
+     {campaign ? `${campaign.completed}/${campaign.total} hop(s)` : live.campaign ? `${live.campaign.completed}/${live.campaign.total} hop(s)` : `${live.inFlight.length} in flight`}
     </span>
    </div>
+   {campaign?.lastHop && (
+    <div className="mb-1.5 flex items-center gap-2 text-[8.5px] font-mono text-olympus-text-dim">
+     <span className="text-olympus-gold">last</span>
+     <span className="text-olympus-text">{campaign.lastHop.hop}</span>
+     <span>{campaign.lastHop.status}</span>
+     <span>{campaign.lastHop.tokensIn ?? '—'} in / {campaign.lastHop.tokensOut ?? '—'} out</span>
+     {campaign.parked && <span className="text-olympus-amber-soft">parked: {campaign.parked} ({campaign.parkedReason ?? 'named'})</span>}
+    </div>
+   )}
    <div className="space-y-1.5">
     {live.inFlight.map((h) => {
      const Icon = GOD_ICONS[h.god] ?? GOD_ICONS.atlas;

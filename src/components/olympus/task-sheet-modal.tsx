@@ -92,7 +92,7 @@ function openInEditor(file: string) {
   }).catch(() => {});
 }
 
-export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onClose: () => void }) {
+export default function TaskSheetModal({ hopId, lane, onClose }: { hopId: string; lane?: string | null; onClose: () => void }) {
   const [task, setTask] = useState<TaskRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [showThinking, setShowThinking] = useState(true);
@@ -105,23 +105,29 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
     return () => clearInterval(timer);
   }, [task?.status]);
 
+  // v0.0.75 — the sheet reads the LANE the hop belongs to (the activity feed
+  // mixes campaigns; without the lane a hop from another project read as
+  // "no task record"), and it stays LIVE while the hop is running.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const load = async (first: boolean) => {
       try {
-        const r = await fetch('/api/olympus/tasks', { cache: 'no-store' });
+        const qs = lane ? `?lane=${encodeURIComponent(lane)}` : '';
+        const r = await fetch(`/api/olympus/tasks${qs}`, { cache: 'no-store' });
         const d = await r.json();
         if (cancelled) return;
         const found: TaskRecord | undefined = (d?.tasks || []).find((t: TaskRecord) => t.id === hopId);
         setTask(found ?? null);
       } catch {
-        if (!cancelled) setTask(null);
+        if (!cancelled && first) setTask(null);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && first) setLoading(false);
       }
-    })();
-    return () => { cancelled = true; };
-  }, [hopId]);
+    };
+    void load(true);
+    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void load(false); }, 5000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [hopId, lane]);
 
   const onKey = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') onClose();

@@ -1,21 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="OLYMPUS Paper theme">
-  <rect width="640" height="360" rx="18" fill="#DCDCD6"/>
-  <rect x="18" y="18" width="604" height="30" rx="8" fill="#E6E6E0"/>
-  <circle cx="34" cy="33" r="5" fill="#7E5F33"/>
-  <text x="48" y="37" font-family="ui-monospace,monospace" font-size="12" fill="#1A1A1C">OLYMPUS · Paper</text>
-  <text x="560" y="37" font-family="ui-monospace,monospace" font-size="10" fill="#4F4F54">light</text>
-  <rect x="18" y="60" width="180" height="282" rx="10" fill="#E6E6E0"/>
-  <rect x="210" y="60" width="412" height="160" rx="10" fill="#EFEFE9"/>
-  <rect x="210" y="232" width="200" height="110" rx="10" fill="#EFEFE9"/>
-  <rect x="422" y="232" width="200" height="110" rx="10" fill="#EFEFE9"/>
-  <path d="M300 176 L326 112 L352 176 L338 176 L326 146 L314 176 Z" fill="#7E5F33"/>
-  <circle cx="326" cy="96" r="4" fill="#6A4F86"/>
-  <rect x="230" y="196" width="120" height="8" rx="4" fill="#7E5F33" opacity=".9"/>
-  <rect x="230" y="210" width="70" height="5" rx="2.5" fill="#4F4F54" opacity=".6"/>
-  <rect x="228" y="248" width="80" height="7" rx="3" fill="#7E5F33"/>
-  <rect x="228" y="262" width="120" height="5" rx="2.5" fill="#4F4F54" opacity=".5"/>
-  <rect x="440" y="248" width="80" height="7" rx="3" fill="#2F6F7A"/>
-  <rect x="440" y="262" width="120" height="5" rx="2.5" fill="#4F4F54" opacity=".5"/>
-  <g><rect x="28" y="90" width="34" height="18" rx="4" fill="#7E5F33"/><rect x="70" y="90" width="34" height="18" rx="4" fill="#6E522B"/><rect x="112" y="90" width="34" height="18" rx="4" fill="#3E5F83"/><rect x="154" y="90" width="34" height="18" rx="4" fill="#3F7553"/><rect x="28" y="116" width="34" height="18" rx="4" fill="#6A4F86"/><rect x="70" y="116" width="34" height="18" rx="4" fill="#2F7A69"/><rect x="112" y="116" width="34" height="18" rx="4" fill="#94443C"/><rect x="154" y="116" width="34" height="18" rx="4" fill="#2F6F7A"/></g>
-  <text x="28" y="330" font-family="ui-monospace,monospace" font-size="9" fill="#4F4F54">paper · text #1A1A1C · dim #4F4F54</text>
+  <rect width="640" height="360" rx="18" fill="#F8F5EC"/>
+  <rect x="18" y="18" width="604" height="30" rx="8" fill="#FCFAF3"/>
+  <circle cx="34" cy="33" r="5" fill="#2A2A2A"/>
+  <text x="48" y="37" font-family="ui-monospace,monospace" font-size="12" fill="#121212">OLYMPUS · Paper</text>
+  <text x="560" y="37" font-family="ui-monospace,monospace" font-size="10" fill="#4E4A42">light</text>
+  <rect x="18" y="60" width="180" height="282" rx="10" fill="#FCFAF3"/>
+  <rect x="210" y="60" width="412" height="160" rx="10" fill="#FFFFFF"/>
+  <rect x="210" y="232" width="200" height="110" rx="10" fill="#FFFFFF"/>
+  <rect x="422" y="232" width="200" height="110" rx="10" fill="#FFFFFF"/>
+  <path d="M300 176 L326 112 L352 176 L338 176 L326 146 L314 176 Z" fill="#2A2A2A"/>
+  <circle cx="326" cy="96" r="4" fill="#4A3A5A"/>
+  <rect x="230" y="196" width="120" height="8" rx="4" fill="#2A2A2A" opacity=".9"/>
+  <rect x="230" y="210" width="70" height="5" rx="2.5" fill="#4E4A42" opacity=".6"/>
+  <rect x="228" y="248" width="80" height="7" rx="3" fill="#2A2A2A"/>
+  <rect x="228" y="262" width="120" height="5" rx="2.5" fill="#4E4A42" opacity=".5"/>
+  <rect x="440" y="248" width="80" height="7" rx="3" fill="#2F5A62"/>
+  <rect x="440" y="262" width="120" height="5" rx="2.5" fill="#4E4A42" opacity=".5"/>
+  <g><rect x="28" y="90" width="34" height="18" rx="4" fill="#2A2A2A"/><rect x="70" y="90" width="34" height="18" rx="4" fill="#5A4A3A"/><rect x="112" y="90" width="34" height="18" rx="4" fill="#2F4A6A"/><rect x="154" y="90" width="34" height="18" rx="4" fill="#2F5A3F"/><rect x="28" y="116" width="34" height="18" rx="4" fill="#4A3A5A"/><rect x="70" y="116" width="34" height="18" rx="4" fill="#2F5F55"/><rect x="112" y="116" width="34" height="18" rx="4" fill="#A83A2E"/><rect x="154" y="116" width="34" height="18" rx="4" fill="#2F5A62"/></g>
+  <text x="28" y="330" font-family="ui-monospace,monospace" font-size="9" fill="#4E4A42">paper · text #121212 · dim #4E4A42</text>
 </svg>

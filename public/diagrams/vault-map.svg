@@ -1,0 +1,39 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="THE VAULT, FOLDER BY FOLDER — where the brain lives on disk">
+  <rect width="1200" height="630" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="629" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">THE VAULT, FOLDER BY FOLDER</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">where the brain lives on disk</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <text x="60" y="124" fill="#D4A574" font-family="'JetBrains Mono',monospace" font-size="12">~/OLYMPUS-VAULT/</text>
+  <text x="70" y="154" fill="#D4A574" font-family="'JetBrains Mono',monospace" font-size="11.5">00_Inbox/</text>
+  <text x="330" y="154" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">incoming archives + uploads</text>
+  <line x1="60" y1="164" x2="1140" y2="164" stroke="#2A2E38" stroke-opacity="0.5"/>
+  <text x="70" y="198" fill="#67C9E8" font-family="'JetBrains Mono',monospace" font-size="11.5">01_Gods/</text>
+  <text x="330" y="198" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">per-god reference notes</text>
+  <line x1="60" y1="208" x2="1140" y2="208" stroke="#2A2E38" stroke-opacity="0.5"/>
+  <text x="70" y="242" fill="#B79BE0" font-family="'JetBrains Mono',monospace" font-size="11.5">02_Projects/</text>
+  <text x="330" y="242" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">one folder per project (plan, state, telemetry, artifacts)</text>
+  <line x1="60" y1="252" x2="1140" y2="252" stroke="#2A2E38" stroke-opacity="0.5"/>
+  <text x="70" y="286" fill="#9CC48E" font-family="'JetBrains Mono',monospace" font-size="11.5">03_Index/</text>
+  <text x="330" y="286" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">skill-vec.db · skill-vocab.json · arsenal-resonance.jsonl</text>
+  <line x1="60" y1="296" x2="1140" y2="296" stroke="#2A2E38" stroke-opacity="0.5"/>
+  <text x="70" y="330" fill="#E8A45C" font-family="'JetBrains Mono',monospace" font-size="11.5">04_Knowledge/</text>
+  <text x="330" y="330" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">reference docs: security, testing, integrations, per-stack</text>
+  <line x1="60" y1="340" x2="1140" y2="340" stroke="#2A2E38" stroke-opacity="0.5"/>
+  <text x="70" y="374" fill="#C23A45" font-family="'JetBrains Mono',monospace" font-size="11.5">05_Auto_Learning/</text>
+  <text x="330" y="374" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">instincts/&lt;god&gt;/{seed,empirical,_archive} · sub-agents/&lt;demigod&gt;/… · vibrations · patterns · evolved</text>
+  <line x1="60" y1="384" x2="1140" y2="384" stroke="#2A2E38" stroke-opacity="0.5"/>
+  <text x="70" y="418" fill="#67C9E8" font-family="'JetBrains Mono',monospace" font-size="11.5">06_Activity_Feed/</text>
+  <text x="330" y="418" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">live.jsonl — every dispatch + outcome</text>
+  <line x1="60" y1="428" x2="1140" y2="428" stroke="#2A2E38" stroke-opacity="0.5"/>
+  <text x="70" y="462" fill="#9CC48E" font-family="'JetBrains Mono',monospace" font-size="11.5">07_Reviews/</text>
+  <text x="330" y="462" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">code review snapshots</text>
+  <line x1="60" y1="472" x2="1140" y2="472" stroke="#2A2E38" stroke-opacity="0.5"/>
+  <text x="70" y="506" fill="#E8A45C" font-family="'JetBrains Mono',monospace" font-size="11.5">08_Templates/</text>
+  <text x="330" y="506" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">vault templates</text>
+  <line x1="60" y1="516" x2="1140" y2="516" stroke="#2A2E38" stroke-opacity="0.5"/>
+  <text x="70" y="550" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11.5">09_Archive/</text>
+  <text x="330" y="550" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">archived instincts (cold storage)</text>
+  <line x1="60" y1="560" x2="1140" y2="560" stroke="#2A2E38" stroke-opacity="0.5"/>
+  <text x="60" y="600" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">The brain is files: every instinct, pattern and dispatch is readable, versionable and prunable.</text>
+</svg>

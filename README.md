@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.62, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.74, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -33,16 +33,17 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.74 — paste anything, read `[name]`.** The terminal composer accepts
-**Ctrl+V** with images, documents and archives: images ride the reference-image
-lane, everything else the upload lane, and each attachment becomes a compact
-**`[name]`** token in the prompt (the staged image too) — the input stays
-clean. `npm run agents:census` publishes the pruning evidence (122 declared ·
-14 dispatched · 3 referenced; 115 zero-dispatch candidates, a proposal, never
-a blind cut). Every document in the Documentation table now carries a
-self-explanatory SVG, and the README architecture block is a diagram.
-Everything below is evidence, not a promise; the open v1.0 gates are named in
-[V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.75 — the dashboard reads the lane, and the light themes turn regal.**
+God Intelligence counts what actually ran: `dispatchCount` = turns + hops from
+the active lane's telemetry (no more "0 dispatches" for the gods that walked),
+the live campaign comes from the lane's state + plan (23/34, in-flight, parked
+reason, last hop with tokens), and a hop click opens a **live** detail sheet.
+**Eclipse** replaces the old Paper slot (the inverse of Celestial: soft white
+paper, near-black ink, royal gold); **Paper** replaces Arctic (warm manga
+stock, black ink, a vermilion seal). The reference grid resets on filter and
+`npm run references:refresh` diffs the public OriginKit sitemap within the
+daily budget (0 new today). Everything below is evidence, not a promise; the
+open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -75,7 +76,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**141 PASS / 0 FAIL / 1 declared skip** across 142 suites; a 100-hop
+**142 PASS / 0 FAIL / 1 declared skip** across 143 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache
@@ -179,10 +180,10 @@ click a card to open it.
 |---|---|---|
 | [<img src="screenshots/themes/olympus.svg" width="360" alt="Olympus" />](screenshots/themes/olympus.svg) | [<img src="screenshots/themes/obsidian.svg" width="360" alt="Obsidian" />](screenshots/themes/obsidian.svg) | [<img src="screenshots/themes/ember.svg" width="360" alt="Ember" />](screenshots/themes/ember.svg) |
 | [<img src="screenshots/themes/violet.svg" width="360" alt="Violet" />](screenshots/themes/violet.svg) | [<img src="screenshots/themes/forest.svg" width="360" alt="Forest" />](screenshots/themes/forest.svg) | [<img src="screenshots/themes/ice.svg" width="360" alt="Ice" />](screenshots/themes/ice.svg) |
-| [<img src="screenshots/themes/parchment.svg" width="360" alt="Parchment" />](screenshots/themes/parchment.svg) | [<img src="screenshots/themes/paper.svg" width="360" alt="Paper" />](screenshots/themes/paper.svg) | [<img src="screenshots/themes/mist.svg" width="360" alt="Mist" />](screenshots/themes/mist.svg) |
+| [<img src="screenshots/themes/parchment.svg" width="360" alt="Parchment" />](screenshots/themes/parchment.svg) | [<img src="screenshots/themes/eclipse.svg" width="360" alt="Eclipse" />](screenshots/themes/eclipse.svg) | [<img src="screenshots/themes/mist.svg" width="360" alt="Mist" />](screenshots/themes/mist.svg) |
 | [<img src="screenshots/themes/blossom.svg" width="360" alt="Blossom" />](screenshots/themes/blossom.svg) | [<img src="screenshots/themes/sand.svg" width="360" alt="Sand" />](screenshots/themes/sand.svg) | [<img src="screenshots/themes/mint.svg" width="360" alt="Mint" />](screenshots/themes/mint.svg) |
 | [<img src="screenshots/themes/vampire.svg" width="360" alt="Vampire" />](screenshots/themes/vampire.svg) | [<img src="screenshots/themes/celestial.svg" width="360" alt="Celestial" />](screenshots/themes/celestial.svg) | [<img src="screenshots/themes/abyss.svg" width="360" alt="Abyss" />](screenshots/themes/abyss.svg) |
-| [<img src="screenshots/themes/rosewood.svg" width="360" alt="Rosewood" />](screenshots/themes/rosewood.svg) | [<img src="screenshots/themes/ivory.svg" width="360" alt="Ivory" />](screenshots/themes/ivory.svg) | [<img src="screenshots/themes/arctic.svg" width="360" alt="Arctic" />](screenshots/themes/arctic.svg) |
+| [<img src="screenshots/themes/rosewood.svg" width="360" alt="Rosewood" />](screenshots/themes/rosewood.svg) | [<img src="screenshots/themes/ivory.svg" width="360" alt="Ivory" />](screenshots/themes/ivory.svg) | [<img src="screenshots/themes/paper.svg" width="360" alt="Paper" />](screenshots/themes/paper.svg) |
 
 Beyond the presets, the **palette lab** generates all 14 colors of a family
 from a hue + harmony, with contrast floors (text ≥ 7:1, dim ≥ 4.5:1, accent

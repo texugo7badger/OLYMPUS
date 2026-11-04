@@ -122,9 +122,12 @@ export const THEME_PRESETS: ThemePreset[] = [
     bg: '#080D12', panel: '#0C131A', card: '#101923', text: '#D9E5EE', textDim: '#9AABB6',
   }) },
   { id: 'parchment', name: 'Parchment', mode: 'light', colors: light('#B07A3C') },
-  { id: 'paper', name: 'Paper', mode: 'light', colors: light('#7E5F33', {
-    gold: '#7E5F33', amber: '#6E522B', amberSoft: '#8E6E3E',
-    bg: '#DCDCD6', panel: '#E6E6E0', card: '#EFEFE9', text: '#1A1A1C', textDim: '#4F4F54',
+  // v0.0.76 — the inverse of Celestial: soft white paper, black ink, royal
+  // gold. It replaces the old Paper slot (same position, new name/idea).
+  { id: 'eclipse', name: 'Eclipse', mode: 'light', colors: light('#8A6A2F', {
+    gold: '#8A6A2F', amber: '#6E522B', amberSoft: '#A08540',
+    purple: '#5A4A7A', blue: '#3A5A7A', green: '#3F6A4F', red: '#8A3A34', cyan: '#2F6470', teal: '#2F6F62',
+    bg: '#F4F1E8', panel: '#FAF7F0', card: '#FFFFFF', text: '#111111', textDim: '#4A463E',
   }) },
   { id: 'mist', name: 'Mist', mode: 'light', colors: light('#2A727E', {
     gold: '#2A727E', amber: '#25636E', amberSoft: '#3E8590', cyan: '#2A727E',
@@ -169,10 +172,12 @@ export const THEME_PRESETS: ThemePreset[] = [
     blue: '#3E5F83', green: '#3F7553', red: '#94443C', cyan: '#2F6F7A', teal: '#2F7A69',
     bg: '#F2EEE6', panel: '#F8F5EF', card: '#FFFFFF', text: '#1A1712', textDim: '#5A5348',
   }) },
-  { id: 'arctic', name: 'Arctic', mode: 'light', colors: light('#2A6A7A', {
-    gold: '#2A6A7A', amber: '#2A5F6A', amberSoft: '#3A7A8A', purple: '#5A4F86',
-    blue: '#2F5F8A', green: '#2F6F55', red: '#8A3F3F', cyan: '#2A6A7A', teal: '#2A6F6A',
-    bg: '#E8F0F4', panel: '#F0F6F9', card: '#FFFFFF', text: '#10202A', textDim: '#4A5E68',
+  // v0.0.76 — the real Paper: warm manga stock, black ink, a vermilion seal.
+  // It replaces the Arctic slot; high contrast is the point.
+  { id: 'paper', name: 'Paper', mode: 'light', colors: light('#2A2A2A', {
+    gold: '#2A2A2A', amber: '#5A4A3A', amberSoft: '#6A5A48',
+    purple: '#4A3A5A', blue: '#2F4A6A', green: '#2F5A3F', red: '#A83A2E', cyan: '#2F5A62', teal: '#2F5F55',
+    bg: '#F8F5EC', panel: '#FCFAF3', card: '#FFFFFF', text: '#121212', textDim: '#4E4A42',
   }) },
 ];
 

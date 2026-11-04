@@ -316,6 +316,14 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   });
   const visibleRefs = filteredRefs.slice(0, refLimit);
 
+  // v0.0.76 — a filter change starts a NEW grid. Without this reset the
+  // previous page count survived the filter, the sentinel re-fired and the
+  // same cards could mount twice across a re-render (the "repeated
+  // references" the maintainer saw while scrolling).
+  useEffect(() => {
+    setRefLimit(60);
+  }, [query, refCat, refLib, memoryOnly, tab]);
+
   // v0.0.34 — infinite scroll: the sentinel loads the next 60 a little
   // BEFORE the user reaches it (900px). No button, no jank: the cards mount
   // lazily and the preview canvas only exists near the viewport.

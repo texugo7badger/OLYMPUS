@@ -268,8 +268,71 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(payload);
 }
 
+
+// ─── v0.0.75 — THE LIVE LANE ─────────────────────────────────────────────
+// The dashboard used to count only `dispatch_outcome` events from the
+// activity feed. Hop dispatches publish `action: 'hop'`, so a campaign that
+// ran 23 hops showed "0 dispatches" on every god except Apollo. The lane's
+// own telemetry is the truth; this reads it once and merges it below.
+interface LaneTruth {
+  slug: string;
+  lane: string;
+  state: any;
+  plan: any;
+  rows: any[];
+  hopByGod: Record<string, {
+    total: number; completed: number; parked: number;
+    durations: number[]; tokensIn: number; tokensOut: number;
+    lastTs: string | null; lastHop: string | null;
+    success7d: number; total7d: number;
+  }>;
+}
+
+function readLaneTruth(): LaneTruth | null {
+  let slug = '';
+  try { slug = String(JSON.parse(fs.readFileSync(path.join(OLYMPUS_HOME, 'active-project.json'), 'utf-8'))?.slug ?? ''); } catch { /* no pointer */ }
+  if (!slug) return null;
+  const lane = path.join(VAULT, '02_Projects', slug);
+  const json = (file: string) => { try { return JSON.parse(fs.readFileSync(file, 'utf-8')); } catch { return null; } };
+  const state = json(path.join(lane, '.olympus-hop-state.json'));
+  const plan = json(path.join(lane, 'dispatch-plan.json'));
+  let rows: any[] = [];
+  try {
+    rows = fs.readFileSync(path.join(lane, '.olympus-hop-telemetry.jsonl'), 'utf-8')
+      .split('\n').filter(Boolean)
+      .map((l) => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(Boolean);
+  } catch { /* no telemetry yet */ }
+
+  // One row per hop: the newest line wins (a retry rewrites the truth).
+  const byHop = new Map<string, any>();
+  for (const row of rows) {
+    const prev = byHop.get(String(row.hop));
+    if (!prev || String(row.ts) > String(prev.ts)) byHop.set(String(row.hop), row);
+  }
+  const hopByGod: LaneTruth['hopByGod'] = {};
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  for (const row of byHop.values()) {
+    const god = String(row.god || 'global');
+    const b = hopByGod[god] ?? (hopByGod[god] = { total: 0, completed: 0, parked: 0, durations: [], tokensIn: 0, tokensOut: 0, lastTs: null, lastHop: null, success7d: 0, total7d: 0 });
+    b.total += 1;
+    if (String(row.status) === 'completed') b.completed += 1; else b.parked += 1;
+    if (typeof row.durationMs === 'number' && row.durationMs > 0) b.durations.push(row.durationMs);
+    b.tokensIn += Number(row.tokensIn) || 0;
+    b.tokensOut += Number(row.tokensOut) || 0;
+    if (!b.lastTs || String(row.ts) > b.lastTs) { b.lastTs = String(row.ts); b.lastHop = String(row.hop); }
+    const ts = Date.parse(String(row.ts));
+    if (Number.isFinite(ts) && ts >= weekAgo) {
+      b.total7d += 1;
+      if (String(row.status) === 'completed') b.success7d += 1;
+    }
+  }
+  return { slug, lane, state, plan, rows, hopByGod };
+}
+
 async function computeBrainStats(brief: boolean) {
   const allEvents = readLiveFeed();
+  const laneTruth = readLaneTruth();
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
 
@@ -390,7 +453,17 @@ async function computeBrainStats(brief: boolean) {
       },
       shortCircuitHitRate: Math.round(shortCircuitHitRate * 1000) / 1000,
       shortCircuitCount: godScCount,
-      dispatchCount: godDispatches,
+      // v0.0.75 — turns + hops: the lane's telemetry fills the gap the
+      // activity feed left (a hop is a dispatch too).
+      dispatchCount: godDispatches + (laneTruth?.hopByGod[godId]?.total ?? 0),
+      turns: godDispatches,
+      hops: laneTruth?.hopByGod[godId]?.total ?? 0,
+      hopCompleted: laneTruth?.hopByGod[godId]?.completed ?? 0,
+      hopParked: laneTruth?.hopByGod[godId]?.parked ?? 0,
+      hopTokensIn: laneTruth?.hopByGod[godId]?.tokensIn ?? 0,
+      hopTokensOut: laneTruth?.hopByGod[godId]?.tokensOut ?? 0,
+      lastHopAt: laneTruth?.hopByGod[godId]?.lastTs ?? null,
+      lastHop: laneTruth?.hopByGod[godId]?.lastHop ?? null,
       avgConfidence: Math.round(avgConfidence * 1000) / 1000,
       successRate: {
         '7d': success7d !== null ? Math.round(success7d * 1000) / 1000 : null,
@@ -400,7 +473,9 @@ async function computeBrainStats(brief: boolean) {
       topBySamples,
       topByConfidence,
       learningVelocity,
-      avgDurationMs,
+      avgDurationMs: (laneTruth?.hopByGod[godId]?.durations.length ?? 0) > 0
+        ? Math.round(laneTruth!.hopByGod[godId].durations.reduce((a, b) => a + b, 0) / laneTruth!.hopByGod[godId].durations.length)
+        : avgDurationMs,
     };
 
     totalShortCircuits += godScCount;
@@ -471,6 +546,24 @@ async function computeBrainStats(brief: boolean) {
       totalEmpiricalInstincts: allEmpiricalConfidences.length,
     },
     sparkline,
+    // v0.0.75 — the REAL campaign: the active lane's state + plan, never the
+    // last campaign_start that happened to be in the feed.
+    campaign: laneTruth ? {
+      project: laneTruth.slug,
+      campaignId: laneTruth.state?.campaignId ?? null,
+      completed: (laneTruth.state?.completed ?? []).length,
+      total: (laneTruth.plan?.hops ?? []).length || ((laneTruth.state?.completed ?? []).length + ((laneTruth.state?.inFlight ?? []).length)),
+      inFlight: (laneTruth.state?.inFlight ?? []).map((h: any) => (typeof h === 'string' ? h : h?.hopId)).filter(Boolean),
+      parked: laneTruth.state?.parked?.hopId ?? null,
+      parkedReason: laneTruth.state?.parked?.reason ?? null,
+      lastHop: laneTruth.rows.length > 0 ? {
+        hop: laneTruth.rows[laneTruth.rows.length - 1].hop,
+        status: laneTruth.rows[laneTruth.rows.length - 1].status,
+        ts: laneTruth.rows[laneTruth.rows.length - 1].ts,
+        tokensIn: laneTruth.rows[laneTruth.rows.length - 1].tokensIn,
+        tokensOut: laneTruth.rows[laneTruth.rows.length - 1].tokensOut,
+      } : null,
+    } : null,
     currentStrategy,
     recommendedStrategy: recommended,
     strategyReasoning,

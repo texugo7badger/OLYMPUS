@@ -2,6 +2,52 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.75] — 2026-11-04
+
+### The dashboard reads the lane (live truth)
+
+- `brain-stats` now reads the **active lane's hop telemetry** and merges it
+  with the activity feed: per-god `dispatchCount` = turns + hops, plus
+  `hops`, `hopCompleted`, `hopParked`, hop tokens and the last hop. A campaign
+  that ran 23 hops no longer shows "0 dispatches" on every god except Apollo.
+- The **live campaign** comes from the lane's state + plan (23/34, in-flight,
+  parked with the reason, last hop with tokens) instead of the last
+  `campaign_start` that happened to be in the feed.
+- **Hop Detail is live**: the sheet reads the lane the hop belongs to (the
+  feed mixes campaigns), and it polls every 5s while the hop is running —
+  thinking, files, tokens and the build stay current.
+- Architecture docs: the three-layer ASCII block and the vault tree are now
+  `architecture-layers.svg` and `vault-map.svg`; ARCHITECTURE.md carries the
+  v0.0.75 truth (39 curated tools, 28 servers, 132 agents).
+
+### Two new light themes (the family turns 18 again)
+
+- **Eclipse** replaces the old Paper slot: the inverse of Celestial — soft
+  white paper, near-black ink, royal gold accents. Light, but regal.
+- **Paper** replaces the old Arctic slot: warm manga stock, black ink, a
+  vermilion seal. High contrast is the point.
+- The gallery cards were regenerated from `THEME_PRESETS`; the README and
+  `screenshots/THEMES.md` point at the new ids; the two real theme captures
+  were re-shot.
+
+### References: dedupe + refresh within the daily budget
+
+- The reference grid resets its page count when the filter changes — the
+  "repeated cards while scrolling" class is gone.
+- `npm run references:refresh` (new): reads the public OriginKit sitemap,
+  diffs the component slugs against the catalog and appends up to the daily
+  limit (default 30) with `--write`. Dry-run by default; it never copies code,
+  only the reference (the fetch lane keeps the MCP budget honest).
+- First run: 758 upstream slugs · 945 in the catalog · **0 new** — the catalog
+  is current today.
+
+### Evidence
+
+- `brain-live.test.mjs` 7/7 (lane telemetry, turns+hops, lane campaign, sheet
+  lane, live poll, timeline lane).
+- `tsc` + eslint clean; production build + standalone verify PASS.
+- Battery: see the release body.
+
 ## [v0.0.74] — 2026-11-04
 
 ### Paste anything, read `[name]`

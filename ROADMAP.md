@@ -1,6 +1,12 @@
 # OLYMPUS Roadmap
 
-**v0.0.74 is the current release** (2026-11-04) — the clean-input release:
+**v0.0.75 is the current release** (2026-11-04) — live truth + themes:
+Eclipse (inverse Celestial) and Paper (manga) replace the old Paper/Arctic
+slots; the reference grid resets on filter and `references:refresh` diffs the
+sitemap within the daily budget. v0.0.75 was the live-truth release:
+God Intelligence counts turns + hops from the lane telemetry, the campaign
+reads the lane state + plan, and the hop sheet is lane-scoped and live.
+v0.0.74 was the clean-input release:
 Ctrl+V attachments become `[name]` tokens, the agents census publishes the
 pruning evidence (122/14/3), and every Documentation page carries a diagram.
 v0.0.73 was the detached-walk release:
@@ -32,6 +38,7 @@ external user.** 9.0 and 10.0 are community and sustainability, not versions.
 
 | Version | Theme | Evidence that closes it |
 |---|---|---|
+| **v0.0.75** | Live truth | dashboard = lane telemetry; hop sheet live |
 | **v0.0.74** | Clean input + census + docs | paste → `[name]`; census 122/14/3; SVG on every doc |
 | **v0.0.73** | Detached supervisor (#291) | one process per lane; crash drill; boot adoption; start/stop/status |
 | **v0.0.72** | Cost truth + docs gate + spend caps | `cost:audit` measured; caps tested; `docs:check` green; strategy guard |

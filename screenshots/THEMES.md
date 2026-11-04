@@ -7,9 +7,9 @@ Celestial, Abyss, Rosewood, Ivory and Arctic. Click a card to open the SVG;
 
 | Dark | Light |
 |---|---|
-| [Olympus](./themes/olympus.svg) · [Obsidian](./themes/obsidian.svg) · [Ember](./themes/ember.svg) | [Parchment](./themes/parchment.svg) · [Paper](./themes/paper.svg) · [Mist](./themes/mist.svg) |
+| [Olympus](./themes/olympus.svg) · [Obsidian](./themes/obsidian.svg) · [Ember](./themes/ember.svg) | [Parchment](./themes/parchment.svg) · [Paper](./themes/eclipse.svg) · [Mist](./themes/mist.svg) |
 | [Violet](./themes/violet.svg) · [Forest](./themes/forest.svg) · [Ice](./themes/ice.svg) | [Blossom](./themes/blossom.svg) · [Sand](./themes/sand.svg) · [Mint](./themes/mint.svg) |
-| [Vampire](./themes/vampire.svg) · [Celestial](./themes/celestial.svg) · [Abyss](./themes/abyss.svg) | [Rosewood](./themes/rosewood.svg) · [Ivory](./themes/ivory.svg) · [Arctic](./themes/arctic.svg) |
+| [Vampire](./themes/vampire.svg) · [Celestial](./themes/celestial.svg) · [Abyss](./themes/abyss.svg) | [Rosewood](./themes/rosewood.svg) · [Ivory](./themes/ivory.svg) · [Arctic](./themes/paper.svg) |
 
 ## What changes with a theme
 
