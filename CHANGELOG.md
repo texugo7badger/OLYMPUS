@@ -2,6 +2,37 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.79] — 2026-11-04
+
+### Share the preview, safely
+
+- The Live Preview toolbar gains **Share**: a scoped, expiring, revocable link
+  to ONE preview. The token is 32 random bytes, stored hashed at rest
+  (`~/.olympus/preview-shares.json`, 0600); expiry 1h–30d (default 24h).
+- `GET /share/preview/<token>/…` reverse-proxies the preview and rewrites
+  root-relative URLs into the share prefix; redirects stay inside it; the
+  response is `noindex`, `no-referrer`, `no-store`. The recipient never
+  reaches the OLYMPUS session.
+- The popover offers copy, **WhatsApp**, **Telegram** and revoke, with the
+  expiry shown.
+
+### Review fixes
+
+- The status bar no longer overlaps at 1600px (left group clips; agents and
+  cost detail appear at ≥1680px).
+- The README support buttons sit in a table with an empty 16px spacer cell —
+  no character, no stray underline.
+- A discreet coffee in the status bar opens the Ko-fi/PIX popover.
+
+### Evidence
+
+- `preview-share.test.mjs` 11/11 (token, hash-at-rest, resolve, wrong token,
+  expiry, revoke, list, URL rewrite, absolute URLs).
+- Live proxy proof: an upstream HTML came back rewritten and its asset served
+  inside the prefix.
+- `tsc` + eslint clean; production build + standalone verify PASS.
+- Battery: see the release body.
+
 ## [v0.0.78] — 2026-11-04
 
 ### The voice ladder, probed

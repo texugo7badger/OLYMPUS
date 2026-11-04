@@ -33,6 +33,12 @@ electron-builder-cache/
 *api_keys*
 *apikey*
 *token*
+# The public share route uses a [token] SEGMENT — it is a Next.js route, not a
+# secret file. Without these negations the broad *token* rule hides the route
+# from git (v0.0.79).
+!src/app/share/preview/\[token\]/
+!src/app/share/preview/\[token\]/\[\[...path\]\]/
+!src/app/share/preview/\[token\]/\[\[...path\]\]/route.ts
 *tokens*
 
 # Demigod prompt templates are source, not secrets. The broad patterns above

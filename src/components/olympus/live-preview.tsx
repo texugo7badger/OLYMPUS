@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import OlympusLoader from './olympus-loader';
-import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2, ChevronLeft, ChevronRight, Share2, Copy, X } from 'lucide-react';
 import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
@@ -35,6 +35,14 @@ export default function LivePreview() {
   const [probing, setProbing] = useState(true);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [markMode, setMarkMode] = useState(false);
+  // v0.0.79 — a scoped, expiring share link for the running preview.
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareId, setShareId] = useState<string | null>(null);
+  const [shareExpires, setShareExpires] = useState<string | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
   const [pendingMark, setPendingMark] = useState<{ x: number; y: number } | null>(null);
   const [instruction, setInstruction] = useState('');
   const [sending, setSending] = useState(false);
@@ -167,6 +175,37 @@ export default function LivePreview() {
   // #103: the RESOLVED project path (note/lane reconciliation) for the tip —
   // the raw note path only as the pre-first-probe fallback.
   const resolvedPath = status?.path ?? activeProject?.path;
+  const createShare = useCallback(async () => {
+    if (!activeProject?.slug) { setShareError('Open a project first.'); return; }
+    setShareBusy(true); setShareError(null);
+    try {
+      const r = await fetch('/api/olympus/preview/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: activeProject.slug, ttlHours: 24 }),
+      });
+      const d = await r.json();
+      if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      setShareUrl(d.url); setShareId(d.id); setShareExpires(d.expiresAt); setShareCopied(false);
+    } catch (e: any) { setShareError(e?.message || String(e)); }
+    finally { setShareBusy(false); }
+  }, [activeProject]);
+
+  const revokeShare = useCallback(async () => {
+    if (!shareId) return;
+    try {
+      await fetch('/api/olympus/preview/share', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: shareId }),
+      });
+    } catch { /* the link expires anyway */ }
+    setShareUrl(null); setShareId(null); setShareExpires(null); setShareCopied(false);
+  }, [shareId]);
+
+  const copyShare = useCallback(async () => {
+    if (!shareUrl) return;
+    try { await navigator.clipboard.writeText(shareUrl); setShareCopied(true); } catch { setShareError('Could not copy — select the link.'); }
+  }, [shareUrl]);
+
   const showOverlay = customUrl ? !iframeLoaded : (!isRunning || probing || !iframeLoaded);
 
   // #202: hydrate the pinned URL for this project lane, and keep the draft
@@ -270,6 +309,57 @@ export default function LivePreview() {
               <MousePointerClick size={11} /> {markMode ? 'click preview…' : 'Mark'}
             </button>
           </OlympusTooltip>
+          <div className="relative">
+            <OlympusTooltip content="Share this preview (scoped, expiring link)" side="bottom">
+              <button
+                onClick={() => setShareOpen((v) => !v)}
+                aria-expanded={shareOpen}
+                className={cn('flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono transition-all', shareOpen ? 'bg-olympus-cyan/20 text-olympus-cyan ring-1 ring-olympus-cyan/40' : 'text-olympus-text-dim hover:text-olympus-cyan hover:bg-olympus-cyan/10')}
+              >
+                <Share2 size={11} /> Share
+              </button>
+            </OlympusTooltip>
+            {shareOpen && (
+              <div className="absolute right-0 top-full z-30 mt-1 w-[320px] rounded-lg border border-olympus-cyan/30 bg-olympus-panel p-2.5 shadow-2xl">
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <Share2 size={11} className="text-olympus-cyan" />
+                  <span className="text-[10px] font-mono font-semibold text-olympus-cyan">Share preview</span>
+                  <button onClick={() => setShareOpen(false)} aria-label="Close share" className="ml-auto text-olympus-text-dim hover:text-olympus-text"><X size={11} /></button>
+                </div>
+                {!shareUrl && (
+                  <>
+                    <p className="mb-2 text-[9px] font-mono leading-relaxed text-olympus-text-dim">
+                      A read-only link to THIS preview. Expires in 24h, revocable — never your OLYMPUS session.
+                    </p>
+                    <button
+                      onClick={() => void createShare()}
+                      disabled={shareBusy || !isRunning}
+                      className="w-full rounded bg-olympus-cyan/15 px-2 py-1.5 text-[10px] font-mono text-olympus-cyan ring-1 ring-olympus-cyan/30 disabled:opacity-40"
+                    >
+                      {shareBusy ? 'creating…' : isRunning ? 'create link' : 'start the preview first'}
+                    </button>
+                  </>
+                )}
+                {shareUrl && (
+                  <>
+                    <div className="mb-1.5 flex items-center gap-1 rounded border border-olympus-gold/20 bg-olympus-bg px-1.5 py-1">
+                      <span className="min-w-0 flex-1 truncate text-[9px] font-mono text-olympus-text" data-tip={shareUrl}>{shareUrl}</span>
+                      <button onClick={() => void copyShare()} aria-label="Copy link" className="shrink-0 text-olympus-gold hover:text-olympus-gold/80"><Copy size={10} /></button>
+                    </div>
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <a href={`https://wa.me/?text=${encodeURIComponent(`OLYMPUS preview: ${shareUrl}`)}`} target="_blank" rel="noreferrer" className="flex-1 rounded bg-olympus-green/10 px-1.5 py-1 text-center text-[9px] font-mono text-olympus-green ring-1 ring-olympus-green/25">WhatsApp</a>
+                      <a href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent('OLYMPUS preview')}`} target="_blank" rel="noreferrer" className="flex-1 rounded bg-olympus-cyan/10 px-1.5 py-1 text-center text-[9px] font-mono text-olympus-cyan ring-1 ring-olympus-cyan/25">Telegram</a>
+                      <button onClick={() => void revokeShare()} className="rounded bg-olympus-red/10 px-1.5 py-1 text-[9px] font-mono text-olympus-red ring-1 ring-olympus-red/25">revoke</button>
+                    </div>
+                    <p className="text-[8px] font-mono text-olympus-text-dim">
+                      {shareCopied ? 'copied ✓ · ' : ''}expires {shareExpires ? new Date(shareExpires).toLocaleString() : '—'}
+                    </p>
+                  </>
+                )}
+                {shareError && <p className="mt-1 text-[9px] font-mono text-olympus-red">{shareError}</p>}
+              </div>
+            )}
+          </div>
           <OlympusTooltip content="Refresh probe" side="bottom">
             <button onClick={() => { setIframeLoaded(false); probe(); }} className="text-olympus-text-dim hover:text-olympus-gold transition-colors p-1"><RefreshCw size={11} /></button>
           </OlympusTooltip>

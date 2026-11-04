@@ -33,15 +33,14 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.78 — the voice ladder and the phone companion.** The voice engines are
-probed, never claimed: **Chatterbox** (MIT, 23+ languages, cloning, emotion) →
-**Kokoro** (Apache-2.0, CPU) → **edge-tts** (zero-install default), with the
-per-god profiles and the exact setup in [VOICE.md](VOICE.md). The phone can now
-**queue** a prompt for the terminal and **resume a parked campaign** through the
-detached supervisor. The suspend contract is proven by a drill: a hop with 1.5s
-timers survives a suspend marker mid-flight. A discreet cup in the status bar
-opens the donation links (Ko-fi / PIX) — never a nag. Everything below is evidence, not a
-promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.79 — share the preview, safely.** The Live Preview gains **Share**: a
+scoped, expiring, revocable link to one preview (32-byte token, hashed at rest,
+24h by default), reverse-proxied through OLYMPUS with root-relative URLs
+rewritten into the share prefix — the recipient never reaches the session.
+Copy, WhatsApp, Telegram and revoke live in the popover. The status bar stops
+overlapping at 1600px, and the support buttons breathe. Everything below is
+evidence, not a promise; the open v1.0 gates are named in
+[V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -74,7 +73,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**145 PASS / 0 FAIL / 1 declared skip** across 146 suites; a 100-hop
+**146 PASS / 0 FAIL / 1 declared skip** across 147 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache
