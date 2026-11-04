@@ -19,6 +19,10 @@ export interface PromptQueueItem {
   createdAt: string;
   status: 'queued' | 'sent';
   sentAt?: string;
+  /** v0.0.71 — where the prompt was composed: the terminal or the creative. */
+  source?: 'terminal' | 'creative';
+  /** The god whose creative session produced it (creative items only). */
+  god?: string;
 }
 
 const HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
@@ -43,7 +47,7 @@ export function listQueue(project?: string): PromptQueueItem[] {
   return (project ? all.filter((i) => i.project === project) : all).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-export function enqueuePrompt(project: string, text: string, now = Date.now()): PromptQueueItem | null {
+export function enqueuePrompt(project: string, text: string, now = Date.now(), meta: { source?: 'terminal' | 'creative'; god?: string } = {}): PromptQueueItem | null {
   const clean = String(text || '').trim().slice(0, 4000);
   if (!clean) return null;
   const item: PromptQueueItem = {
@@ -52,6 +56,8 @@ export function enqueuePrompt(project: string, text: string, now = Date.now()): 
     text: clean,
     createdAt: new Date(now).toISOString(),
     status: 'queued',
+    ...(meta.source ? { source: meta.source } : {}),
+    ...(meta.god ? { god: meta.god } : {}),
   };
   write([...read(), item]);
   return item;

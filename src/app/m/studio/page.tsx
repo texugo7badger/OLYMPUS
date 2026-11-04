@@ -169,7 +169,7 @@ export default function MobileStudio() {
     setQueueText('');
     try {
       const r = await fetch('/api/olympus/prompt-queue', {
-        method: 'POST', headers, body: JSON.stringify({ project: activeSlug, text }),
+        method: 'POST', headers, body: JSON.stringify({ project: activeSlug, text, source: 'creative', god }),
       });
       const d = await r.json().catch(() => null);
       if (r.ok && d?.ok) setQueue(Array.isArray(d.items) ? d.items : []);

@@ -28,7 +28,10 @@ export async function POST(req: NextRequest) {
   if (authError) return authError;
   let body: any = {};
   try { body = await req.json(); } catch { /* invalid */ }
-  const item = enqueuePrompt(String(body?.project || ''), String(body?.text || ''));
+  const item = enqueuePrompt(String(body?.project || ''), String(body?.text || ''), Date.now(), {
+    source: body?.source === 'creative' ? 'creative' : body?.source === 'terminal' ? 'terminal' : undefined,
+    god: typeof body?.god === 'string' ? body.god : undefined,
+  });
   if (!item) return NextResponse.json({ ok: false, error: 'project and text are required' }, { status: 400, headers: NO_CACHE_HEADERS });
   return NextResponse.json({ ok: true, item, items: listQueue(item.project) }, { headers: NO_CACHE_HEADERS });
 }

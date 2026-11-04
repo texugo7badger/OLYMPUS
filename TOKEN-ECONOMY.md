@@ -222,7 +222,7 @@ it uses the studio converse lane (read-only, no tools), and the deterministic
 fallback cites the same numbers if the model is unavailable.
 
 
-## v0.0.70 — the one-screen phone
+## v0.0.71 — the one-screen phone
 
 The minimal `/m` spends **0 tokens** until you speak: the ring, the god row,
 the details sheet and the watchdog are local/HTTP reads. Each hold-to-talk is

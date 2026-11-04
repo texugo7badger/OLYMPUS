@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, memo } from 'react';
 import {
   Send, Loader2, CornerDownLeft, ChevronRight,
   Zap, CheckCircle2, AlertCircle, Users, Sun, Hammer, Bird,
-  Compass, Target, Wine, Flower2, Flame, Square, RefreshCw, Paperclip, type LucideIcon,
+  Compass, Target, Wine, Flower2, Flame, Square, RefreshCw, Paperclip, Sparkles, type LucideIcon,
   Landmark, Terminal as TerminalIcon, ImageIcon, Globe, X, Pencil, GitFork,
 } from 'lucide-react';
 import { marked } from 'marked';
@@ -439,6 +439,9 @@ export default function InteractiveTerminal() {
   // ReferenceError: "can't access lexical declaration 'uploadedFileDetails'
   // before initialization" because `const` bindings are not hoisted.
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  // v0.0.71 — the creative queue: prompts composed in /m/studio or the studio
+  // panel, shown here with a distinct marker and drained on demand.
+  const [creativeQueue, setCreativeQueue] = useState<Array<{ id: string; text: string; god?: string }>>([]);
   const [uploadedFileDetails, setUploadedFileDetails] = useState<Array<{
     name: string;
     path: string;
@@ -1397,6 +1400,37 @@ export default function InteractiveTerminal() {
     }
   }, [submitting, addMessage, updateGodActivity, pushEvent, pushPulse, setActiveGod, handleServerEvent, uploadedFileDetails, pendingImage]);
 
+  // v0.0.71 — poll the shared creative queue for the active project.
+  useEffect(() => {
+    const slug = activeProject?.slug;
+    if (!slug) { setCreativeQueue([]); return; }
+    let live = true;
+    const pull = () => {
+      fetch(`/api/olympus/prompt-queue?project=${encodeURIComponent(slug)}`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!live || !d?.ok) return;
+          setCreativeQueue((Array.isArray(d.items) ? d.items : []).filter((i: any) => i.source === 'creative' && i.status === 'queued'));
+        })
+        .catch(() => { /* offline */ });
+    };
+    pull();
+    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') pull(); }, 10_000);
+    return () => { live = false; clearInterval(timer); };
+  }, [activeProject?.slug]);
+
+  const drainCreative = useCallback(async (item: { id: string; text: string }) => {
+    void submit(item.text, undefined);
+    try {
+      await fetch('/api/olympus/prompt-queue', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id, status: 'sent' }),
+      });
+    } catch { /* it stays queued; the user can retry */ }
+    setCreativeQueue((prev) => prev.filter((i) => i.id !== item.id));
+  }, [submit]);
+
   // v0.0.47 — the unattended switch is read at SEND time; the chip reflects it.
   useEffect(() => {
     setUnattended(unattendedEnabled());
@@ -2170,6 +2204,22 @@ export default function InteractiveTerminal() {
                   </button>
                 </span>
               ))}
+            </div>
+          )}
+
+          {creativeQueue.length > 0 && (
+            <div className="shrink-0 border-t border-olympus-purple/20 bg-olympus-purple/5 px-3 py-1.5">
+              <div className="flex items-center gap-1.5 text-[9px] font-mono">
+                <Sparkles size={10} className="text-olympus-purple" />
+                <span className="text-olympus-purple">creative queue · {creativeQueue.length}</span>
+                <span className="min-w-0 flex-1 truncate text-olympus-text-dim">{creativeQueue[0].text}</span>
+                <button
+                  onClick={() => void drainCreative(creativeQueue[0])}
+                  className="rounded px-2 py-0.5 text-olympus-gold ring-1 ring-olympus-gold/25 hover:bg-olympus-gold/10"
+                >
+                  send
+                </button>
+              </div>
             </div>
           )}
 

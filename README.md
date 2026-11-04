@@ -51,14 +51,16 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.70 — the stability checkpoint.** The ladder is complete in order:
-the one-screen phone and the server watchdog (0.0.65), the mounted/visual
-verify gates and the retired instinct gate (0.0.66), the MCP quarantine
-(0.0.67), terminal attachments + the build crystal + the working preview Mark
-(0.0.68), the persisted performance mode (0.0.69), and now the AppImage, the
-docs and the screenshots 01–12. AIME is measured at **60/79** (p50 12.9
-min/hop), resumable. Everything below is evidence, not a promise; the open
-v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.71 — the perfect alignment release.** The ladder 0.0.65 → 0.0.70 is
+complete in order (one-screen phone + watchdog, mounted/visual gates + retired
+instinct gate, MCP quarantine, terminal attachments + build crystal + working
+preview Mark + distinct voices, performance mode, AppImage/checkpoint), and the
+creative queue now crosses surfaces: a prompt composed in `/m/studio` appears in
+the terminal with a **creative marker** and drains with one send. The README
+carries the large prints (creative, one-screen phone, clean terminal, empty
+OLYMPUS, themes) and `ISSUES.md` maps the 22 open issues to their next target.
+Everything below is evidence, not a promise; the road to v0.0.80 is in
+[V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -127,7 +129,7 @@ renders blank. The full table and speech locales live in
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
-**v0.0.70.** The phone opens `/m` — one screen, voice first: the plasma ring
+**v0.0.71.** The phone opens `/m` — one screen, voice first: the plasma ring
 fills the view, **hold the mic in the middle**, speak, release; the server STT
 transcribes and the request goes to Apollo in the active project's lane. The
 god row below the ring picks the voice/persona; the details sheet holds the
