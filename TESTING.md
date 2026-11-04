@@ -15,7 +15,20 @@
 | **Live drill** | 100 hops, hibernation, soak, a real campaign | local, against the running app |
 | **Campaign** | real gods, real artifacts, p50/p90, parks | AIME lane |
 
-The suites are not in the public repository: they read the maintainer's vault,
+## The public core (v0.0.81)
+
+Ten pure suites are published — no vault, no credentials — and a clean clone
+runs them:
+
+```
+cost-caps · docs-check · terminal-paste · preview-share · alignment-preview
+i18n-audit · theme-gallery · god-chat · brain-live · cost-window
+```
+
+`.github/workflows/core.yml` runs `tsc` + lint + the ten suites. Verified from a
+fresh clone with a linked `node_modules`: **10/10 exit 0**.
+
+The rest of the suites are not in the public repository: they read the maintainer's vault,
 lanes and credentials. What ships publicly is the **method and the measured
 result**, never a green badge without a number.
 

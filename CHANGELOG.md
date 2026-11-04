@@ -2,6 +2,57 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.81] — 2026-11-04
+
+### The public core
+
+- **Ten pure suites are published** (no vault, no credentials): cost-caps,
+  docs-check, terminal-paste, preview-share, alignment-preview, i18n-audit,
+  theme-gallery, god-chat, brain-live, cost-window. `.gitignore` un-ignores
+  exactly these; `.github/workflows/core.yml` runs `tsc` + lint + the ten
+  suites on a clean clone.
+- Verified from a **fresh clone** with a linked `node_modules`: **10/10 exit 0**.
+
+### The measured frames
+
+- `npm run fps:probe` loads four surfaces in headless Chromium and counts rAF
+  for 5s each. Measured (software renderer — a lower bound):
+
+  | surface | p50 | p95 |
+  |---|---:|---:|
+  | brain + terminal | 60 | 61 |
+  | creative studio (full) | 28 | 31 |
+  | creative (performance mode) | **61** | 61 |
+  | mobile creative | 60 | 61 |
+  | mobile /m | 60 | 61 |
+
+  The creative studio's full particle field is the only surface below 58 in
+  software; the existing **performance mode** takes it to 61. The number is
+  reported, not hidden.
+
+### Hygiene and security
+
+- `npm run repo:privacy`: **clean** (1,893 tracked files; private roots
+  ignored). `.gitignore` now un-ignores the public suites and the share route's
+  `[token]` segment (a broad `*token*` rule was hiding it from git).
+- `npm audit`: **39 moderate, 0 high, 0 critical**; the open Dependabot alerts
+  are the minimatch ReDoS through dev tooling and the VS Code extension. The
+  paths and the exposure are documented in `SECURITY.md`; a lockfile-wide
+  upgrade is v0.0.82.
+
+### The checkpoint (honest)
+
+- Cost measured ✅ · public tests ✅ · FPS probe ✅ · docs coherent ✅ ·
+  supervisor ✅ · the pruning **census** ✅ but the **cut was not executed** ❌ ·
+  one external user ❌ · AIME 23/34 (the maintainer's run, read-only).
+- Therefore the checkpoint is **7.x**, not 8.0 — the v3 rubric requires the
+  pruning, the public tests and an external user; two of the three are here.
+
+### Distribution
+
+- AppImage v0.0.81 attached; the installed launcher
+  (`~/.local/bin/olympus-desktop` → `olympus dev` in the repo) runs this tree.
+
 ## [v0.0.80] — 2026-11-04
 
 ### The alignment meter

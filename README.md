@@ -33,13 +33,14 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.80 — alignment, then a fast preview.** The creative studio shows an
-**alignment meter** — five explainable signals (goal, audience, stack, style,
-plan), each with its evidence — and unlocks a **fast preview** at 70+: one
-bounded Athena turn writes a single static skeleton page to
-`~/.olympus/previews/<slug>/` (never into the project) and serves it on a local
-port. The bar opens or copies the link. Everything below is evidence, not a
-promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.81 — the public core, the measured frames, the honest checkpoint.**
+Ten pure suites are published and a clean clone runs them (10/10); `npm run
+fps:probe` measures four surfaces (60/61 on brain, mobile and the creative with
+performance mode; the full creative field is 28 in software — reported, not
+hidden); `repo:privacy` is clean and the 39 moderate advisories are documented
+in [SECURITY.md](SECURITY.md). The checkpoint is **7.x**, not 8.0: the pruning
+census exists, the cut and an external user do not. Everything below is
+evidence, not a promise. [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 

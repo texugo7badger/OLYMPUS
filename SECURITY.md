@@ -225,3 +225,17 @@ Out of scope:
 ## License
 
 OLYMPUS is [AGPL-3.0-or-later](LICENSE). This security policy is part of the project documentation and may be reused under the same terms.
+
+## Dependency advisories (v0.0.81)
+
+`npm audit` reports **39 moderate, 0 high, 0 critical**. The open Dependabot
+alerts are the **minimatch ReDoS** advisory, reached through **dev tooling**
+(`npm-packlist` / `ignore-walk`) and the VS Code extension's own lockfile —
+not through the runtime bundle that ships in the app.
+
+- `npm run security:audit` (`npm audit --audit-level=high`) is **green**.
+- `npm audit fix` cannot resolve the remaining advisories without `--force`
+  (breaking upgrades); the paths are recorded here and the runtime surface is
+  unaffected.
+- A dedicated dependency upgrade (with the full battery + AppImage) is
+  scheduled for **v0.0.82** — the honest place for a lockfile-wide change.

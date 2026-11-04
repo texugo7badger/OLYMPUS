@@ -1,6 +1,8 @@
 # OLYMPUS Roadmap
 
-**v0.0.80 is the current release** (2026-11-04) — alignment + fast preview:
+**v0.0.81 is the current release** (2026-11-04) — public core + measured frames:
+ten pure suites + CI, the fps probe, hygiene/security, the honest 7.x
+checkpoint. v0.0.80 was alignment + fast preview:
 five explainable signals, a bounded Athena turn, a static skeleton served
 locally. v0.0.79 was the secure preview share:
 scoped/expiring/revocable link, reverse proxy with URL rewriting, copy/
@@ -49,6 +51,7 @@ external user.** 9.0 and 10.0 are community and sustainability, not versions.
 
 | Version | Theme | Evidence that closes it |
 |---|---|---|
+| **v0.0.81** | Public core + FPS + checkpoint | 10 suites + CI; fps probe; 7.x |
 | **v0.0.80** | Alignment + fast preview | meter + one-turn skeleton |
 | **v0.0.79** | Secure preview share | scoped link + proxy |
 | **v0.0.78** | Voice + phone + suspend | ladder + drill |
