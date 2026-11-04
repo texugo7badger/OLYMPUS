@@ -1,0 +1,30 @@
+<svg width="1200" height="350" viewBox="0 0 1200 350" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="THE 22 ISSUES, BY TARGET — what is open, who owns it, what closes it">
+  <rect width="1200" height="350" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="349" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">THE 22 ISSUES, BY TARGET</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">what is open, who owns it, what closes it</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="260" height="130" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="3" height="130" rx="1.5" fill="#D4A574"/>
+  <text x="56" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">22 OPEN ISSUES</text>
+  <text x="56" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">every one mapped to a class</text>
+  <text x="56" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">and a target version</text>
+  <text x="56" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">no closure without proof</text>
+  <rect x="330" y="120" width="260" height="130" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="330" y="120" width="3" height="130" rx="1.5" fill="#67C9E8"/>
+  <text x="346" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">v0.0.73 — WALK</text>
+  <text x="346" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">#291 supervisor · #278 tokens</text>
+  <text x="346" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">#270 MCP lane health</text>
+  <rect x="620" y="120" width="260" height="130" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="620" y="120" width="3" height="130" rx="1.5" fill="#B79BE0"/>
+  <text x="636" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">v0.0.74 — FOCUS</text>
+  <text x="636" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">#274 · #303 · #304 · #318</text>
+  <text x="636" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">pruning + picker + chats</text>
+  <rect x="910" y="120" width="250" height="130" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="910" y="120" width="3" height="130" rx="1.5" fill="#9CC48E"/>
+  <text x="926" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">v0.0.75–78</text>
+  <text x="926" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">public tests, FPS, AIME,</text>
+  <text x="926" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">distribution + adoption</text>
+  <text x="40" y="290" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">ISSUES.md is the map: status at the current version, the next target, and the evidence rule.</text>
+  <text x="40" y="314" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">A comment carries the commit sha + the probe output; an issue without evidence stays open.</text>
+</svg>

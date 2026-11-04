@@ -1,0 +1,60 @@
+<svg width="1200" height="550" viewBox="0 0 1200 550" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TEN GODS, ONE CHAIN OF COMMAND — Apollo plans · Atlas dispatches · the specialists execute">
+  <rect width="1200" height="550" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="549" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">TEN GODS, ONE CHAIN OF COMMAND</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">Apollo plans · Atlas dispatches · the specialists execute</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <rect x="440" y="112" width="320" height="100" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="440" y="112" width="3" height="100" rx="1.5" fill="#67C9E8"/>
+  <text x="456" y="138" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">APOLLO · planner</text>
+  <text x="456" y="160" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">plans the DAG, defines acceptance</text>
+  <text x="456" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the only god who talks to you</text>
+  <line x1="600" y1="212" x2="600" y2="250" stroke="#67C9E8" stroke-width="1.2"/><path d="M 600 250 l -6 -3 l 0 6 z" fill="#67C9E8"/>
+  <rect x="440" y="250" width="320" height="90" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="440" y="250" width="3" height="90" rx="1.5" fill="#B79BE0"/>
+  <text x="456" y="276" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">ATLAS · executor</text>
+  <text x="456" y="298" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">dispatches waves, tracks hops,</text>
+  <text x="456" y="316" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">compiles the result</text>
+  <line x1="600" y1="340" x2="600" y2="372" stroke="#B79BE0" stroke-width="1.2"/><path d="M 600 372 l -6 -3 l 0 6 z" fill="#B79BE0"/>
+  <line x1="600" y1="372" x2="102" y2="400" stroke="#2A2E38" stroke-width="1.2"/><path d="M 102 400 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="40" y="400" width="124" height="86" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="400" width="3" height="86" rx="1.5" fill="#9CC48E"/>
+  <text x="56" y="426" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">ARTEMIS</text>
+  <text x="56" y="448" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">security</text>
+  <line x1="600" y1="372" x2="247" y2="400" stroke="#2A2E38" stroke-width="1.2"/><path d="M 247 400 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="185" y="400" width="124" height="86" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="185" y="400" width="3" height="86" rx="1.5" fill="#9CC48E"/>
+  <text x="201" y="426" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">ATHENA</text>
+  <text x="201" y="448" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">frontend</text>
+  <line x1="600" y1="372" x2="392" y2="400" stroke="#2A2E38" stroke-width="1.2"/><path d="M 392 400 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="330" y="400" width="124" height="86" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="330" y="400" width="3" height="86" rx="1.5" fill="#9CC48E"/>
+  <text x="346" y="426" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">DIONYSUS</text>
+  <text x="346" y="448" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">QA</text>
+  <line x1="600" y1="372" x2="537" y2="400" stroke="#2A2E38" stroke-width="1.2"/><path d="M 537 400 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="475" y="400" width="124" height="86" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="475" y="400" width="3" height="86" rx="1.5" fill="#9CC48E"/>
+  <text x="491" y="426" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">HEPHAESTUS</text>
+  <text x="491" y="448" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">backend</text>
+  <line x1="600" y1="372" x2="682" y2="400" stroke="#2A2E38" stroke-width="1.2"/><path d="M 682 400 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="620" y="400" width="124" height="86" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="620" y="400" width="3" height="86" rx="1.5" fill="#9CC48E"/>
+  <text x="636" y="426" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">HERMES</text>
+  <text x="636" y="448" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">integrations</text>
+  <line x1="600" y1="372" x2="827" y2="400" stroke="#2A2E38" stroke-width="1.2"/><path d="M 827 400 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="765" y="400" width="124" height="86" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="765" y="400" width="3" height="86" rx="1.5" fill="#9CC48E"/>
+  <text x="781" y="426" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">PERSEPHONE</text>
+  <text x="781" y="448" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">data</text>
+  <line x1="600" y1="372" x2="972" y2="400" stroke="#2A2E38" stroke-width="1.2"/><path d="M 972 400 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="910" y="400" width="124" height="86" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="910" y="400" width="3" height="86" rx="1.5" fill="#9CC48E"/>
+  <text x="926" y="426" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">PROMETHEUS</text>
+  <text x="926" y="448" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">devops</text>
+  <line x1="600" y1="372" x2="1117" y2="400" stroke="#2A2E38" stroke-width="1.2"/><path d="M 1117 400 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="1055" y="400" width="124" height="86" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="1055" y="400" width="3" height="86" rx="1.5" fill="#D4A574"/>
+  <text x="1071" y="426" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">CALLIMACHUS</text>
+  <text x="1071" y="448" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">vault</text>
+  <text x="40" y="520" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">Each specialist commands its own demigods. A hop leads a team of 2-5 in parallel; the disk carries the campaign.</text>
+</svg>

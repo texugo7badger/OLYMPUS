@@ -1,10 +1,14 @@
 # OLYMPUS — stability protocol
 
-> v0.0.72 · The harness is shipped and measured; the 8-hour / 100-hop
+![Stability](public/diagrams/stability.svg)
+
+> v0.0.73 · The harness is shipped and measured; the 8-hour / 100-hop
 > certification is **not** claimed yet. This page records what was actually
 > run and what remains. The cost side is now measured by `npm run cost:audit`
 > (tokens/hop, cache hit, list value, invoice unknown) and bounded by the
-> opt-in caps in `~/.olympus/cost-caps.json`.
+> opt-in caps in `~/.olympus/cost-caps.json`. Since v0.0.73 a campaign can
+> walk in a **detached supervisor process**: the app restarting no longer
+> kills the walk, and an orphaned state is resumed once at boot (bounded).
 
 ## What the harness measures
 

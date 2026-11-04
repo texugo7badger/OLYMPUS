@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPendingGates, resolveGate, getGate } from '@/lib/hitl-gates';
 import { maybeWalkThePlan } from '@/lib/hop-runtime/post-run';
+import { startDetachedWalk } from '@/lib/hop-runtime/supervisor';
 import { appendActivity } from '@/lib/activity-feed';
 
 export const runtime = 'nodejs';
@@ -83,7 +84,14 @@ export async function POST(req: NextRequest) {
           // publishes every hop to the durable feed (publishActivity).
           void (async () => {
             try {
-              await maybeWalkThePlan({ slug, laneRoot, sessionId: gate.sessionId, publishActivity: true });
+              // v0.0.73 — the Pantheon approval walks DETACHED (the response
+              // is already fire-and-forget; the runner outlives the app).
+              const detached = process.env.OLYMPUS_WALK_INLINE === '1' ? null : startDetachedWalk({ slug, laneRoot });
+              if (detached?.ok) {
+                try { appendActivity({ god: 'apollo', action: 'walk', msg: `Walk detached (pid ${detached.pid}) — it survives the app; follow the hops in God Intelligence.` }); } catch {}
+              } else {
+                await maybeWalkThePlan({ slug, laneRoot, sessionId: gate.sessionId, publishActivity: true });
+              }
             } catch (e: any) {
               try { appendActivity({ god: 'apollo', action: 'walk', msg: `Pantheon-triggered walk failed (non-fatal): ${e?.message || String(e)}` }); } catch {}
             }

@@ -58,7 +58,7 @@ export interface WalkLockRefusal {
 
 export type WalkLockResult = WalkLockHandle | WalkLockRefusal;
 
-function bootIdOf(): string {
+export function bootIdOf(): string {
   // /proc/sys/kernel/random/boot_id is Linux; elsewhere fall back to the
   // process start second (good enough to distinguish a recycled pid).
   try {

@@ -1,0 +1,52 @@
+<svg width="1200" height="460" viewBox="0 0 1200 460" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ONE WINDOW. TEN GODS. ONE LIVING MACHINE. — what OLYMPUS is, in one picture">
+  <rect width="1200" height="460" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="459" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">ONE WINDOW. TEN GODS. ONE LIVING MACHINE.</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">what OLYMPUS is, in one picture</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="210" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="3" height="120" rx="1.5" fill="#D4A574"/>
+  <text x="56" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">YOU</text>
+  <text x="56" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">one prompt,</text>
+  <text x="56" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">one window</text>
+  <line x1="250" y1="180" x2="300" y2="180" stroke="#D4A574" stroke-width="1.2"/><path d="M 300 180 l -6 -3 l 0 6 z" fill="#D4A574"/>
+  <rect x="300" y="110" width="240" height="140" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="300" y="110" width="3" height="140" rx="1.5" fill="#67C9E8"/>
+  <text x="316" y="136" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">APOLLO</text>
+  <text x="316" y="158" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the planner</text>
+  <text x="316" y="176" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the only god</text>
+  <text x="316" y="194" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">who talks to you</text>
+  <line x1="540" y1="180" x2="590" y2="180" stroke="#67C9E8" stroke-width="1.2"/><path d="M 590 180 l -6 -3 l 0 6 z" fill="#67C9E8"/>
+  <rect x="590" y="110" width="240" height="140" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="590" y="110" width="3" height="140" rx="1.5" fill="#B79BE0"/>
+  <text x="606" y="136" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">ATLAS</text>
+  <text x="606" y="158" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the executor</text>
+  <text x="606" y="176" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">dispatches the DAG</text>
+  <text x="606" y="194" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">tracks every hop</text>
+  <line x1="830" y1="180" x2="880" y2="180" stroke="#B79BE0" stroke-width="1.2"/><path d="M 880 180 l -6 -3 l 0 6 z" fill="#B79BE0"/>
+  <rect x="880" y="110" width="280" height="140" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="880" y="110" width="3" height="140" rx="1.5" fill="#9CC48E"/>
+  <text x="896" y="136" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">8 SPECIALISTS</text>
+  <text x="896" y="158" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">security, frontend, QA,</text>
+  <text x="896" y="176" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">backend, integrations, data,</text>
+  <text x="896" y="194" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">devops, curation</text>
+  <rect x="40" y="270" width="340" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="270" width="3" height="120" rx="1.5" fill="#D4A574"/>
+  <text x="56" y="296" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">122 DEMIGODS</text>
+  <text x="56" y="318" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">unprefixed specialists under</text>
+  <text x="56" y="336" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">each god; a hop leads a team</text>
+  <text x="56" y="354" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">of 2-5 in parallel</text>
+  <rect x="400" y="270" width="340" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="400" y="270" width="3" height="120" rx="1.5" fill="#67C9E8"/>
+  <text x="416" y="296" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">THE VAULT</text>
+  <text x="416" y="318" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">instincts, knowledge, skills,</text>
+  <text x="416" y="336" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">patterns; the brain that</text>
+  <text x="416" y="354" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">learns from every dispatch</text>
+  <rect x="760" y="270" width="400" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="760" y="270" width="3" height="120" rx="1.5" fill="#B79BE0"/>
+  <text x="776" y="296" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">ONE MACHINE</text>
+  <text x="776" y="318" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">desktop + /m on the phone;</text>
+  <text x="776" y="336" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">28 curated MCPs; artifacts</text>
+  <text x="776" y="354" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">on disk; verification decides</text>
+  <text x="40" y="430" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">Sessions are lanes; the disk carries the campaign. The window can close — the walk continues (v0.0.73).</text>
+</svg>

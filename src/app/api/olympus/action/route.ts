@@ -11,6 +11,7 @@ import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 import { resolveAndRegisterIntent, stripUploadBlock, resolveKnownTurnProject } from '@/lib/project-intent';
 import { maybeStartDevServer } from '@/lib/dev-server-trigger';
 import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
+import { startDetachedWalk } from '@/lib/hop-runtime/supervisor';
 import { pickPlanRoot, walkRootNote } from '@/lib/hop-runtime/walk-root';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
 import { probeLane } from '@/lib/lane-probe';
@@ -867,7 +868,16 @@ function gateAnswerStream(opts: {
           const laneRoot = dirname(opts.resolution.planPath);
           const slug = basename(laneRoot);
           send({ type: 'log', msg: `Plan walk approved (gate ${opts.resolution.gateId}) — walking ${slug} now.`, ts: new Date().toISOString() });
-          await maybeWalkThePlan({ slug, laneRoot, send, sessionId: opts.conversationId, publishActivity: true });
+          // v0.0.73 — the approved plan walks DETACHED: the runner owns the
+          // process, so closing the app (or the server dying) does not kill
+          // the campaign. Inline is the fallback and the escape hatch.
+          const detached = process.env.OLYMPUS_WALK_INLINE === '1' ? null : startDetachedWalk({ slug, laneRoot });
+          if (detached?.ok) {
+            send({ type: 'log', msg: `Walk detached (pid ${detached.pid}) — it survives this window; follow the hops in God Intelligence.`, ts: new Date().toISOString() });
+          } else {
+            if (detached && !detached.ok) send({ type: 'log', msg: `Detached start failed (${detached.reason}) — walking inline.`, ts: new Date().toISOString() });
+            await maybeWalkThePlan({ slug, laneRoot, send, sessionId: opts.conversationId, publishActivity: true });
+          }
         } else {
           send({ type: 'log', msg: `Plan walk ABORTED (gate ${opts.resolution.gateId}) — the plan stays on disk; ask for a replan to start over.`, ts: new Date().toISOString() });
         }
@@ -1293,7 +1303,19 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
             // retires with the turn.
             if (warmStallTimer) clearInterval(warmStallTimer);
             try {
-              const walk = await maybeWalkThePlan({
+              // v0.0.73 — DETACHED BY DEFAULT. The walker is a separate
+              // process now: the app can restart and the campaign continues.
+              // `OLYMPUS_WALK_INLINE=1` keeps the old in-process path (the
+              // escape hatch while the soak proves the supervisor).
+              const detached = process.env.OLYMPUS_WALK_INLINE === '1'
+                ? null
+                : startDetachedWalk({ slug: opts.intent.slug, laneRoot });
+              if (detached?.ok) {
+                send({ type: 'log', msg: `Walk detached (pid ${detached.pid}) — it survives this window; follow the hops in God Intelligence.`, ts: new Date().toISOString() });
+              } else if (detached && !detached.ok) {
+                send({ type: 'log', msg: `Detached start failed (${detached.reason}) — walking inline.`, ts: new Date().toISOString() });
+              }
+              const walk = detached?.ok ? null : await maybeWalkThePlan({
                 slug: opts.intent.slug, laneRoot, send, sessionId: opts.conversationId, publishActivity: true,
                 unattended: opts.unattended === true,
                 expectPlan: opts.classification?.needsPlanning === true,
@@ -1316,7 +1338,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
                   } catch { return false; }
                 } : undefined,
               });
-              if (walk.awaitingApproval?.gate) {
+              if (walk?.awaitingApproval?.gate) {
                 // #120 (PLANO-MASTER-1 B6c): the SAME gate the Pantheon
                 // toast polls, asked through the existing question flow —
                 // approve from EITHER surface; 's'/'n' typed here resolve
@@ -1329,7 +1351,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
               // walk just wrote the deliverables: re-trigger the static
               // preview so the panel goes green on the SAME run, never
               // only on the second prompt.
-              if (walk.walked) {
+              if (walk?.walked) {
                 try {
                   const t2 = await maybeStartDevServer(opts.intent.slug, laneRoot);
                   if (t2.triggered) {

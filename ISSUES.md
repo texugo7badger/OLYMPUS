@@ -1,6 +1,8 @@
-# The 22 open issues — status map at v0.0.72
+# The 22 open issues — status map at v0.0.73
 
-> v0.0.72 is the cost-truth release. It measures the campaign economics, adds
+![The 22 issues](public/diagrams/issues.svg)
+
+> v0.0.73 is the detached-walk release. It measures the campaign economics, adds
 > opt-in spend caps, gates the docs against the code and refuses a strategy
 > switch while a walk is live. It closes the crash class and the mobile
 > UX class; the rest stays open with a named target. No issue is closed
@@ -8,7 +10,7 @@
 
 | Issue | Title | Status at v0.0.71 | Target |
 |---|---|---|---|
-| #291 | detached supervisor + auto-resume on app restart | **partial** — server watchdog + respawn + INTERRUPTED verdict; the walker still dies with the server | v0.0.71 |
+| #291 | detached supervisor + auto-resume on app restart | **closed as a class** — one detached process per lane, boot adoption (bounded), start/stop/status route, crash drill green; the packaged-app runner path is v0.0.78 | v0.0.73 |
 | #287 | stop hops from starting unmanaged servers/builds | open — the preview manager refuses double-spawn, hops still can | v0.0.71 |
 | #293 | stream bounded tool output/progress | **partial** — live tokens/files/last tool in the task sheet; the modal's thinking is still settle-only | v0.0.71 |
 | #288 | persist the full recipe + Hop Detail drawer | **partial** — build snapshot + the build crystal in the sheet | v0.0.71 |

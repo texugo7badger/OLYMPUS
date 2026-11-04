@@ -15,39 +15,33 @@
 
 ## Screens
 
-Six surfaces, captured from the running build — no mockups.
-
-<div align="center">
-  <img src="screenshots/screens/01-brain-terminal.png" width="100%" alt="OLYMPUS — the Brain Atlas and a clean terminal in the Olympus theme" />
-</div>
+Twelve surfaces, captured from the running build in **English**, at
+1600×1000 — no mockups.
 
 <div align="center">
 
-| Creative mode | Build Hub | Settings |
+| | | |
 |---|---|---|
-| <img src="screenshots/screens/02-creative.png" width="460" alt="OLYMPUS creative mode — progress, ring, build crystal and queue" /> | <img src="screenshots/screens/03-builds.png" width="460" alt="OLYMPUS Build Hub — the talent builds and their crystals" /> | <img src="screenshots/screens/04-settings.png" width="460" alt="OLYMPUS Settings — appearance, themes and performance mode" /> |
-
-| Mobile · one screen | Mobile creative |
-|---|---|
-| <img src="screenshots/screens/05-mobile.png" width="360" alt="OLYMPUS mobile — the ring, hold-to-talk and the god row" /> | <img src="screenshots/screens/06-mobile-studio.png" width="360" alt="OLYMPUS mobile creative mode — progress per god and hold-to-talk" /> |
+| <a href="screenshots/screens/01-brain-terminal.png"><img src="screenshots/screens/01-brain-terminal.png" width="480" alt="Brain + terminal — the atlas and a clean session" /></a><br><sub><b>Brain + terminal</b> · the atlas and a clean session</sub> | <a href="screenshots/screens/02-creative.png"><img src="screenshots/screens/02-creative.png" width="480" alt="Creative mode — progress, ring, build crystal and queue" /></a><br><sub><b>Creative mode</b> · progress, ring, build crystal and queue</sub> | <a href="screenshots/screens/03-craft-apps.png"><img src="screenshots/screens/03-craft-apps.png" width="480" alt="Craft apps — the vendored creative suite" /></a><br><sub><b>Craft apps</b> · the vendored creative suite</sub> |
+| <a href="screenshots/screens/04-references.png"><img src="screenshots/screens/04-references.png" width="480" alt="References — the design reference catalog" /></a><br><sub><b>References</b> · the design reference catalog</sub> | <a href="screenshots/screens/05-design.png"><img src="screenshots/screens/05-design.png" width="480" alt="Design board — direction, live preview and brand" /></a><br><sub><b>Design board</b> · direction, live preview and brand</sub> | <a href="screenshots/screens/06-builds.png"><img src="screenshots/screens/06-builds.png" width="480" alt="Build Hub — the talent builds and their crystals" /></a><br><sub><b>Build Hub</b> · the talent builds and their crystals</sub> |
+| <a href="screenshots/screens/07-settings.png"><img src="screenshots/screens/07-settings.png" width="480" alt="Settings — appearance, themes and performance" /></a><br><sub><b>Settings</b> · appearance, themes and performance</sub> | <a href="screenshots/screens/08-talent.png"><img src="screenshots/screens/08-talent.png" width="480" alt="Talent Studio — the build editor and the crystal picker" /></a><br><sub><b>Talent Studio</b> · the build editor and the crystal picker</sub> | <a href="screenshots/screens/09-vault.png"><img src="screenshots/screens/09-vault.png" width="480" alt="Vault — instincts, knowledge and skills" /></a><br><sub><b>Vault</b> · instincts, knowledge and skills</sub> |
+| <a href="screenshots/screens/10-frames.png"><img src="screenshots/screens/10-frames.png" width="480" alt="Frames — the live tool frames" /></a><br><sub><b>Frames</b> · the live tool frames</sub> | <a href="screenshots/screens/11-mobile.png"><img src="screenshots/screens/11-mobile.png" width="480" alt="Mobile — one screen: ring, hold-to-talk and the god row" /></a><br><sub><b>Mobile</b> · one screen: ring, hold-to-talk and the god row</sub> | <a href="screenshots/screens/12-mobile-studio.png"><img src="screenshots/screens/12-mobile-studio.png" width="480" alt="Mobile creative — the same surface in one hand" /></a><br><sub><b>Mobile creative</b> · the same surface in one hand</sub> |
 
 </div>
 
-A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app — no mockups.
+A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app.
 
 ## Latest
 
-**v0.0.72 — the cost-truth release.** The question open since the first
-independent analysis finally has a command: `npm run cost:audit` reads the
-campaign's hop telemetry and the cost ledger and prints tokens/hop, cache hit,
-p50/p95, **list value** and **invoice** — three numbers, never one; a
-subscription reports `$0.00` and the audit says `invoice: unknown` instead of
-pretending it is free. Measured on the AIME campaign: 23 green hops, 1.0M in /
-74.6k out, p50 9.1 min, 89.7% cache hit. Spend caps are opt-in and park a hop
-by name (`cost-cap-5h`), `docs:check` now gates the docs against the code, and
-a strategy switch is refused while a walk is live. Everything below is
-evidence, not a promise; the open v1.0 gates are named in
-[V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.73 — the walk that survives the app.** A campaign now runs in a
+**detached supervisor process** (`tsx scripts/walk-lane.ts`), one per lane,
+with its own log and state; the app is a reader, so restarting or closing it
+no longer kills the walk. An orphaned state is resumed once at boot (bounded),
+a manual stop is never resumed, and `GET/POST /api/olympus/walk/supervisor`
+lists, starts and stops. Proven by a crash drill: the starter process dies and
+both hops still complete. `OLYMPUS_WALK_INLINE=1` keeps the old path; a spawn
+failure falls back to it. Everything below is evidence, not a promise; the
+open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -80,7 +74,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**139 PASS / 0 FAIL / 1 declared skip** across 140 suites; a 100-hop
+**140 PASS / 0 FAIL / 1 declared skip** across 141 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache
@@ -221,6 +215,8 @@ and `ffmpeg` on PATH. The first transcription downloads the Whisper base model
 
 ## What is OLYMPUS?
 
+![What OLYMPUS is](public/diagrams/what-is-olympus.svg)
+
 OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencode.ai). It runs as a standalone **Electron desktop app** on Linux. Other platforms should use WSL. OLYMPUS routes each task to the cheapest LLM that can handle it, cascades token compression across five layers (including the Symphony latent protocol), and learns from every action via a self-curating **VaultBrain**.
 
 - **Three ways to run.** The GO plan (flat monthly, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps), or **Local** — your own hardware (Ollama, LM Studio, vLLM, llama.cpp, or any OpenAI-compatible endpoint). The zero-cost path is the local lane, and it tells you exactly what it found (see [LOCAL-LLM.md](LOCAL-LLM.md)).
@@ -230,6 +226,8 @@ OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencod
 - **Always open.** AGPL-3.0-or-later. The public code is the most up-to-date and best version — forever.
 
 ## Quick Start
+
+![Quick start](public/diagrams/quickstart.svg)
 
 OLYMPUS runs as a **standalone desktop application** — it opens its own window. Your IDE terminal stays free for coding.
 
@@ -285,6 +283,8 @@ olympus apply-strategy go-budget
 
 ## Key Features
 
+![Key features](public/diagrams/features.svg)
+
 | Feature | What it does |
 |---------|--------------|
 | **10 Gods** | Apollo (primary) + Atlas (orchestration) + 7 specialists + Callimachus (background vault curator). Each has a fixed domain and model. |
@@ -300,6 +300,8 @@ olympus apply-strategy go-budget
 | **Vault Backup** | Auto-commit (every 5 min) + manual push to a private GitHub repo via `isomorphic-git`. |
 
 ## The Pantheon
+
+![The pantheon](public/diagrams/pantheon.svg)
 
 | God | Domain | Model (go-balanced) |
 |-----|--------|---------------------|
@@ -345,6 +347,8 @@ The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash
 ```
 
 ## Strategies
+
+![Strategies](public/diagrams/strategies.svg)
 
 | Strategy | Apollo | Atlas | Specialists | Callimachus |
 |----------|--------|-------|-------------|-----------|

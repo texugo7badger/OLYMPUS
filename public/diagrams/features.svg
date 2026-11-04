@@ -1,0 +1,38 @@
+<svg width="1200" height="460" viewBox="0 0 1200 460" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SIX THINGS THAT MAKE THE MACHINE — the product, without the adjectives">
+  <rect width="1200" height="460" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="459" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">SIX THINGS THAT MAKE THE MACHINE</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">the product, without the adjectives</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="360" height="130" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="3" height="130" rx="1.5" fill="#D4A574"/>
+  <text x="56" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">10 GODS + 122 DEMIGODS</text>
+  <text x="56" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">Apollo plans, Atlas dispatches,</text>
+  <text x="56" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">8 specialists execute</text>
+  <rect x="420" y="120" width="360" height="130" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="420" y="120" width="3" height="130" rx="1.5" fill="#67C9E8"/>
+  <text x="436" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">SYMPHONY</text>
+  <text x="436" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">every dispatch is a signature;</text>
+  <text x="436" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">no textual dispatch path</text>
+  <rect x="800" y="120" width="360" height="130" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="800" y="120" width="3" height="130" rx="1.5" fill="#B79BE0"/>
+  <text x="816" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">VAULTBRAIN</text>
+  <text x="816" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">instincts + knowledge + skills;</text>
+  <text x="816" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">curated by Callimachus</text>
+  <rect x="40" y="270" width="360" height="130" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="270" width="3" height="130" rx="1.5" fill="#9CC48E"/>
+  <text x="56" y="296" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">CRAFT · 13 APPS</text>
+  <text x="56" y="318" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">image, vector, video, PDF, word,</text>
+  <text x="56" y="336" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">CAD, sheets — self-hosted</text>
+  <rect x="420" y="270" width="360" height="130" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="420" y="270" width="3" height="130" rx="1.5" fill="#E8A45C"/>
+  <text x="436" y="296" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">MOBILE /m</text>
+  <text x="436" y="318" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">one screen: ring, hold-to-talk,</text>
+  <text x="436" y="336" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the god row</text>
+  <rect x="800" y="270" width="360" height="130" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="800" y="270" width="3" height="130" rx="1.5" fill="#C23A45"/>
+  <text x="816" y="296" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">COST TRUTH</text>
+  <text x="816" y="318" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">tokens/hop, cache hit, list value;</text>
+  <text x="816" y="336" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">invoice unknown, never invented</text>
+  <text x="40" y="430" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">Every feature is one surface: the terminal, the brain, the creative, the phone. No second product.</text>
+</svg>

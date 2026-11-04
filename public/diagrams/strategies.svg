@@ -1,0 +1,33 @@
+<svg width="1200" height="390" viewBox="0 0 1200 390" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="THREE LANES, ONE MACHINE — the model is a lane; the cable carries context">
+  <rect width="1200" height="390" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="389" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">THREE LANES, ONE MACHINE</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">the model is a lane; the cable carries context</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="360" height="170" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="3" height="170" rx="1.5" fill="#9CC48E"/>
+  <text x="56" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">LOCAL</text>
+  <text x="56" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">your hardware: Ollama, LM Studio,</text>
+  <text x="56" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">vLLM, llama.cpp, any OpenAI-</text>
+  <text x="56" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">compatible endpoint</text>
+  <text x="56" y="222" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5"></text>
+  <text x="56" y="240" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">$0 · slower · private</text>
+  <rect x="420" y="120" width="360" height="170" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="420" y="120" width="3" height="170" rx="1.5" fill="#D4A574"/>
+  <text x="436" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">GO PLAN</text>
+  <text x="436" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">flat monthly subscription</text>
+  <text x="436" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">DeepSeek V4.1 Flash planner +</text>
+  <text x="436" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the specialist roster</text>
+  <text x="436" y="222" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5"></text>
+  <text x="436" y="240" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">invoice unknown · balanced</text>
+  <rect x="800" y="120" width="360" height="170" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="800" y="120" width="3" height="170" rx="1.5" fill="#67C9E8"/>
+  <text x="816" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">ZEN</text>
+  <text x="816" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">pay-as-you-go, no request caps</text>
+  <text x="816" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">same 132 agents, same</text>
+  <text x="816" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">Symphony protocol</text>
+  <text x="816" y="222" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5"></text>
+  <text x="816" y="240" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">metered · bursty</text>
+  <text x="40" y="330" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">One command rewrites the 132-agent config:  olympus apply-strategy &lt;local|go-balanced|go-max-quality|zen-balanced&gt;</text>
+  <text x="40" y="354" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">A strategy switch is refused while a walk is live (v0.0.72) — it happens at the hop boundary, never mid-hop.</text>
+</svg>

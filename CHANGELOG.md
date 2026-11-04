@@ -2,6 +2,33 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.73] — 2026-11-04
+
+### The walk survives the app (detached supervisor, #291)
+
+- `src/lib/hop-runtime/supervisor.ts` spawns **one detached process per lane**
+  (`tsx scripts/walk-lane.ts`), with its own log
+  (`~/.olympus/supervisor/<slug>.log`) and state
+  (`~/.olympus/supervisor/<slug>.json`). The app is a reader: killing the
+  server no longer kills the walk.
+- The approved plan (Pantheon gate) and the post-turn walk start detached by
+  default; `OLYMPUS_WALK_INLINE=1` keeps the old in-process path, and a spawn
+  failure falls back to inline (the product never stops).
+- Boot adoption: a state that says `running` with a dead pid is resumed once
+  (bounded at 2 attempts, `autoResume` only). A manual stop says `failed` and
+  is never resumed.
+- `GET/POST /api/olympus/walk/supervisor` — list (pid, alive, lock, hop
+  state, last telemetry) and start/stop.
+- The `alive` verdict requires the pid **and** the same boot id: a recycled
+  pid never reads as a running walk.
+
+### Evidence
+
+- `supervisor.test.mjs` 10/10, including the **crash drill**: a starter
+  process spawns the runner and exits; both script hops still complete and the
+  state says `finished` with the outcome.
+- `tsc` + eslint clean; production build + standalone verify PASS.
+
 ## [v0.0.72] — 2026-11-04
 
 ### The cost truth, measured

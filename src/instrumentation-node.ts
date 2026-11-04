@@ -193,4 +193,19 @@ export async function registerNode() {
       });
     } catch (e: any) { console.error('[olympus-ws] Failed to start:', e.message); }
   });
+
+  // v0.0.73 — ADOPT ORPHANED DETACHED WALKS. A campaign that outlived the
+  // server (the whole point of the supervisor) is resumed once, bounded, only
+  // for lanes that opted into autoResume. The delay lets the app finish
+  // booting before a walker starts spending tokens.
+  setTimeout(() => {
+    void import('./lib/hop-runtime/supervisor')
+      .then(({ resumeOrphanedSupervisors }) => {
+        for (const r of resumeOrphanedSupervisors()) {
+          console.log(`[supervisor] ${r.slug}: ${r.resumed ? 'resumed' : 'not resumed'} — ${r.reason}`);
+        }
+      })
+      .catch(() => { /* the supervisor is additive; boot never blocks on it */ });
+  }, 20_000).unref?.();
 }
+

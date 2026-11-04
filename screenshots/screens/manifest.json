@@ -2,7 +2,7 @@
   {
     "file": "screenshots/screens/01-brain-terminal.png",
     "title": "Brain + terminal",
-    "note": "the atlas and a clean session, Olympus theme"
+    "note": "the atlas and a clean session"
   },
   {
     "file": "screenshots/screens/02-creative.png",
@@ -10,22 +10,52 @@
     "note": "progress, ring, build crystal and queue"
   },
   {
-    "file": "screenshots/screens/03-builds.png",
+    "file": "screenshots/screens/03-craft-apps.png",
+    "title": "Craft apps",
+    "note": "the vendored creative suite"
+  },
+  {
+    "file": "screenshots/screens/04-references.png",
+    "title": "References",
+    "note": "the design reference catalog"
+  },
+  {
+    "file": "screenshots/screens/05-design.png",
+    "title": "Design board",
+    "note": "direction, live preview and brand"
+  },
+  {
+    "file": "screenshots/screens/06-builds.png",
     "title": "Build Hub",
     "note": "the talent builds and their crystals"
   },
   {
-    "file": "screenshots/screens/04-settings.png",
+    "file": "screenshots/screens/07-settings.png",
     "title": "Settings",
     "note": "appearance, themes and performance"
   },
   {
-    "file": "screenshots/screens/05-mobile.png",
+    "file": "screenshots/screens/08-talent.png",
+    "title": "Talent Studio",
+    "note": "the build editor and the crystal picker"
+  },
+  {
+    "file": "screenshots/screens/09-vault.png",
+    "title": "Vault",
+    "note": "instincts, knowledge and skills"
+  },
+  {
+    "file": "screenshots/screens/10-frames.png",
+    "title": "Frames",
+    "note": "the live tool frames"
+  },
+  {
+    "file": "screenshots/screens/11-mobile.png",
     "title": "Mobile",
     "note": "one screen: ring, hold-to-talk and the god row"
   },
   {
-    "file": "screenshots/screens/06-mobile-studio.png",
+    "file": "screenshots/screens/12-mobile-studio.png",
     "title": "Mobile creative",
     "note": "the same surface in one hand"
   }

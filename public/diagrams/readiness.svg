@@ -1,0 +1,37 @@
+<svg width="1200" height="460" viewBox="0 0 1200 460" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="THE HONEST SCOREBOARD — seven fronts, one average — the v3 rubric">
+  <rect width="1200" height="460" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="459" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">THE HONEST SCOREBOARD</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">seven fronts, one average — the v3 rubric</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <text x="40" y="132" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="11">Honesty &amp; docs</text>
+  <rect x="300" y="120" width="600" height="16" rx="8" fill="#12141A"/>
+  <rect x="300" y="120" width="540" height="16" rx="8" fill="#9CC48E"/>
+  <text x="920" y="132" fill="#9CC48E" font-family="'JetBrains Mono',monospace" font-size="11">9.0</text>
+  <text x="40" y="166" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="11">Engineering &amp; tests</text>
+  <rect x="300" y="154" width="600" height="16" rx="8" fill="#12141A"/>
+  <rect x="300" y="154" width="420" height="16" rx="8" fill="#E8A45C"/>
+  <text x="920" y="166" fill="#E8A45C" font-family="'JetBrains Mono',monospace" font-size="11">7.0</text>
+  <text x="40" y="200" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="11">Architecture (DAG)</text>
+  <rect x="300" y="188" width="600" height="16" rx="8" fill="#12141A"/>
+  <rect x="300" y="188" width="480" height="16" rx="8" fill="#9CC48E"/>
+  <text x="920" y="200" fill="#9CC48E" font-family="'JetBrains Mono',monospace" font-size="11">8.0</text>
+  <text x="40" y="234" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="11">Product readiness</text>
+  <rect x="300" y="222" width="600" height="16" rx="8" fill="#12141A"/>
+  <rect x="300" y="222" width="360" height="16" rx="8" fill="#E8A45C"/>
+  <text x="920" y="234" fill="#E8A45C" font-family="'JetBrains Mono',monospace" font-size="11">6.0</text>
+  <text x="40" y="268" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="11">Cost promise</text>
+  <rect x="300" y="256" width="600" height="16" rx="8" fill="#12141A"/>
+  <rect x="300" y="256" width="300" height="16" rx="8" fill="#C23A45"/>
+  <text x="920" y="268" fill="#C23A45" font-family="'JetBrains Mono',monospace" font-size="11">5.0</text>
+  <text x="40" y="302" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="11">Perceived speed</text>
+  <rect x="300" y="290" width="600" height="16" rx="8" fill="#12141A"/>
+  <rect x="300" y="290" width="360" height="16" rx="8" fill="#E8A45C"/>
+  <text x="920" y="302" fill="#E8A45C" font-family="'JetBrains Mono',monospace" font-size="11">6.0</text>
+  <text x="40" y="336" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="11">Focus &amp; control</text>
+  <rect x="300" y="324" width="600" height="16" rx="8" fill="#12141A"/>
+  <rect x="300" y="324" width="180" height="16" rx="8" fill="#C23A45"/>
+  <text x="920" y="336" fill="#C23A45" font-family="'JetBrains Mono',monospace" font-size="11">3.0</text>
+  <text x="40" y="400" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">Average 6.29 → score 6 (independent analysis v3, v0.0.71). The ladder alone ≈ 7.1.</text>
+  <text x="40" y="424" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">8.0 needs: cost measured ✓ · pruning ✗ · public tests ✗ · one external user ✗</text>
+</svg>

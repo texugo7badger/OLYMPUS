@@ -1,8 +1,9 @@
 # OLYMPUS Roadmap
 
-**v0.0.72 is the current release** (2026-11-04) — the cost-truth release: a
-campaign cost audit, opt-in spend caps, a docs gate, and a strategy switch that
-refuses to break a live walk. See [CHANGELOG.md](CHANGELOG.md) and
+**v0.0.73 is the current release** (2026-11-04) — the detached-walk release:
+one process per lane that survives the app, boot adoption (bounded), a
+start/stop/status route and a green crash drill. v0.0.72 added the campaign
+cost audit, opt-in spend caps, a docs gate and the strategy guard. See [CHANGELOG.md](CHANGELOG.md) and
 [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) for the measured numbers.
 
 > The plan of record for the climb to v0.0.81 is the maintainer's
@@ -28,6 +29,7 @@ external user.** 9.0 and 10.0 are community and sustainability, not versions.
 
 | Version | Theme | Evidence that closes it |
 |---|---|---|
+| **v0.0.73** | Detached supervisor (#291) | one process per lane; crash drill; boot adoption; start/stop/status |
 | **v0.0.72** | Cost truth + docs gate + spend caps | `cost:audit` measured; caps tested; `docs:check` green; strategy guard |
 | v0.0.73 | 8-hour soak | soak report: 0 lost hops, RSS bounded, p50/p95 |
 | v0.0.74 | The pruning | census 132 → ~30 dispatched; negative line delta; #317 cancelled |
