@@ -75,6 +75,19 @@ async function main() {
     await sleep(3500);
     await shot('10-talent.png');
 
+    // The terminal, clean (a fresh session), at desktop size.
+    await win.loadURL(URL);
+    await sleep(4000);
+    await click(`(() => { const b = [...document.querySelectorAll('button')].find((el) => /terminal/i.test(el.textContent || '') || /terminal/i.test(el.getAttribute('aria-label') || '')); b?.click(); return !!b; })()`);
+    await sleep(2500);
+    await click(`(() => { const b = [...document.querySelectorAll('button')].find((el) => /nova sessão|new session/i.test(el.textContent || '') || /nova sessão|new session/i.test(el.getAttribute('aria-label') || '')); b?.click(); return !!b; })()`);
+    await sleep(1200);
+    // Confirm the fresh-session card ("Start fresh") so the shot is the clean
+    // welcome, not the confirmation dialog.
+    await click(`(() => { const b = [...document.querySelectorAll('button')].find((el) => /start fresh|começar|iniciar/i.test((el.textContent || '').trim())); b?.click(); return !!b; })()`);
+    await sleep(4000);
+    await shot('11-terminal.png');
+
     // The phone, at a phone's size, with the paired token (localStorage).
     const phone = new BrowserWindow({
       width: 390, height: 844, show: false,
