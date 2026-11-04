@@ -133,6 +133,19 @@ research/
 # The public method and the measured evidence live in TESTING.md.
 scripts/*.test.mjs
 
+# v0.0.81 — THE PUBLIC CORE. These pure suites (no vault, no credentials)
+# are published so a clone can verify the project.
+!scripts/cost-caps.test.mjs
+!scripts/docs-check.test.mjs
+!scripts/terminal-paste.test.mjs
+!scripts/preview-share.test.mjs
+!scripts/alignment-preview.test.mjs
+!scripts/i18n-audit.test.mjs
+!scripts/theme-gallery.test.mjs
+!scripts/god-chat.test.mjs
+!scripts/brain-live.test.mjs
+!scripts/cost-window.test.mjs
+
 # ─── Internal development data and plans — NEVER public (golden rule) ───
 # AIME/bench data, machine-local reports and session checkpoints stay on the
 # maintainer's disk. The public product docs (README, ARCHITECTURE, TESTING,

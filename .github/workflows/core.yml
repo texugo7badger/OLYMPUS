@@ -1,0 +1,26 @@
+name: core
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - name: Pure core suites
+        run: |
+          for t in cost-caps docs-check terminal-paste preview-share alignment-preview i18n-audit theme-gallery god-chat brain-live cost-window; do
+            echo "== $t"
+            npx tsx "scripts/$t.test.mjs"
+          done
