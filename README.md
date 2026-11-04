@@ -390,7 +390,13 @@ All contributors must accept the [Contributor License Agreement (CLA)](CLA.md) b
 
   <h3>Support the dev</h3>
 
-  <p><a href="https://ko-fi.com/G4H521S5GK"><img src="public/diagrams/support-kofi.svg" height="64" alt="Buy me a coffee at ko-fi.com/texugo7badger" style="margin:0 6px" /></a><a href="https://livepix.gg/texugo7badger"><img src="public/diagrams/support-pix.svg" height="64" alt="Doe via PIX at livepix.gg/texugo7badger" style="margin:0 6px" /></a></p>
+  <table>
+    <tr>
+      <td><a href="https://ko-fi.com/G4H521S5GK"><img src="public/diagrams/support-kofi.svg" height="64" alt="Buy me a coffee at ko-fi.com/texugo7badger" /></a></td>
+      <td width="16"></td>
+      <td><a href="https://livepix.gg/texugo7badger"><img src="public/diagrams/support-pix.svg" height="64" alt="Doe via PIX at livepix.gg/texugo7badger" /></a></td>
+    </tr>
+  </table>
 
   <sub>Made by <a href="https://github.com/texugo7badger">@texugo7badger</a></sub>
 

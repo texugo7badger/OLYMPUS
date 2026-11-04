@@ -178,7 +178,7 @@ export default function StatusBar({
  style={{ WebkitAppRegion: 'drag', paddingLeft: isMac && isElectron ? 80 : 12 } as React.CSSProperties}
  >
 	 {/* LEFT SIDE: logo + window controls + Compact Brain + focus mode + nav info */}
- <div className="flex items-center gap-3 min-w-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+ <div className="flex flex-1 items-center gap-3 min-w-0 overflow-hidden" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
  <div className="flex items-center gap-1.5 text-olympus-gold font-semibold shrink-0">
  <ThemedLogo iconId="classic" size={20} />
  <span>OLYMPUS</span>
@@ -322,7 +322,7 @@ export default function StatusBar({
  {!compact && <span className="text-olympus-text-dim text-[10px]">skills</span>}
  </span>
  <span className="text-olympus-text-dim">·</span>
- <span className="flex items-center gap-1 text-olympus-purple" data-tip="Total gods + demigods">
+ <span className="hidden min-[1680px]:flex items-center gap-1 text-olympus-purple" data-tip="Total gods + demigods">
  <Users size={11} />
  <span>{health?.total_agents ?? 0}</span>
  {!compact && <span className="text-olympus-text-dim text-[10px]">agents</span>}
@@ -331,7 +331,7 @@ export default function StatusBar({
  </div>
 
  {/* RIGHT SIDE: cost + SSE + APIs (NO window controls — they're on the left now) */}
- <div className="flex min-w-0 items-center gap-3 shrink-0 overflow-hidden" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+ <div className="flex min-w-0 shrink-0 items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
  <button
  onClick={() => setLeftPane('cost')}
  className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-olympus-gold/10 transition-colors"
@@ -343,7 +343,7 @@ export default function StatusBar({
 	   : fmtUsd(realUsd)}
 	 </span>
 	 <span
-	   className="text-olympus-text-dim text-[10px] hidden min-[1600px]:inline"
+	   className="text-olympus-text-dim text-[10px] hidden min-[1680px]:inline"
 	   data-tip={
 	     `Invoice: not exposed by the provider (GO subscription). ` +
 	     `Step cost ${fmtUsd(realUsd)} (OpenCode's per-step model-price field) · ` +
