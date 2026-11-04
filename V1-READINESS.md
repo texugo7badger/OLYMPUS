@@ -1,6 +1,6 @@
 # OLYMPUS — v1.0 readiness
 
-> v0.0.71 · 2026-11-03 · **GO for a release candidate after two named gates**
+> v0.0.72 · 2026-11-04 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
 > this build "certified v1.0" until those gates are green.** This page is the
 > report; it does not claim what was not run.

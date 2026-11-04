@@ -1,0 +1,128 @@
+[
+  {
+    "id": "olympus",
+    "name": "Olympus",
+    "mode": "dark",
+    "file": "screenshots/themes/olympus.png",
+    "capturedAt": "2026-11-04T06:17:30.554Z"
+  },
+  {
+    "id": "obsidian",
+    "name": "Obsidian",
+    "mode": "dark",
+    "file": "screenshots/themes/obsidian.png",
+    "capturedAt": "2026-11-04T06:17:43.968Z"
+  },
+  {
+    "id": "ember",
+    "name": "Ember",
+    "mode": "dark",
+    "file": "screenshots/themes/ember.png",
+    "capturedAt": "2026-11-04T06:17:56.498Z"
+  },
+  {
+    "id": "violet",
+    "name": "Violet",
+    "mode": "dark",
+    "file": "screenshots/themes/violet.png",
+    "capturedAt": "2026-11-04T06:18:10.391Z"
+  },
+  {
+    "id": "forest",
+    "name": "Forest",
+    "mode": "dark",
+    "file": "screenshots/themes/forest.png",
+    "capturedAt": "2026-11-04T06:18:23.491Z"
+  },
+  {
+    "id": "ice",
+    "name": "Ice",
+    "mode": "dark",
+    "file": "screenshots/themes/ice.png",
+    "capturedAt": "2026-11-04T06:18:36.607Z"
+  },
+  {
+    "id": "parchment",
+    "name": "Parchment",
+    "mode": "light",
+    "file": "screenshots/themes/parchment.png",
+    "capturedAt": "2026-11-04T06:18:49.850Z"
+  },
+  {
+    "id": "paper",
+    "name": "Paper",
+    "mode": "light",
+    "file": "screenshots/themes/paper.png",
+    "capturedAt": "2026-11-04T06:19:02.737Z"
+  },
+  {
+    "id": "mist",
+    "name": "Mist",
+    "mode": "light",
+    "file": "screenshots/themes/mist.png",
+    "capturedAt": "2026-11-04T06:19:16.146Z"
+  },
+  {
+    "id": "blossom",
+    "name": "Blossom",
+    "mode": "light",
+    "file": "screenshots/themes/blossom.png",
+    "capturedAt": "2026-11-04T06:19:28.781Z"
+  },
+  {
+    "id": "sand",
+    "name": "Sand",
+    "mode": "light",
+    "file": "screenshots/themes/sand.png",
+    "capturedAt": "2026-11-04T06:19:42.173Z"
+  },
+  {
+    "id": "mint",
+    "name": "Mint",
+    "mode": "light",
+    "file": "screenshots/themes/mint.png",
+    "capturedAt": "2026-11-04T06:19:55.329Z"
+  },
+  {
+    "id": "vampire",
+    "name": "Vampire",
+    "mode": "dark",
+    "file": "screenshots/themes/vampire.png",
+    "capturedAt": "2026-11-04T06:20:08.585Z"
+  },
+  {
+    "id": "celestial",
+    "name": "Celestial",
+    "mode": "dark",
+    "file": "screenshots/themes/celestial.png",
+    "capturedAt": "2026-11-04T06:20:21.670Z"
+  },
+  {
+    "id": "abyss",
+    "name": "Abyss",
+    "mode": "dark",
+    "file": "screenshots/themes/abyss.png",
+    "capturedAt": "2026-11-04T06:20:34.765Z"
+  },
+  {
+    "id": "rosewood",
+    "name": "Rosewood",
+    "mode": "dark",
+    "file": "screenshots/themes/rosewood.png",
+    "capturedAt": "2026-11-04T06:20:48.088Z"
+  },
+  {
+    "id": "ivory",
+    "name": "Ivory",
+    "mode": "light",
+    "file": "screenshots/themes/ivory.png",
+    "capturedAt": "2026-11-04T06:21:01.492Z"
+  },
+  {
+    "id": "arctic",
+    "name": "Arctic",
+    "mode": "light",
+    "file": "screenshots/themes/arctic.png",
+    "capturedAt": "2026-11-04T06:21:13.972Z"
+  }
+]

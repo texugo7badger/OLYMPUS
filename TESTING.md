@@ -65,7 +65,7 @@ claimed here.
 
 | Evidence | Result |
 |---|---|
-| Battery | **137 PASS / 0 FAIL / 1 declared skip** (138 suites) |
+| Battery | **139 PASS / 0 FAIL / 1 declared skip** (140 suites) |
 | 100-hop spine | **100/100** in 9.9s · p50 189ms · p95 225ms · 0 tokens |
 | Soak while walking | **24 rounds PASS** · 5/5 probes · p95 ≤ 120ms |
 | Hibernation drill | pre-hibernation artifact **byte-identical**; 0 lost |
@@ -93,6 +93,6 @@ claimed here.
 
 ## Running it
 
-Maintainers run `npm run battery` (local suites) and `npm run soak`. The
+Maintainers run `npm run battery` (local suites), `npm run soak`, `npm run cost:audit` (the campaign economics) and `npm run docs:check` (docs vs code). The
 public repo intentionally does not ship the suites; a fresh clone can still
 build, typecheck and lint.

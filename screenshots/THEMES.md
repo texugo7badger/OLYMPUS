@@ -1,26 +1,19 @@
-# OLYMPUS themes — the gallery
+# OLYMPUS themes — real screenshots
 
-Eighteen presets — ten dark and eight light — plus the palette lab (a full
-14-key family generated with contrast floors). The new families: Vampire,
-Celestial, Abyss, Rosewood, Ivory and Arctic. Click a card to open the SVG;
-`npm run themes:gallery` regenerates the set from `src/lib/theme.ts`.
+> v0.0.72 · 18 themes, each captured from the running app with a
+> clean terminal (a fresh session). Generated from
+> `screenshots/themes/manifest.json` by `scripts/readme-themes.mjs` — the
+> gallery cannot drift from the captures.
 
-| Dark | Light |
-|---|---|
-| [Olympus](./themes/olympus.svg) · [Obsidian](./themes/obsidian.svg) · [Ember](./themes/ember.svg) | [Parchment](./themes/parchment.svg) · [Paper](./themes/paper.svg) · [Mist](./themes/mist.svg) |
-| [Violet](./themes/violet.svg) · [Forest](./themes/forest.svg) · [Ice](./themes/ice.svg) | [Blossom](./themes/blossom.svg) · [Sand](./themes/sand.svg) · [Mint](./themes/mint.svg) |
-| [Vampire](./themes/vampire.svg) · [Celestial](./themes/celestial.svg) · [Abyss](./themes/abyss.svg) | [Rosewood](./themes/rosewood.svg) · [Ivory](./themes/ivory.svg) · [Arctic](./themes/arctic.svg) |
+| | | |
+|---|---|---|
+| <a href="screenshots/themes/olympus.png"><img src="screenshots/themes/olympus.png" width="420" alt="Olympus theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Olympus</b> · dark</sub> | <a href="screenshots/themes/obsidian.png"><img src="screenshots/themes/obsidian.png" width="420" alt="Obsidian theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Obsidian</b> · dark</sub> | <a href="screenshots/themes/ember.png"><img src="screenshots/themes/ember.png" width="420" alt="Ember theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Ember</b> · dark</sub> |
+| <a href="screenshots/themes/violet.png"><img src="screenshots/themes/violet.png" width="420" alt="Violet theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Violet</b> · dark</sub> | <a href="screenshots/themes/forest.png"><img src="screenshots/themes/forest.png" width="420" alt="Forest theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Forest</b> · dark</sub> | <a href="screenshots/themes/ice.png"><img src="screenshots/themes/ice.png" width="420" alt="Ice theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Ice</b> · dark</sub> |
+| <a href="screenshots/themes/parchment.png"><img src="screenshots/themes/parchment.png" width="420" alt="Parchment theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Parchment</b> · light</sub> | <a href="screenshots/themes/paper.png"><img src="screenshots/themes/paper.png" width="420" alt="Paper theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Paper</b> · light</sub> | <a href="screenshots/themes/mist.png"><img src="screenshots/themes/mist.png" width="420" alt="Mist theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Mist</b> · light</sub> |
+| <a href="screenshots/themes/blossom.png"><img src="screenshots/themes/blossom.png" width="420" alt="Blossom theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Blossom</b> · light</sub> | <a href="screenshots/themes/sand.png"><img src="screenshots/themes/sand.png" width="420" alt="Sand theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Sand</b> · light</sub> | <a href="screenshots/themes/mint.png"><img src="screenshots/themes/mint.png" width="420" alt="Mint theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Mint</b> · light</sub> |
+| <a href="screenshots/themes/vampire.png"><img src="screenshots/themes/vampire.png" width="420" alt="Vampire theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Vampire</b> · dark</sub> | <a href="screenshots/themes/celestial.png"><img src="screenshots/themes/celestial.png" width="420" alt="Celestial theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Celestial</b> · dark</sub> | <a href="screenshots/themes/abyss.png"><img src="screenshots/themes/abyss.png" width="420" alt="Abyss theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Abyss</b> · dark</sub> |
+| <a href="screenshots/themes/rosewood.png"><img src="screenshots/themes/rosewood.png" width="420" alt="Rosewood theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Rosewood</b> · dark</sub> | <a href="screenshots/themes/ivory.png"><img src="screenshots/themes/ivory.png" width="420" alt="Ivory theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Ivory</b> · light</sub> | <a href="screenshots/themes/arctic.png"><img src="screenshots/themes/arctic.png" width="420" alt="Arctic theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Arctic</b> · light</sub> |
 
-## What changes with a theme
-
-- the app chrome, the terminal, the god icons and the filters (CSS variables)
-- the brain canvas (nodes by kind, cloud alpha and core ink adapt to light)
-- the loader, the splash, the tray dot, the window icon and the Linux dock
-- the Pattern Studio (particles and the voice orb)
-
-## The palette lab
-
-Settings → Appearance → **palette lab**: pick a hue, a harmony (analogous,
-complementary, triadic, split, mono) and a mode; shuffle until it feels right;
-**apply + make default** persists the family. Contrast is enforced by
-construction and pinned by `scripts/palette-lab.test.mjs`.
+The **palette lab** generates all 14 colors of a family from a hue + harmony,
+with contrast floors (text ≥ 7:1, dim ≥ 4.5:1, accent ≥ 3:1). Apply it and
+every surface follows — including the OS icon.

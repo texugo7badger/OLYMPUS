@@ -1,6 +1,8 @@
-# The 22 open issues — status map at v0.0.71
+# The 22 open issues — status map at v0.0.72
 
-> v0.0.71 is the stability release. It closes the crash class and the mobile
+> v0.0.72 is the cost-truth release. It measures the campaign economics, adds
+> opt-in spend caps, gates the docs against the code and refuses a strategy
+> switch while a walk is live. It closes the crash class and the mobile
 > UX class; the rest stays open with a named target. No issue is closed
 > without probe evidence.
 
@@ -13,7 +15,7 @@
 | #306 | source hops must run build/lint | **partial** — verify supports build/lint; a source hop without a gate is named in the walk log (warning, not a hard rejection yet) | v0.0.71 |
 | #305 | visual gate for UI hops | **partial** — `visual:` reads opacity/console/login; the browser-level reviewer writes the JSON | v0.0.71 |
 | #308 | work card GREEN but not mounted | **partial** — `mounted:<artifact>::<entry>` fails dead code; plans must declare it | v0.0.71 |
-| #278 | capture tokens on the warm transport | open — recent AIME rows carry `null` | v0.0.71 |
+| #278 | capture tokens on the warm transport | **measured** — `cost:audit` prints the null-token hops by name; the current campaign rows carry tokens (2 historical nulls flagged); the warm-transport drill is next | v0.0.73 |
 | #277 | per-model 5h/weekly/monthly caps | open | v0.0.72 |
 | #279 | cost:audit reconciliation gate | open | v0.0.72 |
 | #269 | epic(cost): cost truth | open (parent) | v0.0.72 |
@@ -28,6 +30,20 @@
 | #304 | per-god chats (10 tabs/sessions/queues) | open | v0.0.74 |
 | #318 | user-sovereignty decision ledger + cognitive protocol | open | v0.0.74 |
 | #273 | epic(design): live preview + magic wand | open (parent) | v0.0.74 |
+
+## What v0.0.72 did close (the class, not the issue number)
+
+- **The cost question has a command**: `npm run cost:audit` reads the lane's
+  telemetry + the cost ledger and prints tokens/hop, cache hit, p50/p95, list
+  value and invoice — three money numbers, never one. Null token rows are
+  named, not zeroed.
+- **Spend is bounded**: opt-in 5h/weekly/monthly caps park a hop by name
+  (`cost-cap-*`) instead of burning through a budget silently.
+- **Docs contradict the code → the gate fails**: `npm run docs:check` checks
+  VERSION, the status bar, README Latest, CHANGELOG, ROADMAP, STABILITY and the
+  retired 97% claim.
+- **A strategy switch cannot break a live walk**: the route refuses with the
+  holder named (409), or requires `force:true`.
 
 ## What v0.0.71 did close (the class, not the issue number)
 

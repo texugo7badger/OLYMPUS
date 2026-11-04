@@ -194,3 +194,24 @@ export function readWalkLock(laneRoot: string): { holder: WalkLockHolder | null;
   );
   return { holder, alive, ageMs };
 }
+
+/**
+ * v0.0.72 — every LIVE walk in the vault. A strategy switch rewrites
+ * `opencode.json`; doing that mid-hop is what broke the AIME campaign
+ * (the warm server cached the old config and answered "Agent not found").
+ * The switch is now refused while any lane is walking, with the holder named.
+ */
+export function liveWalkLocks(vaultRoot: string): Array<{ lane: string; slug: string; holder: WalkLockHolder; ageMs: number }> {
+  const projects = path.join(vaultRoot, '02_Projects');
+  let entries: fs.Dirent[] = [];
+  try { entries = fs.readdirSync(projects, { withFileTypes: true }); } catch { return []; }
+  const out: Array<{ lane: string; slug: string; holder: WalkLockHolder; ageMs: number }> = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const lane = path.join(projects, entry.name);
+    const { holder, alive, ageMs } = readWalkLock(lane);
+    if (holder && alive) out.push({ lane, slug: entry.name, holder, ageMs });
+  }
+  return out;
+}
+

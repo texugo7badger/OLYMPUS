@@ -45,6 +45,7 @@ import { markLaneAlive, markLaneDead, laneChain, isLaneDeadClass } from '@/lib/l
 import { FREE_HYBRID_ROSTER } from '@/lib/model-strategies';
 import { backupBeforeDestructiveHop } from '@/lib/destructive-guard';
 import { applyRunManifestFile, buildRunMcpManifest, getRunMcpManifest, setRunMcpManifest } from '@/lib/mcp-run-manifest';
+import { checkCostCaps } from '@/lib/cost-caps';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
 export const MAX_HOP_CONCURRENCY = 3;
@@ -1275,6 +1276,21 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           return (perPool.get(lane) ?? 0) < maxHopsPerPoolFor(lane);
         });
         if (!next) return;
+        // v0.0.72 — THE SPEND BRAKE. The campaign deadline bounded TIME;
+        // nothing bounded MONEY. Caps are opt-in (no caps file/env = the walk
+        // is unlimited). When a cap fires the hop is parked by NAME and the
+        // walk stops: a budget is a human decision, not a transient error to
+        // retry. The list value is the measured unit (a subscription reports a
+        // $0 invoice while still burning quota).
+        const capVerdict = checkCostCaps();
+        if (!capVerdict.ok) {
+          stopped = true;
+          const reason = capVerdict.window === '5h' ? 'cost-cap-5h' : capVerdict.window === 'weekly' ? 'cost-cap-weekly' : 'cost-cap-monthly';
+          parkedHop = { hopId: next.id, reason, ts: new Date().toISOString(), error: capVerdict.reason };
+          emit({ type: 'hop_parked', hop: next.id, god: next.god, reason, error: capVerdict.reason });
+          persistState();
+          return;
+        }
         // #SACRED-RUNTIME: self-healing lane — a god (or anything) may have
         // deleted the runtime config mid-walk (the 10:16 specimen killed the
         // NEXT hop with "Model not found"). Re-assert the lane config before

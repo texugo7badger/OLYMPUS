@@ -2,230 +2,131 @@
 
 ![Token economy](public/diagrams/token-economy.svg)
 
-> **Measured reality — v0.0.61 (2026-11-03).** The compression claims below
-> are **design intent**, not measured wins. The v0.0.31 audit (kept as
-> history) found: short-circuit
-> gate **0/2,999** evaluations (the tag-similarity × confidence math cannot
-> reach 0.85 except on near-identical tags); 5h cache read **89.7M** vs 1.04M
-> output (**86:1**); 107 MCP tools loaded while the AIME plan declared four.
-> MCP tiering started as **permission-only**; v0.0.30 added a campaign manifest
-> that filters the lane config, but the hot/warm/cold **loading** described
-> below is still not a measured input reduction. Treat every percentage in
-> this file as `[DESIGN-MATH]` until a benchmark says otherwise. v0.0.61
-> ships the curated **6 servers / 39 tools** default and a ledger-measured
-> cache-hit rate; the AIME campaign report is the current spend evidence.
+> **v0.0.72 — measured reality.** This page used to sell a 97% input
+> reduction. The instinct gate measured **0 short-circuits in 4,754
+> evaluations** (`GATE.md`), so that reduction is **not happening** and the
+> claim is retired. What follows separates what is **measured** from what is
+> **design intent**, and gives the command that re-measures each number.
 >
-> **v0.0.31 measured strip (2026-11-01, local tree):**
-> - MCP: **28** registry rows, **6 enabled / 39 tools** measured (`mcp/health`,
->   git 12 + filesystem 9 + memory 9 + olympus-craft 6 + context7 2 +
->   sequential-thinking 1). Enabling the two keyed servers (Originkit, Brave)
->   gives **8 alive / 41 tools, 0 enabled-but-dead**. The old "44" was the
->   v0.0.30 census; the tooltip and this file now carry the measured 39.
-> - Hops: real tokens come from the **`session_v2` row**, not the ACK
->   (v3-feed-api: **94,043 in / 9,853 out**, 1,070 s). A warm ACK that stalls
->   fails over to spawn **once** (R31-01); the ceiling is 1,500,000 ms.
-> - Lean hop agents: `<god>-hop` carries file/shell tools only, not the god's
->   22 orchestration tools (R31-09).
-> - AIME campaign `cmp_mvye6fx0jpd8l0`: **16/39 completed**, 4 quarantined
->   (g3 killed by an operator error; v8/p3 hit the 25-min ceiling while still
->   listing files), systemic stop after ≥50 % parks. No data lost.
-> - Retention: **10.4 GB** reclaimed by `doctor --fix` (8.8 GB stale build
->   archive + 1.6 GB pre-v2 DB backup; three newest DB backups kept).
-> - Hibernation (first slice): window destroyed + app chat server stopped;
->   campaign stays on its lane hop server. The **< 1.5 GB** target is the
->   headless worker (v0.0.41), not measured yet.
+> The rule of this file: a number without a source is not a number.
 
+## 1. What is measured (v0.0.72)
 
-> How OLYMPUS achieves high quality at low cost — from zero (your own hardware) to the GO plan. 5-layer compression · Hot/Warm/Cold tiers · Instinct short-circuits · Symphony Layer 5 · Zero-cost economics.
+### The AIME campaign (read-only, the user's exam)
 
-## 5-layer compression stack
+`npx tsx scripts/cost-audit.ts --lane ~/OLYMPUS-VAULT/02_Projects/aime`
 
-| Layer | Path | Compression | Tool |
-|-------|------|-------------|------|
-| 1 | User ↔ Apollo | None (full prose) | — |
-| 2 | Apollo ↔ Gods | Caveman (65% reduction) | caveman skill |
-| 3 | Gods ↔ Demigods | Strategic-compact (at logical boundaries) | strategic-compact skill |
-| 4 | Demigods ↔ Tools | None (no LLM — raw tool I/O) | — |
-| 5 | Gods ↔ Demigods (latent) | Symphony (70–90% transport reduction) | VibrationalSignature |
+| Metric | Value |
+|---|---:|
+| Hops in the current campaign | 23 green / 0 parked |
+| Tokens in (sum) | 1,009,005 |
+| Tokens out (sum) | 74,613 |
+| Tokens in p50 / p95 | 52,687 / 69,233 |
+| Duration p50 / p95 | 9.1 min / 12.5 min |
+| Cache read (ledger) | 914,176 |
+| Cache hit | 89.7% |
+| Provider invoice | **$0.00** (the GO plan is a subscription) |
+| List value (estimate) | **$0.1936** for the campaign, ≈ $0.0084/hop |
 
-### MCP-level compression
+**How to read the money.** Three numbers, never one:
 
-- **mcp-compressor** — wraps the 3 heaviest MCP servers (github, context7, serena). Compresses tool descriptions/schemas. 70–97% reduction (benchmarked by Atlassian). Apache-2.0.
-- **tamp** — compresses MCP tool output (what comes back from a tool call). Orthogonal to mcp-compressor. Lossless.
+- **step cost** — what the provider charged for this step (`spend_usd`);
+- **list value** — the catalog price for the same tokens
+  (`spend_estimated_usd`, or `priceTokens()` when the ledger row is missing);
+- **invoice** — the month's bill. A subscription reports `$0.00` per step and
+  still has a quota; the invoice is **unknown** until the provider issues it.
 
-### God-level compression
+The audit prints `invoice: unknown (subscription reports $0)` whenever the
+provider reports zero. That is the honest answer, not a free lunch.
 
-- **Caveman** — compresses god output (natural language → terse caveman). 65% reduction. Per-god level.
-- **Strategic-compact** — manages WHEN to compact (at logical task boundaries). OLYMPUS standard.
+### The MCP surface
 
----
+- **6 servers / 39 tools** enabled by default (filesystem, memory, git,
+  context7, sequential-thinking, olympus-craft).
+- Measured by `npm run mcp:audit`; the 128-tool budget is enforced in the
+  panel.
+- Heavy servers (rea 207 tools, grafana 79, comfyui 41) are opt-in. They are
+  not loaded, so they cost nothing until enabled.
 
-## Hot/Warm/Cold tier system
+### The hop runtime
 
-The `olympus-dynamic-context` plugin filters which skills load into a god's system prompt:
+- One hop = one small turn on the god's lane; deterministic verification
+  (file-exists / build / lint / mounted / visual) costs **0 LLM tokens**.
+- The warm transport (`opencode serve`, one per lane) removes the per-hop cold
+  start; the spawn transport is the fallback.
+- Tokens are read from the `session_v2` row, not from the ACK. A null token
+  row is a **measurement gap**, never a zero.
+- A campaign is bounded twice: by **time** (campaign deadline) and, since
+  v0.0.72, by **money** (`~/.olympus/cost-caps.json` → 5h / weekly / monthly
+  caps, evaluated on the list value). A cap parks the hop by name
+  (`cost-cap-5h|weekly|monthly`) instead of retrying.
 
-| Tier | What | Token cost | Count |
-|------|------|------------|-------|
-| **Hot** | Mastered skills (in `mastered-skills/<god>.md`) | ~1,400 | ~5–10 per god |
-| **Warm** | Stack-relevant skills (tags match active stack) | ~4,000 | Up to 20 |
-| **Cold** | All other skills | 0 (not loaded) | ~330 |
-
-Without tiering, all 330 skill descriptions would load (~72,000 tokens per request). With tiering, a non-trivial request loads ~22,000 tokens — an **81% input reduction**.
-
-MCPs are also tiered: hot MCPs always load, warm MCPs load for domain-relevant tasks, and cold MCPs require explicit equip. This prevents unused MCP tool schemas from inflating the system prompt.
-
-> **v0.0.30 correction.** The original tier map was a **permission** policy
-> only: every enabled server still spawned and every tool schema still rode
-> the request. The AIME lane spawned 16 servers / 107 tools while the plan
-> declared four. v0.0.30 adds `src/lib/mcp-run-manifest.ts`: the campaign's
-> `hop.mcp` + the curated baseline filter the lane's `opencode.json`, so the
-> warm server loads only that set. The hot/warm/cold loading claim becomes
-> true only when the manifest is the only path; do not cite the old 81%
-> number until it is re-measured.
-
----
-
-## Instinct gate (short-circuit)
-
-When a god's instinct matches the task with confidence ≥ 0.85, the dispatch **short-circuits**:
-
-| Component | Normal dispatch | Short-circuit |
-|-----------|----------------|---------------|
-| Task text + context | ~22,000 tokens | ~500 tokens |
-| Instinct body | 0 | ~200 tokens |
-| **Total input** | **~22,000** | **~700 tokens** |
-
-That's a **97% input reduction** on short-circuited dispatches. As the brain matures (more empirical instincts), the short-circuit rate climbs from 0% (cold start) toward 70%+.
-
----
-
-## Skill index
-
-The skill index (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) provides sub-millisecond TF-IDF cosine search across all 330 skills. When the instinct gate doesn't short-circuit, the router searches the index for the top-5 relevant skills and surfaces them as hints — without loading all 330 skill descriptions.
-
-Build: `node scripts/build-skill-index.js`
-
----
-
-## Arsenal Resonance (feedback loop)
-
-Every dispatch outcome is logged to `~/OLYMPUS-VAULT/03_Index/arsenal-resonance.jsonl`:
-
-```json
-{
-  "ts": "2026-07-25T...",
-  "task_signature": "build nextjs postgres project",
-  "god": "apollo",
-  "skill": "writing-plans",
-  "mcp": null,
-  "demigod": "planner",
-  "outcome": "success"
-}
-```
-
-The Symphony Arsenal Resolver reads this log to compute per-skill/per-mcp/per-demigod confidence scores. When a similar task comes in (Jaccard similarity ≥ 0.4), the resolver returns the proven arsenal as hints. If coherence ≥ 0.85, a quick-circuit fires.
-
-This is the feedback loop that makes OLYMPUS more efficient over time — every dispatch outcome makes future dispatches smarter.
-
----
-
-## LLM strategies
-
-| Strategy | Apollo | Atlas | Specialists | Vault | Est. cost/day |
-|----------|--------|-------|-------------|-------|---------------|
-| **go-max-quality** | DeepSeek V4.1 Flash | Hy3 | Kimi K2.7 Code (backend) · Qwen3.7 Plus (frontend/integrations) · Kimi K3 (security) · MiniMax M3 (DevOps) | DeepSeek V4.1 Flash | Higher |
-| **go-balanced** (default) | DeepSeek V4.1 Flash | Hy3 | Qwen3.7 Plus (frontend/QA/integrations) · DeepSeek V4.1 Flash (backend/security/DB) · MiniMax M3 (DevOps) | DeepSeek V4.1 Flash | Moderate |
-| **go-budget** | DeepSeek V4.1 Flash | Hy3 | DeepSeek V4.1 Flash (backend/security/DB) · Qwen3.8 Flash (frontend) · MiMo-V2.6-Flash (QA/integrations/DevOps/vault) | MiMo-V2.6-Flash | Low |
-| **zen-max-quality** (**ZEN**) | GPT 6.1 Sol | GPT 6.1 Sol | Claude Sonnet 5.5 (backend/integrations) · GPT 6 Sol (frontend) · Claude Opus 5.5 (security) · Gemini 3.1 Pro (DB) · Grok 4.7 (DevOps) | Claude Haiku 5.5 | Higher (pay-as-you-go) |
-| **zen-balanced** (**ZEN**) | GPT 6.1 Sol | GPT 6 Luna | Claude Sonnet 5.5 (backend/security) · GPT 6 Luna (frontend/integrations) · Claude Haiku 5.5 (QA) · DeepSeek V4.1 Flash (DB) · Grok Build 0.1 (DevOps) | Claude Haiku 5.5 | Moderate (pay-as-you-go) |
-| **zen-budget** (**ZEN**) | GPT 6 Luna | GPT 6 Luna | DeepSeek V4.1 Flash (backend/security/QA/DB) · GLM-5.3-Flash (frontend/DevOps) | Claude Haiku 5.5 | Low (pay-as-you-go) |
-| **local** (**Local**) | the probed local model | the probed local model | the probed local model | the probed local model | **$0** |
-
-Apollo rides **DeepSeek V4.1 Flash** in every GO strategy and **GPT 6.1 Sol / GPT 6 Luna** in ZEN — the planner is the quality floor, not a premium-model luxury. Atlas is Hy3 in GO (GO-only) and GPT 6.1 Sol / Luna in ZEN. DeepSeek V4 Pro and the GLM-5.3 planner rule are retired; GLM-5.3-Flash survives only in `zen-budget` frontend/DevOps. The source of truth is `src/lib/model-strategies.ts` — this table is checked against it by `npm run check-strategy-sync`.
-
-### GO plan budget
-
-- **GLM-5.3**: 4,300 requests/month (Apollo alone)
-- **DeepSeek V4 Pro / Qwen3.7 Plus**: shared specialist pool
-- **DeepSeek V4 Flash**: vault + Callimachus (cheapest, highest volume)
-
-When > 70% of dispatches short-circuit AND average confidence > 0.80, Apollo suggests switching to go-budget (the brain is mature enough to run on cheaper models).
-
-### Zero-cost economics ($0)
-
-The **`local` strategy** runs OLYMPUS entirely on your own hardware — no plan, no key, no network. `olympus apply-strategy local` probes Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint and wires the full arsenal to it; the apply refuses with the probe table when nothing answers (see LOCAL-LLM.md).
-
-A custom strategy may also use free endpoints from any provider registered in OpenCode (OpenRouter `:free`, NVIDIA Build, etc.). Free endpoints are rate-limited and often much slower — the Strategy Builder warns before saving one. They are useful for experiments, not for a deadline.
-
-## Terminal Bridge — zero-token IPC
-
-The Terminal Bridge (port 3740) and WebSocket bridge (port 3738) are pure local IPC pathways between the OLYMPUS Electron app and external IDE extensions (VSCode, Zed, Cursor). They consume **zero LLM tokens** — all communication is local JSON over WebSocket (`ws://127.0.0.1`, token-gated). The bridge reduces context-switching overhead (no need to alt-tab between OLYMPUS and your editor) without adding a single token to the budget.
-
----
-
-## Cost example: full project build
-
-"Build a Next.js + Postgres project from scratch" (complexity: architectural)
-
-| Stage | Without OLYMPUS | With OLYMPUS (go-balanced) |
-|-------|----------------|--------------|
-| Apollo (plan) | ~115K in / 3K out | ~22K in / 3K out |
-| 5 specialist gods | ~575K in / 15K out | ~110K in / 15K out |
-| 10 demigods (70% short-circuit) | ~1,150K in / 30K out | ~71K in / 10K out |
-| **Total** | **1,840K in / 48K out** | **203K in / 28K out** |
-| **Savings** | — | **89% input / 42% output** [DESIGN-MATH] |
-
-The same project on the **`local` strategy**: **$0 total cost**, same short-circuit rate. A custom strategy using free endpoints is also $0 but is rate-limited and slow. The savings come from: hot/warm/cold tier filtering (81%), instinct short-circuits (97% on 70% of demigod dispatches), and MCP allowlist enforcement (only the god's allowed MCPs load).
-
----
-
-## Benchmark recording costs
-
-When benchmark recording is enabled (Settings → Benchmark Recording toggle), each finished run is logged to `~/OLYMPUS-VAULT/07_Reviews/benchmarks/dispatches.jsonl` — one row per (session, agent), written when the run goes idle, when recording is toggled off, and best-effort on app shutdown. The writer is app-side (`src/lib/benchmarks.ts`), not a plugin, so it records runs started from Zed and other non-OLYMPUS spawns too. This is **pure file I/O** — zero LLM tokens, < 1KB per row. The file is pruned when it exceeds 50MB (configurable via `maxBenchmarkLogMB` in `~/.olympus/vault-policy.json`). The recording is opt-in and off by default.
-
----
-
-## Summary
-
-| Mechanism | Reduction | Notes |
-|-----------|-----------|-------|
-| Hot/Warm/Cold tiers | 81% input [DESIGN-MATH] | Only mastered + stack-relevant skills load — CAL-1 claim #1 |
-| Instinct short-circuits | 97% per dispatch [DESIGN-MATH] | Kicks in as brain matures (70%+ hit rate) — claim #2/#5 |
-| Symphony latent transport | 70–90% parallel dispatch [DESIGN-MATH] | Pure local code, zero tokens — claim #4 |
-| Caveman compression | 65% per god output [DESIGN-MATH] | Terse natural language — claim #3 |
-| Strategic-compact | Boundary-gated | Only compacts at logical task edges |
-| `local` (your hardware) | 100% cost | $0 — your own LLM server, no network |
-| Terminal Bridge | 100% (not applicable) | Local IPC, zero LLM tokens |
-
-> **Read this before quoting a percentage.** Every number in this file is currently `[DESIGN-MATH]` except where tagged otherwise. The v0.0.26 CAL-1 campaign (`research/CAL-1.md`) measures them on a real medium build and replaces or refutes each tag. The cost example above is a projection, not a measurement.
-
-## Hop runtime economics
+### Hop runtime economics
 
 An architectural task is not one giant prompt: Apollo writes a DAG of small
 hops (≤16k output tokens each), the walker dispatches each hop on its god's
-lane, and deterministic verification (file-exists / build / lint) costs **0
-LLM tokens**. The request shape is deliberately small and bursty, so it fits
-**BETWEEN provider peaks** instead of holding one long expensive stream open.
+lane, and deterministic verification (file-exists / build / lint / mounted /
+visual) costs **0 LLM tokens**. The request shape is deliberately small and
+bursty, so it fits **BETWEEN provider peaks** instead of holding one long
+expensive stream open.
 
-When a lane is exhausted (quota / 429 / no-route), the hop **PARKS on exhaustion** with its artifacts + resume point on disk — the campaign never
-dies with a pool burst, and the next resume re-runs only the unfinished hop.
-A warm transport (one `opencode serve` per project lane, v0.0.24) removes the
-per-hop cold start while keeping the same small-hop economics.
+When a lane is exhausted (quota / 429 / no-route), the hop **PARKS on exhaustion**
+with its artifacts and resume point on disk — the campaign never dies with a
+pool burst, and the next resume re-runs only the unfinished hop.
 
+## 2. What is design intent (not measured)
 
-## v0.0.64 — the creative surface
+These mechanisms exist and are wired, but their savings are **projections**,
+not benchmarks. They are tagged `[DESIGN]` and must never be quoted as wins:
 
-The progress model (`project-progress.ts`), the prompt queue, the loader, the
-crystal and the development feed are **0 tokens**: they read the plan, the hop
-state and the activity feed. Only **explain progress** spends a model turn —
-it uses the studio converse lane (read-only, no tools), and the deterministic
-fallback cites the same numbers if the model is unavailable.
+| Mechanism | Intent | Status |
+|---|---|---|
+| Hot/warm/cold skill tiers | load only mastered + stack-relevant skills | `[DESIGN]` — no A/B measurement |
+| Instinct short-circuit | skip deliberation at confidence ≥ 0.85 | **measured 0/4,754 — retired** (`GATE.md`) |
+| Symphony latent transport | parallel dispatch without extra tokens | `[DESIGN]` — the 70–90% claim was refuted in CAL-1 |
+| Caveman compression | terse output per god | `[DESIGN]` — no measured delta |
+| MCP allowlist | only the god's MCPs load | `[DESIGN]` — the campaign manifest filters the lane config, the loading win is unmeasured |
 
+The honest summary: **the only measured economy today is the hop shape**
+(small turns, deterministic verification, 89.7% cache hit) **and the curated
+MCP surface** (39 tools instead of 107). Everything else is a hypothesis with
+a test attached.
 
-## v0.0.71 — the one-screen phone
+## 3. The three strategies
 
-The minimal `/m` spends **0 tokens** until you speak: the ring, the god row,
-the details sheet and the watchdog are local/HTTP reads. Each hold-to-talk is
-ONE Apollo turn (the action lane), exactly like the terminal. The creative's
-progress, feed and queue are 0 tokens; only **explain** and the studio chat
-spend a turn.
+| Strategy | Money | Speed | When |
+|---|---|---|---|
+| `local` (Ollama / LM Studio / vLLM / llama.cpp) | **$0** — your hardware | slow, model-dependent | privacy, offline, zero budget |
+| `go-balanced` (default) | subscription (invoice unknown) | p50 ≈ 9 min/hop (measured) | daily work |
+| `go-max-quality` | subscription, higher quota burn | slower, better specialists | hard campaigns |
+
+`npm run apply-strategy <name>` rewrites the 132-agent config. Since v0.0.72 a
+strategy switch is **refused while a walk is live** — the old behavior could
+break a campaign mid-hop.
+
+## 4. How to verify (the commands)
+
+```bash
+# the campaign's economics (tokens, cache, p50/p95, list value, invoice)
+npx tsx scripts/cost-audit.ts --lane <project>
+
+# the MCP surface actually enabled
+npm run mcp:audit
+
+# the instinct gate's real hit rate
+cat ~/OLYMPUS-VAULT/05_Auto_Learning/shortcircuit-log.jsonl | wc -l   # evaluations
+# GATE.md records the verdict: retired at 0 short-circuits.
+
+# the caps
+cat ~/.olympus/cost-caps.json
+```
+
+## 5. What would make the design numbers real
+
+1. An A/B run of the same hop with and without the hot/warm/cold tiers.
+2. A gate that actually fires (the current tag-similarity × confidence math
+   cannot reach 0.85 except on near-identical tags).
+3. A Symphony measurement that survives CAL-1's refutation.
+4. A month of invoices compared to the list-value estimate.
+
+Until then, this page quotes the measured row and labels the rest.

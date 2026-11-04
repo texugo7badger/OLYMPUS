@@ -51,15 +51,16 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.71 — the perfect alignment release.** The ladder 0.0.65 → 0.0.70 is
-complete in order (one-screen phone + watchdog, mounted/visual gates + retired
-instinct gate, MCP quarantine, terminal attachments + build crystal + working
-preview Mark + distinct voices, performance mode, AppImage/checkpoint), and the
-creative queue now crosses surfaces: a prompt composed in `/m/studio` appears in
-the terminal with a **creative marker** and drains with one send. The README
-carries the large prints (creative, one-screen phone, clean terminal, empty
-OLYMPUS, themes) and `ISSUES.md` maps the 22 open issues to their next target.
-Everything below is evidence, not a promise; the road to v0.0.80 is in
+**v0.0.72 — the cost-truth release.** The question open since the first
+independent analysis finally has a command: `npm run cost:audit` reads the
+campaign's hop telemetry and the cost ledger and prints tokens/hop, cache hit,
+p50/p95, **list value** and **invoice** — three numbers, never one; a
+subscription reports `$0.00` and the audit says `invoice: unknown` instead of
+pretending it is free. Measured on the AIME campaign: 23 green hops, 1.0M in /
+74.6k out, p50 9.1 min, 89.7% cache hit. Spend caps are opt-in and park a hop
+by name (`cost-cap-5h`), `docs:check` now gates the docs against the code, and
+a strategy switch is refused while a walk is live. Everything below is
+evidence, not a promise; the open v1.0 gates are named in
 [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
@@ -93,11 +94,13 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**137 PASS / 0 FAIL / 1 declared skip** across 138 suites; a 100-hop
+**139 PASS / 0 FAIL / 1 declared skip** across 140 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
-suites stay maintainer-local; the evidence is public. Read
-[TESTING.md](TESTING.md).
+campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache
+hit, list value, invoice unknown) and the docs are gated by
+`npm run docs:check`. The suites stay maintainer-local; the evidence is
+public. Read [TESTING.md](TESTING.md).
 
 ## Responsive by design
 
@@ -188,17 +191,20 @@ notification and follows the system theme — stated, not hidden.
 ## Themes — eighteen families and a palette lab
 
 Every theme repaints the app, the terminal, the brain, the loader, the tray,
-the system icon and the scrollbars. The full gallery lives in [screenshots/THEMES.md](screenshots/THEMES.md);
-click a card to open it.
+the system icon and the scrollbars. Every card below is a **real screenshot**
+of the running app in that theme, with a clean terminal (a fresh session) —
+no mockups, no generated cards. Click one to open it full size.
 
+<!-- THEMES:GALLERY:START -->
 | | | |
 |---|---|---|
-| [<img src="screenshots/themes/olympus.svg" width="360" alt="Olympus" />](screenshots/themes/olympus.svg) | [<img src="screenshots/themes/obsidian.svg" width="360" alt="Obsidian" />](screenshots/themes/obsidian.svg) | [<img src="screenshots/themes/ember.svg" width="360" alt="Ember" />](screenshots/themes/ember.svg) |
-| [<img src="screenshots/themes/violet.svg" width="360" alt="Violet" />](screenshots/themes/violet.svg) | [<img src="screenshots/themes/forest.svg" width="360" alt="Forest" />](screenshots/themes/forest.svg) | [<img src="screenshots/themes/ice.svg" width="360" alt="Ice" />](screenshots/themes/ice.svg) |
-| [<img src="screenshots/themes/parchment.svg" width="360" alt="Parchment" />](screenshots/themes/parchment.svg) | [<img src="screenshots/themes/paper.svg" width="360" alt="Paper" />](screenshots/themes/paper.svg) | [<img src="screenshots/themes/mist.svg" width="360" alt="Mist" />](screenshots/themes/mist.svg) |
-| [<img src="screenshots/themes/blossom.svg" width="360" alt="Blossom" />](screenshots/themes/blossom.svg) | [<img src="screenshots/themes/sand.svg" width="360" alt="Sand" />](screenshots/themes/sand.svg) | [<img src="screenshots/themes/mint.svg" width="360" alt="Mint" />](screenshots/themes/mint.svg) |
-| [<img src="screenshots/themes/vampire.svg" width="360" alt="Vampire" />](screenshots/themes/vampire.svg) | [<img src="screenshots/themes/celestial.svg" width="360" alt="Celestial" />](screenshots/themes/celestial.svg) | [<img src="screenshots/themes/abyss.svg" width="360" alt="Abyss" />](screenshots/themes/abyss.svg) |
-| [<img src="screenshots/themes/rosewood.svg" width="360" alt="Rosewood" />](screenshots/themes/rosewood.svg) | [<img src="screenshots/themes/ivory.svg" width="360" alt="Ivory" />](screenshots/themes/ivory.svg) | [<img src="screenshots/themes/arctic.svg" width="360" alt="Arctic" />](screenshots/themes/arctic.svg) |
+| <a href="screenshots/themes/olympus.png"><img src="screenshots/themes/olympus.png" width="420" alt="Olympus theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Olympus</b> · dark</sub> | <a href="screenshots/themes/obsidian.png"><img src="screenshots/themes/obsidian.png" width="420" alt="Obsidian theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Obsidian</b> · dark</sub> | <a href="screenshots/themes/ember.png"><img src="screenshots/themes/ember.png" width="420" alt="Ember theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Ember</b> · dark</sub> |
+| <a href="screenshots/themes/violet.png"><img src="screenshots/themes/violet.png" width="420" alt="Violet theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Violet</b> · dark</sub> | <a href="screenshots/themes/forest.png"><img src="screenshots/themes/forest.png" width="420" alt="Forest theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Forest</b> · dark</sub> | <a href="screenshots/themes/ice.png"><img src="screenshots/themes/ice.png" width="420" alt="Ice theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Ice</b> · dark</sub> |
+| <a href="screenshots/themes/parchment.png"><img src="screenshots/themes/parchment.png" width="420" alt="Parchment theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Parchment</b> · light</sub> | <a href="screenshots/themes/paper.png"><img src="screenshots/themes/paper.png" width="420" alt="Paper theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Paper</b> · light</sub> | <a href="screenshots/themes/mist.png"><img src="screenshots/themes/mist.png" width="420" alt="Mist theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Mist</b> · light</sub> |
+| <a href="screenshots/themes/blossom.png"><img src="screenshots/themes/blossom.png" width="420" alt="Blossom theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Blossom</b> · light</sub> | <a href="screenshots/themes/sand.png"><img src="screenshots/themes/sand.png" width="420" alt="Sand theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Sand</b> · light</sub> | <a href="screenshots/themes/mint.png"><img src="screenshots/themes/mint.png" width="420" alt="Mint theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Mint</b> · light</sub> |
+| <a href="screenshots/themes/vampire.png"><img src="screenshots/themes/vampire.png" width="420" alt="Vampire theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Vampire</b> · dark</sub> | <a href="screenshots/themes/celestial.png"><img src="screenshots/themes/celestial.png" width="420" alt="Celestial theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Celestial</b> · dark</sub> | <a href="screenshots/themes/abyss.png"><img src="screenshots/themes/abyss.png" width="420" alt="Abyss theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Abyss</b> · dark</sub> |
+| <a href="screenshots/themes/rosewood.png"><img src="screenshots/themes/rosewood.png" width="420" alt="Rosewood theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Rosewood</b> · dark</sub> | <a href="screenshots/themes/ivory.png"><img src="screenshots/themes/ivory.png" width="420" alt="Ivory theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Ivory</b> · light</sub> | <a href="screenshots/themes/arctic.png"><img src="screenshots/themes/arctic.png" width="420" alt="Arctic theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Arctic</b> · light</sub> |
+<!-- THEMES:GALLERY:END -->
 
 Beyond the presets, the **palette lab** generates all 14 colors of a family
 from a hue + harmony, with contrast floors (text ≥ 7:1, dim ≥ 4.5:1, accent
@@ -299,11 +305,11 @@ olympus apply-strategy go-budget
 | Feature | What it does |
 |---------|--------------|
 | **10 Gods** | Apollo (primary) + Atlas (orchestration) + 7 specialists + Callimachus (background vault curator). Each has a fixed domain and model. |
-| **118 Demigods** | Unprefixed specialists organized under `.opencode/prompts/agents/demigods/<god>/`. |
-| **Symphony v1.0** | Latent God↔Demigod protocol. Every dispatch is a `VibrationalSignature` — no textual dispatch path. 70–90% transport reduction on parallel dispatches. |
+| **122 Demigods** | Unprefixed specialists organized under `.opencode/prompts/agents/demigods/<god>/`. |
+| **Symphony v1.0** | Latent God↔Demigod protocol. Every dispatch is a `VibrationalSignature` — no textual dispatch path. The old 70–90% transport claim was **refuted in CAL-1**; the protocol is real, the saving is measured per campaign. |
 | **VaultBrain v3.0** | Self-curating brain at `~/OLYMPUS-VAULT/05_Auto_Learning/`. Seed + empirical + archive instincts, cross-god patterns, 7-stage maintenance loop. |
-| **Cascading Compression** | 5 layers: none → caveman (65%) → strategic-compact → none → Symphony (70–90%). Net: ~90%+ cost reduction. |
-| **Hot/Warm/Cold Tiers** | 81% input reduction by only loading mastered + stack-relevant skills. |
+| **Cascading Compression** | 5 layers, wired. The percentages were **design math**, not measured; the measured economy today is the hop shape + an 89.7% cache hit (`npm run cost:audit`). |
+| **Hot/Warm/Cold Tiers** | Loads mastered + stack-relevant skills. `[DESIGN]` — no A/B measurement yet; the instinct gate measured **0 short-circuits in 4,754 evaluations** and is retired (`GATE.md`). |
 | **3D Brain Atlas** | Three.js / Canvas2D visualization of gods, instincts, knowledge, and Symphony vibrations. Brain view shows only Gods / Instincts / Knowledge (Skills, Evolved, and Projects removed for focus). Scope filters (Global / Stack / Project / Cross-stack) narrow the view. |
 | **Editor Bridge** | No built-in code editor — OLYMPUS launches your preferred IDE (Zed, VSCode, VSCodium, Cursor) on the active project and shares the live terminal via a token-gated WebSocket bridge. Use `olympus terminal` in any editor to attach. See [EDITORS.md](EDITORS.md). |
 | **Native Terminal** | Built-in `node-pty`/`xterm.js` terminal — shared live with your IDE via the Terminal Bridge (port 3740). |

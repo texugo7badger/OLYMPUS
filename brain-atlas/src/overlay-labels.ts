@@ -20,6 +20,18 @@ import { displayNodeName } from "./node-display.ts";
 import type { BrainGraph, LobeName, ProjectedPoint, Vec3 } from "./types.ts";
 import type { ProjectedNode } from "./render-core.ts";
 
+/** v0.0.72 — the label chip must read in EVERY theme. The old chip was a
+ *  hardcoded black box: on a light theme the dark label text vanished into
+ *  it (the Parchment screenshot). The chip now follows the canvas bg and the
+ *  text keeps the node's semantic color (deepened by the light palette). */
+function labelChipIsLight(bg: string): boolean {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(bg || "").trim());
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 140;
+}
+
 // ---------------------------------------------------------------------------
 // Lobe descriptions — relocated here so both renderers share the same data.
 // ---------------------------------------------------------------------------
@@ -195,6 +207,7 @@ export function drawNodeLabels(
   ctx.font = "10px 'JetBrains Mono', monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
+  const lightChip = labelChipIsLight(graph.activePalette.bg);
 
   const labels = new Set(automaticLabelIds(graph, nodeProjs, mobile, width, zoom));
 
@@ -278,12 +291,13 @@ export function drawNodeLabels(
       }
       if (!overlaps) {
         // Render the label at this position.
-        ctx.fillStyle = `rgba(0,0,0,${0.5 * alpha})`;
+        ctx.fillStyle = lightChip
+          ? `rgba(255,255,255,${0.72 * alpha})`
+          : `rgba(0,0,0,${0.5 * alpha})`;
         ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-        ctx.fillStyle =
-          projected.node.id === focusId
-            ? `rgba(255,255,255,${alpha})`
-            : hexA(projected.node.color, 0.95 * alpha);
+        ctx.fillStyle = projected.node.id === focusId
+          ? (lightChip ? `rgba(20,18,16,${alpha})` : `rgba(255,255,255,${alpha})`)
+          : hexA(projected.node.color, 0.95 * alpha);
         // The text is drawn relative to the rect: horizontally centered,
         // vertically at the top + 5px (matching the original baseline).
         ctx.fillText(label, rect.x + rect.w / 2, rect.y + 5);

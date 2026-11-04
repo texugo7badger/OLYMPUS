@@ -1,52 +1,63 @@
 # OLYMPUS Roadmap
 
-**v0.0.26 is the current release** (shipped 2026-10-30 — "THE MEASURED FLOOR": doc-truth rosters + provenance tags, grounded `tokens_saved`, benchmark attribution (god/demigod), the classifier agreement loop, control-lane flags, and the CAL-1 calibration with a refuted Symphony claim below 1 KB. See [CHANGELOG.md](CHANGELOG.md) and `research/CAL-1.md`.
+**v0.0.72 is the current release** (2026-11-04) — the cost-truth release: a
+campaign cost audit, opt-in spend caps, a docs gate, and a strategy switch that
+refuses to break a live walk. See [CHANGELOG.md](CHANGELOG.md) and
+[TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) for the measured numbers.
 
-**v0.0.25** (shipped 2026-10-30 — "THE STABLE SURFACE": the standalone `ws` boot crash fixed and gated by `verify:standalone`, MCP dependency preflight + honest amber states + the 128-tool budget with one-click cures, cached pane endpoints (`npm run perf:routes` warm p95 ≤ 300ms), check-only craft updates. See [CHANGELOG.md](CHANGELOG.md).
+> The plan of record for the climb to v0.0.81 is the maintainer's
+> `ROADMAP.md` in `~/.opencode/plan/` (ladder, runbook, definition of done).
+> This file is the public, short version: what ships next and what evidence
+> closes each step. A version without evidence does not count.
 
-**v0.0.24** (shipped 2026-10-30 — "THE HONEST SURFACE": one canonical MCP registry (28 unique, 44 tools, the curated six connected), one portal tooltip, the retired free-tier UI/plumbing removed, Athena's in-chat design choices (Design Studio deleted), 13 sourced god-domain knowledge references, project homes in `OLYMPUS-VAULT/02_Projects`, and the four open flow issues (#231 adaptive polling/paginated feed, #226 campaign grouping, #227 live in-flight panel, #241 warm hop transport). See [CHANGELOG.md](CHANGELOG.md).
+## Where the score stands
 
-**v0.0.23** (shipped 2026-10-29 — "THE STRATEGY ENGINE": the GO/ZEN rosters rebuilt from the live catalogue with DeepSeek V4.1 Flash as the preferred lane (DeepSeek V4 Pro retired), BYOK deleted, the interactive Strategy Builder (search any model registered in OpenCode), the MCP arsenal probed and curated to 44 tools, the demigod TEAM CONTRACT (2–5 parallel sub-agents per hop), stale in-flight reconciliation, and a minimalist header/badge identity. See [CHANGELOG.md](CHANGELOG.md).
+The independent analysis v3 (v0.0.71) scored **6.29 → 6**: product shipped,
+score flat. The three chronic debts are the reason:
 
----
+| Debt | State | Closed by |
+|---|---|---|
+| Cost | measured tokens/hop, list value, invoice unknown | v0.0.72 (this release) |
+| Focus | 132 agents, +3.958 lines, no pruning | v0.0.74 |
+| People | 2 stars, 0 forks, 0 external user | v0.0.78 |
 
-## SHIPPED — v0.0.3 through v0.0.13 (2026-10-17 → 2026-10-24)
+The ladder alone is worth ~7.1. **8.0 requires pruning + public tests + one
+external user.** 9.0 and 10.0 are community and sustainability, not versions.
 
-- v0.0.3 "the fix-OLYMPUS-itself release": the hop runtime wired end-to-end, the exit gate, the UAT cure (LUMINA walked 14/14).
-- v0.0.4 "Mission Control": task timers, the TASKS sheet, the drill-down, the honest Cost screen.
-- v0.0.5 "THE ATELIER'S TOOLS": the media vault, the describe lane, semantic search.
-- v0.0.6 "THE FORGE COMPLETES" + the premio waves: FORGE-3D, the agentic RAG, GLB ingestion, free+BYOK image generation, every MCP configurable, TOTAL VISIBILITY, electron 44.
-- v0.0.7 "THE CRAFT INSIDE": the 13 ArtCraft apps + the Studio embedded, the UI-references lane, the demigod naming law, React 19.3.1, the plugin cure (v2 loads the compiled JS, no more source failures), the originkit MCP, the plain release-title law (CI-enforced).
-- v0.0.8 "CRAFT-VENDOR": the Craft Apps move from live-site embeds to DOWNLOADS INSIDE OLYMPUS — the self-hosted WASM web builds (SHA-256-verified, auto-updated, no login) served from the OLYMPUS origin, the native portable lane, the OLYMPUS-built `olympus-craft` MCP (upstream ships none), the 13 official logos, the "Craft apps" menu, the version-stamp badge cure, the docs/version sweep (the v0.0.7 "No changes" release notes retro-filled with the real story).
-- v0.0.9 "THE FIELD POLISH + THE EDITORS + THE PAIR FOUNDATION": **SHIPPED 2026-10-23** — the six-wave field campaign (W1 true idle + named aborts, W2 the poll diet, W3a the exact-cost split, W3b the Beam flagship + DeepSeek V4.1 Flash, W4 the dispatch DNA, W5 premium chat UX), **PLUGIN-V2** (the v2 Effect contract, compiled to `.opencode/plugin-dist`, five native-covered plugins retired), the overnight auto-queue + the pinned OpenCode update lane, the **OriginKit 10/day budget** (#198), the **live preview URL bar** (#202), the **premium chat composer + persisted attachments** (#203), **EDITORS-2** re-verified with the packaged vsix (#199), the **first-run proof** (#201), and **PAIR-1 phase 1** probed end-to-end (#200).
-- v0.0.13 "THE IGNITION": **SHIPPED 2026-10-24** — `pickPlanRoot()` makes the planner marker and the post-run read the same root (lane-first), curing the AIME root split that left 6 prompts with 0/23 hops; the real plan walks 23/23 in the fixture; suite `walk-root.test.mjs`.
-- v0.0.12 "THE RELIABLE FREE": **SHIPPED 2026-10-24** — the lane census (GO Beam/GO DeepSeek/NVIDIA GLM/OR inkling serve; Zen free = "Free usage limit reached") + the GO-first roster v3 (Zen free only as the last resort) + small_model on GO Beam + the 30s session-create window.
-- v0.0.11 "THE TOOL LOOP": **SHIPPED 2026-10-24** — the terminal-finish rule (tool-calls ≠ turn end; the AIME field bug, S9) + the DeepSeek-first Free Hybrid roster (Apollo/Hephaestus/Callimachus on DeepSeek V4.1 Flash, Atlas on GO Beam, Athena/Dionysus/Hermes on inkling, Prometheus on flint, Persephone on north-mini) + the two-pass task-fit resolver + the NVIDIA DeepSeek probe (catalogued, aborts at 60s — not wired).
-- v0.0.10 "FREE HYBRID": **SHIPPED 2026-10-23** — ONE free strategy over every registered free source (GO/Zen free, OpenRouter free, NVIDIA Build free), a per-god roster fitted to each god's task (Beam 1.0 planning, MiniMax M3.1 Flash orchestration/512k out, Kimi K2.5 QA, DeepSeek V4.1 Flash code + vault, Cat Jam research), load-spread (≤3 gods/lane), user pins (`free-hybrid-overrides.json`), the #106 distributed NVIDIA pantheon as the keyless fallback, legacy free ids as deprecated aliases, and the GO deepseek price correction ($0.15/$0.60 + $0.66/$1.98).
+## The ladder
 
-## The ladder to v0.1.0
+| Version | Theme | Evidence that closes it |
+|---|---|---|
+| **v0.0.72** | Cost truth + docs gate + spend caps | `cost:audit` measured; caps tested; `docs:check` green; strategy guard |
+| v0.0.73 | 8-hour soak | soak report: 0 lost hops, RSS bounded, p50/p95 |
+| v0.0.74 | The pruning | census 132 → ~30 dispatched; negative line delta; #317 cancelled |
+| v0.0.75 | Public tests + control | a clone runs the pure core; hop detail; real ETA; per-god chats |
+| v0.0.76 | Measured 60 FPS + renderer | `fps:probe` p50 ≥ 58 on four surfaces; 24h uptime; Mark + Atelier |
+| v0.0.77 | AIME 79/79 | frozen plan finished; per-hop report; 0 unnamed parks |
+| v0.0.78 | Distribution + first external user | one human issue; one campaign on another machine |
+| v0.0.79 | Checkpoint 8 (honest) | independent review confirms 8.0 or says 7.x |
+| v0.0.80 | Headless worker < 1.5 GB | RSS measured; campaign 100% headless |
+| v0.0.81 | 100-hop + 7 days + external campaign | 100/100; a campaign from another machine published |
 
-### v0.0.14 — "THE FREE-FIRST ECONOMY" (COST-2..COST-6)
+## Rules of the climb
 
-The plan shipped in v0.0.9 (`docs/research/cost-strategy-remodel.md`); **the preset shipped in v0.0.10/v0.0.11 as Free Hybrid (COST-4 — #216)**; the economy layer is next:
+1. **Minors only** — never `0.0.x.1`, never skip a number.
+2. **No new surface before the 8** — no theme, voice, panel or screen. Extend
+   what exists. v0.0.74 must shrink the product.
+3. **AIME is the exam, not the workspace** — read-only until the maintainer
+   asks.
+4. **No claim without a probe** — tokens need a row, FPS needs the probe,
+   "running" needs the health probe.
+5. **Docs move with the tag** — `npm run docs:check` is part of the gate.
+6. **#317 (vendor-all MCP) is cancelled** — the curated 39 tools are the asset.
+7. **Evidence is public, raw campaign data is private.**
 
-1. **The provider budget ledger** — per-provider daily counters (Zen free / OpenRouter / NVIDIA), local-midnight reset, 80% alert + proactive failover, 100% honest stop (COST-2).
-2. **The workload-aware router** — multimodal / long-context / agentic / background classification; free-first lanes with the *paid last resort* under a hard monthly cap (default US$ 5); Apollo stays GLM (COST-3).
-3. **Free/paid telemetry** — `cost.jsonl` source labels, free share, per-provider spend, alert rows (COST-5).
-4. **The A/B benchmark + 24h UAT** — free vs paid quality/cost report; shadow-mode rollout first, rollback to `go-balanced` documented (COST-6).
+## v0.0.72 in one screen
 
-### v0.1.0 — "THE MILESTONE" (OLYMPUS on every device)
-
-1. **PAIR-1 complete (#170)**: the full remote surface — the campaign feed, the Parthenon + the ETA projection, and the HITL gates answered from the phone (the plan-walk approval remote; the same vault record, no state bifurcation).
-2. **The multisession per-god pool** — the B6 proposal (readers first, the per-god session pool deliberately last — the 0.1 milestone asks for it).
-3. **The matured candidates** that earn their place in the arc's conversation: voice input (if the user opts in), the short-circuit $ backfill (the resonance loop computing real token deltas), the vendored offline Craft lane (if the size math wins).
-4. **#166 (JET) + #140 (BENCH-2)** — enter whichever version the user's decisions land in.
-
-## The standing opportunities (candidates, no dates)
-
-- **The vendored Craft lane — SHIPPED (v0.0.8 W-M)**: the self-hosted WASM web builds download into `~/.olympus/craft-apps/` (7-14 MB each, SHA-256-verified, auto-updated) and the pane serves them from the OLYMPUS origin; the native portable lane + the `olympus-craft` MCP ride alongside. The old "Electron-resources bundling" idea stays retired — the runtime-download lane wins on size honesty.
-- **TRELLIS local 3D** — parked (no NVIDIA GPU on the current box; the honest requirements in docs/research/3d-lanes.md).
-- **Meshy hosted 3D** — the BYOK candidate, wiring deferred until the user opts in.
-- **Voice input** — the app listens (a candidate for v0.1.0 if the user calls it).
-
-**License:** AGPL-3.0-or-later. See [LICENSE](LICENSE).
+- `npx tsx scripts/cost-audit.ts --lane <project>` — tokens, cache hit,
+  p50/p95, list value, invoice, null-token gaps.
+- `~/.olympus/cost-caps.json` — 5h / weekly / monthly caps on the list value;
+  a cap parks the hop by name (`cost-cap-*`).
+- `npm run docs:check` — VERSION, README, CHANGELOG, ROADMAP, STABILITY and
+  the retired 97% claim are gated.
+- Strategy switch while a walk is live → refused with the holder named.

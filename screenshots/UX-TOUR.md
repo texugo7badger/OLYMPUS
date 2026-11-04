@@ -356,3 +356,11 @@ request to Apollo; tap a god's bar to hear that god explain its number.
 
 The captures are real (`npm run shots`, Electron offscreen): `07-creative.png`,
 `08-mobile.png` and `09-mobile-studio.png` are written from the running app.
+
+## Themes — one real screenshot per theme (v0.0.72)
+
+`screenshots/themes/<id>.png` is the running app in that theme, with a clean
+terminal (a fresh session), captured at 1440×900 from the standalone build.
+The manifest (`screenshots/themes/manifest.json`) is the source of the README
+gallery; `npm run shots:themes` re-captures all 18 and restores the user's own
+theme when it finishes.

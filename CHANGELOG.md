@@ -2,6 +2,52 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.72] — 2026-11-04
+
+### The cost truth, measured
+
+- `npm run cost:audit` — the campaign's economics from two existing files: the
+  lane's hop telemetry and the cost ledger. Tokens in/out, p50/p95 duration,
+  cache hit, list value, invoice, null-token gaps, top hops. A null token row
+  is a measurement gap, never a zero.
+- Three money numbers, never one: **step cost** (provider), **list value**
+  (catalog estimate) and **invoice** (unknown while the plan is a
+  subscription). The audit prints `invoice: unknown` instead of a silent sum.
+- Measured on the AIME campaign: 23 green hops, 1,009,005 in / 74,613 out,
+  p50 9.1 min, 89.7% cache hit, ≈ $0.19 list value, invoice unknown.
+
+### The spend brake
+
+- `~/.olympus/cost-caps.json` (or `OLYMPUS_CAP_*` env): 5h / weekly / monthly
+  caps on the list value and on tokens.
+- The walker checks the caps before a hop launches. A cap parks the hop by
+  name (`cost-cap-5h|weekly|monthly`) and stops the walk — a budget is a human
+  decision, not a transient error to retry.
+- Caps are opt-in: no file and no env means unlimited (existing campaigns are
+  never surprised).
+
+### The docs gate
+
+- `npm run docs:check` — VERSION vs package.json, the status-bar fallback, the
+  README Latest section, the CHANGELOG entry, the ROADMAP and STABILITY
+  headers, and the retired 97% claim in TOKEN-ECONOMY. Docs that contradict
+  the code now fail the gate.
+- TOKEN-ECONOMY rewritten: measured row first, design intent tagged
+  `[DESIGN]`, the instinct gate recorded as **0/4,754 — retired**.
+
+### The strategy guard
+
+- `POST /api/olympus/providers/gods` refuses a strategy switch while any lane
+  has a live walk lock (409 with the holder named). Rewriting `opencode.json`
+  mid-hop is the "Agent not found" class that killed hops; the switch now
+  happens at the hop boundary, or with an explicit `force:true`.
+
+### Evidence
+
+- `cost-caps.test.mjs` 10/10, `docs-check.test.mjs` 5/5.
+- `tsc` + eslint clean; production build + standalone verify PASS.
+- Battery: see the release body.
+
 ## [v0.0.30] — 2026-11-01
 
 **"TRUTH FIRST"** — the AIME day-of-build exposed the measurement layer, the MCP delivery path, and one data-loss event. This release makes the numbers honest and closes the destructive gap; it does not claim the campaign is fast.

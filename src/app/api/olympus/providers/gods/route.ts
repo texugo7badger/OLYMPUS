@@ -3,6 +3,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { liveWalkLocks } from '@/lib/hop-runtime/walk-lock';
+import { getVaultRoot } from '@/lib/vault-root';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -260,6 +262,23 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { god, override, strategy, defaultProvider, customStrategy, clearOverrides, resetToDefaults } = body;
+
+    // v0.0.72 — THE STRATEGY GUARD. apply-strategy rewrites opencode.json for
+    // every god; doing that while a hop is in flight leaves the warm server on
+    // a stale config (the AIME "Agent not found" class). The switch is applied
+    // at the hop boundary: refused here, with the holder named, unless the
+    // caller explicitly forces it.
+    if (body?.force !== true) {
+      const live = liveWalkLocks(getVaultRoot());
+      if (live.length > 0) {
+        const first = live[0];
+        return NextResponse.json({
+          ok: false,
+          error: `A campaign is walking in "${first.slug}" (pid ${first.holder.pid}, hop in flight) — switching the strategy now would break it. Stop the walk first, or pass force:true to override.`,
+          liveWalks: live.map((w) => ({ slug: w.slug, pid: w.holder.pid, startedAt: w.holder.startedAt, ageMs: w.ageMs })),
+        }, { status: 409 });
+      }
+    }
 
     // Handle custom strategy creation
     if (customStrategy) {
