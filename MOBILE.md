@@ -1,6 +1,6 @@
 # Mobile companion
 
-> v0.0.69 · one screen, voice first; the creative mode is the desktop surface, responsive.
+> v0.0.70 · one screen, voice first; the creative mode is the desktop surface, responsive.
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
