@@ -15,35 +15,21 @@
 
 ## Screens
 
+Six surfaces, captured from the running build — no mockups.
+
 <div align="center">
-  <img src="screenshots/00-hero.png" width="100%" alt="OLYMPUS fullscreen — the Brain Atlas and the live terminal, Olympus theme, English UI" />
+  <img src="screenshots/screens/01-brain-terminal.png" width="100%" alt="OLYMPUS — the Brain Atlas and a clean terminal in the Olympus theme" />
 </div>
 
 <div align="center">
 
-| The Brain Atlas · Obsidian | The Pattern Studio · Ember |
-|---|---|
-| <img src="screenshots/01-brain.png" width="720" alt="OLYMPUS Brain Atlas in the Obsidian theme" /> | <img src="screenshots/04-studio.png" width="720" alt="OLYMPUS Pattern Studio in the Ember theme" /> |
+| Creative mode | Build Hub | Settings |
+|---|---|---|
+| <img src="screenshots/screens/02-creative.png" width="460" alt="OLYMPUS creative mode — progress, ring, build crystal and queue" /> | <img src="screenshots/screens/03-builds.png" width="460" alt="OLYMPUS Build Hub — the talent builds and their crystals" /> | <img src="screenshots/screens/04-settings.png" width="460" alt="OLYMPUS Settings — appearance, themes and performance mode" /> |
 
-| References · Violet | Build Hub · Ice |
+| Mobile · one screen | Mobile creative |
 |---|---|
-| <img src="screenshots/05-references.png" width="720" alt="OLYMPUS References in the Violet theme — 939 live studies" /> | <img src="screenshots/03-builds.png" width="720" alt="OLYMPUS Build Hub — builds, cards and the talent entry" /> |
-
-| Settings · Parchment | Live preview & design |
-|---|---|
-| <img src="screenshots/06-appearance.png" width="720" alt="OLYMPUS Settings in the Parchment theme" /> | <img src="screenshots/04-style.png" width="720" alt="OLYMPUS design board — direction, live preview and brand" /> |
-
-| Creative mode · progress, ring and queue | Mobile companion |
-|---|---|
-| <img src="screenshots/07-creative.png" width="720" alt="OLYMPUS creative mode — the honest progress bars, the plasma ring and the build crystal" /> | <img src="screenshots/08-mobile.png" width="360" alt="OLYMPUS mobile companion showing the AIME campaign and the live preview" /> |
-
-| Mobile creative · the same surface in one hand | The terminal, clean (fresh session) |
-|---|---|
-| <img src="screenshots/09-mobile-studio.png" width="380" alt="OLYMPUS mobile creative mode — progress per god, the plasma ring and hold-to-talk" /> | <img src="screenshots/11-terminal.png" width="760" alt="OLYMPUS terminal in a fresh session — the brain atlas on the left, the clean terminal on the right" /> |
-
-| OLYMPUS with no project selected |
-|---|
-| <img src="screenshots/12-empty.png" width="960" alt="OLYMPUS with no project selected — the empty brain and the welcome terminal" /> |
+| <img src="screenshots/screens/05-mobile.png" width="360" alt="OLYMPUS mobile — the ring, hold-to-talk and the god row" /> | <img src="screenshots/screens/06-mobile-studio.png" width="360" alt="OLYMPUS mobile creative mode — progress per god and hold-to-talk" /> |
 
 </div>
 
@@ -191,20 +177,17 @@ notification and follows the system theme — stated, not hidden.
 ## Themes — eighteen families and a palette lab
 
 Every theme repaints the app, the terminal, the brain, the loader, the tray,
-the system icon and the scrollbars. Every card below is a **real screenshot**
-of the running app in that theme, with a clean terminal (a fresh session) —
-no mockups, no generated cards. Click one to open it full size.
+the system icon and the scrollbars. The full gallery lives in [screenshots/THEMES.md](screenshots/THEMES.md);
+click a card to open it.
 
-<!-- THEMES:GALLERY:START -->
 | | | |
 |---|---|---|
-| <a href="screenshots/themes/olympus.png"><img src="screenshots/themes/olympus.png" width="420" alt="Olympus theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Olympus</b> · dark</sub> | <a href="screenshots/themes/obsidian.png"><img src="screenshots/themes/obsidian.png" width="420" alt="Obsidian theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Obsidian</b> · dark</sub> | <a href="screenshots/themes/ember.png"><img src="screenshots/themes/ember.png" width="420" alt="Ember theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Ember</b> · dark</sub> |
-| <a href="screenshots/themes/violet.png"><img src="screenshots/themes/violet.png" width="420" alt="Violet theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Violet</b> · dark</sub> | <a href="screenshots/themes/forest.png"><img src="screenshots/themes/forest.png" width="420" alt="Forest theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Forest</b> · dark</sub> | <a href="screenshots/themes/ice.png"><img src="screenshots/themes/ice.png" width="420" alt="Ice theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Ice</b> · dark</sub> |
-| <a href="screenshots/themes/parchment.png"><img src="screenshots/themes/parchment.png" width="420" alt="Parchment theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Parchment</b> · light</sub> | <a href="screenshots/themes/paper.png"><img src="screenshots/themes/paper.png" width="420" alt="Paper theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Paper</b> · light</sub> | <a href="screenshots/themes/mist.png"><img src="screenshots/themes/mist.png" width="420" alt="Mist theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Mist</b> · light</sub> |
-| <a href="screenshots/themes/blossom.png"><img src="screenshots/themes/blossom.png" width="420" alt="Blossom theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Blossom</b> · light</sub> | <a href="screenshots/themes/sand.png"><img src="screenshots/themes/sand.png" width="420" alt="Sand theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Sand</b> · light</sub> | <a href="screenshots/themes/mint.png"><img src="screenshots/themes/mint.png" width="420" alt="Mint theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Mint</b> · light</sub> |
-| <a href="screenshots/themes/vampire.png"><img src="screenshots/themes/vampire.png" width="420" alt="Vampire theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Vampire</b> · dark</sub> | <a href="screenshots/themes/celestial.png"><img src="screenshots/themes/celestial.png" width="420" alt="Celestial theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Celestial</b> · dark</sub> | <a href="screenshots/themes/abyss.png"><img src="screenshots/themes/abyss.png" width="420" alt="Abyss theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Abyss</b> · dark</sub> |
-| <a href="screenshots/themes/rosewood.png"><img src="screenshots/themes/rosewood.png" width="420" alt="Rosewood theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Rosewood</b> · dark</sub> | <a href="screenshots/themes/ivory.png"><img src="screenshots/themes/ivory.png" width="420" alt="Ivory theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Ivory</b> · light</sub> | <a href="screenshots/themes/arctic.png"><img src="screenshots/themes/arctic.png" width="420" alt="Arctic theme — OLYMPUS with a clean terminal" /></a><br><sub><b>Arctic</b> · light</sub> |
-<!-- THEMES:GALLERY:END -->
+| [<img src="screenshots/themes/olympus.svg" width="360" alt="Olympus" />](screenshots/themes/olympus.svg) | [<img src="screenshots/themes/obsidian.svg" width="360" alt="Obsidian" />](screenshots/themes/obsidian.svg) | [<img src="screenshots/themes/ember.svg" width="360" alt="Ember" />](screenshots/themes/ember.svg) |
+| [<img src="screenshots/themes/violet.svg" width="360" alt="Violet" />](screenshots/themes/violet.svg) | [<img src="screenshots/themes/forest.svg" width="360" alt="Forest" />](screenshots/themes/forest.svg) | [<img src="screenshots/themes/ice.svg" width="360" alt="Ice" />](screenshots/themes/ice.svg) |
+| [<img src="screenshots/themes/parchment.svg" width="360" alt="Parchment" />](screenshots/themes/parchment.svg) | [<img src="screenshots/themes/paper.svg" width="360" alt="Paper" />](screenshots/themes/paper.svg) | [<img src="screenshots/themes/mist.svg" width="360" alt="Mist" />](screenshots/themes/mist.svg) |
+| [<img src="screenshots/themes/blossom.svg" width="360" alt="Blossom" />](screenshots/themes/blossom.svg) | [<img src="screenshots/themes/sand.svg" width="360" alt="Sand" />](screenshots/themes/sand.svg) | [<img src="screenshots/themes/mint.svg" width="360" alt="Mint" />](screenshots/themes/mint.svg) |
+| [<img src="screenshots/themes/vampire.svg" width="360" alt="Vampire" />](screenshots/themes/vampire.svg) | [<img src="screenshots/themes/celestial.svg" width="360" alt="Celestial" />](screenshots/themes/celestial.svg) | [<img src="screenshots/themes/abyss.svg" width="360" alt="Abyss" />](screenshots/themes/abyss.svg) |
+| [<img src="screenshots/themes/rosewood.svg" width="360" alt="Rosewood" />](screenshots/themes/rosewood.svg) | [<img src="screenshots/themes/ivory.svg" width="360" alt="Ivory" />](screenshots/themes/ivory.svg) | [<img src="screenshots/themes/arctic.svg" width="360" alt="Arctic" />](screenshots/themes/arctic.svg) |
 
 Beyond the presets, the **palette lab** generates all 14 colors of a family
 from a hue + harmony, with contrast floors (text ≥ 7:1, dim ≥ 4.5:1, accent

@@ -95,7 +95,7 @@
     "cost:audit": "tsx scripts/cost-audit.ts",
     "docs:check": "node scripts/docs-check.mjs",
     "shots:themes": "node scripts/capture-themes-cdp.mjs",
-    "themes:readme": "node scripts/readme-themes.mjs"
+    "shots:screens": "node scripts/capture-screens-cdp.mjs"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
