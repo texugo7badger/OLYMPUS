@@ -50,6 +50,14 @@ export function listQueue(project?: string): PromptQueueItem[] {
 export function enqueuePrompt(project: string, text: string, now = Date.now(), meta: { source?: 'terminal' | 'creative'; god?: string } = {}): PromptQueueItem | null {
   const clean = String(text || '').trim().slice(0, 4000);
   if (!clean) return null;
+  // v0.0.77 — THE DEDUPE. Before a god's suggestion is queued, the queue is
+  // checked for the same project + normalized text: an error already waiting
+  // for a fix is not enqueued twice (the user's "check if it is already in
+  // the queue" rule).
+  const norm = (v: string) => v.toLowerCase().replace(/\s+/g, ' ').trim();
+  const projectKey = String(project || '').trim() || 'unknown';
+  const duplicate = read().some((i) => i.status === 'queued' && i.project === projectKey && norm(i.text) === norm(clean));
+  if (duplicate) return null;
   const item: PromptQueueItem = {
     id: `pq-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
     project: String(project || '').trim() || 'unknown',

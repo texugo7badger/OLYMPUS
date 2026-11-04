@@ -2,6 +2,43 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.77] — 2026-11-04
+
+### The creative flow, first slice
+
+- **Click a hop** in the Pattern Studio (desktop) or the mobile studio: the
+  same live info sheet Recent Activity uses opens — thinking, files, tokens,
+  build, status — scoped to the active lane and polling while the hop runs.
+- **The god chat has a microphone**: hold-to-talk (server STT, browser
+  fallback) fills the message; the answer can be **queued** with one click
+  (`queue this`), landing in the creative queue as the next prompt.
+- **God↔god working session**: a second god joins the chat (`discuss with`),
+  reads the user's message + the first god's answer, and replies with its own
+  view, the risks and one next step. One round, two turns — bounded.
+- Every exchange is appended to the **shared activity feed** (the terminal's
+  activity strip and God Intelligence are the durable log).
+
+### The queue checks itself
+
+- `enqueuePrompt` now refuses a duplicate: same project + normalized text
+  already queued → no second card. A god's suggestion that is already waiting
+  for a fix is not enqueued twice.
+
+### Support, elegant
+
+- The README's support block is two self-contained SVG buttons
+  (`support-kofi.svg`, `support-pix.svg`) wrapped in the real links — no
+  third-party image hosts, no sales copy.
+
+### Evidence
+
+- `god-chat.test.mjs` 12/12 (allowlist, own agent, parser, timeout, modal,
+  thought, entry point, no Apollo, god↔god, activity log, selector, speakers).
+- Live: Athena + Hephaestus discussed a verification plan in **17.6s**
+  (two turns) in an isolated lane.
+- `tsc` + eslint clean; production build + standalone verify PASS.
+- Battery: see the release body.
+
 ## [v0.0.76] — 2026-11-04
 
 ### Talk to one god (the Parthenon chat)

@@ -33,15 +33,14 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.76 — talk to one god, and the orb follows the theme.** The Parthenon
-header opens a **chat with the focused god** — its own agent, its own session,
-no Apollo in the middle — with the god's last thought (the reasoning from its
-last hop) and what it is doing above the conversation. The studio's voice orb
-lost its hardcoded near-black background: on light themes it is a paper ball
-with the god's ink ring. The terminal header and composer no longer overlap at
-~1200px, and the i18n audit proves all **268 keys × 7 languages** are present.
-Everything below is evidence, not a promise; the open
-v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.77 — the creative flow starts talking.** Clicking a hop in the Pattern
+Studio (desktop or phone) opens its live info sheet; the god chat gains a
+**microphone** (hold-to-talk) and a **queue this** action; and a second god can
+join the session (`discuss with`) — one round, two turns, with the user in the
+middle. Every exchange lands in the shared activity feed. The queue refuses
+duplicates, and the README support block is two elegant SVG buttons. Everything
+below is evidence, not a promise; the open v1.0 gates are named in
+[V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -390,11 +389,11 @@ All contributors must accept the [Contributor License Agreement (CLA)](CLA.md) b
   <h3>Support the dev</h3>
 
   <a href="https://ko-fi.com/G4H521S5GK">
-    <img src="https://storage.ko-fi.com/cdn/kofi5.png?v=6" height="44" alt="Buy Me a Coffee at ko-fi.com" />
+    <img src="public/diagrams/support-kofi.svg" height="64" alt="Buy me a coffee at ko-fi.com/texugo7badger" />
   </a>
   &nbsp;&nbsp;
   <a href="https://livepix.gg/texugo7badger">
-    <img src="https://i.imgur.com/jjPuVUG.png" height="44" alt="Doe via LivePix (PIX)" />
+    <img src="public/diagrams/support-pix.svg" height="64" alt="Doe via PIX at livepix.gg/texugo7badger" />
   </a>
 
   <br /><br />

@@ -13,10 +13,11 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send, X, Loader2, Brain } from 'lucide-react';
+import { MessageSquare, Send, X, Loader2, Brain, Mic, ListPlus } from 'lucide-react';
 import { useLanguage, godName } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme-store';
 import { resolvePalette } from '@/lib/theme';
+import { useHoldToTalk } from '@/lib/use-hold-to-talk';
 
 interface TaskRow {
   id: string;
@@ -29,7 +30,7 @@ interface TaskRow {
   artifacts?: string[];
 }
 
-interface Msg { role: 'you' | 'god'; text: string }
+interface Msg { role: 'you' | 'god'; text: string; god?: string }
 
 export default function GodChatModal({ godId, onClose }: { godId: string; onClose: () => void }) {
   const [language] = useLanguage();
@@ -41,6 +42,16 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
   const [error, setError] = useState<string | null>(null);
   const [thought, setThought] = useState<TaskRow | null>(null);
   const [showThought, setShowThought] = useState(false);
+  const [lane, setLane] = useState<string | null>(null);
+  // v0.0.77 — the god↔god working session: a second god reads the first
+  // answer and replies with its own view (one round, two turns).
+  const [withGod, setWithGod] = useState<string>('');
+  const [queued, setQueued] = useState(false);
+  const hold = useHoldToTalk({
+    language: language as any,
+    onText: (text) => { setInput(text); },
+    onError: (msg) => setError(msg),
+  });
   const listRef = useRef<HTMLDivElement>(null);
 
   // The god's latest thought = the reasoning of its last hop (the lane's own
@@ -78,17 +89,35 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
       const r = await fetch('/api/olympus/god/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ god: godId, message: text }),
+        body: JSON.stringify({ god: godId, message: text, ...(withGod ? { withGod } : {}) }),
       });
       const d = await r.json();
       if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
-      setMessages((m) => [...m, { role: 'god', text: String(d.text) }]);
+      const replies = Array.isArray(d.replies) && d.replies.length > 0 ? d.replies : [{ god: godId, text: String(d.text) }];
+      setMessages((m) => [...m, ...replies.map((r: any) => ({ role: 'god' as const, text: String(r.text), god: String(r.god) }))]);
+      if (typeof d.lane === 'string') setLane(d.lane);
+      setQueued(false);
     } catch (e: any) {
       setError(e?.message || String(e));
     } finally {
       setBusy(false);
     }
-  }, [godId, input, busy]);
+  }, [godId, input, busy, withGod]);
+
+  const queueAnswer = useCallback(async (text: string) => {
+    const slug = lane ? lane.split(/[\\/]/).filter(Boolean).pop() : '';
+    if (!slug) { setError('No active project to queue into.'); return; }
+    try {
+      const r = await fetch('/api/olympus/prompt-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: slug, text, source: 'creative', god: godId }),
+      });
+      const d = await r.json();
+      if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      setQueued(true);
+    } catch (e: any) { setError(e?.message || String(e)); }
+  }, [lane, godId]);
 
   const name = godName(godId, language as any);
 
@@ -141,7 +170,7 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
           {messages.map((m, i) => (
             <div key={i} className="flex flex-col gap-0.5">
               <span className="text-[8px] font-mono uppercase tracking-wide" style={{ color: m.role === 'you' ? palette.textDim : palette.gold }}>
-                {m.role === 'you' ? 'you' : godId}
+                {m.role === 'you' ? 'you' : godName(m.god ?? godId, language as any)}
               </span>
               <div
                 className="whitespace-pre-wrap break-words rounded-lg px-2.5 py-1.5 text-[11px] leading-relaxed"
@@ -152,6 +181,16 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
               >
                 {m.text}
               </div>
+              {m.role === 'god' && (
+                <button
+                  onClick={() => void queueAnswer(m.text)}
+                  className="mt-0.5 flex items-center gap-1 self-start text-[8px] font-mono"
+                  style={{ color: queued ? palette.green : palette.textDim }}
+                  data-tip="Queue this answer as the next prompt (creative queue)"
+                >
+                  <ListPlus size={9} /> {queued ? 'queued' : 'queue this'}
+                </button>
+              )}
             </div>
           ))}
           {busy && (
@@ -162,7 +201,25 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
           {error && <p className="text-[9.5px] font-mono" style={{ color: palette.red }}>{error}</p>}
         </div>
 
-        <div className="flex items-end gap-2 border-t px-3 py-2" style={{ borderColor: `${palette.gold}22` }}>
+        <div className="flex items-center gap-1.5 border-t px-3 pt-2" style={{ borderColor: `${palette.gold}22` }}>
+          <span className="text-[8px] font-mono" style={{ color: palette.textDim }}>discuss with</span>
+          <select
+            value={withGod}
+            onChange={(e) => setWithGod(e.target.value)}
+            aria-label="Discuss with a second god"
+            className="rounded bg-transparent px-1 py-0.5 text-[8.5px] font-mono outline-none"
+            style={{ color: palette.text, border: `1px solid ${palette.gold}33` }}
+          >
+            <option value="" style={{ background: palette.panel }}>— alone —</option>
+            {['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus']
+              .filter((g) => g !== godId)
+              .map((g) => (
+                <option key={g} value={g} style={{ background: palette.panel }}>{godName(g, language as any)}</option>
+              ))}
+          </select>
+          {withGod && <span className="text-[8px] font-mono" style={{ color: palette.cyan }}>one round · two turns</span>}
+        </div>
+        <div className="flex items-end gap-2 px-3 pb-2 pt-1">
           <textarea
             rows={1}
             value={input}
@@ -173,6 +230,18 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
             className="max-h-28 flex-1 resize-none bg-transparent text-[11px] font-mono outline-none"
             style={{ color: palette.text }}
           />
+          <button
+            onPointerDown={(e) => { e.preventDefault(); if (hold.supported && !busy) void hold.start(); }}
+            onPointerUp={(e) => { e.preventDefault(); hold.stop(); }}
+            onPointerLeave={() => { if (hold.recording) hold.stop(); }}
+            disabled={busy || !hold.supported}
+            aria-label={hold.recording ? 'Release to transcribe' : 'Hold to talk'}
+            data-tip={hold.supported ? 'Hold to talk (server STT)' : 'Microphone needs HTTPS or localhost'}
+            className="rounded px-2 py-1 disabled:opacity-40"
+            style={{ background: hold.recording ? `${palette.red}22` : `${palette.cyan}14`, color: hold.recording ? palette.red : palette.cyan, border: `1px solid ${palette.cyan}33` }}
+          >
+            {hold.transcribing ? <Loader2 size={11} className="animate-spin" /> : <Mic size={11} />}
+          </button>
           <button
             onClick={() => void send()}
             disabled={busy || !input.trim()}

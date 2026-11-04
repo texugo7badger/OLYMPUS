@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { ArrowLeft, Loader2, Mic, Send, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import PlasmaRing from '@/components/olympus/plasma-ring';
 import ProgressStrip from '@/components/olympus/progress-strip';
+import TaskSheetModal from '@/components/olympus/task-sheet-modal';
 import { normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
 import { speechLocale, t, useLanguage } from '@/lib/i18n';
 import { godPersona } from '@/lib/god-personas';
@@ -70,6 +71,8 @@ export default function MobileStudio() {
   const [activeSlug, setActiveSlug] = useState('');
   const [queue, setQueue] = useState<Array<{ id: string; text: string; status: string; createdAt: string }>>([]);
   const [queueText, setQueueText] = useState('');
+  // v0.0.77 — tapping a hop opens its info sheet on the phone too.
+  const [sheetHop, setSheetHop] = useState<string | null>(null);
   const [feed, setFeed] = useState<Array<{ type: string; title: string; body: string; ts: string }>>([]);
   const studioStampRef = useRef('');
   const levelGate = useRef(0);
@@ -443,9 +446,15 @@ export default function MobileStudio() {
           {inFlight.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {inFlight.map((h) => (
-                <span key={h.hopId} className="rounded-full border px-2 py-0.5 text-[10px]" style={{ borderColor: `${godTint(palette, h.god || 'apollo')}44`, color: godTint(palette, h.god || 'apollo') }}>
+                <button
+                  key={h.hopId}
+                  onClick={() => setSheetHop(h.hopId)}
+                  aria-label={`Open ${h.hopId}`}
+                  className="rounded-full border px-2 py-0.5 text-[10px]"
+                  style={{ borderColor: `${godTint(palette, h.god || 'apollo')}44`, color: godTint(palette, h.god || 'apollo') }}
+                >
                   {h.hopId}{h.god ? ` · ${h.god}` : ''}
-                </span>
+                </button>
               ))}
             </div>
           )}
@@ -568,6 +577,8 @@ export default function MobileStudio() {
 
         <div className="h-4" />
       </section>
+      {sheetHop && <TaskSheetModal hopId={sheetHop} onClose={() => setSheetHop(null)} />}
     </main>
   );
 }
+

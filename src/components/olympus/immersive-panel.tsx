@@ -27,6 +27,7 @@ import { godIntro } from '@/lib/god-personas';
 import ThemedLogo from './themed-logo';
 import PlasmaRing from './plasma-ring';
 import ProgressStrip from './progress-strip';
+import TaskSheetModal from './task-sheet-modal';
 
 interface Particle { x: number; y: number; vx: number; vy: number; r: number; c: number; a: number }
 interface Cell { x: number; y: number; r: number; phase: number; splitAt: number; c: number; drift: number }
@@ -58,6 +59,10 @@ interface Thought {
 export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const [theme] = useTheme();
   const palette = resolvePalette(theme);
+  const activeProject = useOlympus((s) => s.activeProject);
+  // v0.0.77 — a hop click opens its info sheet (the same live sheet Recent
+  // Activity uses), scoped to the active lane.
+  const [sheetHop, setSheetHop] = useState<string | null>(null);
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('olympus:close-tutorial'));
   }, []);
@@ -694,7 +699,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
             return (
               <div
                 key={th.id}
-                onClick={() => setActiveGod(th.god || 'apollo')}
+                onClick={() => { setActiveGod(th.god || 'apollo'); setSheetHop(th.label); }}
                 className="absolute pointer-events-auto cursor-pointer rounded-lg border px-2 py-1 max-w-[150px] transition-opacity duration-500 hover:scale-[1.03]"
                 style={{
                   left: `${nx}%`,
@@ -914,6 +919,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
           </div>
         </aside>
       </div>
+      {sheetHop && <TaskSheetModal hopId={sheetHop} lane={activeProject?.path ?? null} onClose={() => setSheetHop(null)} />}
     </div>
   );
 }

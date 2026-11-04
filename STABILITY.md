@@ -2,7 +2,7 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.76 · The harness is shipped and measured; the 8-hour / 100-hop
+> v0.0.77 · The harness is shipped and measured; the 8-hour / 100-hop
 > certification is **not** claimed yet. This page records what was actually
 > run and what remains. The cost side is now measured by `npm run cost:audit`
 > (tokens/hop, cache hit, list value, invoice unknown) and bounded by the

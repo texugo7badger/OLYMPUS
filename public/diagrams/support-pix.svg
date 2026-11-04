@@ -1,0 +1,19 @@
+<svg width="280" height="76" viewBox="0 0 280 76" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Doe via PIX at livepix.gg/texugo7badger">
+  <a href="https://livepix.gg/texugo7badger" target="_blank">
+    <rect x="0.5" y="0.5" width="279" height="75" rx="14" fill="#12141A" stroke="#9CC48E" stroke-opacity="0.55"/>
+    <rect x="0.5" y="0.5" width="279" height="75" rx="14" fill="url(#pixGlow)"/>
+    <g transform="translate(24 24)" stroke="#9CC48E" stroke-width="1.6" fill="none">
+      <path d="M14 2 26 14 14 26 2 14 14 2Z"/>
+      <path d="M14 8 20 14 14 20 8 14 14 8Z" opacity="0.65"/>
+      <path d="M2 14 6 10M26 14l-4 4" opacity="0.5"/>
+    </g>
+    <text x="66" y="34" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="14" font-weight="700">Doe via PIX</text>
+    <text x="66" y="52" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="9.5">livepix.gg/texugo7badger</text>
+  </a>
+  <defs>
+    <radialGradient id="pixGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(44 38) rotate(90) scale(60 140)">
+      <stop stop-color="#9CC48E" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#9CC48E" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

@@ -1,6 +1,8 @@
 # OLYMPUS Roadmap
 
-**v0.0.76 is the current release** (2026-11-04) — the god chat:
+**v0.0.77 is the current release** (2026-11-04) — the creative flow:
+hop click → live sheet (desktop + phone), god chat with mic + queue, god↔god
+session, queue dedupe, SVG support buttons. v0.0.76 was the god chat:
 the Parthenon opens a conversation with the focused god (own agent, own
 session, last thought + status), and the voice orb follows the theme.
 v0.0.75 was the live-truth + themes release:
@@ -41,6 +43,7 @@ external user.** 9.0 and 10.0 are community and sustainability, not versions.
 
 | Version | Theme | Evidence that closes it |
 |---|---|---|
+| **v0.0.77** | Creative flow | hop sheet + mic + queue + god↔god |
 | **v0.0.76** | God chat | Parthenon conversation per god |
 | **v0.0.75** | Live truth | dashboard = lane telemetry; hop sheet live |
 | **v0.0.74** | Clean input + census + docs | paste → `[name]`; census 122/14/3; SVG on every doc |
