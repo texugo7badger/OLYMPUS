@@ -2,13 +2,15 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.77 · The harness is shipped and measured; the 8-hour / 100-hop
+> v0.0.78 · The harness is shipped and measured; the 8-hour / 100-hop
 > certification is **not** claimed yet. This page records what was actually
 > run and what remains. The cost side is now measured by `npm run cost:audit`
 > (tokens/hop, cache hit, list value, invoice unknown) and bounded by the
 > opt-in caps in `~/.olympus/cost-caps.json`. Since v0.0.73 a campaign can
 > walk in a **detached supervisor process**: the app restarting no longer
 > kills the walk, and an orphaned state is resumed once at boot (bounded).
+> The suspend contract is drilled (`npm run suspend:drill`): a hop with 1.5s
+> timers survives a suspend marker written mid-flight.
 
 ## What the harness measures
 

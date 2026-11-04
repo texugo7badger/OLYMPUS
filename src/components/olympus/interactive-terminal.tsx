@@ -441,7 +441,7 @@ export default function InteractiveTerminal() {
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   // v0.0.71 — the creative queue: prompts composed in /m/studio or the studio
   // panel, shown here with a distinct marker and drained on demand.
-  const [creativeQueue, setCreativeQueue] = useState<Array<{ id: string; text: string; god?: string }>>([]);
+  const [creativeQueue, setCreativeQueue] = useState<Array<{ id: string; text: string; god?: string; source?: string }>>([]);
   const [uploadedFileDetails, setUploadedFileDetails] = useState<Array<{
     name: string;
     path: string;
@@ -1410,7 +1410,7 @@ export default function InteractiveTerminal() {
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (!live || !d?.ok) return;
-          setCreativeQueue((Array.isArray(d.items) ? d.items : []).filter((i: any) => i.source === 'creative' && i.status === 'queued'));
+          setCreativeQueue((Array.isArray(d.items) ? d.items : []).filter((i: any) => i.status === 'queued'));
         })
         .catch(() => { /* offline */ });
     };
@@ -2296,7 +2296,8 @@ export default function InteractiveTerminal() {
             <div className="shrink-0 border-t border-olympus-purple/20 bg-olympus-purple/5 px-3 py-1.5">
               <div className="flex items-center gap-1.5 text-[9px] font-mono">
                 <Sparkles size={10} className="text-olympus-purple" />
-                <span className="text-olympus-purple">creative queue · {creativeQueue.length}</span>
+                <span className="text-olympus-purple">queue · {creativeQueue.length}</span>
+                <span className="rounded px-1 text-[8px] uppercase text-olympus-text-dim ring-1 ring-olympus-text-dim/20">{creativeQueue[0].source ?? 'terminal'}</span>
                 <span className="min-w-0 flex-1 truncate text-olympus-text-dim">{creativeQueue[0].text}</span>
                 <button
                   onClick={() => void drainCreative(creativeQueue[0])}

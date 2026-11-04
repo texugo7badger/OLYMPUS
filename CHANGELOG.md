@@ -2,6 +2,47 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.78] — 2026-11-04
+
+### The voice ladder, probed
+
+- `src/lib/voice-engines.ts` probes **Chatterbox Multilingual V3** (MIT, 23+
+  languages, cloning, emotion) on `:4123`, **Kokoro 82M** (Apache-2.0, CPU) and
+  **edge-tts** (the zero-install default), and reports `available`, `detail`,
+  `setup` and `preferred` in `/api/olympus/voice/status`. A probe answers only
+  when the engine answers.
+- `VOICE.md` documents the ladder, the licenses (XTTS v2 rejected as
+  non-commercial), the per-god pitch/rate profiles, and the exact Chatterbox
+  sidecar setup — including the language-metadata rule that keeps the voice
+  correct in Portuguese.
+
+### The phone is a companion, not a second boss
+
+- `/m` can **queue** a typed prompt for the terminal (source `phone`) and
+  **resume a parked/interrupted campaign** through the detached supervisor.
+- The terminal's queue banner now shows every queued item with its source
+  (`creative` / `phone` / `terminal`), not only the creative ones.
+
+### A discreet coffee in the status bar
+
+- A small cup opens a two-link popover (Ko-fi and PIX) and closes on click
+  outside/Escape. It never interrupts, never nags and never appears mid-task —
+  the user is king.
+
+### The suspend contract, proven
+
+- `npm run suspend:drill` runs a detached script hop with 1.5s timers, writes
+  the suspend marker mid-hop, resumes it, and asserts the hop still completes
+  with its artifact — no park. **PASS.**
+- This is a simulation of the marker (a real OS suspend cannot be automated on
+  a machine in use); the contract it proves is the one the walker relies on.
+
+### Evidence
+
+- `suspend-drill.test.mjs` 1/1; `god-chat.test.mjs` 12/12; `i18n-audit` 1/1.
+- `tsc` + eslint clean; production build + standalone verify PASS.
+- Battery: see the release body.
+
 ## [v0.0.77] — 2026-11-04
 
 ### The creative flow, first slice

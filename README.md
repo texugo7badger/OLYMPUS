@@ -33,14 +33,15 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.77 — the creative flow starts talking.** Clicking a hop in the Pattern
-Studio (desktop or phone) opens its live info sheet; the god chat gains a
-**microphone** (hold-to-talk) and a **queue this** action; and a second god can
-join the session (`discuss with`) — one round, two turns, with the user in the
-middle. Every exchange lands in the shared activity feed. The queue refuses
-duplicates, and the README support block is two elegant SVG buttons. Everything
-below is evidence, not a promise; the open v1.0 gates are named in
-[V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.78 — the voice ladder and the phone companion.** The voice engines are
+probed, never claimed: **Chatterbox** (MIT, 23+ languages, cloning, emotion) →
+**Kokoro** (Apache-2.0, CPU) → **edge-tts** (zero-install default), with the
+per-god profiles and the exact setup in [VOICE.md](VOICE.md). The phone can now
+**queue** a prompt for the terminal and **resume a parked campaign** through the
+detached supervisor. The suspend contract is proven by a drill: a hop with 1.5s
+timers survives a suspend marker mid-flight. A discreet cup in the status bar
+opens the donation links (Ko-fi / PIX) — never a nag. Everything below is evidence, not a
+promise; the open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -73,7 +74,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**144 PASS / 0 FAIL / 1 declared skip** across 145 suites; a 100-hop
+**145 PASS / 0 FAIL / 1 declared skip** across 146 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache
@@ -358,6 +359,7 @@ bash scripts/install/uninstall.sh
 | [EDITORS.md](EDITORS.md) | Supported external editors (Zed, VSCode, VSCodium, Cursor), per-OS install commands, Terminal Bridge protocol |
 | [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) | LLM strategy reference — GO plan strategies, Zen (private models), Local (your hardware), the Strategy Builder, demigod inheritance, switching strategies |
 | [BENCHMARKS.md](BENCHMARKS.md) | Eval harness (CI golden tasks) + always-on opt-in benchmark recording (real-world metrics), vault pruning policy |
+| [VOICE.md](VOICE.md) | The voice ladder (Chatterbox / Kokoro / edge-tts), licenses, per-god profiles and setup |
 | [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) | Token cost flow — how OLYMPUS achieves quality at low cost |
 | [WORKFLOW.md](WORKFLOW.md) | How a task flows end-to-end — standard dispatch + Symphony latent path |
 | [SECURITY.md](SECURITY.md) | Security policy + vulnerability reporting |
@@ -388,15 +390,7 @@ All contributors must accept the [Contributor License Agreement (CLA)](CLA.md) b
 
   <h3>Support the dev</h3>
 
-  <a href="https://ko-fi.com/G4H521S5GK">
-    <img src="public/diagrams/support-kofi.svg" height="64" alt="Buy me a coffee at ko-fi.com/texugo7badger" />
-  </a>
-  &nbsp;&nbsp;
-  <a href="https://livepix.gg/texugo7badger">
-    <img src="public/diagrams/support-pix.svg" height="64" alt="Doe via PIX at livepix.gg/texugo7badger" />
-  </a>
-
-  <br /><br />
+  <p><a href="https://ko-fi.com/G4H521S5GK"><img src="public/diagrams/support-kofi.svg" height="64" alt="Buy me a coffee at ko-fi.com/texugo7badger" style="margin:0 6px" /></a><a href="https://livepix.gg/texugo7badger"><img src="public/diagrams/support-pix.svg" height="64" alt="Doe via PIX at livepix.gg/texugo7badger" style="margin:0 6px" /></a></p>
 
   <sub>Made by <a href="https://github.com/texugo7badger">@texugo7badger</a></sub>
 

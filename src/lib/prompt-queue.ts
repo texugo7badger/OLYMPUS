@@ -20,7 +20,7 @@ export interface PromptQueueItem {
   status: 'queued' | 'sent';
   sentAt?: string;
   /** v0.0.71 — where the prompt was composed: the terminal or the creative. */
-  source?: 'terminal' | 'creative';
+  source?: 'terminal' | 'creative' | 'phone';
   /** The god whose creative session produced it (creative items only). */
   god?: string;
 }
@@ -47,7 +47,7 @@ export function listQueue(project?: string): PromptQueueItem[] {
   return (project ? all.filter((i) => i.project === project) : all).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-export function enqueuePrompt(project: string, text: string, now = Date.now(), meta: { source?: 'terminal' | 'creative'; god?: string } = {}): PromptQueueItem | null {
+export function enqueuePrompt(project: string, text: string, now = Date.now(), meta: { source?: 'terminal' | 'creative' | 'phone'; god?: string } = {}): PromptQueueItem | null {
   const clean = String(text || '').trim().slice(0, 4000);
   if (!clean) return null;
   // v0.0.77 — THE DEDUPE. Before a god's suggestion is queued, the queue is

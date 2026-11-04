@@ -65,7 +65,7 @@ claimed here.
 
 | Evidence | Result |
 |---|---|
-| Battery | **144 PASS / 0 FAIL / 1 declared skip** (145 suites) |
+| Battery | **145 PASS / 0 FAIL / 1 declared skip** (146 suites) |
 | 100-hop spine | **100/100** in 9.9s · p50 189ms · p95 225ms · 0 tokens |
 | Soak while walking | **24 rounds PASS** · 5/5 probes · p95 ≤ 120ms |
 | Hibernation drill | pre-hibernation artifact **byte-identical**; 0 lost |

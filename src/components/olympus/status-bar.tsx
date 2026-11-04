@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 const CompactBrainButton = dynamic(() => import('./compact-brain-button'), { ssr: false });
 const ProjectSwitcher = dynamic(() => import('./project-switcher'), { ssr: false });
 const ApiConfigDialog = dynamic(() => import('./api-config-dialog'), { ssr: false });
+const SupportButton = dynamic(() => import('./support-button'), { ssr: false });
 const MobilePairDialog = dynamic(() => import('./mobile-pair-dialog'), { ssr: false });
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip';
@@ -183,7 +184,7 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.77'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.78'}
    </span>
 )}
  </div>
@@ -375,6 +376,8 @@ export default function StatusBar({
  </span>
  </button>
  <ApiConfigDialog open={apiConfigOpen} onClose={() => setApiConfigOpen(false)} />
+ <div className="w-px h-3 bg-olympus-gold/15" />
+ <SupportButton />
 
 	 {/* Window controls on the right side. */}
  {showCustomWindowControls && (

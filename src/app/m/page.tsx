@@ -91,6 +91,7 @@ export default function MobileCompanion() {
   const [tunnelUrl, setTunnelUrl] = useState<string | null>(null);
   const [tunnelBusy, setTunnelBusy] = useState(false);
   const [typeDraft, setTypeDraft] = useState('');
+  const [queueNote, setQueueNote] = useState<string | null>(null);
   const levelGate = useRef(0);
   const themeStampRef = useRef('');
 
@@ -130,6 +131,36 @@ export default function MobileCompanion() {
     if (token) h['x-olympus-token'] = token;
     return h;
   }, [token]);
+  // v0.0.78 — the phone is a companion, not a second boss: a prompt can be
+  // QUEUED for the terminal (source 'phone') and a parked/interrupted walk can
+  // be resumed by the detached supervisor — without opening the desktop.
+  const queuePrompt = useCallback(async (text: string) => {
+    const q = text.trim();
+    if (!q || !active) return;
+    try {
+      const r = await fetch('/api/olympus/prompt-queue', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: active, text: q, source: 'phone' }),
+      });
+      const d = await r.json();
+      setQueueNote(d?.ok ? 'queued for the terminal' : (d?.error || 'queue failed'));
+    } catch (e: any) { setQueueNote(e?.message || 'queue failed'); }
+  }, [active, headers]);
+
+  const resumeWalk = useCallback(async () => {
+    if (!active) return;
+    try {
+      const r = await fetch('/api/olympus/walk/supervisor', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start', slug: active }),
+      });
+      const d = await r.json();
+      setQueueNote(d?.ok ? 'walk resumed (detached)' : (d?.error || 'resume failed'));
+    } catch (e: any) { setQueueNote(e?.message || 'resume failed'); }
+  }, [active, headers]);
+
 
   const palette = useMemo(() => resolvePalette(normalizeThemeState(theme)), [theme]);
   const tint = godTintHex(palette, god);
@@ -542,6 +573,15 @@ export default function MobileCompanion() {
                   <Play size={12} /> {t('m.resume', language)}
                 </button>
               )}
+              {active && (run?.hops?.parked?.hopId || /parked|interrupted/i.test(run?.campaign?.state ?? '')) && (
+                <button
+                  onClick={() => void resumeWalk()}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-cyan/40 bg-olympus-cyan/10 py-2 text-[11px] text-olympus-cyan"
+                >
+                  <RefreshCw size={12} /> resume the campaign (detached)
+                </button>
+              )}
+              {queueNote && <p className="mt-1 text-[9px] font-mono text-olympus-cyan">{queueNote}</p>}
               {/* v0.0.68 — the keyboard fallback: when the mic is blocked (HTTP
                   LAN) or the room is loud, type the request to Apollo. */}
               <div className="mt-2 flex items-center gap-1.5">
@@ -559,6 +599,13 @@ export default function MobileCompanion() {
                   aria-label={t('m.send', language)}
                   className="rounded-lg bg-olympus-gold/15 px-3 py-2 text-[10px] font-mono text-olympus-gold ring-1 ring-olympus-gold/30 disabled:opacity-40"
                 >{t('m.send', language)}</button>
+                <button
+                  onClick={() => { const q = typeDraft; setTypeDraft(''); void queuePrompt(q); }}
+                  disabled={!typeDraft.trim()}
+                  aria-label="Queue for the terminal"
+                  data-tip="Queue this prompt for the terminal (the walk keeps running)"
+                  className="rounded-lg bg-olympus-cyan/10 px-2.5 py-2 text-[10px] font-mono text-olympus-cyan ring-1 ring-olympus-cyan/30 disabled:opacity-40"
+                >queue</button>
               </div>
             </div>
 

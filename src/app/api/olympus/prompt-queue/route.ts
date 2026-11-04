@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   let body: any = {};
   try { body = await req.json(); } catch { /* invalid */ }
   const item = enqueuePrompt(String(body?.project || ''), String(body?.text || ''), Date.now(), {
-    source: body?.source === 'creative' ? 'creative' : body?.source === 'terminal' ? 'terminal' : undefined,
+    source: body?.source === 'creative' ? 'creative' : body?.source === 'terminal' ? 'terminal' : body?.source === 'phone' ? 'phone' : undefined,
     god: typeof body?.god === 'string' ? body.god : undefined,
   });
   if (!item) return NextResponse.json({ ok: false, error: 'project and text are required' }, { status: 400, headers: NO_CACHE_HEADERS });
