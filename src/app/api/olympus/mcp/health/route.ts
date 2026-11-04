@@ -29,6 +29,7 @@ import { listMcpServers, type McpRegistryEntry } from '@/lib/mcp-registry';
 import { probeMcpBatch, readConfiguredMcpKeys, type McpProbeResult } from '@/lib/mcp-probe';
 import { checkMcpDependency } from '@/lib/mcp-deps';
 import { findOlympusRoot } from '@/lib/opencode-spawn';
+import { listQuarantine, recordFailure, recordSuccess, type QuarantineEntry } from '@/lib/mcp-quarantine';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,10 +66,17 @@ export async function GET(req: NextRequest) {
   }));
 
   const enabled = registry.servers.filter((s) => s.enabled);
+  const quarantined = new Map<string, QuarantineEntry>(listQuarantine().map((q) => [q.name, q]));
   const toProbe: McpRegistryEntry[] = [];
   const unavailable: McpProbeResult[] = [];
 
+  const skipped: McpProbeResult[] = [];
   for (const s of enabled) {
+    const q = quarantined.get(s.name);
+    if (q) {
+      skipped.push({ name: s.name, status: 'quarantined' as any, latencyMs: 0, error: `quarantined: ${q.reason}`, checkedAt: now } as McpProbeResult);
+      continue;
+    }
     const dep = await checkMcpDependency(s, process.env, keys);
     if (dep.status === 'ok') {
       toProbe.push(s);
@@ -93,9 +101,17 @@ export async function GET(req: NextRequest) {
     if (r.status === 'dead' && requiresBy.get(r.name) === 'optional') {
       r.status = 'optional-unavailable';
     }
+    // v0.0.67 — two consecutive dead probes quarantine the server; a live
+    // probe clears the streak. Quarantined servers are skipped next time.
+    if (r.status === 'dead') {
+      const q = recordFailure(r.name, r.error || 'probe failed');
+      if (q) { r.status = 'quarantined' as any; r.error = `quarantined: ${q.reason}`; }
+    } else if (r.status === 'alive') {
+      recordSuccess(r.name);
+    }
   }
 
-  const results = [...probed, ...unavailable, ...disabled];
+  const results = [...probed, ...skipped, ...unavailable, ...disabled];
   cache = { results, at: now };
 
   return NextResponse.json({
@@ -118,6 +134,7 @@ function summarize(results: McpProbeResult[]) {
     enabled: enabled.length,
     alive: enabled.filter((r) => r.status === 'alive').length,
     dead: enabled.filter((r) => r.status === 'dead').length,
+    quarantined: enabled.filter((r) => r.status === 'quarantined').length,
     needsAuth: enabled.filter((r) => r.status === 'needs-auth').length,
     needsService: enabled.filter((r) => r.status === 'needs-service').length,
     needsBinary: enabled.filter((r) => r.status === 'needs-binary').length,

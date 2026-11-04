@@ -47,17 +47,15 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.66 — the truth release.** The hop verify grew the two gates that were
-missing: **mounted** (an artifact that exists but is never imported is dead
-code, not a feature) and **visual** (opacity/console/login, read from the
-review JSON). A source hop without a gate is named in the walk log, not
-silently green. The phone's voice now tells the truth: on plain HTTP LAN the
-browser blocks the mic, so `/m` shows **“voice needs HTTPS”** and opens the
-secure tunnel link with one tap. And the instinct gate has its **go/no-go**:
-4,754 evaluations, **0 short-circuits** — the claim is retired, the measured
-levers (curated MCPs, lean hops, deterministic spine, instinct RAG) are what
-remain. Everything below is evidence, not a promise; the open v1.0 gates are
-named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.67 — the MCP lifecycle.** A broken MCP is now **quarantined, not
+retried forever**: two consecutive dead probes move it out of the probe loop
+with the reason and a clear button (`/api/olympus/mcp/quarantine`). The health
+panel keeps the honest classification (needs-auth / needs-service /
+needs-binary / needs-app / optional-unavailable) and skips quarantined servers
+instead of paying a 12s timeout on every load. The verify gates from v0.0.66
+(mounted/visual) and the retired instinct gate (0/4,754) remain. Everything
+below is evidence, not a promise; the open v1.0 gates are named in
+[V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -90,7 +88,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**136 PASS / 0 FAIL / 1 declared skip** across 137 suites; a 100-hop
+**137 PASS / 0 FAIL / 1 declared skip** across 138 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 suites stay maintainer-local; the evidence is public. Read
@@ -126,7 +124,7 @@ renders blank. The full table and speech locales live in
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
-**v0.0.66.** The phone opens `/m` — one screen, voice first: the plasma ring
+**v0.0.67.** The phone opens `/m` — one screen, voice first: the plasma ring
 fills the view, **hold the mic in the middle**, speak, release; the server STT
 transcribes and the request goes to Apollo in the active project's lane. The
 god row below the ring picks the voice/persona; the details sheet holds the

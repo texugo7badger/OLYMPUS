@@ -40,7 +40,7 @@ result**, never a green badge without a number.
 - **Mobile** — theme both ways, remote tunnel, QR, voice, preview, git; the
   preview URL is a server answer (LAN IPv4 or per-port HTTPS tunnel), the
   phone adopts the desktop's language and never overwrites it, and the studio
-  reuses the same particles/orb/voice. v0.0.66: `/m` is one screen (ring +
+  reuses the same particles/orb/voice. v0.0.67: `/m` is one screen (ring +
   hold-to-talk + god row), the body no longer blocks scroll, and the details
   sheet holds the campaign/preview/git/cost/theme.
 - **Creative mode** — the progress model (current plan; a dead walker is
@@ -50,6 +50,8 @@ result**, never a green badge without a number.
 - **Hop gates** — `mounted:<artifact>::<entry>` (dead code fails) and
   `visual[:<json>]` (opacity/console/login), plus unknown checks never pass
   silently (`verify-gates.test.mjs`, 6 checks).
+- **MCP quarantine** — two strikes, the reason, the clear path; a live probe
+  clears the streak (`mcp-quarantine.test.mjs`, 6 checks).
 
 ## How a hop becomes GREEN
 
@@ -63,7 +65,7 @@ claimed here.
 
 | Evidence | Result |
 |---|---|
-| Battery | **136 PASS / 0 FAIL / 1 declared skip** (137 suites) |
+| Battery | **137 PASS / 0 FAIL / 1 declared skip** (138 suites) |
 | 100-hop spine | **100/100** in 9.9s · p50 189ms · p95 225ms · 0 tokens |
 | Soak while walking | **24 rounds PASS** · 5/5 probes · p95 ≤ 120ms |
 | Hibernation drill | pre-hibernation artifact **byte-identical**; 0 lost |

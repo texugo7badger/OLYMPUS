@@ -1,10 +1,10 @@
-# The 22 open issues — status map at v0.0.66
+# The 22 open issues — status map at v0.0.67
 
-> v0.0.66 is the stability release. It closes the crash class and the mobile
+> v0.0.67 is the stability release. It closes the crash class and the mobile
 > UX class; the rest stays open with a named target. No issue is closed
 > without probe evidence.
 
-| Issue | Title | Status at v0.0.66 | Target |
+| Issue | Title | Status at v0.0.67 | Target |
 |---|---|---|---|
 | #291 | detached supervisor + auto-resume on app restart | **partial** — server watchdog + respawn + INTERRUPTED verdict; the walker still dies with the server | v0.0.71 |
 | #287 | stop hops from starting unmanaged servers/builds | open — the preview manager refuses double-spawn, hops still can | v0.0.71 |
@@ -20,8 +20,8 @@
 | #272 | epic(telemetry): context/benchmark/counts | open (parent) | v0.0.72 |
 | #271 | epic(hop): campaign truth + reliability | open (parent) | v0.0.71 |
 | #270 | epic(mcp): MCP lifecycle | open (parent) | v0.0.73 |
-| #283 | lane-scoped health, probe-before-enable, quarantine | open | v0.0.73 |
-| #284 | repair or retire tamp/serena/opendesign/docker/postgres/git | open | v0.0.73 |
+| #283 | lane-scoped health, probe-before-enable, quarantine | **partial** — quarantine (two strikes + clear route) and the honest classification; lane scoping/next | v0.0.68 |
+| #284 | repair or retire tamp/serena/opendesign/docker/postgres/git | **partial** — quarantine retires them from the probe loop with the reason; repair is a manual clear | v0.0.68 |
 | #317 | every MCP first-class — vendor all + cure matrix | open | v0.0.73 |
 | #274 | epic(autonomy): per-god chats | open (parent) | v0.0.74 |
 | #303 | element/component picker → god chat/queue | open | v0.0.74 |
@@ -29,7 +29,7 @@
 | #318 | user-sovereignty decision ledger + cognitive protocol | open | v0.0.74 |
 | #273 | epic(design): live preview + magic wand | open (parent) | v0.0.74 |
 
-## What v0.0.66 did close (the class, not the issue number)
+## What v0.0.67 did close (the class, not the issue number)
 
 - The app no longer sits on `ERR_CONNECTION_REFUSED`: a 10s health watchdog
   respawns a dead dev server and reloads when it answers; the `did-fail-load`

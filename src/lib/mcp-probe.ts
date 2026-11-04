@@ -28,7 +28,7 @@ export type McpProbeStatus =
   | 'needs-binary'
   | 'needs-app'
   | 'optional-unavailable'
-  | 'unprobed';
+  | 'unprobed' | 'quarantined' ;
 
 export interface McpProbeResult {
   name: string;
