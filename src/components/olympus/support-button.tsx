@@ -45,7 +45,7 @@ export default function SupportButton() {
         <div
           role="dialog"
           aria-label="Support the dev"
-          className="absolute bottom-full right-0 mb-1 w-52 rounded-lg border border-olympus-gold/25 bg-olympus-panel p-2 shadow-xl"
+          className="fixed top-9 right-3 z-50 w-52 rounded-lg border border-olympus-gold/25 bg-olympus-panel p-2 shadow-xl"
         >
           <p className="mb-1.5 text-[9px] font-mono uppercase tracking-wide text-olympus-gold">Support the dev</p>
           <a

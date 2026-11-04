@@ -2,6 +2,48 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.80] — 2026-11-04
+
+### The alignment meter
+
+- `src/lib/alignment.ts` turns "is the project clear?" into five explainable
+  signals — **goal, audience, stack, style, plan** — 20 points each, with the
+  evidence that earned each one. `GET /api/olympus/project/alignment` returns
+  the score and what is missing; the creative studio shows the bar with the
+  per-signal evidence in the tooltip.
+- At **70+** the preview button unlocks; below it, the bar names exactly what
+  is missing. No automatic spend.
+
+### The fast preview
+
+- `POST /api/olympus/preview/generate`: **one bounded Athena turn** returns
+  `{html, css}`; the route writes a single static page to
+  **`~/.olympus/previews/<slug>/`** — never into the project, so a read-only
+  lane is never touched — and starts a tiny detached static host
+  (`scripts/preview-server.mjs`) on a free localhost port.
+- The page is a real skeleton (hero, sections, footer), OLYMPUS palette,
+  responsive 320px→desktop, semantic HTML, skip link, no external assets.
+- The bar shows **open** and **copy** once the preview exists; the state is
+  re-read on reload.
+
+### Evidence
+
+- `alignment-preview.test.mjs` 11/11: the complete brief scores 100 and is
+  ready; the empty one names the missing signals; the answer parses through
+  fences; garbage is refused; the page is written under the app home (the lane
+  is untouched); the static host serves it; the URL is readable from state.
+- `tsc` + eslint clean; production build + standalone verify PASS.
+- Battery: see the release body.
+
+### Honest limits
+
+- **The generated page is a skeleton, not the final product**; the style PDF
+  and the per-change regeneration are the next slice.
+- **The route was not exercised with a live LLM turn in this release** — its
+  parts are tested (god-run is live-tested by the god chat; parse/write/serve
+  by the suite); the first real generation is the maintainer's click.
+- **The share link points at the project's running preview**, not the
+  generated one yet (the generated port is stored and can be shared next).
 ## [v0.0.79] — 2026-11-04
 
 ### Share the preview, safely

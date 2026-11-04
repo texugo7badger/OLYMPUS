@@ -26,6 +26,7 @@ import { requireAuth } from '@/lib/auth';
 import { spawnOpencode } from '@/lib/opencode-spawn';
 import { getVaultRoot } from '@/lib/vault-root';
 import { appendActivity } from '@/lib/activity-feed';
+import { runGodTurn } from '@/lib/god-run';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,51 +43,6 @@ function activeLane(): string | null {
     const lane = path.join(getVaultRoot(), '02_Projects', slug);
     return fs.existsSync(lane) ? lane : null;
   } catch { return null; }
-}
-
-/** Tolerant parser for `opencode run --format json` text parts. */
-function extractText(stdout: string): string {
-  const parts: string[] = [];
-  for (const line of stdout.split('\n')) {
-    if (!line.trim()) continue;
-    try {
-      const ev = JSON.parse(line);
-      const text = ev?.part?.text ?? ev?.text ?? (ev?.type === 'text' ? ev?.content : null);
-      if (typeof text === 'string' && text.trim()) parts.push(text);
-    } catch { /* not a JSON line */ }
-  }
-  return parts.join('').trim();
-}
-
-function runGod(god: string, message: string, lane: string): Promise<{ ok: boolean; text: string; error?: string; durationMs: number }> {
-  const startedAt = Date.now();
-  return new Promise((resolve) => {
-    let out = '';
-    let err = '';
-    let settled = false;
-    const done = (r: { ok: boolean; text: string; error?: string }) => {
-      if (settled) return;
-      settled = true;
-      resolve({ ...r, durationMs: Date.now() - startedAt });
-    };
-    const child = spawnOpencode(['run', '--format', 'json', '--agent', god, message], {
-      cwd: lane,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    const timer = setTimeout(() => {
-      try { child.kill('SIGKILL'); } catch { /* gone */ }
-      done({ ok: false, text: '', error: `the god did not answer within ${TIMEOUT_MS / 1000}s` });
-    }, TIMEOUT_MS);
-    child.stdout?.on('data', (d) => { out = (out + String(d)).slice(-400_000); });
-    child.stderr?.on('data', (d) => { err = (err + String(d)).slice(-20_000); });
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      const text = extractText(out);
-      if (!text) done({ ok: false, text: '', error: code === 0 ? 'the god answered with no text' : `opencode exited ${code}: ${(err || out).slice(-300)}` });
-      else done({ ok: true, text });
-    });
-    child.on('error', (e: any) => { clearTimeout(timer); done({ ok: false, text: '', error: String(e?.message || e) }); });
-  });
 }
 
 export async function POST(req: NextRequest) {
@@ -110,7 +66,7 @@ export async function POST(req: NextRequest) {
   const slug = lane.split(/[\\/]/).filter(Boolean).pop() || 'project';
   const startedAt = Date.now();
 
-  const first = await runGod(god, message, lane);
+  const first = await runGodTurn(god, message, lane);
   if (!first.ok) {
     appendActivity({ god, action: 'chat', project: slug, msg: `Chat with ${god} failed: ${first.error}` });
     return NextResponse.json({ ok: false, error: first.error, god, lane }, { status: 502 });
@@ -129,7 +85,7 @@ export async function POST(req: NextRequest) {
       `${god} answered: "${first.text}".`,
       `Reply in your own voice: your view, the risks you see, and ONE concrete next step. Do not repeat ${god}.`,
     ].join('\n');
-    const second = await runGod(withGod, context, lane);
+    const second = await runGodTurn(withGod, context, lane);
     if (second.ok) {
       replies.push({ god: withGod, text: second.text });
       appendActivity({ god: withGod, action: 'chat', project: slug, msg: `${withGod}: ${second.text.slice(0, 500)}`, meta: { source: 'parthenon', withGod: god } });

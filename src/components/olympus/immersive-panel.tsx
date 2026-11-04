@@ -28,6 +28,7 @@ import ThemedLogo from './themed-logo';
 import PlasmaRing from './plasma-ring';
 import ProgressStrip from './progress-strip';
 import TaskSheetModal from './task-sheet-modal';
+import AlignmentBar from './alignment-bar';
 
 interface Particle { x: number; y: number; vx: number; vy: number; r: number; c: number; a: number }
 interface Cell { x: number; y: number; r: number; phase: number; splitAt: number; c: number; drift: number }
@@ -780,15 +781,18 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
         {/* the voice orb */}
         <aside className="rounded-xl border p-3 flex flex-col items-center justify-start gap-2 overflow-y-auto custom-scroll" style={{ borderColor: `${palette.gold}22`, background: `${palette.panel}99` }}>
           {projectSlug && (
-            <ProgressStrip
-              slug={projectSlug}
-              god={activeGod}
-              language={language}
-              onExplain={(text, g) => {
-                setChat((prev) => [...prev, { role: 'god' as const, text, god: g }].slice(-8));
-                if (voice) speak(text, g);
-              }}
-            />
+            <>
+              <ProgressStrip
+                slug={projectSlug}
+                god={activeGod}
+                language={language}
+                onExplain={(text, g) => {
+                  setChat((prev) => [...prev, { role: 'god' as const, text, god: g }].slice(-8));
+                  if (voice) speak(text, g);
+                }}
+              />
+              <AlignmentBar slug={projectSlug} />
+            </>
           )}
           <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wide" style={{ color: palette.gold }}>
             <ActiveGodIcon size={13} style={{ color: orbTint }} />
