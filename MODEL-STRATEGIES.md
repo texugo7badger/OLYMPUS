@@ -1,5 +1,8 @@
 # OLYMPUS Model Strategies
 
+![Strategies](public/diagrams/strategies.svg)
+
+
 > **v0.0.30 correction (read this first).** The "GO Plan Limits & Sustainable
 > Usage" table below is the source of truth: GO limits are **per model**
 > monthly dollar caps, with 5h = 20%, weekly = 50%, monthly = 100% of that

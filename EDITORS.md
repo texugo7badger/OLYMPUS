@@ -1,5 +1,8 @@
 # OLYMPUS Editor Bridge — Supported Editors
 
+![The editor bridge](public/diagrams/editors.svg)
+
+
 > Editor Bridge — OLYMPUS launches your preferred external editor and shares the live terminal with it via a token-gated WebSocket bridge.
 
 This document lists every editor OLYMPUS supports, how to install each on each OS, and how to configure OLYMPUS to use a custom binary path.

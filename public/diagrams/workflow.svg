@@ -1,0 +1,38 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FROM ONE PROMPT TO ARTIFACTS — how a task flows, end to end">
+  <rect width="1200" height="400" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="399" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">FROM ONE PROMPT TO ARTIFACTS</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">how a task flows, end to end</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <rect x="40" y="130" width="170" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="130" width="3" height="120" rx="1.5" fill="#D4A574"/>
+  <text x="56" y="156" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">PROMPT</text>
+  <text x="56" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">one message,</text>
+  <text x="56" y="196" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">any size</text>
+  <line x1="210" y1="190" x2="230" y2="190" stroke="#D4A574" stroke-width="1.2"/><path d="M 230 190 l -6 -3 l 0 6 z" fill="#D4A574"/>
+  <rect x="230" y="130" width="170" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="230" y="130" width="3" height="120" rx="1.5" fill="#67C9E8"/>
+  <text x="246" y="156" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">CLASSIFY</text>
+  <text x="246" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">ask · action · plan</text>
+  <line x1="400" y1="190" x2="420" y2="190" stroke="#67C9E8" stroke-width="1.2"/><path d="M 420 190 l -6 -3 l 0 6 z" fill="#67C9E8"/>
+  <rect x="420" y="130" width="170" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="420" y="130" width="3" height="120" rx="1.5" fill="#B79BE0"/>
+  <text x="436" y="156" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">PLAN</text>
+  <text x="436" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">DAG of small hops</text>
+  <line x1="590" y1="190" x2="610" y2="190" stroke="#B79BE0" stroke-width="1.2"/><path d="M 610 190 l -6 -3 l 0 6 z" fill="#B79BE0"/>
+  <rect x="610" y="130" width="170" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="610" y="130" width="3" height="120" rx="1.5" fill="#9CC48E"/>
+  <text x="626" y="156" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">WALK</text>
+  <text x="626" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">2-3 in parallel</text>
+  <line x1="780" y1="190" x2="800" y2="190" stroke="#9CC48E" stroke-width="1.2"/><path d="M 800 190 l -6 -3 l 0 6 z" fill="#9CC48E"/>
+  <rect x="800" y="130" width="170" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="800" y="130" width="3" height="120" rx="1.5" fill="#E8A45C"/>
+  <text x="816" y="156" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">VERIFY</text>
+  <text x="816" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">file · build · lint · visual</text>
+  <line x1="970" y1="190" x2="990" y2="190" stroke="#E8A45C" stroke-width="1.2"/><path d="M 990 190 l -6 -3 l 0 6 z" fill="#E8A45C"/>
+  <rect x="990" y="130" width="170" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="990" y="130" width="3" height="120" rx="1.5" fill="#C23A45"/>
+  <text x="1006" y="156" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">ARTIFACTS</text>
+  <text x="1006" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">on disk, resumable</text>
+  <text x="40" y="300" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">Every hop carries its artifacts, its verify gate and its budget. A park names the cause and resumes from disk.</text>  <text x="40" y="324" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">A detached supervisor owns the walk (v0.0.73): the app can close, the campaign continues.</text>  <rect x="40" y="350" width="188" height="20" rx="10" fill="#9CC48E22" stroke="#9CC48E55"/><text x="48" y="364" fill="#9CC48E" font-family="'JetBrains Mono',monospace" font-size="9.5">0 LLM tokens for verification</text>  <rect x="330" y="350" width="138" height="20" rx="10" fill="#67C9E822" stroke="#67C9E855"/><text x="338" y="364" fill="#67C9E8" font-family="'JetBrains Mono',monospace" font-size="9.5">one campaign per lane</text>  <rect x="600" y="350" width="138" height="20" rx="10" fill="#D4A57422" stroke="#D4A57455"/><text x="608" y="364" fill="#D4A574" font-family="'JetBrains Mono',monospace" font-size="9.5">cost measured per hop</text>
+</svg>

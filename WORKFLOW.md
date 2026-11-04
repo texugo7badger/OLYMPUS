@@ -1,5 +1,8 @@
 # OLYMPUS Workflow
 
+![The workflow](public/diagrams/workflow.svg)
+
+
 > OLYMPUS v0.0.7 — how a task flows through the 10 gods, 122 demigods, Symphony, and the VaultBrain. See [AGENTS.md](AGENTS.md) for the full agent roster and [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) for the cost flow.
 
 ## Task lifecycle

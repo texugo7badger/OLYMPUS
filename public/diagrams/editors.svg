@@ -1,0 +1,39 @@
+<svg width="1200" height="500" viewBox="0 0 1200 500" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="YOUR EDITOR, NOT OURS — the Editor Bridge and the shared terminal">
+  <rect width="1200" height="500" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="499" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">YOUR EDITOR, NOT OURS</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">the Editor Bridge and the shared terminal</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="260" height="150" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="3" height="150" rx="1.5" fill="#D4A574"/>
+  <text x="56" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">OLYMPUS</text>
+  <text x="56" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the window,</text>
+  <text x="56" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the terminal,</text>
+  <text x="56" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the active project</text>
+  <line x1="300" y1="195" x2="350" y2="195" stroke="#D4A574" stroke-width="1.2"/><path d="M 350 195 l -6 -3 l 0 6 z" fill="#D4A574"/>
+  <rect x="350" y="120" width="300" height="150" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="350" y="120" width="3" height="150" rx="1.5" fill="#67C9E8"/>
+  <text x="366" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">EDITOR BRIDGE</text>
+  <text x="366" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">launch your editor</text>
+  <text x="366" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">on the active project;</text>
+  <text x="366" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">follow the agent (opt-in)</text>
+  <line x1="650" y1="195" x2="700" y2="195" stroke="#67C9E8" stroke-width="1.2"/><path d="M 700 195 l -6 -3 l 0 6 z" fill="#67C9E8"/>
+  <rect x="700" y="120" width="220" height="150" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="700" y="120" width="3" height="150" rx="1.5" fill="#B79BE0"/>
+  <text x="716" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">ZED</text>
+  <text x="716" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">native</text>
+  <text x="716" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">fast</text>
+  <text x="716" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">LSP</text>
+  <rect x="940" y="120" width="220" height="150" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="940" y="120" width="3" height="150" rx="1.5" fill="#B79BE0"/>
+  <text x="956" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">VSCODE / CURSOR</text>
+  <text x="956" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">extensions</text>
+  <text x="956" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">debugger</text>
+  <text x="956" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">remote</text>
+  <rect x="350" y="310" width="540" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="350" y="310" width="3" height="120" rx="1.5" fill="#9CC48E"/>
+  <text x="366" y="336" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">TERMINAL BRIDGE · :3740</text>
+  <text x="366" y="358" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the same live terminal in OLYMPUS and in your IDE —</text>
+  <text x="366" y="376" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">token-gated WebSocket, one shell, two views</text>
+  <text x="40" y="470" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">No built-in editor: OLYMPUS opens the one you already use. `olympus terminal` attaches any editor.</text>
+</svg>

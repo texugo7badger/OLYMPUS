@@ -1,0 +1,37 @@
+<svg width="1200" height="330" viewBox="0 0 1200 330" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FIVE STEPS TO A MERGED PR — fork → tests → PR → CLA → merge">
+  <rect width="1200" height="330" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="329" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">FIVE STEPS TO A MERGED PR</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">fork → tests → PR → CLA → merge</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="200" height="110" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="3" height="110" rx="1.5" fill="#D4A574"/>
+  <text x="56" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">1 · FORK</text>
+  <text x="56" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">+ branch</text>
+  <text x="56" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">one change</text>
+  <line x1="240" y1="175" x2="275" y2="175" stroke="#2A2E38" stroke-width="1.2"/><path d="M 275 175 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="275" y="120" width="220" height="110" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="275" y="120" width="3" height="110" rx="1.5" fill="#67C9E8"/>
+  <text x="291" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">2 · TESTS</text>
+  <text x="291" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">tsc · lint</text>
+  <text x="291" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">battery green</text>
+  <line x1="495" y1="175" x2="530" y2="175" stroke="#2A2E38" stroke-width="1.2"/><path d="M 530 175 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="530" y="120" width="220" height="110" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="530" y="120" width="3" height="110" rx="1.5" fill="#B79BE0"/>
+  <text x="546" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">3 · PR</text>
+  <text x="546" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">small, focused</text>
+  <text x="546" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">evidence in the body</text>
+  <line x1="750" y1="175" x2="785" y2="175" stroke="#2A2E38" stroke-width="1.2"/><path d="M 785 175 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="785" y="120" width="220" height="110" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="785" y="120" width="3" height="110" rx="1.5" fill="#E8A45C"/>
+  <text x="801" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">4 · CLA</text>
+  <text x="801" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the bot comments</text>
+  <text x="801" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">one click</text>
+  <line x1="1005" y1="175" x2="1040" y2="175" stroke="#2A2E38" stroke-width="1.2"/><path d="M 1040 175 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="1040" y="120" width="120" height="110" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="1040" y="120" width="3" height="110" rx="1.5" fill="#9CC48E"/>
+  <text x="1056" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">5 · MERGE</text>
+  <text x="1056" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">reviewed</text>
+  <text x="1056" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">and green</text>
+  <text x="40" y="280" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">Read CONTRIBUTING.md first: setup, demigods, skills, MCPs, code style. English in the repo.</text>
+</svg>

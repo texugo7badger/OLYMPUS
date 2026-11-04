@@ -33,15 +33,16 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.73 — the walk that survives the app.** A campaign now runs in a
-**detached supervisor process** (`tsx scripts/walk-lane.ts`), one per lane,
-with its own log and state; the app is a reader, so restarting or closing it
-no longer kills the walk. An orphaned state is resumed once at boot (bounded),
-a manual stop is never resumed, and `GET/POST /api/olympus/walk/supervisor`
-lists, starts and stops. Proven by a crash drill: the starter process dies and
-both hops still complete. `OLYMPUS_WALK_INLINE=1` keeps the old path; a spawn
-failure falls back to it. Everything below is evidence, not a promise; the
-open v1.0 gates are named in [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
+**v0.0.74 — paste anything, read `[name]`.** The terminal composer accepts
+**Ctrl+V** with images, documents and archives: images ride the reference-image
+lane, everything else the upload lane, and each attachment becomes a compact
+**`[name]`** token in the prompt (the staged image too) — the input stays
+clean. `npm run agents:census` publishes the pruning evidence (122 declared ·
+14 dispatched · 3 referenced; 115 zero-dispatch candidates, a proposal, never
+a blind cut). Every document in the Documentation table now carries a
+self-explanatory SVG, and the README architecture block is a diagram.
+Everything below is evidence, not a promise; the open v1.0 gates are named in
+[V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
 ## Architecture at a glance
 
@@ -74,7 +75,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**140 PASS / 0 FAIL / 1 declared skip** across 141 suites; a 100-hop
+**141 PASS / 0 FAIL / 1 declared skip** across 142 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache
@@ -320,31 +321,7 @@ The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash
 
 ## Architecture (brief)
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│  Electron Main Process (electron/main.ts)                      │
-│  • Spawns Next.js on localhost:3737                            │
-│  • Native BrowserWindow (1600×1000)                            │
-│  • <webview> for embedded frames · IPC bridge                  │
-└────────────────────────────────────────────────────────────────┘
-                          ↕
-┌────────────────────────────────────────────────────────────────┐
-│  Next.js Server (localhost:3737)                               │
-│  • API routes: /api/olympus/*, /api/vault/*, /api/symphony/*   │
-│  • SSE streams + WebSocket bridge (:3738)                      │
-│  • React 19 + Next.js 16 dashboard                             │
-└────────────────────────────────────────────────────────────────┘
-                          ↕
-┌────────────────────────────────────────────────────────────────┐
-│  OpenCode + Agents                                             │
-│  • 10 OLYMPUS gods → 122 demigods → 44 curated tools + 28 MCP servers  │
-│  • Cascading compression (caveman → strategic-compact →        │
-│    Symphony harmonics)                                         │
-│  • Cache instrumentation (olympus-go-cache + context-cache +   │
-│    native OpenCode caching)                                    │
-│  • Self-curating brain (VaultBrain v3.0)                       │
-└────────────────────────────────────────────────────────────────┘
-```
+![The three layers](public/diagrams/architecture-brief.svg)
 
 ## Strategies
 
@@ -411,24 +388,18 @@ All contributors must accept the [Contributor License Agreement (CLA)](CLA.md) b
 
 <div align="center">
 
-  <h3>💙 Support the Dev</h3>
+  <h3>Support the dev</h3>
 
-  <p>
-    <sub><i>Did OLYMPUS supercharge your multi-agent workflow? If you can, buy me a coffee to keep the cauldron bubbling!</i></sub>
-  </p>
+  <a href="https://ko-fi.com/G4H521S5GK">
+    <img src="https://storage.ko-fi.com/cdn/kofi5.png?v=6" height="44" alt="Buy Me a Coffee at ko-fi.com" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://livepix.gg/texugo7badger">
+    <img src="https://i.imgur.com/jjPuVUG.png" height="44" alt="Doe via LivePix (PIX)" />
+  </a>
 
-  <p>
-    <a href="https://ko-fi.com/G4H521S5GK">
-      <img src="https://storage.ko-fi.com/cdn/kofi5.png?v=6" height="50" alt="Buy Me a Coffee at ko-fi.com" />
-    </a>
-    &nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="https://livepix.gg/texugo7badger">
-      <img src="https://i.imgur.com/jjPuVUG.png" height="50" alt="Doe via LivePix (PIX)" />
-    </a>
-  </p>
+  <br /><br />
 
-  <p>
-    <sub>Made by <a href="https://github.com/texugo7badger">@texugo7badger</a></sub>
-  </p>
+  <sub>Made by <a href="https://github.com/texugo7badger">@texugo7badger</a></sub>
 
 </div>

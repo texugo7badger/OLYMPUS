@@ -1,5 +1,8 @@
 # Contributing to OLYMPUS
 
+![Contributing](public/diagrams/contributing.svg)
+
+
 Thanks for your interest in contributing to OLYMPUS! This guide covers the contribution workflow, code style, and how to add new demigods, skills, and MCPs.
 
 ## Before You Start

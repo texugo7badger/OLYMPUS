@@ -1,5 +1,8 @@
 # OLYMPUS Security
 
+![Security](public/diagrams/security.svg)
+
+
 > Standalone Electron desktop app, AGPL-3.0-or-later. 128 agents, Symphony protocol, token-gated IPC bridges.
 
 ## Attack surface

@@ -2,6 +2,48 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.74] — 2026-11-04
+
+### Paste anything, read `[name]`
+
+- The terminal composer accepts **Ctrl+V** with images, documents and
+  archives. Images ride the reference-image lane (`/api/olympus/image-upload`,
+  saved under the project); everything else rides the upload lane
+  (`/api/olympus/upload`). Each attachment is inserted into the prompt as a
+  compact **`[name]`** token, and the staged image renders as `[name]` instead
+  of a large chip — the input stays clean, the transcript keeps the chips.
+- Plain-text paste is untouched (the browser handles it); the send path
+  already carries `uploadedFiles` + the image path.
+
+### The agents census (the pruning evidence, not the cut)
+
+- `npm run agents:census` answers three questions with files: **declared**
+  (122 demigods on disk), **dispatched** (the resonance + gate logs) and
+  **referenced** (every project `dispatch-plan.json`).
+- First reading: **122 declared · 14 dispatched · 3 referenced by a plan**;
+  115 demigods have zero dispatches and zero references. That is a proposal,
+  not an action — a demigod named by a future plan is not dead. The cut waits
+  for the maintainer's approval (user is king).
+
+### The docs become self-explanatory
+
+- The README's ASCII architecture block is now `architecture-brief.svg`.
+- Every document linked from the Documentation table carries a diagram in the
+  same visual language: `pantheon` (AGENTS), `architecture` (ARCHITECTURE),
+  `editors`, `strategies` (MODEL-STRATEGIES), `benchmarks`, `workflow`,
+  `security`, `contributing`, `credits`, `cla`.
+- The README sections below Voice already carry `what-is-olympus`,
+  `quickstart`, `features`, `pantheon`, `strategies`; V1/STABILITY/ISSUES carry
+  `readiness`, `stability`, `issues`.
+- "Support the dev" lost the sales copy: two buttons, one heading.
+
+### Evidence
+
+- `terminal-paste.test.mjs` 8/8 (paste handler, `[name]` token, both upload
+  lanes, plain-text paste, attachments on send).
+- `tsc` + eslint clean; production build + standalone verify PASS.
+- Battery: see the release body.
+
 ## [v0.0.73] — 2026-11-04
 
 ### The walk survives the app (detached supervisor, #291)

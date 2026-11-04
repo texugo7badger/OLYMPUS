@@ -1,0 +1,27 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MEASURE, THEN CLAIM — the eval harness, the recorder and the pruning policy">
+  <rect width="1200" height="360" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="359" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">MEASURE, THEN CLAIM</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">the eval harness, the recorder and the pruning policy</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="340" height="140" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="120" width="3" height="140" rx="1.5" fill="#67C9E8"/>
+  <text x="56" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">EVAL HARNESS</text>
+  <text x="56" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">golden tasks in CI</text>
+  <text x="56" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">pass rate · cost · time</text>
+  <text x="56" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">`npm run eval`</text>
+  <rect x="420" y="120" width="340" height="140" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="420" y="120" width="3" height="140" rx="1.5" fill="#D4A574"/>
+  <text x="436" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">BENCHMARK RECORDING</text>
+  <text x="436" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">opt-in, off by default</text>
+  <text x="436" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">one row per run, &lt; 1 KB</text>
+  <text x="436" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">`07_Reviews/benchmarks/`</text>
+  <rect x="800" y="120" width="360" height="140" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="800" y="120" width="3" height="140" rx="1.5" fill="#B79BE0"/>
+  <text x="816" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">VAULT PRUNING</text>
+  <text x="816" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">TTL + size policy</text>
+  <text x="816" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">`npm run vault-prune`</text>
+  <text x="816" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the brain never grows forever</text>
+  <text x="40" y="300" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">Every number is a row you can open. A benchmark without a run is not a benchmark.</text>
+  <text x="40" y="324" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">The campaign report joins telemetry + the cost ledger (v0.0.72) — tokens, cache hit, list value, invoice unknown.</text>
+</svg>

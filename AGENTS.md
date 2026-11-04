@@ -1,5 +1,8 @@
 # OLYMPUS Agents
 
+![The pantheon](public/diagrams/pantheon.svg)
+
+
 > AGPL-3.0-or-later · GO-primary · Apollo-primary · OpenCode-based · 10 gods · 122 demigods · Symphony protocol · Standalone Electron desktop app
 >
 > **v0.0.30 truth notes.** Atlas is counted as a god everywhere (10 gods +

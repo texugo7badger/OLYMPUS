@@ -1,5 +1,8 @@
 # OLYMPUS Benchmarks + Eval Harness
 
+![Benchmarks](public/diagrams/benchmarks.svg)
+
+
 ## Measured baseline — 2026-10-31 (v0.0.29 working tree) [MEASURED]
 
 These are the numbers v0.0.30 is fixing, published before the fixes so the

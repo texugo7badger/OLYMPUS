@@ -1,5 +1,8 @@
 # CREDITS
 
+![Credits](public/diagrams/credits.svg)
+
+
 > OLYMPUS v0.0.9 — built on the shoulders of giants. This file lists the upstream projects that make OLYMPUS possible.
 
 OLYMPUS is built on the shoulders of giants. This file lists the upstream projects that make OLYMPUS possible.

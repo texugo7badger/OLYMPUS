@@ -1834,6 +1834,91 @@ export default function InteractiveTerminal() {
     }
   }, [activeProject, addMessage]);
 
+  // v0.0.74 — PASTE ANYTHING (Ctrl+V), SHOW `[name]`.
+  // The composer accepts images, documents and archives straight from the
+  // clipboard. Every attachment is uploaded through the same routes the
+  // paperclip/image buttons use, and its name is inserted into the prompt as
+  // a compact `[name]` token — the transcript and the queue stay readable.
+  const insertToken = useCallback((name: string) => {
+    const token = `[${name}]`;
+    setInput(prev => {
+      if (prev.includes(token)) return prev;
+      const sep = prev && !/\s$/.test(prev) ? ' ' : '';
+      return `${prev}${sep}${token} `;
+    });
+  }, []);
+
+  const pasteFiles = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+    const projectPath = activeProject?.path;
+    const images = files.filter(f => f.type.startsWith('image/'));
+    const others = files.filter(f => !f.type.startsWith('image/'));
+
+    // Images: the reference-image lane when a project is open (Athena can
+    // find the saved path); the generic upload otherwise.
+    for (const file of images) {
+      if (projectPath) {
+        try {
+          const fd = new FormData();
+          fd.append('image', file);
+          fd.append('projectPath', projectPath);
+          const res = await fetch('/api/olympus/image-upload', { method: 'POST', body: fd });
+          const d = await res.json();
+          if (d.ok && d.path) {
+            const url = URL.createObjectURL(file);
+            setPendingImage(prev => {
+              if (prev) URL.revokeObjectURL(prev.thumbnailUrl);
+              return { thumbnailUrl: url, savedPath: d.path, filename: d.filename || file.name };
+            });
+            insertToken(d.filename || file.name);
+            continue;
+          }
+          addMessage({ type: 'error', text: d.error || `Image upload failed for ${file.name}` });
+          continue;
+        } catch (err: any) {
+          addMessage({ type: 'error', text: `Image upload failed: ${err.message}` });
+          continue;
+        }
+      }
+      others.push(file);
+    }
+
+    if (others.length > 0) {
+      setUploading(true);
+      try {
+        const fd = new FormData();
+        for (const file of others) fd.append('files', file);
+        const res = await fetch('/api/olympus/upload', { method: 'POST', body: fd });
+        const text = await res.text();
+        let d: any;
+        try { d = JSON.parse(text); } catch { throw new Error(`Upload endpoint error (HTTP ${res.status})`); }
+        if (d.ok && d.files) {
+          setUploadedFiles(prev => [...prev, ...d.files.map((f: any) => f.name)]);
+          setUploadedFileDetails(prev => [...prev, ...d.files]);
+          for (const f of d.files) insertToken(f.name);
+          addMessage({ type: 'system', text: `${d.files.length} file(s) attached: ${d.files.map((f: any) => f.name).join(', ')}` });
+        } else {
+          addMessage({ type: 'error', text: d.error || 'Upload failed' });
+        }
+      } catch (err: any) {
+        addMessage({ type: 'error', text: `Upload failed: ${err.message}` });
+      } finally {
+        setUploading(false);
+      }
+    }
+  }, [activeProject?.path, addMessage, insertToken]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const files = items
+      .filter((i) => i.kind === 'file')
+      .map((i) => i.getAsFile())
+      .filter((f): f is File => Boolean(f));
+    if (files.length === 0) return; // plain text paste: the browser handles it
+    e.preventDefault();
+    void pasteFiles(files);
+  }, [pasteFiles]);
+
   const toggleTodo = (id: string) => setTodos(prev => prev.map(t =>
     t.id === id ? { ...t, status: t.status === 'done' ? 'pending' : 'done' } : t,
   ));
@@ -2226,13 +2311,13 @@ export default function InteractiveTerminal() {
           <div className="shrink-0 border-t border-olympus-gold/10 bg-olympus-panel px-3 py-2">
             {/* #203: staged reference image — rides the next prompt. */}
             {pendingImage && (
-              <div className="flex items-center gap-2 mb-2 pl-5">
+              <div className="flex items-center gap-1.5 mb-2 pl-5">
                 <img
                   src={pendingImage.thumbnailUrl}
                   alt={pendingImage.filename}
-                  className="h-10 w-10 rounded object-cover ring-1 ring-olympus-cyan/30"
+                  className="h-4 w-4 rounded-sm object-cover ring-1 ring-olympus-cyan/30"
                 />
-                <span className="text-[9px] font-mono text-olympus-text-dim truncate max-w-56">{pendingImage.filename}</span>
+                <span className="text-[9px] font-mono text-olympus-cyan">[{pendingImage.filename}]</span>
                 <button
                   data-tip="Remove attached image"
                   onClick={removePendingImage}
@@ -2240,7 +2325,6 @@ export default function InteractiveTerminal() {
                 >
                   <X size={10} />
                 </button>
-                <span className="text-[9px] font-mono text-olympus-text-dim">attached — sends with your next message</span>
               </div>
             )}
             <div className="flex items-end gap-2">
@@ -2250,6 +2334,8 @@ export default function InteractiveTerminal() {
               rows={1}
               value={input}
               onChange={e => setInput(e.target.value)}
+              onPaste={handlePaste}
+              data-tip="Paste text, images, documents or archives (Ctrl+V) — each attachment becomes [name]"
               onKeyDown={e => {
                 // Enter sends; Shift+Enter inserts a paragraph break.
                 if (e.key === 'Enter' && !e.shiftKey && !awaitingAnswer && !awaitingContext) {

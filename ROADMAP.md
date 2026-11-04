@@ -1,6 +1,9 @@
 # OLYMPUS Roadmap
 
-**v0.0.73 is the current release** (2026-11-04) — the detached-walk release:
+**v0.0.74 is the current release** (2026-11-04) — the clean-input release:
+Ctrl+V attachments become `[name]` tokens, the agents census publishes the
+pruning evidence (122/14/3), and every Documentation page carries a diagram.
+v0.0.73 was the detached-walk release:
 one process per lane that survives the app, boot adoption (bounded), a
 start/stop/status route and a green crash drill. v0.0.72 added the campaign
 cost audit, opt-in spend caps, a docs gate and the strategy guard. See [CHANGELOG.md](CHANGELOG.md) and
@@ -29,6 +32,7 @@ external user.** 9.0 and 10.0 are community and sustainability, not versions.
 
 | Version | Theme | Evidence that closes it |
 |---|---|---|
+| **v0.0.74** | Clean input + census + docs | paste → `[name]`; census 122/14/3; SVG on every doc |
 | **v0.0.73** | Detached supervisor (#291) | one process per lane; crash drill; boot adoption; start/stop/status |
 | **v0.0.72** | Cost truth + docs gate + spend caps | `cost:audit` measured; caps tested; `docs:check` green; strategy guard |
 | v0.0.73 | 8-hour soak | soak report: 0 lost hops, RSS bounded, p50/p95 |

@@ -1,0 +1,31 @@
+<svg width="1200" height="340" viewBox="0 0 1200 340" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="THE CLA IN ONE PICTURE — one comment, one click, once">
+  <rect width="1200" height="340" rx="18" fill="#0B0C10"/>
+  <rect x="0.5" y="0.5" width="1199" height="339" rx="18" stroke="#2A2E38"/>
+  <text x="40" y="52" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="20" font-weight="700" letter-spacing="1">THE CLA IN ONE PICTURE</text>
+  <text x="40" y="76" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="11">one comment, one click, once</text>
+  <line x1="40" y1="94" x2="1160" y2="94" stroke="#2A2E38"/>
+  <rect x="40" y="130" width="240" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="40" y="130" width="3" height="120" rx="1.5" fill="#D4A574"/>
+  <text x="56" y="156" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">YOU OPEN A PR</text>
+  <text x="56" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the first time</text>
+  <text x="56" y="196" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">the bot answers</text>
+  <line x1="280" y1="190" x2="330" y2="190" stroke="#2A2E38" stroke-width="1.2"/><path d="M 330 190 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="330" y="130" width="280" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="330" y="130" width="3" height="120" rx="1.5" fill="#67C9E8"/>
+  <text x="346" y="156" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">CLA ASSISTANT</text>
+  <text x="346" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">posts one comment</text>
+  <text x="346" y="196" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">with a sign link</text>
+  <line x1="610" y1="190" x2="660" y2="190" stroke="#2A2E38" stroke-width="1.2"/><path d="M 660 190 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="660" y="130" width="240" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="660" y="130" width="3" height="120" rx="1.5" fill="#B79BE0"/>
+  <text x="676" y="156" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">YOU SIGN</text>
+  <text x="676" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">one click,</text>
+  <text x="676" y="196" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">once per identity</text>
+  <line x1="900" y1="190" x2="950" y2="190" stroke="#2A2E38" stroke-width="1.2"/><path d="M 950 190 l -6 -3 l 0 6 z" fill="#2A2E38"/>
+  <rect x="950" y="130" width="210" height="120" rx="10" fill="#12141A" stroke="#2A2E38"/>
+  <rect x="950" y="130" width="3" height="120" rx="1.5" fill="#9CC48E"/>
+  <text x="966" y="156" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">MERGE</text>
+  <text x="966" y="178" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">review + green</text>
+  <text x="966" y="196" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">then merge</text>
+  <text x="40" y="300" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">The CLA protects the project&#x27;s AGPL-3.0-or-later license and every contributor. It is not a copyright transfer.</text>
+</svg>

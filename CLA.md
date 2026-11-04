@@ -1,5 +1,8 @@
 # OLYMPUS Contributor License Agreement (CLA)
 
+![The CLA](public/diagrams/cla.svg)
+
+
 > **Version 1.1 — effective for all contributions to OLYMPUS on or after the publication date of this version.**
 
 Thank you for contributing to OLYMPUS! This Contributor License Agreement
