@@ -31,8 +31,10 @@ const VOICES: Record<string, { male: string[]; female: string[] }> = {
     female: ['en-GB-SoniaNeural', 'en-US-AriaNeural', 'en-US-EmmaNeural', 'en-US-MichelleNeural'],
   },
   'pt-BR': {
-    male: ['pt-BR-AntonioNeural'],
-    female: ['pt-BR-FranciscaNeural', 'pt-BR-ThalitaMultilingualNeural'],
+    // v0.0.68 — the multilingual neural voices speak Portuguese too; without
+    // them six male gods shared Antonio (the "same voice" complaint).
+    male: ['pt-BR-AntonioNeural', 'en-US-AndrewMultilingualNeural', 'en-US-BrianMultilingualNeural', 'de-DE-FlorianMultilingualNeural', 'fr-FR-RemyMultilingualNeural'],
+    female: ['pt-BR-FranciscaNeural', 'pt-BR-ThalitaMultilingualNeural', 'en-US-AvaMultilingualNeural', 'en-US-EmmaMultilingualNeural'],
   },
   es: { male: ['es-ES-AlvaroNeural'], female: ['es-ES-ElviraNeural', 'es-ES-XimenaNeural'] },
   fr: {
@@ -43,7 +45,10 @@ const VOICES: Record<string, { male: string[]; female: string[] }> = {
     male: ['de-DE-ConradNeural', 'de-DE-FlorianMultilingualNeural', 'de-DE-KillianNeural'],
     female: ['de-DE-KatjaNeural', 'de-DE-AmalaNeural', 'de-DE-SeraphinaMultilingualNeural'],
   },
-  ja: { male: ['ja-JP-KeitaNeural'], female: ['ja-JP-NanamiNeural'] },
+  ja: {
+    male: ['ja-JP-KeitaNeural', 'en-US-AndrewMultilingualNeural', 'en-US-BrianMultilingualNeural'],
+    female: ['ja-JP-NanamiNeural', 'en-US-AvaMultilingualNeural', 'en-US-EmmaMultilingualNeural'],
+  },
   zh: {
     male: ['zh-CN-YunxiNeural', 'zh-CN-YunjianNeural', 'zh-CN-YunyangNeural'],
     female: ['zh-CN-XiaoxiaoNeural', 'zh-CN-XiaoyiNeural'],

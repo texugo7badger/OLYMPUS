@@ -1,4 +1,4 @@
-# OLYMPUS — UX tour (v0.0.67)
+# OLYMPUS — UX tour (v0.0.68)
 
 > Real screenshots from the running app: `npm run shots` (Electron, offscreen)
 > captures them from `http://127.0.0.1:3737`. No mockups.

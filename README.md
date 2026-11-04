@@ -23,23 +23,23 @@
 
 | The Brain Atlas · Obsidian | The Pattern Studio · Ember |
 |---|---|
-| <img src="screenshots/01-brain.png" width="480" alt="OLYMPUS Brain Atlas in the Obsidian theme" /> | <img src="screenshots/04-studio.png" width="480" alt="OLYMPUS Pattern Studio in the Ember theme" /> |
+| <img src="screenshots/01-brain.png" width="720" alt="OLYMPUS Brain Atlas in the Obsidian theme" /> | <img src="screenshots/04-studio.png" width="720" alt="OLYMPUS Pattern Studio in the Ember theme" /> |
 
 | References · Violet | Build Hub · Ice |
 |---|---|
-| <img src="screenshots/05-references.png" width="480" alt="OLYMPUS References in the Violet theme — 939 live studies" /> | <img src="screenshots/03-builds.png" width="480" alt="OLYMPUS Build Hub — builds, cards and the talent entry" /> |
+| <img src="screenshots/05-references.png" width="720" alt="OLYMPUS References in the Violet theme — 939 live studies" /> | <img src="screenshots/03-builds.png" width="720" alt="OLYMPUS Build Hub — builds, cards and the talent entry" /> |
 
 | Settings · Parchment | Live preview & design |
 |---|---|
-| <img src="screenshots/06-appearance.png" width="480" alt="OLYMPUS Settings in the Parchment theme" /> | <img src="screenshots/04-style.png" width="480" alt="OLYMPUS design board — direction, live preview and brand" /> |
+| <img src="screenshots/06-appearance.png" width="720" alt="OLYMPUS Settings in the Parchment theme" /> | <img src="screenshots/04-style.png" width="720" alt="OLYMPUS design board — direction, live preview and brand" /> |
 
 | Creative mode · progress, ring and queue | Mobile companion |
 |---|---|
-| <img src="screenshots/07-creative.png" width="480" alt="OLYMPUS creative mode — the honest progress bars, the plasma ring and the build crystal" /> | <img src="screenshots/08-mobile.png" width="220" alt="OLYMPUS mobile companion showing the AIME campaign and the live preview" /> |
+| <img src="screenshots/07-creative.png" width="720" alt="OLYMPUS creative mode — the honest progress bars, the plasma ring and the build crystal" /> | <img src="screenshots/08-mobile.png" width="360" alt="OLYMPUS mobile companion showing the AIME campaign and the live preview" /> |
 
-| Mobile creative · the same surface in one hand |
-|---|
-| <img src="screenshots/09-mobile-studio.png" width="240" alt="OLYMPUS mobile creative mode — progress per god, the plasma ring and hold-to-talk" /> |
+| Mobile creative · the same surface in one hand | The terminal, clean (fresh session) |
+|---|---|
+| <img src="screenshots/09-mobile-studio.png" width="380" alt="OLYMPUS mobile creative mode — progress per god, the plasma ring and hold-to-talk" /> | <img src="screenshots/11-terminal.png" width="760" alt="OLYMPUS terminal in a fresh session — the brain atlas on the left, the clean terminal on the right" /> |
 
 </div>
 
@@ -47,13 +47,14 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.67 — the MCP lifecycle.** A broken MCP is now **quarantined, not
-retried forever**: two consecutive dead probes move it out of the probe loop
-with the reason and a clear button (`/api/olympus/mcp/quarantine`). The health
-panel keeps the honest classification (needs-auth / needs-service /
-needs-binary / needs-app / optional-unavailable) and skips quarantined servers
-instead of paying a 12s timeout on every load. The verify gates from v0.0.66
-(mounted/visual) and the retired instinct gate (0/4,754) remain. Everything
+**v0.0.68 — the interaction release.** The terminal transcript now shows
+**every attached file** (not only the image), the task sheet shows the
+**build's crystal** next to its name, and the live preview's **Mark** finally
+works: a transparent overlay captures the click inside the iframe (cross-origin
+clicks never bubbled), so Athena's click-to-edit gets the element and the
+instruction. The gods' voices are more distinct (the multilingual neural pool
+gives the Portuguese male gods five voices instead of one). On the phone, a
+keyboard fallback sends a request to Apollo when the mic is blocked. Everything
 below is evidence, not a promise; the open v1.0 gates are named in
 [V1-READINESS.md](V1-READINESS.md). [All releases](https://github.com/texugo7badger/OLYMPUS/releases) · [v1.0 readiness](V1-READINESS.md) · [the 22 open issues and their targets](ISSUES.md).
 
@@ -124,7 +125,7 @@ renders blank. The full table and speech locales live in
 
 ![Mobile companion](public/diagrams/mobile.svg)
 
-**v0.0.67.** The phone opens `/m` — one screen, voice first: the plasma ring
+**v0.0.68.** The phone opens `/m` — one screen, voice first: the plasma ring
 fills the view, **hold the mic in the middle**, speak, release; the server STT
 transcribes and the request goes to Apollo in the active project's lane. The
 god row below the ring picks the voice/persona; the details sheet holds the
@@ -188,12 +189,12 @@ click a card to open it.
 
 | | | |
 |---|---|---|
-| [<img src="screenshots/themes/olympus.svg" width="220" alt="Olympus" />](screenshots/themes/olympus.svg) | [<img src="screenshots/themes/obsidian.svg" width="220" alt="Obsidian" />](screenshots/themes/obsidian.svg) | [<img src="screenshots/themes/ember.svg" width="220" alt="Ember" />](screenshots/themes/ember.svg) |
-| [<img src="screenshots/themes/violet.svg" width="220" alt="Violet" />](screenshots/themes/violet.svg) | [<img src="screenshots/themes/forest.svg" width="220" alt="Forest" />](screenshots/themes/forest.svg) | [<img src="screenshots/themes/ice.svg" width="220" alt="Ice" />](screenshots/themes/ice.svg) |
-| [<img src="screenshots/themes/parchment.svg" width="220" alt="Parchment" />](screenshots/themes/parchment.svg) | [<img src="screenshots/themes/paper.svg" width="220" alt="Paper" />](screenshots/themes/paper.svg) | [<img src="screenshots/themes/mist.svg" width="220" alt="Mist" />](screenshots/themes/mist.svg) |
-| [<img src="screenshots/themes/blossom.svg" width="220" alt="Blossom" />](screenshots/themes/blossom.svg) | [<img src="screenshots/themes/sand.svg" width="220" alt="Sand" />](screenshots/themes/sand.svg) | [<img src="screenshots/themes/mint.svg" width="220" alt="Mint" />](screenshots/themes/mint.svg) |
-| [<img src="screenshots/themes/vampire.svg" width="220" alt="Vampire" />](screenshots/themes/vampire.svg) | [<img src="screenshots/themes/celestial.svg" width="220" alt="Celestial" />](screenshots/themes/celestial.svg) | [<img src="screenshots/themes/abyss.svg" width="220" alt="Abyss" />](screenshots/themes/abyss.svg) |
-| [<img src="screenshots/themes/rosewood.svg" width="220" alt="Rosewood" />](screenshots/themes/rosewood.svg) | [<img src="screenshots/themes/ivory.svg" width="220" alt="Ivory" />](screenshots/themes/ivory.svg) | [<img src="screenshots/themes/arctic.svg" width="220" alt="Arctic" />](screenshots/themes/arctic.svg) |
+| [<img src="screenshots/themes/olympus.svg" width="360" alt="Olympus" />](screenshots/themes/olympus.svg) | [<img src="screenshots/themes/obsidian.svg" width="360" alt="Obsidian" />](screenshots/themes/obsidian.svg) | [<img src="screenshots/themes/ember.svg" width="360" alt="Ember" />](screenshots/themes/ember.svg) |
+| [<img src="screenshots/themes/violet.svg" width="360" alt="Violet" />](screenshots/themes/violet.svg) | [<img src="screenshots/themes/forest.svg" width="360" alt="Forest" />](screenshots/themes/forest.svg) | [<img src="screenshots/themes/ice.svg" width="360" alt="Ice" />](screenshots/themes/ice.svg) |
+| [<img src="screenshots/themes/parchment.svg" width="360" alt="Parchment" />](screenshots/themes/parchment.svg) | [<img src="screenshots/themes/paper.svg" width="360" alt="Paper" />](screenshots/themes/paper.svg) | [<img src="screenshots/themes/mist.svg" width="360" alt="Mist" />](screenshots/themes/mist.svg) |
+| [<img src="screenshots/themes/blossom.svg" width="360" alt="Blossom" />](screenshots/themes/blossom.svg) | [<img src="screenshots/themes/sand.svg" width="360" alt="Sand" />](screenshots/themes/sand.svg) | [<img src="screenshots/themes/mint.svg" width="360" alt="Mint" />](screenshots/themes/mint.svg) |
+| [<img src="screenshots/themes/vampire.svg" width="360" alt="Vampire" />](screenshots/themes/vampire.svg) | [<img src="screenshots/themes/celestial.svg" width="360" alt="Celestial" />](screenshots/themes/celestial.svg) | [<img src="screenshots/themes/abyss.svg" width="360" alt="Abyss" />](screenshots/themes/abyss.svg) |
+| [<img src="screenshots/themes/rosewood.svg" width="360" alt="Rosewood" />](screenshots/themes/rosewood.svg) | [<img src="screenshots/themes/ivory.svg" width="360" alt="Ivory" />](screenshots/themes/ivory.svg) | [<img src="screenshots/themes/arctic.svg" width="360" alt="Arctic" />](screenshots/themes/arctic.svg) |
 
 Beyond the presets, the **palette lab** generates all 14 colors of a family
 from a hue + harmony, with contrast floors (text ≥ 7:1, dim ≥ 4.5:1, accent

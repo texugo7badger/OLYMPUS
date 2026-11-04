@@ -252,6 +252,9 @@ interface ChatMessage {
   imagePath?: string;
   imageFilename?: string;
   imageSavedPath?: string;
+  /** v0.0.68 — every uploaded file rides the message, so the transcript shows
+   *  what was attached (not only the image). */
+  uploadedFiles?: Array<{ name: string; size: string | number; path: string }>;
 }
 // Issue #42: the wire-level phases a god reports. `thinking`, `working` and
 // `delegating` all read as "busy" to a user, so they collapse into the
@@ -1342,6 +1345,7 @@ export default function InteractiveTerminal() {
       imagePath: attachedImage?.thumbnailUrl,
       imageFilename: attachedImage?.filename,
       imageSavedPath: attachedImage?.savedPath,
+      uploadedFiles: uploadedFileDetails.map((f) => ({ name: f.name, size: f.size, path: f.path })),
     });
     if (attachedImage) setPendingImage(null);
     addMessage({ type: 'system', text: 'Routing to Apollo...' });
@@ -2452,6 +2456,17 @@ const MessageRenderer = memo(function MessageRenderer({
                   {t('terminal.attachedPrompt', getLanguage())}
                 </span>
               </span>
+            </div>
+          )}
+          {message.uploadedFiles && message.uploadedFiles.length > 0 && (
+            <div className="mb-1.5 flex flex-wrap gap-1.5">
+              {message.uploadedFiles.map((f, i) => (
+                <span key={`${f.name}:${i}`} className="inline-flex max-w-full items-center gap-1 rounded-md border border-olympus-gold/15 bg-olympus-card/50 px-1.5 py-1 text-[9px] font-mono text-olympus-text-dim" data-tip={f.path}>
+                  <Paperclip size={9} className="shrink-0 text-olympus-gold" />
+                  <span className="truncate text-olympus-text">{f.name}</span>
+                  <span className="shrink-0">{f.size} B</span>
+                </span>
+              ))}
             </div>
           )}
           <div className="flex items-start gap-1.5">

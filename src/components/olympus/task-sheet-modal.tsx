@@ -16,6 +16,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { X, Brain, FilePen, Coins, Clock, ChevronDown, ChevronRight, Wrench, RotateCcw, Sparkles, ShieldCheck } from 'lucide-react';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import OlympusLoader from './olympus-loader';
+import BuildCrystal from './build-crystal';
 import { cn } from '@/lib/utils';
 
 export interface TaskRecord {
@@ -230,9 +231,12 @@ export default function TaskSheetModal({ hopId, onClose }: { hopId: string; onCl
                     <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">snapshot at launch</span>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <div>
-                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">build</div>
-                      <div className="text-[11px] font-mono text-olympus-text">{task.buildName || '—'}</div>
+                    <div className="flex items-center gap-2">
+                      <BuildCrystal build={{ name: task.buildName || task.id, god: task.god, tier: 'warm' }} size={34} />
+                      <div className="min-w-0">
+                        <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">build</div>
+                        <div className="truncate text-[11px] font-mono text-olympus-text">{task.buildName || '—'}</div>
+                      </div>
                     </div>
                     <div>
                       <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">model / strategy</div>

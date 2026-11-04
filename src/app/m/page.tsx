@@ -90,6 +90,7 @@ export default function MobileCompanion() {
   const [secure, setSecure] = useState(true);
   const [tunnelUrl, setTunnelUrl] = useState<string | null>(null);
   const [tunnelBusy, setTunnelBusy] = useState(false);
+  const [typeDraft, setTypeDraft] = useState('');
   const levelGate = useRef(0);
   const themeStampRef = useRef('');
 
@@ -541,6 +542,24 @@ export default function MobileCompanion() {
                   <Play size={12} /> {t('m.resume', language)}
                 </button>
               )}
+              {/* v0.0.68 — the keyboard fallback: when the mic is blocked (HTTP
+                  LAN) or the room is loud, type the request to Apollo. */}
+              <div className="mt-2 flex items-center gap-1.5">
+                <input
+                  value={typeDraft}
+                  onChange={(e) => setTypeDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && typeDraft.trim()) { const q = typeDraft; setTypeDraft(''); setDetailsOpen(false); void askApollo(q); } }}
+                  placeholder={t('m.typeRequest', language)}
+                  aria-label={t('m.typeRequest', language)}
+                  className="min-w-0 flex-1 rounded-lg border border-olympus-gold/20 bg-olympus-bg px-2.5 py-2 text-[12px] outline-none placeholder:text-olympus-text-dim"
+                />
+                <button
+                  onClick={() => { if (!typeDraft.trim()) return; const q = typeDraft; setTypeDraft(''); setDetailsOpen(false); void askApollo(q); }}
+                  disabled={!typeDraft.trim() || busy}
+                  aria-label={t('m.send', language)}
+                  className="rounded-lg bg-olympus-gold/15 px-3 py-2 text-[10px] font-mono text-olympus-gold ring-1 ring-olympus-gold/30 disabled:opacity-40"
+                >{t('m.send', language)}</button>
+              </div>
             </div>
 
             <div className="mt-2 flex items-center gap-2">

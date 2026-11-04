@@ -396,6 +396,13 @@ export default function LivePreview() {
           </div>
         )}
         {markMode && <div className="absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-olympus-gold/20 text-olympus-gold text-[10px] font-mono ring-1 ring-olympus-gold/30 pointer-events-none">Click anywhere on the preview to mark for editing</div>}
+        {/* v0.0.68 — THE MARK OVERLAY. Clicks inside the iframe never bubble
+            to the parent (a cross-origin dev server), so the mark mode sat
+            there and nothing happened. A transparent overlay above the frame
+            captures the click and the coordinates. */}
+        {markMode && (
+          <div className="absolute inset-0 z-20 cursor-crosshair" onClick={handleContainerClick} aria-label="Mark the preview for editing" role="button" />
+        )}
       </div>
 
       <div className="h-6 shrink-0 flex items-center justify-between px-3 border-t border-olympus-gold/10 bg-olympus-panel text-[9px] font-mono text-olympus-text-dim">
