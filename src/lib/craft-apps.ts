@@ -132,7 +132,17 @@ async function probeAllUncached(): Promise<CraftAppProbe[]> {
   // The catalogue pass is a reachability hint, not a load test: 1.2s is
   // enough on a healthy network and bounds the FIRST open (the cached opens
   // are already instant). A single app click keeps the 3s budget.
-  return Promise.all(urls.map((u) => probeCraftApp(u, 1200)));
+  const first = await Promise.all(urls.map((u) => probeCraftApp(u, 1200)));
+  // v0.0.79 — ONE retry for a failed probe. A transient network hiccup made a
+  // healthy app read as dead (the flaky G4); a genuinely dead app fails both
+  // attempts, so the truth is unchanged and the noise is gone.
+  const failed = first.map((p, i) => ({ p, i })).filter((x) => !x.p.ok);
+  if (failed.length > 0) {
+    await new Promise((r) => setTimeout(r, 600));
+    const retried = await Promise.all(failed.map((x) => probeCraftApp(urls[x.i], 2000)));
+    retried.forEach((p, k) => { first[failed[k].i] = p; });
+  }
+  return first;
 }
 
 /** Kick a background refresh without awaiting it (stale-while-revalidate). */
