@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import PlasmaRing from '@/components/olympus/plasma-ring';
 import { THEME_PRESETS, applyTheme, normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
+import { getPerformanceMode, setPerformanceMode } from '@/lib/performance-mode';
 import { LANGUAGES, godName, setLanguage, t, useLanguage, type Language } from '@/lib/i18n';
 import { speakAs } from '@/lib/voice';
 import { useHoldToTalk } from '@/lib/use-hold-to-talk';
@@ -80,6 +81,7 @@ export default function MobileCompanion() {
   const [previewBusy, setPreviewBusy] = useState(false);
   const [theme, setTheme] = useState<ThemeState | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [perfMode, setPerfMode] = useState(false);
   const [god, setGod] = useState('apollo');
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -123,6 +125,7 @@ export default function MobileCompanion() {
     };
     fit();
     setSecure(typeof window !== 'undefined' ? window.isSecureContext : true);
+    setPerfMode(getPerformanceMode());
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
   }, []);
@@ -690,7 +693,7 @@ export default function MobileCompanion() {
               <button onClick={() => setDetailsOpen(false)} className="flex items-center gap-1 rounded-lg border border-olympus-gold/15 px-2 py-1.5 text-[10px] text-olympus-gold"><Palette size={10} /> {t('m.theme', language)}</button>
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              {THEME_PRESETS.slice(0, 6).map((preset) => (
+              {THEME_PRESETS.map((preset) => (
                 <button
                   key={preset.id}
                   onClick={async () => {
@@ -712,6 +715,16 @@ export default function MobileCompanion() {
                   {theme?.presetId === preset.id && <Check size={10} className="ml-auto text-olympus-green" />}
                 </button>
               ))}
+            </div>
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-olympus-gold/15 bg-olympus-bg/40 px-2.5 py-2">
+              <span className="flex-1 text-[10px] uppercase tracking-wider text-olympus-text-dim" data-tip="Low-end phone: fewer particles, stable motion; keeps spinners/status">performance mode</span>
+              <button
+                onClick={() => { const next = !perfMode; setPerfMode(next); setPerformanceMode(next); }}
+                aria-pressed={perfMode}
+                className={`rounded-full px-2.5 py-1 text-[9px] font-mono ring-1 ${perfMode ? 'bg-olympus-green/15 text-olympus-green ring-olympus-green/30' : 'bg-olympus-gold/10 text-olympus-gold ring-olympus-gold/25'}`}
+              >
+                {perfMode ? 'on' : 'off'}
+              </button>
             </div>
             <button
               onClick={() => { try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ } setToken(null); }}

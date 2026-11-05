@@ -33,7 +33,14 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.82 — the markview bridge and the two dead clicks.**
+**v0.0.83 — the user lane and the measured speed.**
+The studio god cites measured tok/s (last turn, p50 by model, hop wall-clock)
+and the shared GO-bucket truth; studio sessions rotate hourly; an agent-scoped
+chip names the lane. A chat/mark/voice lease holds NEW hops while the human is
+driving. The mobile creative gets Apollo-only hold-to-talk into the terminal
+queue, the particle field, all themes (whites included), performance mode and
+clickable hops; the Cost panel carries the GO Plus bar. v0.0.82 was the
+markview bridge and the two dead clicks:
 References stage into the composer and queue into the shared prompt queue with
 priority; high items auto-drain when the terminal is idle. The project
 switcher and notification panel are portals above the studio (the status bar
@@ -83,7 +90,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**151 PASS / 0 FAIL / 1 declared skip** across 152 suites; a 100-hop
+**152 PASS / 0 FAIL / 1 declared skip** across 153 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

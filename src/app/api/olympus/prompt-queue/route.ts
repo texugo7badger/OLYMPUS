@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireReadAuth } from '@/lib/auth';
 import { listQueue, enqueuePrompt, markQueueItem, removeQueueItem } from '@/lib/prompt-queue';
+import { markUserActivity } from '@/lib/user-activity';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 
 export const runtime = 'nodejs';
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  markUserActivity(60_000);
   const authError = requireAuth(req);
   if (authError) return authError;
   let body: any = {};

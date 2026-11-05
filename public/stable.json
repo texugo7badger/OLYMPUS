@@ -1,14 +1,14 @@
 {
-  "version": "0.0.82",
-  "tag": "v0.0.82",
+  "version": "0.0.83",
+  "tag": "v0.0.83",
   "stable": true,
   "tests": {
-    "pass": 151,
+    "pass": 152,
     "fail": 0,
     "skip": 1,
-    "suites": 152
+    "suites": 153
   },
-  "releasedAt": "2026-11-05T23:31:38.553Z",
-  "commit": "cb2e3b6",
+  "releasedAt": "2026-11-05T23:57:47.384Z",
+  "commit": "48ed246",
   "note": "Stable means: the full battery ran with 0 FAIL and the declared skips are explicit. The console/GO limits are unrelated and may change."
 }

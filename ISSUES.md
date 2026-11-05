@@ -1,4 +1,4 @@
-# The 22 open issues — status map at v0.0.82
+# The 22 open issues — status map at v0.0.83
 
 ![The 22 issues](public/diagrams/issues.svg)
 

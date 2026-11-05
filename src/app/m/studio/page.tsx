@@ -16,10 +16,11 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Send, Sparkles, Volume2, VolumeX, Zap } from 'lucide-react';
+import { ArrowLeft, Loader2, Mic, Send, Sparkles, Volume2, VolumeX, Zap } from 'lucide-react';
 import PlasmaRing from '@/components/olympus/plasma-ring';
 import ProgressStrip from '@/components/olympus/progress-strip';
 import GoUsageBar from '@/components/olympus/go-usage-bar';
+import MobileAmbient from '@/components/olympus/mobile-ambient';
 import TaskSheetModal from '@/components/olympus/task-sheet-modal';
 import { normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
 import { t, useLanguage } from '@/lib/i18n';
@@ -27,6 +28,7 @@ import { godPersona } from '@/lib/god-personas';
 import { godName } from '@/lib/i18n';
 import { GOD_VOICE, setVoiceEnabled, speakAs, voiceEnabled } from '@/lib/voice';
 import { mobileFetch } from '@/lib/mobile-fetch';
+import { useHoldToTalk } from '@/lib/use-hold-to-talk';
 
 const GOD_IDS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
 
@@ -75,6 +77,7 @@ export default function MobileStudio() {
   const [activeSlug, setActiveSlug] = useState('');
   const [queue, setQueue] = useState<Array<{ id: string; text: string; status: string; createdAt: string; priority?: 'high' | 'normal' | 'low'; source?: string; reference?: { name: string } }>>([]);
   const [queueText, setQueueText] = useState('');
+  const [voiceNote, setVoiceNote] = useState('');
   // v0.0.77 — tapping a hop opens its info sheet on the phone too.
   const [sheetHop, setSheetHop] = useState<string | null>(null);
   const [feed, setFeed] = useState<Array<{ type: string; title: string; body: string; ts: string }>>([]);
@@ -166,8 +169,11 @@ export default function MobileStudio() {
     let live = true;
     const pull = async () => {
       try {
-        const q = activeSlug ? `?project=${encodeURIComponent(activeSlug)}` : '';
-        const r = await mobileFetch(`/api/olympus/token-speed${q}`, { cache: 'no-store', headers });
+        const q = new URLSearchParams();
+        if (activeSlug) q.set('project', activeSlug);
+        q.set('agent', god);
+        const qs = `?${q.toString()}`;
+        const r = await mobileFetch(`/api/olympus/token-speed${qs}`, { cache: 'no-store', headers });
         const d = await r.json().catch(() => null);
         if (live && r.ok && d?.ok) setSpeed(d as SpeedState);
       } catch { /* next poll */ }
@@ -209,6 +215,32 @@ export default function MobileStudio() {
     } catch { /* the item stays queued; the user can retry */ }
   };
 
+  // v0.0.83 — ONLY Apollo has a microphone in the creative screen. He is the
+  // mandante; the transcript is queued HIGH for the terminal, so his answer
+  // lands in the campaign conversation/planning, not in a read-only side chat.
+  const enqueueVoice = useCallback(async (heard: string) => {
+    const q = heard.trim();
+    if (!q || !activeSlug) return;
+    try {
+      const r = await fetch('/api/olympus/prompt-queue', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ project: activeSlug, text: q, source: 'phone', priority: 'high' }),
+      });
+      const d = await r.json().catch(() => null);
+      if (r.ok && d?.ok) {
+        setVoiceNote('ideia enviada ao terminal · alta prioridade');
+        void loadQueue();
+      } else setError(d?.error || t('m.connectionFailed', language));
+    } catch (e: any) { setError(e?.message || t('m.connectionFailed', language)); }
+  }, [activeSlug, headers, language, loadQueue]);
+
+  const hold = useHoldToTalk({
+    language,
+    onText: (text) => void enqueueVoice(text),
+    onError: (message) => setError(message),
+  });
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ block: 'end' });
   }, [chat, busy]);
@@ -235,6 +267,8 @@ export default function MobileStudio() {
       setVoiceEnabled(next);
       if (!next && typeof window !== 'undefined') window.speechSynthesis?.cancel();
       void pushStudio({ voice: next });
+      // v0.0.83 — the toggle is a gesture; use it to prove the audio lane.
+      if (next) speak('Apollo à escuta. A voz está ativa.');
       return next;
     });
   };
@@ -332,6 +366,7 @@ export default function MobileStudio() {
       {/* v0.0.70 — one canvas on a phone: the ring. The ambient field is a
           static gradient here; the full particle field stays on the desktop. */}
       <div className="pointer-events-none fixed inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${palette.gold}14, transparent 62%)` }} aria-hidden="true" />
+      <MobileAmbient theme={theme} enabled />
       <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-olympus-gold/10 bg-olympus-bg/95 px-3 pt-[calc(env(safe-area-inset-top)+8px)] pb-2.5 backdrop-blur">
         <Link
           href="/m"
@@ -359,7 +394,7 @@ export default function MobileStudio() {
         {(speed?.last || speed?.hops?.stat) && (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-olympus-gold/15 bg-olympus-panel/60 px-2 py-1 text-[9px] font-mono text-olympus-text-dim">
             <Zap size={10} className="text-olympus-cyan" />
-            {speed?.last ? <span><span className="text-olympus-green tabular-nums">{speed.last.outTokPerSec.toFixed(1)}</span> tok/s last turn{speed.last.ttftMs != null ? ` · ttft ${Math.round(speed.last.ttftMs)}ms` : ''}</span> : <span>— last turn</span>}
+            {speed?.last ? <span><span className="text-olympus-green tabular-nums">{speed.last.outTokPerSec.toFixed(1)}</span> tok/s {god} last turn{speed.last.ttftMs != null ? ` · ttft ${Math.round(speed.last.ttftMs)}ms` : ''}</span> : <span>— {god} last turn</span>}
             {speed?.hops?.stat ? <span>· <span className="text-olympus-green tabular-nums">{speed.hops.stat.p50.toFixed(1)}</span> tok/s hop (p50, {speed.hops.stat.n})</span> : null}
           </div>
         )}
@@ -380,28 +415,57 @@ export default function MobileStudio() {
           <div className="flex items-center gap-2">
             <Sparkles size={13} style={{ color: tint }} />
             <span className="text-[11px] font-semibold" style={{ color: tint }}>{persona.name}</span>
-            <span className="truncate text-[10px] text-olympus-text-dim">{persona.epithet}</span>
           </div>
           <div className="mt-3 flex flex-col items-center">
             <PlasmaRing
               tint={tint}
-              level={level}
+              level={hold.recording ? hold.level : level}
               speaking={speaking && voice}
-              recording={false}
+              recording={hold.recording}
               size={220}
             >
-              <div
-                aria-hidden="true"
-                className="flex h-24 w-24 select-none items-center justify-center rounded-full border"
-                style={{
-                  borderColor: `${tint}55`,
-                  background: `radial-gradient(circle at 50% 45%, ${tint}22, transparent 72%)`,
-                  boxShadow: `0 0 26px ${tint}44`,
-                }}
-              >
-                <Sparkles size={26} style={{ color: tint }} />
-              </div>
+              {god === 'apollo' ? (
+                <button
+                  onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); void hold.start(); }}
+                  onPointerUp={(e) => { e.preventDefault(); hold.stop(false); }}
+                  onPointerCancel={() => hold.stop(true)}
+                  onContextMenu={(e) => e.preventDefault()}
+                  aria-label="Hold to speak with Apollo — queues a high-priority idea for the terminal"
+                  aria-pressed={hold.recording}
+                  className="flex h-24 w-24 select-none items-center justify-center rounded-full border"
+                  style={{
+                    touchAction: 'none',
+                    borderColor: hold.recording ? palette.red : `${tint}55`,
+                    background: `radial-gradient(circle at 50% 45%, ${tint}22, transparent 72%)`,
+                    boxShadow: `0 0 ${hold.recording ? 46 : 26}px ${hold.recording ? palette.red : tint}44`,
+                  }}
+                >
+                  {hold.transcribing ? <Loader2 size={22} className="animate-spin" style={{ color: tint }} /> : <Mic size={24} style={{ color: hold.recording ? palette.red : tint }} />}
+                </button>
+              ) : (
+                <div
+                  aria-hidden="true"
+                  className="flex h-24 w-24 select-none items-center justify-center rounded-full border"
+                  style={{
+                    borderColor: `${tint}55`,
+                    background: `radial-gradient(circle at 50% 45%, ${tint}22, transparent 72%)`,
+                    boxShadow: `0 0 26px ${tint}44`,
+                  }}
+                >
+                  <Sparkles size={26} style={{ color: tint }} />
+                </div>
+              )}
             </PlasmaRing>
+            {god === 'apollo' ? (
+              <p className="mt-1 text-center text-[9px] font-mono" style={{ color: hold.recording ? palette.red : palette.textDim }}>
+                {hold.recording ? 'solte para enviar ao terminal' : hold.transcribing ? 'transcrevendo…' : 'segure para falar com Apollo — ele interfere no terminal'}
+              </p>
+            ) : (
+              <p className="mt-1 text-center text-[9px] font-mono" style={{ color: palette.textDim }}>
+                a voz é do Apollo; troque para ele para falar
+              </p>
+            )}
+            {voiceNote && <p className="text-center text-[9px] font-mono text-olympus-cyan">{voiceNote}</p>}
             <div className="mt-2 grid w-full grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
               <span className="text-olympus-text-dim">{t('m.domain', language)}</span>
               <span className="truncate text-olympus-text">{persona.domain}</span>
@@ -444,7 +508,8 @@ export default function MobileStudio() {
                   key={h.hopId}
                   onClick={() => setSheetHop(h.hopId)}
                   aria-label={`Open ${h.hopId}`}
-                  className="rounded-full border px-2 py-0.5 text-[10px]"
+                  data-tip="Open the hop task sheet"
+                  className="cursor-pointer rounded-full border px-2 py-0.5 text-[10px]"
                   style={{ borderColor: `${godTint(palette, h.god || 'apollo')}44`, color: godTint(palette, h.god || 'apollo') }}
                 >
                   {h.hopId}{h.god ? ` · ${h.god}` : ''}

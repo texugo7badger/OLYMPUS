@@ -13,7 +13,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { resolvePalette, type ThemeState } from '@/lib/theme';
 
 type Particle = { x: number; y: number; vx: number; vy: number; r: number; a: number; c: number };
@@ -22,6 +22,14 @@ export default function MobileAmbient({ theme, enabled }: { theme: ThemeState | 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const colorsRef = useRef<string[]>(['#D4A574']);
   const stableRef = useRef(false);
+  const [low, setLow] = useState(false);
+
+  useEffect(() => {
+    const read = () => setLow(typeof document !== 'undefined' && document.documentElement.dataset.performance === 'low');
+    read();
+    window.addEventListener('olympus:performance', read);
+    return () => window.removeEventListener('olympus:performance', read);
+  }, []);
 
   useEffect(() => {
     if (!theme) return;
@@ -31,7 +39,7 @@ export default function MobileAmbient({ theme, enabled }: { theme: ThemeState | 
   }, [theme]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || low) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d', { alpha: true });
@@ -39,8 +47,6 @@ export default function MobileAmbient({ theme, enabled }: { theme: ThemeState | 
     let raf = 0;
     let running = true;
     let particles: Particle[] = [];
-    const low = typeof document !== 'undefined' && document.documentElement.dataset.performance === 'low';
-    if (low) return;
     const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const dpr = Math.min(1.5, window.devicePixelRatio || 1);
     const resize = () => {
@@ -103,7 +109,7 @@ export default function MobileAmbient({ theme, enabled }: { theme: ThemeState | 
       ro.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [enabled]);
+  }, [enabled, low]);
 
   if (!enabled) return null;
   return (

@@ -8,6 +8,7 @@ import path from 'path';
 // Use spawnOpencode() for cross-platform support.
 import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 import { getVaultRoot } from '@/lib/vault-root';
+import { markUserActivity } from '@/lib/user-activity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,7 @@ const VAULT_ROOT = getVaultRoot();
  * Progress is tracked in the activity feed.
  */
 export async function POST(req: NextRequest) {
+  markUserActivity(120_000);
   try {
     const body = await req.json();
     const { x, y, instruction, projectSlug, viewport, route } = body;

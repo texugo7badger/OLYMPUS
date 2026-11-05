@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import OlympusLoader from './olympus-loader';
+import GoUsageBar from './go-usage-bar';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { DollarSign, Zap, Server, CheckCircle2, ChevronRight, ChevronDown, Cpu, FileText, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -328,6 +329,9 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  {prov.capsDisplay} · refresh 10s
  </span>
  </div>
+
+      {/* v0.0.83 — GO Plus limits live in the Cost panel too. */}
+      <div className="mb-4"><GoUsageBar /></div>
 
  {/* Polished empty-state banner (replaces the old
  "No cost events yet. Costs appear here once the Olympus overlay

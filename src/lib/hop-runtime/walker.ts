@@ -30,6 +30,7 @@ import { syncLaneFile } from '@/lib/lane-config';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
 import { balancePlan } from './plan-balance';
 import { loadHopState, saveHopState, hopStatePath, pruneStaleInFlight, type HopPark } from './hop-state';
+import { userIsActive } from '../user-activity';
 import { composeArsenalDirective } from './arsenal';
 import { createHopTransport, type HopTransport } from './transport';
 import { hardCeilingMs } from './progress';
@@ -1134,6 +1135,11 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   const ready = (h: PlanHop) => (h.after ?? []).every((dep) => completed.has(dep));
 
   let stopped = false;
+  // v0.0.83 — the user lane. While a chat/mark/voice lease is live, NEW hops
+  // wait; the in-flight hop finishes, nothing is lost. The check is bounded by
+  // the lease TTL (max 5 min) and the campaign deadline.
+  let userPauseTimer: ReturnType<typeof setTimeout> | null = null;
+  let userPauseAnnounced = false;
   /**
    * v0.0.31 (R31-02) — THE PARK CIRCUIT BREAKER.
    *
@@ -1259,6 +1265,21 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         }
         persistState();
         return;
+      }
+      if (userIsActive()) {
+        if (!userPauseAnnounced) {
+          userPauseAnnounced = true;
+          emit({ type: 'log', msg: 'user is active — holding NEW hops so the human turn gets the lane' } as any);
+        }
+        if (!userPauseTimer) {
+          userPauseTimer = setTimeout(() => { userPauseTimer = null; launch(); }, 1500);
+          userPauseTimer.unref?.();
+        }
+        return;
+      }
+      if (userPauseAnnounced) {
+        userPauseAnnounced = false;
+        emit({ type: 'log', msg: 'user lane idle — resuming the campaign' } as any);
       }
       while (inFlight.size < concurrency) {
         // #POOL-CONTENTION: count the in-flight hops per provider lane; a

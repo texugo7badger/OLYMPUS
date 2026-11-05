@@ -1,6 +1,10 @@
 # OLYMPUS Roadmap
 
-**v0.0.82 is the current release** (2026-11-05) — the markview bridge and the two dead clicks:
+**v0.0.83 is the current release** (2026-11-05) — the user lane and the measured speed:
+measured telemetry in the studio, hourly bounded sessions, agent-scoped tok/s,
+user-activity lease holding new hops, Apollo-only mobile mic into the terminal
+queue, mobile particle field/performance/all themes, Cost-panel GO bar.
+**v0.0.82** was the markview bridge and the two dead clicks:
 references stage/queue with priority and auto-drain; the project switcher and
 notification panel are portals; the profile scan is bounded/cached.
 **v0.0.81** was public core + measured frames + the fix pass:

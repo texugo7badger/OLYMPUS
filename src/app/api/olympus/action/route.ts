@@ -12,6 +12,7 @@ import { resolveAndRegisterIntent, stripUploadBlock, resolveKnownTurnProject } f
 import { maybeStartDevServer } from '@/lib/dev-server-trigger';
 import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
 import { startDetachedWalk } from '@/lib/hop-runtime/supervisor';
+import { markUserActivity } from '@/lib/user-activity';
 import { pickPlanRoot, walkRootNote } from '@/lib/hop-runtime/walk-root';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
 import { probeLane } from '@/lib/lane-probe';
@@ -160,6 +161,9 @@ function getConversationProject(conversationId: string): string | null {
  * (context still retained via the session id when one exists).
  */
 export async function POST(req: NextRequest) {
+  // v0.0.83 — any interactive action claims the user lane for 90s; the hop
+  // walker holds NEW hops while the human is driving (in-flight hops finish).
+  markUserActivity(90_000);
   const authError = requireAuth(req);
   if (authError) return authError;
 

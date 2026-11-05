@@ -156,3 +156,7 @@ plans/
 *.plan.md
 *.checkpoint.md
 SESSION-CHECKPOINT*.md
+
+# v0.0.83 — the tok/s API route is source, not a credential.
+!src/app/api/olympus/token-speed/
+!src/app/api/olympus/token-speed/route.ts

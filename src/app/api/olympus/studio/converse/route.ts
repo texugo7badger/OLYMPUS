@@ -18,6 +18,9 @@ import { ensureServer, getOrCreateSession, runWarmMessage } from '@/lib/opencode
 import { readHopEvents } from '@/lib/hop-runtime/hop-events';
 import { GOD_PERSONAS, godPersona } from '@/lib/god-personas';
 import { godDisplayName, godDomainText, type GodLanguage } from '@/lib/god-names';
+import { getActiveProject } from '@/lib/project-context';
+import { groupByModel, readHopSpeeds, readTurnSpeeds, stat } from '@/lib/token-speed';
+import { markUserActivity } from '@/lib/user-activity';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,7 +58,27 @@ function liveContext(): string {
   }
 }
 
+/**
+ * v0.0.83 — the measured lane, so the god never says "I cannot measure" when
+ * OLYMPUS has the ledger. Also states the sharing truth: the GO plan's
+ * per-model buckets are workspace-wide, not per API key.
+ */
+function measuredContext(project: string): string {
+  try {
+    const turns = readTurnSpeeds(160);
+    const byModel = groupByModel(turns);
+    const last = turns[0];
+    const hops = project ? readHopSpeeds(project) : [];
+    const hopStat = hops.length > 0 ? stat(hops.map((h) => h.outTokPerSec)) : null;
+    const f = (n: number) => n.toFixed(1);
+    return `Measured by OLYMPUS from the local OpenCode ledger: last turn ${last ? `${f(last.outTokPerSec)} tok/s (${last.model}, ${last.agent ?? 'agent'})` : 'not readable'}; p50 by model ${byModel.slice(0, 4).map((m) => `${m.model} ${f(m.p50)} tok/s (n=${m.n})`).join(', ') || 'not readable'}; ${project ? `project hop wall-clock p50 ${hopStat ? f(hopStat.p50) : 'not readable'} tok/s (includes tools, n=${hopStat?.n ?? 0}); ` : ''}the GO plan's per-model buckets are shared across every OpenCode session in the workspace (this chat, the desktop terminal, the campaign walk); different API keys do not create separate quotas. Generation speed is not time-to-first-token: a huge cached prefix can delay the first token while output tok/s stays high.`;
+  } catch {
+    return 'No measured token speed is readable right now.';
+  }
+}
+
 export async function POST(req: NextRequest) {
+  markUserActivity(120_000);
   // v0.0.63 — an LLM-spending POST on a public tunnel is a door with a bill
   // attached. The desktop passes via the HttpOnly cookie; the phone via
   // x-olympus-token.
@@ -74,6 +97,11 @@ export async function POST(req: NextRequest) {
   // v0.0.63 — the Greek character (epithet + tone), authored in all seven
   // languages. The temperament sentence stays as the first-person voice.
   const character = godPersona(god, (langKey as GodLanguage));
+  const projectSlug = String(getActiveProject()?.slug || '');
+  // v0.0.83 — a studio thread is a BOUNDED session, not a forever-growing
+  // one. Rotate per hour (and per god/project) so a long conversation cannot
+  // turn every answer into a huge-prefix prefill; the UI keeps its history.
+  const hourKey = new Date().toISOString().slice(0, 13);
 
   const prompt = `[OLYMPUS-STUDIO-CHAT — CONVERSATION ONLY]
 You are ${name} — ${character.epithet}. ${domain}.
@@ -83,12 +111,13 @@ Speak naturally in ${lang.name}, first person, warm, calm and concise (at most 9
 Do NOT use any tool. Do NOT read, write or edit files. Do NOT start a campaign or dispatch.
 Do NOT repeat the user's message verbatim and do NOT read a report like a robot: understand it and answer in your own words, with one natural follow-up when useful.
 Live walk context (use only if relevant): ${liveContext()}
+Measured speed (cite these numbers if the user asks about speed; do not invent): ${measuredContext(projectSlug)}
 User: ${message}`;
 
   try {
     const server = await ensureServer();
     if (!server) throw new Error('warm server unavailable');
-    const sessionId = await getOrCreateSession(`studio-${god}`);
+    const sessionId = await getOrCreateSession(`studio-${god}-${projectSlug || 'global'}-${hourKey}`);
     let answer = '';
     await runWarmMessage({
       sessionId,

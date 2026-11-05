@@ -2,6 +2,67 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.83] — 2026-11-05
+
+### Speed is measured, and the user lane wins
+
+- **The studio god can measure now.** `studio/converse` receives the local
+  ledger's measured numbers (last turn, p50 by model, hop wall-clock p50) and
+  the sharing truth: the GO plan's per-model buckets are **workspace-wide**,
+  not per API key. The god cites numbers instead of saying "I cannot measure".
+- **Bounded studio sessions.** The studio thread key rotates per god/project/
+  hour (`studio-<god>-<project>-<YYYY-MM-DD-HH>`), so a long chat cannot turn
+  every answer into a huge-prefix prefill. The UI history stays.
+- **Agent-scoped speed chip.** `/api/olympus/token-speed?agent=<god>` filters
+  the ledger to the selected god; the mobile chip says `apollo last turn`, not
+  an unrelated campaign lane.
+- **The user lane holds new hops.** A chat, mark, voice idea or queued prompt
+  writes a bounded lease (`~/.olympus/user-activity.json`); the walker waits
+  before launching a NEW hop (the in-flight one finishes) so the human's turn
+  is not competing with the campaign for the same provider. The lease expires
+  on its own (max 5 min).
+
+### Mobile creative
+
+- **Apollo-only microphone.** The creative ring is a hold-to-talk button only
+  when Apollo (the mandante) is selected; the transcript is queued **HIGH**
+  for the terminal, so Apollo answers in the campaign conversation/planning,
+  not in a read-only side chat. Other gods have no mic.
+- **PC visual language on the phone.** `MobileAmbient` adds the particle field
+  to the studio (44 particles, DPR capped, no link pass), respects reduced
+  motion and hides entirely in performance mode. The "Febo, o Lúcido" epithet
+  line is gone.
+- **All themes, including whites.** The details sheet now lists every theme
+  preset (Parchment, Eclipse, Mist, Blossom, Sand, Mint + the dark families)
+  instead of the first six.
+- **Performance mode on the phone.** A dedicated toggle writes
+  `data-performance="low"`, and `MobileAmbient` reacts live (no reload).
+- **Audio proof on enable.** Turning the voice on speaks a short sample; the
+  browser SpeechSynthesis remains the fallback when edge-tts is unavailable.
+- **Hops are visibly clickable.** The in-flight chips carry a pointer/tooltip
+  and open the TaskSheet.
+
+### The Cost panel
+
+- The GO Plus bar is now in the **Cost** panel (PC) as well as the creative
+  and the phone, so the limit/usage is visible where the cost is read.
+
+### Verification
+
+- Battery: **152 PASS / 0 FAIL / 1 declared skip (153 suites)**.
+
+### Honest limits
+
+- **No automatic DAG pruning yet.** The 40-hop/38 example is the next slice:
+  a hop must be able to emit `plan-prune.json` and the walker must cascade the
+  skip with evidence. Planned for v0.0.84, not claimed here.
+- The measured p50 is generation speed, not TTFT; a huge cached prefix can
+  still delay the first token. The studio session rotation reduces that, but
+  it does not make the provider faster.
+- The auto-drain of high-priority queue items runs on the desktop terminal;
+  the phone can see/send but does not auto-drain.
+- AIME remains parked at `v5g-mobile-gate` (43/53, 6.6 < 7).
+
 ## [v0.0.82] — 2026-11-05
 
 ### The markview bridge
