@@ -38,14 +38,16 @@ const { parsePreviewAnswer, writePreview, startPreviewServer, stopPreviewServer,
 let failures = 0;
 const check = (n, c, d) => { console.log(`${c ? 'PASS' : 'FAIL'}  ${n}${c ? '' : ' — ' + String(d).slice(0, 200)}`); if (!c) failures++; };
 
-const a = computeAlignment(SLUG);
+const a = computeAlignment(SLUG, 'new');
 check('A-1: a complete brief scores 100 and is ready', a?.score === 100 && a.ready === true, JSON.stringify(a));
 check('A-2: five signals, each with evidence', a?.signals.length === 5 && a.signals.every((s) => s.evidence.length > 0), JSON.stringify(a?.signals));
 check('A-3: the audience signal reads the description', a?.signals.find((s) => s.id === 'audience')?.score === 20, 'audience not detected');
 
 fs.writeFileSync(path.join(LANE, 'project.md'), `---\nslug: ${SLUG}\nname: Demo\npath: ${LANE}\n---\n`);
-const b = computeAlignment(SLUG);
+const b = computeAlignment(SLUG, 'new');
 check('A-4: an empty brief is not ready and names what is missing', b?.ready === false && (b?.missing ?? []).length >= 3, JSON.stringify(b));
+const auto = computeAlignment(SLUG);
+check('A-12: a lane with a plan is detected as a continuation', auto?.mode === 'continue' && auto.signals.some((s) => s.id === 'next'), JSON.stringify(auto));
 
 const parsed = parsePreviewAnswer('```json\n{"html":"<html><head></head><body>hi</body></html>","css":"body{color:#fff}"}\n```');
 check('A-5: the god answer parses through fences', parsed?.html.includes('<body>hi</body>') && parsed?.css.includes('#fff'), JSON.stringify(parsed));
