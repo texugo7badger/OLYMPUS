@@ -1,6 +1,9 @@
 # OLYMPUS Roadmap
 
-**v0.0.81 is the current release** (2026-11-04) — public core + measured frames:
+**v0.0.81 is the current release** (2026-11-04; re-released 2026-11-05) — public core + measured frames + the fix pass:
+notifications open, mobile creative is chat-only, voices stop reading logs,
+restarts ask, the GO Plus bar matches the console, tok/s is measured and the
+stable-version channel lands in Settings. The original v0.0.81 cut was:
 ten pure suites + CI, the fps probe, hygiene/security, the honest 7.x
 checkpoint. v0.0.80 was alignment + fast preview:
 five explainable signals, a bounded Athena turn, a static skeleton served

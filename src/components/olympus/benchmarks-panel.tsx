@@ -288,6 +288,7 @@ export default function BenchmarksPanel() {
                       <span className="text-olympus-text w-12 text-right">{s.dispatches}×</span>
                       <span className="text-olympus-green w-12 text-right">{(s.success_rate * 100).toFixed(0)}%</span>
                       <span className="text-olympus-cyan w-16 text-right">{s.tokens} tok</span>
+                      <span className="text-olympus-green w-14 text-right" data-tip="total tokens / wall-clock dispatch time (includes input/cache)">{s.avg_duration_ms > 0 ? `${(s.tokens / (s.avg_duration_ms / 1000)).toFixed(0)} t/s` : '—'}</span>
                       <span className="text-olympus-text-dim w-16 text-right">{(s.avg_duration_ms / 1000).toFixed(1)}s</span>
                       <span className="text-olympus-gold/60 w-12 text-right">{(s.short_circuit_rate * 100).toFixed(0)}% SC</span>
                     </div>

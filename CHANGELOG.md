@@ -4,6 +4,37 @@ All notable changes to OLYMPUS are documented in this file.
 
 ## [v0.0.81] — 2026-11-04
 
+### The fix pass (re-release, 2026-11-05)
+
+- **Notifications are doors again:** a native click restores the hibernated
+  window and opens the notification center; the themed in-app toast is
+  clickable too.
+- **Mobile:** `/m/studio` has **no microphone** (chat + project + hops +
+  share); the resume-walk button only appears when the lane is idle; state
+  fetches are bounded by `mobileFetch` (a stalled poll can no longer look
+  like a frozen app).
+- **Restarts ask, they do not silently continue:** the supervisor defaults
+  to `autoResume: false`; the AIME lane's flag was flipped in place.
+- **Voices stop reading logs:** `toNarration` drops JSON, stack frames,
+  shell lines, paths and tables; a log-only turn is silent (204), an answer
+  passes through.
+- **AIME profile + alignment:** the profile degrades instead of 500 on a
+  non-git lane; alignment is mode-aware (`new`/`continue`/`refactor`), so a
+  running project is judged on progress/next/invariants/acceptance/evidence,
+  not on a missing audience sentence.
+- **GO Plus instrument:** per-model 5h/weekly/monthly consumption from the
+  local OpenCode ledger × the public Go catalog, calibrated to the console
+  (5h 20% / week 8% / month 4% specimen); the console remains authoritative.
+- **Settings stable plug:** the running version, the stable version and its
+  test evidence, and the channel. `scripts/mark-stable.mjs` writes
+  `public/stable.json` **only** on a green battery; development versions are
+  selectable only when stable is disabled.
+- **Measured tok/s:** turn (`created→streamed`), hop (wall-clock, includes
+  tools), per-god/strategy averages; "—" when unverifiable.
+- **Hibernate transition:** hide first, destroy on the next tick — the Linux
+  compositor no longer paints "application is not responding" during the
+  destroy.
+
 ### The public core
 
 - **Ten pure suites are published** (no vault, no credentials): cost-caps,

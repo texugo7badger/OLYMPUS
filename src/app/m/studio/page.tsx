@@ -16,9 +16,10 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Send, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Sparkles, Volume2, VolumeX, Zap } from 'lucide-react';
 import PlasmaRing from '@/components/olympus/plasma-ring';
 import ProgressStrip from '@/components/olympus/progress-strip';
+import GoUsageBar from '@/components/olympus/go-usage-bar';
 import TaskSheetModal from '@/components/olympus/task-sheet-modal';
 import { normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
 import { t, useLanguage } from '@/lib/i18n';
@@ -44,6 +45,10 @@ type RunState = {
 };
 
 type ChatMsg = { role: 'user' | 'god'; text: string; god?: string };
+type SpeedState = {
+  last?: { outTokPerSec: number; ttftMs: number | null; model: string } | null;
+  hops?: { stat?: { n: number; avg: number; p50: number; p95: number } | null; recent?: Array<{ hop: string; god: string | null; outTokPerSec: number }> };
+}
 
 function godTint(palette: ReturnType<typeof resolvePalette>, god: string): string {
   const map: Record<string, string> = {
@@ -73,6 +78,7 @@ export default function MobileStudio() {
   // v0.0.77 — tapping a hop opens its info sheet on the phone too.
   const [sheetHop, setSheetHop] = useState<string | null>(null);
   const [feed, setFeed] = useState<Array<{ type: string; title: string; body: string; ts: string }>>([]);
+  const [speed, setSpeed] = useState<SpeedState | null>(null);
   const studioStampRef = useRef('');
   const levelGate = useRef(0);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -88,7 +94,7 @@ export default function MobileStudio() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.ok && d.state) setTheme(d.state); })
       .catch(() => { /* offline */ });
-    mobileFetch('/api/olympus/projects', { cache: 'no-store' })
+    (() => { const t = (() => { try { return localStorage.getItem(TOKEN_KEY); } catch { return null; } })(); return mobileFetch('/api/olympus/projects', { cache: 'no-store', headers: t ? { 'x-olympus-token': t } : undefined }); })()
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.active?.slug) setActiveSlug(String(d.active.slug)); })
       .catch(() => { /* the progress strip hides */ });
@@ -154,6 +160,22 @@ export default function MobileStudio() {
       if (r.ok && d?.ok) setFeed(Array.isArray(d.events) ? d.events : []);
     } catch { /* next poll */ }
   }, [headers]);
+
+  useEffect(() => {
+    if (!token) { setSpeed(null); return; }
+    let live = true;
+    const pull = async () => {
+      try {
+        const q = activeSlug ? `?project=${encodeURIComponent(activeSlug)}` : '';
+        const r = await mobileFetch(`/api/olympus/token-speed${q}`, { cache: 'no-store', headers });
+        const d = await r.json().catch(() => null);
+        if (live && r.ok && d?.ok) setSpeed(d as SpeedState);
+      } catch { /* next poll */ }
+    };
+    void pull();
+    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void pull(); }, 30_000);
+    return () => { live = false; clearInterval(timer); };
+  }, [token, activeSlug, headers]);
 
   useEffect(() => {
     void pullStudio();
@@ -333,11 +355,20 @@ export default function MobileStudio() {
       </header>
 
       <section className="relative z-10 mx-auto w-full max-w-lg px-3 pt-3 space-y-3">
+        <GoUsageBar token={token} />
+        {(speed?.last || speed?.hops?.stat) && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-olympus-gold/15 bg-olympus-panel/60 px-2 py-1 text-[9px] font-mono text-olympus-text-dim">
+            <Zap size={10} className="text-olympus-cyan" />
+            {speed?.last ? <span><span className="text-olympus-green tabular-nums">{speed.last.outTokPerSec.toFixed(1)}</span> tok/s last turn{speed.last.ttftMs != null ? ` · ttft ${Math.round(speed.last.ttftMs)}ms` : ''}</span> : <span>— last turn</span>}
+            {speed?.hops?.stat ? <span>· <span className="text-olympus-green tabular-nums">{speed.hops.stat.p50.toFixed(1)}</span> tok/s hop (p50, {speed.hops.stat.n})</span> : null}
+          </div>
+        )}
         {activeSlug && (
           <ProgressStrip
             slug={activeSlug}
             god={god}
             language={language}
+            token={token}
             onExplain={(text, g) => {
               setChat((prev) => [...prev, { role: 'god' as const, text, god: g }].slice(-10));
               if (voice) speak(text);

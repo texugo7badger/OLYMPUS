@@ -43,6 +43,8 @@ export interface ContextUsage {
   model?: string;
   /** v0.0.30 — true when the session source is unreadable; render "—". */
   unknown?: boolean;
+  /** v0.0.81 — measured output tok/s for the latest assistant turn. */
+  speed?: { outTokPerSec: number; ttftMs: number | null; wallMs: number; model: string } | null;
 }
 
 export interface ContextIndicatorProps {
@@ -221,6 +223,7 @@ export default function ContextIndicator({
       : 'Context window: no active session (showing "—", never a fake 0%)'
     : `Context window: ${usage.used.toLocaleString()} / ${usage.limit.toLocaleString()} tokens (${pct}%)` +
       (usage.model ? `\nModel: ${usage.model}` : '') +
+      (usage.speed ? `\nSpeed: ${usage.speed.outTokPerSec.toFixed(1)} tok/s output${usage.speed.ttftMs != null ? ` · TTFT ${Math.round(usage.speed.ttftMs)}ms` : ''}` : '') +
       (usage.sessionId ? `\nSession: ${usage.sessionId.slice(0, 8)}` : '');
 
   return (
@@ -259,6 +262,17 @@ export default function ContextIndicator({
           </span>
         </div>
       </OlympusTooltip>
+
+      {usage?.speed?.outTokPerSec ? (
+        <OlympusTooltip
+          content={`Measured generation: ${usage.speed.outTokPerSec.toFixed(1)} tok/s output${usage.speed.ttftMs != null ? ` · TTFT ${Math.round(usage.speed.ttftMs)}ms` : ''}${usage.speed.model ? ` · ${usage.speed.model}` : ''}`}
+          side="bottom"
+        >
+          <span className="px-1.5 py-0.5 rounded bg-olympus-bg/60 ring-1 ring-white/5 tabular-nums text-olympus-green">
+            {usage.speed.outTokPerSec.toFixed(1)} tok/s
+          </span>
+        </OlympusTooltip>
+      ) : null}
 
       <OlympusTooltip
         content="Flush the current session and start a fresh one (server restarts; the project stays the same)."

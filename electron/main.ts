@@ -838,8 +838,14 @@ function hibernateNow(): void {
   try { tray?.setToolTip('OLYMPUS — hibernating (campaign running; notifications on)'); } catch { /* tray gone */ }
   void postJson('/api/olympus/chat/hibernate', {});
   if (mainWindow) {
-    try { mainWindow.destroy(); } catch { /* already gone */ }
+    const win = mainWindow;
     mainWindow = null;
+    // v0.0.81 — hide first, destroy on the next tick. Destroying a visible
+    // renderer synchronously froze the Linux compositor long enough for the
+    // window manager to paint "application is not responding". The hide is
+    // an urgent paint; the destroy is cheap once the surface is gone.
+    try { win.hide(); } catch { /* already gone */ }
+    setTimeout(() => { try { win.destroy(); } catch { /* gone */ } }, 0);
   }
   startHibernationWatch();
   notifyDesktop('walk', 'OLYMPUS hibernating', 'The window is closed; the campaign keeps running and you will be notified on done/park.');

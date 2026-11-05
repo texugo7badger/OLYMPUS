@@ -1,0 +1,168 @@
+{
+  "stable": {
+    "version": "0.0.81",
+    "tag": "v0.0.81",
+    "stable": true,
+    "tests": {
+      "pass": 150,
+      "fail": 0,
+      "skip": 1,
+      "suites": 151
+    },
+    "releasedAt": "2026-11-05T21:58:57.542Z",
+    "commit": "4eb87cf",
+    "note": "Stable means: the full battery ran with 0 FAIL and the declared skips are explicit. The console/GO limits are unrelated and may change."
+  },
+  "versions": [
+    {
+      "version": "0.0.81",
+      "tag": "v0.0.81",
+      "stable": true
+    },
+    {
+      "version": "0.0.80",
+      "tag": "v0.0.80",
+      "stable": false
+    },
+    {
+      "version": "0.0.79",
+      "tag": "v0.0.79",
+      "stable": false
+    },
+    {
+      "version": "0.0.78",
+      "tag": "v0.0.78",
+      "stable": false
+    },
+    {
+      "version": "0.0.77",
+      "tag": "v0.0.77",
+      "stable": false
+    },
+    {
+      "version": "0.0.76",
+      "tag": "v0.0.76",
+      "stable": false
+    },
+    {
+      "version": "0.0.75",
+      "tag": "v0.0.75",
+      "stable": false
+    },
+    {
+      "version": "0.0.74",
+      "tag": "v0.0.74",
+      "stable": false
+    },
+    {
+      "version": "0.0.73",
+      "tag": "v0.0.73",
+      "stable": false
+    },
+    {
+      "version": "0.0.72",
+      "tag": "v0.0.72",
+      "stable": false
+    },
+    {
+      "version": "0.0.71",
+      "tag": "v0.0.71",
+      "stable": false
+    },
+    {
+      "version": "0.0.70",
+      "tag": "v0.0.70",
+      "stable": false
+    },
+    {
+      "version": "0.0.69",
+      "tag": "v0.0.69",
+      "stable": false
+    },
+    {
+      "version": "0.0.68",
+      "tag": "v0.0.68",
+      "stable": false
+    },
+    {
+      "version": "0.0.67",
+      "tag": "v0.0.67",
+      "stable": false
+    },
+    {
+      "version": "0.0.66",
+      "tag": "v0.0.66",
+      "stable": false
+    },
+    {
+      "version": "0.0.65",
+      "tag": "v0.0.65",
+      "stable": false
+    },
+    {
+      "version": "0.0.64",
+      "tag": "v0.0.64",
+      "stable": false
+    },
+    {
+      "version": "0.0.63",
+      "tag": "v0.0.63",
+      "stable": false
+    },
+    {
+      "version": "0.0.62",
+      "tag": "v0.0.62",
+      "stable": false
+    },
+    {
+      "version": "0.0.61",
+      "tag": "v0.0.61",
+      "stable": false
+    },
+    {
+      "version": "0.0.60",
+      "tag": "v0.0.60",
+      "stable": false
+    },
+    {
+      "version": "0.0.59",
+      "tag": "v0.0.59",
+      "stable": false
+    },
+    {
+      "version": "0.0.58",
+      "tag": "v0.0.58",
+      "stable": false
+    },
+    {
+      "version": "0.0.57",
+      "tag": "v0.0.57",
+      "stable": false
+    },
+    {
+      "version": "0.0.56",
+      "tag": "v0.0.56",
+      "stable": false
+    },
+    {
+      "version": "0.0.55",
+      "tag": "v0.0.55",
+      "stable": false
+    },
+    {
+      "version": "0.0.54",
+      "tag": "v0.0.54",
+      "stable": false
+    },
+    {
+      "version": "0.0.53",
+      "tag": "v0.0.53",
+      "stable": false
+    },
+    {
+      "version": "0.0.52",
+      "tag": "v0.0.52",
+      "stable": false
+    }
+  ]
+}

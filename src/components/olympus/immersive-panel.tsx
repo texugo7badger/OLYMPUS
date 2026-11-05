@@ -29,6 +29,7 @@ import PlasmaRing from './plasma-ring';
 import ProgressStrip from './progress-strip';
 import TaskSheetModal from './task-sheet-modal';
 import AlignmentBar from './alignment-bar';
+import GoUsageBar from './go-usage-bar';
 
 interface Particle { x: number; y: number; vx: number; vy: number; r: number; c: number; a: number }
 interface Cell { x: number; y: number; r: number; phase: number; splitAt: number; c: number; drift: number }
@@ -792,6 +793,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
                 }}
               />
               <AlignmentBar slug={projectSlug} />
+              <GoUsageBar />
             </>
           )}
           <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wide" style={{ color: palette.gold }}>

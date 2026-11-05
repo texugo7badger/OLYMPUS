@@ -26,12 +26,14 @@ export default function ProgressStrip({
   language,
   onExplain,
   compact = false,
+  token,
 }: {
   slug: string;
   god: string;
   language: Language;
   onExplain?: (text: string, god: string) => void;
   compact?: boolean;
+  token?: string | null;
 }) {
   const [theme] = useTheme();
   const palette = useMemo(() => resolvePalette(theme), [theme]);
@@ -42,11 +44,14 @@ export default function ProgressStrip({
   const load = useCallback(async () => {
     if (!slug) return;
     try {
-      const r = await fetch(`/api/olympus/project-progress?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
+      const r = await fetch(`/api/olympus/project-progress?slug=${encodeURIComponent(slug)}`, {
+        cache: 'no-store',
+        headers: token ? { 'x-olympus-token': token } : undefined,
+      });
       const d = await r.json().catch(() => null);
       if (r.ok && d?.ok) { setData(d); setError(null); }
     } catch { /* the next poll retries */ }
-  }, [slug]);
+  }, [slug, token]);
 
   useEffect(() => {
     if (!slug) return;
@@ -70,7 +75,7 @@ export default function ProgressStrip({
     try {
       const r = await fetch('/api/olympus/studio/converse', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-olympus-language': language },
+        headers: { 'Content-Type': 'application/json', 'x-olympus-language': language, ...(token ? { 'x-olympus-token': token } : {}) },
         body: JSON.stringify({ message: prompt, god: targetGod, language }),
       });
       const d = await r.json().catch(() => null);
@@ -82,7 +87,7 @@ export default function ProgressStrip({
     } finally {
       setBusy(false);
     }
-  }, [data, busy, language, onExplain]);
+  }, [data, busy, language, onExplain, token]);
 
   if (!data) {
     return (

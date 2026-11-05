@@ -33,7 +33,11 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.81 — the public core, the measured frames, the honest checkpoint.**
+**v0.0.81 — the fix pass plus the instruments.**
+Notifications open, the mobile creative is chat-only, voices stop reading logs,
+restarts ask instead of auto-continuing, the GO Plus bar matches the console
+and tok/s is measured. The first v0.0.81 cut also shipped the public core, the
+FPS probe and the honest 7.x checkpoint:
 Ten pure suites are published and a clean clone runs them (10/10); `npm run
 fps:probe` measures four surfaces (60/61 on brain, mobile and the creative with
 performance mode; the full creative field is 28 in software — reported, not

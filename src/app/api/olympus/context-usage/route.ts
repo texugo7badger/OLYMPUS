@@ -45,6 +45,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireReadAuth } from '@/lib/auth';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 import { resolveModelWindow } from '@/lib/model-context';
+import { turnSpeedFrom } from '@/lib/token-speed';
 import { LLM_STRATEGIES, DEFAULT_LLM_STRATEGY } from '@/lib/model-strategies';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -217,6 +218,7 @@ function readUsageFromDb(sessionId?: string): {
   limit: number;
   model?: string;
   sessionId?: string;
+  speed?: { outTokPerSec: number; ttftMs: number | null; wallMs: number; model: string } | null;
 } | null {
   const dbPath = findOpencodeDb();
   if (!dbPath) return null;
@@ -264,6 +266,7 @@ function readUsageFromDb(sessionId?: string): {
       // zeros and carry no total — skipped by the > 0 filter). Fallback to
       // the cumulative sum only when no message rows exist (pre-v2 DBs).
       let used: number | null = null;
+      let speed: { outTokPerSec: number; ttftMs: number | null; wallMs: number; model: string } | null = null;
       let model: string | undefined;
       let providerId: string | undefined;
       try {
@@ -272,6 +275,11 @@ function readUsageFromDb(sessionId?: string): {
           .all(row.id) as Array<{ data: string }>;
         for (const m of msgs) {
           const d = JSON.parse(m.data);
+          if (!speed) {
+            const mid = typeof d?.model === 'string' ? d.model : typeof d?.model?.id === 'string' ? d.model.id : '';
+            const sp = turnSpeedFrom(d?.tokens, d?.time, mid, Number(d?.time?.completed ?? row.time_created) || row.time_created, typeof d?.agent === 'string' ? d.agent : null);
+            if (sp) speed = { outTokPerSec: Number(sp.outTokPerSec.toFixed(2)), ttftMs: sp.ttftMs, wallMs: sp.wallMs, model: sp.model };
+          }
           // v0.0.54 — a session row can have model=NULL (older/rotated
           // sessions), which made the window unresolved and the indicator 0.
           // The message carries the exact model that produced the tokens.
@@ -358,6 +366,7 @@ function readUsageFromDb(sessionId?: string): {
         limit: window.context,
         model,
         sessionId: row.id,
+        speed,
         ...(window.context === 0 ? { unknown: true } : {}),
       };
     } finally {
@@ -402,6 +411,8 @@ export interface ContextUsageResponse {
   sessionMtime?: string;
   /** v0.0.30 — true when there is no readable session; the UI shows "—". */
   unknown?: boolean;
+  /** v0.0.81 — measured output tok/s for the latest assistant turn. */
+  speed?: { outTokPerSec: number; ttftMs: number | null; wallMs: number; model: string } | null;
 }
 
 /**
@@ -625,6 +636,7 @@ export async function GET(req: NextRequest) {
       quality,
       sessionId: dbResult.sessionId,
       model: dbResult.model,
+      speed: dbResult.speed ?? null,
       sessionMtime: new Date().toISOString(),
       ...(dbUnknown ? { unknown: true } : {}),
     } satisfies ContextUsageResponse, { headers: NO_CACHE_HEADERS });
