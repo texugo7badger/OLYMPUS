@@ -171,7 +171,10 @@ export function startDetachedWalk(opts: {
     bootId: bootIdOf(),
     startedAt: new Date().toISOString(),
     logFile,
-    autoResume: opts.autoResume !== false,
+    // v0.0.81 — ASK, don't auto-continue. A restart is a decision point:
+    // the state says `interrupted` and the UI offers resume; only an explicit
+    // `autoResume: true` (a user choice) adopts the lane on boot.
+    autoResume: opts.autoResume === true,
     status: 'running',
     resumeAttempts: 0,
   };

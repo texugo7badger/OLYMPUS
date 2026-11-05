@@ -735,7 +735,22 @@ function notifyDesktop(type: NotifyType, title: string, body: string): void {
     n.on('failed', forget);
     n.on('click', () => {
       closeNativeNotifications();
-      if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+      // v0.0.81 — a notification is a door, even while HIBERNATING. The
+      // renderer is destroyed in hibernate, so `mainWindow` is null; the old
+      // handler did nothing and the click felt dead. Recreate the window
+      // first (createWindow also clears the hibernation marker), then focus.
+      if (!mainWindow) createWindow();
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+        const openCenter = () => {
+          try { mainWindow?.webContents.send('olympus:notify-open'); } catch { /* gone */ }
+        };
+        try {
+          if (mainWindow.webContents.isLoading()) mainWindow.webContents.once('did-finish-load', openCenter);
+          else openCenter();
+        } catch { /* best effort */ }
+      }
     });
     n.show();
   } catch { /* notifications are optional */ }

@@ -117,6 +117,21 @@ export default function NotificationCenter() {
     try { localStorage.setItem(SEEN_KEY, latest); } catch { /* private mode */ }
   };
 
+  // v0.0.81 — a notification is a door. The native click restores the
+  // window (main) and sends `olympus:notify-open`; the themed in-app toast
+  // dispatches the same DOM event. Both open this panel instead of leaving
+  // the user on a screen that looks unchanged.
+  useEffect(() => {
+    const openIt = () => { setOpen(true); markSeen(); };
+    const api = (window as any)?.olympus;
+    api?.on?.('olympus:notify-open', openIt);
+    window.addEventListener('olympus:open-notifications', openIt);
+    return () => {
+      try { api?.off?.('olympus:notify-open'); } catch { /* gone */ }
+      window.removeEventListener('olympus:open-notifications', openIt);
+    };
+  }, [events]);
+
   // v0.0.52 — clear the archive and the local unread marker. The Electron
   // main closes the native notifications on focus; this removes the history
   // so a restart never resurrects a numeric badge.

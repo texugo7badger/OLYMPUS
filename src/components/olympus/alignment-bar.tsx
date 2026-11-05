@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Sparkles, Loader2, ExternalLink, Copy } from 'lucide-react';
 
 interface Signal { id: string; label: string; score: number; max: number; evidence: string }
-interface Alignment { project: string; score: number; ready: boolean; signals: Signal[]; missing: string[] }
+interface Alignment { project: string; mode: 'new' | 'continue' | 'refactor'; score: number; ready: boolean; signals: Signal[]; missing: string[] }
 
 export default function AlignmentBar({ slug }: { slug: string }) {
   const [alignment, setAlignment] = useState<Alignment | null>(null);
@@ -53,13 +53,26 @@ export default function AlignmentBar({ slug }: { slug: string }) {
     finally { setBusy(false); }
   }, [slug, load]);
 
+  const openLive = useCallback(async () => {
+    setBusy(true); setError(null);
+    try {
+      const r = await fetch(`/api/olympus/live-preview?project=${encodeURIComponent(slug)}`, { cache: 'no-store' });
+      const d = await r.json();
+      if (!d?.running || !d?.url) throw new Error('the dev server is not running');
+      window.open(d.url, '_blank', 'noopener');
+    } catch (e: any) { setError(e?.message || 'the dev server is not running'); }
+    finally { setBusy(false); }
+  }, [slug]);
+
   if (!alignment) return null;
   const pct = Math.max(0, Math.min(100, alignment.score));
+  const label = alignment.mode === 'continue' ? 'continuation' : alignment.mode === 'refactor' ? 'refactor' : 'alignment';
+  const liveMode = alignment.mode !== 'new';
 
   return (
     <div className="w-full rounded-lg border border-olympus-gold/15 bg-olympus-panel/60 px-2 py-1.5" data-tip={alignment.signals.map((s) => `${s.label}: ${s.evidence}`).join('\n')}>
       <div className="flex items-center gap-1.5">
-        <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">alignment</span>
+        <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">{label}</span>
         <span className="text-[9px] font-mono font-semibold text-olympus-gold tabular-nums">{pct}%</span>
         <div className="flex items-center gap-0.5">
           {alignment.signals.map((s) => (
@@ -72,7 +85,7 @@ export default function AlignmentBar({ slug }: { slug: string }) {
           ))}
         </div>
         <div className="ml-auto flex items-center gap-1">
-          {!url && (
+          {!url && !liveMode && (
             <button
               onClick={() => void generate()}
               disabled={busy || !alignment.ready}
@@ -80,7 +93,18 @@ export default function AlignmentBar({ slug }: { slug: string }) {
               className="flex items-center gap-1 rounded bg-olympus-gold/12 px-1.5 py-0.5 text-[8.5px] font-mono text-olympus-gold ring-1 ring-olympus-gold/25 disabled:opacity-35"
             >
               {busy ? <Loader2 size={9} className="animate-spin" /> : <Sparkles size={9} />}
-              {busy ? 'generating…' : 'preview'}
+              {busy ? 'generating…' : 'concept preview'}
+            </button>
+          )}
+          {!url && liveMode && (
+            <button
+              onClick={() => void openLive()}
+              disabled={busy}
+              data-tip="This project is already running — open the live preview, not a generated skeleton"
+              className="flex items-center gap-1 rounded bg-olympus-green/12 px-1.5 py-0.5 text-[8.5px] font-mono text-olympus-green ring-1 ring-olympus-green/25 disabled:opacity-35"
+            >
+              {busy ? <Loader2 size={9} className="animate-spin" /> : <ExternalLink size={9} />}
+              live preview
             </button>
           )}
           {url && (

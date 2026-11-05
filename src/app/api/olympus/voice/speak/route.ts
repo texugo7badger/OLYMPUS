@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { execFile } from 'node:child_process';
 import path from 'node:path';
+import { toNarration } from '@/lib/narration';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -77,8 +78,12 @@ function signed(n: number, unit: string): string {
 export async function POST(req: NextRequest) {
   let body: any = {};
   try { body = await req.json(); } catch { /* empty */ }
-  const text = String(body?.text || '').slice(0, 900).trim();
-  if (!text) return NextResponse.json({ ok: false, error: 'text is required' }, { status: 400 });
+  const raw = String(body?.text || '').slice(0, 4000).trim();
+  if (!raw) return NextResponse.json({ ok: false, error: 'text is required' }, { status: 400 });
+  // v0.0.81 — never read a log aloud. The client already filters through
+  // `toSpeech`; this is the server-side guard for every other caller.
+  const text = toNarration(raw, { max: 900, fallback: '' });
+  if (!text) return new NextResponse(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
 
   const god = String(body?.god || 'apollo').toLowerCase();
   const lang = String(body?.language || 'en');

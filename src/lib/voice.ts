@@ -8,6 +8,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
+import { toNarration } from './narration';
 import { speechLocale, type Language } from './i18n';
 
 export const GOD_VOICE: Record<string, { pitch: number; rate: number }> = {
@@ -43,24 +44,11 @@ export function setVoiceEnabled(on: boolean): void {
  * mid-word at 900 characters. Short conversational replies pass through whole.
  */
 export function toSpeech(text: string, max = 360): string {
-  let s = String(text || '');
-  s = s.replace(/```[\s\S]*?```/g, ' ');
-  s = s.replace(/`([^`]+)`/g, '$1');
-  s = s.replace(/!\[[^\]]*\]\([^)]*\)/g, ' ');
-  s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
-  s = s.replace(/https?:\/\/\S+/g, ' ');
-  s = s.replace(/^\s{0,3}#{1,6}\s+/gm, '');
-  s = s.replace(/^\s*[-*+]\s+/gm, '');
-  s = s.replace(/^\s*\d+[.)]\s+/gm, '');
-  s = s.replace(/[*_~>|]/g, '');
-  s = s.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
-  s = s.replace(/\s+/g, ' ').trim();
-  if (s.length <= max) return s;
-  const cut = s.slice(0, max);
-  const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '), cut.lastIndexOf('; '));
-  if (end > max * 0.45) return cut.slice(0, end + 1).trim();
-  const space = cut.lastIndexOf(' ');
-  return `${cut.slice(0, space > 0 ? space : max).trim()}…`;
+  // v0.0.81 — speech is the answer, never the transcript. `toNarration`
+  // drops JSON, stack frames, shell lines, paths and tables; an empty result
+  // means "this turn has nothing to say out loud", so the caller stays silent
+  // instead of reciting a log.
+  return toNarration(text, { max, fallback: '' });
 }
 
 let currentAudio: HTMLAudioElement | null = null;
@@ -86,6 +74,11 @@ export async function speakAs(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: spoken, god: key, language }),
     });
+    if (res.status === 204) {
+      // Nothing to say out loud (a log-only turn); stay silent.
+      onState?.(false);
+      return;
+    }
     if (res.ok) {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

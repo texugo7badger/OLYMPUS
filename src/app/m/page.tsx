@@ -27,6 +27,7 @@ import { THEME_PRESETS, applyTheme, normalizeThemeState, resolvePalette, type Th
 import { LANGUAGES, godName, setLanguage, t, useLanguage, type Language } from '@/lib/i18n';
 import { speakAs } from '@/lib/voice';
 import { useHoldToTalk } from '@/lib/use-hold-to-talk';
+import { mobileFetch } from '@/lib/mobile-fetch';
 import { godTintHex } from '@/lib/god-tint';
 
 const GOD_IDS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
@@ -167,7 +168,7 @@ export default function MobileCompanion() {
 
   const pullTheme = useCallback(async () => {
     try {
-      const r = await fetch('/api/olympus/theme', { cache: 'no-store' });
+      const r = await mobileFetch('/api/olympus/theme', { cache: 'no-store' });
       const d = await r.json();
       if (!d?.ok || !d.state) return;
       const stamp = String(d.updatedAt || '');
@@ -184,9 +185,9 @@ export default function MobileCompanion() {
     if (!token) return;
     try {
       const [pRes, rRes, cRes] = await Promise.all([
-        fetch('/api/olympus/projects', { cache: 'no-store', headers }),
-        fetch('/api/olympus/run-state', { cache: 'no-store', headers }),
-        fetch('/api/olympus/costs?window=24h', { cache: 'no-store', headers }),
+        mobileFetch('/api/olympus/projects', { cache: 'no-store', headers }),
+        mobileFetch('/api/olympus/run-state', { cache: 'no-store', headers }),
+        mobileFetch('/api/olympus/costs?window=24h', { cache: 'no-store', headers }),
       ]);
       if (pRes.ok) {
         const d = await pRes.json();
@@ -206,7 +207,7 @@ export default function MobileCompanion() {
 
   useEffect(() => {
     if (!token) return;
-    fetch('/api/olympus/mobile/tunnel', { cache: 'no-store', headers })
+    mobileFetch('/api/olympus/mobile/tunnel', { cache: 'no-store', headers })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.running && d.url) setTunnelUrl(String(d.url)); })
       .catch(() => { /* the secure card explains */ });
@@ -224,7 +225,7 @@ export default function MobileCompanion() {
     let live = true;
     const pull = async () => {
       try {
-        const r = await fetch('/api/olympus/studio/state', { cache: 'no-store', headers });
+        const r = await mobileFetch('/api/olympus/studio/state', { cache: 'no-store', headers });
         const d = await r.json().catch(() => null);
         if (!live || !r.ok || !d?.ok) return;
         const stamp = String(d.updatedAt || '');
@@ -263,7 +264,7 @@ export default function MobileCompanion() {
     if (!active || previewBusy) return;
     setPreviewBusy(true);
     try {
-      const r = await fetch('/api/olympus/projects/preview', {
+      const r = await mobileFetch('/api/olympus/projects/preview', {
         method: 'POST', headers, body: JSON.stringify({ slug: active, action }),
       });
       const d = await r.json().catch(() => null);
@@ -278,7 +279,7 @@ export default function MobileCompanion() {
     if (!token || !active) { setPreview(null); return; }
     const pull = async () => {
       try {
-        const r = await fetch(`/api/olympus/projects/preview?slug=${encodeURIComponent(active)}`, { cache: 'no-store', headers });
+        const r = await mobileFetch(`/api/olympus/projects/preview?slug=${encodeURIComponent(active)}`, { cache: 'no-store', headers });
         const d = await r.json().catch(() => null);
         if (r.ok && d?.ok) setPreview(d);
       } catch { /* next poll */ }
@@ -291,7 +292,7 @@ export default function MobileCompanion() {
   useEffect(() => {
     if (!token || !active) { setGit(null); return; }
     let live = true;
-    fetch(`/api/olympus/projects/github?slug=${encodeURIComponent(active)}`, { cache: 'no-store', headers })
+    mobileFetch(`/api/olympus/projects/github?slug=${encodeURIComponent(active)}`, { cache: 'no-store', headers })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (live) setGit(d); })
       .catch(() => { if (live) setGit(null); });
@@ -319,7 +320,7 @@ export default function MobileCompanion() {
     try {
       let url = tunnelUrl;
       if (!url) {
-        const r = await fetch('/api/olympus/mobile/tunnel', {
+        const r = await mobileFetch('/api/olympus/mobile/tunnel', {
           method: 'POST', headers, body: JSON.stringify({ action: 'start' }),
         });
         const d = await r.json().catch(() => null);
@@ -343,11 +344,11 @@ export default function MobileCompanion() {
     setError(null);
     setLog((l) => [...l.slice(-3), `${t('m.you', language)}: ${prompt}`]);
     try {
-      const res = await fetch('/api/olympus/action', {
+      const res = await mobileFetch('/api/olympus/action', {
         method: 'POST',
         headers,
         body: JSON.stringify({ action: 'prompt', text: prompt, conversationId: active ? `mobile-${active}` : 'mobile' }),
-      });
+      }, 180_000);
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -397,6 +398,14 @@ export default function MobileCompanion() {
           : campaign === 'done' ? t('m.stateDone', language)
             : campaign === 'none' ? t('m.stateIdle', language)
               : campaign;
+  // v0.0.81 — resuming a walk is an IDLE action. A live campaign or an
+  // in-flight hop means the walker is already holding the lane; showing a
+  // resume button there invites a second walk and a lock fight.
+  const inFlightCount = Number(run?.hops?.inFlight ?? 0);
+  const canResumeWalk = !!active
+    && campaign !== 'running'
+    && inFlightCount === 0
+    && (!!run?.hops?.parked?.hopId || campaign === 'parked' || campaign === 'unverified' || /parked|interrupted/i.test(campaign));
   const activeProject = projects.find((p) => p.slug === active);
 
   if (!token) {
@@ -573,13 +582,19 @@ export default function MobileCompanion() {
                   <Play size={12} /> {t('m.resume', language)}
                 </button>
               )}
-              {active && (run?.hops?.parked?.hopId || /parked|interrupted/i.test(run?.campaign?.state ?? '')) && (
+              {active && canResumeWalk && (
                 <button
                   onClick={() => void resumeWalk()}
                   className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-cyan/40 bg-olympus-cyan/10 py-2 text-[11px] text-olympus-cyan"
+                  title="Resume only while the lane is idle"
                 >
                   <RefreshCw size={12} /> resume the campaign (detached)
                 </button>
+              )}
+              {active && !canResumeWalk && (campaign === 'running' || inFlightCount > 0) && (
+                <p className="mt-1 text-[9px] font-mono text-olympus-text-dim">
+                  {campaign === 'running' ? t('m.stateRunning', language) : campaignLabel} · resume available when idle
+                </p>
               )}
               {queueNote && <p className="mt-1 text-[9px] font-mono text-olympus-cyan">{queueNote}</p>}
               {/* v0.0.68 — the keyboard fallback: when the mic is blocked (HTTP

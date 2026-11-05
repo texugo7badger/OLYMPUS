@@ -16,16 +16,16 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Mic, Send, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Sparkles, Volume2, VolumeX } from 'lucide-react';
 import PlasmaRing from '@/components/olympus/plasma-ring';
 import ProgressStrip from '@/components/olympus/progress-strip';
 import TaskSheetModal from '@/components/olympus/task-sheet-modal';
 import { normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
-import { speechLocale, t, useLanguage } from '@/lib/i18n';
+import { t, useLanguage } from '@/lib/i18n';
 import { godPersona } from '@/lib/god-personas';
 import { godName } from '@/lib/i18n';
 import { GOD_VOICE, setVoiceEnabled, speakAs, voiceEnabled } from '@/lib/voice';
-import { useHoldToTalk } from '@/lib/use-hold-to-talk';
+import { mobileFetch } from '@/lib/mobile-fetch';
 
 const GOD_IDS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
 
@@ -66,7 +66,6 @@ export default function MobileStudio() {
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSlug, setActiveSlug] = useState('');
   const [queue, setQueue] = useState<Array<{ id: string; text: string; status: string; createdAt: string }>>([]);
@@ -85,11 +84,11 @@ export default function MobileStudio() {
       const cached = localStorage.getItem(THEME_KEY);
       if (cached) setTheme(JSON.parse(cached));
     } catch { /* private */ }
-    fetch('/api/olympus/theme', { cache: 'no-store' })
+    mobileFetch('/api/olympus/theme', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.ok && d.state) setTheme(d.state); })
       .catch(() => { /* offline */ });
-    fetch('/api/olympus/projects', { cache: 'no-store' })
+    mobileFetch('/api/olympus/projects', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d?.active?.slug) setActiveSlug(String(d.active.slug)); })
       .catch(() => { /* the progress strip hides */ });
@@ -105,7 +104,7 @@ export default function MobileStudio() {
     if (!token) return;
     const load = () => {
       if (document.visibilityState === 'hidden') return;
-      fetch('/api/olympus/run-state', { cache: 'no-store', headers })
+      mobileFetch('/api/olympus/run-state', { cache: 'no-store', headers })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => { if (d) setRun(d); })
         .catch(() => { /* offline */ });
@@ -118,7 +117,7 @@ export default function MobileStudio() {
   // v0.0.64 — the studio mirrors the other surface (god + voice).
   const pullStudio = useCallback(async () => {
     try {
-      const r = await fetch('/api/olympus/studio/state', { cache: 'no-store', headers });
+      const r = await mobileFetch('/api/olympus/studio/state', { cache: 'no-store', headers });
       const d = await r.json().catch(() => null);
       if (!r.ok || !d?.ok) return;
       const stamp = String(d.updatedAt || '');
@@ -142,7 +141,7 @@ export default function MobileStudio() {
   const loadQueue = useCallback(async () => {
     if (!activeSlug) return;
     try {
-      const r = await fetch(`/api/olympus/prompt-queue?project=${encodeURIComponent(activeSlug)}`, { cache: 'no-store', headers });
+      const r = await mobileFetch(`/api/olympus/prompt-queue?project=${encodeURIComponent(activeSlug)}`, { cache: 'no-store', headers });
       const d = await r.json().catch(() => null);
       if (r.ok && d?.ok) setQueue(Array.isArray(d.items) ? d.items : []);
     } catch { /* next poll */ }
@@ -150,7 +149,7 @@ export default function MobileStudio() {
 
   const loadFeed = useCallback(async () => {
     try {
-      const r = await fetch('/api/olympus/notify?limit=6', { cache: 'no-store', headers });
+      const r = await mobileFetch('/api/olympus/notify?limit=6', { cache: 'no-store', headers });
       const d = await r.json().catch(() => null);
       if (r.ok && d?.ok) setFeed(Array.isArray(d.events) ? d.events : []);
     } catch { /* next poll */ }
@@ -228,22 +227,22 @@ export default function MobileStudio() {
     try {
       let answer = '';
       try {
-        const r = await fetch('/api/olympus/studio/converse', {
+        const r = await mobileFetch('/api/olympus/studio/converse', {
           method: 'POST',
           headers: { ...headers, 'x-olympus-language': language },
           body: JSON.stringify({ message: question, god, language }),
-        });
+        }, 120_000);
         if (r.ok) {
           const d = await r.json();
           if (d?.ok && d.answer) answer = String(d.answer);
         }
       } catch { /* fall through */ }
       if (!answer) {
-        const r = await fetch('/api/olympus/studio/chat', {
+        const r = await mobileFetch('/api/olympus/studio/chat', {
           method: 'POST',
           headers: { ...headers, 'x-olympus-language': language },
           body: JSON.stringify({ question, god, language }),
-        });
+        }, 120_000);
         const d = await r.json().catch(() => null);
         answer = String(d?.answer || t('m.studioIdle', language));
       }
@@ -256,26 +255,9 @@ export default function MobileStudio() {
     }
   }, [input, busy, headers, language, god, voice, speak]);
 
-  const mic = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { setError(t('m.voiceUnsupported', language)); return; }
-    const rec = new SR();
-    rec.lang = speechLocale(language);
-    rec.interimResults = true;
-    rec.continuous = false;
-    rec.onresult = (ev: any) => {
-      let heard = '';
-      for (let i = ev.resultIndex; i < ev.results.length; i++) heard += ev.results[i][0].transcript;
-      setInput((prev) => `${prev} ${heard}`.trim());
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    setListening(true);
-    rec.start();
-  };
-
-  // v0.0.64 — the ring's mic sends a real request to Apollo (action lane),
-  // not a read-only studio question.
+  // v0.0.81 — the creative studio is chat + project + hops, NO microphone.
+  // The hold-to-talk ring lives only on /m (the home screen); here the ring
+  // is the god's visual identity, not an input device.
   const askApollo = useCallback(async (text: string) => {
     const prompt = text.trim();
     if (!prompt || busy) return;
@@ -283,11 +265,11 @@ export default function MobileStudio() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch('/api/olympus/action', {
+      const res = await mobileFetch('/api/olympus/action', {
         method: 'POST',
         headers,
         body: JSON.stringify({ action: 'prompt', text: prompt, conversationId: activeSlug ? `mobile-${activeSlug}` : 'mobile' }),
-      });
+      }, 180_000);
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -317,12 +299,6 @@ export default function MobileStudio() {
       setBusy(false);
     }
   }, [activeSlug, busy, headers, language, speak, voice]);
-
-  const hold = useHoldToTalk({
-    language,
-    onText: (text) => void askApollo(text),
-    onError: (message) => setError(message),
-  });
 
   const inFlight = run?.hops?.inFlightList ?? [];
   const completed = Number(run?.hops?.completed ?? 0);
@@ -378,36 +354,23 @@ export default function MobileStudio() {
           <div className="mt-3 flex flex-col items-center">
             <PlasmaRing
               tint={tint}
-              level={hold.recording ? hold.level : level}
+              level={level}
               speaking={speaking && voice}
-              recording={hold.recording}
+              recording={false}
               size={220}
             >
-              <button
-                onPointerDown={(e) => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); void hold.start(); }}
-                onPointerUp={(e) => { e.preventDefault(); hold.stop(false); }}
-                onPointerCancel={() => hold.stop(true)}
-                onContextMenu={(e) => e.preventDefault()}
-                aria-label={t('m.holdToTalk', language)}
-                aria-pressed={hold.recording}
-                className="flex h-24 w-24 select-none items-center justify-center rounded-full border text-center"
+              <div
+                aria-hidden="true"
+                className="flex h-24 w-24 select-none items-center justify-center rounded-full border"
                 style={{
-                  touchAction: 'none',
-                  borderColor: hold.recording ? palette.red : `${tint}55`,
+                  borderColor: `${tint}55`,
                   background: `radial-gradient(circle at 50% 45%, ${tint}22, transparent 72%)`,
-                  boxShadow: `0 0 ${hold.recording ? 46 : 26}px ${hold.recording ? palette.red : tint}44`,
+                  boxShadow: `0 0 26px ${tint}44`,
                 }}
               >
-                {hold.transcribing
-                  ? <Loader2 size={22} className="animate-spin" style={{ color: tint }} />
-                  : hold.recording
-                    ? <Mic size={24} style={{ color: palette.red }} />
-                    : <Mic size={22} style={{ color: tint }} />}
-              </button>
+                <Sparkles size={26} style={{ color: tint }} />
+              </div>
             </PlasmaRing>
-            <p className="mt-1 text-center text-[9px] font-mono" style={{ color: hold.recording ? palette.red : palette.textDim }}>
-              {hold.recording ? t('m.recordingRelease', language) : hold.transcribing ? t('m.transcribing', language) : t('m.holdToTalk', language)}
-            </p>
             <div className="mt-2 grid w-full grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
               <span className="text-olympus-text-dim">{t('m.domain', language)}</span>
               <span className="truncate text-olympus-text">{persona.domain}</span>
@@ -548,13 +511,6 @@ export default function MobileStudio() {
             <div ref={chatEndRef} />
           </div>
           <div className="mt-2 flex items-center gap-2">
-            <button
-              onClick={mic}
-              aria-label={t('m.voiceInput', language)}
-              className={`flex h-11 w-11 items-center justify-center rounded-full border ${listening ? 'border-olympus-green text-olympus-green animate-pulse' : 'border-olympus-gold/25 text-olympus-gold'}`}
-            >
-              <Mic size={16} />
-            </button>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}

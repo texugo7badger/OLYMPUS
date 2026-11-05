@@ -56,7 +56,19 @@ export default function NotificationToast() {
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto overflow-hidden rounded-xl border shadow-2xl ${stable ? '' : 'olympus-toast-in'}`}
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('olympus:open-notifications'));
+              setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              window.dispatchEvent(new CustomEvent('olympus:open-notifications'));
+              setToasts((prev) => prev.filter((t) => t.id !== toast.id));
+            }}
+            className={`pointer-events-auto cursor-pointer overflow-hidden rounded-xl border shadow-2xl ${stable ? '' : 'olympus-toast-in'}`}
             style={{ background: palette.panel, borderColor: `${tint}55`, color: palette.text, boxShadow: `0 10px 30px ${palette.bg}AA` }}
           >
             <div className="flex items-start gap-2.5 p-3">
@@ -68,7 +80,7 @@ export default function NotificationToast() {
                 <div className="mt-0.5 break-words text-[10px] leading-relaxed" style={{ color: palette.text, opacity: 0.78 }}>{toast.body}</div>
               </div>
               <button
-                onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+                onClick={(e) => { e.stopPropagation(); setToasts((prev) => prev.filter((t) => t.id !== toast.id)); }}
                 aria-label="Dismiss"
                 className="shrink-0 rounded p-1 opacity-60 hover:opacity-100"
                 style={{ color: palette.text }}

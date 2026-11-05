@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireReadAuth } from '@/lib/auth';
-import { computeAlignment } from '@/lib/alignment';
+import { computeAlignment, type AlignmentMode } from '@/lib/alignment';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 
 export const runtime = 'nodejs';
@@ -21,7 +21,9 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
   const slug = req.nextUrl.searchParams.get('project') || '';
   if (!slug) return NextResponse.json({ ok: false, error: 'project is required' }, { status: 400 });
-  const alignment = computeAlignment(slug);
+  const rawMode = req.nextUrl.searchParams.get('mode');
+  const mode: AlignmentMode | undefined = rawMode === 'new' || rawMode === 'continue' || rawMode === 'refactor' ? rawMode : undefined;
+  const alignment = computeAlignment(slug, mode);
   if (!alignment) return NextResponse.json({ ok: false, error: `project not found: ${slug}` }, { status: 404 });
   return NextResponse.json({ ok: true, alignment }, { headers: NO_CACHE_HEADERS });
 }

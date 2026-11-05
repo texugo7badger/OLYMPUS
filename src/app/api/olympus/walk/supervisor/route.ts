@@ -83,7 +83,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: `no dispatch-plan.json in ${laneRoot}` }, { status: 409 });
   }
 
-  const started = startDetachedWalk({ slug, laneRoot, autoResume: body?.autoResume !== false });
+  // v0.0.81 — explicit opt-in only; the default after a restart is "ask".
+  const started = startDetachedWalk({ slug, laneRoot, autoResume: body?.autoResume === true });
   if (!started.ok) {
     return NextResponse.json({ ok: false, error: started.reason, pid: started.pid ?? null, logFile: started.logFile ?? null }, { status: started.reason === 'already-running' ? 409 : 500 });
   }

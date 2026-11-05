@@ -26,6 +26,13 @@ export const dynamic = 'force-dynamic';
 
 const MAX_ENTRIES = 6000;
 const MAX_DEPTH = 6;
+
+/** v0.0.81 — the profile is a card, not a single point of failure. A
+ *  non-git lane (AIME), a vanished folder or a huge tree must degrade to a
+ *  partial profile instead of a 500 that makes the project click look dead. */
+function safe<T>(fn: () => T, fallback: T): T {
+  try { return fn(); } catch { return fallback; }
+}
 const IGNORED = new Set([
   'node_modules', '.git', '.next', '.turbo', 'dist', 'build', 'out', 'target',
   'coverage', '.cache', '.venv', 'venv', '__pycache__', 'vendor', '.gradle',
@@ -143,16 +150,16 @@ export async function GET(req: NextRequest) {
   const note = getProject(slug);
   if (!note) return NextResponse.json({ ok: false, error: 'project not found' }, { status: 404 });
 
-  const reconciled = reconcileProjectPath(slug);
+  const reconciled = safe(() => reconcileProjectPath(slug), null);
   const root = reconciled?.path || note.path;
-  const exists = !!root && fs.existsSync(root);
-  const isDir = exists && fs.statSync(root).isDirectory();
+  const exists = !!root && safe(() => fs.existsSync(root), false);
+  const isDir = exists && safe(() => fs.statSync(root).isDirectory(), false);
 
   const manifestFile = isDir ? path.join(root, 'package.json') : '';
-  const pkg = manifestFile && fs.existsSync(manifestFile) ? readJson(manifestFile) : null;
+  const pkg = manifestFile && safe(() => fs.existsSync(manifestFile), false) ? readJson(manifestFile) : null;
   // The note's `stacks` is what the user declared at creation; detection adds
   // what the folder actually uses. The union is the honest stack shelf.
-  const stacks = Array.from(new Set([...(note.stacks || []), ...detectProjectStacks(root, pkg)]));
+  const stacks = Array.from(new Set([...(note.stacks || []), ...safe(() => detectProjectStacks(root, pkg), [] as string[])]));
   const scripts = pkg?.scripts && typeof pkg.scripts === 'object' ? Object.keys(pkg.scripts).slice(0, 24) : [];
 
   const manifestNames = [
@@ -163,9 +170,9 @@ export async function GET(req: NextRequest) {
   ];
   const manifests = isDir ? manifestNames.filter((name) => fs.existsSync(path.join(root, name))) : [];
 
-  const stats = isDir ? scanTree(root) : { files: 0, directories: 0, bytes: 0, recent: [], truncated: false };
-  const git = isDir ? gitInfo(root) : null;
-  const readme = isDir ? readReadme(root) : null;
+  const stats = isDir ? safe(() => scanTree(root), { files: 0, directories: 0, bytes: 0, recent: [], truncated: true }) : { files: 0, directories: 0, bytes: 0, recent: [], truncated: false };
+  const git = isDir ? safe(() => gitInfo(root), null) : null;
+  const readme = isDir ? safe(() => readReadme(root), null) : null;
 
   return NextResponse.json({
     ok: true,
@@ -178,15 +185,15 @@ export async function GET(req: NextRequest) {
     isDir,
     stacks,
     // A summary, not the prompt that created the project.
-    brief: buildProjectBrief(isDir ? root : undefined),
-    description: projectSummary({
+    brief: safe(() => buildProjectBrief(isDir ? root : undefined), undefined),
+    description: safe(() => projectSummary({
       slug: note.slug,
       pkg,
       root: isDir ? root : undefined,
       stacks,
       files: stats.files,
       port: note.livePreviewPort,
-    }),
+    }), note.description || `${note.slug} project`),
     stats,
     manifest: pkg ? {
       name: typeof pkg.name === 'string' ? pkg.name : '',
