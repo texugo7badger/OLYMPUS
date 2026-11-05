@@ -441,7 +441,8 @@ export default function InteractiveTerminal() {
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   // v0.0.71 — the creative queue: prompts composed in /m/studio or the studio
   // panel, shown here with a distinct marker and drained on demand.
-  const [creativeQueue, setCreativeQueue] = useState<Array<{ id: string; text: string; god?: string; source?: string }>>([]);
+  const [creativeQueue, setCreativeQueue] = useState<Array<{ id: string; text: string; god?: string; source?: string; priority?: 'high' | 'normal' | 'low'; reference?: { name: string; library?: string; category?: string } }>>([]);
+  const autoDrainedQueue = useRef<Set<string>>(new Set());
   const [uploadedFileDetails, setUploadedFileDetails] = useState<Array<{
     name: string;
     path: string;
@@ -1431,6 +1432,32 @@ export default function InteractiveTerminal() {
     setCreativeQueue((prev) => prev.filter((i) => i.id !== item.id));
   }, [submit]);
 
+  // v0.0.82 — a HIGH markview item is worked on its own when the terminal is
+  // idle. Normal/low items still wait for the explicit send button.
+  useEffect(() => {
+    if (submitting) return;
+    const head = creativeQueue[0];
+    if (!head || head.priority !== 'high' || autoDrainedQueue.current.has(head.id)) return;
+    const timer = setTimeout(() => {
+      autoDrainedQueue.current.add(head.id);
+      void drainCreative(head);
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [creativeQueue, submitting, drainCreative]);
+
+  // v0.0.82 — the markview USE bridge: stage the reference in this composer.
+  useEffect(() => {
+    const onUse = (e: Event) => {
+      const d = (e as CustomEvent).detail || {};
+      if (!d?.name) return;
+      const text = `Use the "${d.name}" reference${d.library ? ` (${d.library}${d.category ? ` · ${d.category}` : ''})` : ''}.${d.what ? ` ${d.what}` : ''}${d.demoUrl ? ` Reference: ${d.demoUrl}` : ''}`;
+      setInput(text);
+      inputRef.current?.focus();
+    };
+    window.addEventListener('olympus:reference-use', onUse);
+    return () => window.removeEventListener('olympus:reference-use', onUse);
+  }, []);
+
   // v0.0.47 — the unattended switch is read at SEND time; the chip reflects it.
   useEffect(() => {
     setUnattended(unattendedEnabled());
@@ -2297,6 +2324,8 @@ export default function InteractiveTerminal() {
               <div className="flex items-center gap-1.5 text-[9px] font-mono">
                 <Sparkles size={10} className="text-olympus-purple" />
                 <span className="text-olympus-purple">queue · {creativeQueue.length}</span>
+                {creativeQueue[0].priority === 'high' && <span className="rounded px-1 text-[8px] uppercase text-olympus-red ring-1 ring-olympus-red/30">high</span>}
+                {creativeQueue[0].reference?.name && <span className="max-w-[120px] truncate rounded px-1 text-[8px] text-olympus-cyan ring-1 ring-olympus-cyan/20">ref: {creativeQueue[0].reference.name}</span>}
                 <span className="rounded px-1 text-[8px] uppercase text-olympus-text-dim ring-1 ring-olympus-text-dim/20">{creativeQueue[0].source ?? 'terminal'}</span>
                 <span className="min-w-0 flex-1 truncate text-olympus-text-dim">{creativeQueue[0].text}</span>
                 <button

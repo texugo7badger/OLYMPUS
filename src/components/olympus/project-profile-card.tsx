@@ -107,7 +107,7 @@ function fileIcon(rel: string) {
   return <Files size={12} className="text-olympus-text-dim" />;
 }
 
-export default function ProjectProfileCard({ slug, onClose }: { slug: string; onClose: () => void }) {
+export default function ProjectProfileCard({ slug, initial, onClose }: { slug: string; initial?: ProjectNote | null; onClose: () => void }) {
   const language = useLanguage();
   // v0.0.48 — the passport: share/export the project's identity.
   const [sharing, setSharing] = useState(false);
@@ -242,7 +242,7 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[140] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[220] flex items-center justify-center p-4"
       style={{ background: 'color-mix(in srgb, var(--olympus-bg) 78%, transparent)' }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
@@ -253,8 +253,21 @@ export default function ProjectProfileCard({ slug, onClose }: { slug: string; on
         className="w-[min(780px,94vw)] max-h-[88vh] overflow-y-auto custom-scroll rounded-xl border border-olympus-gold/25 bg-olympus-panel shadow-2xl"
       >
         {loading ? (
-          <div className="flex flex-col items-center justify-center gap-3 py-20">
-            <OlympusLoader size={96} label="opening the project" />
+          <div className="p-6">
+            <div className="text-sm font-mono font-semibold text-olympus-gold">{name}</div>
+            <p className="mt-1 text-[10px] font-mono leading-relaxed text-olympus-text-dim">
+              {initial?.description || 'opening the project…'}
+            </p>
+            {Array.isArray(initial?.stacks) && initial.stacks.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {initial.stacks.slice(0, 10).map((st) => (
+                  <span key={st} className="rounded bg-olympus-gold/10 px-1.5 py-0.5 text-[8px] font-mono text-olympus-gold ring-1 ring-olympus-gold/20">{st}</span>
+                ))}
+              </div>
+            )}
+            <div className="mt-6 flex justify-center">
+              <OlympusLoader size={72} label="loading the profile" />
+            </div>
           </div>
         ) : error ? (
           <div className="p-6 text-center">

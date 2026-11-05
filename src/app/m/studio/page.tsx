@@ -73,7 +73,7 @@ export default function MobileStudio() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSlug, setActiveSlug] = useState('');
-  const [queue, setQueue] = useState<Array<{ id: string; text: string; status: string; createdAt: string }>>([]);
+  const [queue, setQueue] = useState<Array<{ id: string; text: string; status: string; createdAt: string; priority?: 'high' | 'normal' | 'low'; source?: string; reference?: { name: string } }>>([]);
   const [queueText, setQueueText] = useState('');
   // v0.0.77 — tapping a hop opens its info sheet on the phone too.
   const [sheetHop, setSheetHop] = useState<string | null>(null);
@@ -502,8 +502,10 @@ export default function MobileStudio() {
             </div>
             {queue.length > 0 && (
               <div className="mt-2 space-y-1">
-                {queue.slice(-6).map((q) => (
+                {queue.filter((q) => q.status === 'queued').slice(0, 6).map((q) => (
                   <div key={q.id} className="flex items-center gap-1.5 rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 px-2 py-1.5">
+                    {q.priority === 'high' && <span className="rounded px-1 text-[8px] font-mono uppercase text-olympus-red ring-1 ring-olympus-red/30">high</span>}
+                    {q.reference?.name && <span className="max-w-[90px] truncate rounded px-1 text-[8px] font-mono text-olympus-cyan ring-1 ring-olympus-cyan/20">ref: {q.reference.name}</span>}
                     <span className={`text-[8px] font-mono uppercase ${q.status === 'sent' ? 'text-olympus-green' : 'text-olympus-cyan'}`}>{q.status}</span>
                     <span className="min-w-0 flex-1 truncate text-[10px] text-olympus-text">{q.text}</span>
                     {q.status === 'queued' && (

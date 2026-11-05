@@ -12,6 +12,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell, ChevronRight, Loader2, Moon, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
@@ -70,6 +71,9 @@ export default function NotificationCenter() {
   const [hibAuto, setHibAuto] = useState(true);
   const [hibBusy, setHibBusy] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
   const setLeftPane = useOlympus((s) => s.setLeftPane);
   const docVisible = useOlympus((s) => s.leftPane) !== undefined; // keeps the component client-only
 
@@ -103,7 +107,10 @@ export default function NotificationCenter() {
       .then((d) => setLearnings(Array.isArray(d?.learnings) ? d.learnings : []))
       .catch(() => { /* offline */ });
     const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (wrapRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     window.addEventListener('mousedown', onDown);
     return () => window.removeEventListener('mousedown', onDown);
@@ -169,7 +176,16 @@ export default function NotificationCenter() {
   return (
     <div className="relative" ref={wrapRef}>
       <button
-        onClick={() => { setOpen((v) => !v); if (!open) markSeen(); }}
+        ref={buttonRef}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) {
+            markSeen();
+            const r = buttonRef.current?.getBoundingClientRect();
+            if (r) setPanelPos({ top: r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - 336)) });
+          }
+        }}
         className="relative flex items-center gap-1 px-1.5 py-1 rounded text-olympus-text-dim hover:text-olympus-gold transition-colors"
         aria-label={`Notifications${unread ? ` (${unread} unread)` : ''}`}
         aria-expanded={open}
@@ -183,8 +199,8 @@ export default function NotificationCenter() {
         )}
       </button>
 
-      {open && (
-        <div className="absolute left-0 top-full mt-1 w-80 max-w-[calc(100vw-1rem)] max-h-[420px] overflow-hidden rounded-lg border border-olympus-gold/25 bg-olympus-panel shadow-2xl z-[120] flex flex-col">
+      {open && panelPos && typeof document !== 'undefined' && createPortal(
+        <div ref={panelRef} className="fixed w-80 max-w-[calc(100vw-1rem)] max-h-[420px] overflow-hidden rounded-lg border border-olympus-gold/25 bg-olympus-panel shadow-2xl z-[220] flex flex-col" style={{ top: panelPos.top, left: panelPos.left }}>
           <header className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-olympus-gold/10">
             <Bell size={10} className="text-olympus-gold" />
             <span className="text-[9px] font-mono font-semibold uppercase tracking-wide text-olympus-gold">notifications</span>
@@ -261,7 +277,8 @@ export default function NotificationCenter() {
               {busy ? <Loader2 size={9} className="animate-spin" /> : <Moon size={9} />} now
             </button>
           </footer>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* v0.0.55 — the night contract: how long may OLYMPUS work alone? */}

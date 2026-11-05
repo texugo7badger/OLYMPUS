@@ -12,6 +12,17 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+export type PromptPriority = 'high' | 'normal' | 'low';
+
+export interface PromptReference {
+  name: string;
+  library?: string;
+  category?: string;
+  demoUrl?: string;
+  what?: string;
+  fetchLane?: string;
+}
+
 export interface PromptQueueItem {
   id: string;
   project: string;
@@ -19,10 +30,14 @@ export interface PromptQueueItem {
   createdAt: string;
   status: 'queued' | 'sent';
   sentAt?: string;
-  /** v0.0.71 — where the prompt was composed: the terminal or the creative. */
-  source?: 'terminal' | 'creative' | 'phone';
+  /** v0.0.81 — where the prompt was composed. Markview is a first-class lane. */
+  source?: 'terminal' | 'creative' | 'phone' | 'markview';
   /** The god whose creative session produced it (creative items only). */
   god?: string;
+  /** v0.0.82 — high items are drained first and auto-sent when the terminal is idle. */
+  priority?: PromptPriority;
+  /** v0.0.82 — the reference that seeded the prompt (markview). */
+  reference?: PromptReference;
 }
 
 const HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
@@ -42,12 +57,31 @@ function write(items: PromptQueueItem[]): void {
   } catch { /* a queue write failure never blocks the request */ }
 }
 
+const PRIORITY_RANK: Record<PromptPriority, number> = { high: 0, normal: 1, low: 2 };
+
 export function listQueue(project?: string): PromptQueueItem[] {
   const all = read();
-  return (project ? all.filter((i) => i.project === project) : all).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  return (project ? all.filter((i) => i.project === project) : all).sort((a, b) => {
+    const pa = PRIORITY_RANK[a.priority ?? 'normal'] ?? 1;
+    const pb = PRIORITY_RANK[b.priority ?? 'normal'] ?? 1;
+    return pa - pb || a.createdAt.localeCompare(b.createdAt);
+  });
 }
 
-export function enqueuePrompt(project: string, text: string, now = Date.now(), meta: { source?: 'terminal' | 'creative' | 'phone'; god?: string } = {}): PromptQueueItem | null {
+function cleanReference(r: any): PromptReference | undefined {
+  if (!r || typeof r !== 'object') return undefined;
+  const name = String(r.name || '').trim().slice(0, 120);
+  if (!name) return undefined;
+  const out: PromptReference = { name };
+  if (typeof r.library === 'string' && r.library.trim()) out.library = r.library.trim().slice(0, 80);
+  if (typeof r.category === 'string' && r.category.trim()) out.category = r.category.trim().slice(0, 80);
+  if (typeof r.demoUrl === 'string' && /^https?:\/\//.test(r.demoUrl)) out.demoUrl = r.demoUrl.slice(0, 500);
+  if (typeof r.what === 'string' && r.what.trim()) out.what = r.what.trim().slice(0, 500);
+  if (typeof r.fetchLane === 'string' && r.fetchLane.trim()) out.fetchLane = r.fetchLane.trim().slice(0, 300);
+  return out;
+}
+
+export function enqueuePrompt(project: string, text: string, now = Date.now(), meta: { source?: 'terminal' | 'creative' | 'phone' | 'markview'; god?: string; priority?: PromptPriority; reference?: PromptReference } = {}): PromptQueueItem | null {
   const clean = String(text || '').trim().slice(0, 4000);
   if (!clean) return null;
   // v0.0.77 — THE DEDUPE. Before a god's suggestion is queued, the queue is
@@ -66,6 +100,8 @@ export function enqueuePrompt(project: string, text: string, now = Date.now(), m
     status: 'queued',
     ...(meta.source ? { source: meta.source } : {}),
     ...(meta.god ? { god: meta.god } : {}),
+    ...(meta.priority ? { priority: meta.priority } : {}),
+    ...(cleanReference(meta.reference) ? { reference: cleanReference(meta.reference) } : {}),
   };
   write([...read(), item]);
   return item;

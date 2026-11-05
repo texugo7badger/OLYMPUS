@@ -11,6 +11,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FolderPlus, Folder, ChevronDown, Layers, Upload, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOlympus, type ProjectNote } from '@/lib/olympus-store';
@@ -66,11 +67,17 @@ export default function ProjectSwitcher() {
     } finally { setImporting(false); }
   };
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => { refreshProjects(); }, [refreshProjects]);
   useEffect(() => {
     function h(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
+      const target = e.target as Node;
+      if (dropdownRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setDropdownOpen(false);
     }
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
@@ -86,7 +93,15 @@ export default function ProjectSwitcher() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setDropdownOpen(!dropdownOpen)}
+        ref={buttonRef}
+        onClick={() => {
+          const next = !dropdownOpen;
+          setDropdownOpen(next);
+          if (next) {
+            const r = buttonRef.current?.getBoundingClientRect();
+            if (r) setMenuPos({ top: r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - 400)) });
+          }
+        }}
         aria-label="Switch project"
         aria-expanded={dropdownOpen}
         className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-olympus-gold/10 transition-colors group"
@@ -96,8 +111,8 @@ export default function ProjectSwitcher() {
         <ChevronDown size={10} className={cn('text-olympus-text-dim transition-transform', dropdownOpen && 'rotate-180')} />
       </button>
 
-      {dropdownOpen && (
-        <div className="absolute top-full left-0 mt-1 w-96 bg-olympus-panel border border-olympus-gold/20 rounded-lg shadow-md z-50 overflow-hidden">
+      {dropdownOpen && menuPos && typeof document !== 'undefined' && createPortal(
+        <div ref={menuRef} className="fixed w-96 max-w-[calc(100vw-1rem)] bg-olympus-panel border border-olympus-gold/20 rounded-lg shadow-2xl z-[220] overflow-hidden" style={{ top: menuPos.top, left: menuPos.left }}>
           <div className="px-3 py-2 border-b border-olympus-gold/10 flex items-center justify-between">
             <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">
               {t('projects.title', language)} <span className="text-olympus-gold/70">· {projects.length}</span>
@@ -180,10 +195,11 @@ export default function ProjectSwitcher() {
               {importing ? <Loader2 size={9} className="animate-spin" /> : <Upload size={9} />} import
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {profileSlug && <ProjectProfileCard slug={profileSlug} onClose={() => setProfileSlug(null)} />}
+      {profileSlug && <ProjectProfileCard slug={profileSlug} initial={projects.find((p) => p.slug === profileSlug) ?? null} onClose={() => setProfileSlug(null)} />}
     </div>
   );
 }

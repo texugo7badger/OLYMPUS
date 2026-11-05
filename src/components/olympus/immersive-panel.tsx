@@ -88,6 +88,18 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const [say, setSay] = useState('');
   const [chat, setChat] = useState<Array<{ role: 'user' | 'god'; text: string; god?: string }>>([]);
   const [chatInput, setChatInput] = useState('');
+
+  // v0.0.82 — the markview USE bridge reaches the creative composer too.
+  useEffect(() => {
+    const onUse = (e: Event) => {
+      const d = (e as CustomEvent).detail || {};
+      if (!d?.name) return;
+      const text = `Use the "${d.name}" reference${d.library ? ` (${d.library}${d.category ? ` · ${d.category}` : ''})` : ''}.${d.what ? ` ${d.what}` : ''}${d.demoUrl ? ` Reference: ${d.demoUrl}` : ''}`;
+      setChatInput(text);
+    };
+    window.addEventListener('olympus:reference-use', onUse);
+    return () => window.removeEventListener('olympus:reference-use', onUse);
+  }, []);
   const [chatBusy, setChatBusy] = useState(false);
   const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
   const [micId, setMicId] = useState('');

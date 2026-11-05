@@ -389,24 +389,70 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
     } catch { toast.error('could not queue the critique'); }
   };
   const applyReference = (r: UiRef) => {
-    setPendingRef({ name: r.name, demoUrl: r.demoUrl, category: r.category, library: r.library });
+    const reference = {
+      name: r.name,
+      library: r.library,
+      category: r.category,
+      demoUrl: r.demoUrl,
+      what: r.what,
+      fetchLane: r.fetchLane,
+    };
+    setPendingRef(reference);
     setTab('style');
     setRefView(null);
-  };
-  const queueReference = async (r: UiRef) => {
+    // v0.0.82 — USE means STAGE, not just a style-board mutation. The
+    // terminal and the creative composer listen for this event and put the
+    // reference into the prompt input, where the user can edit and send.
     try {
-      await fetch('/api/olympus/artcraft/queue', {
+      window.dispatchEvent(new CustomEvent('olympus:reference-use', { detail: reference }));
+      toast.success('reference staged in the prompt');
+    } catch { /* clipboard/composer best effort */ }
+  };
+  const queueReference = useCallback(async (r: UiRef) => {
+    const project = useOlympus.getState().activeProject?.slug ?? 'project';
+    const reference = {
+      name: r.name,
+      library: r.library,
+      category: r.category,
+      demoUrl: r.demoUrl,
+      what: r.what,
+      fetchLane: r.fetchLane,
+    };
+    const prompt = `Use the "${r.name}" reference (${r.library} · ${r.category}) in the open project.\n${r.what}\nReference link: ${r.demoUrl}\nFetch lane: ${r.fetchLane}\n\nAsk me where it belongs before changing the page if it is ambiguous.`;
+    // The design board keeps its own history; the SHARED prompt queue is what
+    // the terminal/creative workers see and drain.
+    await Promise.allSettled([
+      fetch('/api/olympus/artcraft/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project: useOlympus.getState().activeProject?.slug ?? 'project',
-          title: `Use the ${r.name} reference`,
-          priority: 'high',
-          prompt: `Use the "${r.name}" reference (${r.library} · ${r.category}) in the open project.\n${r.what}\nReference link: ${r.demoUrl}\nFetch lane: ${r.fetchLane}\n\nAsk me where it belongs before changing the page if it is ambiguous.`,
-        }),
-      });
-    } catch { /* best effort */ }
-  };
+        body: JSON.stringify({ project, title: `Use the ${r.name} reference`, priority: 'high', prompt }),
+      }),
+      (async () => {
+        const res = await fetch('/api/olympus/prompt-queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project, text: prompt, source: 'markview', priority: 'high', reference }),
+        });
+        const d = await res.json().catch(() => null);
+        if (res.ok && d?.ok) toast.success('reference queued — the terminal will pick it up');
+        else if (res.status === 409) toast.success('already queued — the terminal will pick it up');
+        else toast.error(d?.error || 'could not queue the reference');
+      })(),
+    ]);
+  }, []);
+
+  // v0.0.82 — the markview shortcut: with a reference open, Cmd/Ctrl+Enter
+  // queues it immediately (high priority, with the reference attached).
+  useEffect(() => {
+    if (!refView) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== 'Enter') return;
+      e.preventDefault();
+      void queueReference(refView);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [refView, queueReference]);
 
   return (
     <div className="w-full h-full flex flex-col bg-olympus-bg">
@@ -490,8 +536,8 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   ))}
                   <span className="text-[8px] font-mono text-olympus-text-dim hidden md:inline">· interactive — move the pointer</span>
                   <button onClick={() => void critiqueReference(refView)} className="ml-auto flex items-center gap-1 text-[9px] font-mono px-2 py-1 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20"><MessageSquare size={9} /> {t('references.critique', language)}</button>
-                  <button onClick={() => applyReference(refView)} className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
-                  <button onClick={() => void queueReference(refView)} className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">{t('common.queue', language)}</button>
+                  <button onClick={() => applyReference(refView)} data-tip="Stage this reference in the terminal/creative prompt" className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
+                  <button onClick={() => void queueReference(refView)} data-tip="Queue for the terminal · ⌘/Ctrl+Enter" className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">{t('common.queue', language)}</button>
                 </div>
               </div>
             ) : (
@@ -850,7 +896,7 @@ function ReferenceCard({
       </div>
       <div className="flex items-center gap-1 px-3 pb-2 pt-1.5">
         <button onClick={onUse} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
-        <button onClick={onQueue} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">{t('common.queue', language)}</button>
+        <button onClick={onQueue} data-tip="Queue for the terminal" className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">{t('common.queue', language)}</button>
         <button onClick={onOpen} data-tip="Open the component details" aria-label={`Open ${reference.name} details`} className="ml-auto text-olympus-text-dim hover:text-olympus-gold p-1.5 rounded hover:bg-olympus-gold/10"><Maximize2 size={12} /></button>
       </div>
     </div>

@@ -1,6 +1,9 @@
 # OLYMPUS Roadmap
 
-**v0.0.81 is the current release** (2026-11-04; re-released 2026-11-05) — public core + measured frames + the fix pass:
+**v0.0.82 is the current release** (2026-11-05) — the markview bridge and the two dead clicks:
+references stage/queue with priority and auto-drain; the project switcher and
+notification panel are portals; the profile scan is bounded/cached.
+**v0.0.81** was public core + measured frames + the fix pass:
 notifications open, mobile creative is chat-only, voices stop reading logs,
 restarts ask, the GO Plus bar matches the console, tok/s is measured and the
 stable-version channel lands in Settings. The original v0.0.81 cut was:

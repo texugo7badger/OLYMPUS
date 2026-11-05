@@ -33,7 +33,13 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.81 — the fix pass plus the instruments.**
+**v0.0.82 — the markview bridge and the two dead clicks.**
+References stage into the composer and queue into the shared prompt queue with
+priority; high items auto-drain when the terminal is idle. The project
+switcher and notification panel are portals above the studio (the status bar
+`overflow-hidden` was clipping them), and the profile card opens with its
+identity while a bounded scan runs. v0.0.81 was the fix pass plus the
+instruments:
 Notifications open, the mobile creative is chat-only, voices stop reading logs,
 restarts ask instead of auto-continuing, the GO Plus bar matches the console
 and tok/s is measured. The first v0.0.81 cut also shipped the public core, the
@@ -77,7 +83,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**147 PASS / 0 FAIL / 1 declared skip** across 148 suites; a 100-hop
+**151 PASS / 0 FAIL / 1 declared skip** across 152 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

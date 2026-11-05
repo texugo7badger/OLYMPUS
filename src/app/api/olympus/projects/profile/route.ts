@@ -24,8 +24,13 @@ import { buildProjectBrief } from '@/lib/project-brief';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MAX_ENTRIES = 6000;
-const MAX_DEPTH = 6;
+const MAX_ENTRIES = 2200;
+const MAX_DEPTH = 4;
+// v0.0.82 — a profile card is not a filesystem census. Stat at most this
+// many files; the rest are counted but not measured, and `truncated` is true.
+const MAX_STATS = 700;
+const PROFILE_TTL_MS = 20_000;
+const PROFILE_CACHE = new Map<string, { at: number; data: any }>();
 
 /** v0.0.81 — the profile is a card, not a single point of failure. A
  *  non-git lane (AIME), a vanished folder or a huge tree must degrade to a
@@ -56,6 +61,7 @@ interface ScanResult {
 function scanTree(root: string): ScanResult {
   const result: ScanResult = { files: 0, directories: 0, bytes: 0, recent: [], truncated: false };
   let seen = 0;
+  let stats = 0;
   const queue: Array<{ dir: string; rel: string; depth: number }> = [{ dir: root, rel: '', depth: 0 }];
   while (queue.length > 0) {
     const { dir, rel, depth } = queue.shift()!;
@@ -76,6 +82,8 @@ function scanTree(root: string): ScanResult {
         if (depth < MAX_DEPTH) queue.push({ dir: full, rel: relPath, depth: depth + 1 });
       } else if (entry.isFile()) {
         result.files += 1;
+        if (stats >= MAX_STATS) { result.truncated = true; continue; }
+        stats += 1;
         try {
           const st = fs.statSync(full);
           result.bytes += st.size;
@@ -150,6 +158,11 @@ export async function GET(req: NextRequest) {
   const note = getProject(slug);
   if (!note) return NextResponse.json({ ok: false, error: 'project not found' }, { status: 404 });
 
+  const cached = PROFILE_CACHE.get(slug);
+  if (cached && Date.now() - cached.at < PROFILE_TTL_MS) {
+    return NextResponse.json({ ...cached.data, cached: true });
+  }
+
   const reconciled = safe(() => reconcileProjectPath(slug), null);
   const root = reconciled?.path || note.path;
   const exists = !!root && safe(() => fs.existsSync(root), false);
@@ -174,7 +187,7 @@ export async function GET(req: NextRequest) {
   const git = isDir ? safe(() => gitInfo(root), null) : null;
   const readme = isDir ? safe(() => readReadme(root), null) : null;
 
-  return NextResponse.json({
+  const payload = {
     ok: true,
     active: getActiveProjectSlug() === note.slug,
     project: { ...note, name: folderName(note.slug), stacks },
@@ -206,5 +219,7 @@ export async function GET(req: NextRequest) {
     manifests,
     git,
     readme,
-  });
+  };
+  PROFILE_CACHE.set(slug, { at: Date.now(), data: payload });
+  return NextResponse.json(payload);
 }

@@ -2,6 +2,61 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.82] — 2026-11-05
+
+### The markview bridge
+
+- **USE stages, QUEUE works.** In the References markview, `usar` now puts the
+  reference into the terminal/creative **composer** (via the
+  `olympus:reference-use` event) and keeps the style-board behavior. `enviar
+  para a fila` posts to the **shared prompt queue** (`source: markview`,
+  `priority: high`) with the reference metadata, not only to the design board.
+- **The queue is visible where the work happens:** the terminal shows
+  `high`, `ref: <name>`, `MARKVIEW` and the text; the mobile creative queue
+  shows the same. High-priority items are **auto-drained** by the terminal
+  when it is idle (700 ms), so a markview send is worked without another
+  click. Normal/low items still wait for the explicit send.
+- **Shortcut:** with a reference open, **⌘/Ctrl+Enter** queues it immediately.
+- The prompt queue is ordered high → normal → low; duplicates return 409
+  (“already queued”), and the reference survives the JSON round-trip.
+
+### The two dead clicks
+
+- The project switcher dropdown and the notification panel were children of
+  the **status bar with `overflow-hidden`**: they opened in the DOM but were
+  clipped, so the UI looked dead. Both are now **portals** to `document.body`
+  at `z-[220]`, above the creative studio. The profile card moved from
+  `z-[140]` to `z-[220]` for the same reason. Outside-click handling includes
+  the portal so a row click is not swallowed.
+- The project profile now opens with its **identity immediately** (name,
+  description, stack) while the bounded scan runs; the scan is capped at
+  2,200 entries / 700 stats and cached for 20 s. Measured on AIME: **1.2 s**
+  first (dev compile included), **0.02 s** cached — instead of a 4 s
+  synchronous scan that blocked the Next server (and made the notification
+  bell/API feel frozen too).
+
+### Verification
+
+- `prompt-queue.test.mjs` 14/14 (priority order, reference persistence,
+  dedupe, sent, project isolation, the bridge/shortcut/auto-drain static
+  contracts).
+- Portal probes: project menu fixed at `z 220` under the status bar;
+  notification panel fixed at `z 220`; profile card opens with the AIME
+  description and 16 stacks.
+- Battery: **151 PASS / 0 FAIL / 1 declared skip (152 suites)**.
+
+### Honest limits
+
+- AIME remains **parked at `v5g-mobile-gate`** (43/53, design review 6.6 < 7:
+  scrollLife/phoneSpeed). The walker refused a sub-7 gate; the mobile fix and
+  the unit/E2E test-repair are still required.
+- The markview queue is worked by the terminal/creative worker; the mobile can
+  see and send it, but the auto-drain runs on the desktop terminal.
+- The AIME public quick-tunnel URL (`reuters-…`) is preserved by the detached
+  tunnel state; it is still ephemeral — a named tunnel is the stable path.
+- Windows/macOS installers and the ≤220 MB AppImage remain the v0.1.0 plan
+  (`DISTRIBUTION.md`).
+
 ## [v0.0.81] — 2026-11-04
 
 ### The fix pass (re-release, 2026-11-05)

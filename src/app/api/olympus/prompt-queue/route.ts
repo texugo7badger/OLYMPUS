@@ -28,11 +28,24 @@ export async function POST(req: NextRequest) {
   if (authError) return authError;
   let body: any = {};
   try { body = await req.json(); } catch { /* invalid */ }
+  const source = body?.source === 'creative' ? 'creative'
+    : body?.source === 'terminal' ? 'terminal'
+      : body?.source === 'phone' ? 'phone'
+        : body?.source === 'markview' ? 'markview'
+          : undefined;
+  const priority = body?.priority === 'high' || body?.priority === 'low' || body?.priority === 'normal' ? body.priority : undefined;
   const item = enqueuePrompt(String(body?.project || ''), String(body?.text || ''), Date.now(), {
-    source: body?.source === 'creative' ? 'creative' : body?.source === 'terminal' ? 'terminal' : body?.source === 'phone' ? 'phone' : undefined,
+    source,
     god: typeof body?.god === 'string' ? body.god : undefined,
+    priority,
+    reference: body?.reference && typeof body.reference === 'object' ? body.reference : undefined,
   });
-  if (!item) return NextResponse.json({ ok: false, error: 'project and text are required' }, { status: 400, headers: NO_CACHE_HEADERS });
+  if (!item) {
+    const project = String(body?.project || '').trim();
+    const text = String(body?.text || '').trim();
+    if (!project || !text) return NextResponse.json({ ok: false, error: 'project and text are required' }, { status: 400, headers: NO_CACHE_HEADERS });
+    return NextResponse.json({ ok: false, error: 'already queued' }, { status: 409, headers: NO_CACHE_HEADERS });
+  }
   return NextResponse.json({ ok: true, item, items: listQueue(item.project) }, { headers: NO_CACHE_HEADERS });
 }
 
