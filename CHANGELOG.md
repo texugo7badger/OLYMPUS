@@ -79,8 +79,9 @@ All notable changes to OLYMPUS are documented in this file.
   the phone immediately and writes the same store the PC and the companion
   watch. The theme choice changes the other sessions, not just the current one.
 - **`OLYMPUS_HOME` and `OLYMPUS_PORT` are honored** by auth, the project
-  registry, the vault root, run-state and Electron, so a dev build runs on
-  3747 with its own store/vault while the stable app stays on 3737. On a
+  registry, the vault root, run-state, the mobile tunnel and Electron, so a dev
+  build runs on 3747 with its own store/vault while the stable app stays on
+  3737. The tunnel now points at the active PORT, never a hardcoded 3737. On a
   memory-tight host, `OLYMPUS_BUILD_CPUS=1` lowers the Next build workers
   without changing the output (the SIGSEGV escape hatch).
 - **The native Samsung/home-screen widget is a v0.1.0 priority**, with the

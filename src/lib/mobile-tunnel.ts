@@ -18,6 +18,8 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 
 const HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
+// v0.0.85 — the dev lane on 3747 must tunnel to ITSELF, not the stable 3737.
+const TARGET_PORT = process.env.PORT || process.env.OLYMPUS_PORT || '3737';
 const STATE = path.join(HOME, 'mobile-tunnel.json');
 const LOG = path.join(HOME, 'mobile-tunnel.log');
 
@@ -79,7 +81,7 @@ export async function startTunnel(timeoutMs = 30_000): Promise<TunnelStatus> {
   const offset = (() => { try { return fs.statSync(LOG).size; } catch { return 0; } })();
   const out = fs.openSync(LOG, 'a');
   try {
-    const child = spawn(binary, ['tunnel', '--url', 'http://127.0.0.1:3737', '--no-autoupdate'], {
+    const child = spawn(binary, ['tunnel', '--url', `http://127.0.0.1:${TARGET_PORT}`, '--no-autoupdate'], {
       detached: true,
       stdio: ['ignore', out, out],
       env: { ...process.env },
