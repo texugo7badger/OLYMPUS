@@ -28,8 +28,7 @@ All notable changes to OLYMPUS are documented in this file.
 - **Honest caveat:** the AIME app still logs a hydration mismatch (server vs
   client HTML); the client regenerates the tree, so the animations run, but
   the app has a real hydration difference to fix in the project. The AIME
-  gate `v5g3` parked `dispatch-failed`; the walk resumed with
-  `v5g4-mobile-touch-speed` / `v5g5-mobile-theme-shadow` in flight.
+  walk reached **48/67**; `v5g3-mobile-gate` remains the retried/parked hop.
 
 ### A full context window becomes a handoff, not amnesia
 
@@ -73,6 +72,15 @@ All notable changes to OLYMPUS are documented in this file.
   The root and the VSCode extension override `minimatch` to **11.0.5**; the
   extension's `@vscode/vsce` moves to 4.1.0. Root `npm audit` no longer
   reports a high/critical finding; the extension reports zero.
+
+### Verification
+
+- Battery: **153 PASS / 0 FAIL / 1 declared skip (154 suites)** — the new
+  `context-handoff` suite is 15/15 and `cost-caps` is 14/14.
+- Build + standalone verify: **PASS** (`next build --webpack`, ws tracing,
+  BUILD_ID and boot gate).
+- The AIME public link is 200 and animates; the phone preview sheet loads it
+  and the mark pins at the tapped coordinates (203,272 in the capture).
 
 ### Honest limits
 
