@@ -633,14 +633,20 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
           <div className="text-[9px] font-mono uppercase tracking-wide mb-2" style={{ color: palette.gold }}>{t('studio.gods', language)}</div>
           {inflight.length === 0 && <p className="text-[9px] font-mono" style={{ color: palette.textDim }}>{t('studio.idle', language)}</p>}
           {inflight.map((h) => (
-            <div key={h.hopId} className="mb-2">
+            <button
+              key={h.hopId}
+              onClick={() => setSheetHop(h.hopId)}
+              aria-label={`Open ${h.hopId}`}
+              data-tip="Open the hop task sheet"
+              className="mb-2 w-full cursor-pointer rounded-md px-1 py-0.5 text-left transition-colors hover:bg-white/5"
+            >
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: palette.green }} />
                 <span className="text-[10px] font-mono truncate">{h.god ?? 'god'}</span>
                 <span className="ml-auto text-[8px] font-mono uppercase" style={{ color: palette.cyan }}>{h.status ?? 'running'}</span>
               </div>
               <div className="text-[9px] font-mono truncate pl-3" style={{ color: palette.textDim }}>{h.hopId}</div>
-            </div>
+            </button>
           ))}
 
           <div className="mt-3 pt-2 border-t" style={{ borderColor: `${palette.gold}22` }}>

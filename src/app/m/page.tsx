@@ -23,6 +23,8 @@ import {
   MousePointerClick, Radio, RefreshCw, Settings2, Sparkles, Square, X,
 } from 'lucide-react';
 import PlasmaRing from '@/components/olympus/plasma-ring';
+import TaskSheetModal from '@/components/olympus/task-sheet-modal';
+import GoUsageBar from '@/components/olympus/go-usage-bar';
 import { THEME_PRESETS, applyTheme, normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
 import { getPerformanceMode, setPerformanceMode } from '@/lib/performance-mode';
 import { LANGUAGES, godName, setLanguage, t, useLanguage, type Language } from '@/lib/i18n';
@@ -75,7 +77,6 @@ export default function MobileCompanion() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [active, setActive] = useState('');
   const [run, setRun] = useState<RunState | null>(null);
-  const [cost, setCost] = useState<{ spend?: number } | null>(null);
   const [git, setGit] = useState<{ remote?: string | null; branch?: string | null; commits?: Array<{ hash: string; subject: string; relative: string }> } | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
@@ -89,6 +90,9 @@ export default function MobileCompanion() {
   const [theme, setTheme] = useState<ThemeState | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [perfMode, setPerfMode] = useState(false);
+  // v0.0.84 — the cost/details sheet is the phone's campaign window. Its hops
+  // open the same TaskSheet as the PC creative's left column.
+  const [sheetHop, setSheetHop] = useState<string | null>(null);
   const [god, setGod] = useState('apollo');
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -194,10 +198,9 @@ export default function MobileCompanion() {
   const load = useCallback(async () => {
     if (!token) return;
     try {
-      const [pRes, rRes, cRes] = await Promise.all([
-        mobileFetch('/api/olympus/projects', { cache: 'no-store', headers }),
-        mobileFetch('/api/olympus/run-state', { cache: 'no-store', headers }),
-        mobileFetch('/api/olympus/costs?window=24h', { cache: 'no-store', headers }),
+      const [pRes, rRes] = await Promise.all([
+        mobileFetch('/api/olympus/projects', { cache: 'no-store', headers }, 20_000),
+        mobileFetch('/api/olympus/run-state', { cache: 'no-store', headers }, 20_000),
       ]);
       if (pRes.ok) {
         const d = await pRes.json();
@@ -205,10 +208,6 @@ export default function MobileCompanion() {
         setActive(String(d.active?.slug || ''));
       }
       if (rRes.ok) setRun(await rRes.json());
-      if (cRes.ok) {
-        const d = await cRes.json();
-        setCost({ spend: Number(d?.spend ?? d?.stepCost ?? d?.total ?? 0) });
-      }
       setError(null);
     } catch (e: any) {
       setError(e?.message || t('m.connectionFailed', language));
@@ -316,7 +315,9 @@ export default function MobileCompanion() {
     if (!token || !active) { setPreview(null); return; }
     const pull = async () => {
       try {
-        const r = await mobileFetch(`/api/olympus/projects/preview?slug=${encodeURIComponent(active)}`, { cache: 'no-store', headers });
+        // The route probes the port (with one retry) before it calls a live
+        // server down; 20s covers that plus a CPU-throttled host.
+        const r = await mobileFetch(`/api/olympus/projects/preview?slug=${encodeURIComponent(active)}`, { cache: 'no-store', headers }, 20_000);
         const d = await r.json().catch(() => null);
         if (r.ok && d?.ok) setPreview(d);
       } catch { /* next poll */ }
@@ -597,9 +598,12 @@ export default function MobileCompanion() {
             <div className="mb-2 flex items-center gap-2">
               <Settings2 size={14} className="text-olympus-gold" />
               <span className="text-[12px] font-semibold tracking-wide">{t('m.details', language)}</span>
-              <span className="ml-auto text-[10px] font-mono text-olympus-text-dim">{cost ? `24h · $${(cost.spend ?? 0).toFixed(2)}` : '—'}</span>
               <button onClick={() => setDetailsOpen(false)} aria-label={t('m.close', language)} className="p-2 text-olympus-text-dim"><X size={16} /></button>
             </div>
+            {/* v0.0.84 — the phone's spend window carries the same measured GO
+                bar as the creative and the PC Cost panel; the old line printed
+                the $0.00 invoice as if the subscription were free. */}
+            <div className="mb-2"><GoUsageBar /></div>
 
             <div className="rounded-xl border border-olympus-gold/10 bg-olympus-card p-3">
               <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-olympus-text-dim">
@@ -610,6 +614,30 @@ export default function MobileCompanion() {
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-olympus-bg">
                 <div className="h-full rounded-full bg-olympus-gold" style={{ width: `${pct}%` }} />
               </div>
+              {(run?.hops?.inFlightList?.length ?? 0) > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {run!.hops!.inFlightList!.map((h) => (
+                    <button
+                      key={h.hopId}
+                      onClick={() => setSheetHop(h.hopId)}
+                      aria-label={`Open ${h.hopId}`}
+                      data-tip="Open the hop task sheet"
+                      className="cursor-pointer rounded-full border border-olympus-cyan/30 px-2 py-0.5 text-[10px] text-olympus-cyan"
+                    >
+                      {h.hopId}{h.god ? ` · ${h.god}` : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {run?.hops?.parked?.hopId && (
+                <button
+                  onClick={() => setSheetHop(run.hops!.parked!.hopId!)}
+                  aria-label={`Open parked hop ${run.hops.parked.hopId}`}
+                  className="mt-1 cursor-pointer text-[9px] font-mono text-olympus-gold underline decoration-dotted"
+                >
+                  {t('m.parkedAt', language)} {run.hops.parked.hopId}
+                </button>
+              )}
               {active && (
                 <button
                   onClick={() => { void askApollo(`Nova tarefa: continue o projeto ${active}`); setDetailsOpen(false); }}
@@ -772,6 +800,8 @@ export default function MobileCompanion() {
           </div>
         </div>
       )}
+
+      {sheetHop && <TaskSheetModal hopId={sheetHop} onClose={() => setSheetHop(null)} />}
 
       {/* v0.0.84 — the personal animated preview + mark. The public share link
           has no mark; only the OLYMPUS session can send an Athena edit. */}

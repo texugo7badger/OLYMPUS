@@ -91,10 +91,13 @@ export default function GoUsageBar({ token }: { token?: string | null }) {
   const load = useCallback(async () => {
     try {
       const mobileToken = token || (() => { try { return localStorage.getItem('olympus:mobile-token'); } catch { return null; } })();
+      // v0.0.84 — the first call on a cold process scans the chat + hop DBs
+      // (measured 6–9s, longer while a hop throttles the CPU). 12s aborted the
+      // instrument exactly when it was most useful; 25s matches the cold scan.
       const r = await mobileFetch('/api/olympus/go-usage', {
         cache: 'no-store',
         headers: mobileToken ? { 'x-olympus-token': mobileToken } : undefined,
-      });
+      }, 25_000);
       const d = await r.json().catch(() => null);
       if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
       setData(d as Usage);
@@ -118,7 +121,7 @@ export default function GoUsageBar({ token }: { token?: string | null }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(mobileToken ? { 'x-olympus-token': mobileToken } : {}) },
         body: JSON.stringify({ plan }),
-      });
+      }, 20_000);
       const d = await r.json().catch(() => null);
       if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
       await load();

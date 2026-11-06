@@ -24,8 +24,9 @@ fs.mkdirSync(path.join(HOME, 'metrics'), { recursive: true });
 const now = Date.parse('2026-11-04T12:00:00.000Z');
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
-const row = (hoursAgo, usd, tokens = 1000) => ({
+const row = (hoursAgo, usd, tokens = 1000, model = 'opencode-go/deepseek-v4.1-flash') => ({
   ts: new Date(now - hoursAgo * HOUR).toISOString(),
+  model,
   spend_estimated_usd: usd,
   input_tokens: tokens,
   output_tokens: 0,
@@ -78,6 +79,31 @@ expect('C-9: describeCaps exposes 5h/weekly/monthly usage', described.usage.five
 // C-10: a broken file is "no caps", never a crash
 fs.writeFileSync(path.join(HOME, 'cost-caps.json'), '{not json');
 expect('C-10: a broken caps file degrades to unlimited', readCostCaps(HOME).enabled === false, 'threw or enabled');
+
+// v0.0.84 (#277) — per-model buckets. The GO plan meters each model
+// workspace-wide, so a global cap cannot see the one bucket that is hot.
+fs.writeFileSync(path.join(HOME, 'cost-caps.json'), JSON.stringify({
+  global: { fiveHourUsd: 100 },
+  models: { 'qwen3.7-plus': { fiveHourUsd: 1 }, 'deepseek-v4.1-flash': { monthlyTokens: 5000 } },
+}));
+const caps11 = readCostCaps(HOME);
+expect('C-11: models are parsed and the brake is enabled by them alone', caps11.enabled === true && Object.keys(caps11.models).length === 2, JSON.stringify(caps11.models));
+const v11 = evaluateCostCaps([
+  row(1, 0.7, 1000, 'opencode-go/qwen3.7-plus'),
+  row(2, 0.6, 1000, 'opencode-go/qwen3.7-plus'),
+  row(1, 0.2, 1000, 'opencode-go/deepseek-v4.1-flash'),
+], caps11, now);
+expect('C-12: a per-model 5h cap fires with the model named', v11.ok === false && v11.window === '5h' && v11.model === 'qwen3.7-plus' && /\[qwen3\.7-plus\]/.test(v11.reason), JSON.stringify(v11));
+const v13 = evaluateCostCaps([
+  row(1, 0.7, 1000, 'opencode-go/deepseek-v4.1-flash'),
+  row(2, 0.7, 1000, 'opencode-go/deepseek-v4.1-flash'),
+], caps11, now);
+expect('C-13: another model does not pay the hot model\'s cap', v13.ok === true, JSON.stringify(v13));
+const v14 = evaluateCostCaps([
+  row(1, 0.1, 3000, 'opencode-go/deepseek-v4.1-flash'),
+  row(2, 0.1, 3000, 'opencode-go/deepseek-v4.1-flash'),
+], caps11, now);
+expect('C-14: a per-model token cap fires on tokens alone', v14.ok === false && v14.window === 'monthly' && v14.model === 'deepseek-v4.1-flash' && v14.capUsd === null, JSON.stringify(v14));
 
 fs.rmSync(HOME, { recursive: true, force: true });
 console.log(`\ncost-caps: ${failures === 0 ? 'PASS' : failures + ' FAIL'}`);

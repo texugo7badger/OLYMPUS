@@ -42,10 +42,19 @@ export interface CostCaps {
   /** A cap file or an env var exists. When false, the brake is off. */
   enabled: boolean;
   global: CostWindowCaps;
+  /**
+   * v0.0.84 — per-model caps (issue #277). The GO plan's buckets are
+   * workspace-wide per MODEL, not per API key, so a global cap cannot see the
+   * bucket that is actually hot. Keys match by exact id or suffix: a cap for
+   * `qwen3.7-plus` also matches the ledger's `opencode-go/qwen3.7-plus`.
+   */
+  models: Record<string, CostWindowCaps>;
 }
 
 export interface CostLedgerRow {
   ts: string;
+  /** The lane/model that produced the row (e.g. opencode-go/qwen3.7-plus). */
+  model?: string;
   spend_estimated_usd?: number;
   spend_usd?: number;
   input_tokens?: number;
@@ -64,6 +73,8 @@ export type CostCapVerdict =
       ok: false;
       /** `5h` | `weekly` | `monthly` */
       window: '5h' | 'weekly' | 'monthly';
+      /** v0.0.84 — set when a per-model cap fired, not the global one. */
+      model?: string;
       usedUsd: number;
       capUsd: number | null;
       usedTokens: number;
@@ -83,21 +94,35 @@ function num(value: unknown): number | undefined {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
+function parseWindows(g: any): CostWindowCaps {
+  return {
+    fiveHourUsd: num(g?.fiveHourUsd),
+    weeklyUsd: num(g?.weeklyUsd),
+    monthlyUsd: num(g?.monthlyUsd),
+    fiveHourTokens: num(g?.fiveHourTokens),
+    weeklyTokens: num(g?.weeklyTokens),
+    monthlyTokens: num(g?.monthlyTokens),
+  };
+}
+
+function hasAnyCap(c: CostWindowCaps): boolean {
+  return Object.values(c).some((v) => typeof v === 'number');
+}
+
 /** Read the caps file + env. Never throws: a broken file is "no caps". */
 export function readCostCaps(home?: string): CostCaps {
   let global: CostWindowCaps = {};
+  let models: Record<string, CostWindowCaps> = {};
   try {
     const file = path.join(homeDir(home), 'cost-caps.json');
     const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
-    const g = raw?.global ?? raw ?? {};
-    global = {
-      fiveHourUsd: num(g.fiveHourUsd),
-      weeklyUsd: num(g.weeklyUsd),
-      monthlyUsd: num(g.monthlyUsd),
-      fiveHourTokens: num(g.fiveHourTokens),
-      weeklyTokens: num(g.weeklyTokens),
-      monthlyTokens: num(g.monthlyTokens),
-    };
+    global = parseWindows(raw?.global ?? raw ?? {});
+    if (raw?.models && typeof raw.models === 'object' && !Array.isArray(raw.models)) {
+      for (const [id, cap] of Object.entries(raw.models)) {
+        const parsed = parseWindows(cap);
+        if (hasAnyCap(parsed)) models[String(id)] = parsed;
+      }
+    }
   } catch { /* no file = no caps */ }
 
   const env = process.env;
@@ -109,8 +134,8 @@ export function readCostCaps(home?: string): CostCaps {
     weeklyTokens: num(env.OLYMPUS_CAP_WEEKLY_TOKENS) ?? global.weeklyTokens,
     monthlyTokens: num(env.OLYMPUS_CAP_MONTHLY_TOKENS) ?? global.monthlyTokens,
   };
-  const enabled = Object.values(global).some((v) => typeof v === 'number');
-  return { enabled, global };
+  const enabled = hasAnyCap(global) || Object.keys(models).length > 0;
+  return { enabled, global, models };
 }
 
 /** Read the ledger, cached by mtime — the walker may ask once per hop. */
@@ -153,6 +178,7 @@ function exceeded(
   usage: CostWindowUsage,
   capUsd: number | undefined,
   capTokens: number | undefined,
+  model?: string,
 ): CostCapVerdict | null {
   const usdHit = typeof capUsd === 'number' && usage.spendUsd >= capUsd;
   const tokHit = typeof capTokens === 'number' && usage.tokens >= capTokens;
@@ -163,12 +189,45 @@ function exceeded(
   return {
     ok: false,
     window,
+    ...(model ? { model } : {}),
     usedUsd: usage.spendUsd,
     capUsd: typeof capUsd === 'number' ? capUsd : null,
     usedTokens: usage.tokens,
     capTokens: typeof capTokens === 'number' ? capTokens : null,
-    reason: `cost-cap-exceeded:${window} — ${parts.join(' and ')}; raise the cap or wait for the window to roll`,
+    reason: `cost-cap-exceeded:${window}${model ? `[${model}]` : ''} — ${parts.join(' and ')}; raise the cap or wait for the window to roll`,
   };
+}
+
+const WINDOWS: Array<['5h' | 'weekly' | 'monthly', number]> = [
+  ['5h', 5 * HOUR],
+  ['weekly', 7 * DAY],
+  ['monthly', 30 * DAY],
+];
+
+function evaluateWindows(
+  caps: CostWindowCaps,
+  rows: CostLedgerRow[],
+  now: number,
+  model?: string,
+): CostCapVerdict | null {
+  for (const [name, ms] of WINDOWS) {
+    const capUsd = name === '5h' ? caps.fiveHourUsd : name === 'weekly' ? caps.weeklyUsd : caps.monthlyUsd;
+    const capTokens = name === '5h' ? caps.fiveHourTokens : name === 'weekly' ? caps.weeklyTokens : caps.monthlyTokens;
+    if (typeof capUsd !== 'number' && typeof capTokens !== 'number') continue;
+    const verdict = exceeded(name, windowUsage(rows, ms, now), capUsd, capTokens, model);
+    if (verdict) return verdict;
+  }
+  return null;
+}
+
+/**
+ * A configured model key matches an exact id or a path suffix:
+ * `qwen3.7-plus` matches `opencode-go/qwen3.7-plus`; a full id matches itself.
+ */
+function modelMatches(rowModel: unknown, capKey: string): boolean {
+  const id = String(rowModel ?? '').trim();
+  if (!id) return false;
+  return id === capKey || id.endsWith(`/${capKey}`) || id.includes(capKey);
 }
 
 /**
@@ -181,15 +240,13 @@ export function evaluateCostCaps(
   now = Date.now(),
 ): CostCapVerdict {
   if (!caps.enabled) return { ok: true, enabled: false };
-  const windows: Array<['5h' | 'weekly' | 'monthly', number, number | undefined, number | undefined]> = [
-    ['5h', 5 * HOUR, caps.global.fiveHourUsd, caps.global.fiveHourTokens],
-    ['weekly', 7 * DAY, caps.global.weeklyUsd, caps.global.weeklyTokens],
-    ['monthly', 30 * DAY, caps.global.monthlyUsd, caps.global.monthlyTokens],
-  ];
-  for (const [name, ms, capUsd, capTokens] of windows) {
-    if (typeof capUsd !== 'number' && typeof capTokens !== 'number') continue;
-    const verdict = exceeded(name, windowUsage(rows, ms, now), capUsd, capTokens);
-    if (verdict) return verdict;
+  const globalHit = evaluateWindows(caps.global, rows, now);
+  if (globalHit) return globalHit;
+  // v0.0.84 — the per-model buckets are the ones the GO plan actually meters.
+  for (const [id, cap] of Object.entries(caps.models ?? {})) {
+    const scoped = rows.filter((r) => modelMatches(r.model, id));
+    const hit = evaluateWindows(cap, scoped, now, id);
+    if (hit) return hit;
   }
   return { ok: true, enabled: true };
 }
@@ -208,5 +265,5 @@ export function describeCaps(caps: CostCaps, rows: CostLedgerRow[], now = Date.n
     weekly: windowUsage(rows, 7 * DAY, now),
     monthly: windowUsage(rows, 30 * DAY, now),
   };
-  return { enabled: caps.enabled, caps: caps.global, usage };
+  return { enabled: caps.enabled, caps: caps.global, models: caps.models ?? {}, usage };
 }

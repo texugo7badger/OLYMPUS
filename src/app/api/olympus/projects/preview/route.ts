@@ -64,7 +64,17 @@ async function describe(slug: string, host: string | null): Promise<PreviewState
   // wrong surface. The manager assigns a free port when the start runs.
   const status = await managerStatus(slug).catch(() => null);
   const port = status?.port ?? project?.livePreviewPort ?? null;
-  const probe = port ? await probeDevServer(port) : { running: false, responseTimeMs: null };
+  // v0.0.84 — a dev server that is compiling can drop a single 1.5s TCP
+  // probe under load. One bounded retry keeps the phone's preview from
+  // flashing "not running" on a server that is alive (the probe evidence is
+  // still required; a dead port fails both).
+  let probe: Awaited<ReturnType<typeof probeDevServer>> = port
+    ? await probeDevServer(port)
+    : { running: false, host: null, url: '', responseTimeMs: 0 };
+  if (port && !probe.running) {
+    await new Promise((r) => setTimeout(r, 250));
+    probe = await probeDevServer(port, 2500);
+  }
   const running = Boolean(probe.running || status?.running);
   const tunnel = port ? previewTunnelStatus(port) : null;
 

@@ -2008,10 +2008,9 @@ export default function InteractiveTerminal() {
   // The reset is destructive (it drops the conversation and restarts the
   // warm server), so we confirm first instead of doing it on click.
   const handleNewSessionStart = useCallback(() => {
-    // Kill any in-flight run so the new session doesn't inherit events from
-    // the old conversation's stream.
-    actionAbortRef.current?.abort();
-    actionAbortRef.current = null;
+    // Show the box only. Aborting belongs to the CONFIRMED reset (resetTerminal
+    // aborts); aborting on open would kill a live answer just because the
+    // context crossed 95% and the offer appeared.
     setShowNewSessionConfirm(true);
   }, []);
 
@@ -2026,22 +2025,26 @@ export default function InteractiveTerminal() {
   //   3. Report the new port so the user can see the server really changed.
   // The indicator needs no explicit poke: resetTerminal rotates the
   // conversationId, and the next 5s poll finds no mapping → zeros.
-  const confirmNewSession = useCallback(async () => {
+  const confirmNewSession = useCallback(async (withHandoff = true) => {
     setShowNewSessionConfirm(false);
     // Issue #21: resetTerminal() rotates conversationId below, so capture the
     // pre-reset id FIRST and hand it to the server — that is the stale mapping
     // it needs to prune from ~/.olympus/opencode-sessions.json.
     const staleConversationId = conversationIdRef.current;
+    // v0.0.84 — capture the compact brief BEFORE the transcript is replaced.
+    // It is a file, not new context: the fresh session gets a short pointer.
+    const handoff = withHandoff ? buildConversationSummary() : '';
     resetTerminal();
     setSubmitting(true);
-    addMessage({ type: 'system', text: 'Restarting warm server…' });
+    addMessage({ type: 'system', text: withHandoff ? 'Saving a compact handoff and restarting the warm server…' : 'Restarting warm server…' });
     updateGodActivity('apollo', 'thinking', 'Restarting warm server...');
     ensureThinking();
+    let continued = false;
     try {
       const res = await fetch('/api/olympus/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset-session', conversationId: staleConversationId }),
+        body: JSON.stringify({ action: 'reset-session', conversationId: staleConversationId, handoff: handoff || undefined }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) {
@@ -2049,17 +2052,32 @@ export default function InteractiveTerminal() {
         removeThinking();
         return;
       }
-      addMessage({ type: 'system', text: `OpenCode server ready on port ${data.port}${data.warm ? ' (reused)' : ''} — fresh context window.` });
+      addMessage({
+        type: 'system',
+        text: `OpenCode server ready on port ${data.port}${data.warm ? ' (reused)' : ''} — clean context window${data.handoff?.path ? ` · handoff ${data.handoff.chars.toLocaleString()} chars` : ''}.`,
+      });
+      if (data.handoff?.path) {
+        // The one click the box promised: continue the SAME work in the clean
+        // window. `submit` owns the submitting lifecycle from here.
+        removeThinking();
+        setSubmitting(false);
+        continued = true;
+        void submit(
+          `[OLYMPUS HANDOFF] The context window was reset before it could degrade. Read your continuation brief first:\n${data.handoff.path}\n\nThen CONTINUE the same task from where it stopped. Do not restart it, do not ask the user to repeat the conversation, and do not claim work the brief does not support.`,
+        );
+      }
     } catch (e: any) {
       addMessage({ type: 'error', text: `Session reset failed: ${e?.message || 'network error'}` });
       removeThinking();
     } finally {
-      removeThinking();
-      setSubmitting(false);
-      updateGodActivity('apollo', 'idle');
-      inputRef.current?.focus();
+      if (!continued) {
+        removeThinking();
+        setSubmitting(false);
+        updateGodActivity('apollo', 'idle');
+        inputRef.current?.focus();
+      }
     }
-  }, [addMessage, updateGodActivity, ensureThinking, removeThinking, resetTerminal]);
+  }, [addMessage, updateGodActivity, ensureThinking, removeThinking, resetTerminal, buildConversationSummary, submit]);
 
   // Called when the new-session stream ends. handleServerEvent already
   // processed the 'action_done' SSE event (reset submitting/awaiting/etc.
@@ -2135,12 +2153,15 @@ export default function InteractiveTerminal() {
         </div>
       </div>
 
-      {/* Reset confirmation dialog — Olympus styled, not browser default */}
+      {/* Reset confirmation dialog — Olympus styled, not browser default.
+          v0.0.84 — the primary action is a CONTINUATION: a compact handoff is
+          written to disk, the warm server restarts with a clean window, and
+          Apollo resumes the same task from that brief. */}
       {showNewSessionConfirm && (
-        <div className="shrink-0 px-3 py-2 bg-olympus-gold/10 border-b border-olympus-gold/30 flex items-center justify-between">
+        <div className="shrink-0 px-3 py-2 bg-olympus-gold/10 border-b border-olympus-gold/30 flex flex-wrap items-center justify-between gap-2">
           <span className="text-[10px] font-mono text-olympus-gold flex items-center gap-1.5">
             <RefreshCw size={11} />
-            Start a fresh session? This clears the conversation and restarts the warm server (~10s). The project stays the same.
+            Context is nearly full. Continue the same work in a clean window? Apollo saves a compact handoff, restarts the warm server (~10s) and reads it back — the transcript stays on disk.
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -2150,10 +2171,17 @@ export default function InteractiveTerminal() {
               Cancel
             </button>
             <button
-              onClick={confirmNewSession}
+              onClick={() => void confirmNewSession(false)}
+              className="text-[10px] font-mono px-2 py-1 rounded text-olympus-text-dim hover:bg-olympus-red/10 hover:text-olympus-red transition-colors"
+              data-tip="Clear everything and start with no handoff"
+            >
+              Start empty
+            </button>
+            <button
+              onClick={() => void confirmNewSession(true)}
               className="text-[10px] font-mono px-2 py-1 rounded bg-olympus-gold/20 text-olympus-gold hover:bg-olympus-gold/30 ring-1 ring-olympus-gold/30 transition-colors"
             >
-              Start fresh
+              Handoff + continue
             </button>
           </div>
         </div>

@@ -13,6 +13,7 @@ import { maybeStartDevServer } from '@/lib/dev-server-trigger';
 import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
 import { startDetachedWalk } from '@/lib/hop-runtime/supervisor';
 import { markUserActivity } from '@/lib/user-activity';
+import { writeHandoff } from '@/lib/context-handoff';
 import { pickPlanRoot, walkRootNote } from '@/lib/hop-runtime/walk-root';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
 import { probeLane } from '@/lib/lane-probe';
@@ -572,6 +573,15 @@ ${uiReferencesBlock}`
   // survives untouched — as do the vault, permissions and instincts.
   if (action === 'reset-session') {
     try {
+      // v0.0.84 — an optional handoff makes the reset a CONTINUATION, not an
+      // amnesia. The brief is written to disk (0600) BEFORE the serve dies;
+      // the fresh session gets a short prompt with the path and reads it on
+      // demand, so the new window starts near 0% instead of re-injecting the
+      // old transcript (the 53% → 82% regression).
+      const handoffText = typeof body.handoff === 'string' ? body.handoff.trim() : '';
+      const handoff = handoffText
+        ? writeHandoff(handoffText, body.conversationId || undefined)
+        : null;
       cleanupServer();
       const server = await ensureServer();
       // Issue #21: drop the pre-reset conversation's session mapping. Its
@@ -582,7 +592,7 @@ ${uiReferencesBlock}`
       // before it rotated to a fresh one.
       const forgotten = forgetConversation(body.conversationId || '');
       console.log(
-        `[olympus-action] reset-session: fresh OpenCode server on port ${server.port} (warm=${server.warm}, pruned_stale_mapping=${forgotten})`,
+        `[olympus-action] reset-session: fresh OpenCode server on port ${server.port} (warm=${server.warm}, pruned_stale_mapping=${forgotten}, handoff=${handoff?.path ?? 'none'})`,
       );
       return NextResponse.json({
         ok: true,
@@ -590,6 +600,7 @@ ${uiReferencesBlock}`
         warm: server.warm,
         authed: server.authed,
         prunedStaleMapping: forgotten,
+        handoff,
       });
     } catch (e: any) {
       return NextResponse.json(

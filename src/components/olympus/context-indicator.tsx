@@ -118,6 +118,9 @@ export default function ContextIndicator({
   const [starting, setStarting] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  // v0.0.84 — ask ONCE per session when the window is nearly full. The box
+  // (in the terminal) offers handoff+continue; cancelling is remembered.
+  const autoOfferedRef = useRef<string>('');
   // Avoid refetching on every render — track the last fetch time.
   const lastFetchRef = useRef(0);
   // The parent passes `getConversationId` as an inline arrow (new identity
@@ -207,6 +210,17 @@ export default function ContextIndicator({
     }
   }, [starting, onStart]);
 
+  // v0.0.84 — a full window is not a surprise the user should discover from a
+  // degraded answer. Offer the clean continuation once, by session id.
+  useEffect(() => {
+    if (!usage || usage.unknown) return;
+    if (usage.percentage < 95) return;
+    const key = usage.sessionId || 'critical';
+    if (autoOfferedRef.current === key) return;
+    autoOfferedRef.current = key;
+    onStart?.();
+  }, [usage, onStart]);
+
   // ---- Render -----------------------------------------------------------
   // Color falls back to a dim gray when we have no data yet — the
   // indicator is present but unobtrusive, which is the desired behavior
@@ -275,7 +289,7 @@ export default function ContextIndicator({
       ) : null}
 
       <OlympusTooltip
-        content="Flush the current session and start a fresh one (server restarts; the project stays the same)."
+        content="Save a compact handoff and continue the same work in a clean context window (the warm server restarts; the transcript stays on disk)."
         side="bottom"
       >
         <button
@@ -287,14 +301,14 @@ export default function ContextIndicator({
             'bg-olympus-gold text-olympus-bg font-semibold ring-1 ring-olympus-gold/50 hover:brightness-110',
             starting && 'opacity-70 cursor-wait',
           )}
-          aria-label="Start a fresh session — clears the conversation and restarts the warm server"
+          aria-label="Handoff and continue — saves a compact brief and restarts the warm server"
         >
           {starting ? (
             <Loader2 size={9} className="animate-spin" />
           ) : (
             <Zap size={9} />
           )}
-          {starting ? 'starting' : 'new session'}
+          {starting ? 'starting' : 'handoff'}
         </button>
       </OlympusTooltip>
     </div>
