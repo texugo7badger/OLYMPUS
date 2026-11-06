@@ -293,7 +293,7 @@ export default function LiveWidgetPage() {
             </span>
           )}
         </button>
-        <button onClick={() => void cycleTheme()} aria-label={t('w.theme', language)} title={`${t('w.theme', language)} · ${normalizeThemeState(theme).presetId}`} className="rounded p-1" style={dim}>
+        <button onClick={() => void cycleTheme()} aria-label={`${t('w.theme', language)} · ${normalizeThemeState(theme).presetId}`} className="rounded p-1" style={dim}>
           <Palette size={12} />
         </button>
         <Link href="/m" aria-label="Abrir o app mobile OLYMPUS" className="rounded p-1" style={dim}>

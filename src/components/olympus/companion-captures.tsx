@@ -182,7 +182,7 @@ export default function CompanionCaptures({ slug, token, language, palette, scre
         <button onClick={() => void capture()} disabled={busy} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[9px] font-mono disabled:opacity-40" style={{ border: `1px solid ${palette.gold}44`, color: palette.gold }}>
           {busy ? <Loader2 size={9} className="animate-spin" /> : <RefreshCw size={9} />} {busy ? t('w.capturing', language) : t('w.captureNow', language)}
         </button>
-        {error && <p className="min-w-0 flex-1 truncate text-[8px] font-mono" style={{ color: palette.red }} title={error}>{error}</p>}
+        {error && <p className="min-w-0 flex-1 truncate text-[8px] font-mono" style={{ color: palette.red }}>{error}</p>}
       </div>
 
       <div className="mt-2 flex items-center gap-1.5">

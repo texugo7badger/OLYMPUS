@@ -577,7 +577,7 @@ export default function MobileCompanion() {
           <div className="text-[10px] font-semibold tracking-[0.22em]">OLYMPUS</div>
           <div className="truncate text-[10px] text-olympus-text-dim">{active || t('m.noProject', language)} · {campaignLabel}</div>
         </div>
-        <Link href="/m/widget" aria-label={t('m.openWidget', language)} title={t('m.openWidget', language)} className="flex h-11 w-11 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold">
+        <Link href="/m/widget" aria-label={t('m.openWidget', language)} className="flex h-11 w-11 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold">
           <Smartphone size={16} />
         </Link>
         <button
@@ -774,7 +774,7 @@ export default function MobileCompanion() {
                 <button
                   onClick={() => void resumeWalk()}
                   className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-cyan/40 bg-olympus-cyan/10 py-2 text-[11px] text-olympus-cyan"
-                  title="Resume only while the lane is idle"
+                  data-tip="Resume only while the lane is idle"
                 >
                   <RefreshCw size={12} /> resume the campaign (detached)
                 </button>
