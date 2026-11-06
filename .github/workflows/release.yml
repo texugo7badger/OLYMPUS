@@ -70,22 +70,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish release draft
-        uses: release-drafter/release-drafter@v6
-        with:
-          publish: true
-          tag: ${{ github.ref_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # The title law (the 2026-10-20 directive): every release is titled
-      # exactly "OLYMPUS v0.0.x" — nothing else. The drafter never sees PR
-      # merges (we commit direct to main), so the plain title is enforced
-      # here, deterministically, right after publish.
-      - name: Enforce the plain release title
-        run: gh release edit "${{ github.ref_name }}" --title "OLYMPUS v${{ steps.version.outputs.VERSION }}"
+      # The title law: every release is titled exactly "OLYMPUS vX.Y.Z".
+      # We commit direct to main, so Release Drafter sees no merged PRs and
+      # cannot be the source of truth. Create/update the release here, then
+      # upload the artifacts; the maintainer replaces the generated body with
+      # the honest release notes in the same action.
+      - name: Create or update the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          TITLE="OLYMPUS v${{ steps.version.outputs.VERSION }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE"
+          else
+            gh release create "$TAG" --title "$TITLE" --generate-notes
+          fi
 
       - name: Upload artifacts to release
         env:
