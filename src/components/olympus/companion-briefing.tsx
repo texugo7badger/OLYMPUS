@@ -60,7 +60,7 @@ export default function CompanionBriefing({ briefing, language, palette, busy, o
         <p className="mt-2 text-[11px] leading-relaxed" style={{ color: palette.red }}>{briefing.error || 'briefing unavailable'}</p>
         {onRefresh && (
           <button onClick={onRefresh} className="mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-mono" style={{ border: `1px solid ${palette.gold}44`, color: palette.gold }}>
-            <RefreshCw size={9} /> {t('w.clear', language)}
+            <RefreshCw size={9} /> {t('w.refresh', language)}
           </button>
         )}
       </section>

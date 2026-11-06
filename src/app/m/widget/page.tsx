@@ -316,7 +316,7 @@ export default function LiveWidgetPage() {
         <div className="mt-2 h-1.5 overflow-hidden rounded-full" style={{ background: palette.bg }}>
           <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${progress}%`, background: palette.gold }} />
         </div>
-        <p className="mt-2 line-clamp-2 text-[10px] leading-relaxed" style={dim}>{run?.line || 'waiting for the walker'}</p>
+        <p className="mt-2 line-clamp-2 text-[10px] leading-relaxed" style={dim}>{run?.line || t('m.waitingWalker', language)}</p>
         {inFlight.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {inFlight.slice(0, 4).map((h) => (
@@ -329,7 +329,7 @@ export default function LiveWidgetPage() {
         {parked?.hopId && (
           <div className="mt-2 flex items-center gap-2">
             <p className="min-w-0 flex-1 text-[9px] font-mono" style={{ color: palette.gold }}>
-              parked: {parked.hopId}{parked.reason ? ` · ${parked.reason}` : ''}
+              {t('w.parked', language)}: {parked.hopId}{parked.reason ? ` · ${parked.reason}` : ''}
             </p>
             <button
               onClick={() => void sendPrompt(`O hop ${parked.hopId} está parked (${parked.reason || 'sem motivo'}). Investigue o bloqueio e retome o walk.`)}
@@ -435,21 +435,21 @@ export default function LiveWidgetPage() {
 
       <div className="flex flex-wrap items-center gap-2 text-[9px] font-mono" style={dim}>
         <Zap size={9} style={{ color: palette.gold }} />
-        <span>{error ? `offline · ${error}` : 'app ↔ widget · sem abrir a tela do OLYMPUS'}</span>
+        <span>{error ? `${t('w.offline', language)} · ${error}` : `app ↔ widget · ${t('w.noPcScreen', language)}`}</span>
         <div className="ml-auto flex items-center gap-1.5">
           <Link href="/m" className="inline-flex items-center gap-1 rounded-full px-2 py-0.5" style={{ border: `1px solid ${palette.cyan}55`, color: palette.cyan }}>
             <Smartphone size={9} /> app
           </Link>
           {pwa.installEvent && (
             <button onClick={() => void pwa.install()} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5" style={{ border: `1px solid ${palette.gold}55`, color: palette.gold }}>
-              <Download size={9} /> instalar
+              <Download size={9} /> {t('m.installApp', language)}
             </button>
           )}
         </div>
       </div>
 
       <p className="text-center text-[8px] font-mono" style={dim}>
-        {pwa.installed ? 'instalado · este ícone abre o widget · o app está no ícone ao lado' : pwa.installEvent ? 'toque em instalar · ou ⋮ → adicionar à tela inicial' : 'adicione à tela inicial · mesmo ícone e tema do app mobile'}
+        {pwa.installed ? `${t('m.installed', language)} · ${t('w.noPcScreen', language)}` : t('m.installHint', language)}
       </p>
 
       <CompanionNotificationsSheet
