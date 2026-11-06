@@ -56,7 +56,7 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Build Next (packaging gate)
-        run: npx next build
+        run: npx next build --webpack
         env:
           NEXT_TELEMETRY_DISABLED: 1
 

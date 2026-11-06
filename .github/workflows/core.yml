@@ -20,7 +20,7 @@ jobs:
       - run: npm run lint
       - name: Pure core suites
         run: |
-          for t in cost-caps docs-check terminal-paste preview-share alignment-preview i18n-audit theme-gallery god-chat brain-live cost-window; do
+          for t in cost-caps docs-check terminal-paste preview-share alignment-preview i18n-audit theme-gallery god-chat brain-live cost-window context-handoff; do
             echo "== $t"
             npx tsx "scripts/$t.test.mjs"
           done

@@ -163,3 +163,6 @@ SESSION-CHECKPOINT*.md
 
 # v0.0.84 — token-speed.ts is source (the tok/s ledger reader), not a credential.
 !src/lib/token-speed.ts
+
+# v0.0.84 — the handoff suite is part of the battery, not a scratch file.
+!scripts/context-handoff.test.mjs

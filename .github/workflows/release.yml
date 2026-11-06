@@ -57,7 +57,7 @@ jobs:
           npm run overlay:compile
 
       - name: Build Next.js
-        run: npx next build
+        run: npx next build --webpack
       # v0.0.25 — the standalone must be COMPLETE before packaging: the
       # static/public copy plus the ws/tracing/perf gate (the
       # "Cannot find module './websocket'" boot crash).

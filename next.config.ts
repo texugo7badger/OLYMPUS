@@ -98,6 +98,13 @@ const nextConfig = {
   // (fallback for fs/path on server) is no longer needed — Turbopack
   // handles this natively.
   turbopack: {},
+  experimental: {
+    // v0.0.84 — build workers are memory-bound. The default 4 can SIGSEGV on
+    // a workstation whose free RAM is shared with a game/other servers (the
+    // 2026-11-06 specimens); 2 is deterministic and still inside the release
+    // timeout. It does not change the output.
+    cpus: 2,
+  },
   // Ensure CJS packages with minimal exports maps are available to Turbopack's
   // server-side bundle (postcss plugin dependencies, radix-ui primitives).
   // These packages are installed in node_modules but Turbopack may not resolve
