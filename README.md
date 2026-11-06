@@ -33,7 +33,12 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.83 — the user lane and the measured speed.**
+**v0.0.84 — the animated preview, the real share, mark on the phone.**
+The AIME static preview was the dev `allowedDevOrigins` gate; the public
+`sku-…` tunnel now hydrates and animates. Share returns the direct tunnel app
+(not the HTML-rewriting proxy), revoke kills it, and the OLYMPUS phone preview
+has a mark crosshair that sends a coordinate + instruction to Athena. v0.0.83
+was the user lane and the measured speed:
 The studio god cites measured tok/s (last turn, p50 by model, hop wall-clock)
 and the shared GO-bucket truth; studio sessions rotate hourly; an agent-scoped
 chip names the lane. A chat/mark/voice lease holds NEW hops while the human is

@@ -43,6 +43,7 @@ export default function LivePreview() {
   const [shareExpires, setShareExpires] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [dMode, setDMode] = useState<'live-tunnel' | 'proxy' | null>(null);
   const [pendingMark, setPendingMark] = useState<{ x: number; y: number } | null>(null);
   const [instruction, setInstruction] = useState('');
   const [sending, setSending] = useState(false);
@@ -186,7 +187,7 @@ export default function LivePreview() {
       });
       const d = await r.json();
       if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
-      setShareUrl(d.url); setShareId(d.id); setShareExpires(d.expiresAt); setShareCopied(false);
+      setShareUrl(d.url); setShareId(d.id); setShareExpires(d.expiresAt); setShareCopied(false); setDMode(d.mode ?? null);
     } catch (e: any) { setShareError(e?.message || String(e)); }
     finally { setShareBusy(false); }
   }, [activeProject]);
@@ -329,7 +330,7 @@ export default function LivePreview() {
                 {!shareUrl && (
                   <>
                     <p className="mb-2 text-[9px] font-mono leading-relaxed text-olympus-text-dim">
-                      A read-only link to THIS preview. Expires in 24h, revocable — never your OLYMPUS session.
+                      A LIVE link to THIS preview: the real animated app through an unguessable tunnel. Expires in 24h, revocable — it never carries your OLYMPUS session or vault.
                     </p>
                     <button
                       onClick={() => void createShare()}
@@ -352,7 +353,7 @@ export default function LivePreview() {
                       <button onClick={() => void revokeShare()} className="rounded bg-olympus-red/10 px-1.5 py-1 text-[9px] font-mono text-olympus-red ring-1 ring-olympus-red/25">revoke</button>
                     </div>
                     <p className="text-[8px] font-mono text-olympus-text-dim">
-                      {shareCopied ? 'copied ✓ · ' : ''}expires {shareExpires ? new Date(shareExpires).toLocaleString() : '—'}
+                      {shareCopied ? 'copied ✓ · ' : ''}{dMode === 'live-tunnel' ? 'live app · ' : 'proxy fallback · '}expires {shareExpires ? new Date(shareExpires).toLocaleString() : '—'}
                     </p>
                   </>
                 )}

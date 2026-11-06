@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Check, ExternalLink, Loader2, Lock, Mic, Palette, Play,
-  Radio, RefreshCw, Settings2, Sparkles, Square, X,
+  MousePointerClick, Radio, RefreshCw, Settings2, Sparkles, Square, X,
 } from 'lucide-react';
 import PlasmaRing from '@/components/olympus/plasma-ring';
 import { THEME_PRESETS, applyTheme, normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
@@ -79,6 +79,13 @@ export default function MobileCompanion() {
   const [git, setGit] = useState<{ remote?: string | null; branch?: string | null; commits?: Array<{ hash: string; subject: string; relative: string }> } | null>(null);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
+  // v0.0.84 — the personal preview sheet (animated app + mark -> Athena).
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [markMode, setMarkMode] = useState(false);
+  const [markPoint, setMarkPoint] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [markInstruction, setMarkInstruction] = useState('');
+  const [markBusy, setMarkBusy] = useState(false);
+  const [markNote, setMarkNote] = useState('');
   const [theme, setTheme] = useState<ThemeState | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [perfMode, setPerfMode] = useState(false);
@@ -277,6 +284,33 @@ export default function MobileCompanion() {
       setError(e?.message || t('m.connectionFailed', language));
     } finally { setPreviewBusy(false); }
   }, [active, previewBusy, headers, language]);
+
+  const sendMark = useCallback(async () => {
+    if (!active || !markPoint || !markInstruction.trim() || markBusy) return;
+    setMarkBusy(true);
+    setMarkNote('');
+    try {
+      const r = await fetch('/api/olympus/athena/edit', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          x: Math.round(markPoint.x),
+          y: Math.round(markPoint.y),
+          instruction: markInstruction.trim(),
+          projectSlug: active,
+          viewport: { width: Math.round(markPoint.w), height: Math.round(markPoint.h), devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1 },
+          route: '/',
+        }),
+      });
+      const d = await r.json().catch(() => null);
+      if (r.ok && d?.ok) {
+        setMarkNote('Athena recebeu o mark — acompanhe no terminal');
+        setMarkInstruction('');
+        setMarkMode(false);
+      } else setMarkNote(d?.error || 'mark failed');
+    } catch (e: any) { setMarkNote(e?.message || 'mark failed'); }
+    finally { setMarkBusy(false); }
+  }, [active, markPoint, markInstruction, markBusy, headers]);
 
   useEffect(() => {
     if (!token || !active) { setPreview(null); return; }
@@ -645,7 +679,10 @@ export default function MobileCompanion() {
                 <p className="mt-1 text-[10px] leading-relaxed text-olympus-text-dim break-words">{preview?.note || '—'}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {preview?.running && preview.recommendedUrl && (
-                    <a href={preview.recommendedUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded-lg bg-olympus-gold px-3 py-2 text-[11px] font-semibold text-olympus-bg"><ExternalLink size={12} /> {t('m.preview', language)}</a>
+                    <>
+                      <button onClick={() => { setPreviewOpen(true); setMarkMode(false); setMarkNote(''); }} className="flex items-center gap-1 rounded-lg bg-olympus-gold px-3 py-2 text-[11px] font-semibold text-olympus-bg"><ExternalLink size={12} /> {t('m.preview', language)}</button>
+                      <a href={preview.recommendedUrl} target="_blank" rel="noreferrer" aria-label="Open preview externally" className="rounded-lg border border-olympus-gold/20 px-2 py-2 text-[10px] text-olympus-text-dim"><ExternalLink size={11} /></a>
+                    </>
                   )}
                   {!preview?.running && (
                     <button onClick={() => void previewAction('start')} disabled={previewBusy} className="flex items-center gap-1 rounded-lg bg-olympus-gold px-3 py-2 text-[11px] font-semibold text-olympus-bg disabled:opacity-40"><Play size={12} /> {t('m.startPreview', language)}</button>
@@ -732,6 +769,56 @@ export default function MobileCompanion() {
             >
               <Lock size={11} /> {t('m.lock', language)}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* v0.0.84 — the personal animated preview + mark. The public share link
+          has no mark; only the OLYMPUS session can send an Athena edit. */}
+      {previewOpen && preview?.recommendedUrl && (
+        <div className="fixed inset-0 z-[320] flex flex-col bg-olympus-bg text-olympus-text">
+          <header className="flex items-center gap-2 border-b border-olympus-gold/15 px-3 pt-[calc(env(safe-area-inset-top)+8px)] pb-2">
+            <button onClick={() => { setPreviewOpen(false); setMarkMode(false); }} aria-label="Close preview" className="flex h-10 w-10 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold"><X size={16} /></button>
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-olympus-gold">preview</div>
+              <div className="truncate text-[9px] font-mono text-olympus-text-dim">{active || 'project'} · :{preview.port || '—'} · live app</div>
+            </div>
+            <button onClick={() => setMarkMode((v) => !v)} aria-pressed={markMode} className={`flex h-10 items-center gap-1 rounded-full border px-3 text-[10px] font-mono ${markMode ? 'border-olympus-red/50 text-olympus-red' : 'border-olympus-cyan/30 text-olympus-cyan'}`}><MousePointerClick size={12} /> mark</button>
+            <a href={preview.recommendedUrl} target="_blank" rel="noreferrer" aria-label="Open externally" className="flex h-10 w-10 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold"><ExternalLink size={14} /></a>
+          </header>
+          <div className="relative min-h-0 flex-1 bg-black">
+            <iframe src={preview.recommendedUrl} title={`${active || 'project'} preview`} className="h-full w-full border-0" allow="fullscreen; clipboard-write" />
+            {markMode && (
+              <button
+                aria-label="Place a mark on the preview"
+                className="absolute inset-0 cursor-crosshair bg-olympus-red/5"
+                onClick={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  setMarkPoint({ x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height });
+                }}
+              />
+            )}
+            {markPoint && (
+              <span className="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-olympus-red bg-olympus-red/20" style={{ left: markPoint.x, top: markPoint.y }} />
+            )}
+          </div>
+          <div className="border-t border-olympus-gold/15 bg-olympus-panel px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2">
+            <div className="flex items-center gap-1.5">
+              <input
+                value={markInstruction}
+                onChange={(e) => setMarkInstruction(e.target.value)}
+                placeholder={markMode ? 'descreva o que marcar…' : 'ative mark e toque no preview'}
+                aria-label="Mark instruction"
+                className="min-w-0 flex-1 rounded-lg border border-olympus-gold/20 bg-olympus-bg px-2.5 py-2 text-[12px] outline-none placeholder:text-olympus-text-dim"
+              />
+              <button onClick={() => void sendMark()} disabled={!markPoint || !markInstruction.trim() || markBusy} className="rounded-lg bg-olympus-gold/15 px-3 py-2 text-[10px] font-mono text-olympus-gold ring-1 ring-olympus-gold/30 disabled:opacity-40">
+                {markBusy ? <Loader2 size={12} className="animate-spin" /> : 'enviar'}
+              </button>
+            </div>
+            <div className="mt-1 flex items-center gap-2 text-[8px] font-mono text-olympus-text-dim">
+              <span>{markMode ? (markPoint ? `mark em ${Math.round(markPoint.x)},${Math.round(markPoint.y)}` : 'toque no preview') : 'o app é interativo; mark ativa a mira'}</span>
+              {markNote && <span className="ml-auto text-olympus-cyan">{markNote}</span>}
+            </div>
           </div>
         </div>
       )}

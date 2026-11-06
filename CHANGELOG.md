@@ -2,6 +2,44 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.84] — 2026-11-05
+
+### The animated preview, the real share, and mark on the phone
+
+- **Root cause of the static AIME preview:** the AIME `next.config.ts` only
+  allowed `127.0.0.1`/`localhost` in `allowedDevOrigins`. Next 16 gates the
+  dev `/_next/*` debug/HMR channel by Origin; the tunnel host was rejected,
+  the RSC/debug streams never closed, `hydrateRoot` was never called, and the
+  page rendered **server-only** (static, no animations, no console error).
+  The config now allows `*.trycloudflare.com` / `**.trycloudflare.com`; the
+  public `sku-…` tunnel hydrates and animates (measured: client opacity
+  changing 0.37→0.32 over 1.2s, 153 animated elements).
+- **Share means the real app, not the HTML-rewriting proxy.** The share POST
+  now starts/reuses the **preview tunnel** and returns the direct HTTPS app
+  URL (`mode: live-tunnel`); the old `/share/preview/<token>` remains a
+  read-only proxy fallback. Revoking a share also stops the tunnel. The link
+  never carries the OLYMPUS session or vault — only the project preview port.
+- **Mark on the phone.** The OLYMPUS user's `/m` preview now opens an
+  in-app sheet with the **animated app** in an iframe, a `mark` crosshair,
+  the tapped coordinates, an instruction, and `enviar` → the existing
+  `/api/olympus/athena/edit` lane. The public share has no mark; only the
+  OLYMPUS session can dispatch an edit. The iframe stays interactive when
+  mark is off.
+- **Honest caveat:** the AIME app still logs a hydration mismatch (server vs
+  client HTML); the client regenerates the tree, so the animations run, but
+  the app has a real hydration difference to fix in the project. The AIME
+  gate `v5g3` parked `dispatch-failed`; the walk resumed with
+  `v5g4-mobile-touch-speed` / `v5g5-mobile-theme-shadow` in flight.
+
+### Honest limits
+
+- The direct share is an unguessable **quick tunnel**, not a token-gated
+  request; revoke kills the tunnel, and a named tunnel is the stable path.
+- The AIME unit suite debt and the mobile gate still need their own repair.
+- The post-v0.0.83 cache/chip battery reruns hit load flakes
+  (`telemetry-pulse`, `planner-patience`, both pass standalone); this release
+  is a preview/share/mark change, not a new model or planner behavior.
+
 ## [v0.0.83] — 2026-11-05
 
 ### Speed is measured, and the user lane wins
