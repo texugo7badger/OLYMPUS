@@ -125,6 +125,11 @@ All notable changes to OLYMPUS are documented in this file.
 - **A parked-hop question inherits the active lane.** "O hop X está parked.
   Investigue…" and campaign/status questions no longer create
   `hop-…-est-parked` projects; a real new request still creates a project.
+- **A short follow-up also inherits the lane.** A ~300-char design critique
+  (`background-escolhido-para-padr`) had minted a project and stolen the active
+  pointer; short instructions now inherit the active project unless they
+  explicitly ask to create/build a new one (`create`, `crie`, `novo projeto`,
+  `do zero`). The New Project button remains the explicit fork.
 - The bogus workspaces created by the bug were moved to
   `~/.olympus/workspaces/_archive/2026-11-06-broken/` (recoverable, not deleted).
 
