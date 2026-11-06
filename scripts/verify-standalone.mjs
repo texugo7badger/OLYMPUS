@@ -30,6 +30,7 @@
  */
 
 import fs from 'node:fs';
+import os from 'node:os';
 import net from 'node:net';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -167,11 +168,33 @@ async function bootSmoke() {
     if (child.exitCode !== null) break;
     await new Promise((r) => setTimeout(r, 500));
   }
+  // v0.0.84 edit — the HTML must reference chunks that EXIST. The mixed
+  // Turbopack→webpack build served an old index.html whose `_._.js` chunks
+  // 404'd; React never hydrated and the app sat on "loading the pantheon".
+  let chunkCheck = { ok: false, detail: 'no HTML' };
+  if (answered) {
+    try {
+      const token = fs.readFileSync(`${os.homedir()}/.olympus/session-token`, 'utf-8').trim();
+      const res = await fetch(`http://127.0.0.1:${port}/`, { headers: token ? { 'x-olympus-token': token } : {}, signal: AbortSignal.timeout(5000) });
+      const html = await res.text();
+      const srcs = [...html.matchAll(/src=["'](\/_next\/static\/[^"']+\.js)["']/g)].map((m) => m[1]);
+      const unique = [...new Set(srcs)];
+      const results = await Promise.all(unique.slice(0, 24).map(async (src) => {
+        try { const r = await fetch(`http://127.0.0.1:${port}${src}`, { signal: AbortSignal.timeout(5000) }); return { src, status: r.status }; }
+        catch { return { src, status: 0 }; }
+      }));
+      const bad = results.filter((r) => r.status !== 200);
+      chunkCheck = { ok: unique.length > 0 && bad.length === 0, detail: bad.length ? `${bad.length}/${unique.length} bad: ${bad[0].src}` : `${unique.length} HTML chunks 200` };
+    } catch (e) {
+      chunkCheck = { ok: false, detail: e?.message || 'HTML fetch failed' };
+    }
+  }
   try { child.kill('SIGKILL'); } catch { /* gone */ }
   await new Promise((r) => setTimeout(r, 300));
 
   const text = log.join('');
   check('standalone server.js answers HTTP', answered, answered ? '' : text.slice(-400));
+  check('HTML chunk scripts resolve (no stale build)', chunkCheck.ok, chunkCheck.detail);
   check('no MODULE_NOT_FOUND in the boot log', !/MODULE_NOT_FOUND|Cannot find module/.test(text), text.match(/Cannot find module[^\n]*/)?.[0] ?? 'clean');
   check('no instrumentation error in the boot log', !/loading instrumentation hook/i.test(text));
 }

@@ -113,3 +113,27 @@ external user.** 9.0 and 10.0 are community and sustainability, not versions.
 - `npm run docs:check` — VERSION, README, CHANGELOG, ROADMAP, STABILITY and
   the retired 97% claim are gated.
 - Strategy switch while a walk is live → refused with the holder named.
+
+## After v0.1.0 — updates, changelog and the community as part of OLYMPUS
+
+- **Update flow (stable and dev channels).** When a new build is available,
+  OLYMPUS asks before updating; the update runs behind the branded animated
+  loader with the OLYMPUS mark and a real progress bar. A multilingual,
+  simple changelog explains the new features, fixes and known bugs. Stable
+  and development channels are separate: the dev channel shows what is being
+  built in real time, with an explicit “possible bugs” warning, and never
+  silently replaces the stable tag.
+- **The community builds the base.** Users can export/import instincts,
+  skills, MCPs and vault knowledge as signed build packs; a non-developer can
+  publish a pack through the app (upload/push) without touching the repo.
+  The OriginKit/reference catalog feeds the same pipeline. Each OLYMPUS learns
+  from its own user, and the community can share what worked.
+- **Free lanes are community experiments, not a promise.** The official build
+  does not ship a “free strategy” that failed the benchmark; the UI makes it
+  easy to find/test a community free build and warns about small contexts,
+  weak tool use and rate limits. A working free recipe can be pushed back as a
+  build pack.
+- **The 8-hour night benchmark.** A scheduled overnight campaign produces the
+  benchmark/log bundle (workflow, token spend, instincts and knowledge
+  learned, per-hop truth) that becomes the evidence for the next model,
+  prompt and routing decisions.
