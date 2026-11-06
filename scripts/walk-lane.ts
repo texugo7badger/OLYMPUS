@@ -42,6 +42,9 @@ function log(msg: string) {
 }
 
 async function main() {
+  // v0.0.84 edit — a hop is background work: lower its CPU priority so the
+  // Next UI and the phone APIs stay responsive while agents/eslint/builds run.
+  try { os.setPriority(process.pid, 10); } catch { /* platform */ }
   log(`start slug=${slug} lane=${laneRoot} pid=${process.pid}`);
   try {
     const result = await maybeWalkThePlan({

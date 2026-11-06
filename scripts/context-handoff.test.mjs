@@ -58,6 +58,7 @@ const walker = read('src/lib/hop-runtime/walker.ts');
 const widget = read('src/app/m/widget/page.tsx');
 const widgetManifest = read('public/manifest-widget.webmanifest');
 const pairing = read('src/lib/mobile-pairing.ts');
+const walkLane = read('scripts/walk-lane.ts');
 const pairDialog = read('src/components/olympus/mobile-pair-dialog.tsx');
 
 const writeAt = action.indexOf('writeHandoff(handoffText');
@@ -119,6 +120,10 @@ expect('T-16: the pairing payload carries a themed widget QR', /widgetQr/.test(p
 expect('T-17: the widget has a terminal queue + parked action + install prompt', /prompt-queue/.test(widget) && /investigar/.test(widget) && /beforeinstallprompt/.test(widget) && !/abrir OLYMPUS/.test(widget), 'widget is not interactive');
 expect('T-18: the widget is installable (SW + 192/512 icons)', /serviceWorker/.test(widget) && /widget-sw/.test(widget) && /olympus-192/.test(widgetManifest) && /olympus-512/.test(widgetManifest), 'no install surface');
 
+// v0.0.84 edit — the resume ACK must not wait on the spawn.
+expect('T-19: the resume stream ACKs before spawning the walker', /resume requested/.test(action) && /setImmediate/.test(action), 'resume waits on spawn');
+expect('T-20: hop work runs at low CPU priority', /setPriority\(process\.pid, 10\)/.test(walkLane), 'hops can starve the UI');
+
 fs.rmSync(home, { recursive: true, force: true });
 if (failures) { console.log(`\ncontext-handoff: ${failures} FAIL`); process.exit(1); }
-console.log('\nAll 39 context-handoff assertions passed');
+console.log('\nAll 41 context-handoff assertions passed');

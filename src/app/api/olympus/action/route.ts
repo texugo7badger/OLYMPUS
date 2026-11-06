@@ -169,28 +169,36 @@ function getConversationProject(conversationId: string): string | null {
  */
 function resumeWalkStream(
   slug: string,
-  started: { ok: boolean; pid?: number; reason?: string; logFile?: string },
+  start: () => { ok: boolean; pid?: number; reason?: string; logFile?: string },
 ): Response {
-  const ts = new Date().toISOString();
-  const already = started.reason === 'already-running';
-  const okay = started.ok || already;
-  const msg = okay
-    ? already
-      ? `walk already running (pid ${started.pid ?? '?'}) · ${slug} — no second walk started`
-      : `walk resumed (detached) · pid ${started.pid ?? '?'} · ${slug}`
-    : `walk not resumed — ${started.reason || 'the supervisor refused'}`;
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
       const send = (obj: any) => {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`)); } catch { /* closed */ }
       };
+      const ts = new Date().toISOString();
+      // v0.0.84 edit — flush the UI ACK before spawning the walker. Under a
+      // live campaign the spawn + first hops can starve the event loop; the
+      // phone must never wait 60s for a resume that already happened.
       send({ type: 'action_start', action: 'resume-walk', node: slug, cli: `walk-lane --slug ${slug}`, ts });
-      // walk_summary suppresses the action_done census ("no output") below.
-      send({ type: 'walk_summary', msg, ts });
-      if (!okay) send({ type: 'error', msg, ts });
-      send({ type: 'action_done', action: 'resume-walk', node: slug, code: okay ? 0 : -1, ts });
-      try { controller.close(); } catch { /* already closed */ }
+      send({ type: 'log', msg: `resume requested · ${slug} — starting the detached walker…`, ts });
+      setImmediate(() => {
+        let started: { ok: boolean; pid?: number; reason?: string; logFile?: string };
+        try { started = start(); } catch (e: any) { started = { ok: false, reason: e?.message || 'spawn failed' }; }
+        const already = started.reason === 'already-running';
+        const okay = started.ok || already;
+        const msg = okay
+          ? already
+            ? `walk already running (pid ${started.pid ?? '?'}) · ${slug} — no second walk started`
+            : `walk resumed (detached) · pid ${started.pid ?? '?'} · ${slug}`
+          : `walk not resumed — ${started.reason || 'the supervisor refused'}`;
+        // walk_summary suppresses the action_done census ("no output") below.
+        send({ type: 'walk_summary', msg, ts: new Date().toISOString() });
+        if (!okay) send({ type: 'error', msg, ts: new Date().toISOString() });
+        send({ type: 'action_done', action: 'resume-walk', node: slug, code: okay ? 0 : -1, ts: new Date().toISOString() });
+        try { controller.close(); } catch { /* already closed */ }
+      });
     },
   });
   return new Response(stream, {
@@ -333,8 +341,7 @@ export async function POST(req: NextRequest) {
           // The action route claimed the user lane at the top; a resume is
           // the user handing the lane BACK to the walker.
           clearUserActivity();
-          const started = startDetachedWalk({ slug: resumeSlug, laneRoot });
-          return resumeWalkStream(resumeSlug, started);
+          return resumeWalkStream(resumeSlug, () => startDetachedWalk({ slug: resumeSlug, laneRoot }));
         }
       }
     }

@@ -67,6 +67,11 @@ All notable changes to OLYMPUS are documented in this file.
   `opencode.json` on every hop because the lane always differs by its `-hop`
   agents and MCP manifest; the warm server then respawned mid-hop. The root
   content hash is the truth: copy only when the root changed.
+- **The resume ACK does not wait on the spawn.** The action route flushes the
+  `action_start` / "starting the detached walker" events before it spawns; a
+  loaded host can no longer make the phone wait 60s for a resume that already
+  happened. Hop processes run at `nice 10`, so the Next UI and phone APIs stay
+  responsive while agents/eslint/builds run.
 - **A finished walk with a parked hop resumes on boot** when the user's
   hibernate plan says `autoResume`: it retries only the last park, bounded,
   and keeps the older quarantine. A lane lock that is alive now refuses a
