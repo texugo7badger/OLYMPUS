@@ -51,8 +51,9 @@ export interface ActiveProjectFile {
 
 export const VAULT = getVaultRoot();
 export const PROJECTS_DIR = path.join(VAULT, '02_Projects');
-export const ACTIVE_FILE = path.join(os.homedir(), '.olympus', 'active-project.json');
-export const WORKSPACES_DIR = path.join(os.homedir(), '.olympus', 'workspaces');
+const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
+export const ACTIVE_FILE = path.join(OLYMPUS_HOME, 'active-project.json');
+export const WORKSPACES_DIR = path.join(OLYMPUS_HOME, 'workspaces');
 
 /** Slugify a project name for use as a folder name. */
 export function slugify(name: string): string {

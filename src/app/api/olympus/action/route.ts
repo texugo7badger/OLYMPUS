@@ -18,7 +18,7 @@ import { parseResumeIntent } from '@/lib/hop-runtime/resume-intent';
 import { pickPlanRoot, walkRootNote } from '@/lib/hop-runtime/walk-root';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
 import { probeLane } from '@/lib/lane-probe';
-import { reconcileProjectPath, PROJECTS_DIR, setActiveProject } from '@/lib/project-context';
+import { reconcileProjectPath, PROJECTS_DIR, setActiveProject, getActiveProjectSlug } from '@/lib/project-context';
 import { composePlannerRag } from '@/lib/rag-inject';
 import { composeKnowledgeBlock } from '@/lib/knowledge-hints';
 import { uiReferencesMarkerBlock } from '@/lib/ui-references';
@@ -359,6 +359,9 @@ export async function POST(req: NextRequest) {
       : action === 'context'
         ? `[Additional context from user] ${text}`
         : text;
+    // v0.0.85 — the project pin is routing metadata, not prose. Keep it for
+    // the intent stage, strip it from what the model reads.
+    const promptTextClean = String(promptText || '').replace(/^\s*\[OLYMPUS-PROJECT\s+[a-z0-9][a-z0-9-]{0,63}\]\s*\n?/i, '');
     const classification = classifyTurnWithInheritance(action, text, priorClassification);
     rememberConversationClassification(conversationId, classification);
     const classificationEnv = serializeClassification(classification);
@@ -481,7 +484,7 @@ export async function POST(req: NextRequest) {
     // existed with zero callers (dead code); it now rides the planner turn.
     // Non-fatal by contract: the RAG never breaks the plan.
     const plannerRagBlock = action === 'prompt' && classification.needsPlanning
-      ? await composePlannerRag(promptText).catch(() => '')
+      ? await composePlannerRag(promptTextClean).catch(() => '')
       : '';
     const plannerMarker = action === 'prompt' && classification.needsPlanning
       ? `[OLYMPUS-PLANNER] This task is architectural/complex. Your deliverable for this turn is THE PLAN, not monolithic code: write dispatch-plan.json${intentLaneRoot ? ` to THIS ABSOLUTE PATH: ${intentLaneRoot}/dispatch-plan.json — at that exact path, NEVER the session cwd or any workspace lane` : ' to the project lane root'} — a DAG of small hops. NEVER write code files yourself — the plan IS your deliverable. The HOP RUNTIME is the ONLY execution engine: it dispatches each hop to the hop's god on the god's model lane. If the walk is parked, the user's next prompt resumes it in the post-run — you do NOT need to (and MUST NOT) execute hops, write component code, or dispatch the plan to Atlas. THE CONTRACT IS INLINE (a minimal canonical plan — do NOT open any source to learn it): {"version":1,"laneRoot":"${intentLaneRoot ?? '<the ABSOLUTE path of this project lane root>'}","hops":[{"id":"shell","god":"hephaestus","prompt":"<the spec SLICE + the DESIGN DIRECTIVES slice for this hop>","artifacts":["app/layout.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/layout.tsx"]},"budgetTokens":8192},{"id":"landing","god":"athena","prompt":"<its own slice + the design tokens>","artifacts":["app/page.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/page.tsx"]},"budgetTokens":8192,"after":["shell"]}]} — the hard rules: version is exactly 1; hop ids unique; one god per hop; artifacts are real deliverable paths relative to the laneRoot; after-edges must stay acyclic; budgetTokens at most 16384 (8192 is the sane default); verify.review is "deterministic" with checks like file-exists:<path>. The hop runtime walks the plan: per-hop dispatch on the god\'s own model lane (concurrency at most 3), deterministic verify (0 tokens), park-on-exhaustion with resume. Sessions are lanes; the disk carries the campaign. HARD RULE: hop prompts must NEVER instruct deletion or cleanup of the lane's runtime files (.opencode, opencode.json, opencode.demigods.json, dispatch-plan.json, .olympus-*, project.md, _handoff.md, _delegations) — residue cleanup is the runtime's post-campaign job (the 10:16 specimen: a build-fix god deleted the machinery mid-walk and killed the campaign). STRICT JSON: the file must parse with JSON.parse on the first try — inside string values NEVER write raw line breaks or control characters (escape them as \\n); a 'Bad control character' parse error refuses the whole walk (the 23:32 specimen). USE THE WRITE TOOL to create the file — a chat-text plan is NOT a delivery: the post-run reads the FILE (it may HARVEST your narrated text as a fallback, but the write tool is the contract). YOUR FILE TOOLS ARE DIRECT: write/read/bash/edit are direct tools in your toolset — they are NEVER in the Code Mode catalog, and the catalog search will NOT find them; that is expected, not a gap. When you need to write dispatch-plan.json, call the write tool DIRECTLY — never report yourself blocked over file creation. `
@@ -519,7 +522,7 @@ ${uiReferencesBlock}`
     // v0.0.24 — the vault's domain references reach the task prompt. Bounded
     // (top 3, ~700 chars); a hint the god can open, never a context dump.
     const knowledgeBlock = action === 'prompt'
-      ? composeKnowledgeBlock({ god: agent, stacks: classification.stack ?? [], text: promptText })
+      ? composeKnowledgeBlock({ god: agent, stacks: classification.stack ?? [], text: promptTextClean })
       : '';
     // v0.0.34 — the Settings language reaches the CHAT too: the terminal
     // sends x-olympus-language and the god answers (and writes UI copy) in it.
@@ -532,8 +535,8 @@ ${uiReferencesBlock}`
       ? `\n\n[OLYMPUS-LANGUAGE ${uiLanguage}] The interface language is ${languageNames[uiLanguage] ?? 'English'}. ALL user-facing prose in your reply — explanations, plans, questions, summaries, choices and UI copy — must be written in ${languageNames[uiLanguage] ?? 'English'}. Code, identifiers, file paths, commands and upstream component names stay as-is.`
       : '';
     const runText = unattended
-      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker + languageMarker
-      : sessionMarker + classificationMarker + addressMarker + promptText + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker + languageMarker;
+      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptTextClean + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker + languageMarker
+      : sessionMarker + classificationMarker + addressMarker + promptTextClean + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker + languageMarker;
 
     return streamWarm(req, {
       conversationId,
@@ -605,6 +608,9 @@ ${uiReferencesBlock}`
       },
     });
 
+    // v0.0.85 — a new-session summary continues the active lane; it does not
+    // ask intake to derive a project from the summary text.
+    const activeSlug = getActiveProjectSlug();
     return streamWarm(req, {
       conversationId,
       text: handoffPrompt,
@@ -618,6 +624,7 @@ ${uiReferencesBlock}`
       },
       meta: { action, node: undefined, cli: `opencode run --format json --agent apollo <handoff>` },
       classification,
+      ...(activeSlug ? { intent: { slug: activeSlug, kind: 'existing', message: `New-session handoff inherits the active project '${activeSlug}'` } } : {}),
     });
   }
 

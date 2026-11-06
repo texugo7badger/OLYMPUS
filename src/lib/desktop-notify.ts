@@ -42,6 +42,18 @@ const NOTIFY_TEXT: Record<string, Record<string, string>> = {
     'park.body': '{slug}: {reason}',
     'ready.title': 'OLYMPUS — ready',
     'ready.body': '{detail}',
+    'hop.title': 'OLYMPUS — hop done',
+    'hop.body': '{slug}: {god} finished {hop} ({duration}).',
+    'hopPark.title': 'OLYMPUS — hop parked',
+    'hopPark.body': '{slug}: {hop} parked ({reason}). The campaign keeps going.',
+    'done.title': 'OLYMPUS — campaign finished',
+    'done.body': '{slug}: the plan is complete ({completed}/{total} hops).',
+    'phone.title': 'OLYMPUS — phone prompt sent',
+    'phone.body': '{project}: Apollo received the phone prompt — {detail}',
+    'phoneDone.title': 'OLYMPUS — Apollo answered',
+    'phoneDone.body': '{answer}',
+    'phoneFail.title': 'OLYMPUS — phone prompt failed',
+    'phoneFail.body': '{reason}',
   },
   'pt-BR': {
     'walk.title': 'OLYMPUS — caminhada iniciando',
@@ -50,6 +62,118 @@ const NOTIFY_TEXT: Record<string, Record<string, string>> = {
     'park.body': '{slug}: {reason}',
     'ready.title': 'OLYMPUS — pronto',
     'ready.body': '{detail}',
+    'hop.title': 'OLYMPUS — hop concluído',
+    'hop.body': '{slug}: {god} concluiu {hop} ({duration}).',
+    'hopPark.title': 'OLYMPUS — hop parado',
+    'hopPark.body': '{slug}: {hop} parou ({reason}). A campanha continua.',
+    'done.title': 'OLYMPUS — campanha concluída',
+    'done.body': '{slug}: o plano terminou ({completed}/{total} hops).',
+    'phone.title': 'OLYMPUS — prompt do celular enviado',
+    'phone.body': '{project}: o Apolo recebeu o prompt do celular — {detail}',
+    'phoneDone.title': 'OLYMPUS — Apolo respondeu',
+    'phoneDone.body': '{answer}',
+    'phoneFail.title': 'OLYMPUS — prompt do celular falhou',
+    'phoneFail.body': '{reason}',
+  },
+  es: {
+    'walk.title': 'OLYMPUS — la caminata comienza',
+    'walk.body': '{slug}: el plan se está recorriendo (cada hop corre en la lane de su dios).',
+    'park.title': 'OLYMPUS — campaña detenida',
+    'park.body': '{slug}: {reason}',
+    'ready.title': 'OLYMPUS — listo',
+    'ready.body': '{detail}',
+    'hop.title': 'OLYMPUS — hop completado',
+    'hop.body': '{slug}: {god} completó {hop} ({duration}).',
+    'hopPark.title': 'OLYMPUS — hop detenido',
+    'hopPark.body': '{slug}: {hop} se detuvo ({reason}). La campaña continúa.',
+    'done.title': 'OLYMPUS — campaña terminada',
+    'done.body': '{slug}: el plan está completo ({completed}/{total} hops).',
+    'phone.title': 'OLYMPUS — prompt del móvil enviado',
+    'phone.body': '{project}: Apollo recibió el prompt del móvil — {detail}',
+    'phoneDone.title': 'OLYMPUS — Apollo respondió',
+    'phoneDone.body': '{answer}',
+    'phoneFail.title': 'OLYMPUS — el prompt del móvil falló',
+    'phoneFail.body': '{reason}',
+  },
+  fr: {
+    'walk.title': 'OLYMPUS — la marche commence',
+    'walk.body': '{slug} : le plan est parcouru (chaque hop tourne sur la lane de son dieu).',
+    'park.title': 'OLYMPUS — campagne arrêtée',
+    'park.body': '{slug} : {reason}',
+    'ready.title': 'OLYMPUS — prêt',
+    'ready.body': '{detail}',
+    'hop.title': 'OLYMPUS — hop terminé',
+    'hop.body': '{slug} : {god} a terminé {hop} ({duration}).',
+    'hopPark.title': 'OLYMPUS — hop arrêté',
+    'hopPark.body': '{slug} : {hop} s\'est arrêté ({reason}). La campagne continue.',
+    'done.title': 'OLYMPUS — campagne terminée',
+    'done.body': '{slug} : le plan est complet ({completed}/{total} hops).',
+    'phone.title': 'OLYMPUS — prompt mobile envoyé',
+    'phone.body': '{project} : Apollo a reçu le prompt mobile — {detail}',
+    'phoneDone.title': 'OLYMPUS — Apollo a répondu',
+    'phoneDone.body': '{answer}',
+    'phoneFail.title': 'OLYMPUS — le prompt mobile a échoué',
+    'phoneFail.body': '{reason}',
+  },
+  de: {
+    'walk.title': 'OLYMPUS — Lauf startet',
+    'walk.body': '{slug}: Der Plan wird abgearbeitet (jeder Hop läuft auf der Lane seines Gottes).',
+    'park.title': 'OLYMPUS — Kampagne angehalten',
+    'park.body': '{slug}: {reason}',
+    'ready.title': 'OLYMPUS — bereit',
+    'ready.body': '{detail}',
+    'hop.title': 'OLYMPUS — Hop fertig',
+    'hop.body': '{slug}: {god} hat {hop} abgeschlossen ({duration}).',
+    'hopPark.title': 'OLYMPUS — Hop angehalten',
+    'hopPark.body': '{slug}: {hop} wurde angehalten ({reason}). Die Kampagne läuft weiter.',
+    'done.title': 'OLYMPUS — Kampagne beendet',
+    'done.body': '{slug}: Der Plan ist vollständig ({completed}/{total} Hops).',
+    'phone.title': 'OLYMPUS — Handy-Prompt gesendet',
+    'phone.body': '{project}: Apollo hat den Handy-Prompt erhalten — {detail}',
+    'phoneDone.title': 'OLYMPUS — Apollo hat geantwortet',
+    'phoneDone.body': '{answer}',
+    'phoneFail.title': 'OLYMPUS — Handy-Prompt fehlgeschlagen',
+    'phoneFail.body': '{reason}',
+  },
+  ja: {
+    'walk.title': 'OLYMPUS — ウォーク開始',
+    'walk.body': '{slug}: プランを実行中です（各ホップは担当神のレーンで動きます）。',
+    'park.title': 'OLYMPUS — キャンペーン停止',
+    'park.body': '{slug}: {reason}',
+    'ready.title': 'OLYMPUS — 準備完了',
+    'ready.body': '{detail}',
+    'hop.title': 'OLYMPUS — ホップ完了',
+    'hop.body': '{slug}: {god} が {hop} を完了しました（{duration}）。',
+    'hopPark.title': 'OLYMPUS — ホップ停止',
+    'hopPark.body': '{slug}: {hop} が停止しました（{reason}）。キャンペーンは継続します。',
+    'done.title': 'OLYMPUS — キャンペーン完了',
+    'done.body': '{slug}: プランが完了しました（{completed}/{total} ホップ）。',
+    'phone.title': 'OLYMPUS — スマホのプロンプトを送信',
+    'phone.body': '{project}: Apollo がスマホのプロンプトを受け取りました — {detail}',
+    'phoneDone.title': 'OLYMPUS — Apollo が回答しました',
+    'phoneDone.body': '{answer}',
+    'phoneFail.title': 'OLYMPUS — スマホのプロンプトが失敗',
+    'phoneFail.body': '{reason}',
+  },
+  zh: {
+    'walk.title': 'OLYMPUS — 开始执行',
+    'walk.body': '{slug}：正在执行计划（每个 hop 在对应神的 lane 上运行）。',
+    'park.title': 'OLYMPUS — 任务停止',
+    'park.body': '{slug}：{reason}',
+    'ready.title': 'OLYMPUS — 已就绪',
+    'ready.body': '{detail}',
+    'hop.title': 'OLYMPUS — hop 完成',
+    'hop.body': '{slug}：{god} 完成了 {hop}（{duration}）。',
+    'hopPark.title': 'OLYMPUS — hop 停止',
+    'hopPark.body': '{slug}：{hop} 已停止（{reason}）。任务继续。',
+    'done.title': 'OLYMPUS — 任务完成',
+    'done.body': '{slug}：计划已完成（{completed}/{total} 个 hop）。',
+    'phone.title': 'OLYMPUS — 手机提示已发送',
+    'phone.body': '{project}：Apollo 已收到手机提示 — {detail}',
+    'phoneDone.title': 'OLYMPUS — Apollo 已回答',
+    'phoneDone.body': '{answer}',
+    'phoneFail.title': 'OLYMPUS — 手机提示失败',
+    'phoneFail.body': '{reason}',
   },
 };
 
@@ -71,6 +195,11 @@ export interface DesktopNotification {
   type: NotifyType;
   title: string;
   body: string;
+  /** v0.0.85 — optional provenance so the phone can name the hop and god. */
+  hop?: string;
+  god?: string;
+  slug?: string;
+  status?: string;
 }
 
 export function isNotifyType(value: unknown): value is NotifyType {
@@ -99,7 +228,15 @@ function rotateNotifyFile(file: string): void {
  * break the operation that produced it. Returns false when the write failed.
  */
 export function appendDesktopNotify(
-  input: { type: NotifyType; title: string; body: string },
+  input: {
+    type: NotifyType;
+    title: string;
+    body: string;
+    hop?: string;
+    god?: string;
+    slug?: string;
+    status?: string;
+  },
   opts: { home?: string; now?: number } = {},
 ): boolean {
   if (!isNotifyType(input.type)) return false;
@@ -108,6 +245,10 @@ export function appendDesktopNotify(
     type: input.type,
     title: String(input.title ?? 'OLYMPUS').slice(0, 160),
     body: String(input.body ?? '').slice(0, 600),
+    ...(input.hop ? { hop: String(input.hop).slice(0, 80) } : {}),
+    ...(input.god ? { god: String(input.god).slice(0, 40) } : {}),
+    ...(input.slug ? { slug: String(input.slug).slice(0, 80) } : {}),
+    ...(input.status ? { status: String(input.status).slice(0, 60) } : {}),
   };
   try {
     const file = notifyFilePath(opts.home);
@@ -135,6 +276,10 @@ export function readDesktopNotifications(limit = 20, opts: { home?: string } = {
             type: ev.type,
             title: String(ev.title ?? ''),
             body: String(ev.body ?? ''),
+            ...(typeof ev.hop === 'string' ? { hop: ev.hop } : {}),
+            ...(typeof ev.god === 'string' ? { god: ev.god } : {}),
+            ...(typeof ev.slug === 'string' ? { slug: ev.slug } : {}),
+            ...(typeof ev.status === 'string' ? { status: ev.status } : {}),
           });
         }
       } catch { /* skip a torn line */ }

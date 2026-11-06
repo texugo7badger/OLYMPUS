@@ -4,6 +4,32 @@ All notable changes to OLYMPUS are documented in this file.
 
 ## [v0.0.84] — 2026-11-05
 
+### Hotfix (2026-11-06) — a context reset stays in the active project
+
+- **The compaction handoff no longer mints a project.** The reset prompt now
+  carries `[OLYMPUS-PROJECT <slug>]`; the intake recognizes it (and the older
+  `[OLYMPUS HANDOFF]` marker) before any fuzzy classification and routes to the
+  active project. The 18:54 specimen — `olympus-handoff-context-window` created
+  while AIME was active — is pinned by `scripts/handoff-continuity.test.mjs`.
+- **A parked-hop question inherits the active lane.** "O hop X está parked.
+  Investigue…" and campaign/status questions no longer create
+  `hop-…-est-parked` projects; a real new request still creates a project.
+- The bogus workspaces created by the bug were moved to
+  `~/.olympus/workspaces/_archive/2026-11-06-broken/` (recoverable, not deleted).
+
+### Hotfix (2026-11-06) — the phone queue drains while OLYMPUS hibernates
+
+- **`investigar` works with the window gone.** The only queue drainer lived in
+  the terminal renderer, and hibernate destroys that renderer; the phone item
+  waited until the user woke OLYMPUS. A server-side drain now runs while
+  `~/.olympus/hibernation.json` is active: it claims the phone item
+  (`queued → sending`), pins the active project, calls the normal action route
+  on the warm session, marks it sent, and writes the answer to the shared
+  notification feed. A failed dispatch returns to `queued` with a 2-minute
+  backoff. While awake, the terminal renderer remains the only sender (no
+  duplicates). Pinned by `scripts/prompt-queue-hibernate.test.mjs`.
+
+
 ### Edit — the park that survives a resume, and a model-free resume
 
 #### The park that survives a resume
