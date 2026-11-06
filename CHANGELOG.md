@@ -39,6 +39,20 @@ All notable changes to OLYMPUS are documented in this file.
   tokens, no provider dependency. It also clears the action-route user lease
   so the resumed walker is not held by the 90 s "human is driving" window.
 
+#### Terminal: no duplicate answer, clear view, copy the worklog
+
+- **The same answer rendered twice.** The v2 final readback re-emits the whole
+  assistant text under a new part id, so the terminal printed it a second time
+  (the 13:06 specimen). A per-turn set of normalized long texts suppresses the
+  replay; short chunks and real repeats under 80 chars still pass.
+- **Clear view, not clear context.** A cosmetic button empties the visible
+  transcript; it does not rotate `conversationId`, abort the run, restart the
+  warm server, or touch the model context. The stored transcript is preserved
+  (the persistence effect is suppressed for that update).
+- **Copy worklog.** A header button copies the durable transcript — user
+  turns, god responses, tool frames, system lines — with a Check confirmation
+  and a textarea fallback when the Clipboard API is unavailable.
+
 #### Verification (edit)
 
 - `hop-runtime.test.mjs`: five new Q assertions — the first walk parks and
