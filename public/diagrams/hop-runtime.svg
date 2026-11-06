@@ -80,6 +80,6 @@
   <text x="618" y="596" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#67C9E8" opacity="1">the user lane holds NEW hops (the in-flight hop finishes) · a full context hands off to a clean window</text>
   <rect x="60" y="640" width="1080" height="64" rx="10" fill="#0A0D12" stroke="#1C2044" stroke-width="1" opacity="1"/>
   <text x="80" y="666" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="2" text-anchor="start" fill="#D4A574" opacity="1">AIME · measured</text>
-  <text x="80" y="686" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">46/64 hops at 2026-11-06 · p50 5.5 tok/s hop wall-clock · one gate parked by name</text>
+  <text x="80" y="686" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">48/67 hops at 2026-11-06 · p50 5.5 tok/s hop wall-clock · one gate parked by name</text>
   <text x="80" y="742" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="1.2" text-anchor="start" fill="#8A94A6" opacity="1">OLYMPUS · the walker is a spine; the gods are small hops; the disk is the memory</text>
 </svg>
