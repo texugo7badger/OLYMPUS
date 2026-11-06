@@ -87,6 +87,35 @@ for (const f of ['websocket.js', 'websocket-server.js', 'stream.js', 'receiver.j
   check('BUILD_ID matches .next/BUILD_ID', !!a && a === b, `${a ?? 'missing'} vs ${b ?? 'missing'}`);
 }
 
+// ── 4b. public mirror parity (v0.0.84 — the stale stable.json) ─────────────
+// The old sync compared file COUNTS, so a same-count changed file stayed
+// stale in the packaged app. Compare bytes, not counts.
+{
+  const list = (dir, base = '') => {
+    const out = [];
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
+    for (const e of entries) {
+      const rel = path.join(base, e.name);
+      if (e.isDirectory()) out.push(...list(path.join(dir, e.name), rel));
+      else out.push(rel);
+    }
+    return out;
+  };
+  const src = path.join(ROOT, 'public');
+  const dst = path.join(STANDALONE, 'public');
+  const files = list(src);
+  const diffs = [];
+  for (const rel of files) {
+    const a = path.join(src, rel);
+    const b = path.join(dst, rel);
+    try {
+      if (!fs.existsSync(b) || !fs.readFileSync(a).equals(fs.readFileSync(b))) diffs.push(rel);
+    } catch { diffs.push(rel); }
+  }
+  check('public mirror matches source', diffs.length === 0, diffs.length ? diffs.slice(0, 5).join(', ') : `${files.length} files`);
+}
+
 // ── 5. static assets ──────────────────────────────────────────────────────
 {
   const chunks = path.join(STANDALONE, '.next', 'static', 'chunks');

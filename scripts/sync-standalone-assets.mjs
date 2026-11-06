@@ -14,8 +14,10 @@
  * 404'd. This step makes the standalone tree self-sufficient and lets
  * scripts/verify-standalone.mjs assert the real artifact.
  *
- * Idempotent: a copy runs only when the destination is missing or its file
- * count differs; a rebuild wipes `.next/` so the copy is fresh.
+ * v0.0.84 — always mirror, never trust the file count. The old idempotence
+ * compared COUNTS only, so a same-count changed file (public/stable.json
+ * after mark-stable) stayed stale in the packaged app. The copy is cheap
+ * (hundreds of files) and correctness is not optional.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
@@ -45,8 +47,6 @@ function countFiles(dir) {
 function sync(from, to, label) {
   if (!fs.existsSync(from)) return `skip ${label} (source absent)`;
   const srcCount = countFiles(from);
-  const dstCount = fs.existsSync(to) ? countFiles(to) : -1;
-  if (srcCount > 0 && srcCount === dstCount) return `ok ${label} (${srcCount} files)`;
   fs.rmSync(to, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(to), { recursive: true });
   fs.cpSync(from, to, { recursive: true });

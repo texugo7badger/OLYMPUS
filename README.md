@@ -36,7 +36,7 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.84 — the animated preview, the real share, mark and handoff.**
 The AIME static preview was the dev `allowedDevOrigins` gate; the public
-`sku-…` tunnel now hydrates and animates. Share returns the direct tunnel app
+trycloudflare tunnel now hydrates and animates. Share returns the direct tunnel app
 (not the HTML-rewriting proxy), revoke kills it, and the OLYMPUS phone preview
 has a mark crosshair that sends a coordinate + instruction to Athena. A full
 context window offers a one-click handoff: a compact 0600 brief on disk, a
