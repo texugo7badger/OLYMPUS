@@ -1,8 +1,11 @@
 # OLYMPUS Roadmap
 
-**v0.0.84 is the current release** (2026-11-05) — the animated preview, the real share, mark on the phone:
+**v0.0.84 is the current release** (2026-11-05) — the animated preview, the real share, mark and handoff:
 AIME dev origins allowed; share uses the direct tunnel app; revoke kills it;
-`/m` preview sheet with mark → Athena. **v0.0.83** was the user lane and the measured speed:
+`/m` preview sheet with mark → Athena; a 95% context offers a one-click
+handoff + clean window; per-model cost caps and the strict cost gate; clickable
+hops on the PC left column and the phone cost sheet. **v0.0.83** was the user
+lane and the measured speed:
 measured telemetry in the studio, hourly bounded sessions, agent-scoped tok/s,
 user-activity lease holding new hops, Apollo-only mobile mic into the terminal
 queue, mobile particle field/performance/all themes, Cost-panel GO bar.

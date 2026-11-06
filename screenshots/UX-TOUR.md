@@ -357,6 +357,23 @@ request to Apollo; tap a god's bar to hear that god explain its number.
 The captures are real (`npm run shots`, Electron offscreen): `07-creative.png`,
 `08-mobile.png` and `09-mobile-studio.png` are written from the running app.
 
+## Preview, mark and handoff (v0.0.84)
+
+`16-mobile-cost-hops.png` is the phone's cost/details sheet at 390×844: the
+campaign progress, the **24h spend**, and the in-flight hop chips. The chips
+are buttons — tapping one opens the same `TaskSheetModal` as the PC creative's
+left column (`17-creative-hops.png`, `18-task-sheet.png`).
+
+`15-mobile-preview-mark.png` is the OLYMPUS user's animated preview sheet:
+the real tunnel app in the iframe, `mark` armed, a pin at the tapped
+coordinates, and the instruction box that posts to Athena. The public share
+has no mark; only the OLYMPUS session dispatches the edit.
+
+The diagrams moved with the code: `public/diagrams/mobile.svg` now names the
+animated preview + mark, the clickable hop chip, all themes and performance
+mode; `public/diagrams/hop-runtime.svg` names the user lane and the 95%
+handoff.
+
 ## Themes — one real screenshot per theme (v0.0.72)
 
 `screenshots/themes/<id>.png` is the running app in that theme, with a clean

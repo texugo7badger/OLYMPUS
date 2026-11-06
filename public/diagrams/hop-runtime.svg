@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760">
   <rect width="100%" height="100%" fill="#07090C"/>
   <text x="60" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700" letter-spacing="6" text-anchor="start" fill="#D4A574" opacity="1">OLYMPUS</text>
-  <text x="1140" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="2" text-anchor="end" fill="#8A94A6" opacity="1">HOP RUNTIME · v0.0.61</text>
+  <text x="1140" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="2" text-anchor="end" fill="#8A94A6" opacity="1">HOP RUNTIME · v0.0.84</text>
   <text x="60" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22" font-weight="600" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">a deterministic spine, small hops, artifacts on disk</text>
   <text x="60" y="120" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="400" letter-spacing="1.6" text-anchor="start" fill="#8A94A6" opacity="1">plan → balance → walk → transport → verify → settle</text>
   <rect x="60" y="150" width="1080" height="250" rx="12" fill="#0B0E13" stroke="#1C2044" stroke-width="1" opacity="1"/>
@@ -77,8 +77,9 @@
   <text x="1064" y="503" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="middle" fill="#D4A574" opacity="1">resume</text>
   <text x="618" y="548" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">parked names its cause; resume reads the disk; nothing is lost</text>
   <text x="618" y="572" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">a config error never rescues on pre-existing artifacts</text>
+  <text x="618" y="596" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#67C9E8" opacity="1">the user lane holds NEW hops (the in-flight hop finishes) · a full context hands off to a clean window</text>
   <rect x="60" y="640" width="1080" height="64" rx="10" fill="#0A0D12" stroke="#1C2044" stroke-width="1" opacity="1"/>
   <text x="80" y="666" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="2" text-anchor="start" fill="#D4A574" opacity="1">AIME · measured</text>
-  <text x="80" y="686" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">34/41 hops · p50 18.0 min · p90 34.3 min (pre-cap) · f3 47s on the retry after the 14-tool park</text>
+  <text x="80" y="686" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">46/64 hops at 2026-11-06 · p50 5.5 tok/s hop wall-clock · one gate parked by name</text>
   <text x="80" y="742" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="1.2" text-anchor="start" fill="#8A94A6" opacity="1">OLYMPUS · the walker is a spine; the gods are small hops; the disk is the memory</text>
 </svg>

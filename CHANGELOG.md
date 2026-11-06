@@ -31,14 +31,59 @@ All notable changes to OLYMPUS are documented in this file.
   gate `v5g3` parked `dispatch-failed`; the walk resumed with
   `v5g4-mobile-touch-speed` / `v5g5-mobile-theme-shadow` in flight.
 
+### A full context window becomes a handoff, not amnesia
+
+- **The one-click box.** When the measured window reaches **95%**, the
+  indicator offers (once per session) a clean continuation: Apollo writes a
+  compact brief to `~/.olympus/handoffs/<stamp>-<conversation>.md` (0600,
+  capped at 16k chars), the warm server restarts with an empty window, and
+  the terminal sends ONE short pointer prompt — the file path — then continues
+  the same task. The old transcript is not re-injected; the full text stays on
+  disk. `Start empty` remains available, secondary.
+- **Why a file and not a summary in the prompt:** the summary-in-prompt path
+  measured 53% → 82% on the first message of the "fresh" session. A file costs
+  zero context until Apollo reads it and keeps the claim checkable.
+
+### Per-model caps and the strict cost gate
+
+- **#277 closed.** `cost-caps.json` accepts `models: { "<id>": { fiveHourUsd,
+  weeklyUsd, monthlyUsd, ...Tokens } }`; the brake evaluates each model's
+  bucket against the ledger rows for that model (suffix match handles
+  `opencode-go/qwen3.7-plus`), and the verdict names the model.
+- **#279 closed as the gate.** `npm run cost:audit:gate` runs the audit with
+  `--strict`; it exits non-zero on null-token hops or unmatched sessions. At
+  this release it honestly fails on 40 null-token hops and 2 unmatched AIME
+  sessions — the debt is named, not hidden.
+
+### The left column is alive on both screens
+
+- The PC creative's left-column hop rows are now buttons that open the same
+  `TaskSheetModal` as the phone; the phone's cost/details sheet (campaign +
+  24h spend) carries the same clickable in-flight chips and parked-hop link.
+  A hop is never a dead label on either surface.
+
+### CI and security
+
+- **CI root cause:** the broad `*token*` ignore rule also hid
+  `src/lib/token-speed.ts`; every fresh checkout failed `tsc` with TS2307 in
+  three routes. The file is tracked now and the ignore has an explicit
+  negation — `core`, `Release` and `Eval` all reach the same clean tree.
+- **The two Dependabot alerts (#107/#108):** `minimatch` 10.x is vulnerable
+  to a globparts amplification DoS (GHSA-g3hv-75wg-m249, patched 11.0.1).
+  The root and the VSCode extension override `minimatch` to **11.0.5**; the
+  extension's `@vscode/vsce` moves to 4.1.0. Root `npm audit` no longer
+  reports a high/critical finding; the extension reports zero.
+
 ### Honest limits
 
 - The direct share is an unguessable **quick tunnel**, not a token-gated
   request; revoke kills the tunnel, and a named tunnel is the stable path.
 - The AIME unit suite debt and the mobile gate still need their own repair.
-- The post-v0.0.83 cache/chip battery reruns hit load flakes
-  (`telemetry-pulse`, `planner-patience`, both pass standalone); this release
-  is a preview/share/mark change, not a new model or planner behavior.
+- The handoff is only as good as the compact brief; it carries the last
+  meaningful messages, not the full history. Apollo may still ask for a file
+  the brief does not mention — it can read the project from disk.
+- The AIME walk was at 46/64 with `v5g4`/`v5g5` in flight at this reading;
+  the parked `v5g3` gate is a project failure, not a preview/share failure.
 
 ## [v0.0.83] — 2026-11-05
 

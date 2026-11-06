@@ -25,6 +25,7 @@ Twelve surfaces, captured from the running build in **English**, at
 | <a href="screenshots/screens/01-brain-terminal.png"><img src="screenshots/screens/01-brain-terminal.png" width="480" alt="Brain + terminal — the atlas and a clean session" /></a><br><sub><b>Brain + terminal</b> · the atlas and a clean session</sub> | <a href="screenshots/screens/02-creative.png"><img src="screenshots/screens/02-creative.png" width="480" alt="Creative mode — progress, ring, build crystal and queue" /></a><br><sub><b>Creative mode</b> · progress, ring, build crystal and queue</sub> | <a href="screenshots/screens/03-craft-apps.png"><img src="screenshots/screens/03-craft-apps.png" width="480" alt="Craft apps — the vendored creative suite" /></a><br><sub><b>Craft apps</b> · the vendored creative suite</sub> |
 | <a href="screenshots/screens/04-references.png"><img src="screenshots/screens/04-references.png" width="480" alt="References — the design reference catalog" /></a><br><sub><b>References</b> · the design reference catalog</sub> | <a href="screenshots/screens/05-design.png"><img src="screenshots/screens/05-design.png" width="480" alt="Design board — direction, live preview and brand" /></a><br><sub><b>Design board</b> · direction, live preview and brand</sub> | <a href="screenshots/screens/06-builds.png"><img src="screenshots/screens/06-builds.png" width="480" alt="Build Hub — the talent builds and their crystals" /></a><br><sub><b>Build Hub</b> · the talent builds and their crystals</sub> |
 | <a href="screenshots/screens/07-settings.png"><img src="screenshots/screens/07-settings.png" width="480" alt="Settings — appearance, themes and performance" /></a><br><sub><b>Settings</b> · appearance, themes and performance</sub> | <a href="screenshots/screens/08-talent.png"><img src="screenshots/screens/08-talent.png" width="480" alt="Talent Studio — the build editor and the crystal picker" /></a><br><sub><b>Talent Studio</b> · the build editor and the crystal picker</sub> | <a href="screenshots/screens/09-vault.png"><img src="screenshots/screens/09-vault.png" width="480" alt="Vault — instincts, knowledge and skills" /></a><br><sub><b>Vault</b> · instincts, knowledge and skills</sub> |
+| <a href="screenshots/15-mobile-preview-mark.png"><img src="screenshots/15-mobile-preview-mark.png" width="480" alt="Mobile preview — the animated app, mark armed and a pin at the tapped coordinates" /></a><br><sub><b>Animated preview + mark</b> · the real app on the phone, a pin → Athena</sub> | <a href="screenshots/16-mobile-cost-hops.png"><img src="screenshots/16-mobile-cost-hops.png" width="480" alt="Mobile cost/details sheet — GO Plus bar, campaign and a clickable in-flight hop" /></a><br><sub><b>Cost + hops</b> · the GO bar and a hop chip that opens the task sheet</sub> | <a href="screenshots/17-creative-hops.png"><img src="screenshots/17-creative-hops.png" width="480" alt="PC creative mode — the left column of clickable in-flight hops" /></a><br><sub><b>Creative left column</b> · every hop is a button</sub> |
 | <a href="screenshots/screens/10-frames.png"><img src="screenshots/screens/10-frames.png" width="480" alt="Frames — the live tool frames" /></a><br><sub><b>Frames</b> · the live tool frames</sub> | <a href="screenshots/screens/11-mobile.png"><img src="screenshots/screens/11-mobile.png" width="480" alt="Mobile — one screen: ring, hold-to-talk and the god row" /></a><br><sub><b>Mobile</b> · one screen: ring, hold-to-talk and the god row</sub> | <a href="screenshots/screens/12-mobile-studio.png"><img src="screenshots/screens/12-mobile-studio.png" width="480" alt="Mobile creative — the same surface in one hand" /></a><br><sub><b>Mobile creative</b> · the same surface in one hand</sub> |
 
 </div>
@@ -33,12 +34,17 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.84 — the animated preview, the real share, mark on the phone.**
+**v0.0.84 — the animated preview, the real share, mark and handoff.**
 The AIME static preview was the dev `allowedDevOrigins` gate; the public
 `sku-…` tunnel now hydrates and animates. Share returns the direct tunnel app
 (not the HTML-rewriting proxy), revoke kills it, and the OLYMPUS phone preview
-has a mark crosshair that sends a coordinate + instruction to Athena. v0.0.83
-was the user lane and the measured speed:
+has a mark crosshair that sends a coordinate + instruction to Athena. A full
+context window offers a one-click handoff: a compact 0600 brief on disk, a
+clean warm server, and one pointer prompt — the same task continues without
+re-injecting the transcript. Per-model 5h/weekly/monthly caps land in the cost
+brake (#277) and `npm run cost:audit:gate` is the strict reconciliation gate
+(#279). Hops are clickable on the PC's left column and in the phone's
+cost/details sheet. v0.0.83 was the user lane and the measured speed:
 The studio god cites measured tok/s (last turn, p50 by model, hop wall-clock)
 and the shared GO-bucket truth; studio sessions rotate hourly; an agent-scoped
 chip names the lane. A chat/mark/voice lease holds NEW hops while the human is
