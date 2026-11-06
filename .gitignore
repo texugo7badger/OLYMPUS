@@ -160,3 +160,6 @@ SESSION-CHECKPOINT*.md
 # v0.0.83 — the tok/s API route is source, not a credential.
 !src/app/api/olympus/token-speed/
 !src/app/api/olympus/token-speed/route.ts
+
+# v0.0.84 — token-speed.ts is source (the tok/s ledger reader), not a credential.
+!src/lib/token-speed.ts
