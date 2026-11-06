@@ -12,8 +12,8 @@ All notable changes to OLYMPUS are documented in this file.
   the RSC/debug streams never closed, `hydrateRoot` was never called, and the
   page rendered **server-only** (static, no animations, no console error).
   The config now allows `*.trycloudflare.com` / `**.trycloudflare.com`; the
-  public `sku-…` tunnel hydrates and animates (measured: client opacity
-  changing 0.37→0.32 over 1.2s, 153 animated elements).
+  public trycloudflare tunnel hydrates and animates (measured: client opacity
+  changing 0.326→0.279 over 1.2s, 153 animated elements).
 - **Share means the real app, not the HTML-rewriting proxy.** The share POST
   now starts/reuses the **preview tunnel** and returns the direct HTTPS app
   URL (`mode: live-tunnel`); the old `/share/preview/<token>` remains a
