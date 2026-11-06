@@ -82,8 +82,10 @@ All notable changes to OLYMPUS are documented in this file.
   registry, the vault root, run-state, the mobile tunnel and Electron, so a dev
   build runs on 3747 with its own store/vault while the stable app stays on
   3737. The tunnel now points at the active PORT, never a hardcoded 3737. On a
-  memory-tight host, `OLYMPUS_BUILD_CPUS=1` lowers the Next build workers
-  without changing the output (the SIGSEGV escape hatch).
+  memory-tight host, `OLYMPUS_BUILD_CPUS=1` lowers the Next build workers and
+  `OLYMPUS_MEMORY_FLOOR_MB` lowers the dev-server admission floor for the
+  battery/CI runner; both defaults keep the production guard (the SIGSEGV and
+  low-RAM escape hatches).
 - **The native Samsung/home-screen widget is a v0.1.0 priority**, with the
   PWA limitation named in `ROADMAP.md`: a PWA can install an app icon, not an
   OS home-screen widget. The plan is a thin Capacitor/TWA wrapper with Glance

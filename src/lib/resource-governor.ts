@@ -42,8 +42,14 @@ export interface Admission {
   reason?: string;
 }
 
-/** Below this much available memory, a new heavy spawn is refused. */
-export const MEMORY_FLOOR_MB = 1200;
+/** Below this much available memory, a new heavy spawn is refused.
+ *  v0.0.85 — OLYMPUS_MEMORY_FLOOR_MB is the constrained-host escape hatch
+ *  (the battery/CI runner shares RAM with a live preview). The default stays
+ *  1200 MB; a real workstation keeps the guard. */
+export const MEMORY_FLOOR_MB = (() => {
+  const raw = Number(process.env.OLYMPUS_MEMORY_FLOOR_MB);
+  return Number.isFinite(raw) && raw > 0 ? Math.round(raw) : 1200;
+})();
 /** At or above this used share, the machine is red even with free pages. */
 const RED_USED_PCT = 94;
 const AMBER_USED_PCT = 88;
