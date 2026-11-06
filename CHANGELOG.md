@@ -117,6 +117,11 @@ All notable changes to OLYMPUS are documented in this file.
   parser, the seven locales, the notification feed, the capture route and the
   native-widget plan. Live dev probe: manifest, PNG icons, briefing and a
   phone notification exercised on `:3747` with an isolated vault.
+- **Full battery: 156 PASS / 0 FAIL / 1 declared skip (157 suites).** The
+  host shares RAM with the live AIME preview, so the full local suite was run
+  with `OLYMPUS_MEMORY_FLOOR_MB=400`; the production guard still defaults to
+  1200 MB. Captures: `screenshots/24-companion.png`,
+  `screenshots/25-widget-briefing.png`.
 
 ## [v0.0.84] — 2026-11-05
 
