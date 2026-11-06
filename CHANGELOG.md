@@ -14,7 +14,10 @@ All notable changes to OLYMPUS are documented in this file.
   (34–40 min each) from scratch instead of walking the ready work. The walker
   now loads `quarantined` when `keepQuarantine` is set: the overnight
   auto-resume and the boot orphan pickup pass it; a human start does not, so
-  the explicit retry still retries (the docs' contract).
+  the explicit retry still retries (the docs' contract). The overnight
+  auto-resume adds `retryParkedHop`: it gives ONLY the most recently parked
+  hop one bounded retry, so a transient park can still complete the night
+  while the older quarantined hops stay skipped.
 - **A park is truth on disk from second zero.** The initial state write
   nulled `parked`, so a walk killed before its first completion erased the
   reason. The observed specimen: AIME `cmp_mw4m8xqxttt16u` at **55/78**,
@@ -42,6 +45,8 @@ All notable changes to OLYMPUS are documented in this file.
   quarantines; a machine resume never re-runs the quarantined hop; the park
   survives the machine resume (result **and** state); the initial write keeps
   the park while the walk is live; the human resume retries and clears it.
+- `overnight-queue.test.mjs` S4c and `planner-patience` (25) pin the
+  retry-only-the-last-park and the durable initial state.
 - `context-handoff.test.mjs`: 21 PASS (the six R assertions cover the parse
   accept/reject set, the action-route short-circuit, and the lease handback).
 - `tsc --noEmit` PASS; `hop-deadline`, `hop-agent`, `hop-script`,

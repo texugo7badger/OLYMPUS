@@ -1043,6 +1043,12 @@ export interface WalkOptions {
    * quarantine and retries — the docs' contract.
    */
   keepQuarantine?: boolean;
+  /**
+   * v0.0.84 edit — the OVERNIGHT auto-resume gives the MOST RECENT parked hop
+   * one bounded retry (the old S4c contract) while keeping the older parked
+   * hops quarantined. Boot/orphan pickup does not set it.
+   */
+  retryParkedHop?: boolean;
   /** #117: the live narration bridge (optional — the battery fixtures omit it). */
   onEvent?: (ev: HopWalkEvent) => void;
 }
@@ -1133,6 +1139,10 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   // auto-resume re-ran the same three from scratch because the set was always
   // rebuilt empty. The human's explicit resume still clears it.
   const quarantined = new Set<string>(opts.keepQuarantine ? (state?.quarantined ?? []) : []);
+  // v0.0.84 edit — one bounded retry for the hop that parked last, not the
+  // whole quarantine. The overnight auto-resume sets this; a boot/orphan
+  // pickup keeps the quarantine intact; a human resume clears it entirely.
+  if (opts.retryParkedHop && state?.parked?.hopId) quarantined.delete(state.parked.hopId);
   const rows: HopTelemetryRow[] = [];
 
   // #RESTART-SPECIMEN (2026-10-16, 22:27): the walk died mid-hop-1 (the app
