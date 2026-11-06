@@ -20,6 +20,8 @@ import path from 'node:path';
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-handoff-'));
 process.env.OLYMPUS_HOME = home;
 const { capHandoff, writeHandoff, MAX_HANDOFF_CHARS } = await import('../src/lib/context-handoff.ts');
+const { parseResumeIntent } = await import('../src/lib/hop-runtime/resume-intent.ts');
+const { clearUserActivity, userIsActive, markUserActivity } = await import('../src/lib/user-activity.ts');
 
 let failures = 0;
 function expect(name, cond, detail) {
@@ -70,6 +72,18 @@ expect('H-14: the PC left column hops open the task sheet',
 expect('H-15: the phone cost/details sheet hops open the task sheet',
   /inFlightList[\s\S]{0,600}setSheetHop\(h\.hopId\)/.test(mobile) && /TaskSheetModal hopId=\{sheetHop\}/.test(mobile), 'phone hop rows are dead');
 
+// v0.0.84 edit — the resume decoupling: a bare resume command must start the
+// detached walk without an LLM turn (the lane may be 429/stalled).
+expect('R-1: "Continue o projeto aime!" parses to aime', parseResumeIntent('Continue o projeto aime!') === 'aime', parseResumeIntent('Continue o projeto aime!'));
+expect('R-2: "continuar projeto aime" parses to aime', parseResumeIntent('continuar projeto aime') === 'aime', parseResumeIntent('continuar projeto aime'));
+expect('R-3: "Continue com o projeto aime" parses to aime', parseResumeIntent('Continue com o projeto aime') === 'aime', parseResumeIntent('Continue com o projeto aime'));
+expect('R-4: "resume the project aime" parses to aime', parseResumeIntent('resume the project aime') === 'aime', parseResumeIntent('resume the project aime'));
+expect('R-5: a task with extra instructions is NOT hijacked', parseResumeIntent('Continue o projeto aime e rode os testes') === null, parseResumeIntent('Continue o projeto aime e rode os testes'));
+expect('R-6: the action route starts the supervisor + clears the user lease', /parseResumeIntent\(text\)/.test(action) && /startDetachedWalk\(\{ slug: resumeSlug/.test(action) && /clearUserActivity\(\)/.test(action), 'no resume short-circuit');
+markUserActivity(30_000);
+clearUserActivity();
+expect('R-7: clearUserActivity hands the lane back to the walker', userIsActive() === false, 'lease still active');
+
 fs.rmSync(home, { recursive: true, force: true });
 if (failures) { console.log(`\ncontext-handoff: ${failures} FAIL`); process.exit(1); }
-console.log('\nAll 15 context-handoff assertions passed');
+console.log('\nAll 21 context-handoff assertions passed');

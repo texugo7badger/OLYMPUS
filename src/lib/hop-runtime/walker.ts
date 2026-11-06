@@ -1035,6 +1035,14 @@ export interface WalkOptions {
   stateDir?: string;
   /** v0.0.24 (#226): the campaign identity from the walk lock. */
   campaignId?: string;
+  /**
+   * v0.0.85 — a MACHINE resume (overnight auto-resume, boot orphan pickup)
+   * must not re-run the hops that already parked in this campaign: they
+   * stalled for a reason (AIME 06:51: three dispatch-failed hops of 34–40
+   * min were retried from scratch). The HUMAN's explicit resume clears the
+   * quarantine and retries — the docs' contract.
+   */
+  keepQuarantine?: boolean;
   /** #117: the live narration bridge (optional — the battery fixtures omit it). */
   onEvent?: (ev: HopWalkEvent) => void;
 }
@@ -1112,7 +1120,19 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     console.log(`[walker] dropped ${pruned.dropped.length} stale in-flight hop(s): ${pruned.dropped.join(', ')} — they re-enter the DAG`);
   }
   const completed = new Set<string>(state?.completed ?? []);
-  let parkedHop: (HopPark & { verify?: HopVerifyResult }) | null = null;
+  // v0.0.85 — A PARK IS TRUTH ON DISK. The initial save below used to write
+  // `parked: null`, so a walk killed between its first write and its first
+  // completion erased the reason the user needed (AIME 06:51: 55/78, no
+  // in-flight, `parked: null`, and no process — a silent stop). The prior
+  // park survives until the parked hop is re-run and PASSES, or a new park
+  // replaces it.
+  const priorPark = state?.parked && !completed.has(state.parked.hopId) ? state.parked : null;
+  let parkedHop: (HopPark & { verify?: HopVerifyResult }) | null = priorPark;
+  // v0.0.85 — QUARANTINE SURVIVES A MACHINE RESUME. The AIME 06:51 specimen:
+  // three hops parked on dispatch-failed (34–40 min each) and the overnight
+  // auto-resume re-ran the same three from scratch because the set was always
+  // rebuilt empty. The human's explicit resume still clears it.
+  const quarantined = new Set<string>(opts.keepQuarantine ? (state?.quarantined ?? []) : []);
   const rows: HopTelemetryRow[] = [];
 
   // #RESTART-SPECIMEN (2026-10-16, 22:27): the walk died mid-hop-1 (the app
@@ -1124,8 +1144,9 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   saveHopState(stateDir, {
     version: 1,
     completed: [...completed],
-    parked: null,
-    quarantined: [],
+    parked: parkedHop,
+    campaignId: opts.campaignId,
+    quarantined: [...quarantined],
     inFlight: [],
     updatedAt: new Date().toISOString(),
   });
@@ -1149,7 +1170,6 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
    * quarantined: independent hops keep running, the quarantined hop is never
    * retried automatically, and a systemic park rate stops the walk named.
    */
-  const quarantined = new Set<string>();
   let attempts = 0;
   let parks = 0;
   const parkHop = (hop: PlanHop, reason: string, error?: string, verify?: HopVerifyResult): void => {
@@ -1400,6 +1420,9 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
             const verify = verifyHopDeterministic(next, laneRoot);
             if (verify.ok) {
               completed.add(next.id);
+              // v0.0.85 — the hop that was parked re-ran and PASSED: the park
+              // is no longer the campaign's state.
+              if (parkedHop?.hopId === next.id) parkedHop = null;
               telemetryRow(next, result, 'completed', startedAt);
               emit({
                 type: 'hop_done', hop: next.id, god: next.god,

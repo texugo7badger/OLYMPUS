@@ -26,6 +26,18 @@ export function markUserActivity(ms = 60_000, now = Date.now()): void {
   } catch { /* a lease write failure must never block a turn */ }
 }
 
+/**
+ * v0.0.84 edit — a resume command is the user handing the lane BACK to the
+ * walker. Without this, the 90s action-route lease would hold every NEW hop
+ * right after the resume, which looks exactly like a stalled walk.
+ */
+export function clearUserActivity(now = Date.now()): void {
+  try {
+    fs.mkdirSync(HOME, { recursive: true });
+    fs.writeFileSync(FILE, JSON.stringify({ until: now - 1, at: new Date(now).toISOString() }, null, 2) + '\n', { mode: 0o600 });
+  } catch { /* a lease write failure must never block a resume */ }
+}
+
 export function userActivityUntil(): number {
   try {
     const raw = JSON.parse(fs.readFileSync(FILE, 'utf-8'));

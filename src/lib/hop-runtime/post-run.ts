@@ -351,6 +351,9 @@ export async function maybeWalkThePlan(opts: {
   unattended?: boolean;
   /** #211: internal resume counter — bounds the auto-resume chain. */
   overnightAttempt?: number;
+  /** v0.0.85 — a machine resume keeps the quarantine (never re-runs the
+   *  hops that just parked). The human's resume leaves it false. */
+  keepQuarantine?: boolean;
 }): Promise<PostRunWalkOutcome> {
   // v0.0.29 — A LIVE CAMPAIGN OWNS THE LANE; CHAT STAYS OPEN. The lock check
   // used to run only AFTER the plan read + the stale-plan refusal, so any
@@ -600,6 +603,7 @@ export async function maybeWalkThePlan(opts: {
       plan,
       dispatcher: opts.dispatcher,
       resume,
+      keepQuarantine: opts.keepQuarantine,
       campaignId: lock.ok ? lock.holder.campaignId : undefined,
       onEvent: (ev) => bridgeEvent(ev, opts.laneRoot, opts.send, opts.publishActivity),
     });
@@ -773,7 +777,7 @@ export async function maybeWalkThePlan(opts: {
         });
       } catch { /* the night log never breaks the walk */ }
       if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
-      return maybeWalkThePlan({ ...opts, unattended: true, overnightAttempt: attempt + 1 });
+      return maybeWalkThePlan({ ...opts, unattended: true, overnightAttempt: attempt + 1, keepQuarantine: true });
     }
     try {
       const planOnDisk = JSON.parse(sanitizePlanJson(readFileSync(planPath, 'utf-8')));

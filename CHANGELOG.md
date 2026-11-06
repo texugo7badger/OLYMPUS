@@ -4,6 +4,50 @@ All notable changes to OLYMPUS are documented in this file.
 
 ## [v0.0.84] — 2026-11-05
 
+### Edit — the park that survives a resume, and a model-free resume
+
+#### The park that survives a resume
+
+- **A machine resume no longer re-runs the hops that just parked.** The
+  quarantine was written to disk but every walk rebuilt the set **empty**, so
+  the AIME overnight auto-resume at 06:51 re-ran three `dispatch-failed` hops
+  (34–40 min each) from scratch instead of walking the ready work. The walker
+  now loads `quarantined` when `keepQuarantine` is set: the overnight
+  auto-resume and the boot orphan pickup pass it; a human start does not, so
+  the explicit retry still retries (the docs' contract).
+- **A park is truth on disk from second zero.** The initial state write
+  nulled `parked`, so a walk killed before its first completion erased the
+  reason. The observed specimen: AIME `cmp_mw4m8xqxttt16u` at **55/78**,
+  `parked: null`, no in-flight, no walker process — a silent stop. The prior
+  park now survives the initial write until the parked hop is re-run and
+  passes, or a new park replaces it.
+- **The parked hop clears the park only by its own success:** `parkedHop` is
+  initialized from the state and cleared when that hop completes.
+
+#### The resume that does not need a model
+
+- **A bare resume command starts the detached walk without an LLM turn.**
+  "Continue o projeto aime" / "resume the project aime" used to be classified
+  as planning and dispatched to Apollo; when the provider returned 429 and the
+  lane stalled, the turn never completed and the walk was never resumed — the
+  user could not resume from the phone or the PC. `parseResumeIntent` now
+  recognizes **only** an unambiguous resume command (extra instructions still
+  go to Apollo) and the action route starts the supervisor directly: zero
+  tokens, no provider dependency. It also clears the action-route user lease
+  so the resumed walker is not held by the 90 s "human is driving" window.
+
+#### Verification (edit)
+
+- `hop-runtime.test.mjs`: five new Q assertions — the first walk parks and
+  quarantines; a machine resume never re-runs the quarantined hop; the park
+  survives the machine resume (result **and** state); the initial write keeps
+  the park while the walk is live; the human resume retries and clears it.
+- `context-handoff.test.mjs`: 21 PASS (the six R assertions cover the parse
+  accept/reject set, the action-route short-circuit, and the lease handback).
+- `tsc --noEmit` PASS; `hop-deadline`, `hop-agent`, `hop-script`,
+  `walk-lock` and `hop-transport` PASS.
+
+
 ### The animated preview, the real share, and mark on the phone
 
 - **Root cause of the static AIME preview:** the AIME `next.config.ts` only

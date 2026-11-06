@@ -34,6 +34,12 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.84 — the park that survives a resume.**
+A machine auto-resume (overnight or boot orphan pickup) now keeps the hop
+quarantine: the hops that just parked are not re-run from scratch, while a
+human start still retries them. A park is truth on disk from the initial
+write — the prior park survives until the hop passes, so the AIME 55/78
+silent stop (no park, no in-flight, no process) can no longer happen.
 **v0.0.84 — the animated preview, the real share, mark and handoff.**
 The AIME static preview was the dev `allowedDevOrigins` gate; the public
 trycloudflare tunnel now hydrates and animates. Share returns the direct tunnel app

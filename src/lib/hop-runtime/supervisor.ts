@@ -134,6 +134,9 @@ export function startDetachedWalk(opts: {
   slug: string;
   laneRoot: string;
   autoResume?: boolean;
+  /** v0.0.85 — the boot auto-resume keeps the quarantine; a human start
+   *  retries the parked hops (the docs' contract). */
+  keepQuarantine?: boolean;
 }): StartResult {
   const existing = readSupervisor(opts.slug);
   if (existing.alive) return { ok: false, reason: 'already-running', pid: existing.state?.pid, logFile: existing.state?.logFile };
@@ -149,7 +152,7 @@ export function startDetachedWalk(opts: {
   const fd = fs.openSync(logFile, 'a');
   let child;
   try {
-    child = spawn(tsx, [runner, '--lane', opts.laneRoot, '--slug', opts.slug], {
+    child = spawn(tsx, [runner, '--lane', opts.laneRoot, '--slug', opts.slug, ...(opts.keepQuarantine ? ['--keep-quarantine'] : [])], {
       cwd: root,
       detached: true,
       stdio: ['ignore', fd, fd],
@@ -213,7 +216,7 @@ export function resumeOrphanedSupervisors(): Array<{ slug: string; resumed: bool
       out.push({ slug: state.slug, resumed: false, reason: 'resume budget exhausted' });
       continue;
     }
-    const started = startDetachedWalk({ slug: state.slug, laneRoot: state.laneRoot, autoResume: true });
+    const started = startDetachedWalk({ slug: state.slug, laneRoot: state.laneRoot, autoResume: true, keepQuarantine: true });
     if (started.ok) {
       markSupervisor(state.slug, { resumeAttempts: attempts + 1, startedAt: new Date().toISOString(), outcome: `resumed after the process died (attempt ${attempts + 1}/${MAX_RESUME_ATTEMPTS})` });
       out.push({ slug: state.slug, resumed: true, reason: `pid ${started.pid}` });

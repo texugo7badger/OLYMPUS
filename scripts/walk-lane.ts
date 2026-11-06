@@ -30,6 +30,10 @@ if (!laneRoot || !slug) {
   console.error('walk-lane: --lane <path> --slug <slug> are required');
   process.exit(2);
 }
+// v0.0.85 — a BOOT AUTO-RESUME keeps the quarantine: the hops that parked
+// before the crash must not be re-run from scratch. A human's start (the
+// supervisor POST) never passes this flag, so their explicit resume retries.
+const keepQuarantine = process.argv.includes('--keep-quarantine');
 
 function log(msg: string) {
   console.log(`[walk-lane ${new Date().toISOString()}] ${msg}`);
@@ -45,6 +49,7 @@ async function main() {
       unattended: true,
       expectPlan: false,
       publishActivity: true,
+      ...(keepQuarantine ? { keepQuarantine: true } : {}),
       send: (ev: any) => {
         if (ev?.msg) log(String(ev.msg));
       },

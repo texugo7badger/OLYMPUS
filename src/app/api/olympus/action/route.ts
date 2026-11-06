@@ -12,8 +12,9 @@ import { resolveAndRegisterIntent, stripUploadBlock, resolveKnownTurnProject } f
 import { maybeStartDevServer } from '@/lib/dev-server-trigger';
 import { maybeWalkThePlan, resolvePlanWalkAnswer } from '@/lib/hop-runtime/post-run';
 import { startDetachedWalk } from '@/lib/hop-runtime/supervisor';
-import { markUserActivity } from '@/lib/user-activity';
+import { markUserActivity, clearUserActivity } from '@/lib/user-activity';
 import { writeHandoff } from '@/lib/context-handoff';
+import { parseResumeIntent } from '@/lib/hop-runtime/resume-intent';
 import { pickPlanRoot, walkRootNote } from '@/lib/hop-runtime/walk-root';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
 import { probeLane } from '@/lib/lane-probe';
@@ -161,6 +162,46 @@ function getConversationProject(conversationId: string): string | null {
  * fall back to one-shot `opencode run --format json [--session <id>]`
  * (context still retained via the session id when one exists).
  */
+/**
+ * v0.0.84 edit — a resume command starts the detached supervisor and returns
+ * an SSE turn the terminal already understands. No OpenCode, no provider, no
+ * 180s stall: the walker reads the disk and dispatches.
+ */
+function resumeWalkStream(
+  slug: string,
+  started: { ok: boolean; pid?: number; reason?: string; logFile?: string },
+): Response {
+  const ts = new Date().toISOString();
+  const already = started.reason === 'already-running';
+  const okay = started.ok || already;
+  const msg = okay
+    ? already
+      ? `walk already running (pid ${started.pid ?? '?'}) · ${slug} — no second walk started`
+      : `walk resumed (detached) · pid ${started.pid ?? '?'} · ${slug}`
+    : `walk not resumed — ${started.reason || 'the supervisor refused'}`;
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      const send = (obj: any) => {
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`)); } catch { /* closed */ }
+      };
+      send({ type: 'action_start', action: 'resume-walk', node: slug, cli: `walk-lane --slug ${slug}`, ts });
+      // walk_summary suppresses the action_done census ("no output") below.
+      send({ type: 'walk_summary', msg, ts });
+      if (!okay) send({ type: 'error', msg, ts });
+      send({ type: 'action_done', action: 'resume-walk', node: slug, code: okay ? 0 : -1, ts });
+      try { controller.close(); } catch { /* already closed */ }
+    },
+  });
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
   // v0.0.83 — any interactive action claims the user lane for 90s; the hop
   // walker holds NEW hops while the human is driving (in-flight hops finish).
@@ -277,6 +318,24 @@ export async function POST(req: NextRequest) {
           conversationId,
           action,
         });
+      }
+    }
+
+    // v0.0.84 edit — the resume decoupling. Only an unambiguous command
+    // ("continue o projeto aime", "resume the project aime") is intercepted;
+    // a task with extra instructions still goes to Apollo. This is the path
+    // that works while the provider is 429/stalled, because it never calls it.
+    if (action === 'prompt') {
+      const resumeSlug = parseResumeIntent(text);
+      if (resumeSlug) {
+        const laneRoot = join(PROJECTS_DIR, resumeSlug);
+        if (fs.existsSync(join(laneRoot, 'dispatch-plan.json'))) {
+          // The action route claimed the user lane at the top; a resume is
+          // the user handing the lane BACK to the walker.
+          clearUserActivity();
+          const started = startDetachedWalk({ slug: resumeSlug, laneRoot });
+          return resumeWalkStream(resumeSlug, started);
+        }
       }
     }
 

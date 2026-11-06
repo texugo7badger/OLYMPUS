@@ -1,6 +1,11 @@
 # OLYMPUS Roadmap
 
-**v0.0.84 is the current release** (2026-11-05) — the animated preview, the real share, mark and handoff:
+**v0.0.84 is the current release** (2026-11-06) — the park that survives a resume:
+a machine auto-resume keeps the quarantine instead of re-running the hops
+that just parked; the park stays on disk from the initial write until the
+hop passes (the AIME 55/78 silent-stop specimen). A human start still
+retries — the explicit decision.
+**v0.0.84** was the animated preview, the real share, mark and handoff:
 AIME dev origins allowed; share uses the direct tunnel app; revoke kills it;
 `/m` preview sheet with mark → Athena; a 95% context offers a one-click
 handoff + clean window; per-model cost caps and the strict cost gate; clickable
