@@ -2085,8 +2085,13 @@ export default function InteractiveTerminal() {
         removeThinking();
         setSubmitting(false);
         continued = true;
+        // v0.0.85 — pin the lane the user is in. The handoff brief lives in
+        // ~/.olympus/handoffs/ and its filename once became a NEW project
+        // (olympus-handoff-context-window) while AIME was active. The server
+        // also recognizes [OLYMPUS HANDOFF] for older clients.
+        const projectPin = activeProject?.slug ? `[OLYMPUS-PROJECT ${activeProject.slug}]\n` : '';
         void submit(
-          `[OLYMPUS HANDOFF] The context window was reset before it could degrade. Read your continuation brief first:\n${data.handoff.path}\n\nThen CONTINUE the same task from where it stopped. Do not restart it, do not ask the user to repeat the conversation, and do not claim work the brief does not support.`,
+          `${projectPin}[OLYMPUS HANDOFF] The context window was reset before it could degrade. Read your continuation brief first:\n${data.handoff.path}\n\nThen CONTINUE the same task from where it stopped. Do not restart it, do not ask the user to repeat the conversation, and do not claim work the brief does not support.`,
         );
       }
     } catch (e: any) {
@@ -2100,7 +2105,7 @@ export default function InteractiveTerminal() {
         inputRef.current?.focus();
       }
     }
-  }, [addMessage, updateGodActivity, ensureThinking, removeThinking, resetTerminal, buildConversationSummary, submit]);
+  }, [addMessage, updateGodActivity, ensureThinking, removeThinking, resetTerminal, buildConversationSummary, submit, activeProject?.slug]);
 
   // Called when the new-session stream ends. handleServerEvent already
   // processed the 'action_done' SSE event (reset submitting/awaiting/etc.

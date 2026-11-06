@@ -15,7 +15,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { listProjects, getActiveProjectSlug, setActiveProject, slugify, canonicalSlug, PROJECTS_DIR, type ProjectNote } from './project-context';
+import { listProjects, getProject, getActiveProjectSlug, setActiveProject, slugify, canonicalSlug, PROJECTS_DIR, type ProjectNote } from './project-context';
 import { join } from 'node:path';
 
 export type FirstPromptIntent =
@@ -25,6 +25,77 @@ export type FirstPromptIntent =
 
 /** A match at/above this score is a candidate. Tuned on the fixture table. */
 export const INTENT_MATCH_THRESHOLD = 0.42;
+
+/**
+ * v0.0.85 — A HANDOFF IS A CONTINUATION, NEVER A NEW PROJECT.
+ *
+ * The specimen (2026-11-06 18:54): the context-window reset wrote a handoff
+ * brief and sent `[OLYMPUS HANDOFF] … Read your continuation brief first:
+ * /home/texugo/.olympus/handoffs/…/olympus-handoff-context-window.md …`.
+ * The intake saw no known project in that text, derived the brief's name and
+ * created `olympus-handoff-context-window` while AIME was the active project.
+ *
+ * Two explicit markers solve it without guessing:
+ *   - `[OLYMPUS-PROJECT <slug>]` — the client pins the project it is in;
+ *   - `[OLYMPUS HANDOFF]` — an older client; inherit the active project.
+ * Both are checked BEFORE the approval/metadata guards, because a handoff is
+ * neither a new task nor a project declaration.
+ */
+const PINNED_PROJECT_RE = /\[OLYMPUS-PROJECT\s+([a-z0-9][a-z0-9-]{0,63})\]/i;
+const HANDOFF_RE = /\[OLYMPUS[ -]HANDOFF\]/i;
+
+export function pinnedProjectSlug(text: string): string | null {
+  const match = PINNED_PROJECT_RE.exec(String(text || ''));
+  return match ? match[1].toLowerCase() : null;
+}
+
+export function isHandoffPrompt(text: string): boolean {
+  return HANDOFF_RE.test(String(text || ''));
+}
+
+/**
+ * v0.0.85 — a status/investigation sentence is about the CURRENT campaign,
+ * not a new project. The second garbage specimen (`hop-c8-companion-notify-est-parked`)
+ * was exactly this: a parked-hop question that the intake minted as a project.
+ * Keep the rule conservative: a campaign word AND a question/imperative.
+ */
+const CAMPAIGN_WORD_RE = /\b(hop|walk|campaign|campanha|parked|dispatch|falhou|failed|erro|error|provider|rate.?limit)\b/i;
+const DIAGNOSTIC_RE = /(\?|^(por que|porque|why|o que|what|como|how|investigue|investigar|retome|resume|continue|status)\b)/i;
+
+export function isCampaignDiagnostic(text: string): boolean {
+  const prompt = String(text || '').trim();
+  if (!prompt || prompt.length > 400) return false;
+  if (pinnedProjectSlug(prompt) || isHandoffPrompt(prompt)) return false;
+  if (!CAMPAIGN_WORD_RE.test(prompt)) return false;
+  return DIAGNOSTIC_RE.test(prompt) || /\bparked\b/i.test(prompt);
+}
+
+function handoffRoute(text: string): { slug: string; kind: 'existing'; source: 'explicit' | 'memory'; message: string } | null {
+  const pinned = pinnedProjectSlug(text);
+  if (pinned) {
+    const project = getProject(pinned);
+    if (project) {
+      return {
+        slug: project.slug,
+        kind: 'existing',
+        source: 'explicit',
+        message: `Pinned by [OLYMPUS-PROJECT ${project.slug}] — a handoff continues the same project, never a new one`,
+      };
+    }
+  }
+  if (isHandoffPrompt(text)) {
+    const active = getActiveProjectSlug();
+    if (active && getProject(active)) {
+      return {
+        slug: active,
+        kind: 'existing',
+        source: 'memory',
+        message: `Handoff continuation — routed to the active project '${active}' (a context reset never forks a project)`,
+      };
+    }
+  }
+  return null;
+}
 
 /** Words too generic to carry project identity. */
 const STOPWORDS = new Set([
@@ -443,6 +514,10 @@ export function resolveKnownTurnProject(opts: {
   projects?: ProjectNote[];
 }): { slug: string; kind: 'existing'; source: 'explicit' | 'memory'; message: string } | null {
   const text = opts.text || '';
+  // A handoff is a continuation of the same lane, not a new task. The pin
+  // (or the active project for an older client) wins over every heuristic.
+  const handoff = handoffRoute(text);
+  if (handoff) return handoff;
   // An approval is a control word, not a name: "Aprovado!" must never match
   // a project that happens to be called 'aprovado'. It inherits memory (or
   // falls through to intake → active project) but never names a lane.
@@ -473,6 +548,21 @@ export async function resolveAndRegisterIntent(
   stacks: string[],
   opts: { targetTui?: 'opencode' | 'generic' } = {},
 ): Promise<IntentStageResult> {
+  // v0.0.85 — the handoff/pin wins before any fuzzy classification. This is
+  // the guard that keeps a context reset inside the active project.
+  const handoff = handoffRoute(userRequest);
+  if (handoff) {
+    setActiveProject(handoff.slug);
+    return { kind: 'existing', slug: handoff.slug, message: handoff.message };
+  }
+  // v0.0.85 — a parked-hop/campaign question inherits the active lane too.
+  if (isCampaignDiagnostic(userRequest)) {
+    const active = getActiveProjectSlug();
+    if (active && getProject(active)) {
+      setActiveProject(active);
+      return { kind: 'existing', slug: active, message: `Campaign diagnostic — routed to the active project '${active}' (a status question never mints a project)` };
+    }
+  }
   // v0.0.63 — APPROVAL IS A CONTROL WORD, NEVER A PROJECT NAME. The fuzzy
   // classifier scores "Aprovado!" 1.00 against a project called 'Aprovado'
   // (the ghost that captured three turns). Check the control word BEFORE

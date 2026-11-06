@@ -2,6 +2,117 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.85] — 2026-11-06
+
+### The Apollo companion — one app family, one briefing, one feed
+
+#### Two installable PWAs with the theme's own icon
+
+- **`/m` is now a real PWA.** The companion had a layout but no manifest; it
+  now ships `/m/manifest.webmanifest`, a themed icon and the same install
+  prompt as the widget. `/m/widget` gets the same treatment. Both declare
+  `scope: /m`, share one icon family and one palette, and start on their own
+  surface: the home screen can hold the companion, the live widget, or both.
+- **The icon follows the active theme.** The manifest and the mark are
+  generated per request from `~/.olympus/theme.json`; `/m/icon/<size>` renders
+  the real OLYMPUS mark through sharp, with a maskable variant that respects
+  the Android safe zone. The manifest carries a theme hash in the icon URL, so
+  a theme change is a new icon URL instead of a stale gold square.
+- **One worker, two surfaces.** `public/m-sw.js` (scope `/m`) caches only the
+  two navigation shells — never API data, never hashed JS chunks — and
+  migrates the v0.0.84 `/widget-sw.js` registration. Tap-to-open notifications
+  focus the installed phone surface, never the PC app.
+- **Switching is in-app.** The companion header opens the live widget; the
+  widget header and footer open the companion. Both sides keep the same token
+  in localStorage, so the switch never asks for the QR again.
+
+#### The living briefing (zero tokens)
+
+- **`GET /api/olympus/briefing` is the phone's project document.** It reads
+  `dispatch-plan.json`, `.olympus-hop-state.json`, the hop telemetry and the
+  project note — never writes, never calls a model. It returns the honest
+  percentage, the hops running now, the parked hop and its reason, the recent
+  settles, the next hops and the screenshot metadata.
+- **The widget renders it as a readable card.** Current, parked, recent and
+  next are separate sections; a parked hop has the one-tap `investigate`
+  action that queues the investigation to Apollo. Every card has a speaker
+  and uses the responsible god's voice (Apollo for the overall summary).
+- **The companion answers "brief me" without a model.** "Resumo do projeto",
+  "briefing", "me atualiza", "o que está sendo desenvolvido" and their
+  translations are recognized only when the request is unambiguous; Apollo
+  speaks the summary. A real task ("continue o projeto", "resume the
+  campaign", a fix/deploy/build command) still goes to the terminal.
+- **A chat that feels alive.** The widget keeps the high-priority terminal
+  queue, but "brief me" now answers inline as Apollo and is spoken. Everything
+  else still goes to Apollo in the terminal, and the answer appears there.
+
+#### Screenshots the user can critique
+
+- **Real mobile and desktop captures of the live preview.** `POST
+  /api/olympus/screenshots` probes the project's own dev-server port first,
+  then drives a locally installed Chromium over the DevTools Protocol. Mobile
+  is 390×844 at 2×, desktop 1440×900. The images live under
+  `~/.olympus/screenshots/<slug>/` with 0600 permissions.
+- **No fake frame.** No preview means an explicit 409; no Chromium means an
+  honest refusal with `OLYMPUS_CHROME` as the override. The widget shows the
+  capture age and a critique box right under the image; the critique goes to
+  Apollo with the viewport named.
+
+#### Notifications — the same feed on the PC and the phone
+
+- **The walker now appends hop settled/parked events to the desktop
+  notification feed.** The PC center already reads that file; the phone reads
+  the same `/api/olympus/notify` (now read-gated). A hop done, a hop parked, a
+  design/compact/curate event is one feed, not two systems.
+- **The phone raises native OS notifications through the service worker**
+  when the PWA is hidden and permission is granted; while visible it shows a
+  quiet in-app toast with the responsible god's voice. The sheet explains the
+  limit honestly: this works while the PWA process is alive; true background
+  push arrives with the native wrapper (v0.1.0).
+- **Seven languages** for the companion chrome and the hop notification
+  text; the notification provenance carries `hop`, `god`, `slug` and `status`
+  so the phone can name the work instead of saying "something changed".
+
+#### Theme remote and a dev lane that does not touch stable
+
+- **The widget is a theme remote.** One tap cycles the preset, applies it to
+  the phone immediately and writes the same store the PC and the companion
+  watch. The theme choice changes the other sessions, not just the current one.
+- **`OLYMPUS_HOME` and `OLYMPUS_PORT` are honored** by auth, the project
+  registry, the vault root, run-state and Electron, so a dev build runs on
+  3747 with its own store/vault while the stable app stays on 3737.
+- **The native Samsung/home-screen widget is a v0.1.0 priority**, with the
+  PWA limitation named in `ROADMAP.md`: a PWA can install an app icon, not an
+  OS home-screen widget. The plan is a thin Capacitor/TWA wrapper with Glance
+  (Android/Samsung) and WidgetKit (iOS), reusing these same surfaces.
+
+#### The queue that works while OLYMPUS hibernates (backported to v0.0.84)
+
+- **`investigar` no longer waits for the window to wake.** A server-side drain
+  runs while the hibernation marker is active: it claims phone items, pins the
+  active project, calls the normal action route on the warm session, marks the
+  item sent and publishes the answer to the shared notification feed. A failed
+  dispatch returns to `queued` with a two-minute backoff; while awake the
+  terminal renderer remains the only sender. Pinned by
+  `scripts/prompt-queue-hibernate.test.mjs`.
+
+#### A context reset never forks a project (backported to v0.0.84)
+
+- **The compaction handoff stays in the active lane.** The reset prompt now
+  carries `[OLYMPUS-PROJECT <slug>]`, and the intake recognizes that pin (and
+  the older `[OLYMPUS HANDOFF]` marker) before any fuzzy classification. A
+  parked-hop/campaign question inherits the active project too; a real new
+  request still creates one. The 18:54 `olympus-handoff-context-window`
+  specimen is pinned by `scripts/handoff-continuity.test.mjs`.
+
+#### Verification
+
+- New `scripts/companion-apps.test.mjs`: **38 assertions** covering the two
+  manifests, themed icons, one worker, the briefing function, the intent
+  parser, the seven locales, the notification feed, the capture route and the
+  native-widget plan. Live dev probe: manifest, PNG icons, briefing and a
+  phone notification exercised on `:3747` with an isolated vault.
+
 ## [v0.0.84] — 2026-11-05
 
 ### Edit — the park that survives a resume, and a model-free resume

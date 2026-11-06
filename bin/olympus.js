@@ -371,7 +371,7 @@ function startElectron(extraArgs = []) {
   }
 
   console.log(`${c.gold}olympus:${c.reset} launching OLYMPUS desktop window...`);
-  console.log(`${c.gray}olympus: Electron will start Next.js on port 3737 and open the window.${c.reset}`);
+  console.log(`${c.gray}olympus: Electron will start Next.js on port ${process.env.OLYMPUS_PORT || 3737} and open the window.${c.reset}`);
   console.log(`${c.gray}olympus: close the OLYMPUS window to stop. Ctrl+C also works.${c.reset}`);
   console.log('');
 

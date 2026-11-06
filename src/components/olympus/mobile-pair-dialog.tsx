@@ -22,6 +22,7 @@ type Pair = {
   url?: string;
   widgetUrl?: string;
   widgetSecure?: boolean;
+  urlSecure?: boolean;
   qr?: string | null;
   widgetQr?: string | null;
   themeName?: string;
@@ -177,9 +178,9 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
                 no QR — use the URL and token below
               </div>
             )}
-            {target === 'widget' && pair && !pair.widgetSecure && (
+            {pair && !(target === 'widget' ? pair.widgetSecure : pair.urlSecure) && (
               <p className="text-center text-[8px] font-mono text-olympus-gold/80">
-                para instalar como PWA, inicie o túnel HTTPS abaixo e o QR se atualiza
+                para instalar como PWA e usar a voz, inicie o túnel HTTPS abaixo e o QR se atualiza
               </p>
             )}
             <div className="w-full flex items-center gap-1.5">

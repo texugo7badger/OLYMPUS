@@ -57,6 +57,8 @@ const main = read('electron/main.ts');
 const walker = read('src/lib/hop-runtime/walker.ts');
 const widget = read('src/app/m/widget/page.tsx');
 const widgetManifest = read('public/manifest-widget.webmanifest');
+const pwaHook = read('src/lib/use-mobile-pwa.ts');
+const sharedSw = read('public/m-sw.js');
 const pairing = read('src/lib/mobile-pairing.ts');
 const walkLane = read('scripts/walk-lane.ts');
 const pairDialog = read('src/components/olympus/mobile-pair-dialog.tsx');
@@ -113,12 +115,12 @@ expect('T-12: closing the main window hibernates, it does not quit', /mainWindow
 // v0.0.84 edit — the live phone widget / hibernation HUD.
 expect('T-13: /m/widget is a live campaign + GO + hops view', /run-state/.test(widget) && /go-usage/.test(widget) && /5_000/.test(widget) && /inFlightList/.test(widget), 'widget is not live');
 expect('T-14: the widget has a standalone manifest', /"start_url": "\/m\/widget"/.test(widgetManifest) && /standalone/.test(widgetManifest), 'no widget manifest');
-expect('T-15: the phone details sheet links to the widget', /\/m\/widget#t=/.test(mobile) && /Smartphone/.test(mobile), 'no phone widget link');
+expect('T-15: the phone details sheet links to the widget', /href="\/m\/widget"/.test(mobile) && /Smartphone/.test(mobile), 'no phone widget link');
 
 // v0.0.84 edit — themed QR + installable widget with terminal chat.
 expect('T-16: the pairing payload carries a themed widget QR', /widgetQr/.test(pairing) && /qrDark/.test(pairing) && /themeName/.test(pairing) && /widgetQr/.test(pairDialog), 'no themed widget QR');
-expect('T-17: the widget has a terminal queue + parked action + install prompt', /prompt-queue/.test(widget) && /investigar/.test(widget) && /beforeinstallprompt/.test(widget) && !/abrir OLYMPUS/.test(widget), 'widget is not interactive');
-expect('T-18: the widget is installable (SW + 192/512 icons)', /serviceWorker/.test(widget) && /widget-sw/.test(widget) && /olympus-192/.test(widgetManifest) && /olympus-512/.test(widgetManifest), 'no install surface');
+expect('T-17: the widget has a terminal queue + parked action + install prompt', /prompt-queue/.test(widget) && /w\.investigate/.test(widget) && /beforeinstallprompt/.test(pwaHook) && !/abrir OLYMPUS/.test(widget), 'widget is not interactive');
+expect('T-18: the widget is installable (shared SW + themed icons)', /register\('\/m-sw\.js'/.test(pwaHook) && /notificationclick/.test(sharedSw) && /mobileManifest\('widget'\)/.test(read('src/app/m/widget/manifest.webmanifest/route.ts')) && /themedAppIconSvg/.test(read('src/app/m/icon/[size]/route.ts')), 'no install surface');
 
 // v0.0.84 edit — the resume ACK must not wait on the spawn.
 expect('T-19: the resume stream ACKs before spawning the walker', /resume requested/.test(action) && /setImmediate/.test(action), 'resume waits on spawn');

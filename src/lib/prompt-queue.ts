@@ -28,7 +28,7 @@ export interface PromptQueueItem {
   project: string;
   text: string;
   createdAt: string;
-  status: 'queued' | 'sent';
+  status: 'queued' | 'sending' | 'sent';
   sentAt?: string;
   /** v0.0.81 — where the prompt was composed. Markview is a first-class lane. */
   source?: 'terminal' | 'creative' | 'phone' | 'markview';
@@ -107,11 +107,15 @@ export function enqueuePrompt(project: string, text: string, now = Date.now(), m
   return item;
 }
 
-export function markQueueItem(id: string, status: 'sent', now = Date.now()): PromptQueueItem | null {
+export function markQueueItem(id: string, status: 'queued' | 'sending' | 'sent', now = Date.now()): PromptQueueItem | null {
   const all = read();
   const idx = all.findIndex((i) => i.id === id);
   if (idx < 0) return null;
-  all[idx] = { ...all[idx], status, sentAt: new Date(now).toISOString() };
+  all[idx] = {
+    ...all[idx],
+    status,
+    ...(status === 'sent' ? { sentAt: new Date(now).toISOString() } : {}),
+  };
   write(all);
   return all[idx];
 }

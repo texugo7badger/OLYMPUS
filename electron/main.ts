@@ -48,7 +48,12 @@ import { NOTIFY_COLORS, NOTIFY_LABELS, isNotifyType, themeMarkPng, trayPng, deci
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PORT = 3737;
+// v0.0.85 — a dev lane can run beside the stable app on another port.
+// `OLYMPUS_PORT=3747 OLYMPUS_HOME=~/.olympus-dev olympus dev` is isolated.
+const PORT = (() => {
+  const raw = Number(process.env.OLYMPUS_PORT || 3737);
+  return Number.isInteger(raw) && raw > 0 && raw < 65536 ? raw : 3737;
+})();
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 // A crash-loop relaunch lands in SAFE mode: the terminal pane and decorative
 // surfaces are off until the user re-enables them.
@@ -936,10 +941,14 @@ function startHibernationWatch(): void {
     if (key === lastKey) return;
     const prev = lastKey.split('|');
     lastKey = key;
+    // v0.0.85 — the walker appends hop done/park to the shared notification
+    // file and the tail above already delivers it to the tray and the phone.
+    // This poll only reports transitions that are not a hop event, so one
+    // settle never rings twice.
     if (parked && parked.hopId !== prev[2]) {
-      notifyDesktop('error', 'OLYMPUS — hop parked', `${parked.hopId} (${parked.reason ?? 'parked'}). The campaign continues; open OLYMPUS to resume.`);
+      /* delivered by the file tail (the walker appended it) */
     } else if (completed > Number(prev[1] ?? 0)) {
-      notifyDesktop('ready', 'OLYMPUS — hop done', `${completed} hop(s) ok.`);
+      /* delivered by the file tail (the walker appended it) */
     } else {
       notifyDesktop('walk', 'OLYMPUS', d?.line ?? 'Campaign state changed.');
     }
@@ -1944,7 +1953,7 @@ if (!gotLock) {
     try {
       const token = readFileSync(join(nodeOs.homedir(), '.olympus', 'session-token'), 'utf-8').trim();
       if (token) {
-        for (const url of [BASE_URL, 'http://localhost:3737']) {
+        for (const url of [BASE_URL, `http://localhost:${PORT}`]) {
           void session.defaultSession.cookies.set({ url, name: 'olympus_token', value: token, httpOnly: true, sameSite: 'strict' }).catch(() => {});
         }
       }

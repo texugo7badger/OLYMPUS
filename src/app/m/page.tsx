@@ -19,8 +19,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  Check, ExternalLink, Loader2, Lock, Mic, Palette, Play,
-  MousePointerClick, Radio, RefreshCw, Settings2, Smartphone, Sparkles, Square, X,
+  Bell, Check, Download, ExternalLink, Loader2, Lock, Mic, Palette, Play,
+  MousePointerClick, Radio, RefreshCw, Settings2, Smartphone, Sparkles, Square, Volume2, X,
 } from 'lucide-react';
 import PlasmaRing from '@/components/olympus/plasma-ring';
 import TaskSheetModal from '@/components/olympus/task-sheet-modal';
@@ -32,6 +32,12 @@ import { speakAs } from '@/lib/voice';
 import { useHoldToTalk } from '@/lib/use-hold-to-talk';
 import { mobileFetch } from '@/lib/mobile-fetch';
 import { godTintHex } from '@/lib/god-tint';
+import { useMobilePwa } from '@/lib/use-mobile-pwa';
+import { useCompanionNotifications } from '@/lib/use-companion-notifications';
+import CompanionBriefing from '@/components/olympus/companion-briefing';
+import { CompanionNotificationsSheet, CompanionToast } from '@/components/olympus/companion-notifications';
+import type { ProjectBriefing } from '@/lib/project-briefing';
+import { briefingSpeech, isBriefingIntent } from '@/lib/companion-text';
 
 const GOD_IDS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
 
@@ -45,6 +51,7 @@ type Project = {
 
 type RunState = {
   line?: string;
+  verdict?: string;
   campaign?: { state?: string; lane?: string };
   hops?: {
     completed?: number;
@@ -113,6 +120,14 @@ export default function MobileCompanion() {
   const [queueNote, setQueueNote] = useState<string | null>(null);
   const levelGate = useRef(0);
   const themeStampRef = useRef('');
+  // v0.0.85 — the companion is installable, with the same themed icon as the
+  // widget. One worker owns both surfaces; the switcher stays in scope.
+  const pwa = useMobilePwa();
+  const [briefing, setBriefing] = useState<ProjectBriefing | null>(null);
+  const [briefingBusy, setBriefingBusy] = useState(false);
+  const [briefingOpen, setBriefingOpen] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const notifications = useCompanionNotifications({ token, language });
 
   // Boot: token from the QR fragment, then localStorage.
   useEffect(() => {
@@ -451,19 +466,61 @@ export default function MobileCompanion() {
     }
   }, [active, busy, token, headers, language, speak, load]);
 
+  // v0.0.85 — the companion's zero-token answer. "Resumo", "briefing",
+  // "me atualiza" and "o que está sendo desenvolvido" read the project
+  // document on disk and Apollo speaks it; a real task still goes to the
+  // terminal. The same document is the widget's briefing.
+  const loadBriefing = useCallback(async (): Promise<ProjectBriefing | null> => {
+    if (!token) return null;
+    setBriefingBusy(true);
+    try {
+      const response = await mobileFetch('/api/olympus/briefing', { cache: 'no-store', headers }, 20_000);
+      if (!response.ok) return null;
+      const data = await response.json().catch(() => null);
+      if (data?.ok) setBriefing(data);
+      return data;
+    } catch { return null; }
+    finally { setBriefingBusy(false); }
+  }, [token, headers]);
+
+  const speakBriefing = useCallback(async () => {
+    const data = briefing?.ok ? briefing : await loadBriefing();
+    if (!data?.ok) {
+      setError(data?.error || t('m.connectionFailed', language));
+      return;
+    }
+    const speech = briefingSpeech(data, language);
+    setLog((lines) => [...lines.slice(-3), `Apollo: ${speech}`]);
+    void speakAs(speech, 'apollo', language, setSpeaking, onLevel);
+  }, [briefing, loadBriefing, language, onLevel]);
+
+  useEffect(() => {
+    if (briefingOpen && !briefing) void loadBriefing();
+  }, [briefingOpen, briefing, loadBriefing]);
+
   const hold = useHoldToTalk({
     language,
-    onText: (text) => void askApollo(text),
+    onText: (text) => { if (isBriefingIntent(text)) void speakBriefing(); else void askApollo(text); },
     onError: (message) => setError(message),
   });
 
-  const campaign = run?.campaign?.state || 'none';
+  // The verdict is the honest word: a parked/interrupted walk often has no
+  // live campaign state, but the user must see 'parado', not 'ocioso'.
+  const campaign = (() => {
+    const verdict = String(run?.verdict || '').toUpperCase();
+    if (verdict === 'RUNNING') return 'running';
+    if (verdict === 'PARKED') return 'parked';
+    if (verdict === 'INTERRUPTED') return 'interrupted';
+    if (verdict === 'IDLE') return 'idle';
+    return run?.campaign?.state || 'none';
+  })();
   const completed = Number(run?.hops?.completed ?? 0);
   const total = Number(run?.hops?.total ?? 0);
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   const campaignLabel =
     campaign === 'running' ? t('m.stateRunning', language)
       : campaign === 'parked' ? t('m.stateParked', language)
+      : campaign === 'interrupted' ? t('m.interrupted', language)
         : campaign === 'unverified' ? t('m.interrupted', language)
           : campaign === 'done' ? t('m.stateDone', language)
             : campaign === 'none' ? t('m.stateIdle', language)
@@ -520,13 +577,38 @@ export default function MobileCompanion() {
           <div className="text-[10px] font-semibold tracking-[0.22em]">OLYMPUS</div>
           <div className="truncate text-[10px] text-olympus-text-dim">{active || t('m.noProject', language)} · {campaignLabel}</div>
         </div>
-        <Link href="/m/studio" aria-label={t('m.studio', language)} className="flex h-11 w-11 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold">
-          <Radio size={16} />
+        <Link href="/m/widget" aria-label={t('m.openWidget', language)} title={t('m.openWidget', language)} className="flex h-11 w-11 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold">
+          <Smartphone size={16} />
         </Link>
+        <button
+          onClick={() => { setNotifyOpen(true); notifications.markRead(); }}
+          aria-label={t('w.notifications', language)}
+          className="relative flex h-11 w-11 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold"
+        >
+          <Bell size={16} />
+          {notifications.unread > 0 && (
+            <span className="absolute right-1 top-1 flex h-3 min-w-3 items-center justify-center rounded-full bg-olympus-gold px-0.5 text-[7px] font-bold text-olympus-bg">
+              {notifications.unread > 9 ? '9+' : notifications.unread}
+            </span>
+          )}
+        </button>
         <button onClick={() => setDetailsOpen(true)} aria-label={t('m.details', language)} className="flex h-11 w-11 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold">
           <Settings2 size={16} />
         </button>
       </header>
+
+      {pwa.installEvent && (
+        <div className="relative z-10 mx-4 mt-1 flex items-center gap-2 rounded-xl border border-olympus-gold/25 bg-olympus-gold/5 px-3 py-2">
+          <Download size={12} className="shrink-0 text-olympus-gold" />
+          <p className="min-w-0 flex-1 text-[9px] leading-snug text-olympus-text-dim">{t('m.installHint', language)}</p>
+          <button
+            onClick={() => void pwa.install()}
+            className="shrink-0 rounded-lg bg-olympus-gold px-2.5 py-1.5 text-[9px] font-semibold text-olympus-bg active:scale-[0.98]"
+          >
+            {t('m.installApp', language)}
+          </button>
+        </div>
+      )}
 
       <section className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4">
         {!secure && (
@@ -608,6 +690,15 @@ export default function MobileCompanion() {
           {total > 0 ? `${pct}% · ${completed}/${total} ${t('m.hops', language)}` : campaignLabel}
           {run?.hops?.parked?.hopId ? ` · ${t('m.parkedAt', language)} ${run.hops.parked.hopId}` : ''}
         </p>
+
+        <button
+          onClick={() => { setBriefingOpen(true); void speakBriefing(); }}
+          disabled={briefingBusy}
+          className="olympus-rise mt-1 inline-flex items-center gap-1.5 rounded-full border border-olympus-gold/30 bg-olympus-gold/5 px-3 py-1.5 text-[10px] font-mono text-olympus-gold disabled:opacity-50"
+        >
+          {briefingBusy ? <Loader2 size={11} className="animate-spin" /> : <Volume2 size={11} />}
+          {t('w.briefing', language)}
+        </button>
       </section>
 
       <div className="relative z-10 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)]">
@@ -823,15 +914,30 @@ export default function MobileCompanion() {
                 {perfMode ? 'on' : 'off'}
               </button>
             </div>
-            {token && (
-              <a
-                href={`/m/widget#t=${encodeURIComponent(token)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-cyan/30 bg-olympus-cyan/5 py-2 text-[10px] text-olympus-cyan"
+            <Link
+              href="/m/widget"
+              onClick={() => setDetailsOpen(false)}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-cyan/30 bg-olympus-cyan/5 py-2 text-[10px] text-olympus-cyan"
+            >
+              <Smartphone size={11} /> {t('m.openWidget', language)}
+            </Link>
+            <Link
+              href="/m/studio"
+              onClick={() => setDetailsOpen(false)}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-gold/20 py-2 text-[10px] text-olympus-gold"
+            >
+              <Radio size={11} /> {t('m.studio', language)}
+            </Link>
+            {pwa.installEvent && (
+              <button
+                onClick={() => void pwa.install()}
+                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-gold/30 bg-olympus-gold/10 py-2 text-[10px] text-olympus-gold"
               >
-                <Smartphone size={11} /> widget ao vivo (adicionar à tela inicial)
-              </a>
+                <Download size={11} /> {t('m.installApp', language)}
+              </button>
+            )}
+            {pwa.installed && (
+              <p className="mt-2 text-center text-[9px] font-mono text-olympus-green">{t('m.installed', language)}</p>
             )}
             <button
               onClick={() => { try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ } setToken(null); }}
@@ -842,6 +948,39 @@ export default function MobileCompanion() {
           </div>
         </div>
       )}
+
+      {briefingOpen && (
+        <div className="fixed inset-0 z-[340] flex items-end bg-black/60" onClick={() => setBriefingOpen(false)} role="dialog" aria-modal="true" aria-label={t('w.briefing', language)}>
+          <div
+            className="olympus-rise max-h-[88dvh] w-full overflow-y-auto rounded-t-2xl border-t border-olympus-gold/20 bg-olympus-panel p-3 pb-[calc(env(safe-area-inset-bottom)+14px)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <Sparkles size={13} className="text-olympus-gold" />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-olympus-gold">{t('w.briefing', language)}</span>
+              <button onClick={() => setBriefingOpen(false)} aria-label={t('m.close', language)} className="ml-auto p-2 text-olympus-text-dim"><X size={16} /></button>
+            </div>
+            <CompanionBriefing
+              briefing={briefing}
+              language={language}
+              palette={palette}
+              busy={briefingBusy}
+              onSpeak={(text, god = 'apollo') => void speakAs(text, god, language, setSpeaking, onLevel)}
+              onInvestigate={(text) => { setBriefingOpen(false); void askApollo(text); }}
+              onRefresh={() => void loadBriefing()}
+            />
+          </div>
+        </div>
+      )}
+
+      <CompanionNotificationsSheet
+        open={notifyOpen}
+        onClose={() => setNotifyOpen(false)}
+        state={notifications}
+        language={language}
+        palette={palette}
+      />
+      <CompanionToast state={notifications} language={language} palette={palette} onOpen={() => { setNotifyOpen(true); notifications.markRead(); }} />
 
       {sheetHop && <TaskSheetModal hopId={sheetHop} onClose={() => setSheetHop(null)} />}
 

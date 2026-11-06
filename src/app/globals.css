@@ -451,6 +451,14 @@
   .olympus-crystal-float, .olympus-crystal-shimmer { animation: none; }
 }
 
+/* v0.0.85 — the companion cards rise in; transform/opacity only, and the
+   global reduced-motion rule below turns it off for users who ask. */
+@keyframes olympus-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.olympus-rise { animation: olympus-rise 420ms cubic-bezier(.2,.8,.2,1) both; }
+
 /* v0.0.49 — accessibility: the host's reduced-motion preference wins over
    decorative motion (the app's own "stable" mode remains the explicit
    in-app control). Layout and state changes stay instant, never animated. */

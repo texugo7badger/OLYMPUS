@@ -20,6 +20,11 @@
       "stable": true
     },
     {
+      "version": "0.0.85",
+      "tag": "v0.0.85",
+      "stable": false
+    },
+    {
       "version": "0.0.83",
       "tag": "v0.0.83",
       "stable": false

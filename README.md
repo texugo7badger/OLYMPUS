@@ -34,7 +34,18 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.84 — the park that survives a resume.**
+**v0.0.85 — the Apollo companion in your pocket.**
+The mobile companion and the live widget are now two installable PWAs with the
+same OLYMPUS mark painted by the active theme, one service worker, in-app
+switching and an install prompt. The widget is a living briefing: what the
+project is, the hop in flight, the parked reason, recent settles and the next
+hops — zero tokens, read from the plan and telemetry on disk. Apollo answers
+"resumo do projeto" / "brief me" by voice and reads the same briefing; every
+card can speak in the responsible god's voice. Real mobile and desktop
+captures of the live preview sit under a critique box that sends the note to
+Apollo, and the PC and phone share one notification feed (with native OS
+notifications while the PWA runs). The widget is also a theme remote: one tap
+changes the PC and the phone. **v0.0.84 — the park that survives a resume.**
 A machine auto-resume (overnight or boot orphan pickup) now keeps the hop
 quarantine: the hops that just parked are not re-run from scratch, while a
 human start still retries them. A park is truth on disk from the initial

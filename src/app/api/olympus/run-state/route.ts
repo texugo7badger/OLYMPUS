@@ -35,6 +35,8 @@ import { loadHopState, hopStatePath } from '@/lib/hop-runtime/hop-state';
 import { readHopTelemetry } from '@/lib/hop-runtime/walker';
 import { readLaneHealth, blockedLanes } from '@/lib/lane-health';
 import { workspaceLaneDir } from '@/lib/opencode-spawn';
+import { getVaultRoot } from '@/lib/vault-root';
+import { getProject } from '@/lib/project-context';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,7 +46,7 @@ export const dynamic = 'force-dynamic';
 // files once; the run-state route no longer patches drift on every poll.
 import { readStrategyState } from '@/lib/strategy-state';
 
-const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
+const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
 
 function readJson<T>(file: string): T | null {
   try { return JSON.parse(fs.readFileSync(file, 'utf-8')) as T; } catch { return null; }
@@ -102,7 +104,10 @@ function candidateLanes(slug: string | null): string[] {
   const out: string[] = [];
   if (!slug) return out;
   try { out.push(path.join(workspaceLaneDir(), slug)); } catch { /* no workspace yet */ }
-  out.push(path.join(os.homedir(), 'OLYMPUS-VAULT', '02_Projects', slug));
+  // v0.0.85 — the project note's own path is the lane for note-rooted projects
+  // (the dev fixture and any project whose plan lives in its note home).
+  try { const note = getProject(slug); if (note?.path) out.push(note.path); } catch { /* no note */ }
+  out.push(path.join(getVaultRoot(), '02_Projects', slug));
   return [...new Set(out)];
 }
 

@@ -14,7 +14,8 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 
-const VAULT_ROOT_FILE = join(homedir(), '.olympus', 'vault-root.txt');
+const OLYMPUS_HOME = process.env.OLYMPUS_HOME || join(homedir(), '.olympus');
+const VAULT_ROOT_FILE = join(OLYMPUS_HOME, 'vault-root.txt');
 const DEFAULT_VAULT_ROOT = join(homedir(), 'OLYMPUS-VAULT');
 
 // The D21 deprecation warning fires once per process, loudly — never silent.

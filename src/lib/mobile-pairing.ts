@@ -130,13 +130,18 @@ export async function buildPairPayload(opts: { hostHeader: string | null; includ
   const port = resolvePort(opts.hostHeader);
   const addresses = lanAddresses();
   const preferred = addresses[0] || 'localhost';
-  const url = mobileUrlFor(preferred, port, token);
+  // PWA install and phone voice need a secure context. The same HTTPS tunnel
+  // serves both surfaces; when it is down, the QR falls back to LAN (a
+  // shortcut, not an installable PWA) and the dialog says so.
+  const lanUrl = mobileUrlFor(preferred, port, token);
   // PWA install needs a secure context. When the mobile HTTPS tunnel is
   // running, the widget QR points at it; otherwise it falls back to LAN and
   // the dialog says this QR is a shortcut, not an installable PWA.
   const remote = (() => { try { return tunnelStatus(); } catch { return null; } })();
   const secureBase = remote && remote.running && remote.url ? remote.url.replace(/\/$/, '') : null;
-  const widgetBase = secureBase || `http://${preferred}:${port}`;
+  const lanBase = `http://${preferred}:${port}`;
+  const url = secureBase ? `${secureBase}/m#t=${encodeURIComponent(token)}` : lanUrl;
+  const widgetBase = secureBase || lanBase;
   const widgetUrl = `${widgetBase}/m/widget#t=${encodeURIComponent(token)}`;
   const mode = readNetworkMode();
   const theme = readThemeForQr();
@@ -163,6 +168,7 @@ export async function buildPairPayload(opts: { hostHeader: string | null; includ
     url,
     widgetUrl,
     widgetSecure: Boolean(secureBase),
+    urlSecure: Boolean(secureBase),
     qr,
     widgetQr,
     themeName: theme.name,

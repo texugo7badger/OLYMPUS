@@ -1,8 +1,27 @@
 import type { Metadata, Viewport } from 'next';
 
+/**
+ * /m — the installable OLYMPUS mobile companion (v0.0.85).
+ *
+ * The manifest is generated per request from the active theme; the icon route
+ * renders the same mark in that palette. `scope: /m` covers the live widget
+ * too, so the in-app switcher stays inside the installed window.
+ */
 export const metadata: Metadata = {
   title: 'OLYMPUS · mobile',
   description: 'The OLYMPUS companion — campaign, projects, prompts and voice.',
+  applicationName: 'OLYMPUS Mobile',
+  manifest: '/m/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'OLYMPUS',
+  },
+  icons: {
+    icon: [{ url: '/m/icon/192', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/m/icon/180', sizes: '180x180', type: 'image/png' }],
+  },
+  formatDetection: { telephone: false, email: false, address: false },
 };
 
 export const viewport: Viewport = {
@@ -13,7 +32,7 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: 'cover',
-  themeColor: '#0b0b0f',
+  themeColor: '#0A0E16',
 };
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {

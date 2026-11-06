@@ -23,7 +23,8 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
+// v0.0.85 — the dev lane sets OLYMPUS_HOME; the stable app keeps the default.
+const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
 const TOKEN_FILE = path.join(OLYMPUS_HOME, 'session-token');
 const MODE_FILE = path.join(OLYMPUS_HOME, 'network-mode');
 const ALLOWED_LOCAL_ORIGINS = [

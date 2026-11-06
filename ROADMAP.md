@@ -1,6 +1,13 @@
 # OLYMPUS Roadmap
 
-**v0.0.84 is the current release** (2026-11-06) — the park that survives a resume:
+**v0.0.85 is the current release** (2026-11-06) — the Apollo companion in
+your pocket: `/m` and `/m/widget` are two installable PWAs with the same
+themed icon, one worker and in-app switching; a zero-token briefing (current
+hop, parked reason, recent settles, next hops) spoken by Apollo and every
+god; real mobile/desktop captures of the live preview with a critique lane;
+one notification feed on PC and phone, with native OS notifications while
+the PWA runs. The native home-screen widget is the v0.1.0 priority.
+**v0.0.84** was the park that survives a resume:
 a machine auto-resume keeps the quarantine instead of re-running the hops
 that just parked; the park stays on disk from the initial write until the
 hop passes (the AIME 55/78 silent-stop specimen). A human start still
@@ -137,3 +144,26 @@ external user.** 9.0 and 10.0 are community and sustainability, not versions.
   benchmark/log bundle (workflow, token spend, instincts and knowledge
   learned, per-hop truth) that becomes the evidence for the next model,
   prompt and routing decisions.
+
+## v0.1.0 — the native OLYMPUS app and the real home-screen widget (priority)
+
+The v0.0.85 companion is an installable **PWA**: `/m` and `/m/widget` have
+their own themed manifests, icons and service worker, and the phone can add
+both to the home screen with the same mark in the active palette. A PWA can
+not place a live **home-screen widget** on Android/iOS — the OS only exposes
+widgets to native apps. That is a platform limit, not a missing script.
+
+- **Delivery:** a thin Capacitor/TWA wrapper reuses the same `/m` and
+  `/m/widget` surfaces (one codebase, no second UI), with **Glance** for the
+  Android/Samsung home-screen widget and **WidgetKit** for iOS. The wrapper
+  reads the same session token, theme store and notification feed.
+- **The widget:** campaign progress, the in-flight hop, the parked reason,
+  the next hops and the briefing — read-only, refreshed by WorkManager, with
+  one tap opening `/m/widget` (never the PC screen).
+- **Notifications:** the wrapper adds true background push (Web Push
+  subscription + VAPID, or FCM/APNs) so a settled hop reaches the phone even
+  when the PWA process is gone. Until then the PWA notifies while it is
+  running; the UI says so explicitly.
+- **Acceptance:** installable APK/IPA, themed launcher icon, one widget per
+  home screen, background notification on hop done/park, and the same
+  briefing in the user's language. The PWA remains the zero-install lane.

@@ -25,7 +25,7 @@
 import { appendFileSync, existsSync, readFileSync, symlinkSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
-import { join, isAbsolute } from 'node:path';
+import { join, isAbsolute, basename } from 'node:path';
 import { spawn } from 'node:child_process';
 import { syncLaneFile } from '@/lib/lane-config';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
@@ -48,6 +48,7 @@ import { FREE_HYBRID_ROSTER } from '@/lib/model-strategies';
 import { backupBeforeDestructiveHop } from '@/lib/destructive-guard';
 import { applyRunManifestFile, buildRunMcpManifest, getRunMcpManifest, setRunMcpManifest } from '@/lib/mcp-run-manifest';
 import { checkCostCaps } from '@/lib/cost-caps';
+import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
 export const MAX_HOP_CONCURRENCY = 3;
@@ -1250,6 +1251,34 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       ...(r?.output ? { outputTail: String(r.output).slice(-2_000) } : {}),
     };
     appendHopTelemetry(stateDir, row);
+    // v0.0.85 — THE SAME EVENT REACHES THE PC AND THE PHONE. The desktop
+    // notification file is the one feed both surfaces read; appending here
+    // means a hop settle is no longer visible only in the terminal. The
+    // phone localizes its own derived text and shows the provenance.
+    try {
+      const ok = status === 'completed';
+      const lang = readLanguage();
+      const slug = basename(stateDir);
+      const secs = Math.max(0, Math.round(row.durationMs / 1000));
+      const duration = secs >= 3600
+        ? `${Math.floor(secs / 3600)}h${Math.round((secs % 3600) / 60)}m`
+        : secs >= 60 ? `${Math.floor(secs / 60)}m${secs % 60}s` : `${secs}s`;
+      appendDesktopNotify({
+        type: ok ? 'ready' : 'error',
+        title: notifyText(lang, ok ? 'hop.title' : 'hopPark.title'),
+        body: notifyText(lang, ok ? 'hop.body' : 'hopPark.body', {
+          slug,
+          god: row.god,
+          hop: row.hop,
+          duration,
+          reason: String(status).replace(/^parked-/, ''),
+        }),
+        hop: row.hop,
+        god: row.god,
+        slug,
+        status,
+      });
+    } catch { /* a notification never blocks a hop */ }
     rows.push(row);
     return row;
   };
