@@ -15,8 +15,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ArrowUpRight, Coins, Gauge, RefreshCw, Radio, Zap } from 'lucide-react';
+import { Coins, Download, Gauge, Radio, RefreshCw, Send, Zap } from 'lucide-react';
 import { applyTheme, normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
 import { mobileFetch } from '@/lib/mobile-fetch';
 
@@ -45,6 +44,7 @@ type Usage = {
 };
 
 type Costs = { spend?: number; stepCost?: number; total?: number };
+type QueueItem = { id: string; text: string; status: 'queued' | 'sent'; priority?: string; source?: string; createdAt?: string };
 
 function pct(value: unknown): number | null {
   const n = Number(value);
@@ -67,16 +67,34 @@ export default function LiveWidgetPage() {
   const [updatedAt, setUpdatedAt] = useState<string>('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [queueNote, setQueueNote] = useState('');
+  const [installEvent, setInstallEvent] = useState<any>(null);
 
   useEffect(() => {
     try {
       const hash = window.location.hash || '';
       const fromHash = new URLSearchParams(hash.replace(/^#/, '')).get('t') || '';
       const stored = localStorage.getItem(TOKEN_KEY) || '';
+      // The PWA start_url is /m/widget (no hash); persist the QR token so the
+      // installed widget keeps its session without the fragment.
+      if (fromHash) { try { localStorage.setItem(TOKEN_KEY, fromHash); } catch { /* private */ } }
       setToken(fromHash || stored || null);
       const raw = localStorage.getItem(THEME_KEY);
       if (raw) setTheme(normalizeThemeState(JSON.parse(raw)));
     } catch { /* private mode */ }
+  }, []);
+
+  useEffect(() => {
+    // PWA: the widget is installable on the phone; it never opens the full app.
+    try {
+      if ('serviceWorker' in navigator) void navigator.serviceWorker.register('/widget-sw.js', { scope: '/m/widget' }).catch(() => { /* http/private */ });
+    } catch { /* no SW */ }
+    const onPrompt = (e: any) => { e.preventDefault(); setInstallEvent(e); };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
   }, []);
 
   const palette = useMemo(() => resolvePalette(normalizeThemeState(theme)), [theme]);
@@ -96,12 +114,13 @@ export default function LiveWidgetPage() {
     if (!token || busy) return;
     setBusy(true);
     try {
-      const [pRes, rRes, gRes, cRes, tRes] = await Promise.all([
+      const [pRes, rRes, gRes, cRes, tRes, qRes] = await Promise.all([
         mobileFetch('/api/olympus/projects', { cache: 'no-store', headers }, 20_000),
         mobileFetch('/api/olympus/run-state', { cache: 'no-store', headers }, 20_000),
         mobileFetch('/api/olympus/go-usage', { cache: 'no-store', headers }, 25_000),
         mobileFetch('/api/olympus/costs?window=24h', { cache: 'no-store', headers }, 20_000),
         mobileFetch('/api/olympus/theme', { cache: 'no-store', headers }, 15_000),
+        mobileFetch('/api/olympus/prompt-queue', { cache: 'no-store', headers }, 15_000),
       ]);
       if (pRes.ok) {
         const d = await pRes.json().catch(() => null);
@@ -118,6 +137,10 @@ export default function LiveWidgetPage() {
           setTheme(next);
           try { localStorage.setItem(THEME_KEY, JSON.stringify(next)); } catch { /* private */ }
         }
+      }
+      if (qRes.ok) {
+        const d = await qRes.json().catch(() => null);
+        setQueue(Array.isArray(d?.items) ? d.items.slice(-8).reverse() : []);
       }
       setUpdatedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       setError(null);
@@ -150,6 +173,33 @@ export default function LiveWidgetPage() {
   const listValue = usage?.models?.find((m) => m.model === usage?.binding?.model)?.spendMonth;
   const step = costs?.stepCost ?? costs?.spend ?? costs?.total;
 
+  const sendPrompt = useCallback(async (text: string) => {
+    const q = text.trim();
+    if (!q || sending) return;
+    setSending(true);
+    setQueueNote('');
+    try {
+      const r = await mobileFetch('/api/olympus/prompt-queue', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ project: project || 'aime', text: q, source: 'phone', priority: 'high' }),
+      }, 20_000);
+      const d = await r.json().catch(() => null);
+      if (r.ok && d?.ok) {
+        setQueueNote('enviado ao terminal · alta prioridade');
+        setDraft('');
+        setQueue(Array.isArray(d?.items) ? d.items.slice(-8).reverse() : []);
+      } else setQueueNote(d?.error || 'fila indisponível');
+    } catch (e: any) { setQueueNote(e?.message || 'fila indisponível'); }
+    finally { setSending(false); }
+  }, [sending, headers, project]);
+
+  const installWidget = useCallback(async () => {
+    if (!installEvent) return;
+    try { await installEvent.prompt(); await installEvent.userChoice; } catch { /* dismissed */ }
+    setInstallEvent(null);
+  }, [installEvent]);
+
   const card = { border: `1px solid ${palette.gold}22`, background: `${palette.card}cc` } as const;
   const dim = { color: palette.textDim } as const;
   const mono = 'font-mono tabular-nums';
@@ -159,10 +209,7 @@ export default function LiveWidgetPage() {
       <main className="flex min-h-dvh items-center justify-center p-6" style={{ background: palette.bg, color: palette.text }}>
         <div className="max-w-sm text-center">
           <div className="text-[11px] font-semibold uppercase tracking-[0.3em]" style={{ color: palette.gold }}>OLYMPUS</div>
-          <p className="mt-3 text-sm" style={dim}>Abra este widget pelo OLYMPUS mobile para herdar a sessão.</p>
-          <Link href="/m" className="mt-4 inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-mono" style={{ background: palette.gold, color: palette.bg }}>
-            abrir /m <ArrowUpRight size={12} />
-          </Link>
+          <p className="mt-3 text-sm" style={dim}>Escaneie o QR de widget no OLYMPUS do PC para herdar a sessão.</p>
         </div>
       </main>
     );
@@ -204,9 +251,18 @@ export default function LiveWidgetPage() {
           </div>
         )}
         {parked?.hopId && (
-          <p className="mt-2 text-[9px] font-mono" style={{ color: palette.gold }}>
-            parked: {parked.hopId}{parked.reason ? ` · ${parked.reason}` : ''}
-          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <p className="min-w-0 flex-1 text-[9px] font-mono" style={{ color: palette.gold }}>
+              parked: {parked.hopId}{parked.reason ? ` · ${parked.reason}` : ''}
+            </p>
+            <button
+              onClick={() => void sendPrompt(`O hop ${parked.hopId} está parked (${parked.reason || 'sem motivo'}). Investigue o bloqueio e retome o walk.`)}
+              className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-mono"
+              style={{ border: `1px solid ${palette.gold}55`, color: palette.gold }}
+            >
+              investigar
+            </button>
+          </div>
         )}
       </section>
 
@@ -239,16 +295,52 @@ export default function LiveWidgetPage() {
         </div>
       </section>
 
+      <section className="rounded-xl p-3" style={card}>
+        <div className="flex items-center gap-1.5 text-[9px] font-mono uppercase tracking-wider" style={dim}>
+          <Send size={10} style={{ color: palette.gold }} /> terminal · fila
+          {queueNote && <span className="ml-auto normal-case" style={{ color: palette.cyan }}>{queueNote}</span>}
+        </div>
+        {queue.slice(0, 3).map((q) => (
+          <div key={q.id} className="mt-1.5 flex items-start gap-1.5 text-[9px]">
+            <span className="mt-0.5 h-1 w-1 shrink-0 rounded-full" style={{ background: q.status === 'sent' ? palette.green : palette.gold }} />
+            <span className="min-w-0 flex-1 line-clamp-2" style={{ color: palette.text }}>{q.text}</span>
+            <span className="shrink-0 font-mono" style={{ color: q.status === 'sent' ? palette.green : palette.textDim }}>{q.status}</span>
+          </div>
+        ))}
+        <div className="mt-2 flex items-center gap-1.5">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && draft.trim()) void sendPrompt(draft); }}
+            placeholder="pergunte ao terminal…"
+            aria-label="Ask the terminal"
+            className="min-w-0 flex-1 rounded-lg px-2 py-1.5 text-[11px] outline-none"
+            style={{ background: palette.bg, border: `1px solid ${palette.gold}22`, color: palette.text }}
+          />
+          <button
+            onClick={() => void sendPrompt(draft)}
+            disabled={!draft.trim() || sending}
+            className="rounded-lg px-2.5 py-1.5 text-[10px] font-mono disabled:opacity-40"
+            style={{ background: `${palette.gold}22`, color: palette.gold, border: `1px solid ${palette.gold}44` }}
+          >
+            {sending ? '…' : 'enviar'}
+          </button>
+        </div>
+        <p className="mt-1 text-[8px] font-mono" style={dim}>alta prioridade · a resposta aparece no terminal do OLYMPUS (PC)</p>
+      </section>
+
       <div className="flex items-center gap-2 text-[9px] font-mono" style={dim}>
         <Zap size={9} style={{ color: palette.gold }} />
-        <span>{error ? `offline · ${error}` : 'read-only · no vault, no chat surface'}</span>
-        <Link href="/m" className="ml-auto inline-flex items-center gap-1" style={{ color: palette.gold }}>
-          abrir OLYMPUS <ArrowUpRight size={10} />
-        </Link>
+        <span>{error ? `offline · ${error}` : 'widget only · sem abrir a tela do OLYMPUS'}</span>
+        {installEvent && (
+          <button onClick={() => void installWidget()} className="ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5" style={{ border: `1px solid ${palette.gold}55`, color: palette.gold }}>
+            <Download size={9} /> instalar
+          </button>
+        )}
       </div>
 
       <p className="text-center text-[8px] font-mono" style={dim}>
-        adicione à tela inicial para um widget ao vivo · sem acordar a janela principal
+        {installEvent ? 'toque em instalar · ou ⋮ → adicionar à tela inicial' : 'adicione à tela inicial · o widget não abre a tela do OLYMPUS'}
       </p>
     </main>
   );

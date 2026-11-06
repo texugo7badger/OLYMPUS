@@ -57,6 +57,8 @@ const main = read('electron/main.ts');
 const walker = read('src/lib/hop-runtime/walker.ts');
 const widget = read('src/app/m/widget/page.tsx');
 const widgetManifest = read('public/manifest-widget.webmanifest');
+const pairing = read('src/lib/mobile-pairing.ts');
+const pairDialog = read('src/components/olympus/mobile-pair-dialog.tsx');
 
 const writeAt = action.indexOf('writeHandoff(handoffText');
 const cleanupAt = action.indexOf('cleanupServer();', writeAt);
@@ -112,6 +114,11 @@ expect('T-13: /m/widget is a live campaign + GO + hops view', /run-state/.test(w
 expect('T-14: the widget has a standalone manifest', /"start_url": "\/m\/widget"/.test(widgetManifest) && /standalone/.test(widgetManifest), 'no widget manifest');
 expect('T-15: the phone details sheet links to the widget', /\/m\/widget#t=/.test(mobile) && /Smartphone/.test(mobile), 'no phone widget link');
 
+// v0.0.84 edit — themed QR + installable widget with terminal chat.
+expect('T-16: the pairing payload carries a themed widget QR', /widgetQr/.test(pairing) && /qrDark/.test(pairing) && /themeName/.test(pairing) && /widgetQr/.test(pairDialog), 'no themed widget QR');
+expect('T-17: the widget has a terminal queue + parked action + install prompt', /prompt-queue/.test(widget) && /investigar/.test(widget) && /beforeinstallprompt/.test(widget) && !/abrir OLYMPUS/.test(widget), 'widget is not interactive');
+expect('T-18: the widget is installable (SW + 192/512 icons)', /serviceWorker/.test(widget) && /widget-sw/.test(widget) && /olympus-192/.test(widgetManifest) && /olympus-512/.test(widgetManifest), 'no install surface');
+
 fs.rmSync(home, { recursive: true, force: true });
 if (failures) { console.log(`\ncontext-handoff: ${failures} FAIL`); process.exit(1); }
-console.log('\nAll 36 context-handoff assertions passed');
+console.log('\nAll 39 context-handoff assertions passed');

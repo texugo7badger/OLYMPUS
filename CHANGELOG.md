@@ -79,16 +79,28 @@ All notable changes to OLYMPUS are documented in this file.
 
 #### The live phone widget + hibernation HUD
 
-- `/m/widget` is a phone-sized, read-only live view: campaign progress,
-  in-flight hop, GO Plus 5h/week/month bars, step/list/invoice and parked
-  reason, polling every 5s while visible. It has its own
-  `manifest-widget.webmanifest`, so it can be added to the phone's home screen
-  as a standalone shortcut. It never exposes the vault or chat surface.
-- Hibernation now opens that widget as a **themed HUD window** instead of a
-  native toast: the campaign stays alive, the full renderer is destroyed, and
-  the user can check progress/spend/hops on the PC without waking the app. The
-  same `/m/widget` is reachable from the phone.
-- The tray has `Live status HUD` / `Hide HUD`; Escape hides the HUD.
+- **`/m/widget` is the full-screen live widget**: campaign progress, in-flight
+  hop, parked reason + one-tap `investigar`, GO Plus 5h/week/month bars,
+  step/list/invoice, and a **terminal queue** that sends small questions at
+  high priority (`source: phone`). It polls every 5s while visible and never
+  exposes the vault; there is deliberately **no link to the full OLYMPUS
+  screen**.
+- **Install it from a QR.** The desktop pairing dialog has a `widget` tab
+  (default) and a `companion` tab. The widget QR is generated with the active
+  theme — paper field + deep theme-accent bronze, theme name in the frame —
+  and prefers the **HTTPS mobile tunnel** so the phone can install it as a
+  PWA. The token persists on first scan, so the installed `start_url`
+  (`/m/widget`) keeps its session.
+- It ships `manifest-widget.webmanifest`, a service worker and 192/512 icons;
+  the dialog says when the QR is only a LAN shortcut (start the HTTPS tunnel
+  to install).
+- **Hibernation opens the widget as a themed HUD window**, not a native toast
+  and not the full app: the campaign stays alive, the renderer is destroyed,
+  and the user can check progress/spend/hops and queue a question on the PC
+  without waking OLYMPUS. The tray has `Live status HUD` / `Hide HUD`; Escape
+  hides it.
+- Captures: `screenshots/21-mobile-widget.png`,
+  `screenshots/22-hibernate-widget.png`, `screenshots/23-widget-chat.png`.
 
 #### Verification (edit)
 
