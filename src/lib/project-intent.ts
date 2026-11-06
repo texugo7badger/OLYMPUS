@@ -62,6 +62,32 @@ export function isHandoffPrompt(text: string): boolean {
 const CAMPAIGN_WORD_RE = /\b(hop|walk|campaign|campanha|parked|dispatch|falhou|failed|erro|error|provider|rate.?limit)\b/i;
 const DIAGNOSTIC_RE = /(\?|^(por que|porque|why|o que|what|como|how|investigue|investigar|retome|resume|continue|status)\b)/i;
 
+/**
+ * v0.0.85 — a SHORT instruction is a follow-up, not a new project.
+ *
+ * The second specimen (`background-escolhido-para-padr`): a design critique
+ * ("O background escolhido… a home está com o background feio…") was pasted
+ * into the terminal; the intake derived a project from the first sentence and
+ * stole the active pointer from AIME. The companion follows the user's active
+ * project; forking must be explicit ("create", "build", "new project", "crie",
+ * "novo projeto", "do zero"). Short instructions, questions and fragment-like
+ * briefs inherit the active lane instead.
+ *
+ * The cap is deliberately generous (600 chars): the specimen was ~300. A real
+ * new-project brief is normally explicit or longer; the New Project button is
+ * always available.
+ */
+const EXPLICIT_NEW_PROJECT_RE = /^(create|build|make|start|new project|novo projeto|crie|criar|construa|construir|comece|iniciar|inicie|desenvolva|desenvolver|implemente|implementar)\b/i;
+const NEW_PROJECT_PHRASE_RE = /\b(new project|novo projeto|from scratch|do zero)\b/i;
+
+export function shouldInheritActiveProject(text: string): boolean {
+  const prompt = String(text || '').trim();
+  if (!prompt || prompt.length > 600) return false;
+  if (EXPLICIT_NEW_PROJECT_RE.test(prompt)) return false;
+  if (NEW_PROJECT_PHRASE_RE.test(prompt)) return false;
+  return true;
+}
+
 export function isCampaignDiagnostic(text: string): boolean {
   const prompt = String(text || '').trim();
   if (!prompt || prompt.length > 400) return false;
@@ -561,6 +587,15 @@ export async function resolveAndRegisterIntent(
     if (active && getProject(active)) {
       setActiveProject(active);
       return { kind: 'existing', slug: active, message: `Campaign diagnostic — routed to the active project '${active}' (a status question never mints a project)` };
+    }
+  }
+  // v0.0.85 — a short follow-up inherits the active lane. Forking a project
+  // requires an explicit create/new-project phrase (or the New Project button).
+  if (shouldInheritActiveProject(userRequest)) {
+    const activeNow = getActiveProjectSlug();
+    if (activeNow && getProject(activeNow)) {
+      setActiveProject(activeNow);
+      return { kind: 'existing', slug: activeNow, message: `Routed to the active project '${activeNow}' (short follow-up — only an explicit new-project request forks)` };
     }
   }
   // v0.0.63 — APPROVAL IS A CONTROL WORD, NEVER A PROJECT NAME. The fuzzy

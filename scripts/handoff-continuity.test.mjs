@@ -63,6 +63,12 @@ expect('H-8: a parked-hop question stays in the active project', parkedQuestion.
 const campaignQuestion = await intent.resolveAndRegisterIntent('Why did the campaign fail with a provider rate limit?', []);
 expect('H-9: a campaign question does not mint a project', campaignQuestion.kind === 'existing' && campaignQuestion.slug === 'aime', campaignQuestion);
 
+const designFollowup = await intent.resolveAndRegisterIntent('O background escolhido para padrão em tudo foi o errado - agora a home está com o background feio - cade aquele com nuvens parecidas com a logo?', []);
+expect('H-10: a short design follow-up stays in the active project', designFollowup.kind === 'existing' && designFollowup.slug === 'aime', designFollowup);
+
+const explicitNew = await intent.resolveAndRegisterIntent('Create a new project called Aurora with a dashboard', []);
+expect('H-11: an explicit create does fork a project', explicitNew.kind === 'new', explicitNew);
+
 const normal = await intent.resolveAndRegisterIntent('Create a landing page for a petshop with a booking form and a gallery', []);
 expect('H-5: a real new request still creates a project', normal.kind === 'new', normal);
 
