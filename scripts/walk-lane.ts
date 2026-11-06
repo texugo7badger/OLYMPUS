@@ -34,6 +34,8 @@ if (!laneRoot || !slug) {
 // before the crash must not be re-run from scratch. A human's start (the
 // supervisor POST) never passes this flag, so their explicit resume retries.
 const keepQuarantine = process.argv.includes('--keep-quarantine');
+// v0.0.84 edit — the boot parked resume retries only the last parked hop.
+const retryParkedHop = process.argv.includes('--retry-parked');
 
 function log(msg: string) {
   console.log(`[walk-lane ${new Date().toISOString()}] ${msg}`);
@@ -41,7 +43,6 @@ function log(msg: string) {
 
 async function main() {
   log(`start slug=${slug} lane=${laneRoot} pid=${process.pid}`);
-  markSupervisor(slug!, { status: 'running', outcome: 'walking' });
   try {
     const result = await maybeWalkThePlan({
       slug: slug!,
@@ -50,12 +51,19 @@ async function main() {
       expectPlan: false,
       publishActivity: true,
       ...(keepQuarantine ? { keepQuarantine: true } : {}),
+      ...(retryParkedHop ? { retryParkedHop: true } : {}),
       send: (ev: any) => {
         if (ev?.msg) log(String(ev.msg));
       },
     });
     const outcome = `${result.walked ? 'walked' : 'no-walk'}: ${result.summaryLine ?? result.reason ?? ''} (${result.completed}/${result.total})`;
     log(`done ${outcome}`);
+    // v0.0.84 edit — a duplicate found the lane lock; it must NOT touch the
+    // real supervisor state (the mobile resume clobbered it with failed).
+    if (!result.walked && /already walking this lane/i.test(outcome)) {
+      log('duplicate start ignored — the lane lock holder owns the campaign');
+      process.exit(0);
+    }
     markSupervisor(slug!, {
       status: result.walked ? 'finished' : 'failed',
       finishedAt: new Date().toISOString(),

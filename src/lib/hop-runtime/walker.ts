@@ -23,6 +23,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import { appendFileSync, existsSync, readFileSync, symlinkSync, writeFileSync, mkdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join, isAbsolute } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -892,6 +893,29 @@ export function resolveHopAgentId(god: string, laneRoot: string): string {
  * `Configuration is invalid ... bad file reference`). The #99 workspace
  * lanes ALWAYS get the symlink; the intake homes now do too.
  */
+/**
+ * v0.0.84 edit — ROOT-HASH LANE CONFIG. The old sync compared the lane file
+ * with the root and refreshed on ANY difference; the lane always differs by
+ * its `-hop` agents + MCP manifest, so every hop rewrote opencode.json and
+ * the warm server saw a new mtime and respawned mid-hop (AIME p1, 1350s).
+ * The root content hash is the truth: copy the root only when it changed.
+ */
+function syncLaneConfigFile(rootCfg: string, dst: string, laneRoot: string): 'ok' | 'refreshed' | 'missing' {
+  try {
+    const rootContent = readFileSync(rootCfg, 'utf-8');
+    const rootHash = createHash('sha256').update(rootContent).digest('hex');
+    const markerDir = join(homedir(), '.olympus', 'lane-config');
+    const marker = join(markerDir, `${createHash('sha1').update(laneRoot).digest('hex')}.json`);
+    let last = '';
+    try { last = String(JSON.parse(readFileSync(marker, 'utf-8'))?.rootHash || ''); } catch { /* first run */ }
+    if (existsSync(dst) && last === rootHash) return 'ok';
+    writeFileSync(dst, rootContent, 'utf-8');
+    mkdirSync(markerDir, { recursive: true });
+    writeFileSync(marker, JSON.stringify({ rootHash, at: new Date().toISOString() }) + '\n', 'utf-8');
+    return 'refreshed';
+  } catch { return 'missing'; }
+}
+
 export function ensureLaneConfig(laneRoot: string): void {
   const dst = join(laneRoot, 'opencode.json');
   const dstDemigods = join(laneRoot, 'opencode.demigods.json');
@@ -904,7 +928,7 @@ export function ensureLaneConfig(laneRoot: string): void {
     // specimen: the workspace lane survived two rotations on the banned
     // nemotron pool). The lane mirrors the root — operator edits belong
     // in the root config.
-    const verdictCfg = syncLaneFile(join(root, 'opencode.json'), dst);
+    const verdictCfg = syncLaneConfigFile(join(root, 'opencode.json'), dst, laneRoot);
     const verdictDemigods = syncLaneFile(join(root, 'opencode.demigods.json'), dstDemigods);
     if (verdictCfg === 'refreshed' || verdictDemigods === 'refreshed') {
       console.log(`[lane-config] lane ${laneRoot} drifted from the root config — REFRESHED (cfg=${verdictCfg}, demigods=${verdictDemigods})`);

@@ -52,6 +52,11 @@ const terminal = read('src/components/olympus/interactive-terminal.tsx');
 const indicator = read('src/components/olympus/context-indicator.tsx');
 const immersive = read('src/components/olympus/immersive-panel.tsx');
 const mobile = read('src/app/m/page.tsx');
+const supervisor = read('src/lib/hop-runtime/supervisor.ts');
+const main = read('electron/main.ts');
+const walker = read('src/lib/hop-runtime/walker.ts');
+const widget = read('src/app/m/widget/page.tsx');
+const widgetManifest = read('public/manifest-widget.webmanifest');
 
 const writeAt = action.indexOf('writeHandoff(handoffText');
 const cleanupAt = action.indexOf('cleanupServer();', writeAt);
@@ -91,6 +96,22 @@ expect('T-3: the clear-view action does not rotate the conversation', !/clearVis
 expect('T-4: the header exposes copy + clear buttons', /Copy chat worklog/.test(terminal) && /Clear chat view/.test(terminal), 'buttons missing');
 expect('T-5: the worklog includes the full transcript', /worklogText/.test(terminal) && /m\.type/.test(terminal) && /m\.text/.test(terminal), 'worklog is incomplete');
 
+// v0.0.84 edit — the stability batch.
+expect('T-6: the watchdog does not blind-reload a live/compiling Next', /silentRounds/.test(main) && /nextWatchdogAt/.test(main) && /silent for 60s/.test(main), 'watchdog still churns');
+expect('T-7: the lane config is keyed by the ROOT hash, not the lane mtime', /syncLaneConfigFile/.test(walker) && /rootHash/.test(walker) && /lane-config/.test(walker), 'lane config rewrites every hop');
+expect('T-8: boot resumes a finished walk that has a parked hop', /status === 'finished'/.test(supervisor) && /retryParkedHop: true/.test(supervisor) && /resumed parked hop/.test(supervisor), 'parked walk stays stuck');
+expect('T-9: the phone retries a transient delivery failure once', /for \(let attempt = 0; attempt < 2/.test(mobile) && /HTTP \$\{res\?\.status/.test(mobile), 'mobile has no retry');
+
+// v0.0.84 edit — fluid hibernate: themed HUD, close-to-hibernate.
+expect('T-10: hibernate opens the live HUD instead of a native toast', /function showHud/.test(main) && /showHud\(\)/.test(main) && /Live status HUD/.test(main), 'no HUD');
+expect('T-11: the HUD loads the themed live widget sheet', /\/m\/widget#t=/.test(main) && /GO Plus|5_000|inFlightList/.test(widget), 'HUD is not the live widget');
+expect('T-12: closing the main window hibernates, it does not quit', /mainWindow\.on\('close'[\s\S]{0,300}hibernateNow\(\)/.test(main), 'close still quits');
+
+// v0.0.84 edit — the live phone widget / hibernation HUD.
+expect('T-13: /m/widget is a live campaign + GO + hops view', /run-state/.test(widget) && /go-usage/.test(widget) && /5_000/.test(widget) && /inFlightList/.test(widget), 'widget is not live');
+expect('T-14: the widget has a standalone manifest', /"start_url": "\/m\/widget"/.test(widgetManifest) && /standalone/.test(widgetManifest), 'no widget manifest');
+expect('T-15: the phone details sheet links to the widget', /\/m\/widget#t=/.test(mobile) && /Smartphone/.test(mobile), 'no phone widget link');
+
 fs.rmSync(home, { recursive: true, force: true });
 if (failures) { console.log(`\ncontext-handoff: ${failures} FAIL`); process.exit(1); }
-console.log('\nAll 26 context-handoff assertions passed');
+console.log('\nAll 36 context-handoff assertions passed');

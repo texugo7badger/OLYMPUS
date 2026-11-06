@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Check, ExternalLink, Loader2, Lock, Mic, Palette, Play,
-  MousePointerClick, Radio, RefreshCw, Settings2, Sparkles, Square, X,
+  MousePointerClick, Radio, RefreshCw, Settings2, Smartphone, Sparkles, Square, X,
 } from 'lucide-react';
 import PlasmaRing from '@/components/olympus/plasma-ring';
 import TaskSheetModal from '@/components/olympus/task-sheet-modal';
@@ -90,6 +90,11 @@ export default function MobileCompanion() {
   const [theme, setTheme] = useState<ThemeState | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [perfMode, setPerfMode] = useState(false);
+  // v0.0.84 edit — the hibernation HUD loads /m?hud=1 and opens the live
+  // status sheet (progress, GO bar, hops) instead of the full app. Read it
+  // after mount: the SSR pass has no window, and a render-time const could
+  // stay false through hydration (the HUD showed only the ring).
+  const [hudMode, setHudMode] = useState(false);
   // v0.0.84 — the cost/details sheet is the phone's campaign window. Its hops
   // open the same TaskSheet as the PC creative's left column.
   const [sheetHop, setSheetHop] = useState<string | null>(null);
@@ -176,6 +181,13 @@ export default function MobileCompanion() {
     } catch (e: any) { setQueueNote(e?.message || 'resume failed'); }
   }, [active, headers]);
 
+
+  useEffect(() => {
+    try { setHudMode(new URLSearchParams(window.location.search).has('hud')); } catch { /* non-DOM */ }
+  }, []);
+  useEffect(() => {
+    if (hudMode && active) setDetailsOpen(true);
+  }, [hudMode, active]);
 
   const palette = useMemo(() => resolvePalette(normalizeThemeState(theme)), [theme]);
   const tint = godTintHex(palette, god);
@@ -382,12 +394,32 @@ export default function MobileCompanion() {
     setError(null);
     setLog((l) => [...l.slice(-3), `${t('m.you', language)}: ${prompt}`]);
     try {
-      const res = await mobileFetch('/api/olympus/action', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ action: 'prompt', text: prompt, conversationId: active ? `mobile-${active}` : 'mobile' }),
-      }, 180_000);
-      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      // v0.0.84 edit — after a hibernate/wake the Next server can be
+      // restarting exactly when the phone sends. One bounded retry turns a
+      // transient 502/abort into delivery instead of a lost prompt.
+      let res: Response | null = null;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          res = await mobileFetch('/api/olympus/action', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ action: 'prompt', text: prompt, conversationId: active ? `mobile-${active}` : 'mobile' }),
+          }, 180_000);
+          if (res.ok && res.body) break;
+          if (attempt === 0 && (res.status >= 500 || res.status === 0)) {
+            await new Promise((r) => setTimeout(r, 1500));
+            continue;
+          }
+          break;
+        } catch (e) {
+          if (attempt === 0) {
+            await new Promise((r) => setTimeout(r, 1500));
+            continue;
+          }
+          throw e;
+        }
+      }
+      if (!res || !res.ok || !res.body) throw new Error(`HTTP ${res?.status ?? 'network'}`);
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -791,6 +823,16 @@ export default function MobileCompanion() {
                 {perfMode ? 'on' : 'off'}
               </button>
             </div>
+            {token && (
+              <a
+                href={`/m/widget#t=${encodeURIComponent(token)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-cyan/30 bg-olympus-cyan/5 py-2 text-[10px] text-olympus-cyan"
+              >
+                <Smartphone size={11} /> widget ao vivo (adicionar à tela inicial)
+              </a>
+            )}
             <button
               onClick={() => { try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ } setToken(null); }}
               className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-olympus-red/25 py-2 text-[10px] text-olympus-red"

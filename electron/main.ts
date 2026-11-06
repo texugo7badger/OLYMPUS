@@ -31,7 +31,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage, Tray, Menu, powerMonitor, Notification } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage, Tray, Menu, powerMonitor, Notification, screen } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync, cpSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -449,6 +449,8 @@ function waitForNext(): Promise<void> {
 // ─── Window ───────────────────────────────────────────────────────────────────
 
 let mainWindow: BrowserWindow | null = null;
+// v0.0.84 edit — the live hibernation HUD (a compact /m window, not the app).
+let hudWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let hibernating = false;
 let hibernationWatch: ReturnType<typeof setInterval> | null = null;
@@ -852,8 +854,71 @@ function hibernateNow(): void {
     setTimeout(() => { try { win.destroy(); } catch { /* gone */ } }, 0);
   }
   startHibernationWatch();
-  notifyDesktop('walk', 'OLYMPUS hibernating', 'The window is closed; the campaign keeps running and you will be notified on done/park.');
+  // The HUD IS the notification: themed, live, and it does not wake the app.
+  setTimeout(() => {
+    try { showHud(); } catch { /* fallback below */ }
+    if (!hudWindow) {
+      notifyDesktop('walk', 'OLYMPUS hibernating', 'The window is closed; the campaign keeps running and you will be notified on done/park.');
+    }
+  }, 500);
   console.log('[olympus:hibernate] renderer destroyed, chat server stopped, campaign stays alive');
+}
+
+/**
+ * v0.0.84 edit — THE LIVE HIBERNATION HUD.
+ *
+ * Hibernation destroys the full renderer (low memory) but keeps the Next
+ * server. This small, themed window loads the mobile companion `/m` with the
+ * session token, so the user can see progress, spend and hops on the PC
+ * without waking the app. The same `/m` is reachable from the phone.
+ */
+function showHud(): void {
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    try { hudWindow.showInactive(); } catch { /* gone */ }
+    return;
+  }
+  let token = '';
+  try { token = readFileSync(join(nodeOs.homedir(), '.olympus', 'session-token'), 'utf-8').trim(); } catch { /* no token */ }
+  let width = 420;
+  let height = 720;
+  let x: number | undefined;
+  let y: number | undefined;
+  try {
+    const area = screen.getPrimaryDisplay().workArea;
+    width = Math.min(420, area.width - 24);
+    height = Math.min(720, area.height - 24);
+    x = area.x + area.width - width - 12;
+    y = area.y + area.height - height - 12;
+  } catch { /* screen before ready — Electron centres it */ }
+  hudWindow = new BrowserWindow({
+    width, height, x, y,
+    frame: false,
+    resizable: true,
+    alwaysOnTop: true,
+    skipTaskbar: false,
+    backgroundColor: '#0A0E16',
+    title: 'OLYMPUS — live status',
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  try { hudWindow.setAlwaysOnTop(true, 'floating'); } catch { /* platform */ }
+  const url = token ? `${BASE_URL}/m/widget#t=${encodeURIComponent(token)}` : `${BASE_URL}/m/widget`;
+  const load = () => { try { void hudWindow?.loadURL(url).catch(() => { /* retry below */ }); } catch { /* gone */ } };
+  load();
+  hudWindow.webContents.on('did-fail-load', (_e, code, _desc, _url, isMain) => {
+    if (!isMain || code === -3) return;
+    setTimeout(load, 1500);
+  });
+  hudWindow.webContents.on('before-input-event', (_e, input) => {
+    if (input.type === 'keyDown' && input.key === 'Escape') { try { hudWindow?.hide(); } catch { /* gone */ } }
+  });
+  hudWindow.on('closed', () => { hudWindow = null; });
+  try { hudWindow.showInactive(); } catch { /* the window may be gone */ }
+}
+
+function closeHud(): void {
+  if (!hudWindow) return;
+  try { hudWindow.destroy(); } catch { /* gone */ }
+  hudWindow = null;
 }
 
 function startHibernationWatch(): void {
@@ -1048,6 +1113,7 @@ img{width:min(58vmin,420px);height:auto;filter:drop-shadow(0 0 24px ${palette.ac
 }
 
 function createWindow() {
+  closeHud();
   if (hibernating) {
     hibernating = false;
     writeHibernationMarker(false);
@@ -1144,24 +1210,51 @@ function createWindow() {
   // on navigation. Probe the health lane every 10s; two misses in a row
   // respawn the server and reload the window when it answers.
   let healthMisses = 0;
+  let silentRounds = 0;
+  let nextWatchdogAt = 0;
   const watchdog = setInterval(() => {
     if (!mainWindow || app.isQuitting) return;
+    if (Date.now() < nextWatchdogAt) return;
     const req = http.get(`${BASE_URL}/api/olympus/health`, { timeout: 4000 }, (res) => {
       res.resume();
-      if (res.statusCode && res.statusCode < 500) { healthMisses = 0; return; }
+      if (res.statusCode && res.statusCode < 500) { healthMisses = 0; silentRounds = 0; return; }
       healthMisses += 1;
     });
     req.on('error', () => { healthMisses += 1; });
     req.on('timeout', () => { req.destroy(); healthMisses += 1; });
-    if (healthMisses >= 2) {
+    if (healthMisses >= 3) {
       healthMisses = 0;
-      console.log('[olympus:electron] watchdog: server silent — respawning');
-      try {
-        if (!nextProcess || nextProcess.exitCode !== null || nextProcess.signalCode !== null) nextProcess = spawnNext();
-      } catch (e) { console.error('[olympus:electron] watchdog respawn failed', e); }
-      setTimeout(() => {
-        try { mainWindow?.loadURL(APP_URL); } catch { /* the error page owns it */ }
-      }, 6000);
+      silentRounds += 1;
+      nextWatchdogAt = Date.now() + 30_000;
+      const alive = !!nextProcess && nextProcess.exitCode === null && nextProcess.signalCode === null;
+      // v0.0.84 edit — a live Next server that is still compiling is NOT dead.
+      // The old loop respawned/reloaded every ~20s during hibernate wake and
+      // cold start, which read as "OLYMPUS reiniciando sozinho". Only respawn
+      // a dead process, or a live one silent for two full rounds (60s).
+      void (async () => {
+        // v0.0.84 edit — a port that answers is a living Next, even when the
+        // health route is slow under a walk. Never spawn a second server on
+        // an occupied 3737 (the EADDRINUSE -> kill -> reload loop).
+        const portAlive = await isNextAlreadyRunning();
+        if (portAlive) {
+          silentRounds = 0;
+          try { mainWindow?.loadURL(APP_URL); } catch { /* the error page owns it */ }
+          return;
+        }
+        if (!alive || silentRounds >= 2) {
+          silentRounds = 0;
+          console.log(`[olympus:electron] watchdog: server ${alive ? 'silent for 60s' : 'dead'} — respawning`);
+          try { nextProcess = spawnNext(); nextWatchdogAt = Date.now() + 60_000; } catch (e) { console.error('[olympus:electron] watchdog respawn failed', e); }
+        }
+        const start = Date.now();
+        while (Date.now() - start < 30_000) {
+          if (await isNextAlreadyRunning()) {
+            try { mainWindow?.loadURL(APP_URL); } catch { /* the error page owns it */ }
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+      })();
     }
   }, 10_000);
   watchdog.unref?.();
@@ -1245,6 +1338,8 @@ function createWindow() {
         { label: 'Show OLYMPUS', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } else createWindow(); } },
         { label: 'Hide to tray', click: () => { if (mainWindow) mainWindow.hide(); } },
         { label: 'Hibernate (low memory)', click: () => hibernateNow() },
+        { label: 'Live status HUD', click: () => showHud() },
+        { label: 'Hide HUD', click: () => closeHud() },
         { type: 'separator' },
         { label: 'Quit OLYMPUS', click: () => { app.isQuitting = true; app.quit(); } },
       ]);
@@ -1265,14 +1360,11 @@ function createWindow() {
   // hibernating app keeps the window hidden on close; otherwise X quits.
   mainWindow.on('close', (event) => {
     if (app.isQuitting) return;
-    if (hibernating) {
-      event.preventDefault();
-      mainWindow?.hide();
-      console.log('[olympus:electron] window hidden to tray (hibernating)');
-      return;
-    }
-    app.isQuitting = true;
-    app.quit();
+    // v0.0.84 edit — closing the window HIBERNATES (low memory, campaign
+    // stays, HUD appears). Quit is explicit in the tray menu, so X never
+    // leaves the user waiting on a full Next/opencode teardown.
+    event.preventDefault();
+    hibernateNow();
   });
 
   // A dead renderer must never leave a zombie window that cannot be closed.
@@ -2153,6 +2245,7 @@ if (!gotLock) {
   });
 
   app.on('before-quit', (event) => {
+    closeHud();
     // Tear down the Terminal Bridge WebSocket server + any clients.
     try { shutdownTerminalBridge(); } catch {}
 

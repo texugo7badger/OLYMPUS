@@ -29,8 +29,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { bootIdOf } from './walk-lock';
+import { bootIdOf, readWalkLock } from './walk-lock';
 import { findOlympusRoot } from '../opencode-spawn';
+import { loadHopState } from './hop-state';
+import { readHibernationPlan } from '../hibernation';
 
 export interface SupervisorState {
   slug: string;
@@ -137,9 +139,20 @@ export function startDetachedWalk(opts: {
   /** v0.0.85 — the boot auto-resume keeps the quarantine; a human start
    *  retries the parked hops (the docs' contract). */
   keepQuarantine?: boolean;
+  /** v0.0.84 edit — retry ONLY the last parked hop (overnight/boot). */
+  retryParkedHop?: boolean;
 }): StartResult {
   const existing = readSupervisor(opts.slug);
   if (existing.alive) return { ok: false, reason: 'already-running', pid: existing.state?.pid, logFile: existing.state?.logFile };
+  // v0.0.84 edit — THE LANE LOCK IS THE TRUTH, not the supervisor file. A
+  // detached walk survives an app restart, so its supervisor state can be
+  // stale/clobbered while the lock is live. Starting a duplicate spawned a
+  // walker that found the lock, exited no-walk, and overwrote the REAL state
+  // with failed (the mobile "resume" that lost the campaign).
+  const laneLock = readWalkLock(opts.laneRoot);
+  if (laneLock.holder && laneLock.alive) {
+    return { ok: false, reason: 'already-running', pid: laneLock.holder.pid, logFile: existing.state?.logFile };
+  }
 
   const root = findOlympusRoot();
   const runner = path.join(root, 'scripts', 'walk-lane.ts');
@@ -152,7 +165,7 @@ export function startDetachedWalk(opts: {
   const fd = fs.openSync(logFile, 'a');
   let child;
   try {
-    child = spawn(tsx, [runner, '--lane', opts.laneRoot, '--slug', opts.slug, ...(opts.keepQuarantine ? ['--keep-quarantine'] : [])], {
+    child = spawn(tsx, [runner, '--lane', opts.laneRoot, '--slug', opts.slug, ...(opts.keepQuarantine ? ['--keep-quarantine'] : []), ...(opts.retryParkedHop ? ['--retry-parked'] : [])], {
       cwd: root,
       detached: true,
       stdio: ['ignore', fd, fd],
@@ -208,7 +221,33 @@ export function resumeOrphanedSupervisors(): Array<{ slug: string; resumed: bool
   const out: Array<{ slug: string; resumed: boolean; reason: string }> = [];
   for (const view of listSupervisors()) {
     const state = view.state;
-    if (!state || state.status !== 'running' || view.alive) continue;
+    if (!state) continue;
+    // v0.0.84 edit — a parked walk that finished before hibernate/boot is not
+    // an orphan `running` process; the old adoption skipped it, so waking the
+    // app left the campaign parked forever. If the user's hibernate plan says
+    // autoResume, retry ONLY the last park (bounded), keeping older quarantine.
+    if (state.status === 'finished' && !view.alive) {
+      const plan = readHibernationPlan();
+      if (!plan?.autoResume) { out.push({ slug: state.slug, resumed: false, reason: 'autoResume is off' }); continue; }
+      let parked: string | null = null;
+      try { parked = loadHopState(state.laneRoot)?.parked?.hopId ?? null; } catch { /* no state */ }
+      if (!parked) { out.push({ slug: state.slug, resumed: false, reason: 'finished with no parked hop' }); continue; }
+      const attempts = Number(state.resumeAttempts) || 0;
+      if (attempts >= MAX_RESUME_ATTEMPTS) {
+        markSupervisor(state.slug, { status: 'failed', finishedAt: new Date().toISOString(), outcome: `parked resume budget exhausted (${attempts}/${MAX_RESUME_ATTEMPTS})` });
+        out.push({ slug: state.slug, resumed: false, reason: 'parked resume budget exhausted' });
+        continue;
+      }
+      const started = startDetachedWalk({ slug: state.slug, laneRoot: state.laneRoot, autoResume: true, keepQuarantine: true, retryParkedHop: true });
+      if (started.ok) {
+        markSupervisor(state.slug, { resumeAttempts: attempts + 1, startedAt: new Date().toISOString(), outcome: `resumed parked hop '${parked}' after boot (attempt ${attempts + 1}/${MAX_RESUME_ATTEMPTS})` });
+        out.push({ slug: state.slug, resumed: true, reason: `parked ${parked} · pid ${started.pid}` });
+      } else {
+        out.push({ slug: state.slug, resumed: false, reason: started.reason || 'parked spawn failed' });
+      }
+      continue;
+    }
+    if (state.status !== 'running' || view.alive) continue;
     if (!state.autoResume) { out.push({ slug: state.slug, resumed: false, reason: 'autoResume is off' }); continue; }
     const attempts = Number(state.resumeAttempts) || 0;
     if (attempts >= MAX_RESUME_ATTEMPTS) {

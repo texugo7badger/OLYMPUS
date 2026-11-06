@@ -53,6 +53,43 @@ All notable changes to OLYMPUS are documented in this file.
   turns, god responses, tool frames, system lines — with a Check confirmation
   and a textarea fallback when the Clipboard API is unavailable.
 
+#### Stability: the phone prompt, the warm server, and hibernate
+
+- **Phone prompt delivery is retried once.** A hibernate/wake can overlap the
+  phone's POST with a Next restart; a transient 5xx/network failure now waits
+  1.5s and retries before surfacing an error. The composer already sends the
+  callback `text`, not stale component state.
+- **The watchdog no longer respawns a live/compiling Next.** It probes the
+  port first, treats an answering server as alive even when the health route is
+  slow under a walk, and only respawns a dead process or one silent for 60s.
+  This kills the `EADDRINUSE` → kill → reload loop seen during wake.
+- **Lane config is keyed by the ROOT hash.** The old refresh rewrote
+  `opencode.json` on every hop because the lane always differs by its `-hop`
+  agents and MCP manifest; the warm server then respawned mid-hop. The root
+  content hash is the truth: copy only when the root changed.
+- **A finished walk with a parked hop resumes on boot** when the user's
+  hibernate plan says `autoResume`: it retries only the last park, bounded,
+  and keeps the older quarantine. A lane lock that is alive now refuses a
+  duplicate start before spawning, so a resume prompt can never overwrite the
+  real supervisor state with `failed`.
+- **Close means hibernate.** X now opens the live HUD instead of a full
+  teardown; Quit stays explicit in the tray. The stale GPU fallback marker is
+  cleared so the renderer starts on hardware acceleration (60 FPS) and only
+  falls back after real GPU crashes.
+
+#### The live phone widget + hibernation HUD
+
+- `/m/widget` is a phone-sized, read-only live view: campaign progress,
+  in-flight hop, GO Plus 5h/week/month bars, step/list/invoice and parked
+  reason, polling every 5s while visible. It has its own
+  `manifest-widget.webmanifest`, so it can be added to the phone's home screen
+  as a standalone shortcut. It never exposes the vault or chat surface.
+- Hibernation now opens that widget as a **themed HUD window** instead of a
+  native toast: the campaign stays alive, the full renderer is destroyed, and
+  the user can check progress/spend/hops on the PC without waking the app. The
+  same `/m/widget` is reachable from the phone.
+- The tray has `Live status HUD` / `Hide HUD`; Escape hides the HUD.
+
 #### Verification (edit)
 
 - `hop-runtime.test.mjs`: five new Q assertions — the first walk parks and
