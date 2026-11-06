@@ -524,12 +524,16 @@ function ensureLinuxDesktopEntry(): void {
     // loading cursor). Prefer the installed launcher (the CLI adds the flag);
     // otherwise include the flag and the X11 backend explicitly.
     const launcher = join(nodeOs.homedir(), '.local', 'bin', 'olympus-desktop');
-    const useLauncher = isDev && existsSync(launcher);
+    const useLauncher = existsSync(launcher);
+    // v0.0.84 edit — the source build is NOT a packaged AppImage: Electron
+    // needs the app root as its argument. `isDev` was false for `olympus
+    // start` (NODE_ENV=production in the packaged main), so the icon ran
+    // `electron ... %F` with no app and opened the default Electron window.
     const execPath = useLauncher
       ? launcher
-      : isDev
-        ? `${process.execPath} --no-sandbox --ozone-platform=x11 --class=olympus ${appRoot}`
-        : `${process.execPath} --no-sandbox --ozone-platform=x11 --class=olympus %F`;
+      : app.isPackaged
+        ? `${process.execPath} --no-sandbox --ozone-platform=x11 --class=olympus %F`
+        : `${process.execPath} --no-sandbox --ozone-platform=x11 --class=olympus ${appRoot}`;
 
     const desktopFile = join(appsDir, 'olympus.desktop');
     const content = [
