@@ -9,7 +9,7 @@ import {
   Send, Loader2, CornerDownLeft, ChevronRight,
   Zap, CheckCircle2, AlertCircle, Users, Sun, Hammer, Bird,
   Compass, Target, Wine, Flower2, Flame, Square, RefreshCw, Paperclip, Sparkles, type LucideIcon,
-  Landmark, Terminal as TerminalIcon, ImageIcon, Globe, X, Pencil, GitFork,
+  Landmark, Terminal as TerminalIcon, ImageIcon, Globe, X, Pencil, GitFork, Copy, Check, Eraser,
 } from 'lucide-react';
 import { marked } from 'marked';
 import { useOlympus } from '@/lib/olympus-store';
@@ -345,6 +345,11 @@ export default function InteractiveTerminal() {
   const [awaitingAnswer, setAwaitingAnswer] = useState(false);
   const runHadText = useRef(false);
   const lastResponseRef = useRef('');
+  // v0.0.84 edit — the transport can deliver the same final text twice (the
+  // v2 final readback re-emits it under a new part id). Dedupe per turn.
+  const emittedTextsRef = useRef<Set<string>>(new Set());
+  // The clear-view button must not overwrite the stored transcript.
+  const suppressPersistRef = useRef(false);
   const lastSpokenRef = useRef('');
   const runHadError = useRef(false);
   // #98 (UAT-BUILD-1 Batch B): the last error text seen this run, so the
@@ -593,6 +598,19 @@ export default function InteractiveTerminal() {
 
   const handleServerEvent = useCallback((ev: any) => {
     pushEvent(ev);
+    // v0.0.84 edit — exact duplicate long text is a transport replay, not a
+    // second answer. Key on the normalized full text; short chunks pass.
+    const duplicateText = (raw: string): boolean => {
+      const n = String(raw || '').replace(/\s+/g, ' ').trim();
+      if (n.length < 80) return false;
+      if (emittedTextsRef.current.has(n)) return true;
+      emittedTextsRef.current.add(n);
+      if (emittedTextsRef.current.size > 40) {
+        const first = emittedTextsRef.current.values().next().value;
+        if (first) emittedTextsRef.current.delete(first);
+      }
+      return false;
+    };
     if (ev.type === 'ws_connected') return;
     if (ev.type === 'prompt_received') { addMessage({ type: 'system', text: ev.msg || 'Prompt received by Apollo' }); return; }
     if (ev.type === 'delegation' && ev.from && ev.to) {
@@ -834,6 +852,7 @@ export default function InteractiveTerminal() {
         }
       }
       if (text) {
+        if (duplicateText(text)) return;
         runHadText.current = true;
         lastResponseRef.current = `${lastResponseRef.current} ${text}`.trim().slice(-2400);
         runTextCount.current++;
@@ -982,6 +1001,7 @@ export default function InteractiveTerminal() {
 
     if (ev.type === 'response' || ev.type === 'cli' || ev.type === 'log') {
       const msg = ev.msg || ev.cli || ev.text || '';
+      if (msg && ev.type === 'response' && duplicateText(msg)) return;
       if (msg) {
         // Same remove → add → ensure pattern as every other handler here, so
         // the counter stays the LAST line while it ticks. This matters for
@@ -1042,6 +1062,7 @@ export default function InteractiveTerminal() {
       // Already handled by the "Routing to Apollo..." message above.
       runHadText.current = false;
       lastResponseRef.current = '';
+      emittedTextsRef.current.clear();
       runHadError.current = false;
       // #98: a new run starts with an empty cause.
       runLastError.current = '';
@@ -1525,6 +1546,8 @@ export default function InteractiveTerminal() {
   useEffect(() => {
     if (persistMessagesT.current) clearTimeout(persistMessagesT.current);
     persistMessagesT.current = setTimeout(() => {
+      // v0.0.84 edit — a cosmetic clear keeps the stored transcript.
+      if (suppressPersistRef.current) { suppressPersistRef.current = false; return; }
       try {
         const rows = messages
           .filter(m => m.type !== 'thinking' && m.permissionState !== 'pending')
@@ -2092,6 +2115,49 @@ export default function InteractiveTerminal() {
     inputRef.current?.focus();
   }, [updateGodActivity]);
 
+  // v0.0.84 edit — the worklog is the chat's durable record (user turns,
+  // god responses, tool frames, system lines), not just the last bubble.
+  const [worklogCopied, setWorklogCopied] = useState(false);
+  const worklogText = useMemo(
+    () => messages.map((m) => `[${m.ts}] ${m.type}${m.god ? ` ${m.god}` : ''}: ${m.text}`).join('\n\n'),
+    [messages],
+  );
+  const copyWorklog = useCallback(async () => {
+    const text = worklogText || '(empty worklog)';
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      } catch { /* clipboard unavailable */ }
+    }
+    setWorklogCopied(true);
+    setTimeout(() => setWorklogCopied(false), 1800);
+  }, [worklogText]);
+
+  // Aesthetic clear only: the visible transcript goes; the OpenCode session,
+  // conversationId, context, queue and todos stay untouched. The persisted
+  // transcript is kept (the persist effect is suppressed for this update).
+  const clearVisibleChat = useCallback(() => {
+    try {
+      localStorage.setItem(`olympus-chat-cleared:${conversationIdRef.current}`, JSON.stringify(messages.slice(-200).map(durableMessage)));
+    } catch { /* the clear still works */ }
+    suppressPersistRef.current = true;
+    setMessages([{
+      id: `clear-${Date.now()}`,
+      type: 'system' as const,
+      text: 'Chat view cleared — the conversation and model context are preserved. Reload restores the stored transcript.',
+      ts: new Date().toISOString(),
+    }]);
+  }, [messages]);
+
   return (
     <div className="w-full h-full bg-olympus-bg flex flex-col overflow-hidden">
       <div className="min-h-8 shrink-0 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 px-3 py-1 border-b border-olympus-gold/10 bg-olympus-panel">
@@ -2142,6 +2208,24 @@ export default function InteractiveTerminal() {
               <span>{todos.filter(t => t.status !== 'done').length}/{todos.length} todos</span>
             </>
           )}
+          <OlympusTooltip content={worklogCopied ? 'Worklog copied' : 'Copy the chat worklog (turns, tools, system lines)'} side="bottom">
+            <button
+              onClick={() => void copyWorklog()}
+              aria-label="Copy chat worklog"
+              className="text-olympus-text-dim hover:text-olympus-cyan transition-colors"
+            >
+              {worklogCopied ? <Check size={10} className="text-olympus-green" /> : <Copy size={10} />}
+            </button>
+          </OlympusTooltip>
+          <OlympusTooltip content="Clear the chat view only — the conversation and context are preserved" side="bottom">
+            <button
+              onClick={clearVisibleChat}
+              aria-label="Clear chat view (conversation preserved)"
+              className="text-olympus-text-dim hover:text-olympus-gold transition-colors"
+            >
+              <Eraser size={10} />
+            </button>
+          </OlympusTooltip>
           <OlympusTooltip content="Reset terminal (clears all messages + context)" side="bottom">
             <button
               onClick={() => setShowResetConfirm(true)}

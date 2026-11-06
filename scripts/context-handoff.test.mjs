@@ -84,6 +84,13 @@ markUserActivity(30_000);
 clearUserActivity();
 expect('R-7: clearUserActivity hands the lane back to the walker', userIsActive() === false, 'lease still active');
 
+// v0.0.84 edit — duplicate-answer guard + cosmetic clear + copy worklog.
+expect('T-1: the terminal dedupes exact long text per turn', /emittedTextsRef/.test(terminal) && /duplicateText\(text\)/.test(terminal) && /duplicateText\(msg\)/.test(terminal), 'no duplicate guard');
+expect('T-2: the clear-view action never resets the session', /clearVisibleChat/.test(terminal) && /suppressPersistRef/.test(terminal) && /Chat view cleared/.test(terminal), 'no cosmetic clear');
+expect('T-3: the clear-view action does not rotate the conversation', !/clearVisibleChat[\s\S]{0,500}conversationIdRef\.current =/.test(terminal), 'clear rotates the session');
+expect('T-4: the header exposes copy + clear buttons', /Copy chat worklog/.test(terminal) && /Clear chat view/.test(terminal), 'buttons missing');
+expect('T-5: the worklog includes the full transcript', /worklogText/.test(terminal) && /m\.type/.test(terminal) && /m\.text/.test(terminal), 'worklog is incomplete');
+
 fs.rmSync(home, { recursive: true, force: true });
 if (failures) { console.log(`\ncontext-handoff: ${failures} FAIL`); process.exit(1); }
-console.log('\nAll 21 context-handoff assertions passed');
+console.log('\nAll 26 context-handoff assertions passed');
