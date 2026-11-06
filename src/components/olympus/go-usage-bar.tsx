@@ -126,7 +126,20 @@ export default function GoUsageBar({ token }: { token?: string | null }) {
     finally { setBusy(false); }
   }, [token, load]);
 
-  if (!data && !error) return null;
+  if (!data && !error) {
+    return (
+      <div className="w-full rounded-lg border border-olympus-gold/15 bg-olympus-panel/60 px-2 py-1.5">
+        <div className="flex items-center gap-1.5">
+          <Gauge size={10} className="text-olympus-cyan shrink-0" />
+          <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">GO Plus</span>
+          <span className="min-w-0 flex-1 truncate text-[8px] font-mono text-olympus-text-dim">reading the ledger…</span>
+        </div>
+        <div className="mt-1 h-1 overflow-hidden rounded bg-olympus-bg">
+          <div className="h-full w-1/3 animate-pulse rounded bg-olympus-gold/40" />
+        </div>
+      </div>
+    );
+  }
   const binding = data?.binding;
   const unavailable = data?.source === 'unavailable';
 

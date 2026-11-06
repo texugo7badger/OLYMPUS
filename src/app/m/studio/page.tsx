@@ -48,7 +48,8 @@ type RunState = {
 
 type ChatMsg = { role: 'user' | 'god'; text: string; god?: string };
 type SpeedState = {
-  last?: { outTokPerSec: number; ttftMs: number | null; model: string } | null;
+  last?: { outTokPerSec: number; ttftMs: number | null; model: string; agent?: string | null } | null;
+  byAgent?: Array<{ agent: string; n: number; avg: number; p50: number; p95: number }>;
   hops?: { stat?: { n: number; avg: number; p50: number; p95: number } | null; recent?: Array<{ hop: string; god: string | null; outTokPerSec: number }> };
 }
 
@@ -394,7 +395,12 @@ export default function MobileStudio() {
         {(speed?.last || speed?.hops?.stat) && (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-olympus-gold/15 bg-olympus-panel/60 px-2 py-1 text-[9px] font-mono text-olympus-text-dim">
             <Zap size={10} className="text-olympus-cyan" />
-            {speed?.last ? <span><span className="text-olympus-green tabular-nums">{speed.last.outTokPerSec.toFixed(1)}</span> tok/s {god} last turn{speed.last.ttftMs != null ? ` · ttft ${Math.round(speed.last.ttftMs)}ms` : ''}</span> : <span>— {god} last turn</span>}
+            {(() => {
+              const a = speed?.byAgent?.find((x) => x.agent === god) ?? speed?.byAgent?.find((x) => x.agent?.startsWith(`${god}-`));
+              if (a) return <span><span className="text-olympus-green tabular-nums">{a.p50.toFixed(1)}</span> tok/s {god} p50 (n={a.n})</span>;
+              if (speed?.last) return <span><span className="text-olympus-green tabular-nums">{speed.last.outTokPerSec.toFixed(1)}</span> tok/s {god} last turn</span>;
+              return <span>— {god} speed</span>;
+            })()}
             {speed?.hops?.stat ? <span>· <span className="text-olympus-green tabular-nums">{speed.hops.stat.p50.toFixed(1)}</span> tok/s hop (p50, {speed.hops.stat.n})</span> : null}
           </div>
         )}
