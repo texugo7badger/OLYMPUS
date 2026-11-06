@@ -80,7 +80,9 @@ All notable changes to OLYMPUS are documented in this file.
   watch. The theme choice changes the other sessions, not just the current one.
 - **`OLYMPUS_HOME` and `OLYMPUS_PORT` are honored** by auth, the project
   registry, the vault root, run-state and Electron, so a dev build runs on
-  3747 with its own store/vault while the stable app stays on 3737.
+  3747 with its own store/vault while the stable app stays on 3737. On a
+  memory-tight host, `OLYMPUS_BUILD_CPUS=1` lowers the Next build workers
+  without changing the output (the SIGSEGV escape hatch).
 - **The native Samsung/home-screen widget is a v0.1.0 priority**, with the
   PWA limitation named in `ROADMAP.md`: a PWA can install an app icon, not an
   OS home-screen widget. The plan is a thin Capacitor/TWA wrapper with Glance
