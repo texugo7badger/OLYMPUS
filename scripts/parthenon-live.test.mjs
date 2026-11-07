@@ -82,6 +82,13 @@ expect('P-17: the status chip lists lane + reason', /state\.blockedLanes\.map/.t
 expect('P-18: lane-health exposes GET inspect + POST retry', /markLaneAlive\(lane\)/.test(laneRoute) && /action !== 'retry'/.test(laneRoute), 'no retry route');
 expect('P-19: the provider panel loads the lanes and offers retry', /fetch\('\/api\/olympus\/lane-health'/.test(providers) && /retryLane\(l\.lane\)/.test(providers), 'panel never loaded lanes');
 
+// ── P-20..P-22: the Parthenon names the EXECUTING god and the plan's count ──
+const tasksSheet = src('src/lib/tasks-sheet.ts');
+const briefing = src('src/lib/project-briefing.ts');
+expect('P-20: the task sheet applies the walker\'s balance (executing god)', /balancePlan\(rawPlan as any\)\.plan/.test(tasksSheet), 'declared god shown while another runs');
+expect('P-21: the phone briefing applies the same balance', /balancePlan\(planRaw as any\)\.plan/.test(briefing), 'briefing shows the declared god');
+expect('P-22: run-state counts only the plan\'s completed hops (no 33/27)', /planIds \? allCompleted\.filter/.test(runState), 'stale ids inflate progress');
+
 fs.rmSync(tmpHome, { recursive: true, force: true });
 console.log(failures === 0 ? '\nparthenon-live: all green.' : `\nparthenon-live: ${failures} failure(s).`);
 process.exit(failures === 0 ? 0 : 1);

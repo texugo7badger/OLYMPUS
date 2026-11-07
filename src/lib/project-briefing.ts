@@ -19,6 +19,7 @@ import path from 'node:path';
 import { getActiveProjectSlug, getProject, type ProjectNote } from './project-context';
 import { computeProjectProgress, type ProjectProgress } from './project-progress';
 import { readHopTelemetry, type HopTelemetryRow } from './hop-runtime/walker';
+import { balancePlan } from './hop-runtime/plan-balance';
 import { readWalkLock } from './hop-runtime/walk-lock';
 import { workspaceLaneDir } from './opencode-spawn';
 
@@ -166,7 +167,10 @@ export function computeProjectBriefing(slugInput?: string | null): ProjectBriefi
   const inFlightRows = Array.isArray(state?.inFlight) ? state.inFlight : [];
   const inFlight = new Map<string, any>(inFlightRows.map((row: any) => [String(row?.hopId), row]));
   const parkedId = state?.parked?.hopId ? String(state.parked.hopId) : null;
-  const planHops: any[] = Array.isArray(planRaw?.hops) ? planRaw.hops : [];
+  // v0.0.86 — the executing god, not the declared one (the walker rebalances
+  // in memory; the phone's briefing must name the god actually running).
+  const balancedPlan = Array.isArray(planRaw?.hops) ? balancePlan(planRaw as any).plan : planRaw;
+  const planHops: any[] = Array.isArray(balancedPlan?.hops) ? balancedPlan.hops : [];
 
   const plan: BriefHop[] = planHops.map((h) => {
     const id = String(h?.id || '');

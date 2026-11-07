@@ -33,6 +33,7 @@ import path from 'path';
 import { getVaultRoot } from './vault-root';
 import { getProviderInfo } from './olympus';
 import { readWalkLock } from './hop-runtime/walk-lock';
+import { balancePlan } from './hop-runtime/plan-balance';
 
 /** The walker's concurrency law (the projection's honesty bound). */
 const MAX_HOP_CONCURRENCY = 3;
@@ -388,7 +389,13 @@ export function buildTasksSheet(opts: {
   if (!active) return empty;
   const lane = active.lane;
 
-  const plan = safeJson<any>(path.join(lane, 'dispatch-plan.json'), { hops: [] });
+  const rawPlan = safeJson<any>(path.join(lane, 'dispatch-plan.json'), { hops: [] });
+  // v0.0.86 — the walker REBALANCES the plan in memory (Athena over 40% moves
+  // a hop to another god), but the plan on disk keeps the declared god. The
+  // Parthenon attributed f2-flip-fix to Athena while the walker ran it as
+  // Persephone. The sheet applies the same deterministic balance so the card
+  // names the EXECUTING god, matching the inFlight state.
+  const plan = Array.isArray(rawPlan?.hops) ? balancePlan(rawPlan as any).plan : rawPlan;
   const state = safeJson<any>(path.join(lane, '.olympus-hop-state.json'), { completed: [], parked: null, inFlight: [] });
   const completed: string[] = Array.isArray(state.completed) ? state.completed : [];
   const inFlight: Array<{ hopId: string; startedAt: string }> = Array.isArray(state.inFlight) ? state.inFlight : [];

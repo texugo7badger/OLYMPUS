@@ -158,16 +158,24 @@ export async function GET(req: NextRequest) {
   const activeInFlight = liveCampaign ? diskInFlight : [];
   const lostInFlight = liveCampaign ? [] : diskInFlight;
   const inFlight = activeInFlight.length;
-  const completed = hopState?.completed?.length ?? 0;
   const parked = hopState?.parked ?? null;
 
   // v0.0.58 — the denominator. "23 hop(s) ok" without a total reads as a
   // finished campaign; the plan on the lane's disk is the only honest total.
   let planTotal: number | null = null;
+  let planIds: Set<string> | null = null;
   try {
     const planRaw = JSON.parse(fs.readFileSync(path.join(lane || '', 'dispatch-plan.json'), 'utf-8'));
-    if (Array.isArray(planRaw?.hops)) planTotal = planRaw.hops.length;
+    if (Array.isArray(planRaw?.hops)) {
+      planTotal = planRaw.hops.length;
+      planIds = new Set(planRaw.hops.map((h: any) => String(h?.id ?? '')).filter(Boolean));
+    }
   } catch { /* no plan on disk */ }
+
+  // v0.0.86 — completed is the PLAN's completed, not every id ever recorded.
+  // A rewritten plan left 26 stale ids in the state; the chip read 33/27.
+  const allCompleted: string[] = Array.isArray(hopState?.completed) ? hopState.completed.map(String) : [];
+  const completed = planIds ? allCompleted.filter((id) => planIds.has(id)).length : allCompleted.length;
 
   // v0.0.22 PROVENANCE — god + model + hop + elapsed, so the strip never
   // says "something is running" without naming it.
