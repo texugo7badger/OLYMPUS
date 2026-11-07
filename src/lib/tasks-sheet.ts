@@ -34,6 +34,8 @@ import { getVaultRoot } from './vault-root';
 import { getProviderInfo } from './olympus';
 import { readWalkLock } from './hop-runtime/walk-lock';
 import { balancePlan } from './hop-runtime/plan-balance';
+import { hopSpeed } from './token-speed';
+import { patrolLane } from './atlas-patrol';
 
 /** The walker's concurrency law (the projection's honesty bound). */
 const MAX_HOP_CONCURRENCY = 3;
@@ -80,6 +82,8 @@ export interface TaskRecord {
   tokensIn?: number | null;
   tokensOut?: number | null;
   durationMs?: number;
+  /** v0.0.87 — measured output tok/s (settled hops only). */
+  tokensPerSec?: number | null;
   retriesAbsorbed?: number;
   reasoning?: string | null;
   sessionId?: string | null;
@@ -102,6 +106,8 @@ export interface DemigodLive {
   tokensOut: number;
   durationMs: number | null;
   dispatchId: string | null;
+  /** v0.0.87 — measured output tok/s when the dispatch settled. */
+  tokensPerSec?: number | null;
 }
 
 export interface TasksSheet {
@@ -122,6 +128,15 @@ export interface TasksSheet {
     /** W-D3: the whole-project remaining wall-time projection (the critical
      *  path across gods; ms). 0 when nothing remains. */
     projectedRemainingMs: number;
+  };
+  /** v0.0.87 — Atlas's deterministic patrol of the lane (parked + stuck). */
+  atlasPatrol?: {
+    summary: string;
+    parked: number;
+    stuck: number;
+    verdict: string | null;
+    hopId: string | null;
+    nextLane: string | null;
   };
 }
 
@@ -295,6 +310,11 @@ function demigodsByGod(feedPath: string, now: number): Record<string, DemigodLiv
         tokensOut: Number(outcome?.tokens_used?.output) || 0,
         durationMs: typeof outcome?.duration_ms === 'number' ? outcome.duration_ms : null,
         dispatchId: dispatchId ? String(dispatchId) : null,
+        tokensPerSec: (() => {
+          const out = Number(outcome?.tokens_used?.output) || 0;
+          const ms = Number(outcome?.duration_ms) || 0;
+          return out > 0 && ms > 0 ? out / (ms / 1000) : null;
+        })(),
       });
     }
     for (const list of Object.values(demigods)) list.sort((a, b) => a.ts < b.ts ? 1 : -1);
@@ -385,6 +405,7 @@ export function buildTasksSheet(opts: {
     lane: '', project: '', updatedAt: '',
     tasks: [], gods: {},
     stats: { total: 0, completed: 0, parked: 0, running: 0, lost: 0, pending: 0, tokensIn: 0, tokensOut: 0, projectedRemainingMs: 0 },
+    atlasPatrol: undefined,
   };
   if (!active) return empty;
   const lane = active.lane;
@@ -460,8 +481,11 @@ export function buildTasksSheet(opts: {
     const startRec = inFlightByHop.get(String(h?.id)) ?? null;
     let status = 'pending';
     if (isCompleted) status = 'completed';
+    // v0.0.86 — the live inFlight record wins over a stale park: a retried
+    // hop is running, not blocked. A dead walker still reports lost.
+    else if (startRec && lock.alive) status = 'running';
     else if (isParked) status = 'parked';
-    else if (startRec) status = lock.alive ? 'running' : 'lost';
+    else if (startRec) status = 'lost';
     const startedAt = (status === 'running' || status === 'lost') && startRec ? String(startRec.startedAt) : undefined;
     const prompt = typeof h?.prompt === 'string' ? h.prompt : '';
     // v0.0.64 — RUNNING HOPS HAVE REAL DATA: the feed is live while the hop
@@ -504,6 +528,9 @@ export function buildTasksSheet(opts: {
       sessionId: tel?.sessionId ?? null,
       files,
       estimatedCostUsd: deriveCost(tel?.tokensIn, tel?.tokensOut),
+      tokensPerSec: tel && status === 'completed'
+        ? hopSpeed(String(h?.id ?? ''), String(h?.god ?? ''), status, tel.tokensOut, tel.durationMs)?.outTokPerSec ?? null
+        : null,
     };
     if (isCompleted) t.progress = 100;
     else if (status === 'running') {
@@ -564,6 +591,10 @@ export function buildTasksSheet(opts: {
   };
   void MAX_HOP_CONCURRENCY; // documented bound — the model itself is per-god serial
 
+  // v0.0.87 — Atlas's deterministic opinion travels with the same sheet the
+  // Parthenon already polls (no extra fetch, no hidden model turn).
+  const patrol = (() => { try { return patrolLane(lane); } catch { return null; } })();
+  const first = patrol ? (patrol.parked[0] ?? patrol.stuck[0] ?? null) : null;
   return {
     lane,
     project: path.basename(lane),
@@ -571,5 +602,15 @@ export function buildTasksSheet(opts: {
     tasks,
     gods,
     stats,
+    ...(patrol ? {
+      atlasPatrol: {
+        summary: patrol.summary,
+        parked: patrol.parked.length,
+        stuck: patrol.stuck.length,
+        verdict: first?.verdict ?? null,
+        hopId: first?.hopId ?? null,
+        nextLane: first?.nextLane ?? null,
+      },
+    } : {}),
   };
 }

@@ -365,9 +365,14 @@ export function readSpendRows(catalog: Map<string, CatalogModel>, now = Date.now
         for (const row of list) {
           let d: any;
           try { d = JSON.parse(row.data); } catch { continue; }
-          const provider = typeof d?.model?.providerID === 'string' ? d.model.providerID : '';
+          // v0.0.87 — the hop-data DB writes the flat v1 shape
+          // (`providerID`, `modelID`); the global v2 DB writes `model`.
+          // Reading only `d.model.providerID` skipped every AIME hop row.
+          const provider = typeof d?.model?.providerID === 'string' ? d.model.providerID
+            : typeof d?.providerID === 'string' ? d.providerID : '';
           if (provider !== 'opencode-go') continue;
-          const model = typeof d?.model?.id === 'string' ? d.model.id : '';
+          const model = typeof d?.model?.id === 'string' ? d.model.id
+            : typeof d?.modelID === 'string' ? d.modelID : '';
           if (!model || !d?.tokens || typeof d.tokens !== 'object') continue;
           const out = Number(d.tokens.output ?? 0);
           const input = Number(d.tokens.input ?? 0);
@@ -378,11 +383,38 @@ export function readSpendRows(catalog: Map<string, CatalogModel>, now = Date.now
           if (seen.has(key)) continue;
           seen.add(key);
           const ts = Number(d?.time?.completed ?? d?.time?.streamed ?? row.time_created) || row.time_created;
-          const cost = priceTurn(catalog.get(model), { input, output: out, cacheRead, cacheWrite }, ts);
+          const cost = Number(d?.cost) > 0 ? Number(d.cost) : priceTurn(catalog.get(model), { input, output: out, cacheRead, cacheWrite }, ts);
           rows.push({ ts, model, input, output: out, reasoning: Number(d.tokens.reasoning ?? 0), cacheRead, cacheWrite, cost });
         }
       } finally { db.close(); }
     } catch { /* a locked/absent DB must not hide the others */ }
   }
+  // v0.0.87 — the app's own step-finish ledger carries the interactive
+  // sessions (the v2 DB has no per-message tokens). Merge it, deduping the
+  // rows the hop-data DB already reported (same model + ~5s + token pair).
+  try {
+    const ledger = path.join(home(), 'metrics', 'cost.jsonl');
+    const lines = fs.readFileSync(ledger, 'utf-8').trim().split('\n').slice(-60_000);
+    for (const line of lines) {
+      let r: any;
+      try { r = JSON.parse(line); } catch { continue; }
+      if (r?.tool !== '_step-finish_') continue;
+      const fullModel = String(r.model || '');
+      if (!fullModel.startsWith('opencode-go/')) continue;
+      const model = fullModel.slice('opencode-go/'.length);
+      const ts = Date.parse(r.ts) || 0;
+      if (!ts || ts < since) continue;
+      const input = Number(r.input_tokens ?? 0);
+      const out = Number(r.output_tokens ?? 0);
+      const cacheRead = Number(r.cached_tokens ?? 0);
+      const cacheWrite = Number(r.cache_write_tokens ?? 0);
+      if (input + out + cacheRead + cacheWrite <= 0) continue;
+      const key = `${model}:${Math.round(ts / 5000)}:${input}:${out}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const cost = Number(r.spend_usd) > 0 ? Number(r.spend_usd) : priceTurn(catalog.get(model), { input, output: out, cacheRead, cacheWrite }, ts);
+      rows.push({ ts, model, input, output: out, reasoning: Number(r.reasoning_tokens ?? 0), cacheRead, cacheWrite, cost });
+    }
+  } catch { /* no ledger is not a crash */ }
   return rows;
 }

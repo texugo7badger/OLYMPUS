@@ -32,6 +32,7 @@ function expect(name, cond, detail) {
 const src = (p) => fs.readFileSync(path.join(ROOT, p), 'utf-8');
 
 const terminal = src('src/components/olympus/interactive-terminal.tsx');
+const walkerSrc = src('src/lib/hop-runtime/walker.ts');
 const panel = src('src/components/olympus/god-panel.tsx');
 const modal = src('src/components/olympus/god-chat-modal.tsx');
 const chat = src('src/app/api/olympus/god/chat/route.ts');
@@ -88,6 +89,9 @@ const briefing = src('src/lib/project-briefing.ts');
 expect('P-20: the task sheet applies the walker\'s balance (executing god)', /balancePlan\(rawPlan as any\)\.plan/.test(tasksSheet), 'declared god shown while another runs');
 expect('P-21: the phone briefing applies the same balance', /balancePlan\(planRaw as any\)\.plan/.test(briefing), 'briefing shows the declared god');
 expect('P-22: run-state counts only the plan\'s completed hops (no 33/27)', /planIds \? allCompleted\.filter/.test(runState), 'stale ids inflate progress');
+
+expect('P-23: a retried hop clears its stale park at launch', /if \(parkedHop\?\.hopId === next\.id\) parkedHop = null/.test(walkerSrc), 'the card stays blocked while the hop runs');
+expect('P-24: a live inFlight record outranks a stale park in the sheet', /else if \(startRec && lock\.alive\) status = 'running'/.test(tasksSheet), 'running lost to parked');
 
 fs.rmSync(tmpHome, { recursive: true, force: true });
 console.log(failures === 0 ? '\nparthenon-live: all green.' : `\nparthenon-live: ${failures} failure(s).`);

@@ -130,7 +130,7 @@ expect('A-32: Apollo speaks the summary in Portuguese', /33%/.test(text.summaryL
 const themeManifest = await import(OLYMPUS + '/src/lib/theme-manifest.ts');
 const appManifest = themeManifest.mobileManifest('app');
 const widgetManifest = themeManifest.mobileManifest('widget');
-expect('A-33: the active theme paints the manifest', appManifest.background_color === '#120D0A' && appManifest.theme_color === '#E8A45C', `${appManifest.background_color}/${appManifest.theme_color}`);
+expect('A-33: the active theme paints the manifest (status bar follows the bg, never gold)', appManifest.background_color === '#120D0A' && appManifest.theme_color === '#120D0A', `${appManifest.background_color}/${appManifest.theme_color}`);
 expect('A-34: both apps share scope and icon family but start on their own surface', appManifest.scope === '/m' && widgetManifest.scope === '/m' && appManifest.start_url === '/m' && widgetManifest.start_url === '/m/widget' && appManifest.icons[1].src.split('?')[0] === widgetManifest.icons[1].src.split('?')[0], 'scope/start mismatch');
 expect('A-35: the maskable icon keeps the Android safe zone', /<rect width="80" height="80"/.test(themeManifest.themedAppIconSvg(themeManifest.readThemeState(), { maskable: true })), 'no maskable field');
 const versionBefore = themeManifest.themeVersion();

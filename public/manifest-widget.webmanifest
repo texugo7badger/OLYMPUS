@@ -7,7 +7,7 @@
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0A0E16",
-  "theme_color": "#D4A574",
+  "theme_color": "#0A0E16",
   "icons": [
     {
       "src": "/icons/olympus-192.png",

@@ -32,7 +32,7 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: 'cover',
-  themeColor: '#0A0E16',
+  themeColor: '#0A0E16', // the live manifest overrides with the active theme's bg
 };
 
 export default function MobileLayout({ children }: { children: React.ReactNode }) {

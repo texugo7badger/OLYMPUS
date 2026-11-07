@@ -34,6 +34,21 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.87 — Apollo speaks, Atlas thinks, the ledger tells the truth.**
+Apollo narrates every long turn (elapsed + last tool) and a dead lane fails
+fast with the next healthy lane named instead of hanging for 180s. Atlas
+patrols every park deterministically: it classifies the cause, checks the
+artifacts, picks the next lane and emits `retry` / `replan` / `ask-user` to
+the activity feed and the Parthenon, with opt-in `think` (Atlas) and
+`escalate` (Apollo) turns. The GO ledger reads the hop-data DB's real shape,
+so the 5h/week/month windows finally move with the walk; the cost screen adds
+an hourly token chart, honest tips and a recent-request log. Measured tok/s
+appears in the Parthenon, task sheet, demigod chips, phone recent list and
+briefing (settled hops only; running hops show elapsed and `… tok/s`, never a
+fake rate). The PWA status strip follows the theme background, not the gold
+accent. Retried hops clear stale parks, `campaign_end` no longer prints
+"Hop 'undefined' PARKED", and a lane is health-checked before the first
+attempt. **v0.0.86 — every god live, every park named.**
 **v0.0.86 — every god live, every park named.**
 The Parthenon now shows all ten gods from second zero: the task API overlays
 the live event state, so a god working a hop is visible before the terminal

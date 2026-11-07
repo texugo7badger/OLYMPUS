@@ -43,6 +43,8 @@ export interface BriefEvent {
   durationMs: number;
   tokensIn: number | null;
   tokensOut: number | null;
+  /** v0.0.87 — measured output tok/s for the settled hop. */
+  tokensPerSec?: number | null;
 }
 
 export interface BriefScreenshot {
@@ -119,6 +121,11 @@ function telemetryEvents(rows: HopTelemetryRow[]): BriefEvent[] {
       durationMs: Number(row.durationMs) || 0,
       tokensIn: Number.isFinite(Number(row.tokensIn)) ? Number(row.tokensIn) : null,
       tokensOut: Number.isFinite(Number(row.tokensOut)) ? Number(row.tokensOut) : null,
+      tokensPerSec: (() => {
+        const out = Number(row.tokensOut) || 0;
+        const ms = Number(row.durationMs) || 0;
+        return out > 0 && ms > 0 ? out / (ms / 1000) : null;
+      })(),
     }));
 }
 
@@ -176,11 +183,15 @@ export function computeProjectBriefing(slugInput?: string | null): ProjectBriefi
     const id = String(h?.id || '');
     const status: HopBriefStatus = completed.has(id)
       ? 'completed'
-      : parkedId === id
-        ? 'parked'
-        : inFlight.has(id)
-          ? (live ? 'running' : 'lost')
-          : 'pending';
+      // v0.0.86 — a live retry outranks the stale park (the phone must not
+      // say 'parked' while the god is running the hop).
+      : inFlight.has(id) && live
+        ? 'running'
+        : parkedId === id
+          ? 'parked'
+          : inFlight.has(id)
+            ? 'lost'
+            : 'pending';
     return {
       id,
       god: String(h?.god || 'apollo').toLowerCase(),

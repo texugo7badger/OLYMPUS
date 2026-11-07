@@ -18,6 +18,8 @@ import { parseResumeIntent } from '@/lib/hop-runtime/resume-intent';
 import { pickPlanRoot, walkRootNote } from '@/lib/hop-runtime/walk-root';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
 import { probeLane } from '@/lib/lane-probe';
+import { markLaneDead, laneChain } from '@/lib/lane-health';
+import { FREE_HYBRID_ROSTER } from '@/lib/model-strategies';
 import { reconcileProjectPath, PROJECTS_DIR, setActiveProject, getActiveProjectSlug } from '@/lib/project-context';
 import { composePlannerRag } from '@/lib/rag-inject';
 import { composeKnowledgeBlock } from '@/lib/knowledge-hints';
@@ -994,6 +996,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
       // W-U PLAN-HARVEST: the warm stall holder (the errSessionId precedent — declared
       // before finish() to keep the block-scoped order legal).
       let warmStallTimer: ReturnType<typeof setInterval> | null = null;
+      let progressTimer: ReturnType<typeof setInterval> | null = null;
       // W-U: the planner's turn text buffer (harvested when the write never lands).
       let turnTextBuf = '';
 
@@ -1007,6 +1010,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         clearTimeout(startupTimer);
         clearTimeout(maxRuntimeTimer);
         if (warmStallTimer) clearInterval(warmStallTimer);
+        if (progressTimer) clearInterval(progressTimer);
         send({ type: 'action_done', action: opts.meta.action, node: opts.meta.node, code, ts: new Date().toISOString() });
         try { controller.close(); } catch {}
         closed = true;
@@ -1037,10 +1041,22 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         fail(
           `The model lane stalled — zero turn activity for ${Math.round(WARM_STALL_MS / 1000)}s ` +
           `(the #129 free-anchor stall class: the provider accepted the turn and never streamed). ` +
-          `Resend the prompt (the warm session and its context are preserved) or switch the free ` +
-          `strategy in Settings (free-openrouter fails loudly; a dead lane re-tries the same death).`
+          `Resend the prompt (the warm session and its context are preserved) or switch the free strategy in Settings (free-openrouter fails loudly; a dead lane re-tries the same death).`
         );
       }, 15_000);
+
+      // v0.0.87 — APOLLO NARRATES THE WAIT. A long tool chain used to show a
+      // silent 'thinking (96s)'. Every 45s the transcript gets one honest
+      // line: elapsed, the last tool, and the promise that context survives.
+      progressTimer = setInterval(() => {
+        if (closed) return;
+        const elapsed = Math.round((Date.now() - turnStartedAt) / 1000);
+        send({
+          type: 'log',
+          msg: `⏳ ${opts.agent ?? 'apollo'} is working — ${elapsed}s · ${lastTool ? `last tool: ${lastTool}` : 'thinking'} · the warm session and its context are preserved.`,
+          ts: new Date().toISOString(),
+        });
+      }, 45_000);
 
       // W-N LANE-PROBE: one token asked of the active lane BEFORE the real
       // turn posts — fire-and-forget (zero latency added to a healthy lane);
@@ -1049,9 +1065,27 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
       void probeLane().then((r) => {
         if (closed || !r) return;
         if (!r.ok) {
+          const err = String(r.error ?? 'no response');
+          const cls = /auth|credential|401|403/i.test(err) ? 'auth'
+            : /no-route|not found|model unavailable/i.test(err) ? 'no-route'
+            : /429|rate/i.test(err) ? 'rate-limit'
+            : 'timeout';
+          // v0.0.87 — the probe failure is EVIDENCE, not a footnote. Mark the
+          // lane dead (writer refuses unknown classes; timeout is supported)
+          // and name the next healthy lane instead of letting Apollo freeze.
+          try { markLaneDead(r.model, cls, cls === 'rate-limit' || cls === 'timeout' ? 5 * 60_000 : 30 * 60_000, err); } catch {}
+          const roster = ((FREE_HYBRID_ROSTER as any)?.apollo ?? []).map((l: any) => l.id);
+          const nextLane = laneChain(r.model, roster).filter((id) => id !== r.model)[0] ?? null;
+          const advice = nextLane
+            ? `Next healthy lane: ${nextLane} — resend and the turn will use it.`
+            : 'No healthy fallback in the roster — open Settings → LLM Strategy.';
+          if (cls === 'auth' || cls === 'no-route') {
+            fail(`⚠ Pre-flight: lane ${r.model} is ${cls} (${err}). It was marked dead for retry. ${advice}`);
+            return;
+          }
           send({
             type: 'log',
-            msg: `⚠ Pre-flight: the active lane ${r.model} did not answer a 1-token probe (${r.error ?? 'no response'}; ${r.latencyMs}ms) — the free-anchor stall class (#129). The turn may hang; if it stalls, resend or switch the free strategy in Settings.`,
+            msg: `⚠ Pre-flight: lane ${r.model} did not answer a 1-token probe (${err}; ${r.latencyMs}ms). The turn may be slow. ${advice}`,
             ts: new Date().toISOString(),
           });
         }
@@ -1091,8 +1125,11 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
 
       // onEvent wrapper — tracks first-event for the startup timeout and
       // routes events into the SSE stream.
+      let lastTool: string | null = null;
+      const turnStartedAt = Date.now();
       const onEvent = (ev: any) => {
         if (firstEventAt === null) firstEventAt = Date.now();
+        if (ev?.type === 'tool.call' && ev?.tool?.name) lastTool = String(ev.tool.name);
         // W-U PLAN-HARVEST: the turn's TEXT accumulates — when the free
         // planner NARRATES the plan instead of writing it, the post-run
         // harvests the JSON from this very buffer (the model's prose IS
