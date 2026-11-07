@@ -130,11 +130,11 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
   const masked = token ? `${token.slice(0, 6)}…${token.slice(-4)}` : '—';
 
   return (
-    <div className="fixed inset-0 z-[420] flex items-center justify-center bg-black/65 p-4" role="dialog" aria-modal="true" aria-label="Mobile companion pairing">
+    <div className="fixed inset-0 z-[420] flex items-center justify-center bg-black/65 p-4" role="dialog" aria-modal="true" aria-label="OLYMPUS app pairing">
       <div className="w-full max-w-md rounded-2xl border border-olympus-gold/20 bg-olympus-panel shadow-2xl overflow-hidden">
         <header className="flex items-center gap-2 px-4 py-3 border-b border-olympus-gold/10">
           <Smartphone size={14} className="text-olympus-gold" />
-          <span className="text-[12px] font-mono font-semibold text-olympus-text">Mobile companion</span>
+          <span className="text-[12px] font-mono font-semibold text-olympus-text">OLYMPUS app</span>
           <button onClick={onClose} aria-label="Close mobile pairing" className="ml-auto text-olympus-text-dim hover:text-olympus-red">
             <X size={14} />
           </button>
