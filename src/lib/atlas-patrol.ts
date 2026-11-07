@@ -22,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { appendActivity } from './activity-feed';
 import { laneChain, readLaneHealth, isLaneAvailable } from './lane-health';
-import { FREE_HYBRID_ROSTER } from './model-strategies';
+import { laneRosterFor } from './lane-roster';
 import { classifyDispatchFailure } from './hop-runtime/failure-class';
 import { runGodTurn } from './god-run';
 
@@ -72,7 +72,7 @@ function planHop(plan: any, id: string): any | null {
 }
 
 function nextHealthyLane(god: string, current: string | null): string | null {
-  const roster = ((FREE_HYBRID_ROSTER as any)?.[god] ?? []).map((l: any) => String(l.id));
+  const roster = laneRosterFor(god);
   const entries = readLaneHealth().lanes;
   // Prefer lanes with a fresh `alive` reading. An auth lane whose TTL expired
   // is "available" by policy (a fixed key can recover) but it is a bad
@@ -131,6 +131,9 @@ export function patrolFinding(laneRoot: string, hop: any, park: any, opts: { now
     recommendation = nextLane
       ? `${failureClass} on ${lane ?? 'the applied lane'}. Quarantine it for 10 min and retry on ${nextLane}; the artifact check says ${arts.missing.length} missing.`
       : `${failureClass} with no fallback lane — stop and ask the user which lane to use.`;
+  } else if (failureClass === 'campaign-budget') {
+    verdict = 'retry';
+    recommendation = `The campaign window elapsed (${reason}). A resume opens a fresh 60-minute window and Atlas continues the same plan from disk; the start budget still applies. ${arts.missing.length ? `Missing: ${arts.missing.join(', ')}.` : ''}`.trim();
   } else if (failureClass === 'tool-budget') {
     verdict = 'replan';
     recommendation = `Tool budget exhausted (${reason}). Replan the hop with a narrower prompt: name the exact files, cap the shell calls, write the artifact before probing. ${arts.missing.length ? `Missing: ${arts.missing.join(', ')}.` : 'Artifacts exist — verify before rerunning.'}`;

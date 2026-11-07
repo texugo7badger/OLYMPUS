@@ -121,6 +121,32 @@ expect('P-29: the animated Nakkas SVG and its static twin are shipped and stable
     && /data-motion="stable"/.test(src('src/app/globals.css')),
   'the Parthenon has no motion twin');
 
+// ── P-30..P-33: v0.0.90 — the magic wand + the approval gate + preview window ──
+const livePreview = src('src/components/olympus/live-preview.tsx');
+const markRoute = src('src/app/api/olympus/athena/edit/route.ts');
+const approveRoute = src('src/app/api/olympus/athena/approve/route.ts');
+const godRun = src('src/lib/god-run.ts');
+const previewWindow = src('src/app/preview-window/page.tsx');
+const chatModal = src('src/components/olympus/god-chat-modal.tsx');
+expect('P-30: the mark sends the PREVIEW IFRAME viewport + preview URL, not the app window',
+  /iframeRef/.test(livePreview) && /iframeRect\?\.width/.test(livePreview) && /previewUrl: previewTarget/.test(livePreview)
+    && /viewport: \{ width: window\.innerWidth/.test(livePreview) === false,
+  'the mark still sends the app window viewport');
+expect('P-31: the mark is a PLANNING turn, opens Athena chat and has a real approval route',
+  /PLANNING turn/.test(markRoute) && /do not edit/i.test(markRoute) && /olympus:open-god-chat/.test(livePreview)
+    && /olympus:open-god-chat/.test(panel) && /Approve → Apollo \+ Atlas/.test(chatModal)
+    && /writeHopOverride\(/.test(approveRoute) && /loadHopState\(/.test(approveRoute) && !/runGodTurn/.test(approveRoute) && /\.olympus-hop-overrides/.test(approveRoute),
+  'the mark has no plan → approve → Apollo/Atlas handoff');
+expect('P-32: a GO auth failure retries once on the verified fallback model (Athena unblocked)',
+  /GO_FALLBACK_MODEL = 'opencode-go\/deepseek-v4\.1-flash'/.test(godRun) && /isAuthFailure/.test(godRun)
+    && /fallbackModel/.test(godRun) && /--model/.test(godRun),
+  'the qwen 401 still kills the god turn');
+expect('P-33: the preview opens in its own window with the OLYMPUS loader until the project is live',
+  /preview-window\?slug=/.test(livePreview) && fs.existsSync(path.join(ROOT, 'src/app/preview-window/page.tsx'))
+    && /OlympusLoader/.test(previewWindow) && /projects\/preview\?slug=/.test(previewWindow)
+    && /hops\/stream/.test(previewWindow) && /iframe/.test(previewWindow),
+  'the new preview window has no loader/auto-follow');
+
 fs.rmSync(tmpHome, { recursive: true, force: true });
 console.log(failures === 0 ? '\nparthenon-live: all green.' : `\nparthenon-live: ${failures} failure(s).`);
 process.exit(failures === 0 ? 0 : 1);

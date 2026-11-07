@@ -44,7 +44,7 @@ import { verifyHopDeterministic, type HopVerifyResult } from './verify';
 import { findOlympusRoot } from '@/lib/opencode-spawn';
 import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencode-session';
 import { markLaneAlive, markLaneDead, laneChain, isLaneDeadClass, isLaneAvailable, readLaneHealth } from '@/lib/lane-health';
-import { FREE_HYBRID_ROSTER } from '@/lib/model-strategies';
+import { laneRosterFor } from '@/lib/lane-roster';
 import { backupBeforeDestructiveHop } from '@/lib/destructive-guard';
 import { applyRunManifestFile, buildRunMcpManifest, getRunMcpManifest, setRunMcpManifest } from '@/lib/mcp-run-manifest';
 import { checkCostCaps } from '@/lib/cost-caps';
@@ -861,7 +861,7 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
       error: `no live model lane for god '${hop.god}' in opencode.json — cannot dispatch (reassignment is a table edit, the #106 doctrine)`,
     };
   }
-  const roster = (FREE_HYBRID_ROSTER as Record<string, Array<{ id: string }>>)[hop.god]?.map((l) => l.id) ?? [];
+  const roster = laneRosterFor(hop.god);
   const chain = laneChain(applied, roster);
   const deadNotes: string[] = [];
   let retriesAbsorbed = 0;

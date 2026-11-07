@@ -2,6 +2,71 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.90] — 2026-11-07
+
+### The wand plans — mark → Athena → approve → Apollo + Atlas
+
+#### The mark is a planning turn, on the right pixels
+
+- The live preview now sends the **preview iframe's viewport** and the
+  `previewUrl` with the mark, not the OLYMPUS app window. The pixel the user
+  clicks is the CSS pixel Athena receives.
+- Athena's mark turn is **planning-only**: identify the area at the coordinates,
+  ask at most two short questions, propose a 2–4 bullet plan (component/file,
+  the change, whether it fixes the current parked hop or is new scope), and end
+  with "Approve to send to Apollo + Atlas." She does not edit in this turn.
+- The mark opens her chat automatically (a real UI event + toast); the chat
+  polls the durable inbox, so the mark and her plan are visible immediately.
+- The mark prompt names the preview URL, viewport and route; the old app-window
+  dimensions are gone.
+
+#### The approval gate
+
+- Athena's mark reply carries **Approve → Apollo + Atlas**; it calls
+  `POST /api/olympus/athena/approve`.
+- Apollo receives the approved plan and writes
+  `.olympus-hop-overrides.json` for the current/parked hop, or
+  `dispatch-plan.next.json` for new scope. The live plan is never rewritten;
+  Atlas's warden resumes the walk and the override is consumed on the next
+  attempt. The Apollo handoff (or its failure) lands in Athena's thread.
+- This is a user-clicked action, never an automatic Apollo prompt.
+
+#### The GO auth fallback
+
+- The account's `opencode-go` credential admits `deepseek-v4.1-flash` but
+  answers `401 Go requires a credential` for `qwen3.7-plus`. `runGodTurn` now
+  retries **once** on the verified GO fallback and reports `fallbackModel`;
+  Athena's planning turn answered in 11.5s instead of dying at the provider.
+- The provider catalog in the config lists every `opencode-go` model the agents
+  use; the runtime fallback protects a lane that still lacks one.
+
+#### The preview window
+
+- The Live Preview header gains **window**: it opens
+  `/preview-window?slug=<slug>` as its own OS window (the Electron app-origin
+  window, Alt+Tab friendly).
+- The new window shows the OLYMPUS loader until the project dev server is
+  ready, then the real app; it follows the measured port/URL and reloads when a
+  hop settles (the hop stream). `open ↗` still opens the raw URL in the browser.
+
+#### Verification
+
+- New assertions P-30..P-33: iframe viewport + preview URL, planning + approval,
+  the GO fallback, and the preview window's loader/auto-follow.
+- Full battery: **170 PASS / 0 FAIL / 1 declared skip of 171**; tsc 0; lint 0
+  errors.
+
+#### Honest limits
+
+- Athena identifies the element from the preview URL + CSS coordinates; a
+  cross-origin preview cannot be inspected by the app itself. The plan is her
+  reading of the mark.
+- The approval writes the campaign change, but a running hop finishes first; the
+  override applies at the next attempt, and a staged generation applies at a
+  hop boundary.
+- The preview window needs the project dev server; the OLYMPUS loader is the
+  honest waiting state, never a blank frame.
+
 ## [v0.0.89] — 2026-11-07
 
 ### Atlas stays on — the command deck

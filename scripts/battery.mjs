@@ -29,11 +29,14 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
 const ROOT = new URL('..', import.meta.url).pathname;
+// v0.0.90 — per-suite stdout/stderr for a named failure (never a bare exit 1).
+const SUITE_LOG_DIR = process.env.OLYMPUS_BATTERY_LOG_DIR || '/tmp/opencode/battery-logs';
+try { mkdirSync(SUITE_LOG_DIR, { recursive: true }); } catch { /* best effort */ }
 const SUITE_TIMEOUT_MS = 600_000;
 
 // ── The declared prerequisites (checked BEFORE the sweep) ────────────────────
@@ -69,6 +72,7 @@ for (const suite of suites) {
     cwd: ROOT,
     timeout: SUITE_TIMEOUT_MS,
   });
+  try { writeFileSync(join(SUITE_LOG_DIR, `${suite}.log`), `${r.stdout || ''}\n--- stderr ---\n${r.stderr || ''}`); } catch { /* best effort */ }
   const ok = r.status === 0;
   const head = String((r.status === null ? `TIMEOUT after ${SUITE_TIMEOUT_MS / 1000}s` : r.stdout || '') || '')
     .trim().split('\n').filter((l) => /pass|PASS|assertion|violation|doctrine|passed/i.test(l)).slice(-1)[0] ?? '';

@@ -1,6 +1,10 @@
 # OLYMPUS Roadmap
 
-**v0.0.89 is the current release** (2026-11-07) — Atlas stays on: the
+**v0.0.90 is the current release** (2026-11-07) — the wand plans: the live-preview
+mark sends the iframe viewport/URL, Athena plans in her chat, the user approves
+and Apollo writes the campaign change while Atlas resumes/fixes the walk; a GO
+auth 401 falls back once to a verified model; the preview opens in its own OS
+window with the OLYMPUS loader until the project is live. **v0.0.89** — Atlas stays on: the
 server-side warden (deterministic, no Apollo prompt) keeps opted-in campaigns
 walking, pins Atlas to HY3 and writes one decision box; the Parthenon command
 deck lands on desktop and mobile over the animated Nakkas SVG; the GO cost

@@ -6,16 +6,28 @@
  * lane, a hard timeout, and a tolerant parser for the text parts. No Apollo in
  * the middle, no session reuse, no hidden retry.
  *
+ * v0.0.90 — THE GO CREDENTIAL FALLBACK. The account's `opencode-go` credential
+ * admitted `deepseek-v4.1-flash` but answered `401 Go requires a credential`
+ * for `qwen3.7-plus`; the Athena mark turn failed at the provider before it
+ * could plan. A single, named retry on a verified GO model keeps the god
+ * conversational; the reply carries `fallbackModel` so the UI can say which
+ * model answered. This is NOT a silent downgrade: one retry, only on an auth
+ * failure, and the reason is visible.
+ *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
 import { spawnOpencode } from './opencode-spawn';
+
+export const GO_FALLBACK_MODEL = 'opencode-go/deepseek-v4.1-flash';
 
 export interface GodTurnResult {
   ok: boolean;
   text: string;
   error?: string;
   durationMs: number;
+  /** Set only when the first model failed auth and the verified GO model answered. */
+  fallbackModel?: string;
 }
 
 /** Tolerant parser for `opencode run --format json` text parts. */
@@ -32,18 +44,25 @@ export function extractText(stdout: string): string {
   return parts.join('').trim();
 }
 
-export function runGodTurn(god: string, message: string, lane: string, timeoutMs = 180_000): Promise<GodTurnResult> {
-  const startedAt = Date.now();
+/** A provider/auth rejection is retryable on another GO model; anything else is not. */
+export function isAuthFailure(text: string): boolean {
+  return /provider\.auth|Go requires a credential|authentication_error|"status"\s*:\s*401|\b401\b/i.test(String(text || ''));
+}
+
+interface Attempt { ok: boolean; text: string; error?: string }
+
+function runOnce(god: string, message: string, lane: string, timeoutMs: number, model?: string): Promise<Attempt> {
   return new Promise((resolve) => {
     let out = '';
     let err = '';
     let settled = false;
-    const done = (r: { ok: boolean; text: string; error?: string }) => {
+    const done = (r: Attempt) => {
       if (settled) return;
       settled = true;
-      resolve({ ...r, durationMs: Date.now() - startedAt });
+      resolve(r);
     };
-    const child = spawnOpencode(['run', '--format', 'json', '--agent', god, message], {
+    const args = ['run', '--format', 'json', '--agent', god, ...(model ? ['--model', model] : []), message];
+    const child = spawnOpencode(args, {
       cwd: lane,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -61,4 +80,22 @@ export function runGodTurn(god: string, message: string, lane: string, timeoutMs
     });
     child.on('error', (e: any) => { clearTimeout(timer); done({ ok: false, text: '', error: String(e?.message || e) }); });
   });
+}
+
+export async function runGodTurn(god: string, message: string, lane: string, timeoutMs = 180_000): Promise<GodTurnResult> {
+  const startedAt = Date.now();
+  const first = await runOnce(god, message, lane, timeoutMs);
+  if (first.ok || !isAuthFailure(first.error || '')) {
+    return { ...first, durationMs: Date.now() - startedAt };
+  }
+  // One named retry on a verified GO lane; the first attempt got a 401.
+  const fallback = await runOnce(god, message, lane, Math.min(timeoutMs, 180_000), GO_FALLBACK_MODEL);
+  if (fallback.ok) {
+    return { ...fallback, fallbackModel: GO_FALLBACK_MODEL, durationMs: Date.now() - startedAt };
+  }
+  return {
+    ...first,
+    error: `${first.error} · fallback ${GO_FALLBACK_MODEL} failed: ${fallback.error}`,
+    durationMs: Date.now() - startedAt,
+  };
 }

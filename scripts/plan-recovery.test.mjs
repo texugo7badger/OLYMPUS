@@ -86,6 +86,8 @@ expect('R-1: tool-budget → budget 24 + narrow directive', budget.action === 'r
 const timeout = decideRecovery(lane, finding('timeout'));
 expect('R-2: timeout → lane failover override', timeout.action === 'retry' && timeout.override?.lane === 'opencode/deepseek-v4.1-flash-free', timeout);
 const atlasTimeout = decideRecovery(lane, { ...finding('timeout'), god: 'atlas' });
+const campaignBudget = decideRecovery(lane, { ...finding('unknown'), failureClass: 'campaign-budget', reason: 'dispatch-failed:campaign-budget' });
+expect('R-2c: a campaign-budget park retries in a fresh window (opt-in autonomy)', campaignBudget.action === 'retry' && campaignBudget.kind === 'retry-campaign-budget' && /fresh window/.test(campaignBudget.message), campaignBudget);
 expect('R-2b: Atlas timeout retries on HY3, never a free/nemotron failover',
   atlasTimeout.action === 'retry' && atlasTimeout.override?.lane === 'opencode-go/hy3' && /HY3/.test(atlasTimeout.message), atlasTimeout);
 const provider = decideRecovery(lane, finding('provider', 'dispatch-failed:provider'));

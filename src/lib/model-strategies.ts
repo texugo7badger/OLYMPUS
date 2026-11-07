@@ -45,6 +45,8 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
+
+
 /**
  * The date we last verified the GO plan's pricing, model list, and limits
  * against https://opencode.ai/docs/go/. Update this whenever you re-check
@@ -477,6 +479,13 @@ export const FREE_HYBRID_ROSTER: Record<GodId, FreeHybridLane[]> = {
 
 
 
+
+/** GO lanes verified on this account; used as the GO/Zen fallback roster. */
+export const GO_SAFE_FALLBACKS = [
+  'opencode-go/deepseek-v4.1-flash',
+  'opencode-go/hy3',
+  'opencode-go/minimax-m3',
+] as const;
 
 export const DEFAULT_LLM_STRATEGY: LLMStrategy = 'go-balanced';
 

@@ -19,7 +19,7 @@ import { pickPlanRoot, walkRootNote } from '@/lib/hop-runtime/walk-root';
 import { watchdogDecision, classifyRetry, isTurnAliveServerSide } from '@/lib/opencode-session';
 import { probeLane } from '@/lib/lane-probe';
 import { markLaneDead, laneChain } from '@/lib/lane-health';
-import { FREE_HYBRID_ROSTER } from '@/lib/model-strategies';
+import { laneRosterFor } from '@/lib/lane-roster';
 import { reconcileProjectPath, PROJECTS_DIR, setActiveProject, getActiveProjectSlug } from '@/lib/project-context';
 import { composePlannerRag } from '@/lib/rag-inject';
 import { composeKnowledgeBlock } from '@/lib/knowledge-hints';
@@ -1074,7 +1074,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           // lane dead (writer refuses unknown classes; timeout is supported)
           // and name the next healthy lane instead of letting Apollo freeze.
           try { markLaneDead(r.model, cls, cls === 'rate-limit' || cls === 'timeout' ? 5 * 60_000 : 30 * 60_000, err); } catch {}
-          const roster = ((FREE_HYBRID_ROSTER as any)?.apollo ?? []).map((l: any) => l.id);
+          const roster = laneRosterFor('apollo');
           const nextLane = laneChain(r.model, roster).filter((id) => id !== r.model)[0] ?? null;
           const advice = nextLane
             ? `Next healthy lane: ${nextLane} — resend and the turn will use it.`

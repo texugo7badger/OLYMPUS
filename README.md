@@ -36,6 +36,18 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.90 — the wand plans.**
+A live-preview mark is now a planning turn on the **preview's** pixels: the
+iframe viewport and URL travel with the mark, Athena opens her chat and proposes
+a concise plan, and **Approve → Apollo + Atlas** hands the approved change to
+Apollo (hop override or staged next generation; never a live-plan rewrite)
+while Atlas resumes and fixes the walk. The mark no longer dies on the GO
+credential: a 401 retries once on a verified GO model and says which one
+answered. The Live Preview gains a real **window** — an OS window that shows the
+OLYMPUS loader until the project dev server is ready, then the app, following
+the port and the settled hops. Battery **170 PASS / 0 FAIL / 1 declared skip of
+171**. This is a refinement release; v0.1.0 waits for the next planning.
+
 **v0.0.89 — Atlas stays on.**
 A server-side warden keeps every campaign lane under watch: inside a live walk
 it only observes, after the user opts a campaign in it applies the

@@ -138,6 +138,17 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
 
   // v0.0.76 — the Parthenon chat: ask the focused god directly.
   const [chatGod, setChatGod] = useState<string | null>(null);
+  // v0.0.90 — a live-preview mark opens Athena's chat: the user must SEE the
+  // planning turn (the old route wrote the inbox silently and the mark looked
+  // lost). Any surface can request a god's chat with this event.
+  useEffect(() => {
+    const open = (e: Event) => {
+      const god = String((e as CustomEvent<{ god?: string }>)?.detail?.god || 'athena');
+      setChatGod(god);
+    };
+    window.addEventListener('olympus:open-god-chat', open);
+    return () => window.removeEventListener('olympus:open-god-chat', open);
+  }, []);
 
   // W-D3: the campaign stats — the header's N/M progress + the projected
   // time-to-finish (the user's headline ask).

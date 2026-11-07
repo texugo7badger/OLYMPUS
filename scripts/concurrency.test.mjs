@@ -33,7 +33,7 @@ async function run(width) {
   let active = 0, peak = 0;
   const dispatcher = async () => {
     active++; peak = Math.max(peak, active);
-    await new Promise((r) => setTimeout(r, 120));
+    await new Promise((r) => setTimeout(r, 300));
     active--;
     return { ok: true, exitCode: 0, output: 'ok', tokensIn: 1, tokensOut: 1, retriesAbsorbed: 0, exhausted: false };
   };

@@ -44,6 +44,7 @@ for (const [text, expected] of cases) {
   expect(`F-1: '${text.slice(0, 42)}' → ${expected}`, got === expected, got);
 }
 expect('F-2: an explicit provider class wins', classifyDispatchFailure({ error: 'whatever', errorClass: 'provider.no-route' }) === 'provider', 'class ignored');
+expect('F-2b: a campaign-budget park is its own class (fresh window, not a provider)', classifyDispatchFailure({ error: 'dispatch-failed:campaign-budget' }) === 'campaign-budget', classifyDispatchFailure({ error: 'dispatch-failed:campaign-budget' }));
 
 expect('F-3: the telemetry row carries the error, the class and the failed check', /error: String\(r\.error \?\? ''\)\.slice\(0, 2_000\)/.test(walker) && /errorClass: r\.errorClass \?\? classifyDispatchFailure\(r\)/.test(walker) && /failedCheck: extra\.failedCheck/.test(walker), 'grey row');
 expect('F-4: the park reason names the class (never bare dispatch-failed)', /parkHop\(next, `dispatch-failed:\$\{failureClass\}`/.test(walker) && /parkHop\(next, 'script-failed', result\.error\)/.test(walker), 'bare bucket');

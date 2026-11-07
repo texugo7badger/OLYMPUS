@@ -48,6 +48,10 @@ fs.writeFileSync(path.join(lane, '.olympus-hop-telemetry.jsonl'), [
 ].join('\n') + '\n');
 // lane health: qwen3.8 dead, deepseek-free healthy
 fs.mkdirSync(home, { recursive: true });
+// This fixture pins the FREE roster; the GO-only roster is covered in
+// lane-failover A6. Without the strategy file the default is go-balanced and
+// the expected free next-lane would (correctly) change.
+fs.writeFileSync(path.join(home, 'llm-providers.json'), JSON.stringify({ strategy: 'free-openrouter' }));
 fs.writeFileSync(path.join(home, 'lane-health.json'), JSON.stringify({
   version: 1,
   lanes: {

@@ -15,7 +15,7 @@
 | **Live drill** | 100 hops, hibernation, soak, a real campaign | local, against the running app |
 | **Campaign** | real gods, real artifacts, p50/p90, parks | AIME lane |
 
-## The public core (v0.0.89)
+## The public core (v0.0.90)
 
 Twenty-seven hermetic suites are published — no vault, no credentials — and a clean clone
 runs them:
@@ -90,7 +90,7 @@ claimed here.
 
 | Evidence | Result |
 |---|---|
-| Battery | **170 PASS / 0 FAIL / 1 declared skip** (171 suites) at v0.0.89 |
+| Battery | **170 PASS / 0 FAIL / 1 declared skip** (171 suites) at v0.0.90 |
 | 100-hop spine | **100/100** in 9.9s · p50 189ms · p95 225ms · 0 tokens |
 | Soak while walking | **24 rounds PASS** · 5/5 probes · p95 ≤ 120ms |
 | Hibernation drill | pre-hibernation artifact **byte-identical**; 0 lost |

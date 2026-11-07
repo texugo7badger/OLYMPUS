@@ -25,7 +25,7 @@ import { readLaneHealth } from '../lane-health';
 import type { PatrolFinding } from '../atlas-patrol';
 import { writeHopOverride, readHopOverrides, type HopOverride } from './hop-overrides';
 
-export type RecoveryKind = 'retry-budget' | 'retry-lane' | 'retry-verify' | 'retry-script' | 'ask-lane' | 'ask-unknown' | 'none';
+export type RecoveryKind = 'retry-budget' | 'retry-campaign-budget' | 'retry-lane' | 'retry-verify' | 'retry-script' | 'ask-lane' | 'ask-unknown' | 'none';
 
 export interface RecoveryDecision {
   action: 'retry' | 'stop';
@@ -68,6 +68,11 @@ export function decideRecovery(laneRoot: string, finding: PatrolFinding): Recove
   }
   const laneNote = finding.nextLane ? ` Next lane: ${finding.nextLane}.` : ' No healthy fallback lane.';
   switch (finding.failureClass) {
+    case 'campaign-budget':
+      return {
+        action: 'retry', kind: 'retry-campaign-budget', delayMs: 30_000,
+        message: base('the 60-minute campaign window elapsed — a resume opens a fresh window; Atlas continues the same plan from disk (bounded).'),
+      };
     case 'tool-budget':
       return {
         action: 'retry', kind: 'retry-budget', delayMs: 5_000,

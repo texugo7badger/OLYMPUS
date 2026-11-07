@@ -13,7 +13,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send, X, Loader2, Brain, Mic, ListPlus, Crosshair } from 'lucide-react';
+import { MessageSquare, Send, X, Loader2, Brain, Mic, ListPlus, Crosshair, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { useLanguage, godName } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme-store';
 import { resolvePalette } from '@/lib/theme';
@@ -38,6 +39,8 @@ interface Msg {
   source?: string;
   status?: string;
   ts?: string;
+  replyTo?: string | null;
+  meta?: Record<string, any> | null;
 }
 
 export default function GodChatModal({ godId, onClose }: { godId: string; onClose: () => void }) {
@@ -48,6 +51,7 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
   const [pendingUser, setPendingUser] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [approving, setApproving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [thought, setThought] = useState<TaskRow | null>(null);
   const [showThought, setShowThought] = useState(false);
@@ -80,6 +84,8 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
         source: e.source,
         status: e.status,
         ts: e.ts,
+        replyTo: e.replyTo ?? null,
+        meta: e.meta ?? null,
       })));
     } catch { /* the chat still works without history */ }
   }, [godId]);
@@ -112,6 +118,29 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
   }, [onClose]);
 
   useEffect(() => { listRef.current?.scrollTo({ top: listRef.current.scrollHeight }); }, [messages, busy]);
+
+  // v0.0.90 — the mark approval gate: Athena plans, the user approves, Apollo
+  // writes the campaign override and Atlas resumes/fixes the walk.
+  const approveMark = useCallback(async (m: Msg) => {
+    const slug = String(m.meta?.projectSlug || '');
+    if (!slug) { setError('No project on this mark — open the mark from an active project.'); return; }
+    setApproving(m.id); setError(null);
+    try {
+      const r = await fetch('/api/olympus/athena/approve', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, plan: m.text, inboxId: m.id }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      toast.success('Approved — the plan goes to the walk', {
+        description: 'The approved plan becomes a hop override; Atlas applies it on the next attempt and the warden resumes a parked hop.',
+      });
+      await loadHistory();
+    } catch (e: any) {
+      setError(e?.message || String(e));
+      toast.error('The handoff failed', { description: e?.message || String(e) });
+    } finally { setApproving(null); }
+  }, [loadHistory]);
 
   const send = useCallback(async () => {
     const text = input.trim();
@@ -229,14 +258,28 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
                   </span>
                 )}
                 {m.role === 'god' && !isSystem && (
-                  <button
-                    onClick={() => void queueAnswer(m.text)}
-                    className="mt-0.5 flex items-center gap-1 self-start text-[8px] font-mono"
-                    style={{ color: queued ? palette.green : palette.textDim }}
-                    data-tip="Queue this answer as the next prompt (creative queue)"
-                  >
-                    <ListPlus size={9} /> {queued ? 'queued' : 'queue this'}
-                  </button>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => void queueAnswer(m.text)}
+                      className="flex items-center gap-1 text-[8px] font-mono"
+                      style={{ color: queued ? palette.green : palette.textDim }}
+                      data-tip="Queue this answer as the next prompt (creative queue)"
+                    >
+                      <ListPlus size={9} /> {queued ? 'queued' : 'queue this'}
+                    </button>
+                    {m.source === 'mark' && m.status === 'done' && (
+                      <button
+                        onClick={() => void approveMark(m)}
+                        disabled={approving === m.id}
+                        className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[8px] font-semibold"
+                        style={{ background: `${palette.green}18`, color: palette.green, border: `1px solid ${palette.green}55` }}
+                        data-tip="Approve this plan: it becomes a hop override; Atlas applies it on the next attempt and the warden resumes a parked hop."
+                      >
+                        {approving === m.id ? <Loader2 size={9} className="animate-spin" /> : <Check size={9} />}
+                        {approving === m.id ? 'handing off…' : 'Approve → Apollo + Atlas'}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             );

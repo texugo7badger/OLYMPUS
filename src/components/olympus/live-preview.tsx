@@ -13,7 +13,8 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import OlympusLoader from './olympus-loader';
-import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2, ChevronLeft, ChevronRight, Share2, Copy, X } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2, ChevronLeft, ChevronRight, Share2, Copy, X, MonitorUp } from 'lucide-react';
+import { toast } from 'sonner';
 import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
@@ -48,6 +49,7 @@ export default function LivePreview() {
   const [instruction, setInstruction] = useState('');
   const [sending, setSending] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   // #202: the editable URL bar. `customUrl` is a user-pinned origin/path for
   // debugging another port; null means "follow the probed dev server". The
   // choice persists per project lane.
@@ -119,7 +121,11 @@ export default function LivePreview() {
 
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
     if (!markMode) return;
-    const rect = containerRef.current?.getBoundingClientRect(); if (!rect) return;
+    // v0.0.90 — the pixel is the PREVIEW IFRAME's CSS pixel, not the app
+    // container's: the iframe can be smaller than the panel. Both the mark
+    // and the viewport Athena receives come from the same rect.
+    const rect = (iframeRef.current ?? containerRef.current)?.getBoundingClientRect();
+    if (!rect) return;
     setPendingMark({ x: Math.round(e.clientX - rect.left), y: Math.round(e.clientY - rect.top) });
     setMarkMode(false);
   }, [markMode]);
@@ -128,6 +134,14 @@ export default function LivePreview() {
     if (!pendingMark || !instruction.trim()) return;
     setSending(true);
     try {
+      const iframeRect = iframeRef.current?.getBoundingClientRect();
+      const viewport = {
+        width: Math.round(iframeRect?.width || containerRef.current?.getBoundingClientRect().width || window.innerWidth),
+        height: Math.round(iframeRect?.height || containerRef.current?.getBoundingClientRect().height || window.innerHeight),
+        devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+      };
+      const previewTarget = customUrl ?? status?.url ?? previewUrl;
+      const previewPath = (() => { try { return new URL(previewTarget).pathname || '/'; } catch { return '/'; } })();
       const response = await fetch('/api/olympus/athena/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -136,18 +150,23 @@ export default function LivePreview() {
           y: pendingMark.y,
           instruction: instruction.trim(),
           projectSlug: activeProject?.slug || null,
-          viewport: { width: window.innerWidth, height: window.innerHeight, devicePixelRatio: window.devicePixelRatio },
-          route: typeof window !== 'undefined' ? window.location.pathname : '/',
+          viewport,
+          previewUrl: previewTarget,
+          route: previewPath,
         }),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.ok) throw new Error(data?.error || `HTTP ${response.status}`);
       pushEvent({
         type: 'live_preview_mark',
-        msg: `Athena dispatched: "${instruction.trim().slice(0, 80)}" at (${pendingMark.x}, ${pendingMark.y})`,
+        msg: `Athena is planning the mark: "${instruction.trim().slice(0, 80)}" at (${pendingMark.x}, ${pendingMark.y}) in ${viewport.width}x${viewport.height}`,
         x: pendingMark.x, y: pendingMark.y,
         project: activeProject?.slug || null,
         ts: new Date().toISOString(),
       });
+      // v0.0.90 — the mark lands in HER chat, in front of the user.
+      window.dispatchEvent(new CustomEvent('olympus:open-god-chat', { detail: { god: 'athena' } }));
+      toast.success('Mark sent to Athena', { description: 'She will plan it in her chat; approve to hand Apollo + Atlas the implementation.' });
       setPendingMark(null);
       setInstruction('');
     } catch (err) {
@@ -364,6 +383,25 @@ export default function LivePreview() {
           <OlympusTooltip content="Refresh probe" side="bottom">
             <button onClick={() => { setIframeLoaded(false); probe(); }} className="text-olympus-text-dim hover:text-olympus-gold transition-colors p-1"><RefreshCw size={11} /></button>
           </OlympusTooltip>
+          <OlympusTooltip content="Open the preview in its own desktop window (OLYMPUS loader until the project is ready)" side="bottom">
+            <button
+              onClick={() => {
+                if (!activeProject?.slug) return;
+                const w = Math.min(1600, Math.max(900, Math.round(window.screen?.availWidth || 1280)));
+                const h = Math.min(1000, Math.max(600, Math.round(window.screen?.availHeight || 900)));
+                window.open(
+                  `/preview-window?slug=${encodeURIComponent(activeProject.slug)}`,
+                  `olympus-preview-${activeProject.slug}`,
+                  `width=${w},height=${h},menubar=no,toolbar=no,location=no,status=no`,
+                );
+              }}
+              disabled={!activeProject?.slug}
+              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-olympus-text-dim hover:text-olympus-cyan hover:bg-olympus-cyan/10 disabled:opacity-30"
+              data-tip="A real OS window — Alt+Tab friendly"
+            >
+              <MonitorUp size={11} /> window
+            </button>
+          </OlympusTooltip>
           <a href={frameUrl} target="_blank" rel="noopener noreferrer" className="text-olympus-gold hover:text-olympus-gold/80 text-[10px] font-mono px-1.5">open ↗</a>
         </div>
       </div>
@@ -459,7 +497,7 @@ export default function LivePreview() {
 
       <div ref={containerRef} className={cn('flex-1 min-h-0 relative', markMode && 'cursor-crosshair')} onClick={handleContainerClick}>
         {(isRunning || customUrl) && (
-          <iframe key={iframeKey} src={frameUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" data-tip="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
+          <iframe ref={iframeRef} key={iframeKey} src={frameUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" data-tip="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
         )}
         {showOverlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-olympus-bg">

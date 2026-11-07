@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   markUserActivity(120_000);
   try {
     const body = await req.json();
-    const { x, y, instruction, projectSlug, viewport, route } = body;
+    const { x, y, instruction, projectSlug, viewport, route, previewUrl } = body;
 
     // Validate required fields
     if (typeof x !== 'number' || typeof y !== 'number') {
@@ -68,37 +68,26 @@ export async function POST(req: NextRequest) {
     const dispatchId = `athena-edit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     // Build the instruction for Athena
-    const athenaInstruction = `Click-to-element edit request:
+    const athenaInstruction = `Click-to-element mark — PLANNING turn (do not edit yet):
 
-**Coordinates:** (${x}, ${y}) relative to the live preview iframe
-**Viewport:** ${viewport?.width || '?'}x${viewport?.height || '?'} (DPR ${viewport?.devicePixelRatio || 1})
+**Coordinates:** (${x}, ${y}) in CSS pixels relative to the PREVIEW IFRAME viewport — not the OLYMPUS app window.
+**Preview viewport:** ${viewport?.width || '?'}x${viewport?.height || '?'} (DPR ${viewport?.devicePixelRatio || 1})
+**Preview URL:** ${previewUrl || '(unknown — use the project preview)'}
 **Route:** ${route || '/'}
 **Project:** ${projectSlug || '(browsing mode)'}
 
-**User's instruction:**
+**User's mark:**
 ${instruction}
 
-## This is a steering request for your CURRENT work
+## Your job in this turn: plan with the user, do NOT edit
 
-If you are already working on this project (a hop, a task, or a live preview
-fix), treat this mark as an adjustment to that work: apply it in place before
-starting anything new, and keep the current task moving. If nothing is in
-flight, apply the edit directly.
+1. Inspect the preview at the URL above; the mark is the CSS pixel (${x}, ${y}) in that iframe's viewport. If the intent is ambiguous, ask at most TWO short questions.
+2. Otherwise propose a concise plan (2–4 bullets): the exact component/file, the change, and whether this is a fix to the current parked hop or a new hop.
+3. End with a single line: "Approve to send to Apollo + Atlas."
+4. Do not write files and do not dispatch anything in this turn. The user's approval is the gate; after approval the plan becomes a hop override and Atlas applies it on the next attempt; Apollo's deeper plan stays optional.
 
-## Your Task
+Keep it fast and concrete. The OLYMPUS terminal is Apollo's; this thread is yours.`;
 
-1. Use the impeccable skill to process this edit request.
-2. If the instruction is a trivial change (set-text, set-style), apply it client-side via /impeccable live preview.
-3. If the instruction is a structural change, use /impeccable live to generate 3 variants, then accept the best one.
-4. After applying the change, run /impeccable audit to verify design quality.
-5. Log the result to the activity feed.
-
-## Context
-
-The user clicked at (${x}, ${y}) on the live preview running at ${route || '/'}.
-The dev server is running on the project's livePreviewPort.
-Use serena MCP if you need to find the component by symbol name.
-Use context7 MCP if you need library documentation.`;
 
     // Append to activity feed
     const feedPath = path.join(VAULT_ROOT, '06_Activity_Feed', 'live.jsonl');
@@ -135,7 +124,7 @@ Use context7 MCP if you need library documentation.`;
       text: instruction,
       source: 'mark',
       status: 'pending',
-      meta: { dispatchId, x, y, route: route || '/', viewport, projectSlug: projectSlug || null },
+      meta: { dispatchId, x, y, route: route || '/', viewport, previewUrl: previewUrl || null, projectSlug: projectSlug || null },
     });
 
     const lane = resolveDispatchCwd(projectSlug);
