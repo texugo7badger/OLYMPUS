@@ -34,6 +34,8 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.89 evidence:** [Parthenon command deck](screenshots/screens/01-brain-terminal.png) · [GO forecast](screenshots/screens/38-go-forecast-089.png) · [Mobile Parthenon](screenshots/screens/39-mobile-parthenon-089.png).
 
+**v0.0.90 evidence:** [Preview window](screenshots/screens/40-preview-window-090.png) · [Athena mark plan + Atlas handoff](screenshots/screens/41-athena-mark-090.png).
+
 ## Latest
 
 **v0.0.90 — the wand plans.**
