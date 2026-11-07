@@ -331,6 +331,20 @@ export default function OlympusWorkspace() {
     return () => clearTimeout(timer);
   }, []);
 
+  // v0.0.89 — the phone's "start another project" lands here; the wizard opens
+  // once and the query is removed so a refresh does not reopen it.
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      if (q.get('newProject') === '1') {
+        useOlympus.getState().setNewProjectDialogOpen(true);
+        q.delete('newProject');
+        const next = q.toString();
+        window.history.replaceState({}, '', next ? `/?${next}` : '/');
+      }
+    } catch { /* non-DOM */ }
+  }, []);
+
   useEffect(() => {
     void initTheme();
     bootPerformanceMode();

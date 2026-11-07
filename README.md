@@ -34,6 +34,22 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.89 — Atlas stays on.**
+A server-side warden keeps every campaign lane under watch: inside a live walk
+it only observes, after the user opts a campaign in it applies the
+deterministic recovery and restarts the detached walk (bounded), and before
+the opt-in it writes **one** decision box — *Continue AIME* or *Start another
+project* — instead of prompting Apollo. Atlas is pinned to
+`opencode-go/hy3`; a timeout never falls back to a free/nemotron lane. The
+Parthenon now opens with the Atlas/Apollo command deck on desktop **and** mobile
+(HY3 chip, health, Pause/Resume, Ask, apply the staged generation, Evidence),
+over the animated Nakkas SVG with a static twin for stable motion. The cost
+screen adds the GO forecast chart: current %, measured daily burn, the date the
+forecast crosses 100%, the renewal (Nov 5 → Dec 5, not the calendar month), the
+actual cumulative ledger, a dashed forecast and a hatched area. Public CI stays
+27 suites; battery **170 PASS / 0 FAIL / 1 declared skip of 171**. The v0.0.88
+generation/recovery/health work and the 61-demigod archive are unchanged.
+
 **v0.0.88 — the campaign that finishes.**
 A plan is now a generation: every hop carries a definition hash, the live walk
 freezes its snapshot, and a planner rewrite is staged as `dispatch-plan.next`
@@ -54,7 +70,6 @@ a one-command restore. Concurrency stays 3 by default with a measured 4-width
 experiment and an AIMD-off knob. `npm run soak:note8` runs the 100-hop + soak
 harness; the note-8 claim stays **not claimed** until an external campaign
 exists. **v0.0.87 — Apollo speaks, Atlas thinks, the ledger tells the truth.**
-**v0.0.87 — Apollo speaks, Atlas thinks, the ledger tells the truth.**
 Apollo narrates every long turn (elapsed + last tool) and a dead lane fails
 fast with the next healthy lane named instead of hanging for 180s. Atlas
 patrols every park deterministically: it classifies the cause, checks the

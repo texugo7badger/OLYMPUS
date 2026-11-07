@@ -402,6 +402,16 @@
 
 /* v0.0.32 — Stable mode (Settings → Appearance). Decorative motion off;
    spinners, loading and status pulses stay (they carry meaning). */
+/* v0.0.89 — the Nakkas Parthenon visual: animated by default, static twin in
+   stable motion and under prefers-reduced-motion. */
+.nakkas-stable { display: none; }
+[data-motion="stable"] .nakkas-full { display: none; }
+[data-motion="stable"] .nakkas-stable { display: block; }
+@media (prefers-reduced-motion: reduce) {
+  .nakkas-full { display: none; }
+  .nakkas-stable { display: block; }
+}
+
 [data-motion="stable"] .animate-pulse,
 [data-motion="stable"] .animate-bounce,
 [data-motion="stable"] .animate-ping {

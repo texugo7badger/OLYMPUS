@@ -22,6 +22,7 @@ import { useDocVisible } from '@/lib/use-doc-visible';
 import { useEffect, useMemo, useState } from 'react';
 import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
 import GodChatModal from './god-chat-modal';
+import ParthenonCommand from './parthenon-command';
 import { useLanguage, godName, getLanguage } from '@/lib/i18n';
 import type { DemigodLive } from '@/lib/tasks-sheet';
 
@@ -143,7 +144,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   const [campaignStats, setCampaignStats] = useState<null | { total: number; completed: number; parked: number; projectedRemainingMs: number }>(null);
   // v0.0.87 — Atlas's deterministic patrol rides the same tasks poll.
   const [atlasPatrol, setAtlasPatrol] = useState<null | { summary: string; parked: number; stuck: number; verdict: string | null; hopId: string | null; nextLane: string | null }>(null);
-  const [campaignHealth, setCampaignHealth] = useState<null | { verdict: string; line: string; reasons: string[]; completed: number; total: number; generation: number; nextPlan: { added: number; removed: number; changed: number } | null }>(null);
+  const [campaignHealth, setCampaignHealth] = useState<null | { verdict: string; line: string; reasons: string[]; completed: number; total: number; running: number; generation: number; etaMs: number | null; parked: { hopId: string; reason: string } | null; nextPlan: { added: number; removed: number; changed: number } | null }>(null);
   const [projectSlug, setProjectSlug] = useState<string | null>(null);
   const [applyingPlan, setApplyingPlan] = useState(false);
   // The god's LIVE demigod dispatches (the arsenal in action — the
@@ -249,6 +250,13 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           </button>
         )}
       </div>
+
+      <ParthenonCommand
+        health={campaignHealth}
+        patrol={atlasPatrol}
+        projectSlug={projectSlug}
+        onChat={(god) => setChatGod(god)}
+      />
 
       {atlasPatrol && (
         <div

@@ -2,7 +2,7 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.0.88 · 2026-11-07 · **GO for a release candidate after two named gates**
+> v0.0.89 · 2026-11-07 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
 > this build "certified v1.0" until those gates are green.** This page is the
 > report; it does not claim what was not run.
@@ -47,7 +47,7 @@
 | 60 FPS creative mode (measured v0.0.61) | offscreen probe: **Brain 60.1** · **Studio idle 59.8** · **Studio chat 60.2**. v0.0.71 reduced the phone to one canvas and the panel to 64 particles; the repeatable probe is the **v0.0.71** gate |
 | Stability | soak **39 rounds PASS**, 5/5 probes every round, p95 ≤ 85 ms |
 | Memory bounded | available min **7,956 MB** (governor floor 1.2 GB); OLYMPUS RSS 4,457 → 4,331 MB (**−126 MB**), 32 processes |
-| Test battery | **170 PASS / 0 FAIL / 1 declared skip** (171 suites) at v0.0.88 — plan generations, recovery, health, archive and packs included |
+| Test battery | **170 PASS / 0 FAIL / 1 declared skip** (171 suites) at v0.0.89 — plan generations, recovery, health, archive, packs, the Atlas warden, the command deck and the GO forecast included |
 | Types/lint | `tsc --noEmit` and `lint` clean |
 | Security | `npm run security:audit` → **0 high / 0 critical**; 54 moderate transitive `glob/minimatch` advisories via the opencode/electron/npm tree, no safe non-breaking fix; the 3 Dependabot alerts are dismissed with that reason and 0 remain open |
 | Governor | live snapshot 15,459 MB total · 8,426 MB available · 45% · 36 processes · green |

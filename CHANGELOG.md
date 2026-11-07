@@ -2,6 +2,78 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.89] — 2026-11-07
+
+### Atlas stays on — the command deck
+
+#### The Atlas warden (always on, HY3, no Apollo prompt)
+
+- **`atlas-warden.ts`** scans every lane with a plan every 30s. Inside a live
+  walk it only observes (the walker owns the lane). After the user opts a
+  campaign into auto-resume, it applies the deterministic recovery and starts
+  the detached walk again — throttled per lane, bounded by the recovery ledger
+  and a 6-start campaign budget. A provider/auth/unknown park becomes
+  **NEEDS-YOU**, never a blind restart.
+- **One decision, not a chat prompt.** When there is no live walk and the
+  campaign is not opted in, the warden writes `~/.olympus/atlas-decision.json`
+  and `/api/olympus/atlas/warden` serves it: **Continue <project>**,
+  **Start another project**, **Not now**. Continue writes the opt-in and starts
+  the detached walk; the next park is handled without the user.
+- **Apollo is never prompted automatically.** The warden source has no
+  `runGodTurn`, `askAtlas` or `--agent` call; the user talks to a god only by
+  clicking a button. The old "Hy3 sends Apollo a prompt to check a park" loop is
+  gone.
+- **Atlas is pinned to `opencode-go/hy3`.** A drifted lane config is backed up
+  and corrected before the next walk; the recovery policy refuses a
+  free/nemotron failover for Atlas on timeout/transport.
+- Started by `src/instrumentation-node.ts`; `OLYMPUS_ATLAS_WARDEN=0` disables
+  the loop. The detached walk keeps its own overnight recovery when the app is
+  closed.
+
+#### The Parthenon command deck (desktop + mobile)
+
+- **Desktop:** a new `ParthenonCommand` above the god cards — Atlas always-on
+  (HY3 chip, patrolling/recovering/needs-you, health, **Pause/Resume**, **Ask
+  Atlas**, **apply +N**, **Evidence**) and Apollo (**Ask Apollo**, **New
+  project**), plus the single decision card. Every button calls a real API.
+- **Mobile:** a Parthenon button in the header opens the same deck; the
+  decision card appears on its own before the sheet. `?newProject=1` opens the
+  project wizard on the desktop.
+- **Nakkas SVG:** `public/diagrams/parthenon-nakkas.svg` (animated CSS, orbit +
+  pulse + twinkle) with a static twin for stable motion and
+  `prefers-reduced-motion`. Chrome bbox audit: **95 SVGs, 0 clipped texts**.
+
+#### The GO forecast chart
+
+- **`buildGoForecast`** (pure) and `forecast` in `/api/olympus/go-usage`:
+  current monthly %, measured daily burn, projected % at renewal, the date the
+  forecast crosses 100%, the **subscription** month (Nov 5 → Dec 5, not the
+  calendar month) and the actual cumulative ledger points.
+- **`GoForecastChart`** on the cost screen and the mobile details: the big %,
+  "Renews <date>", "On pace to hit the limit <date>", the usage line, the dashed
+  forecast, the hatched forecast area, the 100% monthly limit, the average %/day
+  and the legend. It is a linear burn of the local ledger; the console remains
+  authoritative.
+- `readSpendRows` scans the subscription month even when it began last month.
+
+#### Verification
+
+- New assertions: `plan-recovery` W-1..W-5 (decision → opt-in → auto-resume,
+  HY3 pin, no model dispatch) + H-2 (live inFlight outranks a stale park);
+  `cost-speed` C-11..C-14 (forecast, hit date, ledger points, honest zero);
+  `parthenon-live` P-25..P-29 (command deck, mobile Parthenon, warden route,
+  forecast chart, Nakkas twin).
+- Full battery: **170 PASS / 0 FAIL / 1 declared skip of 171**.
+
+#### Honest limits
+
+- The warden runs while the app is open; a detached walk keeps its own
+  overnight recovery while the app is closed.
+- The forecast is a linear estimate from the local ledger; historical null
+  usage is not backfilled and the console can disagree.
+- The decision box is one per campaign/interruption, never an automatic model
+  prompt.
+
 ## [v0.0.88] — 2026-11-07
 
 ### The campaign that finishes: generations, Atlas recovery, one health line

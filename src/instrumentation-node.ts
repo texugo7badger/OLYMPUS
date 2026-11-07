@@ -207,5 +207,13 @@ export async function registerNode() {
       })
       .catch(() => { /* the supervisor is additive; boot never blocks on it */ });
   }, 20_000).unref?.();
+
+  // v0.0.89 — ATLAS STAYS ON. The warden is deterministic (no model, no
+  // Apollo prompt): it patrols every lane, keeps opted-in campaigns walking,
+  // pins Atlas to HY3 in a drifted lane config and writes ONE decision box
+  // when the user must choose between continuing and starting another project.
+  void import('./lib/atlas-warden')
+    .then(({ startAtlasWarden }) => startAtlasWarden())
+    .catch((e: any) => console.error('[atlas-warden] failed to start:', e?.message || e));
 }
 

@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="200" viewBox="0 0 360 200">
+  <defs>
+    <radialGradient id="atlasGlow">
+      <stop offset="0%" stop-color="#6BAEB5" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#6BAEB5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="apolloGlow">
+      <stop offset="0%" stop-color="#D4A574" stop-opacity="0.26"/>
+      <stop offset="100%" stop-color="#D4A574" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="peak" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0%" stop-color="#E8C79A"/>
+      <stop offset="50%" stop-color="#C4756A"/>
+      <stop offset="100%" stop-color="#6BAEB5"/>
+    </linearGradient>
+  </defs>
+  
+  <circle cx="180" cy="98" r="98" fill="url(#atlasGlow)"/>
+  <circle cx="180" cy="98" r="56" fill="url(#apolloGlow)"/>
+  <circle cx="180" cy="98" r="88" fill="none" stroke="#D4A574" stroke-width="0.8" opacity="0.2"/>
+  <circle cx="180" cy="98" r="82" fill="none" stroke="#6BAEB5" stroke-width="0.8" stroke-dasharray="1 6" opacity="0.16"/>
+  <g>
+    <defs>
+      <g id="nkp1">
+        <line x1="0" y1="0" x2="-4" y2="0" stroke="#D4A574" stroke-width="0.9" opacity="0.35"/>
+      </g>
+    </defs>
+    <use href="#nkp1" transform="translate(180, 10) rotate(-90)"/>
+    <use href="#nkp1" transform="translate(202.776, 12.999) rotate(-75)"/>
+    <use href="#nkp1" transform="translate(224, 21.79) rotate(-60)"/>
+    <use href="#nkp1" transform="translate(242.225, 35.775) rotate(-45)"/>
+    <use href="#nkp1" transform="translate(256.21, 54) rotate(-30)"/>
+    <use href="#nkp1" transform="translate(265.001, 75.224) rotate(-15)"/>
+    <use href="#nkp1" transform="translate(268, 98) rotate(0)"/>
+    <use href="#nkp1" transform="translate(265.001, 120.776) rotate(15)"/>
+    <use href="#nkp1" transform="translate(256.21, 142) rotate(30)"/>
+    <use href="#nkp1" transform="translate(242.225, 160.225) rotate(45)"/>
+    <use href="#nkp1" transform="translate(224, 174.21) rotate(60)"/>
+    <use href="#nkp1" transform="translate(202.776, 183.001) rotate(75)"/>
+    <use href="#nkp1" transform="translate(180, 186) rotate(90)"/>
+    <use href="#nkp1" transform="translate(157.224, 183.001) rotate(105)"/>
+    <use href="#nkp1" transform="translate(136, 174.21) rotate(120)"/>
+    <use href="#nkp1" transform="translate(117.775, 160.225) rotate(135)"/>
+    <use href="#nkp1" transform="translate(103.79, 142) rotate(150)"/>
+    <use href="#nkp1" transform="translate(94.999, 120.776) rotate(165)"/>
+    <use href="#nkp1" transform="translate(92, 98) rotate(180)"/>
+    <use href="#nkp1" transform="translate(94.999, 75.224) rotate(195)"/>
+    <use href="#nkp1" transform="translate(103.79, 54) rotate(210)"/>
+    <use href="#nkp1" transform="translate(117.775, 35.775) rotate(225)"/>
+    <use href="#nkp1" transform="translate(136, 21.79) rotate(240)"/>
+    <use href="#nkp1" transform="translate(157.224, 12.999) rotate(255)"/>
+  </g>
+  <g>
+    <defs>
+      <g id="nkp2">
+        <circle cx="0" cy="0" r="2.2" fill="#D4A574"/>
+      </g>
+    </defs>
+    <use href="#nkp2" transform="translate(180, 28) rotate(-90)"/>
+    <use href="#nkp2" transform="translate(221.145, 41.369) rotate(-54)"/>
+    <use href="#nkp2" transform="translate(246.574, 76.369) rotate(-18)"/>
+    <use href="#nkp2" transform="translate(246.574, 119.631) rotate(18)"/>
+    <use href="#nkp2" transform="translate(221.145, 154.631) rotate(54)"/>
+    <use href="#nkp2" transform="translate(180, 168) rotate(90)"/>
+    <use href="#nkp2" transform="translate(138.855, 154.631) rotate(126)"/>
+    <use href="#nkp2" transform="translate(113.426, 119.631) rotate(162)"/>
+    <use href="#nkp2" transform="translate(113.426, 76.369) rotate(198)"/>
+    <use href="#nkp2" transform="translate(138.855, 41.369) rotate(234)"/>
+  </g>
+  <g>
+    <defs>
+      <g id="nkp3">
+        <line x1="0" y1="0" x2="9" y2="0" stroke="#6BAEB5" stroke-width="1.1" opacity="0.4"/>
+      </g>
+    </defs>
+    <use href="#nkp3" transform="translate(180, 40) rotate(-90)"/>
+    <use href="#nkp3" transform="translate(209, 47.771) rotate(-60)"/>
+    <use href="#nkp3" transform="translate(230.229, 69) rotate(-30)"/>
+    <use href="#nkp3" transform="translate(238, 98) rotate(0)"/>
+    <use href="#nkp3" transform="translate(230.229, 127) rotate(30)"/>
+    <use href="#nkp3" transform="translate(209, 148.229) rotate(60)"/>
+    <use href="#nkp3" transform="translate(180, 156) rotate(90)"/>
+    <use href="#nkp3" transform="translate(151, 148.229) rotate(120)"/>
+    <use href="#nkp3" transform="translate(129.771, 127) rotate(150)"/>
+    <use href="#nkp3" transform="translate(122, 98) rotate(180)"/>
+    <use href="#nkp3" transform="translate(129.771, 69) rotate(210)"/>
+    <use href="#nkp3" transform="translate(151, 47.771) rotate(240)"/>
+  </g>
+  <g>
+    <defs>
+      <g id="nkp4">
+        <circle cx="0" cy="0" r="2.8" fill="#9B7BAE"/>
+      </g>
+    </defs>
+    <use href="#nkp4" transform="translate(180, 58) rotate(-90)"/>
+    <use href="#nkp4" transform="translate(214.641, 118) rotate(30)"/>
+    <use href="#nkp4" transform="translate(145.359, 118) rotate(150)"/>
+  </g>
+  <path d="M 180 50 L 214 144 L 195 144 L 180 107 L 165 144 L 146 144 Z" fill="url(#peak)"/>
+  <path d="M 180 50 L 214 144 L 195 144 L 180 107 L 165 144 L 146 144 Z" fill="none" stroke="#F0D7B0" stroke-width="0.7" opacity="0.55"/>
+  <circle cx="180" cy="98" r="3.4" fill="#D4A574"/>
+  <circle cx="180" cy="20" r="1.4" fill="#D4A574"/>
+  <circle cx="306" cy="70" r="1.2" fill="#6BAEB5"/>
+  <circle cx="58" cy="142" r="1.3" fill="#9B7BAE"/>
+  <circle cx="300" cy="154" r="1.1" fill="#D4A574"/>
+  <circle cx="54" cy="52" r="1" fill="#6BAEB5"/>
+  <line x1="104" y1="182" x2="256" y2="182" stroke="#D4A574" stroke-width="0.7" opacity="0.2"/>
+</svg>
+Rendered OK: artifact "art-4" — 8099 chars, 66 elements.
+Filmstrip: 6 frames across 62s (0s, 10.33s, 20.67s, 31s, 41.33s, 51.67s).
+Use save({artifact:"art-4", outputPath:...}) or preview({artifact:"art-4", width:...}); the SVG text does not need to pass through context.
+
+Design notes:
+• 8 concurrent CSS animations detected. Consider using 2 to 3 complementary animations for visual clarity.
+• Frame sampling: could not derive a transform origin for a "path" element with cssClass "breathe"; it is shown without its transform animation.

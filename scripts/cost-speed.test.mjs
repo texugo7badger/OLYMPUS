@@ -45,5 +45,25 @@ expect('C-9: a zero-duration hop is null, never a fake 0', hopSpeed('h', 'athena
 const s = stat([10, 20, 30]);
 expect('C-10: p50 is measured', s?.p50 === 20 && s?.n === 3, s);
 
+// v0.0.89 — the cost forecast (the usage-vs-pace graph).
+const { buildGoForecast } = await import(ROOT + '/src/lib/go-usage.ts');
+const pStart = Date.parse('2026-11-05T18:15:00Z');
+const pReset = Date.parse('2026-12-05T18:15:00Z');
+const pNow = Date.parse('2026-11-08T18:15:00Z');
+const row = (days, cost) => ({ ts: pStart + days * 86400_000, model: 'deepseek-v4.1-flash', input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0, cost });
+const f = buildGoForecast(
+  [row(1, 10), row(2, 12)],
+  { model: 'deepseek-v4.1-flash', limit: 200, pctMonth: 11, spendMonth: 22, spend5h: 0, spend7d: 0, pct5h: 0, pct7d: 0, projectedDays: 0 },
+  pStart, pReset, pNow,
+);
+expect('C-11: the forecast carries the measured 11% and a ~3.67%/day burn',
+  Math.abs(f.currentPct - 11) < 1e-9 && Math.abs(f.dailyPct - 11 / 3) < 1e-9, f);
+expect('C-12: the projection crosses 100% before the renewal and names the hit date',
+  f.projectedPct > 100 && !!f.hitAt && Date.parse(f.hitAt) > pNow && Date.parse(f.hitAt) < pReset, f);
+expect('C-13: the chart points are the actual cumulative spend (0 → 5 → 11)',
+  f.points[0].pct === 0 && Math.abs(f.points[1].pct - 5) < 1e-9 && Math.abs(f.points[f.points.length - 1].pct - 11) < 1e-9, f.points);
+const calm = buildGoForecast([], { model: 'deepseek-v4.1-flash', limit: 200, pctMonth: 0, spendMonth: 0, spend5h: 0, spend7d: 0, pct5h: 0, pct7d: 0, projectedDays: 0 }, pStart, pReset, pNow);
+expect('C-14: no usage is an honest zero, never a fabricated hit', calm.projectedPct === 0 && calm.hitAt === null && calm.dailyPct === 0, calm);
+
 console.log(failures === 0 ? '\ncost-speed: all green.' : `\ncost-speed: ${failures} failure(s).`);
 process.exit(failures === 0 ? 0 : 1);

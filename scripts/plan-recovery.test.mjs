@@ -28,6 +28,7 @@ const { ensurePlanGeneration, diffPlans, hopDefinitionHash, validCompletedForPla
 const { validateDispatchPlan } = await import(ROOT + '/src/lib/hop-runtime/plan-schema.ts');
 const { writeHopOverride, readHopOverride } = await import(ROOT + '/src/lib/hop-runtime/hop-overrides.ts');
 const { decideRecovery, applyRecovery, recoveryAttempts } = await import(ROOT + '/src/lib/hop-runtime/recovery.ts');
+const { bootIdOf } = await import(ROOT + '/src/lib/hop-runtime/walk-lock.ts');
 
 const base = {
   version: 1, laneRoot: lane,
@@ -84,6 +85,9 @@ const budget = decideRecovery(lane, finding('tool-budget'));
 expect('R-1: tool-budget → budget 24 + narrow directive', budget.action === 'retry' && budget.kind === 'retry-budget' && budget.override?.toolBudget === 24 && /batch/i.test(budget.override?.promptAppend ?? ''), budget);
 const timeout = decideRecovery(lane, finding('timeout'));
 expect('R-2: timeout → lane failover override', timeout.action === 'retry' && timeout.override?.lane === 'opencode/deepseek-v4.1-flash-free', timeout);
+const atlasTimeout = decideRecovery(lane, { ...finding('timeout'), god: 'atlas' });
+expect('R-2b: Atlas timeout retries on HY3, never a free/nemotron failover',
+  atlasTimeout.action === 'retry' && atlasTimeout.override?.lane === 'opencode-go/hy3' && /HY3/.test(atlasTimeout.message), atlasTimeout);
 const provider = decideRecovery(lane, finding('provider', 'dispatch-failed:provider'));
 expect('R-3: provider/auth → STOP and ask the user', provider.action === 'stop' && provider.kind === 'ask-lane', provider);
 const verify = decideRecovery(lane, finding('unknown', 'verify-failed'));
@@ -95,9 +99,62 @@ const third = decideRecovery(lane, finding('tool-budget'));
 expect('R-6: the third attempt stops (max 2 recoveries per hop)', third.action === 'stop' && /needs the user/.test(third.message), third);
 
 const { buildCampaignHealth } = await import(ROOT + '/src/lib/campaign-health.ts');
+const { wardenTick, resolveDecision, readDecision, readOptIn, pinAtlasHy3 } = await import(ROOT + '/src/lib/atlas-warden.ts');
 fs.writeFileSync(path.join(lane, '.olympus-hop-state.json'), JSON.stringify({ version: 1, completed: ['a'], inFlight: [], parked: { hopId: 'b', reason: 'dispatch-failed:tool-budget', errorClass: 'tool-budget', ts: new Date().toISOString() }, updatedAt: new Date().toISOString() }));
 const health = buildCampaignHealth(lane);
 expect('H-1: a park + Atlas verdict becomes one health line', ['BLOCKED', 'NEEDS-YOU'].includes(health.verdict) && /gen 4/.test(health.line) && health.parked?.hopId === 'b', health);
+
+// H-2 — the live-walk rule: a retried hop is RUNNING, not blocked. The state
+// still carries the previous park while inFlight holds the new attempt.
+fs.writeFileSync(path.join(lane, '.olympus-walk.lock'), JSON.stringify({
+  pid: process.pid, bootId: bootIdOf(), campaignId: 'cmp_h2', slug: 'x', startedAt: new Date().toISOString(),
+}, null, 2));
+fs.writeFileSync(path.join(lane, '.olympus-hop-state.json'), JSON.stringify({
+  version: 1, completed: ['a'], inFlight: [{ hopId: 'b', startedAt: new Date().toISOString() }],
+  parked: { hopId: 'b', reason: 'dispatch-failed:tool-budget', errorClass: 'tool-budget', ts: new Date().toISOString() },
+  updatedAt: new Date().toISOString(),
+}));
+const liveHealth = buildCampaignHealth(lane);
+expect('H-2: a live inFlight outranks a stale park (DEGRADED, not BLOCKED)',
+  liveHealth.verdict === 'DEGRADED' && liveHealth.running === 1 && liveHealth.parked?.hopId === 'b',
+  liveHealth);
+
+// ── W: the Atlas warden (v0.0.89) ─────────────────────────────────────────
+const vault = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-vault-'));
+const wardenLane = path.join(vault, '02_Projects', 'demo');
+fs.mkdirSync(wardenLane, { recursive: true });
+const wardenPlan = {
+  version: 1, laneRoot: wardenLane, generation: 2,
+  hops: [
+    { id: 'w1', god: 'athena', prompt: 'w1', artifacts: ['w1.md'], verify: { checks: ['file-exists:w1.md'] } },
+    { id: 'w2', god: 'hephaestus', prompt: 'w2', artifacts: ['w2.md'], verify: { checks: ['file-exists:w2.md'] } },
+    { id: 'w3', god: 'hermes', prompt: 'w3', artifacts: ['w3.md'], verify: { checks: ['file-exists:w3.md'] } },
+  ],
+};
+fs.writeFileSync(path.join(wardenLane, 'dispatch-plan.json'), JSON.stringify(wardenPlan));
+fs.writeFileSync(path.join(wardenLane, '.olympus-hop-state.json'), JSON.stringify({
+  version: 1, completed: ['w1'], inFlight: [], parked: null, updatedAt: new Date().toISOString(),
+}));
+let starts = 0;
+const fakeStart = () => { starts++; return { ok: true, pid: 424242 }; };
+const w1 = wardenTick({ vaultRoot: vault, start: fakeStart, persist: true });
+expect('W-1: before opt-in the warden writes ONE decision and never starts the walk',
+  w1.decision?.slug === 'demo' && starts === 0 && /start another project/i.test(w1.decision?.message ?? ''), { w1, starts });
+const continued = resolveDecision('continue', 'demo', { start: fakeStart });
+expect('W-2: continue opts the campaign in, starts it and clears the decision',
+  continued.ok && starts === 1 && readOptIn('demo') === true && readDecision() === null, { continued, starts, decision: readDecision() });
+const w2 = wardenTick({ vaultRoot: vault, start: fakeStart, persist: true, now: Date.now() + 3 * 60_000 });
+expect('W-3: opted-in + pending → the warden resumes without a human',
+  starts >= 2 && w2.lanes.some((l) => l.slug === 'demo' && l.optedIn), { starts, w2 });
+const cfgPath = path.join(wardenLane, 'opencode.json');
+fs.writeFileSync(cfgPath, JSON.stringify({ agent: { atlas: { model: 'openrouter/nvidia/nemotron-3-ultra:free' } } }, null, 2));
+const pinned = pinAtlasHy3(wardenLane);
+expect('W-4: Atlas is pinned to HY3 in a drifted lane config (never nemotron)',
+  pinned.changed && JSON.parse(fs.readFileSync(cfgPath, 'utf-8')).agent.atlas.model === 'opencode-go/hy3', pinned);
+const wardenSrc = fs.readFileSync(path.join(ROOT, 'src/lib/atlas-warden.ts'), 'utf-8');
+expect('W-5: the warden never dispatches a model/Apollo turn (no automatic prompt)',
+  !/runGodTurn\(|askAtlas\(|--agent/.test(wardenSrc), 'the warden source carries a model dispatch');
+fs.rmSync(vault, { recursive: true, force: true });
 
 fs.rmSync(lane, { recursive: true, force: true });
 fs.rmSync(home, { recursive: true, force: true });

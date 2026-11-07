@@ -19,12 +19,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  Bell, Check, Download, ExternalLink, Loader2, Lock, Mic, Palette, Play,
+  Bell, Check, Download, ExternalLink, Loader2, Lock, Mic, Orbit, Palette, Play,
   MousePointerClick, Radio, RefreshCw, Settings2, Smartphone, Sparkles, Square, Volume2, X,
 } from 'lucide-react';
 import PlasmaRing from '@/components/olympus/plasma-ring';
 import TaskSheetModal from '@/components/olympus/task-sheet-modal';
 import GoUsageBar from '@/components/olympus/go-usage-bar';
+import GoForecastChart from '@/components/olympus/go-forecast-chart';
+import MobileParthenon from '@/components/olympus/mobile-parthenon';
 import { THEME_PRESETS, applyTheme, normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
 import { getPerformanceMode, setPerformanceMode } from '@/lib/performance-mode';
 import { LANGUAGES, godName, setLanguage, t, useLanguage, type Language } from '@/lib/i18n';
@@ -97,6 +99,8 @@ export default function MobileCompanion() {
   const [markNote, setMarkNote] = useState('');
   const [theme, setTheme] = useState<ThemeState | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // v0.0.89 — the phone's Parthenon: Atlas/Apollo command deck + one decision.
+  const [parthenonOpen, setParthenonOpen] = useState(false);
   const [perfMode, setPerfMode] = useState(false);
   // v0.0.84 edit — the hibernation HUD loads /m?hud=1 and opens the live
   // status sheet (progress, GO bar, hops) instead of the full app. Read it
@@ -593,6 +597,13 @@ export default function MobileCompanion() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setParthenonOpen(true)}
+          aria-label="Parthenon — Atlas and Apollo"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-olympus-cyan/30 text-olympus-cyan"
+        >
+          <Orbit size={16} />
+        </button>
         <button onClick={() => setDetailsOpen(true)} aria-label={t('m.details', language)} className="flex h-11 w-11 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold">
           <Settings2 size={16} />
         </button>
@@ -740,7 +751,7 @@ export default function MobileCompanion() {
             {/* v0.0.84 — the phone's spend window carries the same measured GO
                 bar as the creative and the PC Cost panel; the old line printed
                 the $0.00 invoice as if the subscription were free. */}
-            <div className="mb-2"><GoUsageBar /></div>
+            <div className="mb-2 space-y-2"><GoUsageBar /><GoForecastChart /></div>
 
             <div className="rounded-xl border border-olympus-gold/10 bg-olympus-card p-3">
               <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-olympus-text-dim">
@@ -1054,6 +1065,16 @@ export default function MobileCompanion() {
           </div>
         </div>
       )}
+
+      <MobileParthenon
+        open={parthenonOpen}
+        health={run?.hops?.campaignHealth}
+        active={active || null}
+        onClose={() => setParthenonOpen(false)}
+        onAsk={(text) => { setParthenonOpen(false); void askApollo(text); }}
+        onNewProject={() => { window.location.href = '/?newProject=1'; }}
+        onChanged={() => { void load(); }}
+      />
     </main>
   );
 }

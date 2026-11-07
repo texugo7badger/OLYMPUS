@@ -93,6 +93,34 @@ expect('P-22: run-state counts only the plan\'s completed hops (no 33/27)', /pla
 expect('P-23: a retried hop clears its stale park at launch', /if \(parkedHop\?\.hopId === next\.id\) parkedHop = null/.test(walkerSrc), 'the card stays blocked while the hop runs');
 expect('P-24: a live inFlight record outranks a stale park in the sheet', /else if \(startRec && lock\.alive\) status = 'running'/.test(tasksSheet), 'running lost to parked');
 
+// ── P-25..P-29: v0.0.89 — the Atlas/Apollo command deck, mobile + forecast ──
+const command = src('src/components/olympus/parthenon-command.tsx');
+const mobile = src('src/app/m/page.tsx');
+const wardenRoute = src('src/app/api/olympus/atlas/warden/route.ts');
+const dashboardSrc = src('src/components/olympus/cost-dashboard.tsx');
+const forecast = src('src/components/olympus/go-forecast-chart.tsx');
+expect('P-25: the Parthenon renders the Atlas/Apollo command deck with HY3 + real quick actions',
+  /<ParthenonCommand/.test(panel) && /Atlas · always on/.test(command) && /HY3/.test(command)
+    && /Continue /.test(command) && /Start another project/.test(command) && /Ask Apollo/.test(command)
+    && /Ask Atlas/.test(command) && /Pause/.test(command) && /Resume/.test(command) && /Evidence/.test(command),
+  'the two gods are still status lines, not controls');
+expect('P-26: the phone mounts the same Parthenon deck and opens it from the header',
+  /MobileParthenon/.test(mobile) && /parthenonOpen/.test(mobile) && /Parthenon — Atlas and Apollo/.test(mobile),
+  'the phone has no active Parthenon');
+expect('P-27: the warden route exposes continue/new-project/dismiss and never dispatches a model',
+  /action !== 'continue'/.test(wardenRoute) && /new-project/.test(wardenRoute) && /resolveDecision/.test(wardenRoute)
+    && !/runGodTurn|askAtlas|--agent/.test(wardenRoute),
+  'the warden can prompt Apollo or has no decision route');
+expect('P-28: the GO forecast chart is mounted on the cost screen and the phone, with the pace + limit',
+  /GoForecastChart/.test(dashboardSrc) && /GoForecastChart/.test(mobile) && /On pace to hit the limit/.test(forecast)
+    && /Average \{pace\}% a day/.test(forecast) && /MONTHLY LIMIT/.test(forecast) && /go-forecast-hatch/.test(forecast),
+  'the cost window still has no forecast');
+expect('P-29: the animated Nakkas SVG and its static twin are shipped and stable-switchable',
+  fs.existsSync(path.join(ROOT, 'public/diagrams/parthenon-nakkas.svg'))
+    && fs.existsSync(path.join(ROOT, 'public/diagrams/parthenon-nakkas-static.svg'))
+    && /data-motion="stable"/.test(src('src/app/globals.css')),
+  'the Parthenon has no motion twin');
+
 fs.rmSync(tmpHome, { recursive: true, force: true });
 console.log(failures === 0 ? '\nparthenon-live: all green.' : `\nparthenon-live: ${failures} failure(s).`);
 process.exit(failures === 0 ? 0 : 1);

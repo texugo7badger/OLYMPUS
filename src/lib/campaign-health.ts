@@ -59,8 +59,14 @@ export function buildCampaignHealth(laneRoot: string, opts: { etaMs?: number | n
     const ids = new Set(plan.hops.map((h) => h.id));
     const completed = (state?.completed ?? []).filter((id) => ids.has(id));
     const pending = plan.hops.filter((h) => !completed.includes(h.id));
-    const running = lock.holder && lock.alive ? (state?.inFlight?.length ?? 0) : 0;
+    const liveWalk = Boolean(lock.holder && lock.alive);
+    const running = liveWalk ? (state?.inFlight?.length ?? 0) : 0;
     const parked = state?.parked ?? null;
+    // v0.0.88 — a live inFlight record outranks a stale park (the tasks-sheet
+    // rule, now shared): a retried hop is running, not blocked. A live walk
+    // with a park and NO in-flight hop stays BLOCKED/NEEDS-YOU.
+    const stalePark = Boolean(parked && liveWalk && running > 0);
+    const activePark = stalePark ? null : parked;
     const patrol = (() => { try { return patrolLane(laneRoot); } catch { return null; } })();
     const finding = patrol?.parked[0] ?? patrol?.stuck[0] ?? null;
     const lanesDead = blockedLanes().length;
@@ -88,10 +94,16 @@ export function buildCampaignHealth(laneRoot: string, opts: { etaMs?: number | n
     if (pending.length === 0) {
       verdict = 'DONE';
       reasons.push('all hops completed in this generation');
-    } else if (parked) {
-      reasons.push(`${parked.hopId} parked (${parked.reason}${parked.errorClass ? `:${parked.errorClass}` : ''})`);
+    } else if (activePark) {
+      reasons.push(`${activePark.hopId} parked (${activePark.reason}${activePark.errorClass ? `:${activePark.errorClass}` : ''})`);
       const decision = finding?.verdict ?? 'ask-user';
       verdict = decision === 'retry' || decision === 'replan' ? 'BLOCKED' : 'NEEDS-YOU';
+      if (finding) reasons.push(`Atlas: ${finding.verdict} — ${finding.recommendation}`);
+    } else if (stalePark) {
+      // The walk is alive and a hop is running: the recorded park is from an
+      // earlier attempt. DEGRADED, never BLOCKED — the user must see motion.
+      verdict = 'DEGRADED';
+      reasons.push(`${parked!.hopId} parked (${parked!.reason}${parked!.errorClass ? `:${parked!.errorClass}` : ''}) — a live walk is running; Atlas is recovering`);
       if (finding) reasons.push(`Atlas: ${finding.verdict} — ${finding.recommendation}`);
     } else if (lanesDead > 0) {
       verdict = 'DEGRADED';

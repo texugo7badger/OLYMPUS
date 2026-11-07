@@ -123,11 +123,33 @@ export interface ModelUsage {
   projectedDays: number | null;
 }
 
+export interface GoForecastPoint {
+  ts: string;
+  /** Cumulative monthly usage at this point, as a % of the model's limit. */
+  pct: number;
+}
+
+export interface GoForecast {
+  model: string;
+  currentPct: number;
+  /** The measured burn: current % / elapsed days. */
+  dailyPct: number;
+  /** Current + daily burn × the days left before the renewal. */
+  projectedPct: number;
+  /** When the forecast crosses 100%, or null when it stays under. */
+  hitAt: string | null;
+  resetAt: string;
+  periodStart: string;
+  points: GoForecastPoint[];
+}
+
 export interface GoUsage {
   plan: GoPlan;
   models: ModelUsage[];
   windows: Record<GoWindow, { pct: number | null; model: string | null; resetAt: string | null }>;
   binding: { model: string; window: GoWindow; pct: number } | null;
+  /** v0.0.89 — the monthly forecast for the binding model (local ledger). */
+  forecast: GoForecast | null;
   source: 'local-ledger' | 'unavailable';
   periodStart: string;
   updatedAt: string;
@@ -205,16 +227,88 @@ function todayStart(now: number): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
+/** Add calendar months, keeping the subscription day (Nov 5 → Dec 5). */
+function addMonths(ts: number, n: number): number {
+  const d = new Date(ts);
+  const day = d.getUTCDate();
+  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1, d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(day, lastDay));
+  return target.getTime();
+}
+
+/** The subscription period containing `now` and its renewal instant. */
+function currentPeriod(now: number, start: number): { start: number; reset: number } {
+  let s = Math.max(0, start);
+  // The plan can run for years; one step per month is bounded by the row
+  // ledger, so a simple loop is clearer than calendar arithmetic.
+  for (let i = 0; i < 240 && addMonths(s, 1) <= now; i++) s = addMonths(s, 1);
+  return { start: s, reset: addMonths(s, 1) };
+}
+
+/**
+ * The forecast is deliberately simple and honest: a linear burn of the
+ * measured monthly percentage over the elapsed subscription days. It never
+ * invents a daily history the ledger does not have; the points are the actual
+ * cumulative spend per completed day, and the last point is the measured
+ * current percentage.
+ */
+export function buildGoForecast(
+  rows: GoSpendRow[],
+  model: ModelUsage,
+  periodStart: number,
+  resetAt: number,
+  now = Date.now(),
+): GoForecast {
+  const limit = Number(model.limit ?? 0);
+  const currentPct = Math.max(0, Number(model.pctMonth ?? 0));
+  const elapsedDays = Math.max(1 / 24, (now - periodStart) / 86400_000);
+  const dailyPct = currentPct / elapsedDays;
+  const remainingDays = Math.max(0, (resetAt - now) / 86400_000);
+  const projectedPct = Math.min(999, currentPct + dailyPct * remainingDays);
+  const hitTs = currentPct >= 100
+    ? now
+    : dailyPct > 0
+      ? now + ((100 - currentPct) / dailyPct) * 86400_000
+      : Infinity;
+  const hitAt = Number.isFinite(hitTs) && hitTs <= resetAt ? new Date(hitTs).toISOString() : null;
+  // The points are the ACTUAL cumulative spend at each ledger row (never a
+  // synthetic daily interpolation). The last point is the measured current %.
+  const modelRows = rows
+    .filter((r) => r.model === model.model && r.ts >= periodStart && r.ts <= now)
+    .sort((a, b) => a.ts - b.ts);
+  const points: GoForecastPoint[] = [{ ts: new Date(periodStart).toISOString(), pct: 0 }];
+  let cumulative = 0;
+  for (const r of modelRows) {
+    cumulative += r.cost;
+    points.push({ ts: new Date(r.ts).toISOString(), pct: limit > 0 ? Math.min(999, (cumulative / limit) * 100) : 0 });
+  }
+  points.push({ ts: new Date(now).toISOString(), pct: currentPct });
+  return {
+    model: model.model,
+    currentPct,
+    dailyPct,
+    projectedPct,
+    hitAt,
+    resetAt: new Date(resetAt).toISOString(),
+    periodStart: new Date(periodStart).toISOString(),
+    points,
+  };
+}
+
 export function aggregate(rows: GoSpendRow[], plan: GoPlan, now = Date.now(), startedAt?: number): GoUsage {
   const limits = GO_LIMITS[plan] ?? GO_LIMITS['go-plus'];
   // The plan period starts when the subscription started, not when the
   // calendar month did. The default is today (the user subscribed today);
   // the console remains authoritative.
   const periodStart = Math.max(0, startedAt ?? todayStart(now));
+  const period = currentPeriod(now, periodStart);
   const windows = {
     h5: Math.max(now - 5 * 3600_000, periodStart),
     d7: Math.max(now - 7 * 86400_000, periodStart),
-    month: Math.max(monthStart(now), periodStart),
+    // The month is the SUBSCRIPTION month (Nov 5 → Dec 5), not the calendar
+    // month (the image's "Renews Dec 5" is the consumer-facing truth).
+    month: period.start,
   };
   const byModel = new Map<string, GoSpendRow[]>();
   for (const r of rows) {
@@ -247,7 +341,7 @@ export function aggregate(rows: GoSpendRow[], plan: GoPlan, now = Date.now(), st
   const oldest = (since: number) => rows.filter((r) => r.ts >= since).reduce((min, r) => Math.min(min, r.ts), Infinity);
   const h5Oldest = oldest(windows.h5);
   const d7Oldest = oldest(windows.d7);
-  const nextMonth = Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth() + 1, 1);
+
   const bindingCandidates: Array<{ model: string; window: GoWindow; pct: number }> = [];
   for (const m of models) {
     if (m.pct5h != null) bindingCandidates.push({ model: m.model, window: 'h5', pct: m.pct5h });
@@ -256,19 +350,27 @@ export function aggregate(rows: GoSpendRow[], plan: GoPlan, now = Date.now(), st
   }
   bindingCandidates.sort((a, b) => b.pct - a.pct);
 
+  const monthly = [...models]
+    .filter((m) => m.pctMonth != null && m.limit != null && m.limit > 0)
+    .sort((a, b) => (b.pctMonth ?? -1) - (a.pctMonth ?? -1))[0] ?? null;
+  const forecast = monthly
+    ? buildGoForecast(rows, monthly, period.start, period.reset, now)
+    : null;
+
   return {
     plan,
     models,
     windows: {
       h5: { ...h5, resetAt: Number.isFinite(h5Oldest) ? new Date(h5Oldest + 5 * 3600_000).toISOString() : null },
       d7: { ...d7, resetAt: Number.isFinite(d7Oldest) ? new Date(d7Oldest + 7 * 86400_000).toISOString() : null },
-      month: { ...mo, resetAt: new Date(nextMonth).toISOString() },
+      month: { ...mo, resetAt: new Date(period.reset).toISOString() },
     },
     binding: bindingCandidates[0] ?? null,
+    forecast,
     source: rows.length > 0 ? 'local-ledger' : 'unavailable',
     periodStart: new Date(periodStart).toISOString(),
     updatedAt: new Date(now).toISOString(),
-    note: 'Measured locally from OpenCode message tokens × the public Go catalog; 5h/week are % of each window allowance (20%/50% of the monthly limit). The console is authoritative; Extra Usage may bill PAYG.',
+    note: 'Measured locally from OpenCode message tokens × the public Go catalog; 5h/week are % of each window allowance (20%/50% of the monthly limit). The forecast is a linear burn from the local ledger; the console is authoritative and Extra Usage may bill PAYG.',
   };
 }
 
@@ -353,7 +455,8 @@ export function readSpendRows(catalog: Map<string, CatalogModel>, now = Date.now
   try { Database = require('better-sqlite3'); } catch { return []; }
   const rows: GoSpendRow[] = [];
   const seen = new Set<string>();
-  const since = monthStart(now);
+  // Include the current subscription month even when it began last month.
+  const since = Math.min(monthStart(now), readGoPlanStart(now));
   for (const dbPath of dbPaths()) {
     try { if (!fs.existsSync(dbPath)) continue; } catch { continue; }
     try {

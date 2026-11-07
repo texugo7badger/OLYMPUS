@@ -84,12 +84,17 @@ export function decideRecovery(laneRoot: string, finding: PatrolFinding): Recove
         message: base('every lane in the chain was marked dead — waiting for the health window, then retrying the chain (transient exhaustion, not a missing key).'),
       };
     case 'timeout':
-    case 'transport':
+    case 'transport': {
+      // v0.0.89 — ATLAS IS HY3, NEVER A FREE/NEMOTRON FAILOVER. The patrol may
+      // propose any healthy lane; the architect of the campaign stays on its
+      // sacred lane. The lane-health entry still quarantines the failure.
+      const nextLane = finding.god === 'atlas' ? 'opencode-go/hy3' : finding.nextLane;
       return {
         action: 'retry', kind: 'retry-lane', delayMs: 8_000,
-        ...(finding.nextLane ? { override: { lane: finding.nextLane, reason: `lane failover after ${finding.failureClass}`, promptAppend: `RECOVERY: the previous lane stalled. Keep the same scope; write the artifact before probing.` } } : {}),
-        message: base(`${finding.failureClass} → quarantine the lane and retry on the next healthy lane.${laneNote}`),
+        ...(nextLane ? { override: { lane: nextLane, reason: `lane failover after ${finding.failureClass}`, promptAppend: `RECOVERY: the previous lane stalled. Keep the same scope; write the artifact before probing.` } } : {}),
+        message: base(`${finding.failureClass} → quarantine the lane and retry on ${finding.god === 'atlas' ? 'HY3 (Atlas never falls back to a free lane)' : 'the next healthy lane'}.${laneNote}`),
       };
+    }
     case 'script':
       return {
         action: 'retry', kind: 'retry-script', delayMs: 3_000,

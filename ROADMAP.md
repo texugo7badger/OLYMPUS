@@ -1,6 +1,11 @@
 # OLYMPUS Roadmap
 
-**v0.0.88 is the current release** (2026-11-07) — the campaign that
+**v0.0.89 is the current release** (2026-11-07) — Atlas stays on: the
+server-side warden (deterministic, no Apollo prompt) keeps opted-in campaigns
+walking, pins Atlas to HY3 and writes one decision box; the Parthenon command
+deck lands on desktop and mobile over the animated Nakkas SVG; the GO cost
+window gains the usage-vs-pace forecast (renewal, daily burn, hit date, hatched
+forecast). **v0.0.88** — the campaign that
 finishes: plan generations + definition hashes + staged next plans; Atlas
 deterministic verdicts and a cause-specific recovery policy that resumes the
 walk by itself; campaign context/steering law so a follow-up never rewrites a
