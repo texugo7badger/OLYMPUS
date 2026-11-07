@@ -1,27 +1,27 @@
 {
   "stable": {
-    "version": "0.0.84",
-    "tag": "v0.0.84",
+    "version": "0.0.85",
+    "tag": "v0.0.85",
     "stable": true,
     "tests": {
-      "pass": 153,
+      "pass": 157,
       "fail": 0,
       "skip": 1,
-      "suites": 154
+      "suites": 158
     },
-    "releasedAt": "2026-11-06T20:40:49.999Z",
-    "commit": "6fc503c",
+    "releasedAt": "2026-11-07T01:33:08.614Z",
+    "commit": "708992f",
     "note": "Stable means: the full battery ran with 0 FAIL and the declared skips are explicit. The console/GO limits are unrelated and may change."
   },
   "versions": [
     {
-      "version": "0.0.84",
-      "tag": "v0.0.84",
+      "version": "0.0.85",
+      "tag": "v0.0.85",
       "stable": true
     },
     {
-      "version": "0.0.85",
-      "tag": "v0.0.85",
+      "version": "0.0.84",
+      "tag": "v0.0.84",
       "stable": false
     },
     {
@@ -162,11 +162,6 @@
     {
       "version": "0.0.56",
       "tag": "v0.0.56",
-      "stable": false
-    },
-    {
-      "version": "0.0.55",
-      "tag": "v0.0.55",
       "stable": false
     }
   ]
