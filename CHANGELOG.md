@@ -110,6 +110,22 @@ All notable changes to OLYMPUS are documented in this file.
   request still creates one. The 18:54 `olympus-handoff-context-window`
   specimen is pinned by `scripts/handoff-continuity.test.mjs`.
 
+#### The Sync Map is the app's ledger, not every OpenCode session
+
+- **The operator conversation and the walker's hop prompts no longer appear
+  as Apollo project turns.** The Atlas `chat.message` hook was unscoped: it
+  recorded every prompt in the shared `~/.olympus/sync-map.json` (657 entries,
+  0 with the app marker at the specimen). The hook now ingests only sessions
+  mapped in `opencode-sessions.json` (or an explicit `[OLYMPUS-SESSION]`
+  marker), skips `[HOP CONTRACT]` and internal strategy/verdict prompts,
+  stamps `meta.app`, and scopes `session.idle` finalization to its own session.
+- **The read path has an app default and an audit view.** `/api/olympus/sync-map`
+  defaults to `scope=app` (mapped app sessions + dispatches); `scope=all` shows
+  the historical/operator rows. The panel has an `app`/`all` toggle and shows
+  the filtered vs total count. The hash-chained ledger is untouched.
+- Pinned by `scripts/sync-map-scope.test.mjs` (17 assertions); the new-session
+  handoff also carries the session marker.
+
 #### Verification
 
 - New `scripts/companion-apps.test.mjs`: **38 assertions** covering the two

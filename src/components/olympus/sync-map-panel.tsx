@@ -32,6 +32,8 @@ interface SyncRow {
 
 interface Integrity {
   count: number;
+  filtered?: number;
+  scope?: 'app' | 'all';
   chainHead: string | null;
   lastUpdated: string | null;
 }
@@ -61,12 +63,13 @@ export default function SyncMapPanel() {
   const [rows, setRows] = useState<SyncRow[]>([]);
   const [integrity, setIntegrity] = useState<Integrity | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scope, setScope] = useState<'app' | 'all'>('app');
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const r = await fetch('/api/olympus/sync-map', { cache: 'no-store' });
+        const r = await fetch(`/api/olympus/sync-map?scope=${scope}`, { cache: 'no-store' });
         if (!r.ok) return;
         const d = await r.json();
         if (cancelled) return;
@@ -78,24 +81,39 @@ export default function SyncMapPanel() {
     load();
     const iv = setInterval(load, 5_000);
     return () => { cancelled = true; clearInterval(iv); };
-  }, []);
+  }, [scope]);
 
   return (
     <div className="h-full overflow-y-auto custom-scroll bg-olympus-bg p-4">
       <div className="flex items-center gap-2 mb-3">
         <Network size={16} className="text-olympus-cyan" />
         <h2 className="text-sm font-semibold text-olympus-cyan">Sync Map</h2>
-        <span className="text-[9px] text-olympus-text-dim font-mono ml-auto">
-          the hash-chained ledger · refresh 5s
-        </span>
+        <div className="ml-auto flex items-center gap-1">
+          {(['app', 'all'] as const).map((value) => (
+            <button
+              key={value}
+              onClick={() => setScope(value)}
+              aria-pressed={scope === value}
+              className={`rounded px-1.5 py-0.5 text-[9px] font-mono uppercase ${scope === value ? 'bg-olympus-cyan/15 text-olympus-cyan ring-1 ring-olympus-cyan/30' : 'text-olympus-text-dim hover:text-olympus-text'}`}
+            >
+              {value}
+            </button>
+          ))}
+          <span className="text-[9px] text-olympus-text-dim font-mono">
+            · refresh 5s
+          </span>
+        </div>
       </div>
 
       {/* Integrity header — the ledger's own health, tamper-evident by design. */}
       {integrity && (
         <div className="rounded-lg p-2.5 mb-3 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-cyan/15 text-[10px] font-mono">
           <div className="flex items-center gap-2">
-            <span className="text-olympus-cyan font-bold">{integrity.count}</span>
-            <span className="text-olympus-text-dim">entries</span>
+            <span className="text-olympus-cyan font-bold">{scope === 'app' ? (integrity.filtered ?? 0) : integrity.count}</span>
+            <span className="text-olympus-text-dim">{scope === 'app' ? 'app entries' : 'entries'}</span>
+            {scope === 'app' && integrity.count !== (integrity.filtered ?? 0) && (
+              <span className="text-olympus-text-dim">· {integrity.count} total</span>
+            )}
             {integrity.chainHead && (
               <span className="text-olympus-text-dim ml-auto truncate max-w-[55%]" data-tip={integrity.chainHead}>
                 chain {integrity.chainHead.slice(0, 16)}…

@@ -574,6 +574,7 @@ ${uiReferencesBlock}`
     //   4. Summary boundaries are explicit (---) so Apollo can't confuse
     //      them with its own output.
     const handoffPrompt = [
+      `[OLYMPUS-SESSION ${conversationId}] `,
       'Starting a new session. The previous session\'s context window was filling up,',
       'so I\'m continuing the conversation here with a summary of where we left off.',
       '',

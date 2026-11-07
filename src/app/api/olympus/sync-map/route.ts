@@ -16,11 +16,14 @@ import path from 'path';
 import os from 'os';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 import { withTtl } from '@/lib/ttl-cache';
+import { appSessionSet, isAppSyncEntry, isInternalAppPrompt } from '@/lib/sync-map-scope';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const SYNC_MAP_PATH = path.join(process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus'), 'sync-map.json');
+const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
+const SYNC_MAP_PATH = path.join(OLYMPUS_HOME, 'sync-map.json');
+const SESSION_MAP_PATH = path.join(OLYMPUS_HOME, 'opencode-sessions.json');
 
 interface SyncEntry {
   id: string;
@@ -59,11 +62,24 @@ function resolveSyncStatus(e: SyncEntry): 'received' | 'routed' | 'done' | 'fail
 
 export async function GET(req: NextRequest) {
   const limit = Math.min(200, Math.max(10, Number(req.nextUrl.searchParams.get('limit')) || 50));
+  // v0.0.85 — the default view is the APP's ledger, not the operator/assistant
+  // session or the walker's hop prompts. `?scope=all` is the audit view.
+  const scope = req.nextUrl.searchParams.get('scope') === 'all' ? 'all' : 'app';
   try {
     // v0.0.25 — the map file is the heavy read; a 5s cache keeps re-opens instant.
     const map: any = await withTtl('sync-map:file', () => JSON.parse(fs.readFileSync(SYNC_MAP_PATH, 'utf-8')), { ttlMs: 5_000 });
     const entries: Record<string, SyncEntry> = map.entries ?? {};
-    const rows = Object.values(entries)
+    const sessionMap = scope === 'app'
+      ? await withTtl('sync-map:sessions', () => JSON.parse(fs.readFileSync(SESSION_MAP_PATH, 'utf-8')), { ttlMs: 5_000 }).catch(() => ({}))
+      : {};
+    const appSessions = appSessionSet(sessionMap);
+    const scoped = Object.values(entries).filter((e) => {
+      if (scope === 'all') return true;
+      if (!isAppSyncEntry(e, appSessions)) return false;
+      // Machinery prompts (strategy/verdict/hop) are not human turns.
+      return !isInternalAppPrompt(String(e.intent || ''));
+    });
+    const rows = scoped
       .sort((a, b) => (b.updatedTs || b.ts).localeCompare(a.updatedTs || a.ts))
       .slice(0, limit)
       .map((e) => ({
@@ -91,6 +107,8 @@ export async function GET(req: NextRequest) {
       rows,
       integrity: {
         count: Object.keys(entries).length,
+        filtered: scoped.length,
+        scope,
         chainHead: map.chainHead ?? null,
         lastUpdated: map.lastUpdated ?? null,
       },
@@ -100,7 +118,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       rows: [],
-      integrity: { count: 0, chainHead: null, lastUpdated: null },
+      integrity: { count: 0, filtered: 0, scope, chainHead: null, lastUpdated: null },
     }, { headers: NO_CACHE_HEADERS });
   }
 }

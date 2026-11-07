@@ -40,6 +40,7 @@ import * as crypto from "crypto";
 
 // D21: the single canonical vault resolver (no direct env reads).
 import { getVaultRoot } from "../../../src/lib/vault-root.js";
+import { isAppPromptMarker, isHopPrompt } from "../../../src/lib/sync-map-scope.js";
 import {
   finalizeLocalDispatchesOnExit,
   hasLocalDispatchRegistrations,
@@ -48,7 +49,34 @@ import {
 
 const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), ".olympus");
 const STATE_FILE = path.join(OLYMPUS_HOME, "sync-map.json");
+const SESSION_MAP_FILE = path.join(OLYMPUS_HOME, "opencode-sessions.json");
 const LIVE_FEED = path.join(getVaultRoot(), "06_Activity_Feed", "live.jsonl");
+
+/**
+ * v0.0.85 — the Sync Map is the APP's ledger. The plugin runs in every
+ * OpenCode session in this checkout (including the operator/assistant
+ * conversation and the walker), so the chat.message hook must gate on the
+ * app's own session map. Cached for 5s: the map changes only per prompt.
+ */
+let appSessionCache: { at: number; ids: Set<string> } | null = null;
+export function olympusAppSessionIds(): Set<string> {
+  const now = Date.now();
+  if (appSessionCache && now - appSessionCache.at < 5_000) return appSessionCache.ids;
+  const ids = new Set<string>();
+  try {
+    const map = JSON.parse(fs.readFileSync(SESSION_MAP_FILE, "utf-8"));
+    for (const value of Object.values(map || {})) {
+      const sid = (value as { sessionId?: unknown })?.sessionId;
+      if (typeof sid === "string" && sid) ids.add(sid);
+    }
+  } catch { /* no map yet */ }
+  appSessionCache = { at: now, ids };
+  return ids;
+}
+
+export function isOlympusAppSession(sessionID?: string | null): boolean {
+  return typeof sessionID === "string" && Boolean(sessionID) && olympusAppSessionIds().has(sessionID);
+}
 
 export type SyncOrigin = "project" | "dispatch";
 /**
@@ -291,6 +319,8 @@ export function atlasIngestProjectPrompt(input: {
   sessionID: string;
   text: string;
   agent?: string;
+  /** true only for the app's own sessions/prompts (the hook decides). */
+  app?: boolean;
 }): { id: string } {
   const id = "sync-" + crypto.randomUUID();
   atlasWrite({
@@ -300,7 +330,12 @@ export function atlasIngestProjectPrompt(input: {
     ts: new Date().toISOString(),
     intent: (input.text || "").slice(0, 160),
     status: "received",
-    meta: { sessionID: input.sessionID, agent: input.agent ?? null },
+    meta: {
+      sessionID: input.sessionID,
+      agent: input.agent ?? null,
+      ...(input.app === true ? { app: true } : {}),
+      ...(isHopPrompt(input.text) ? { hop: true } : {}),
+    },
   });
   return { id };
 }
@@ -399,10 +434,11 @@ export function atlasMarkEmitComplete(id: string, info: {
 }
 
 /** Mark every still-received PROJECT entry done (session.idle — the turn completed). */
-export function atlasMarkProjectTurnsDone(): number {
+export function atlasMarkProjectTurnsDone(sessionID?: string): number {
   const state = loadState();
   let n = 0;
   for (const e of Object.values(state.entries)) {
+    if (sessionID && String(e.meta?.sessionID ?? "") !== sessionID) continue;
     if (e.origin === "project" && e.status === "received") {
       atlasWrite({
         id: e.id, origin: e.origin, source: e.source, ts: e.ts,

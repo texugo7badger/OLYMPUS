@@ -219,7 +219,8 @@ export const OlympusV2Plugin = Plugin.define({
               });
             }
             if (typeof idleHandler === "function" && anyEv?.type === "session.idle") {
-              void idleHandler({});
+              const idleSession = anyEv?.properties?.sessionID ?? anyEv?.data?.sessionID ?? anyEv?.sessionID;
+              void idleHandler({ sessionID: typeof idleSession === "string" ? idleSession : undefined });
             }
           }
         } catch {

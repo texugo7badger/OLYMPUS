@@ -77,7 +77,9 @@ import {
   atlasMarkProjectTurnsDone,
   atlasMarkDispatchesFinalized,
   finalizeAtlasOnProcessExit,
+  isOlympusAppSession,
 } from "./lib/atlas-sync.js";
+import { isAppPromptMarker, isHopPrompt, isInternalAppPrompt } from "../../src/lib/sync-map-scope.js";
 // SYMPHONY BUS (MADRUGA-3 p3): the cable — heartbeats ride it; Atlas records.
 import { busPublish } from "./lib/symphony-bus.js";
 import { atlasRecordHeartbeat } from "./lib/atlas-sync.js";
@@ -1378,8 +1380,16 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
           .filter((p) => p?.type === "text" && typeof p.text === "string")
           .map((p) => p.text as string)
           .join("\n");
-        if (promptText) {
-          atlasIngestProjectPrompt({ sessionID: input.sessionID, text: promptText });
+        // v0.0.85 — SCOPE: the plugin runs in every OpenCode session in this
+        // checkout (operator chat, walker hops, TUI). Only the app's own
+        // sessions (opencode-sessions.json) or an explicit app marker belong
+        // in the Sync Map; hop/internal prompts never do.
+        const appSession = isOlympusAppSession(input.sessionID);
+        const appMarker = isAppPromptMarker(promptText);
+        const hopPrompt = isHopPrompt(promptText);
+        const internalPrompt = isInternalAppPrompt(promptText);
+        if (promptText && (appSession || appMarker) && !hopPrompt && !internalPrompt) {
+          atlasIngestProjectPrompt({ sessionID: input.sessionID, text: promptText, app: true });
         }
       } catch (e: any) {
         console.error(`[olympus] ATLAS project-prompt ingest failed: ${e?.message || e}`);
@@ -1439,7 +1449,7 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
      * Finalizes any open dispatches before the heartbeat runs, so
      * Callimachus's RECALIBRATE stage has the latest outcomes to aggregate.
      */
-    "session.idle": async () => {
+    "session.idle": async (input?: { sessionID?: string }) => {
       // Finalize any open dispatches (with reward/penalty)
       const idleFinalized: Array<{ dispatchId: string; outcome: string }> = [];
       finalizeDispatchesForGod(null, (d, outcome) => {
@@ -1505,7 +1515,7 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
       // ATLAS (MADRUGA-3 p2): project prompts whose turn completed land
       // 'done' — runs at every idle, dispatches or not.
       try {
-        atlasMarkProjectTurnsDone();
+        atlasMarkProjectTurnsDone(input?.sessionID);
       } catch (e: any) {
         console.error(`[olympus] ATLAS project-turn transition failed: ${e?.message || e}`);
       }
