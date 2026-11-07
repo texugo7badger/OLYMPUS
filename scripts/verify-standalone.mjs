@@ -174,7 +174,11 @@ async function bootSmoke() {
   let chunkCheck = { ok: false, detail: 'no HTML' };
   if (answered) {
     try {
-      const token = fs.readFileSync(`${os.homedir()}/.olympus/session-token`, 'utf-8').trim();
+      // CI/fresh clone has no ~/.olympus/session-token. The page HTML is
+      // public; the token only matters for API calls. Never fail the chunk
+      // gate on a missing local secret.
+      let token = '';
+      try { token = fs.readFileSync(`${os.homedir()}/.olympus/session-token`, 'utf-8').trim(); } catch { /* no local secret */ }
       const res = await fetch(`http://127.0.0.1:${port}/`, { headers: token ? { 'x-olympus-token': token } : {}, signal: AbortSignal.timeout(5000) });
       const html = await res.text();
       const srcs = [...html.matchAll(/src=["'](\/_next\/static\/[^"']+\.js)["']/g)].map((m) => m[1]);
