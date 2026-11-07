@@ -38,7 +38,6 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
   const [pair, setPair] = useState<Pair | null>(null);
   const [busy, setBusy] = useState(false);
   const [reveal, setReveal] = useState(false);
-  const [target, setTarget] = useState<'widget' | 'app'>('widget');
   const [copied, setCopied] = useState<string | null>(null);
   const [modeNote, setModeNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -143,14 +142,9 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
 
         <div className="p-4 space-y-3">
           <p className="text-[10px] font-mono text-olympus-text-dim leading-relaxed">
-            {target === 'widget'
-              ? 'Escaneie para instalar o WIDGET: status ao vivo, GO Plus e uma fila para o terminal — sem abrir a tela do OLYMPUS e sem tirar do hibernar.'
-              : 'Escaneie para abrir o companion completo: campanha, projetos, prompt por texto/voz e preview.'}
+            Um QR, um app: escaneie para abrir o OLYMPUS no celular — campanha, projetos,
+            prompt por texto/voz, preview e o widget (pelo cabeçalho do app).
           </p>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setTarget('widget')} className={cn('rounded-full px-2.5 py-1 text-[9px] font-mono ring-1', target === 'widget' ? 'bg-olympus-gold/15 text-olympus-gold ring-olympus-gold/30' : 'text-olympus-text-dim ring-olympus-gold/10')}>widget</button>
-            <button onClick={() => setTarget('app')} className={cn('rounded-full px-2.5 py-1 text-[9px] font-mono ring-1', target === 'app' ? 'bg-olympus-gold/15 text-olympus-gold ring-olympus-gold/30' : 'text-olympus-text-dim ring-olympus-gold/10')}>companion completo</button>
-          </div>
 
           {error && (
             <div className="rounded-lg border border-olympus-red/40 bg-olympus-red/10 px-2.5 py-2 text-[10px] font-mono text-olympus-red">
@@ -163,14 +157,14 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
               <div className="h-40 w-40 flex items-center justify-center">
                 <Loader2 size={22} className="animate-spin text-olympus-gold" />
               </div>
-            ) : (target === 'widget' ? pair?.widgetQr : pair?.qr) ? (
+            ) : pair?.qr ? (
               <div
                 className="rounded-2xl p-2 shadow-lg"
                 style={{ background: pair?.qrLight || '#F4EFE6', border: `1px solid ${pair?.qrAccent || '#D4A574'}66` }}
               >
-                <img src={(target === 'widget' ? pair?.widgetQr : pair?.qr) || ''} alt={target === 'widget' ? 'OLYMPUS widget QR' : 'Mobile companion pairing QR'} width={180} height={180} className="rounded-lg" />
+                <img src={pair?.qr || ''} alt="OLYMPUS app QR" width={180} height={180} className="rounded-lg" />
                 <div className="mt-1.5 text-center text-[8px] font-mono uppercase tracking-[0.24em]" style={{ color: pair?.qrDark || '#0A0E16' }}>
-                  {pair?.themeName || 'OLYMPUS'} · {target === 'widget' ? 'widget' : 'companion'}
+                  {pair?.themeName || 'OLYMPUS'} · app
                 </div>
               </div>
             ) : (
@@ -178,16 +172,16 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
                 no QR — use the URL and token below
               </div>
             )}
-            {pair && !(target === 'widget' ? pair.widgetSecure : pair.urlSecure) && (
+            {pair && !pair.urlSecure && (
               <p className="text-center text-[8px] font-mono text-olympus-gold/80">
                 para instalar como PWA e usar a voz, inicie o túnel HTTPS abaixo e o QR se atualiza
               </p>
             )}
             <div className="w-full flex items-center gap-1.5">
-              <code className="flex-1 min-w-0 truncate text-[9px] font-mono text-olympus-text">{target === 'widget' ? (pair?.widgetUrl || '—') : (pair?.url || '—')}</code>
+              <code className="flex-1 min-w-0 truncate text-[9px] font-mono text-olympus-text">{pair?.url || '—'}</code>
               <button
-                onClick={() => { const u = target === 'widget' ? pair?.widgetUrl : pair?.url; if (u) void copy(u, 'url'); }}
-                disabled={!(target === 'widget' ? pair?.widgetUrl : pair?.url)}
+                onClick={() => { const u = pair?.url; if (u) void copy(u, 'url'); }}
+                disabled={!pair?.url}
                 className="flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 text-olympus-gold disabled:opacity-40"
               >
                 <Copy size={9} /> {copied === 'url' ? 'copied' : 'copy'}

@@ -16,12 +16,15 @@ import path from 'node:path';
 import os from 'node:os';
 import {
   SEED_DESIGN_BUILDS,
+  getMatrixBuilds,
   mergeBuildStats,
   normalizeUserBuild,
   type DesignBuild,
   type ResonanceRow,
 } from '@/lib/design-builds';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+import { getMcpEnvVarKeys } from '@/lib/mcp-api-requirements';
+import { loadIntegrationEnv } from '@/lib/integration-env';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,15 +65,34 @@ function readResonance(limit = 5000): ResonanceRow[] {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = readUserBuilds();
   const seeds = SEED_DESIGN_BUILDS.filter((s) => !user.some((u) => u.id === s.id));
-  const builds = mergeBuildStats([...seeds, ...user], readResonance());
+  // v0.0.86 (H5) — the 200 `mx-*` matrix entries are ON DEMAND only:
+  // `?matrix=1`. The default hub is the curated shelf (48 builds today).
+  const matrix = req.nextUrl.searchParams.get('matrix') === '1' ? getMatrixBuilds() : [];
+  const builds = mergeBuildStats([...seeds, ...user, ...matrix], readResonance());
   builds.sort((a, b) => {
     const order = { hot: 0, warm: 1, cold: 2 };
     return order[a.stats.tier] - order[b.stats.tier] || a.name.localeCompare(b.name);
   });
-  return NextResponse.json({ ok: true, builds, resonanceRows: readResonance().length }, { headers: NO_CACHE_HEADERS });
+  // v0.0.86 (H4) — the honest optional-key badge: an MCP that needs a key
+  // which is not set is present-but-locked, not silently ready.
+  const env = loadIntegrationEnv();
+  const withKeys = builds.map((b) => {
+    const needsKeys = b.mcps.flatMap((mcp) =>
+      getMcpEnvVarKeys(mcp)
+        .filter((key) => !env[key])
+        .map((key) => ({ mcp, key })));
+    return needsKeys.length ? { ...b, needsKeys } : b;
+  });
+  return NextResponse.json({
+    ok: true,
+    builds: withKeys,
+    resonanceRows: readResonance().length,
+    matrix: matrix.length,
+    curated: seeds.length + user.length,
+  }, { headers: NO_CACHE_HEADERS });
 }
 
 export async function POST(req: NextRequest) {

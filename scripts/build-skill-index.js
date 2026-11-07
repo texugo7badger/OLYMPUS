@@ -190,20 +190,25 @@ const godSkillsMap = mapSkillsToGods();
 for (const skillDir of skillDirs) {
   const skill = readSkill(skillDir);
   if (!skill) continue;
-  // The id is the directory that holds SKILL.md (nested skills keep their
-  // own name); the parent grouping (e.g. "superpowers") is a namespace.
-  const skillName = path.basename(skillDir);
-  const gods = godSkillsMap.get(skillName) || ['all'];
+  // v0.0.86 (H3) — PATH-BASED IDS. The old id was the directory basename, so
+  // a nested `superpowers/writing-plans` and a top-level `writing-plans`
+  // collided into one id. The id is now the path below `.opencode/skills`
+  // (posix separators); the basename is kept as `skill_alias` so consumers
+  // that ask for the old name still resolve.
+  const skillName = path.relative(SKILLS_ROOT, skillDir).split(path.sep).join('/') || path.basename(skillDir);
+  const skillAlias = path.basename(skillDir);
+  const gods = godSkillsMap.get(skillAlias) || ['all'];
   for (const god of gods) {
     documents.push({
       skill_id: skillName,
+      skill_alias: skillAlias,
       god_scope: god,
       kind: 'skill',
       title: skill.name,
       description: skill.description,
       body: skill.body,
       source_path: path.join(skillDir, 'SKILL.md'),
-      text: skill.text,
+      text: `${skillAlias} ${skill.text}`,
     });
   }
   // Also add sub-skills (e.g., superpowers/*)
@@ -214,6 +219,7 @@ for (const skillDir of skillDirs) {
     const subName = sf.replace(/\.md$/, '');
     documents.push({
       skill_id: `${skillName}/${subName}`,
+      skill_alias: `${skillAlias}/${subName}`,
       god_scope: gods[0] || 'all',
       kind: 'skill',
       title: `${skillName} (${subName})`,
@@ -244,6 +250,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS skill_metadata (
     rowid INTEGER PRIMARY KEY,
     skill_id TEXT,
+    skill_alias TEXT,
     god_scope TEXT,
     kind TEXT,
     title TEXT,
@@ -255,7 +262,7 @@ db.exec(`
 
 // Insert documents
 const insertVec = db.prepare('INSERT INTO skill_vectors (embedding) VALUES (?)');
-const insertMeta = db.prepare('INSERT INTO skill_metadata (rowid, skill_id, god_scope, kind, title, description, body, source_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+const insertMeta = db.prepare('INSERT INTO skill_metadata (rowid, skill_id, skill_alias, god_scope, kind, title, description, body, source_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
 const insertMany = db.transaction((docs) => {
   for (let i = 0; i < docs.length; i++) {
@@ -263,7 +270,7 @@ const insertMany = db.transaction((docs) => {
     const vector = tfidfVector(doc.text, vocab, df, documents.length, vocabSize);
     const buf = Buffer.from(vector.buffer);
     insertVec.run(buf);
-    insertMeta.run(i, doc.skill_id, doc.god_scope, doc.kind, doc.title, doc.description, doc.body, doc.source_path);
+    insertMeta.run(i, doc.skill_id, doc.skill_alias ?? doc.skill_id.split('/').pop(), doc.god_scope, doc.kind, doc.title, doc.description, doc.body, doc.source_path);
   }
 });
 insertMany(documents);

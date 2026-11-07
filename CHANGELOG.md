@@ -2,6 +2,123 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.86] — 2026-11-07
+
+### Every god live, every park named
+
+#### The Parthenon is live for all ten gods
+
+- **All ten cards exist from second zero.** `godStates` started as an empty
+  Map and only Apollo ever emitted a terminal event, so the panel showed one
+  god while nine hops could be running. The terminal now seeds every god idle
+  (`idleGodStates()`), and the panel overlays the live tasks API: a running
+  hop marks its god `working` even when no terminal frame has arrived, a
+  parked hop marks it `blocked`, and a completed count fills the step chip.
+- **Every card opens that god's own terminal.** The per-card chat control was
+  implicit before; it is now a labelled button on each card, including the
+  idle gods.
+- **One durable thread per god.** `~/.olympus/god-inbox.json` stores chat
+  turns and mark-preview requests; `/api/olympus/god/inbox` serves the last 80
+  entries and the modal polls while open. Close it, reopen it, switch device:
+  the conversation is still there.
+- **A mark now reaches Athena.** The click-to-element route writes the mark
+  as `pending` in Athena's inbox, runs her turn in the background, and appends
+  the reply (or the failure) to the same thread. The prompt frames the mark as
+  a steering adjustment to the work she is already doing. Nothing is spawned
+  detached with `stdio: 'ignore'` any more.
+
+#### The turn that no longer dies at 15 minutes
+
+- **The action route ceiling is 30 min** (was 15) and the session default is
+  30 min (was 10), both overridable with `OLYMPUS_MAX_RUNTIME_MS`. The hop
+  hard cap is 40 min (`OLYMPUS_HOP_HARD_CAP_MS`) because AIME ran a real
+  31-minute green hop. A turn that owns an artifact is not a hang.
+- **The pre-step reasoning cap is 48 KB** (was 8 KB) and the thinking box is
+  26rem tall, auto-scrolls only when the reader is already at the bottom, and
+  no longer yanks the viewport while the model streams.
+- **A lane that dies mid-hop fails over.** Before every retry the dispatcher
+  re-reads lane health; a lane marked dead during the turn hands the class to
+  the chain instead of burning another full crescendo. A lane-config change
+  while hops are in flight is deferred to the hop boundary — the warm server is
+  never killed under a running turn.
+
+#### Parks that name their cause
+
+- **`parked-dispatch-failed` is classified**, never generic: `transport`,
+  `tool-budget`, `provider`, `agent-missing`, `model-missing`, `timeout`,
+  `script`, `unknown`. The class lands in the park reason
+  (`dispatch-failed:transport`), the hop state and the telemetry row — the 75
+  AIME rows with an empty error are now diagnosable.
+- **A failing script is traced.** `bash -x` runs the command, and the park
+  records the first command line plus the stderr tail, so a silent
+  `set -euo pipefail` test failure is no longer `script exit 1: `.
+- **A partial plan is never called walked.** If hops remain and no park is
+  named, the walker parks `blocked-dependencies` (naming the unmet edges) or
+  `walk-stopped-early` instead of printing "campaign complete, every wave
+  GREEN".
+- **A fixed plan clears the stale quarantine.** When `dispatch-plan.json` is
+  newer than the hop state, the auto-resume drops the quarantine so a hop
+  whose command/prompt was corrected can actually re-run.
+- **The dead-model-lane chip is actionable.** `run-state` returns the blocked
+  lane names, statuses and retry times; the status chip lists them; Settings →
+  LLM Strategy loads the same table (it previously declared the state and
+  never fetched it, always saying "all clear") and offers a real **Retry** per
+  lane through `POST /api/olympus/lane-health`.
+
+#### Build Hub Phase 0
+
+- **H1** `cache-layer` now belongs to Persephone and `craft-prototype` equips
+  Athena's `ui-designer` — no build crosses god ownership.
+- **H2** `npm run builds:check` resolves every skill (deep discovery), MCP
+  (local + optional) and demigod (leader god), and fails a build whose checks
+  are guidance-only. A fixture with a dead ref fails the gate.
+- **H3** the skill index uses path-based ids (`superpowers/writing-plans`)
+  with a `skill_alias` basename, and the gate rejects two paths sharing one id.
+- **H4** the hub badges MCPs whose key is missing (`needs ORIGINKIT_API_KEY`)
+  from the merged integration env.
+- **H5** the 200 `mx-*` matrix entries left the default shelf: they are
+  generated on demand (`?matrix=1`), labelled `generated`, carry no demigods,
+  and are never counted as curated builds.
+- **H6** `spec-first` + `spec-review` → `spec-lifecycle`; `docs-curation` +
+  `doc-truth` → `docs-truth`; `visual-asset` + `illustration-set` →
+  `asset-pipeline`; the `brain-backup` build is now `vault-backup`.
+- **12 new builds** with real gates: eval harness, RAG pipeline, ETL pipeline,
+  browser agent, skill scanner, agent architecture audit (Atlas's first
+  build), mobile app, MCP lifecycle, FinOps audit, canary release, learn
+  OLYMPUS and artifact suite — 60 curated builds total.
+- **The build reaches the dispatch.** A hop's `buildId` (or the best
+  god+skill/MCP fit, score ≥ 3) injects `buildPrompt()` into the hop contract,
+  records the build on the telemetry row, and appends the outcome to
+  `03_Index/arsenal-resonance.jsonl` so the tier can actually learn.
+
+#### The benchmark and the QR
+
+- **`npm run bench:hops -- --lane <project>`** reports rows, completion/park
+  shares, p50/p90/max durations, token totals/medians, null-token share, park
+  classes, top causes and the last completed hop. `--gate` fails on a >20%
+  park share, >40% null tokens, zero completed rows or a recent park with no
+  cause. The first AIME run: 345 rows, 258 completed, 87 parked (25.2%),
+  61.7% null tokens, p90 27.3 min.
+- **One QR for the OLYMPUS app.** The mobile pairing dialog no longer offers a
+  separate widget QR; the single code opens `/m`, and the widget opens from
+  the app's header.
+
+#### Verification
+
+- `scripts/parthenon-live.test.mjs` — 19 assertions (all gods, overlay,
+  per-card chat, durable inbox, mark flow, ceilings, reasoning, lane health).
+- `scripts/hop-failure-class.test.mjs` — 20 assertions (classification,
+  telemetry cause, script trace, mid-hop failover, config deferral, partial
+  plan, quarantine invalidation).
+- `scripts/builds-check.test.mjs` — 6 assertions (clean catalogue, cross-god
+  failure, dead skill/MCP/demigod, guidance-only gate, npm wiring).
+- `scripts/build-execution.test.mjs` — 10 assertions (build resolution,
+  schema alias, prompt injection, telemetry, resonance write-back).
+- `scripts/bench-hops.test.mjs` — 4 assertions (totals/percentiles, classes,
+  gate, null tokens).
+- Updated for the new contract: `god-chat`, `hop-deadline`, `hop-runtime`,
+  `skill-index-refresh`.
+
 ## [v0.0.85] — 2026-11-06
 
 ### The Apollo companion — one app family, one briefing, one feed

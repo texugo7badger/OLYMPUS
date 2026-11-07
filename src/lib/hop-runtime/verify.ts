@@ -85,7 +85,9 @@ function fileContentCheck(
   };
 }
 
-function scriptCheck(laneRoot: string, script: 'build' | 'lint'): HopCheckResult {
+type ScriptGate = 'build' | 'lint' | 'test' | 'typecheck';
+
+function scriptCheck(laneRoot: string, script: ScriptGate): HopCheckResult {
   const pkgPath = join(laneRoot, 'package.json');
   if (!existsSync(pkgPath)) {
     return { check: script, ok: false, detail: 'no package.json in the lane' };
@@ -99,7 +101,10 @@ function scriptCheck(laneRoot: string, script: 'build' | 'lint'): HopCheckResult
   if (typeof scripts[script] !== 'string') {
     return { check: script, ok: false, detail: `no '${script}' script declared` };
   }
-  const r = spawnSync('npm', ['run', script], { cwd: laneRoot, timeout: 180_000, encoding: 'utf-8' });
+  // v0.0.86 (#341) — test/typecheck join build/lint as real deterministic
+  // gates. The timeout is per gate: build 180s, tests 180s, typecheck 120s.
+  const timeout = script === 'typecheck' ? 120_000 : 180_000;
+  const r = spawnSync('npm', ['run', script], { cwd: laneRoot, timeout, encoding: 'utf-8' });
   const ok = r.status === 0;
   return {
     check: script,
@@ -174,7 +179,7 @@ export function verifyHopDeterministic(hop: PlanHop, laneRoot: string): HopVerif
     if (c.startsWith('file-exists:')) {
       const rel = c.slice('file-exists:'.length);
       if (!hop.artifacts.includes(rel)) checks.push(fileExistsCheck(laneRoot, rel));
-    } else if (c === 'build' || c === 'lint') {
+    } else if (c === 'build' || c === 'lint' || c === 'test' || c === 'typecheck') {
       checks.push(scriptCheck(laneRoot, c));
     } else if (c.startsWith('file-contains:') || c.startsWith('file-omits:')) {
       const prefix = c.startsWith('file-contains:') ? 'file-contains:' : 'file-omits:';
@@ -218,7 +223,7 @@ export function verifyHopDeterministic(hop: PlanHop, laneRoot: string): HopVerif
         }
       }
     } else {
-      checks.push({ check: c, ok: false, detail: 'unknown check (supported: file-exists:<rel> | file-contains:<rel>::<text> | file-omits:<rel>::<text> | mounted:<artifact>::<entry> | visual[:<json>] | build | lint | design-score:<n>)' });
+      checks.push({ check: c, ok: false, detail: 'unknown check (supported: file-exists:<rel> | file-contains:<rel>::<text> | file-omits:<rel>::<text> | mounted:<artifact>::<entry> | visual[:<json>] | build | lint | test | typecheck | design-score:<n>)' });
     }
   }
   const review = hop.verify?.review ?? 'deterministic';

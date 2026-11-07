@@ -14,7 +14,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, ChevronLeft, Flame, Gem, Loader2, Search, Share2, Snowflake, Sparkles, Sun, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronLeft, Flame, Gem, Loader2, Lock, Search, Share2, Snowflake, Sparkles, Sun, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { buildPrompt, buildReadiness, describeBuild, type DesignBuildWithStats } from '@/lib/design-builds';
 import { BUILD_CATEGORIES } from '@/lib/build-categories';
@@ -59,17 +59,20 @@ export default function DesignBuildsPanel() {
   const [detail, setDetail] = useState<DesignBuildWithStats | null>(null);
   const [tutorial, setTutorial] = useState<{ open: boolean; step: number }>({ open: false, step: 0 });
   const [sharedNote, setSharedNote] = useState<string | null>(null);
+  // v0.0.86 (H5) — the 200 matrix entries are an ON-DEMAND fallback, never
+  // in the default catalog. The hub asks for them explicitly.
+  const [matrix, setMatrix] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch('/api/olympus/design-builds', { cache: 'no-store' });
+      const r = await fetch(`/api/olympus/design-builds${matrix ? '?matrix=1' : ''}`, { cache: 'no-store' });
       const d = await r.json();
       if (d?.ok) { setBuilds(d.builds ?? []); setError(null); }
       else setError(d?.error ?? 'failed to load builds');
     } catch (e: any) { setError(e?.message || 'failed to load builds'); }
     finally { setLoading(false); }
-  }, []);
+  }, [matrix]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -147,6 +150,14 @@ export default function DesignBuildsPanel() {
         <Sparkles size={12} className="text-olympus-gold" />
         <span className="text-[10px] font-mono font-semibold text-olympus-gold uppercase">build hub</span>
         <span className="text-[8px] font-mono text-olympus-text-dim">{counts.hot} hot · {counts.warm} warm · {counts.cold} cold</span>
+        <button
+          onClick={() => setMatrix((v) => !v)}
+          aria-pressed={matrix}
+          data-tip="The 200 sector × god combinations are placeholders with no evidence. They are generated on demand and labelled; the default shelf is the curated builds only."
+          className={cn('text-[8px] font-mono px-1.5 py-0.5 rounded border', matrix ? 'border-olympus-gold/40 text-olympus-gold bg-olympus-gold/10' : 'border-olympus-gold/15 text-olympus-text-dim hover:text-olympus-text')}
+        >
+          {matrix ? 'hide generated' : 'generated fallback'}
+        </button>
         <div className="relative ml-auto">
           <Search size={9} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-olympus-text-dim" />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="search builds…" className="w-40 bg-olympus-bg border border-olympus-gold/20 rounded pl-5 pr-1.5 py-1 text-[9px] font-mono text-olympus-text outline-none focus:border-olympus-gold/50" />
@@ -196,6 +207,7 @@ export default function DesignBuildsPanel() {
                       <BuildCrystal build={{ name: b.name, id: b.id, god: b.god, crystal: (b as any).crystal, tier: b.stats.tier }} size={26} />
                       <span className="text-[11px] font-mono font-semibold text-olympus-text truncate">{b.name}</span>
                       {b.source === 'user' && <span className="text-[8px] font-mono text-olympus-purple uppercase">yours</span>}
+                      {b.generated && <span className="text-[8px] font-mono text-olympus-text-dim uppercase" data-tip="Generated placeholder — no evidence, no demigods">generated</span>}
                       {b.shared && <Share2 size={9} className="text-olympus-cyan" />}
                       <span className={cn('ml-auto flex items-center gap-1 text-[8px] font-mono uppercase px-1.5 py-0.5 rounded border', tier.className)}>
                         <Icon size={9} /> {tier.label}
@@ -205,6 +217,11 @@ export default function DesignBuildsPanel() {
                       {b.god} · {b.demigods.length} agent{b.demigods.length === 1 ? '' : 's'} · {b.stats.samples} sample{b.stats.samples === 1 ? '' : 's'} · ready {ready}%
                     </div>
                     <p className="mt-1 text-[8px] font-mono text-olympus-text-dim/85 leading-relaxed line-clamp-2">{describeBuild(b)}</p>
+                    {!!b.needsKeys?.length && (
+                      <div className="mt-1 flex items-center gap-1 text-[8px] font-mono text-olympus-gold/90" data-tip={`Missing: ${b.needsKeys.map((k) => k.key).join(', ')}`}>
+                        <Lock size={8} /> needs {b.needsKeys[0].key}{b.needsKeys.length > 1 ? ` +${b.needsKeys.length - 1}` : ''}
+                      </div>
+                    )}
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {[...new Set([...b.skills, ...b.mcps, ...b.demigods])].slice(0, 8).map((chip) => (
                         <span key={chip} className="text-[8px] font-mono px-1 py-0.5 rounded bg-olympus-bg/60 border border-olympus-gold/10 text-olympus-text-dim">{chip}</span>

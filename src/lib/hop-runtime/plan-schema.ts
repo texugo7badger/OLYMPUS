@@ -44,6 +44,10 @@ export interface PlanHop {
   mcp?: string;
   /** Optional demigod dispatched by this hop (for UI visibility, #225). */
   demigod?: string;
+  /** v0.0.86 (#343) — the Build Hub loadout this hop equips. The walker
+   *  injects the build prompt and writes the outcome back to the resonance
+   *  log, so a build is an execution contract, not a UI recommendation. */
+  buildId?: string;
   /**
    * v0.0.32 (Epic P) — the BUILD. A hop may equip up to 3 skills and 3 MCPs,
    * and lead up to 5 demigods IN PARALLEL (one god, several specialists per
@@ -188,6 +192,9 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
       skill: typeof h.skill === 'string' ? h.skill : undefined,
       mcp: typeof h.mcp === 'string' ? h.mcp : undefined,
       demigod: typeof h.demigod === 'string' ? h.demigod : undefined,
+      ...(typeof h.buildId === 'string' && h.buildId.trim()
+        ? { buildId: h.buildId.trim() }
+        : typeof h.build === 'string' && h.build.trim() ? { buildId: h.build.trim() } : {}),
       ...(skills.length ? { skills } : {}),
       ...(mcps.length ? { mcps } : {}),
       ...(demigods.length ? { demigods } : {}),

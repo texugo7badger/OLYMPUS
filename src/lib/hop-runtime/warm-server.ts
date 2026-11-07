@@ -321,6 +321,17 @@ export async function ensureHopServer(laneRoot: string): Promise<WarmServerInfo>
     // campaign. The config mtime is the cheap, truthful signal.
     const currentMtime = laneConfigMtime(key);
     if (currentMtime !== cached.configMtimeMs) {
+      // v0.0.86 (#335) — a config change is deferred to the hop boundary.
+      // The walker runs up to 3 hops on one lane; rewriting opencode.json for
+      // hop B used to kill the warm server under hop A mid-turn. Keep the
+      // stale server for the running hop(s); the next hop after settle sees
+      // the same mtime mismatch and respawns then.
+      if ((cached.activeTurns ?? 0) > 0) {
+        console.log(`[hop-runtime] lane config changed (was ${cached.configMtimeMs}, now ${currentMtime}) while ${cached.activeTurns} hop(s) run — deferring the respawn to the hop boundary`);
+        cached.lastUsed = Date.now();
+        touchHopServer(cached.child.pid);
+        return cached;
+      }
       console.log(`[hop-runtime] lane config changed (was ${cached.configMtimeMs}, now ${currentMtime}) — respawning the warm server`);
       invalidateHopServer(cached);
     } else {

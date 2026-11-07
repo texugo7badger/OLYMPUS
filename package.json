@@ -1,6 +1,6 @@
 {
   "name": "olympus",
-  "version": "0.0.85",
+  "version": "0.0.86",
   "description": "Olympus \u2014 automated multi-agent operating system built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
   "author": "OLYMPUS Contributors",
   "license": "AGPL-3.0-or-later",
@@ -100,7 +100,10 @@
     "references:refresh": "node scripts/references-refresh.mjs",
     "i18n:audit": "tsx scripts/i18n-audit.mjs",
     "fps:probe": "node scripts/fps-probe.mjs",
-    "cost:audit:gate": "tsx scripts/cost-audit.ts --strict"
+    "cost:audit:gate": "tsx scripts/cost-audit.ts --strict",
+    "builds:check": "npx tsx scripts/builds-check.mjs",
+    "bench:hops": "node scripts/bench-hops.mjs",
+    "builds:report": "npx tsx scripts/builds-report.mjs"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",

@@ -22,7 +22,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { appendFileSync, existsSync, readFileSync, symlinkSync, writeFileSync, mkdirSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, symlinkSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join, isAbsolute, basename } from 'node:path';
@@ -43,11 +43,13 @@ import { dirname } from 'node:path';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
 import { findOlympusRoot } from '@/lib/opencode-spawn';
 import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencode-session';
-import { markLaneAlive, markLaneDead, laneChain, isLaneDeadClass } from '@/lib/lane-health';
+import { markLaneAlive, markLaneDead, laneChain, isLaneDeadClass, isLaneAvailable, readLaneHealth } from '@/lib/lane-health';
 import { FREE_HYBRID_ROSTER } from '@/lib/model-strategies';
 import { backupBeforeDestructiveHop } from '@/lib/destructive-guard';
 import { applyRunManifestFile, buildRunMcpManifest, getRunMcpManifest, setRunMcpManifest } from '@/lib/mcp-run-manifest';
 import { checkCostCaps } from '@/lib/cost-caps';
+import { SEED_DESIGN_BUILDS, buildPrompt, mergeBuildStats, type DesignBuild } from '@/lib/design-builds';
+import { getVaultRoot } from '@/lib/vault-root';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
@@ -166,6 +168,15 @@ export interface HopTelemetryRow {
   transport?: 'warm' | 'spawn';
   /** R31-08: the script's bounded stdout/stderr tail (deterministic steps). */
   outputTail?: string;
+  /** v0.0.86 — THE CAUSE, not just the bucket. 75 AIME rows said
+   *  `parked-dispatch-failed` with an empty error, so the user could not tell
+   *  transport from tool budget from a missing agent. */
+  error?: string;
+  errorClass?: string | null;
+  /** The first failing deterministic check (verify-failed rows). */
+  failedCheck?: string | null;
+  /** v0.0.86 (#343) — the Build Hub loadout the hop actually equipped. */
+  build?: string | null;
 }
 
 export function hopTelemetryPath(stateDir: string): string {
@@ -304,12 +315,58 @@ export function composeHopPrompt(hop: PlanHop, laneRoot: string): string {
  * fixtures (the RAG block is additive, never contract-breaking). No hits +
  * no instincts = the plain sync form (lean, never padded).
  */
+/**
+ * v0.0.86 (#343) — THE BUILD IS AN EXECUTION CONTRACT.
+ *
+ * `buildPrompt()` used to render only inside the Build Hub; no dispatch route
+ * ever injected it, so a matched loadout changed a card, not the hop. The
+ * walker now resolves the declared `buildId` (or the best god+skill/MCP fit),
+ * injects the loadout into the hop prompt, and records the build on the
+ * telemetry row + the arsenal-resonance log.
+ */
+function readUserBuilds(): DesignBuild[] {
+  try {
+    const home = process.env.OLYMPUS_HOME || join(process.env.HOME || '', '.olympus');
+    const raw = JSON.parse(readFileSync(join(home, 'design-builds.json'), 'utf-8'));
+    const list = Array.isArray(raw) ? raw : Array.isArray(raw?.builds) ? raw.builds : [];
+    return list.filter((b: any) => b && typeof b.id === 'string' && typeof b.god === 'string');
+  } catch { return []; }
+}
+
+export function resolveHopBuild(hop: PlanHop): DesignBuild | null {
+  const all = [...SEED_DESIGN_BUILDS, ...readUserBuilds()];
+  const declared = String(hop.buildId ?? '').trim();
+  if (declared) {
+    return all.find((b) => b.id === declared || b.name === declared) ?? null;
+  }
+  const lower = (xs: Array<string | undefined>) => new Set(xs.filter(Boolean).map((x) => String(x).toLowerCase()));
+  const skills = lower([...(hop.skills ?? []), hop.skill]);
+  const mcps = lower([...(hop.mcps ?? []), hop.mcp]);
+  const demigods = lower([...(hop.demigods ?? []), hop.demigod]);
+  let best: DesignBuild | null = null;
+  let bestScore = 0;
+  for (const b of all) {
+    if (String(b.god).toLowerCase() !== String(hop.god).toLowerCase()) continue;
+    let score = 0;
+    for (const sk of b.skills) if (skills.has(sk.toLowerCase())) score += 2;
+    for (const m of b.mcps) if (mcps.has(m.toLowerCase())) score += 2;
+    for (const d of b.demigods) if (demigods.has(d.toLowerCase())) score += 1;
+    if (score > bestScore) { bestScore = score; best = b; }
+  }
+  // A single coincidental skill is not a loadout; require a real fit
+  // (skill + MCP, two skills, or skill + demigod).
+  return bestScore >= 3 ? best : null;
+}
+
 export async function composeHopPromptWithRag(
   hop: PlanHop,
   laneRoot: string,
   campaignQuery?: string,
 ): Promise<string> {
-  const base = composeHopPrompt(hop, laneRoot);
+  const build = resolveHopBuild(hop);
+  const base = build
+    ? `${composeHopPrompt(hop, laneRoot)}\n\n${buildPrompt(mergeBuildStats([build], [])[0])}`
+    : composeHopPrompt(hop, laneRoot);
   // The hop's own slice is the query; campaignQuery is only the fallback
   // for the degenerate empty-slice shape (never the shared-mush primary).
   const query = String(hop.prompt ?? '').slice(0, 400) || campaignQuery || '';
@@ -541,6 +598,31 @@ export { isLaneDeadClass } from '@/lib/lane-health';
  * absorbed per resolveRetryPlan(), exhaustion reported for the PARK.
  */
 /**
+ * v0.0.86 (#334) — CLASSIFY A DISPATCH FAILURE, never park classless.
+ *
+ * The spellings below come from the real AIME tails: a warm-transport
+ * ECONNREFUSED, a spawn `Agent not found: "hephaestus-hop"`, a tool-budget
+ * kill, a provider quota/402, and a ceiling kill. The class is stored in the
+ * park + telemetry so the task sheet can name the cause and the walker can
+ * decide whether another lane could help.
+ */
+export type DispatchFailureClass = 'transport' | 'tool-budget' | 'provider' | 'agent-missing' | 'model-missing' | 'timeout' | 'script' | 'unknown';
+
+export function classifyDispatchFailure(input: { error?: string | null; errorClass?: string | null } | string | null | undefined): DispatchFailureClass {
+  const text = typeof input === 'string' ? input : String(input?.error ?? '');
+  const declared = typeof input === 'object' && input ? String(input.errorClass ?? '') : '';
+  const hay = `${declared} ${text}`;
+  if (/all-lanes-dead|provider\.(quota|free-limit|no-route|auth|rate-limit)|quota|rate.?limit|\b401\b|\b402\b|\b403\b|no-route|auth/i.test(hay)) return 'provider';
+  if (/agent not found|unknown agent|no agent named/i.test(hay)) return 'agent-missing';
+  if (/model not found|unknown model|no such model/i.test(hay)) return 'model-missing';
+  if (/hop-tool-budget|tool.?budget|too many tool/i.test(hay)) return 'tool-budget';
+  if (/econnrefused|econnreset|socket hang up|warm turn stalled|warm-transport|connect timeout|fetch failed|network error/i.test(hay)) return 'transport';
+  if (/ceiling-kill|timed out|timeout|silent|stall/i.test(hay)) return 'timeout';
+  if (/script exit|script-timeout|script spawn failed/i.test(hay)) return 'script';
+  return 'unknown';
+}
+
+/**
  * R31-08 — DETERMINISTIC SCRIPT STEP.
  *
  * A script hop runs a bounded shell command in the lane with ZERO LLM tokens;
@@ -561,7 +643,13 @@ function runScriptHop(hop: PlanHop, laneRoot: string): Promise<HopDispatchResult
       clearTimeout(timer);
       resolve(r);
     };
-    const child = spawn('bash', ['-lc', command], {
+    // v0.0.86 (#335) — trace every line. `set -euo pipefail` exits silently
+    // when a `[ ]` test fails, which is how p4b parked with `script exit 1: `
+    // (empty). `set -x` writes the failing line to stderr; the tail is kept
+    // only for the error (success stays quiet).
+    const traced = `set -x\n${command}`;
+    const firstLine = command.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
+    const child = spawn('bash', ['-lc', traced], {
       cwd: laneRoot,
       env: { ...process.env, OLYMPUS_HOP_ID: hop.id, OLYMPUS_HOP_KIND: 'script' },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -571,7 +659,7 @@ function runScriptHop(hop: PlanHop, laneRoot: string): Promise<HopDispatchResult
       done({
         ok: false, exitCode: null, output: out, tokensIn: 0, tokensOut: 0,
         retriesAbsorbed: 0, exhausted: false,
-        error: `script-timeout (${timeoutMs}ms): ${(err || out).slice(-800)}`,
+        error: `script-timeout (${timeoutMs}ms) — ${firstLine}\n${(err || out).slice(-1200)}`,
         errorClass: 'script-timeout',
       });
     }, timeoutMs);
@@ -589,7 +677,7 @@ function runScriptHop(hop: PlanHop, laneRoot: string): Promise<HopDispatchResult
         done({
           ok: false, exitCode: code, output, tokensIn: 0, tokensOut: 0,
           retriesAbsorbed: 0, exhausted: false,
-          error: `script exit ${code}: ${(err || out).slice(-800)}`,
+          error: `script exit ${code} — ${firstLine}\n${(err || out).slice(-1200)}`,
           errorClass: 'script-failed',
         });
       }
@@ -616,6 +704,18 @@ async function attemptLane(
   // R31-09 — the hop runs as its lean variant (no olympus/symphony tools).
   const hopAgent = resolveHopAgentId(hop.god, ctx.laneRoot);
   for (let attempt = 0; ; attempt++) {
+    // v0.0.86 (#333) — a lane marked dead WHILE this hop was in flight must
+    // not absorb another full crescendo. Check before every retry and hand the
+    // class up so the chain fails over immediately.
+    if (attempt > 0 && !isLaneAvailable(lane)) {
+      const entry = readLaneHealth().lanes[lane];
+      return {
+        kind: 'lane-dead',
+        errorClass: entry?.status ?? 'unknown',
+        retryAfterMs: entry?.retryUntil ? Math.max(0, entry.retryUntil - Date.now()) : null,
+        error: `lane '${lane}' was marked dead during the hop (${entry?.status ?? 'unknown'}) — failing over instead of retrying it`,
+      };
+    }
     // v0.0.52 — never start a retry after the campaign deadline. The in-flight
     // attempt is already clipped by hardTimeoutMs; this closes the retry gap.
     if (ctx.deadlineAt && Date.now() >= ctx.deadlineAt) {
@@ -1168,6 +1268,22 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   // whole quarantine. The overnight auto-resume sets this; a boot/orphan
   // pickup keeps the quarantine intact; a human resume clears it entirely.
   if (opts.retryParkedHop && state?.parked?.hopId) quarantined.delete(state.parked.hopId);
+  // v0.0.86 — A FIXED PLAN DESERVES A RETRY. AIME's p4b was quarantined on a
+  // silent script exit; the plan was then rewritten with a traced, node-based
+  // close, but the auto-resume kept the quarantine and declared the walk
+  // complete with the fixed hop still pending. If the plan file is newer than
+  // the hop state, the park reason may no longer exist: clear the quarantine
+  // so the corrected hop re-runs (the human resume keeps its own semantics).
+  if (opts.keepQuarantine && quarantined.size > 0) {
+    try {
+      const planMtime = statSync(join(stateDir, 'dispatch-plan.json')).mtimeMs;
+      const stateMtime = Date.parse(String(state?.updatedAt ?? '')) || 0;
+      if (stateMtime && planMtime > stateMtime + 1_000) {
+        console.log(`[hop-runtime] plan changed after the last park (${new Date(planMtime).toISOString()} > ${new Date(stateMtime).toISOString()}) — clearing ${quarantined.size} stale quarantine(s) so the fixed hop can re-run`);
+        quarantined.clear();
+      }
+    } catch { /* no plan mtime — keep the quarantine */ }
+  }
   const rows: HopTelemetryRow[] = [];
 
   // #RESTART-SPECIMEN (2026-10-16, 22:27): the walk died mid-hop-1 (the app
@@ -1207,7 +1323,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
    */
   let attempts = 0;
   let parks = 0;
-  const parkHop = (hop: PlanHop, reason: string, error?: string, verify?: HopVerifyResult): void => {
+  const parkHop = (hop: PlanHop, reason: string, error?: string, verify?: HopVerifyResult, errorClass?: string | null): void => {
     parks += 1;
     quarantined.add(hop.id);
     parkedHop = {
@@ -1215,6 +1331,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       reason,
       ts: new Date().toISOString(),
       error,
+      ...(errorClass ? { errorClass } : {}),
       ...(verify ? { verify } : {}),
     };
     emit({ type: 'hop_parked', hop: hop.id, god: hop.god, reason, error });
@@ -1229,16 +1346,18 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       });
     }
   };
-  const telemetryRow = (hop: PlanHop, r: HopDispatchResult | null, status: string, startedAt: number): HopTelemetryRow => {
+  const telemetryRow = (hop: PlanHop, r: HopDispatchResult | null, status: string, startedAt: number, extra?: { failedCheck?: string | null }): HopTelemetryRow => {
     // `lane` is the MODEL lane (the pool the hop actually ran on), not the
     // project directory. The dir is already in every other row/event and the
     // hop state; writing it here made the telemetry's lane column useless for
     // the one question it exists to answer ("which pool served this hop?").
     // When the failover moved the hop, the dispatch result names the real lane.
+    const hopBuild = resolveHopBuild(hop);
     const row: HopTelemetryRow = {
       ts: new Date().toISOString(),
       hop: hop.id,
       god: hop.god,
+      build: hopBuild?.id ?? null,
       lane: r?.lane ?? resolveGodModelLane(hop.god) ?? laneRoot,
       tokensIn: r?.tokensIn ?? null,
       tokensOut: r?.tokensOut ?? null,
@@ -1249,8 +1368,33 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       sessionId: r?.sessionId ?? undefined,
       transport: r?.transport,
       ...(r?.output ? { outputTail: String(r.output).slice(-2_000) } : {}),
+      ...(status !== 'completed' && r ? {
+        error: String(r.error ?? '').slice(0, 2_000),
+        errorClass: r.errorClass ?? classifyDispatchFailure(r),
+      } : {}),
+      ...(extra?.failedCheck ? { failedCheck: extra.failedCheck } : {}),
     };
     appendHopTelemetry(stateDir, row);
+    // v0.0.86 (#343) — the outcome returns to the resonance log the Build Hub
+    // learns from. A build with 5 samples promotes itself; before this, the
+    // hub could never see a dispatch outcome.
+    try {
+      const resonance = join(getVaultRoot(), '03_Index', 'arsenal-resonance.jsonl');
+      appendFileSync(resonance, JSON.stringify({
+        ts: row.ts,
+        task_signature: String(hop.prompt ?? '').slice(0, 200),
+        god: hop.god,
+        hop: hop.id,
+        build: hopBuild?.id ?? null,
+        skill: hop.skills?.[0] ?? hop.skill ?? null,
+        mcp: hop.mcps?.[0] ?? hop.mcp ?? null,
+        demigod: hop.demigods?.[0] ?? hop.demigod ?? null,
+        outcome: status,
+        durationMs: row.durationMs,
+        tokensIn: row.tokensIn,
+        tokensOut: row.tokensOut,
+      }) + '\n');
+    } catch { /* resonance is evidence, never a walk blocker */ }
     // v0.0.85 — THE SAME EVENT REACHES THE PC AND THE PHONE. The desktop
     // notification file is the one feed both surfaces read; appending here
     // means a hop settle is no longer visible only in the terminal. The
@@ -1494,17 +1638,21 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
                 transport: result.transport,
               });
             } else {
-              parkHop(next, 'verify-failed', verify.checks.find((c) => !c.ok)?.detail, verify);
-              telemetryRow(next, result, 'parked-verify-failed', startedAt);
+              const failed = verify.checks.find((c) => !c.ok);
+              parkHop(next, 'verify-failed', failed?.detail, verify, 'verify');
+              telemetryRow(next, result, 'parked-verify-failed', startedAt, { failedCheck: failed?.check ?? null });
             }
           } else if (next.kind === 'script') {
             parkHop(next, 'script-failed', result.error);
             telemetryRow(next, result, 'parked-script-failed', startedAt);
           } else if (result.exhausted) {
-            parkHop(next, 'retry-exhausted', result.error);
+            parkHop(next, 'retry-exhausted', result.error, undefined, result.errorClass ?? classifyDispatchFailure(result));
             telemetryRow(next, result, 'parked-retry-exhausted', startedAt);
           } else {
-            parkHop(next, 'dispatch-failed', result.error);
+            // v0.0.86 (#334) — the bucket alone is not actionable: name the
+            // cause on the park itself ("dispatch-failed:transport, …").
+            const failureClass = result.errorClass ?? classifyDispatchFailure(result);
+            parkHop(next, `dispatch-failed:${failureClass}`, result.error, undefined, failureClass);
             telemetryRow(next, result, 'parked-dispatch-failed', startedAt);
           }
           task.done = true;
@@ -1578,6 +1726,32 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     launch();
     void settle();
   });
+
+  // v0.0.86 — NEVER CALL A PARTIAL PLAN "WALKED". The AIME 01:53 specimen:
+  // the walker finished 30/50 and the CLI said "campaign complete, every wave
+  // GREEN" while 20 hops were pending — every one of them blocked behind a
+  // quarantined hop. If pending hops remain and no park is named, name the
+  // stall and its blockers; a resumed walk must know exactly where it stopped.
+  const pendingAtEnd = plan.hops.filter((h) => !completed.has(h.id));
+  if (pendingAtEnd.length > 0 && !parkedHop) {
+    const blocked = pendingAtEnd.map((h) => ({
+      hop: h,
+      missing: (h.after ?? []).filter((d) => !completed.has(d)),
+    }));
+    const trulyBlocked = blocked.filter((b) => b.missing.length > 0);
+    const readyLeft = blocked.filter((b) => b.missing.length === 0);
+    const first = (trulyBlocked[0] ?? readyLeft[0])?.hop;
+    if (first) {
+      const reason = trulyBlocked.length > 0 ? 'blocked-dependencies' : 'walk-stopped-early';
+      const detail = trulyBlocked.length > 0
+        ? `${pendingAtEnd.length} hop(s) pending — ${trulyBlocked.length} blocked by unfinished dependencies: ` +
+          trulyBlocked.slice(0, 6).map((b) => `${b.hop.id} (after ${b.missing.join(', ')})`).join('; ')
+        : `${pendingAtEnd.length} hop(s) ready but the walk stopped without dispatching them — a walker defect, resume is safe`;
+      parkedHop = { hopId: first.id, reason, ts: new Date().toISOString(), error: detail };
+      emit({ type: 'hop_parked', hop: first.id, god: first.god, reason, error: detail });
+      console.log(`[hop-runtime] ${reason}: ${detail}`);
+    }
+  }
 
   // The walk is over: the final state clears the RUNNING set (nothing is
   // in flight anymore — the file never lies about liveness).

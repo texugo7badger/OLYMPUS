@@ -34,18 +34,35 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.85 — the Apollo companion in your pocket.**
-The mobile companion and the live widget are now two installable PWAs with the
-same OLYMPUS mark painted by the active theme, one service worker, in-app
-switching and an install prompt. The widget is a living briefing: what the
-project is, the hop in flight, the parked reason, recent settles and the next
-hops — zero tokens, read from the plan and telemetry on disk. Apollo answers
-"resumo do projeto" / "brief me" by voice and reads the same briefing; every
-card can speak in the responsible god's voice. Real mobile and desktop
-captures of the live preview sit under a critique box that sends the note to
-Apollo, and the PC and phone share one notification feed (with native OS
-notifications while the PWA runs). The widget is also a theme remote: one tap
-changes the PC and the phone. **v0.0.84 — the park that survives a resume.**
+**v0.0.86 — every god live, every park named.**
+The Parthenon now shows all ten gods from second zero: the task API overlays
+the live event state, so a god working a hop is visible before the terminal
+has ever streamed a frame, and every card opens that god's own durable
+terminal. A mark-preview edit lands in Athena's thread as a pending request,
+her turn runs in the background, and the reply appears in the same thread —
+the mark is a steering adjustment to the work she is already doing, not a
+detached process with its output discarded. The turn ceiling is 30 minutes
+(was 15 in the action route, 10 in the session), the hop hard cap is 40, and
+the pre-step reasoning cap is 48 KB with a taller, non-yanking thinking box —
+the AIME `c13b` kill and the truncated-thoughts reports are the specimens.
+Every hop that parks now names its cause (`dispatch-failed:transport`,
+`:tool-budget`, `:provider`, `:agent-missing`, …), script failures carry the
+traced failing line and the command, a lane marked dead mid-hop fails over
+instead of burning another crescendo, a config change waits for the hop
+boundary, a fixed plan clears the stale quarantine, and a partial plan can no
+longer be reported as "walked". The dead-model-lane chip lists the lane and
+the reason and Settings → LLM Strategy has a real Retry. The Build Hub ships
+Phase 0 in full: 60 curated builds (12 new), a `builds:check` reference gate,
+path-based skill ids, optional-key badges, the matrix moved to an on-demand
+labelled fallback, and the fused `spec-lifecycle` / `docs-truth` /
+`asset-pipeline` builds. A hop's `buildId` (or best god+skill/MCP fit) now
+injects the build into the dispatch and writes the outcome back to
+`arsenal-resonance.jsonl`, so a build is an execution contract. `bench:hops`
+turns a lane's telemetry into the AIME benchmark (completion/park rates,
+p50/p90 duration, token and null-token truth) with an optional gate. The
+mobile pairing dialog now shows **one QR for the OLYMPUS app** — the widget
+opens from inside it. **v0.0.85 — the Apollo companion in your pocket.**
+**v0.0.84 — the park that survives a resume.**
 A machine auto-resume (overnight or boot orphan pickup) now keeps the hop
 quarantine: the hops that just parked are not re-run from scratch, while a
 human start still retries them. A park is truth on disk from the initial

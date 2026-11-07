@@ -1,6 +1,14 @@
 # OLYMPUS Roadmap
 
-**v0.0.85 is the current release** (2026-11-06) — the Apollo companion in
+**v0.0.86 is the current release** (2026-11-07) — every god live and every
+park named: the Parthenon renders all ten gods from second zero with a durable
+per-god terminal (a mark-preview request lands in Athena's thread and she
+steers her current work), the turn ceiling is 30 min with a 40-min hop hard
+cap and a 48 KB reasoning prelude, parks are classified by cause with
+mid-hop lane failover and honest partial-plan reporting, the dead-lane chip
+names the lane and retries it, and the Build Hub ships Phase 0 plus 12 new
+builds with a `builds:check` gate and dispatch-time build injection.
+**v0.0.85** was the Apollo companion in
 your pocket: `/m` and `/m/widget` are two installable PWAs with the same
 themed icon, one worker and in-app switching; a zero-token briefing (current
 hop, parked reason, recent settles, next hops) spoken by Apollo and every
