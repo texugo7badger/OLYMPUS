@@ -19,6 +19,8 @@ export interface HopPark {
   ts: string;
   /** The last error text (the exhaustion card's error class, if any). */
   error?: string;
+  /** v0.0.87 — the classified cause (timeout/tool-budget/provider/…). */
+  errorClass?: string | null;
 }
 
 export interface HopInFlight {
@@ -52,6 +54,11 @@ export interface HopStateFile {
    *  (telemetry rows land only at hop settle; before this, a running hop
    *  was indistinguishable from a pending one — the first-hop lie). */
   inFlight?: HopInFlight[];
+  /** v0.0.88 — the plan generation this state was walked with. */
+  generation?: number;
+  /** v0.0.88 — the hop definition hashes at the time each completed id was
+   *  marked. A changed definition invalidates the completed id. */
+  hopHashes?: Record<string, string>;
   updatedAt: string;
 }
 

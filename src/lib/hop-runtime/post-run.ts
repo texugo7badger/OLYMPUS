@@ -159,6 +159,9 @@ import { buildOvernightDigest, buildWaveReports, writeOvernightDigest } from './
 import { hopStatePath, saveHopState } from './hop-state';
 import { createGate, getPendingGates, listGates, resolveGate } from '@/lib/hitl-gates';
 import { appendActivity } from '@/lib/activity-feed';
+import { patrolLane } from '@/lib/atlas-patrol';
+import { decideRecovery, applyRecovery } from './recovery';
+import { stagePlanRewriteIfWalking } from './plan-generation';
 import { publishHopEvent } from './hop-events';
 
 export const DISPATCH_PLAN_FILENAME = 'dispatch-plan.json';
@@ -375,10 +378,27 @@ export async function maybeWalkThePlan(opts: {
   // If another walker holds a LIVE lock, this turn must not touch the plan
   // and must not refuse: report the campaign on the log channel and return,
   // so the assistant's answer still reaches the terminal.
+  // v0.0.88 — a rewrite is staged even when the campaign is PARKED (no live
+  // lock): the frozen generation stays the one the user resumes; the new
+  // plan waits for an explicit apply. This is the enforcement behind the
+  // CAMPAIGN CONTEXT steering law.
+  const stagedBefore = stagePlanRewriteIfWalking(opts.laneRoot);
+  if (stagedBefore.staged && stagedBefore.diff) {
+    opts.send?.({
+      type: 'log',
+      msg: `Plan rewrite staged: +${stagedBefore.diff.added.length} / -${stagedBefore.diff.removed.length} / ~${stagedBefore.diff.changed.length} hops — the active generation stays; apply it at a boundary from the Parthenon.`,
+      ts: new Date().toISOString(),
+    });
+  }
   const liveLock = readWalkLock(opts.laneRoot);
   if (liveLock.holder && liveLock.alive) {
     const who = liveLock.holder;
-    const msg = `Campaign already walking this lane (pid ${who.pid}, plan '${who.slug}', started ${who.startedAt}) — no second walk; chat stays available. Follow the hops in God Intelligence.`;
+    // v0.0.88 — a planner rewrite is STAGED, never written over a live plan.
+    const staged = stagePlanRewriteIfWalking(opts.laneRoot);
+    const stagedNote = staged.staged && staged.diff
+      ? ` Plan rewrite staged: +${staged.diff.added.length} / -${staged.diff.removed.length} / ~${staged.diff.changed.length} hops; the live walk stays on its frozen generation and the next plan waits for a boundary.`
+      : '';
+    const msg = `Campaign already walking this lane (pid ${who.pid}, plan '${who.slug}', started ${who.startedAt}) — no second walk; chat stays available.${stagedNote} Follow the hops in God Intelligence.`;
     opts.send?.({ type: 'log', msg, ts: new Date().toISOString() });
     return { walked: false, reason: 'already-walking', completed: 0, total: 0, parked: null, summaryLine: msg };
   }
@@ -661,45 +681,30 @@ export async function maybeWalkThePlan(opts: {
   // healthy walks). Non-fatal by contract: a verdict failure never touches
   // the summary.
   let atlasVerdict: string | null = null;
+  let atlasFinding: import('@/lib/atlas-patrol').PatrolFinding | null = null;
   if (parked) {
+    // v0.0.88 — THE VERDICT IS DETERMINISTIC AND INSTANT. The old call was a
+    // full hop dispatch raced against 120s; it always timed out in a heavy
+    // campaign and the dispatcher kept running in the background (a leak).
+    // The patrol already reads the state/telemetry/lanes and names the action.
     try {
-      const { spawnHopDispatcher } = await import('./walker');
-      const atlasLane = resolveGodModelLane('atlas');
-      if (atlasLane) {
-        const verdictHop: import('./plan-schema').PlanHop = {
-          id: 'atlas-verdict',
-          god: 'atlas',
-          prompt: [
-            'PROJECT VERIFICATION VERDICT (you are Atlas, the orchestrator).',
-            `The walk parked at hop '${parked.hopId}' (reason: ${parked.reason}) with ${completed}/${totalHops} hops done.`,
-            `The lane: ${opts.laneRoot}`,
-            'Write a BOUNDED verdict (max 6 lines, plain text, no headers):',
-            '1. WHAT failed (one line, the failure class in your own words).',
-            '2. The LIKELY cause (one line — read the hop state / the lane as needed, do not re-run anything).',
-            '3. The RESUME recommendation (one line — what the user should do before resuming).',
-            'Do NOT fix anything. Do NOT write code. Verdict only.',
-          ].join('\n'),
-          artifacts: [],
-        };
-        // W-Q VERDICT-BOUND (the 2026-10-21 20:30 specimen): the verdict
-        // call sat IN THE CRITICAL PATH with no wall-clock bound — a slow
-        // free-lane dispatch held the walk summary (and the whole stream)
-        // hostage for 25+ minutes after the walk itself had resolved. The
-        // verdict is a nicety, never a gate: past the bound it is skipped
-        // and the summary ships.
-        const VERDICT_TIMEOUT_MS = Number(process.env.OLYMPUS_ATLAS_VERDICT_MS || 120_000);
-        const r = await Promise.race([
-          spawnHopDispatcher(verdictHop, { laneRoot: opts.laneRoot, prompt: verdictHop.prompt }),
-          new Promise<null>((resolveTimeout) => setTimeout(() => resolveTimeout(null), VERDICT_TIMEOUT_MS)),
-        ]);
-        if (r === null) {
-          opts.send?.({ type: 'log', msg: `Atlas verdict skipped — the call exceeded the ${Math.round(VERDICT_TIMEOUT_MS / 1000)}s bound (the walk summary ships without it; the lane verdict lands on the next resume).`, ts: new Date().toISOString() });
-        }
-        if (r?.ok && r.output) {
-          atlasVerdict = String(r.output).trim().slice(0, 1200);
-          try { writeFileSync(join(opts.laneRoot, '.olympus-atlas-verdict.md'), `# Atlas verification verdict — ${new Date().toISOString()}\n\n${atlasVerdict}\n`, 'utf-8'); } catch { /* the file is best-effort */ }
-          opts.send?.({ type: 'atlas_verdict', msg: atlasVerdict, parked, ts: new Date().toISOString() });
-        }
+      const report = patrolLane(opts.laneRoot);
+      atlasFinding = report.parked[0] ?? report.stuck[0] ?? null;
+      atlasVerdict = atlasFinding
+        ? `${atlasFinding.verdict.toUpperCase()} (${atlasFinding.failureClass}) — ${atlasFinding.recommendation}`
+        : report.summary;
+      try {
+        writeFileSync(
+          join(opts.laneRoot, '.olympus-atlas-verdict.md'),
+          `# Atlas verification verdict — ${new Date().toISOString()}\n\n${report.summary}\n\n` +
+            (atlasFinding ? `- hop: ${atlasFinding.hopId}\n- class: ${atlasFinding.failureClass}\n- lane: ${atlasFinding.lane ?? 'unknown'}\n- next: ${atlasFinding.nextLane ?? 'none'}\n- verdict: ${atlasFinding.verdict}\n- action: ${atlasFinding.recommendation}\n` : '') + '\n',
+          'utf-8',
+        );
+      } catch { /* the file is best-effort */ }
+      opts.send?.({ type: 'atlas_verdict', msg: atlasVerdict, parked, finding: atlasFinding, ts: new Date().toISOString() });
+      // Deep think is opt-in and NEVER blocks the summary.
+      if (process.env.OLYMPUS_ATLAS_DEEP === '1' && atlasFinding) {
+        void import('@/lib/atlas-patrol').then(({ askAtlas: deep }) => deep(opts.laneRoot, atlasFinding!)).catch(() => { /* optional */ });
       }
     } catch { /* the verdict never breaks the summary */ }
   }
@@ -780,17 +785,42 @@ export async function maybeWalkThePlan(opts: {
       : 12;
     const maxAttempts = plan?.autoResume ? planAttempts : Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_ATTEMPTS ?? 3));
     if (parked && attempt < maxAttempts) {
-      const delayMs = Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_DELAY_MS ?? 60_000));
-      opts.send?.({ type: 'log', msg: `[OVERNIGHT] wave parked at '${parked.hopId}' (${parked.reason}) — auto-resume ${attempt + 1}/${maxAttempts} in ${Math.round(delayMs / 1000)}s (no human input needed).`, ts: new Date().toISOString() });
-      try {
-        appendActivity({
-          god: 'atlas', action: 'milestone', project: opts.slug,
-          msg: `[OVERNIGHT] auto-resume ${attempt + 1}/${maxAttempts} — the walk parked at '${parked.hopId}' (${parked.reason}).`,
-          meta: { kind: 'overnight-resume', hop: parked.hopId, reason: parked.reason, attempt: attempt + 1, lane: opts.laneRoot },
-        });
-      } catch { /* the night log never breaks the walk */ }
-      if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
-      return maybeWalkThePlan({ ...opts, unattended: true, overnightAttempt: attempt + 1, keepQuarantine: true, retryParkedHop: true });
+      // v0.0.88 — ATLAS RECOVERS, NOT A BLIND RE-RUN. The old block re-ran the
+      // same hop/lane/prompt three times and produced three identical parks.
+      opts.send?.({ type: 'log', msg: `[OVERNIGHT] wave parked at '${parked.hopId}' (${parked.reason}) — Atlas is deciding the recovery (${attempt + 1}/${maxAttempts}).`, ts: new Date().toISOString() });
+      const report = patrolLane(opts.laneRoot);
+      const finding = report.parked[0] ?? report.stuck[0] ?? null;
+      if (!finding) {
+        opts.send?.({ type: 'log', msg: `[ATLAS] parked at '${parked.hopId}', but no patrol finding was readable — stopping instead of a blind retry.`, ts: new Date().toISOString() });
+      } else {
+        const decision = decideRecovery(opts.laneRoot, finding);
+        if (decision.action === 'stop') {
+          opts.send?.({ type: 'log', msg: `[ATLAS] ${decision.message} — the walk stops here; the user has the evidence.`, ts: new Date().toISOString() });
+          try {
+            appendActivity({
+              god: 'atlas', action: 'needs-user', project: opts.slug,
+              msg: `Atlas needs the user: ${decision.message}`,
+              meta: { kind: 'recovery-stop', hop: finding.hopId, failureClass: finding.failureClass, lane: opts.laneRoot },
+            });
+          } catch { /* best effort */ }
+        } else {
+          applyRecovery(opts.laneRoot, finding, decision);
+          // The night-log contract survives the new recovery engine: one
+          // explicit overnight-resume row per retry (the digest reads it).
+          try {
+            appendActivity({
+              god: 'atlas', action: 'milestone', project: opts.slug,
+              msg: `[OVERNIGHT] auto-resume ${attempt + 1}/${maxAttempts} — ${decision.message}`,
+              meta: { kind: 'overnight-resume', hop: finding.hopId, reason: finding.failureClass, attempt: attempt + 1, lane: opts.laneRoot },
+            });
+          } catch { /* night log best-effort */ }
+          const envDelay = Number(process.env.OLYMPUS_OVERNIGHT_RESUME_DELAY_MS);
+          const delayMs = Math.max(0, Number.isFinite(envDelay) ? envDelay : decision.delayMs);
+          opts.send?.({ type: 'log', msg: `[ATLAS] ${decision.message} — resuming${delayMs ? ` in ${Math.round(delayMs / 1000)}s` : ''} (${attempt + 1}/${maxAttempts}).`, ts: new Date().toISOString() });
+          if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+          return maybeWalkThePlan({ ...opts, unattended: true, overnightAttempt: attempt + 1, keepQuarantine: true, retryParkedHop: true });
+        }
+      }
     }
     try {
       const planOnDisk = JSON.parse(sanitizePlanJson(readFileSync(planPath, 'utf-8')));

@@ -143,6 +143,9 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   const [campaignStats, setCampaignStats] = useState<null | { total: number; completed: number; parked: number; projectedRemainingMs: number }>(null);
   // v0.0.87 — Atlas's deterministic patrol rides the same tasks poll.
   const [atlasPatrol, setAtlasPatrol] = useState<null | { summary: string; parked: number; stuck: number; verdict: string | null; hopId: string | null; nextLane: string | null }>(null);
+  const [campaignHealth, setCampaignHealth] = useState<null | { verdict: string; line: string; reasons: string[]; completed: number; total: number; generation: number; nextPlan: { added: number; removed: number; changed: number } | null }>(null);
+  const [projectSlug, setProjectSlug] = useState<string | null>(null);
+  const [applyingPlan, setApplyingPlan] = useState(false);
   // The god's LIVE demigod dispatches (the arsenal in action — the
   // parallelism-of-parallelism surface: god → demigod chips).
   const language = useLanguage();
@@ -164,6 +167,8 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
         setTasks(byGod);
         if (d?.stats) setCampaignStats(d.stats);
         setAtlasPatrol(d?.atlasPatrol ?? null);
+        setCampaignHealth(d?.campaignHealth ?? null);
+        setProjectSlug(d?.project ?? null);
         setDemigods(d?.gods
           ? Object.fromEntries(Object.entries(d.gods as Record<string, { demigods?: DemigodLive[] }>)
               .map(([g, v]) => [g, v.demigods || []]))
@@ -187,6 +192,21 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
         <span>Parthenon</span>
         <span className="ml-auto normal-case tracking-normal flex items-center gap-1.5">
           <span>{active} active / {ordered.length}</span>
+          {campaignHealth && (
+            <span
+              className={cn(
+                'rounded px-1 py-0.5 text-[7px] font-mono uppercase tracking-wide',
+                campaignHealth.verdict === 'HEALTHY' ? 'bg-olympus-green/15 text-olympus-green'
+                  : campaignHealth.verdict === 'DONE' ? 'bg-olympus-green/15 text-olympus-green'
+                  : campaignHealth.verdict === 'NEEDS-YOU' ? 'bg-olympus-red/15 text-olympus-red'
+                  : campaignHealth.verdict === 'BLOCKED' ? 'bg-olympus-red/15 text-olympus-red'
+                  : 'bg-olympus-gold/15 text-olympus-gold',
+              )}
+              data-tip={`${campaignHealth.line}\n${(campaignHealth.reasons || []).join('\n')}`}
+            >
+              {campaignHealth.verdict}
+            </span>
+          )}
           {/* W-D3: the persistent campaign header — N/M hops + the projected
               time-to-finish (the user's headline ask) + the parked badge.
               Nothing when no campaign is live (the honest empty). */}
@@ -239,6 +259,29 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           <span>{atlasPatrol.parked} parked · {atlasPatrol.stuck} stuck</span>
           {atlasPatrol.verdict && <span className="text-olympus-cyan">· {atlasPatrol.verdict}</span>}
           {atlasPatrol.nextLane && <span className="truncate">→ {atlasPatrol.nextLane}</span>}
+          {campaignHealth?.nextPlan && projectSlug && (
+            <button
+              type="button"
+              disabled={applyingPlan}
+              onClick={async () => {
+                setApplyingPlan(true);
+                try {
+                  const r = await fetch('/api/olympus/walk/plan', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ slug: projectSlug, action: 'apply' }),
+                  });
+                  const d = await r.json().catch(() => ({}));
+                  if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+                  window.location.reload();
+                } catch (e) { console.warn('apply next plan', e); }
+                setApplyingPlan(false);
+              }}
+              className="shrink-0 rounded border border-olympus-gold/30 px-1 py-0.5 text-[7px] text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
+              data-tip={`Staged next generation: +${campaignHealth.nextPlan.added} / -${campaignHealth.nextPlan.removed} / ~${campaignHealth.nextPlan.changed}. Applies only at a hop boundary.`}
+            >
+              {applyingPlan ? 'applying…' : `apply +${campaignHealth.nextPlan.added}`}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setChatGod('atlas')}

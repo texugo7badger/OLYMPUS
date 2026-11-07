@@ -549,34 +549,47 @@ export async function readSessionTotals(
   sessionId: string | null,
 ): Promise<{ input: number; output: number; cacheRead: number; reasoning: number } | null> {
   if (!sessionId) return null;
-  const dbPath = path.join(olympusHome(), 'hop-data', 'opencode', 'opencode.db');
-  if (!fs.existsSync(dbPath)) return null;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      const mod: any = await import('better-sqlite3');
-      const Database = mod?.default ?? mod;
-      const db = new Database(dbPath, { readonly: true });
+  // v0.0.88 — the warm hop session may live in the GLOBAL OpenCode DB (the
+  // app's serve) while this reader only looked at the hop-data DB. That is
+  // why 59.6% of the AIME rows had null tokens even after the ledger fix.
+  const candidates = [
+    path.join(olympusHome(), 'hop-data', 'opencode', 'opencode.db'),
+    process.env.OPENCODE_DATA_DIR ? path.join(process.env.OPENCODE_DATA_DIR, 'opencode.db') : '',
+    path.join(os.homedir(), '.local', 'share', 'opencode', 'opencode.db'),
+    path.join(olympusHome(), 'opencode', 'opencode.db'),
+    path.join(os.homedir(), '.config', 'opencode', 'opencode.db'),
+  ].filter(Boolean);
+  for (const dbPath of [...new Set(candidates)]) {
+    if (!fs.existsSync(dbPath)) continue;
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const row = db
-          .prepare('SELECT tokens_input, tokens_output, tokens_cache_read, tokens_reasoning FROM session_v2 WHERE id = ?')
-          .get(sessionId) as any;
-        if (row) {
-          const input = Number(row.tokens_input) || 0;
-          const output = Number(row.tokens_output) || 0;
-          if (input > 0 || output > 0) {
-            return {
-              input,
-              output,
-              cacheRead: Number(row.tokens_cache_read) || 0,
-              reasoning: Number(row.tokens_reasoning) || 0,
-            };
+        const mod: any = await import('better-sqlite3');
+        const Database = mod?.default ?? mod;
+        const db = new Database(dbPath, { readonly: true });
+        try {
+          const hasV2 = !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='session_v2'").get();
+          if (!hasV2) continue;
+          const row = db
+            .prepare('SELECT tokens_input, tokens_output, tokens_cache_read, tokens_reasoning FROM session_v2 WHERE id = ?')
+            .get(sessionId) as any;
+          if (row) {
+            const input = Number(row.tokens_input) || 0;
+            const output = Number(row.tokens_output) || 0;
+            if (input > 0 || output > 0) {
+              return {
+                input,
+                output,
+                cacheRead: Number(row.tokens_cache_read) || 0,
+                reasoning: Number(row.tokens_reasoning) || 0,
+              };
+            }
           }
+        } finally {
+          db.close();
         }
-      } finally {
-        db.close();
-      }
-    } catch { /* native module or lock — retry, then give up honestly */ }
-    await new Promise((r) => setTimeout(r, 200));
+      } catch { /* native module or lock — retry, then give up honestly */ }
+      await new Promise((r) => setTimeout(r, 150));
+    }
   }
   return null;
 }

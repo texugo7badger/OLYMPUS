@@ -29,7 +29,7 @@ const clean = run(['--json']);
 let cleanJson = null;
 try { cleanJson = JSON.parse(clean.stdout); } catch { /* reported below */ }
 expect('B-1: the curated registry resolves every reference', clean.status === 0 && cleanJson?.ok === true, clean.stdout.slice(-500) + clean.stderr.slice(-300));
-expect('B-2: the shelf is curated (60), not the 200-entry matrix', cleanJson?.builds === 60 && cleanJson?.failures?.length === 0, cleanJson);
+expect('B-2: the shelf is curated (68), not the 200-entry matrix', cleanJson?.builds === 68 && cleanJson?.failures?.length === 0, cleanJson);
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-builds-'));
 const fixture = path.join(tmp, 'bad-builds.json');

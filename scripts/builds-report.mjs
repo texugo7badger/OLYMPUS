@@ -49,7 +49,9 @@ lines.push('| H4 optional-key badge | done | builds whose MCP key is missing sho
 lines.push('| H5 matrix fallback | done | the 200 `mx-*` entries are on demand (`?matrix=1`), labelled `generated`, never in the default shelf |');
 lines.push('| H6 fusions | done | `spec-lifecycle`, `docs-truth`, `asset-pipeline`; `brain-backup` build renamed `vault-backup` |');
 lines.push('| Build → dispatch | done | a hop\'s `buildId` (or best god+skill/MCP fit) injects `buildPrompt()` and writes back to `arsenal-resonance.jsonl` |');
-lines.push('| 12 new builds | done | eval, RAG, ETL, browser agent, skill scanner, agent audit, mobile, MCP lifecycle, FinOps, canary, learn, artifacts |');
+lines.push('| 12 new builds (v0.0.86) | done | eval, RAG, ETL, browser agent, skill scanner, agent audit, mobile, MCP lifecycle, FinOps, canary, learn, artifacts |');
+lines.push('| 8 next-wave builds (v0.0.88) | done | creative-3d, gen-art-pipeline, game-prototype, audio-lane, pentest, supply-chain, k8s-terraform, homelab-ops |');
+lines.push('| Build packs v0 (v0.0.88) | done | digest-signed export/import + ToxicSkills-style scan; high findings block |');
 lines.push('');
 lines.push('## Catalog');
 lines.push('');

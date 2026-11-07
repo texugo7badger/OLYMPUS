@@ -15,27 +15,39 @@
 | **Live drill** | 100 hops, hibernation, soak, a real campaign | local, against the running app |
 | **Campaign** | real gods, real artifacts, p50/p90, parks | AIME lane |
 
-## The public core (v0.0.81)
+## The public core (v0.0.88)
 
-Ten pure suites are published — no vault, no credentials — and a clean clone
+Twenty-seven hermetic suites are published — no vault, no credentials — and a clean clone
 runs them:
 
 ```
 cost-caps · docs-check · terminal-paste · preview-share · alignment-preview
 i18n-audit · theme-gallery · god-chat · brain-live · cost-window
+context-handoff · plan-recovery · atlas-patrol · cost-speed · apollo-narrative
+parthenon-live · hop-failure-class · builds-check · build-execution · bench-hops
+sync-map-scope · mobile-companion · companion-apps · campaign-smoke
+concurrency · build-packs · demigod-archive
 ```
 
-`.github/workflows/core.yml` runs `tsc` + lint + the ten suites. Verified from a
-fresh clone with a linked `node_modules`: **10/10 exit 0**.
+`.github/workflows/core.yml` runs `tsc` + lint + the 27 public suites. The
+`campaign-smoke` suite is the acceptance: 10 hops, one tool-budget park, Atlas
+recovery, resumed walk **10/10 with no human**.
 
-The rest of the suites are not in the public repository: they read the maintainer's vault,
-lanes and credentials. What ships publicly is the **method and the measured
-result**, never a green badge without a number.
+`npm run suites:manifest` (v0.0.88, #330) is the checked-in map: every one of
+the 171 suites is PUBLIC (tracked + CI), TRACKED_LOCAL (in the repo but needs
+the local OpenCode run state/overlay) or LOCAL (maintainer machine, with a
+named reason). The manifest is `scripts/local-suites.manifest.json`; the
+command fails on drift, so a new suite cannot be silently invisible.
+
+The maintainer-only battery still reads the real vault, lanes and credentials;
+its numbers ride `public/stable.json` and are gated by `docs-check`. What ships
+publicly is the **method, the hermetic proof and the measured result**, never a
+green badge without a number.
 
 ## What the suites protect
 
 - **Hop runtime** — plan schema, DAG validation, 40% balance, 150s launch
-  floor, 30-minute cap, 14-tool budget, warm→spawn fallback, artifact rescue,
+  floor, 40-minute cap, 20-tool budget with per-hop overrides, plan generations/recovery, warm→spawn fallback, artifact rescue,
   park causes, resume, telemetry.
 - **UI & accessibility** — reduced motion, focus rings, contrast, tooltips,
   the one-loader boot gate, the mobile companion's 390×844 surface.
@@ -78,7 +90,7 @@ claimed here.
 
 | Evidence | Result |
 |---|---|
-| Battery | **153 PASS / 0 FAIL / 1 declared skip** (154 suites) |
+| Battery | **170 PASS / 0 FAIL / 1 declared skip** (171 suites) at v0.0.88 |
 | 100-hop spine | **100/100** in 9.9s · p50 189ms · p95 225ms · 0 tokens |
 | Soak while walking | **24 rounds PASS** · 5/5 probes · p95 ≤ 120ms |
 | Hibernation drill | pre-hibernation artifact **byte-identical**; 0 lost |

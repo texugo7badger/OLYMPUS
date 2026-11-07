@@ -53,6 +53,7 @@ const walk = (dir, out = []) => {
 const demigodRoot = path.join(ROOT, '.opencode', 'prompts', 'agents', 'demigods');
 const declared = new Map(); // id -> god
 for (const god of fs.existsSync(demigodRoot) ? fs.readdirSync(demigodRoot) : []) {
+  if (god === '_archive') continue; // v0.0.88 — archived demigods are not declared
   const dir = path.join(demigodRoot, god);
   if (!fs.statSync(dir).isDirectory()) continue;
   for (const file of walk(dir)) {

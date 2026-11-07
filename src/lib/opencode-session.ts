@@ -45,6 +45,7 @@ import { LLM_STRATEGIES } from '@/lib/model-strategies';
 import { markLaneDead, isLaneDeadClass, pruneStaleLanes } from '@/lib/lane-health';
 import { activeModelFor } from '@/lib/lane-probe';
 import { getVaultRoot } from '@/lib/vault-root';
+import { campaignContextBlock } from '@/lib/campaign-context';
 // Issue #41: explicit, revisable permission policy. Replaces the silent
 // auto-approve branch in the event pump; the vault prefixes below now seed
 // `paths.always` in ~/.olympus/permissions.json instead of living as a
@@ -320,6 +321,13 @@ export function buildStrategyContextBlock(opts?: { sessionId?: string | null; us
   const lang = opts?.userText
     ? recordUserLanguage(opts?.sessionId ?? null, opts.userText)
     : conversationLanguage(opts?.sessionId ?? null);
+  // v0.0.88 — the campaign is visible in EVERY turn (generation, parks,
+  // Atlas verdict, last recovery) and carries the steering law that stops a
+  // follow-up from rewriting a live plan.
+  try {
+    const campaign = campaignContextBlock();
+    if (campaign) lines.push('', campaign);
+  } catch { /* the context never breaks a turn */ }
   const directive = languageDirective(lang);
   if (directive) lines.push(directive);
   return lines.join('\n');

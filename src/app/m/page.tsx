@@ -58,6 +58,7 @@ type RunState = {
     total?: number;
     inFlight?: number;
     inFlightList?: Array<{ hopId: string; god?: string; startedAt?: string }>;
+    campaignHealth?: { verdict?: string; line?: string } | null;
     parked?: { hopId?: string; reason?: string } | null;
   };
 };
@@ -734,6 +735,11 @@ export default function MobileCompanion() {
                 <span>{campaignLabel}</span>
               </div>
               <p className="mt-1 text-[11px] leading-relaxed break-words">{run?.line || t('m.waitingWalker', language)}</p>
+              {run?.hops?.campaignHealth?.line && (
+                <p className="mt-1 text-[9px] font-mono text-olympus-text-dim break-words">
+                  {run.hops.campaignHealth.line}
+                </p>
+              )}
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-olympus-bg">
                 <div className="h-full rounded-full bg-olympus-gold" style={{ width: `${pct}%` }} />
               </div>

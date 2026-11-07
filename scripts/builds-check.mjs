@@ -94,6 +94,7 @@ const demigodOwners = new Map(); // normalized name → Set(gods)
 const DEMIGOD_ROOT = path.join(ROOT, '.opencode', 'prompts', 'agents', 'demigods');
 try {
   for (const god of fs.readdirSync(DEMIGOD_ROOT)) {
+    if (god === '_archive') continue; // v0.0.88 — archived demigods are not in service
     const dir = path.join(DEMIGOD_ROOT, god);
     let entries = [];
     try { entries = fs.readdirSync(dir); } catch { continue; }

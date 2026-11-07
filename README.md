@@ -34,6 +34,26 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.88 — the campaign that finishes.**
+A plan is now a generation: every hop carries a definition hash, the live walk
+freezes its snapshot, and a planner rewrite is staged as `dispatch-plan.next`
+instead of mutating the DAG under the walker. Atlas's verdict is deterministic
+and instant (no more 120s `verdict skipped`), and a recovery policy acts on
+each park — tool-budget gets a 24-call override, timeouts fail over, verify
+failures get a targeted fix, provider/auth stops and asks the user — bounded to
+2 per hop and 6 per campaign, then the walk resumes by itself. Every Apollo
+turn sees the campaign context and the steering law (no rewriting a live plan).
+One health line (`HEALTHY / DEGRADED / BLOCKED / NEEDS-YOU / PAUSED / DONE`)
+rides the Parthenon and the phone. The tool budget is 20 with per-hop
+overrides; warm hops read tokens from the global session DB or record a named
+null reason. The public core CI grows to 27 suites; `docs-check` now covers
+V1-READINESS and the README Testing numbers. Builds: 68 curated (8 new), build
+packs export/import with a ToxicSkills-style scan. The fleet cut is reversible:
+61 never-used demigods archived (122 → 61 live; 10 gods + 61 = 71 agents) with
+a one-command restore. Concurrency stays 3 by default with a measured 4-width
+experiment and an AIMD-off knob. `npm run soak:note8` runs the 100-hop + soak
+harness; the note-8 claim stays **not claimed** until an external campaign
+exists. **v0.0.87 — Apollo speaks, Atlas thinks, the ledger tells the truth.**
 **v0.0.87 — Apollo speaks, Atlas thinks, the ledger tells the truth.**
 Apollo narrates every long turn (elapsed + last tool) and a dead lane fails
 fast with the next healthy lane named instead of hanging for 180s. Atlas
@@ -154,13 +174,13 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**153 PASS / 0 FAIL / 1 declared skip** across 154 suites; a 100-hop
+**170 PASS / 0 FAIL / 1 declared skip** across 171 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache
 hit, list value, invoice unknown) and the docs are gated by
-`npm run docs:check`. The suites stay maintainer-local; the evidence is
-public. Read [TESTING.md](TESTING.md).
+`npm run docs:check`. The hermetic suite is public and gated; the full battery runs on the maintainer's
+machine and its numbers are derived from `public/stable.json`. Read [TESTING.md](TESTING.md).
 
 ## Responsive by design
 
@@ -300,7 +320,7 @@ and `ffmpeg` on PATH. The first transcription downloads the Whisper base model
 OLYMPUS is a multi-agent AI operating system built on [OpenCode](https://opencode.ai). It runs as a standalone **Electron desktop app** on Linux. Other platforms should use WSL. OLYMPUS routes each task to the cheapest LLM that can handle it, cascades token compression across five layers (including the Symphony latent protocol), and learns from every action via a self-curating **VaultBrain**.
 
 - **Three ways to run.** The GO plan (flat monthly, no per-token charges), OpenCode **Zen** (pay-as-you-go, no request caps), or **Local** — your own hardware (Ollama, LM Studio, vLLM, llama.cpp, or any OpenAI-compatible endpoint). The zero-cost path is the local lane, and it tells you exactly what it found (see [LOCAL-LLM.md](LOCAL-LLM.md)).
-- **10 gods + 122 demigods (132 agents).** Apollo is the only god who talks to you; the other 9 are dispatched by Apollo via Symphony.
+- **10 gods + 61 demigods (71 agents).** Apollo is the only god who talks to you; the other 9 are dispatched by Apollo via Symphony.
 - **The Craft Apps inside (v0.0.8).** The thirteen open-source ArtCraft apps (image editor, vector illustration, video, PDF, word processing, CAD, spreadsheets) are DOWNLOADED INTO OLYMPUS — the self-hosted web builds run embedded from your own disk (no login, ever; auto-update ON), the native portable builds open as real OS windows, and the `olympus-craft` MCP gives the agents headless CLI/JSON control. The AI crafting Studio rides the live lane.
 - **Self-curating brain.** Each god maintains an instinct pool — empirical patterns that, at confidence ≥ 0.85, **short-circuit** deliberation. The design intent is that OLYMPUS gets faster and cheaper with use; the 2026-10-31 measured baseline shows the gate is still **0/2,999** and the campaign is slower than intended, so treat the improvement as a target, not a shipped claim. Live telemetry in the God Intelligence Dashboard shows the hit rate + tokens saved; see [BENCHMARKS.md](BENCHMARKS.md) for the honest numbers.
 - **Always open.** AGPL-3.0-or-later. The public code is the most up-to-date and best version — forever.
@@ -368,7 +388,7 @@ olympus apply-strategy go-budget
 | Feature | What it does |
 |---------|--------------|
 | **10 Gods** | Apollo (primary) + Atlas (orchestration) + 7 specialists + Callimachus (background vault curator). Each has a fixed domain and model. |
-| **122 Demigods** | Unprefixed specialists organized under `.opencode/prompts/agents/demigods/<god>/`. |
+| **61 Demigods** | Unprefixed live specialists organized under `.opencode/prompts/agents/demigods/<god>/`; 61 never-used ids archived with a one-command restore. |
 | **Symphony v1.0** | Latent God↔Demigod protocol. Every dispatch is a `VibrationalSignature` — no textual dispatch path. The old 70–90% transport claim was **refuted in CAL-1**; the protocol is real, the saving is measured per campaign. |
 | **VaultBrain v3.0** | Self-curating brain at `~/OLYMPUS-VAULT/05_Auto_Learning/`. Seed + empirical + archive instincts, cross-god patterns, 7-stage maintenance loop. |
 | **Cascading Compression** | 5 layers, wired. The percentages were **design math**, not measured; the measured economy today is the hop shape + an 89.7% cache hit (`npm run cost:audit`). |
@@ -416,11 +436,11 @@ The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash
 | `zen-budget` (**Zen**) | GPT 6 Luna | GPT 6 Luna | DeepSeek V4.1 Flash (backend/security/QA/DB) · GLM-5.3-Flash (frontend/DevOps) | Claude Haiku 5.5 |
 | `local` (**Local**) | your harness model | same | same | same |
 
-The **Zen** strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) run the full 132-agent OLYMPUS on OpenCode Zen — pay-as-you-go, **no request caps**, built around **proprietary APIs** (GPT 6.1 Sol, Claude Sonnet 5.5/Opus 5.5, Gemini 3.1 Pro, Grok 4.7) while the GO plan runs the open-weight line (GLM, DeepSeek, Qwen, Hy3). Model ids use `opencode/<id>`. Authorize via `olympus opencode` → `/connect` → OpenCode Zen (key stored in OpenCode's own auth.json under the `opencode` provider; env override `OPENCODE_API_KEY`). NOTE: OpenAI/Anthropic requests are retained 30 days per their data policies — the open-weight and trial models are zero-retention.
+The **Zen** strategies (`zen-max-quality`, `zen-balanced`, `zen-budget`) run the full 71-agent OLYMPUS on OpenCode Zen — pay-as-you-go, **no request caps**, built around **proprietary APIs** (GPT 6.1 Sol, Claude Sonnet 5.5/Opus 5.5, Gemini 3.1 Pro, Grok 4.7) while the GO plan runs the open-weight line (GLM, DeepSeek, Qwen, Hy3). Model ids use `opencode/<id>`. Authorize via `olympus opencode` → `/connect` → OpenCode Zen (key stored in OpenCode's own auth.json under the `opencode` provider; env override `OPENCODE_API_KEY`). NOTE: OpenAI/Anthropic requests are retained 30 days per their data policies — the open-weight and trial models are zero-retention.
 
 DeepSeek V4.1 Flash (the 1017 line) is the preferred lane across GO Balanced/Budget and the max-quality specialists; DeepSeek V4 Pro is retired. **ZEN** is the private-model lane (GPT 6.1 Sol, Claude Sonnet 5.5/Opus 5.5, Gemini 3.1 Pro, Grok 4.7) for users who want proprietary models.
 
-The **Local** strategy (`local`) requires no plan and no key: OLYMPUS probes your machine for a local LLM server (Ollama `:11434`, LM Studio `:1234`, vLLM `:8000`, llama.cpp `:8080`, or any OpenAI-compatible endpoint) and wires the full 10-god + 122-demigod arsenal to it. The apply refuses with the exact probe result if nothing answers — no dead config, no hidden fallback. Requirements: tool calling + ≥32k context; see [LOCAL-LLM.md](LOCAL-LLM.md) for the honest hardware table.
+The **Local** strategy (`local`) requires no plan and no key: OLYMPUS probes your machine for a local LLM server (Ollama `:11434`, LM Studio `:1234`, vLLM `:8000`, llama.cpp `:8080`, or any OpenAI-compatible endpoint) and wires the full 10-god + 61-demigod arsenal to it. The apply refuses with the exact probe result if nothing answers — no dead config, no hidden fallback. Requirements: tool calling + ≥32k context; see [LOCAL-LLM.md](LOCAL-LLM.md) for the honest hardware table.
 
 ## Uninstall
 
@@ -434,7 +454,7 @@ bash scripts/install/uninstall.sh
 
 | Document | Description |
 |----------|-------------|
-| [AGENTS.md](AGENTS.md) | The 10 gods, 122 demigods, dispatch protocol, instinct system, Symphony |
+| [AGENTS.md](AGENTS.md) | The 10 gods, 61 demigods, dispatch protocol, instinct system, Symphony |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Layered architecture, plugin/MCP stacks, cache instrumentation, Symphony |
 | [EDITORS.md](EDITORS.md) | Supported external editors (Zed, VSCode, VSCodium, Cursor), per-OS install commands, Terminal Bridge protocol |
 | [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) | LLM strategy reference — GO plan strategies, Zen (private models), Local (your hardware), the Strategy Builder, demigod inheritance, switching strategies |

@@ -218,7 +218,7 @@ async function main() {
     return;
   }
 
-  const { walkPlan, MAX_HOP_CONCURRENCY, MAX_HOP_PER_POOL, maxHopsPerPoolFor, resolveGodModelLane } = mod;
+  const { walkPlan, MAX_HOP_CONCURRENCY, MAX_HOP_PER_POOL, maxHopsPerPoolFor, resolveGodModelLane, resolveHopConcurrency } = mod;
   const schema = await import(OLYMPUS + '/src/lib/hop-runtime/plan-schema.ts');
   const { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS } = schema;
 
@@ -287,8 +287,8 @@ async function main() {
   };
   const capState = tempLane(); // telemetry/state in a scratch dir
   const walk1 = await walkPlan({ plan: capPlan, dispatcher: capDisp, stateDir: capState });
-  expect('W: MAX_HOP_CONCURRENCY = 3 (the #106 law)', MAX_HOP_CONCURRENCY === 3, String(MAX_HOP_CONCURRENCY));
-  expect('W: the cap held (4 roots runnable, never 4 in flight)', maxInFlight <= 3, 'max=' + maxInFlight);
+  expect('W: MAX_HOP_CONCURRENCY = 4 (v0.0.88 experiment cap; default 3)', MAX_HOP_CONCURRENCY === 4 && resolveHopConcurrency({}) === 3, `${MAX_HOP_CONCURRENCY}/${resolveHopConcurrency({})}`);
+  expect('W: the default cap held (4 roots runnable, 3 in flight)', maxInFlight <= 3, 'max=' + maxInFlight);
   expect('W: the cap USED across DISTINCT pools (the roots actually ran concurrently)', maxInFlight === 3, 'max=' + maxInFlight + ' (want 3 — parallelism dead?)');
   // #POOL-CONTENTION (the 06:15-06:40 specimens): three same-lane hops
   // crawled a single free pool to a 25-minute ceiling-kill. The per-pool
@@ -312,7 +312,13 @@ async function main() {
     poolInFlight--;
     return { ok: true, exitCode: 0, output: 'ok', tokensIn: 100, tokensOut: 500, retriesAbsorbed: 0, exhausted: false };
   };
+  const prevConc = process.env.OLYMPUS_HOP_CONCURRENCY;
+  const prevAimd = process.env.OLYMPUS_HOP_AIMD;
+  process.env.OLYMPUS_HOP_CONCURRENCY = '4';
+  process.env.OLYMPUS_HOP_AIMD = '0';
   await walkPlan({ plan: poolPlan, dispatcher: poolDisp, stateDir: tempLane() });
+  if (prevConc === undefined) delete process.env.OLYMPUS_HOP_CONCURRENCY; else process.env.OLYMPUS_HOP_CONCURRENCY = prevConc;
+  if (prevAimd === undefined) delete process.env.OLYMPUS_HOP_AIMD; else process.env.OLYMPUS_HOP_AIMD = prevAimd;
   // #LANE-CAP (2026-10-24): the per-pool ceiling is LANE-AWARE now — a free
   // NVIDIA pool still saturates at 2 (the #POOL-CONTENTION cure), while a
   // paid/plan lane rides the full global cap (a single-lane BYOK strategy
@@ -488,11 +494,7 @@ async function main() {
     const attempted = [];
     const sysDisp = async (hop) => {
       attempted.push(hop.id);
-      if (hop.id === 'b' || hop.id === 'd') {
-        return { ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null, retriesAbsorbed: 0, exhausted: false, error: 'provider stall' };
-      }
-      fs.writeFileSync(path.join(sysLane, hop.artifacts[0]), 'done');
-      return { ok: true, exitCode: 0, output: 'ok', tokensIn: 10, tokensOut: 20, retriesAbsorbed: 0, exhausted: false };
+      return { ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null, retriesAbsorbed: 0, exhausted: false, error: 'provider stall' };
     };
     const sysState = tempLane();
     const sys = await walkPlan({ plan: sysPlan, dispatcher: sysDisp, stateDir: sysState });

@@ -29,7 +29,9 @@ const base = () => {
   write('VERSION', V + '\n');
   write('package.json', JSON.stringify({ version: V }));
   write('src/components/olympus/status-bar.tsx', `const v = process.env.NEXT_PUBLIC_VERSION || '${V}';\n`);
-  write('README.md', `# OLYMPUS\n\n## Latest\n\n**v${V} — the honest release.**\n`);
+  write('README.md', `# OLYMPUS\n\n## Latest\n\n**v${V} — the honest release.**\n\n## Testing & evidence\n\n**1 PASS / 0 FAIL / 0 declared skip** across 1 suites; the hermetic core.\n`);
+  write('V1-READINESS.md', `# OLYMPUS — v1.0 readiness\n\n> v${V} · 2026-11-07 · GO for an RC after note-8.\n`);
+  write('public/stable.json', JSON.stringify({ version: V, tests: { pass: 1, fail: 0, skip: 0, suites: 1 } }));
   write('CHANGELOG.md', `# Changelog\n\n## [v${V}] — 2026-11-04\n\n- shipped.\n`);
   write('ROADMAP.md', `# Roadmap\n\n**v${V} is the current release**.\n`);
   write('STABILITY.md', `# Stability\n\n> v${V} · the harness.\n`);

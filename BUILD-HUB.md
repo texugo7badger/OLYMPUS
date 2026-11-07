@@ -13,35 +13,37 @@
 | H5 matrix fallback | done | the 200 `mx-*` entries are on demand (`?matrix=1`), labelled `generated`, never in the default shelf |
 | H6 fusions | done | `spec-lifecycle`, `docs-truth`, `asset-pipeline`; `brain-backup` build renamed `vault-backup` |
 | Build → dispatch | done | a hop's `buildId` (or best god+skill/MCP fit) injects `buildPrompt()` and writes back to `arsenal-resonance.jsonl` |
-| 12 new builds | done | eval, RAG, ETL, browser agent, skill scanner, agent audit, mobile, MCP lifecycle, FinOps, canary, learn, artifacts |
+| 12 new builds (v0.0.86) | done | eval, RAG, ETL, browser agent, skill scanner, agent audit, mobile, MCP lifecycle, FinOps, canary, learn, artifacts |
+| 8 next-wave builds (v0.0.88) | done | creative-3d, gen-art-pipeline, game-prototype, audio-lane, pentest, supply-chain, k8s-terraform, homelab-ops |
+| Build packs v0 (v0.0.88) | done | digest-signed export/import + ToxicSkills-style scan; high findings block |
 
 ## Catalog
 
-**60 curated builds** · 0 hot · 15 warm · 45 cold.
+**68 curated builds** · 0 hot · 15 warm · 53 cold.
 
 | Category | Builds |
 |----------|-------:|
 | code | 5 |
 | curation | 4 |
 | data | 6 |
-| design | 22 |
-| infra | 6 |
-| integration | 5 |
+| design | 25 |
+| infra | 8 |
+| integration | 6 |
 | memory | 3 |
 | planning | 3 |
 | qa | 3 |
-| security | 3 |
+| security | 5 |
 
 | God | Builds |
 |-----|-------:|
-| athena | 21 |
+| athena | 22 |
+| hephaestus | 8 |
+| prometheus | 8 |
+| hermes | 7 |
 | callimachus | 7 |
-| hermes | 6 |
-| hephaestus | 6 |
-| prometheus | 6 |
 | persephone | 5 |
+| artemis | 5 |
 | dionysus | 3 |
-| artemis | 3 |
 | apollo | 2 |
 | atlas | 1 |
 
@@ -71,6 +73,7 @@
 | `brand-identity` | athena | brand-guardian | design-md, color-expert | originkit | visual:logo | cold |
 | `copy-direction` | athena | ux-researcher | article-writing | brave-search | build | cold |
 | `craft-prototype` | athena | ui-designer | frontend-design, shadcn-ui | olympus-craft | build | cold |
+| `creative-3d` | hephaestus | 3d-asset-engineer, vision-describer | algorithmic-art, art-generate | blender | test, build | cold |
 | `dashboard-system` | athena | state-architect | design-system, frontend-patterns | context7, shadcn | build, lint, visual:dashboard-exists | warm |
 | `data-table` | athena | ui-designer | frontend-patterns, design-system | shadcn | build | warm |
 | `hero-editorial` | athena | ui-designer | frontend-design, design-md, impeccable | originkit, context7 | visual:hero-exists, build | warm |
@@ -78,6 +81,8 @@
 | `empty-states` | athena | ui-designer | frontend-design, impeccable | originkit | visual:empty-exists | cold |
 | `error-pages` | athena | ui-designer | frontend-design | originkit | visual:error, build | cold |
 | `form-flow` | athena | ui-designer | frontend-a11y, frontend-patterns | shadcn | visual | warm |
+| `game-prototype` | athena | ui-designer, visual-verifier | design-system, code-tour | godot | test, visual | cold |
+| `gen-art-pipeline` | hephaestus | image-generator, vision-describer | art-generate, art-vlm | comfyui, pollinations | test, build | cold |
 | `icon-set` | athena | 2d-asset-designer | image-enhancer, design-md | originkit | visual:grid | cold |
 | `mobile-app` | athena | mobile-app-builder | react-native-patterns, frontend-design | context7 | typecheck, build | cold |
 | `motion-layer` | athena | performance-optimizer | gsap-core, motion-foundations | context7 | build | cold |
@@ -86,12 +91,15 @@
 | `responsive-pass` | athena | responsive-tester | frontend-patterns, web-design-guidelines | playwright | build | cold |
 | `settings-page` | athena | ui-designer | frontend-patterns, frontend-a11y | shadcn | build | cold |
 | `theme-system` | athena | ui-designer | design-md, design-system, color-expert | originkit | build | warm |
-| `canary-release` | prometheus | release-engineer, sre | deployment-patterns, canary-watch | github (needs github:GITHUB_PERSONAL_ACCESS_TOKEN) | build, test | cold |
-| `ci-pipeline` | prometheus | release-engineer | deployment-patterns, docker-patterns | github, docker (needs github:GITHUB_PERSONAL_ACCESS_TOKEN) | build | cold |
+| `canary-release` | prometheus | release-engineer, sre | deployment-patterns, canary-watch | github | build, test | cold |
+| `ci-pipeline` | prometheus | release-engineer | deployment-patterns, docker-patterns | github, docker | build | cold |
 | `finops-audit` | prometheus | finops-analyst | cost-tracking, cost-aware-llm-pipeline | filesystem | file-exists:evidence/finops.md | cold |
+| `homelab-ops` | prometheus | homelab-architect, network-architect, iot-fleet-engineer | cisco-ios-patterns, netmiko-ssh-automation | docker | test, build | cold |
 | `incident-drill` | prometheus | incident-responder, sre | deployment-patterns, error-handling | docker | test | cold |
+| `k8s-terraform` | prometheus | k8s-engineer, terraform-engineer | deployment-patterns, homelab-network-readiness | kubernetes | test, build | cold |
 | `observability` | prometheus | sre | deployment-patterns, error-handling | grafana (needs grafana:GRAFANA_URL, grafana:GRAFANA_API_KEY) | build | cold |
-| `release-train` | prometheus | release-engineer | deployment-patterns | github (needs github:GITHUB_PERSONAL_ACCESS_TOKEN) | build | warm |
+| `release-train` | prometheus | release-engineer | deployment-patterns | github | build | warm |
+| `audio-lane` | hermes | voice-ai-engineer, event-stream-architect | api-design, error-handling | rea | test, build | cold |
 | `mcp-integration` | hermes | mcp-builder | mcp-server-patterns, api-design | context7 | test | warm |
 | `mcp-lifecycle` | hermes | mcp-builder | mcp-server-patterns, api-design | context7 | test, build | cold |
 | `payment-flow` | hermes | payments-billing-engineer | api-design, security-review | context7 | test | cold |
@@ -106,9 +114,11 @@
 | `browser-agent` | dionysus | e2e-runner | e2e-testing, browser-qa | playwright | test | cold |
 | `eval-harness` | dionysus | test-automation-engineer, evidence-collector | eval-harness, agent-eval | filesystem | test, build | cold |
 | `test-suite` | dionysus | unit-test-author, e2e-runner | test-driven-development, e2e-testing | playwright | test | warm |
-| `auth-hardening` | artemis | security-reviewer, appsec-engineer | security-review, django-security | github (needs github:GITHUB_PERSONAL_ACCESS_TOKEN) | test | warm |
-| `secrets-rotation` | artemis | secrets-scanner | security-review, security-scan | github (needs github:GITHUB_PERSONAL_ACCESS_TOKEN) | test | cold |
-| `security-audit` | artemis | security-reviewer, secrets-scanner | security-review, security-scan | github (needs github:GITHUB_PERSONAL_ACCESS_TOKEN) | build | warm |
+| `auth-hardening` | artemis | security-reviewer, appsec-engineer | security-review, django-security | github | test | warm |
+| `pentest-build` | artemis | pentester, threat-analyst | security-scan, security-review | filesystem, github | test, build | cold |
+| `secrets-rotation` | artemis | secrets-scanner | security-review, security-scan | github | test | cold |
+| `security-audit` | artemis | security-reviewer, secrets-scanner | security-review, security-scan | github | build | warm |
+| `supply-chain-gate` | artemis | supply-chain-auditor, secrets-scanner | security-scan, ecc-tools-cost-audit | filesystem, github | test, file-omits:package.json::preinstall | cold |
 
 ## Gates
 

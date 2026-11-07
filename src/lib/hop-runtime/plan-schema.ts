@@ -63,6 +63,10 @@ export interface PlanHop {
   verify?: { review?: HopReview; checks?: string[] };
   /** Output budget. Defaults to MAX_HOP_BUDGET_TOKENS; never above it. */
   budgetTokens?: number;
+  /** v0.0.88 — per-hop tool-call budget (1..40). The walker falls back to
+   *  OLYMPUS_HOP_TOOL_BUDGET/default when absent. A tool-budget park can be
+   *  recovered by a hop override without rewriting the plan. */
+  toolBudget?: number;
 }
 
 export interface DispatchPlan {
@@ -71,6 +75,17 @@ export interface DispatchPlan {
   laneRoot: string;
   /** Optional resume hint: the hop to continue from. */
   resumePoint?: string;
+  /** v0.0.88 — the campaign generation. A rewrite is a NEW generation; the
+   *  live walk keeps a frozen snapshot and only applies the next one at a
+   *  boundary. */
+  generation?: number;
+  /** v0.0.88 — when this generation was created. */
+  createdAt?: string;
+  /** v0.0.88 — the generation this plan was derived from. */
+  parentGeneration?: number;
+  /** v0.0.88 — sha256 (24 chars) of every hop definition. A completed id
+   *  survives a generation change only when its hash is identical. */
+  hopHashes?: Record<string, string>;
   hops: PlanHop[];
 }
 
@@ -198,6 +213,9 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
       ...(skills.length ? { skills } : {}),
       ...(mcps.length ? { mcps } : {}),
       ...(demigods.length ? { demigods } : {}),
+      ...(typeof h.toolBudget === 'number' && Number.isFinite(h.toolBudget) && h.toolBudget > 0
+        ? { toolBudget: Math.max(1, Math.min(40, Math.round(h.toolBudget))) }
+        : {}),
       after, verify: { review, checks }, budgetTokens: budget,
     });
   }
@@ -252,6 +270,12 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
       version: 1,
       laneRoot: raw.laneRoot as string,
       resumePoint: typeof raw.resumePoint === 'string' ? raw.resumePoint : undefined,
+      ...(typeof raw.generation === 'number' && Number.isFinite(raw.generation) && raw.generation > 0
+        ? { generation: Math.round(raw.generation) } : {}),
+      ...(typeof raw.createdAt === 'string' ? { createdAt: raw.createdAt } : {}),
+      ...(typeof raw.parentGeneration === 'number' && Number.isFinite(raw.parentGeneration) && raw.parentGeneration > 0
+        ? { parentGeneration: Math.round(raw.parentGeneration) } : {}),
+      ...(isObj(raw.hopHashes) ? { hopHashes: raw.hopHashes as Record<string, string> } : {}),
       hops,
     },
   };

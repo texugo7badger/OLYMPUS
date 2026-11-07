@@ -1,0 +1,620 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-07T16:42:38.164Z",
+  "note": "PUBLIC suites are tracked and run by .github/workflows/core.yml; TRACKED_LOCAL suites are in the repo but need the local OpenCode run state/overlay; LOCAL suites stay on the maintainer machine and declare why. A fresh clone reproduces the public core; the full battery numbers ride public/stable.json.",
+  "public": [
+    "alignment-preview.test.mjs",
+    "apollo-narrative.test.mjs",
+    "atlas-patrol.test.mjs",
+    "bench-hops.test.mjs",
+    "brain-live.test.mjs",
+    "build-execution.test.mjs",
+    "build-packs.test.mjs",
+    "builds-check.test.mjs",
+    "campaign-smoke.test.mjs",
+    "companion-apps.test.mjs",
+    "concurrency.test.mjs",
+    "context-handoff.test.mjs",
+    "cost-caps.test.mjs",
+    "cost-speed.test.mjs",
+    "cost-window.test.mjs",
+    "demigod-archive.test.mjs",
+    "docs-check.test.mjs",
+    "god-chat.test.mjs",
+    "hop-failure-class.test.mjs",
+    "i18n-audit.test.mjs",
+    "mobile-companion.test.mjs",
+    "parthenon-live.test.mjs",
+    "plan-recovery.test.mjs",
+    "preview-share.test.mjs",
+    "sync-map-scope.test.mjs",
+    "terminal-paste.test.mjs",
+    "theme-gallery.test.mjs"
+  ],
+  "trackedLocal": [
+    {
+      "suite": "dev-server-manager.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "dispatch-cwd.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "handoff-continuity.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "hop-deadline.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "hop-runtime.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "lane-config-sync.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "planner-patience.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "progress.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "prompt-queue-hibernate.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "skill-index-refresh.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    }
+  ],
+  "local": [
+    {
+      "suite": "adaptive-polling.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "agreement-metric.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "apollo-scaffold.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "apply-noop.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "arsenal-recon.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "artcraft.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "atelier-keyfront.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "atelier-proof.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "athena-click.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "atlas-sync.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "auth-lane-census.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "autonomy-gate.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "autonomy.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "benchmark-session.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "boot-mode.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "budget-guard.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "build-icons.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "catalog-uniqueness.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "checkpoint.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "context-strategy-theme.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "continuation-cure.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "craft-apps.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "creative.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "db-health.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "design-builds.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "design-choice.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "design-decision.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "design-memory.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "desktop-notify.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "destructive-guard.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "dev-server-probe.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "dispatch-spine.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "editor-bridge.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "extension-commands.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "findings-foldback.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "first-prompt-intake.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "first-run.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "follow-agent.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "forge-23d.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "generation-contract.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "github-connect.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "go-usage.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "god-selection.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "hibernation-autoresume.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "hibernation-preserve.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "hop-agent.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "hop-live.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "hop-registry.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "hop-script.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "hop-transport.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "hop-verify-content.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "i18n-projects.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "i18n.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "image-gen.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "instinct-gate.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "integration-env.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "knowledge-seed.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "lane-failover.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "lane-probe-harness.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "launch-reliability.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "live-preview-url.test.mjs",
+      "reason": "needs a live local service (LLM/probe host)"
+    },
+    {
+      "suite": "loader.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "local-lane.test.mjs",
+      "reason": "needs a live local service (LLM/probe host)"
+    },
+    {
+      "suite": "logo-chameleon.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "mcp-arsenal.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "mcp-classification.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "mcp-config-shape.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "mcp-health.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "mcp-key-injection.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "mcp-native.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "mcp-quarantine.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "mcp-run-manifest.test.mjs",
+      "reason": "needs a real browser/CDP runtime"
+    },
+    {
+      "suite": "mcp-unify.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "measure-close.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "mobile-preview.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "model-context.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "multi-project.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "narration.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "notification-logo.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "notify-center.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "opencode-gate.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "opencode-session.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "opencode-update.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "originkit-budget.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "overnight-queue.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "pair-protocol.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "palette-lab.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "pane-latency.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "parallel-pantheon.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "plan-balance.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "power-suspend.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "premium-chat.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "probe-claim.test.mjs",
+      "reason": "needs a live local service (LLM/probe host)"
+    },
+    {
+      "suite": "project-brief.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "project-context.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "project-exit-gate.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "project-passport.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "project-routing.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "prompt-queue.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "references-catalog.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "resource-governor.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "retention.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "rlm-metabolism.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "server-lock.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "shortcircuit-gate.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "stability.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "standalone-boot.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "strategy-builder.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "strategy-registry.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "studio-persona.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "supervisor.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "suspend-drill.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "symphony-cable.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "sync-map-retention.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "talent-market.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "task-classifier.test.mjs",
+      "reason": "needs a real browser/CDP runtime"
+    },
+    {
+      "suite": "tasks-telemetry.test.mjs",
+      "reason": "reads local credentials/auth state"
+    },
+    {
+      "suite": "team-orchestration.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "telemetry-pulse.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "theme.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "token-speed.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "tooltips.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "ui-references.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "user-activity.test.mjs",
+      "reason": "reads the local app home (~/.olympus)"
+    },
+    {
+      "suite": "v1-readiness.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "vault-projects.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "verify-gates.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "voice-lane.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "w1-turn-completion.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "w4-dispatch-dna.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "w5-ux-chat.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "walk-lock.test.mjs",
+      "reason": "development-only suite; hermetic core does not include it"
+    },
+    {
+      "suite": "walk-root.test.mjs",
+      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
+    },
+    {
+      "suite": "warm-stall.test.mjs",
+      "reason": "reads local credentials/auth state"
+    }
+  ],
+  "count": {
+    "total": 171,
+    "public": 27,
+    "trackedLocal": 10,
+    "local": 134
+  }
+}

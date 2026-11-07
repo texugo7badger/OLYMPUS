@@ -1,0 +1,1045 @@
+{
+  "version": 1,
+  "archivedAt": "2026-11-07T16:09:30.940Z",
+  "kept": [
+    "architect",
+    "planner",
+    "scope-gatekeeper",
+    "spec-author",
+    "appsec-engineer",
+    "pentester",
+    "secrets-scanner",
+    "security-reviewer",
+    "supply-chain-auditor",
+    "threat-analyst",
+    "2d-asset-designer",
+    "a11y-auditor",
+    "brand-guardian",
+    "frontend-reviewer",
+    "mobile-app-builder",
+    "performance-optimizer",
+    "responsive-tester",
+    "state-architect",
+    "ui-designer",
+    "ux-researcher",
+    "visual-verifier",
+    "multi-agent-architect",
+    "brain-backup",
+    "brain-restore",
+    "docs-verifier",
+    "instinct-curator",
+    "skill-indexer",
+    "technical-writer",
+    "e2e-runner",
+    "evidence-collector",
+    "test-automation-engineer",
+    "unit-test-author",
+    "3d-asset-engineer",
+    "api-designer",
+    "build-resolver",
+    "code-verifier",
+    "image-generator",
+    "script-reviewer",
+    "vision-describer",
+    "api-integrator",
+    "event-stream-architect",
+    "mcp-builder",
+    "payments-billing-engineer",
+    "rag-pipeline-engineer",
+    "voice-ai-engineer",
+    "webhook-engineer",
+    "cache-architect",
+    "dbre",
+    "etl-pipeline-architect",
+    "migration-engineer",
+    "orm-specialist",
+    "query-optimizer",
+    "finops-analyst",
+    "homelab-architect",
+    "incident-responder",
+    "iot-fleet-engineer",
+    "k8s-engineer",
+    "network-architect",
+    "release-engineer",
+    "sre",
+    "terraform-engineer"
+  ],
+  "archived": [
+    {
+      "id": "demigod-author",
+      "god": "apollo",
+      "file": "demigod_author.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/glm-5.3-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/apollo/demigod_author.txt}"
+      },
+      "registryDef": {
+        "parent_god": "apollo",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/apollo/demigod_author.txt}"
+      }
+    },
+    {
+      "id": "rapid-prototyper",
+      "god": "apollo",
+      "file": "rapid_prototyper.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/glm-5.3-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/apollo/rapid_prototyper.txt}"
+      },
+      "registryDef": {
+        "parent_god": "apollo",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/apollo/rapid_prototyper.txt}"
+      }
+    },
+    {
+      "id": "risk-assessor",
+      "god": "apollo",
+      "file": "risk_assessor.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/glm-5.3-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/apollo/risk_assessor.txt}"
+      },
+      "registryDef": {
+        "parent_god": "apollo",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/apollo/risk_assessor.txt}"
+      }
+    },
+    {
+      "id": "spec-miner",
+      "god": "apollo",
+      "file": "spec_miner.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/glm-5.3-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/apollo/spec_miner.txt}"
+      },
+      "registryDef": {
+        "parent_god": "apollo",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/apollo/spec_miner.txt}"
+      }
+    },
+    {
+      "id": "ai-code-auditor",
+      "god": "artemis",
+      "file": "ai_code_auditor.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/ai_code_auditor.txt}"
+      },
+      "registryDef": {
+        "parent_god": "artemis",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/ai_code_auditor.txt}"
+      }
+    },
+    {
+      "id": "blockchain-security-auditor",
+      "god": "artemis",
+      "file": "blockchain_security_auditor.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/blockchain_security_auditor.txt}"
+      },
+      "registryDef": {
+        "parent_god": "artemis",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/blockchain_security_auditor.txt}"
+      }
+    },
+    {
+      "id": "cloud-security-auditor",
+      "god": "artemis",
+      "file": "cloud_security_auditor.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/cloud_security_auditor.txt}"
+      },
+      "registryDef": {
+        "parent_god": "artemis",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/cloud_security_auditor.txt}"
+      }
+    },
+    {
+      "id": "compliance-auditor",
+      "god": "artemis",
+      "file": "compliance_auditor.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/compliance_auditor.txt}"
+      },
+      "registryDef": {
+        "parent_god": "artemis",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/compliance_auditor.txt}"
+      }
+    },
+    {
+      "id": "privacy-engineer",
+      "god": "artemis",
+      "file": "privacy_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/privacy_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "artemis",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/privacy_engineer.txt}"
+      }
+    },
+    {
+      "id": "security-architect",
+      "god": "artemis",
+      "file": "security_architect.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/security_architect.txt}"
+      },
+      "registryDef": {
+        "parent_god": "artemis",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/artemis/security_architect.txt}"
+      }
+    },
+    {
+      "id": "i18n-specialist",
+      "god": "athena",
+      "file": "i18n_specialist.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.8-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/athena/i18n_specialist.txt}"
+      },
+      "registryDef": {
+        "parent_god": "athena",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/athena/i18n_specialist.txt}"
+      }
+    },
+    {
+      "id": "information-architect",
+      "god": "athena",
+      "file": "information_architect.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.8-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/athena/information_architect.txt}"
+      },
+      "registryDef": {
+        "parent_god": "athena",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/athena/information_architect.txt}"
+      }
+    },
+    {
+      "id": "section-508-specialist",
+      "god": "athena",
+      "file": "section_508_specialist.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.8-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/athena/section_508_specialist.txt}"
+      },
+      "registryDef": {
+        "parent_god": "athena",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/athena/section_508_specialist.txt}"
+      }
+    },
+    {
+      "id": "chief-of-staff",
+      "god": "atlas",
+      "file": "chief_of_staff.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/hy3",
+        "prompt": "{file:.opencode/prompts/agents/demigods/atlas/chief_of_staff.txt}"
+      },
+      "registryDef": {
+        "parent_god": "atlas",
+        "mode": "subagent",
+        "model": "opencode-go/hy3",
+        "prompt": "{file:.opencode/prompts/agents/demigods/atlas/chief_of_staff.txt}"
+      }
+    },
+    {
+      "id": "dag-optimizer",
+      "god": "atlas",
+      "file": "dag_optimizer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/hy3",
+        "prompt": "{file:.opencode/prompts/agents/demigods/atlas/dag_optimizer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "atlas",
+        "mode": "subagent",
+        "model": "opencode-go/hy3",
+        "prompt": "{file:.opencode/prompts/agents/demigods/atlas/dag_optimizer.txt}"
+      }
+    },
+    {
+      "id": "git-workflow-master",
+      "god": "atlas",
+      "file": "git_workflow_master.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/hy3",
+        "prompt": "{file:.opencode/prompts/agents/demigods/atlas/git_workflow_master.txt}"
+      },
+      "registryDef": {
+        "parent_god": "atlas",
+        "mode": "subagent",
+        "model": "opencode-go/hy3",
+        "prompt": "{file:.opencode/prompts/agents/demigods/atlas/git_workflow_master.txt}"
+      }
+    },
+    {
+      "id": "integration-compiler",
+      "god": "atlas",
+      "file": "integration_compiler.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/hy3",
+        "prompt": "{file:.opencode/prompts/agents/demigods/atlas/integration_compiler.txt}"
+      },
+      "registryDef": {
+        "parent_god": "atlas",
+        "mode": "subagent",
+        "model": "opencode-go/hy3",
+        "prompt": "{file:.opencode/prompts/agents/demigods/atlas/integration_compiler.txt}"
+      }
+    },
+    {
+      "id": "silent-failure-hunter",
+      "god": "atlas",
+      "file": "silent_failure_hunter.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/hy3",
+        "prompt": "{file:.opencode/prompts/agents/demigods/atlas/silent_failure_hunter.txt}"
+      },
+      "registryDef": {
+        "parent_god": "atlas",
+        "mode": "subagent",
+        "model": "opencode-go/hy3",
+        "prompt": "{file:.opencode/prompts/agents/demigods/atlas/silent_failure_hunter.txt}"
+      }
+    },
+    {
+      "id": "conversation-analyzer",
+      "god": "callimachus",
+      "file": "conversation_analyzer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/conversation_analyzer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "callimachus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/conversation_analyzer.txt}"
+      }
+    },
+    {
+      "id": "opensource-packager",
+      "god": "callimachus",
+      "file": "opensource_packager.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/opensource_packager.txt}"
+      },
+      "registryDef": {
+        "parent_god": "callimachus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/opensource_packager.txt}"
+      }
+    },
+    {
+      "id": "pattern-extractor",
+      "god": "callimachus",
+      "file": "pattern_extractor.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/glm-5.3-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/pattern_extractor.txt}"
+      },
+      "registryDef": {
+        "parent_god": "callimachus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/callimachus/pattern_extractor.txt}"
+      }
+    },
+    {
+      "id": "api-tester",
+      "god": "dionysus",
+      "file": "api_tester.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/api_tester.txt}"
+      },
+      "registryDef": {
+        "parent_god": "dionysus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/api_tester.txt}"
+      }
+    },
+    {
+      "id": "flaky-test-resolver",
+      "god": "dionysus",
+      "file": "flaky_test_resolver.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/flaky_test_resolver.txt}"
+      },
+      "registryDef": {
+        "parent_god": "dionysus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/flaky_test_resolver.txt}"
+      }
+    },
+    {
+      "id": "gan-planner",
+      "god": "dionysus",
+      "file": "gan_planner.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/gan_planner.txt}"
+      },
+      "registryDef": {
+        "parent_god": "dionysus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/gan_planner.txt}"
+      }
+    },
+    {
+      "id": "harness-optimizer",
+      "god": "dionysus",
+      "file": "harness_optimizer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/harness_optimizer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "dionysus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/harness_optimizer.txt}"
+      }
+    },
+    {
+      "id": "mutation-tester",
+      "god": "dionysus",
+      "file": "mutation_tester.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/mutation_tester.txt}"
+      },
+      "registryDef": {
+        "parent_god": "dionysus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/mutation_tester.txt}"
+      }
+    },
+    {
+      "id": "performance-tester",
+      "god": "dionysus",
+      "file": "performance_tester.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/performance_tester.txt}"
+      },
+      "registryDef": {
+        "parent_god": "dionysus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/performance_tester.txt}"
+      }
+    },
+    {
+      "id": "reality-checker",
+      "god": "dionysus",
+      "file": "reality_checker.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/reality_checker.txt}"
+      },
+      "registryDef": {
+        "parent_god": "dionysus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/reality_checker.txt}"
+      }
+    },
+    {
+      "id": "tdd-guide",
+      "god": "dionysus",
+      "file": "tdd_guide.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/tdd_guide.txt}"
+      },
+      "registryDef": {
+        "parent_god": "dionysus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/tdd_guide.txt}"
+      }
+    },
+    {
+      "id": "test-results-analyzer",
+      "god": "dionysus",
+      "file": "test_results_analyzer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/test_results_analyzer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "dionysus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/dionysus/test_results_analyzer.txt}"
+      }
+    },
+    {
+      "id": "code-explorer",
+      "god": "hephaestus",
+      "file": "code_explorer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/code_explorer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/code_explorer.txt}"
+      }
+    },
+    {
+      "id": "code-simplifier",
+      "god": "hephaestus",
+      "file": "code_simplifier.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/code_simplifier.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/code_simplifier.txt}"
+      }
+    },
+    {
+      "id": "comment-analyzer",
+      "god": "hephaestus",
+      "file": "comment_analyzer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/comment_analyzer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/comment_analyzer.txt}"
+      }
+    },
+    {
+      "id": "embedded-firmware-engineer",
+      "god": "hephaestus",
+      "file": "embedded_firmware_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/embedded_firmware_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/embedded_firmware_engineer.txt}"
+      }
+    },
+    {
+      "id": "go-reviewer",
+      "god": "hephaestus",
+      "file": "go_reviewer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/go_reviewer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/go_reviewer.txt}"
+      }
+    },
+    {
+      "id": "managed-reviewer",
+      "god": "hephaestus",
+      "file": "managed_reviewer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/managed_reviewer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/managed_reviewer.txt}"
+      }
+    },
+    {
+      "id": "refactor-engineer",
+      "god": "hephaestus",
+      "file": "refactor_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/refactor_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/refactor_engineer.txt}"
+      }
+    },
+    {
+      "id": "search-relevance-engineer",
+      "god": "hephaestus",
+      "file": "search_relevance_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/search_relevance_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/search_relevance_engineer.txt}"
+      }
+    },
+    {
+      "id": "smart-contract-engineer",
+      "god": "hephaestus",
+      "file": "smart_contract_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/smart_contract_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/smart_contract_engineer.txt}"
+      }
+    },
+    {
+      "id": "systems-reviewer",
+      "god": "hephaestus",
+      "file": "systems_reviewer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/systems_reviewer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/systems_reviewer.txt}"
+      }
+    },
+    {
+      "id": "ts-reviewer",
+      "god": "hephaestus",
+      "file": "ts_reviewer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/ts_reviewer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/ts_reviewer.txt}"
+      }
+    },
+    {
+      "id": "type-design-analyzer",
+      "god": "hephaestus",
+      "file": "type_design_analyzer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/type_design_analyzer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/type_design_analyzer.txt}"
+      }
+    },
+    {
+      "id": "webassembly-engineer",
+      "god": "hephaestus",
+      "file": "webassembly_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/webassembly_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hephaestus",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hephaestus/webassembly_engineer.txt}"
+      }
+    },
+    {
+      "id": "ai-engineer",
+      "god": "hermes",
+      "file": "ai_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/ai_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hermes",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/ai_engineer.txt}"
+      }
+    },
+    {
+      "id": "auth-specialist",
+      "god": "hermes",
+      "file": "auth_specialist.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/auth_specialist.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hermes",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/auth_specialist.txt}"
+      }
+    },
+    {
+      "id": "email-intelligence-engineer",
+      "god": "hermes",
+      "file": "email_intelligence_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/email_intelligence_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hermes",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/email_intelligence_engineer.txt}"
+      }
+    },
+    {
+      "id": "llm-architect",
+      "god": "hermes",
+      "file": "llm_architect.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/llm_architect.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hermes",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/llm_architect.txt}"
+      }
+    },
+    {
+      "id": "prompt-engineer",
+      "god": "hermes",
+      "file": "prompt_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/prompt_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hermes",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/prompt_engineer.txt}"
+      }
+    },
+    {
+      "id": "protocol-designer",
+      "god": "hermes",
+      "file": "protocol_designer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/protocol_designer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hermes",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/protocol_designer.txt}"
+      }
+    },
+    {
+      "id": "realtime-collaboration-engineer",
+      "god": "hermes",
+      "file": "realtime_collaboration_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/realtime_collaboration_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hermes",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/realtime_collaboration_engineer.txt}"
+      }
+    },
+    {
+      "id": "researcher",
+      "god": "hermes",
+      "file": "researcher.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/glm-5.3-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/researcher.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hermes",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/researcher.txt}"
+      }
+    },
+    {
+      "id": "video-streaming-engineer",
+      "god": "hermes",
+      "file": "video_streaming_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/video_streaming_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "hermes",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/hermes/video_streaming_engineer.txt}"
+      }
+    },
+    {
+      "id": "clickhouse-specialist",
+      "god": "persephone",
+      "file": "clickhouse_specialist.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/persephone/clickhouse_specialist.txt}"
+      },
+      "registryDef": {
+        "parent_god": "persephone",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/persephone/clickhouse_specialist.txt}"
+      }
+    },
+    {
+      "id": "data-engineer",
+      "god": "persephone",
+      "file": "data_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/persephone/data_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "persephone",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/persephone/data_engineer.txt}"
+      }
+    },
+    {
+      "id": "data-migration-specialist",
+      "god": "persephone",
+      "file": "data_migration_specialist.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/persephone/data_migration_specialist.txt}"
+      },
+      "registryDef": {
+        "parent_god": "persephone",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/persephone/data_migration_specialist.txt}"
+      }
+    },
+    {
+      "id": "gaussdb-expert",
+      "god": "persephone",
+      "file": "gaussdb_expert.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/persephone/gaussdb_expert.txt}"
+      },
+      "registryDef": {
+        "parent_god": "persephone",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/persephone/gaussdb_expert.txt}"
+      }
+    },
+    {
+      "id": "schema-reviewer",
+      "god": "persephone",
+      "file": "schema_reviewer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4.1-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/persephone/schema_reviewer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "persephone",
+        "mode": "subagent",
+        "model": "opencode-go/deepseek-v4-pro",
+        "prompt": "{file:.opencode/prompts/agents/demigods/persephone/schema_reviewer.txt}"
+      }
+    },
+    {
+      "id": "docker-expert",
+      "god": "prometheus",
+      "file": "docker_expert.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/docker_expert.txt}"
+      },
+      "registryDef": {
+        "parent_god": "prometheus",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/docker_expert.txt}"
+      }
+    },
+    {
+      "id": "network-config-reviewer",
+      "god": "prometheus",
+      "file": "network_config_reviewer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_config_reviewer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "prometheus",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_config_reviewer.txt}"
+      }
+    },
+    {
+      "id": "network-engineer",
+      "god": "prometheus",
+      "file": "network_engineer.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_engineer.txt}"
+      },
+      "registryDef": {
+        "parent_god": "prometheus",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_engineer.txt}"
+      }
+    },
+    {
+      "id": "network-troubleshooter",
+      "god": "prometheus",
+      "file": "network_troubleshooter.txt",
+      "agentDef": {
+        "mode": "subagent",
+        "model": "opencode-go/mimo-v2.6-flash",
+        "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_troubleshooter.txt}"
+      },
+      "registryDef": {
+        "parent_god": "prometheus",
+        "mode": "subagent",
+        "model": "opencode-go/qwen3.7-plus",
+        "prompt": "{file:.opencode/prompts/agents/demigods/prometheus/network_troubleshooter.txt}"
+      }
+    }
+  ]
+}

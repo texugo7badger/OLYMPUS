@@ -34,6 +34,9 @@ const INTERVAL_S = Math.max(2, Number(arg('interval', '5')) || 5);
 const OUT_JSON = arg('json', '');
 const STAMP = new Date().toISOString().replace(/[:.]/g, '-');
 const REPORT = arg('report', path.join(os.tmpdir(), `olympus-soak-${STAMP}.md`));
+// v0.0.88 — the app is auth-gated; read the local session token (the soak
+// used to fail every run-state probe with 401 on a healthy app).
+const TOKEN = (() => { try { return fs.readFileSync(path.join(os.homedir(), '.olympus', 'session-token'), 'utf-8').trim(); } catch { return ''; } })();
 
 const PROBES = [
   { name: 'health', path: '/api/olympus/health', budgetMs: 1200 },
@@ -53,7 +56,7 @@ async function probe(entry) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), entry.budgetMs + 2000);
-    const res = await fetch(BASE + entry.path, { signal: controller.signal, cache: 'no-store' });
+    const res = await fetch(BASE + entry.path, { signal: controller.signal, cache: 'no-store', ...(TOKEN ? { headers: { 'x-olympus-token': TOKEN } } : {}) });
     clearTimeout(timer);
     const ms = Math.round(performance.now() - t0);
     let body = null;

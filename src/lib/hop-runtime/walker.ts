@@ -22,7 +22,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { appendFileSync, existsSync, readFileSync, symlinkSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, symlinkSync, writeFileSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join, isAbsolute, basename } from 'node:path';
@@ -52,10 +52,12 @@ import { SEED_DESIGN_BUILDS, buildPrompt, mergeBuildStats, type DesignBuild } fr
 import { getVaultRoot } from '@/lib/vault-root';
 import { classifyDispatchFailure } from './failure-class';
 import { patrolFinding, recordPatrol } from '@/lib/atlas-patrol';
+import { ensurePlanGeneration, freezePlan, validCompletedForPlan, computeHopHashes, frozenPlanPath } from './plan-generation';
+import { readHopOverride } from './hop-overrides';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
-export const MAX_HOP_CONCURRENCY = 3;
+export const MAX_HOP_CONCURRENCY = 4;
 
 /**
  * v0.0.24 (#241) — DYNAMIC CONCURRENCY (AIMD).
@@ -67,7 +69,7 @@ export const MAX_HOP_CONCURRENCY = 3;
 export function resolveHopConcurrency(env: NodeJS.ProcessEnv = process.env): number {
   const n = Number.parseInt(env.OLYMPUS_HOP_CONCURRENCY ?? '', 10);
   if (Number.isFinite(n) && n > 0) return Math.max(1, Math.min(n, MAX_HOP_CONCURRENCY));
-  return 2;
+  return 3;
 }
 
 /**
@@ -97,7 +99,7 @@ export function resolveCampaignBudgetMs(env: NodeJS.ProcessEnv = process.env): n
 /** v0.0.53 — the exploration budget: a bounded number of distinct tool calls
  *  per hop. 14 is above a normal 5-10 file read/build loop and below the
  *  20-27-step listing loops that burned 25-45 minutes. */
-export const DEFAULT_HOP_TOOL_BUDGET = 14;
+export const DEFAULT_HOP_TOOL_BUDGET = 20;
 export function resolveHopToolBudget(env: NodeJS.ProcessEnv = process.env): number {
   const n = Number.parseInt(env.OLYMPUS_HOP_TOOL_BUDGET ?? '', 10);
   return Number.isFinite(n) && n > 0 ? Math.min(40, n) : DEFAULT_HOP_TOOL_BUDGET;
@@ -105,6 +107,9 @@ export function resolveHopToolBudget(env: NodeJS.ProcessEnv = process.env): numb
 
 export function nextConcurrency(current: number, outcome: 'ok' | 'overload' | 'hang'): number {
   const cur = Math.max(1, Math.min(current, MAX_HOP_CONCURRENCY));
+  // v0.0.88 — the A/B experiment knob: OLYMPUS_HOP_AIMD=0 pins the width.
+  const aimd = process.env.OLYMPUS_HOP_AIMD !== '0';
+  if (!aimd) return outcome === 'overload' ? Math.max(1, cur - 1) : cur;
   if (outcome === 'ok') return Math.min(cur + 1, MAX_HOP_CONCURRENCY);
   if (outcome === 'overload') return Math.max(1, Math.floor(cur / 2));
   return Math.max(1, cur - 1);
@@ -179,6 +184,8 @@ export interface HopTelemetryRow {
   failedCheck?: string | null;
   /** v0.0.86 (#343) — the Build Hub loadout the hop actually equipped. */
   build?: string | null;
+  /** v0.0.88 — why tokens are null (never a silent gap). */
+  nullReason?: string | null;
 }
 
 export function hopTelemetryPath(stateDir: string): string {
@@ -366,9 +373,13 @@ export async function composeHopPromptWithRag(
   campaignQuery?: string,
 ): Promise<string> {
   const build = resolveHopBuild(hop);
+  const override = readHopOverride(laneRoot, hop.id);
+  const recovery = override?.promptAppend
+    ? `\n\n## RECOVERY DIRECTIVE (attempt ${override.attempts ?? 1})\n${override.promptAppend}\n`
+    : '';
   const base = build
-    ? `${composeHopPrompt(hop, laneRoot)}\n\n${buildPrompt(mergeBuildStats([build], [])[0])}`
-    : composeHopPrompt(hop, laneRoot);
+    ? `${composeHopPrompt(hop, laneRoot)}\n\n${buildPrompt(mergeBuildStats([build], [])[0])}${recovery}`
+    : `${composeHopPrompt(hop, laneRoot)}${recovery}`;
   // The hop's own slice is the query; campaignQuery is only the fallback
   // for the degenerate empty-slice shape (never the shared-mush primary).
   const query = String(hop.prompt ?? '').slice(0, 400) || campaignQuery || '';
@@ -734,7 +745,7 @@ async function attemptLane(
       hardTimeoutMs: ctx.deadlineAt
         ? Math.max(60_000, Math.min(hardCeilingMs(resolveHopTimeoutMs()), ctx.deadlineAt - Date.now()))
         : hardCeilingMs(resolveHopTimeoutMs()),
-      toolBudget: resolveHopToolBudget(),
+      toolBudget: readHopOverride(ctx.laneRoot, hop.id)?.toolBudget ?? hop.toolBudget ?? resolveHopToolBudget(),
       firstByteMs: resolveHopFirstByteMs(),
       silenceMs: resolveHopSilenceMs(),
       onNotice: (msg) => console.log(`[hop-transport] ${msg}`),
@@ -839,7 +850,9 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
   // different strategy still ran the repo's model for every hop. Prefer the
   // lane config, fall back to the repo when the lane has none.
   const laneConfig = join(ctx.laneRoot, 'opencode.json');
-  const applied = (existsSync(laneConfig) ? resolveGodModelLane(hop.god, laneConfig) : null)
+  const laneOverride = readHopOverride(ctx.laneRoot, hop.id)?.lane ?? null;
+  const applied = laneOverride
+    ?? (existsSync(laneConfig) ? resolveGodModelLane(hop.god, laneConfig) : null)
     ?? resolveGodModelLane(hop.god);
   if (!applied) {
     return {
@@ -1127,6 +1140,8 @@ export interface WalkResult {
   parked: (HopPark & { verify?: HopVerifyResult }) | null;
   /** Every telemetry row written this walk. */
   rows: HopTelemetryRow[];
+  /** v0.0.88 — the plan generation this walk executed. */
+  generation?: number;
 }
 
 /** #117 (PLANO-MASTER-1 B3): the live narration events — the product flow
@@ -1197,6 +1212,11 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   if (!v.ok) {
     throw new Error(`[hop-runtime] garbage plan — refusing to walk:\n${v.errors.map((e) => `  - ${e}`).join('\n')}`);
   }
+  // v0.0.88 — THE GENERATION IS FROZEN BEFORE BALANCE. Balance changes only
+  // the executing god (a runtime optimization), so the definition hash is
+  // computed on the authored plan; otherwise a rebalance on resume would
+  // invalidate every completed hop.
+  const definitionPlan = ensurePlanGeneration(v.plan);
   // v0.0.55 — the DAG balance pass: only unambiguous artifacts move, never
   // script hops. A single god owning >40% of a plan serializes the critical
   // path on that pool (the AIME Athena-16 specimen).
@@ -1207,6 +1227,11 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   }
   const laneRoot = plan.laneRoot;
   const stateDir = opts.stateDir ?? laneRoot;
+  // The live snapshot the walk uses. A planner rewrite is staged as
+  // `dispatch-plan.next.json`; the generation advances only at a boundary.
+  const frozen = freezePlan(laneRoot, definitionPlan);
+  const generation = frozen.generation ?? 1;
+  const generationHashes = frozen.hopHashes ?? computeHopHashes(frozen);
   const dispatch = opts.dispatcher ?? spawnHopDispatcher;
   // v0.0.24 (#226): every narration event carries the campaign id, so the
   // activity feed can group the hop chain without guessing.
@@ -1242,7 +1267,15 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   if (pruned && pruned.dropped.length) {
     console.log(`[walker] dropped ${pruned.dropped.length} stale in-flight hop(s): ${pruned.dropped.join(', ')} — they re-enter the DAG`);
   }
-  const completed = new Set<string>(state?.completed ?? []);
+  // v0.0.88 — a completed id survives only if its hop definition is identical.
+  const completion = validCompletedForPlan(state?.completed ?? [], frozen, state?.hopHashes);
+  const completed = new Set<string>(completion.valid);
+  if (completion.invalidated.length) {
+    const onlyStale = completion.invalidated.filter((id) => !(v.plan.hops ?? []).some((h) => h.id === id));
+    console.log(`[hop-runtime] generation ${generation}: ${completion.invalidated.length} completed id(s) invalidated` +
+      `${onlyStale.length ? ` (${onlyStale.length} not in this plan)` : ''} — changed definitions re-run`);
+    opts.onEvent?.({ type: 'log', msg: `Plan generation ${generation}: ${completion.invalidated.length} completed hop(s) invalidated by a changed definition — they re-run.` } as any);
+  }
   // v0.0.85 — A PARK IS TRUTH ON DISK. The initial save below used to write
   // `parked: null`, so a walk killed between its first write and its first
   // completion erased the reason the user needed (AIME 06:51: 55/78, no
@@ -1291,6 +1324,8 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     campaignId: opts.campaignId,
     quarantined: [...quarantined],
     inFlight: [],
+    generation,
+    hopHashes: generationHashes,
     updatedAt: new Date().toISOString(),
   });
 
@@ -1373,6 +1408,9 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       sessionId: r?.sessionId ?? undefined,
       transport: r?.transport,
       ...(r?.output ? { outputTail: String(r.output).slice(-2_000) } : {}),
+      ...(r && (r.tokensIn == null || r.tokensOut == null)
+        ? { nullReason: r.transport === 'warm' ? 'warm-session-no-usage' : 'provider-did-not-report' }
+        : {}),
       ...(status !== 'completed' && r ? {
         error: String(r.error ?? '').slice(0, 2_000),
         errorClass: r.errorClass ?? classifyDispatchFailure(r),
@@ -1459,6 +1497,8 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           parked: parkedHop,
           campaignId: opts.campaignId,
           quarantined: [...quarantined],
+          generation,
+          hopHashes: generationHashes,
           inFlight: [...inFlight.values()].map((t) => ({
             hopId: t.hop.id,
             startedAt: new Date(t.startedAt).toISOString(),
@@ -1762,6 +1802,11 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     }
   }
 
+  // v0.0.88 — a COMPLETED campaign releases the freeze: the next authored
+  // plan is a new campaign, not a staged rewrite. A parked campaign keeps it.
+  if (pendingAtEnd.length === 0) {
+    try { unlinkSync(frozenPlanPath(stateDir)); } catch { /* gone */ }
+  }
   // The walk is over: the final state clears the RUNNING set (nothing is
   // in flight anymore — the file never lies about liveness).
   saveHopState(stateDir, {
@@ -1771,7 +1816,9 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     campaignId: opts.campaignId,
     quarantined: [...quarantined],
     inFlight: [],
+    generation,
+    hopHashes: generationHashes,
     updatedAt: new Date().toISOString(),
   });
-  return { completed: [...completed], parked: parkedHop, rows };
+  return { completed: [...completed], parked: parkedHop, rows, generation };
 }

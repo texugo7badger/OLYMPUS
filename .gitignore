@@ -166,3 +166,23 @@ SESSION-CHECKPOINT*.md
 
 # v0.0.84 — the handoff suite is part of the battery, not a scratch file.
 !scripts/context-handoff.test.mjs
+
+# v0.0.88 — the new hermetic suites (temp homes/lanes; no vault, no keys).
+# They are the public proof of the campaign generation/recovery work and run
+# in the core CI, not only on the maintainer's machine.
+!scripts/plan-recovery.test.mjs
+!scripts/atlas-patrol.test.mjs
+!scripts/cost-speed.test.mjs
+!scripts/apollo-narrative.test.mjs
+!scripts/parthenon-live.test.mjs
+!scripts/hop-failure-class.test.mjs
+!scripts/builds-check.test.mjs
+!scripts/build-execution.test.mjs
+!scripts/bench-hops.test.mjs
+!scripts/sync-map-scope.test.mjs
+!scripts/mobile-companion.test.mjs
+!scripts/companion-apps.test.mjs
+!scripts/campaign-smoke.test.mjs
+!scripts/concurrency.test.mjs
+!scripts/build-packs.test.mjs
+!scripts/demigod-archive.test.mjs

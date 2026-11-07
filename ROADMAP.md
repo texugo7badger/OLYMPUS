@@ -1,12 +1,27 @@
 # OLYMPUS Roadmap
 
-**v0.0.87 is the current release** (2026-11-07) — Apollo narrates the wait
-and fails fast on a dead lane; Atlas patrols every park, classifies it and
-publishes `retry`/`replan`/`ask-user` with the next lane; the GO ledger reads
-the walker's real token rows and the cost screen adds an hourly chart, tips and
-a recent-request log; measured tok/s is shown across the Parthenon, task
-sheet, demigod chips, phone and briefing; the PWA status strip follows the
-theme background. **v0.0.86** — every god live, every park named:
+**v0.0.88 is the current release** (2026-11-07) — the campaign that
+finishes: plan generations + definition hashes + staged next plans; Atlas
+deterministic verdicts and a cause-specific recovery policy that resumes the
+walk by itself; campaign context/steering law so a follow-up never rewrites a
+live plan; one health line on the Parthenon and the phone; tool budget 20 with
+per-hop overrides; warm token truth; 23 public CI suites; 68 builds + build
+packs with a ToxicSkills-style scan; a reversible 61-demigod archive (71
+agents); a measured 3→4 concurrency experiment; and the note-8 harness (claim
+still not made). **v0.0.87** — Apollo speaks, Atlas thinks, the ledger tells
+the truth: Apollo narrates every long turn and fails fast on a dead lane;
+Atlas patrols every park with a deterministic retry/replan/ask-user verdict;
+the GO ledger reads the walker's real token rows, the cost screen adds an
+hourly chart, tips and a recent-request log; measured tok/s is shown across
+the Parthenon, task sheet, demigod chips, phone and briefing; the PWA status
+strip follows the theme background. **v0.0.86** — every god live, every park
+named: the Parthenon renders all ten gods from second zero with a durable
+per-god terminal, the turn ceiling is 30 min with a 40-min hop hard cap and a
+48 KB reasoning prelude, parks are classified by cause with mid-hop lane
+failover and honest partial-plan reporting, and the Build Hub ships Phase 0
+plus 12 new builds with a `builds:check` gate and dispatch-time build
+injection.
+**v0.0.86** — every god live, every park named:
 the Parthenon renders all ten gods from second zero with a durable per-god
 terminal (a mark-preview request lands in Athena's thread and she steers her
 current work), the turn ceiling is 30 min with a 40-min hop hard cap and a

@@ -36,9 +36,10 @@ import { readWalkLock } from './hop-runtime/walk-lock';
 import { balancePlan } from './hop-runtime/plan-balance';
 import { hopSpeed } from './token-speed';
 import { patrolLane } from './atlas-patrol';
+import { buildCampaignHealth, type CampaignHealth } from './campaign-health';
 
 /** The walker's concurrency law (the projection's honesty bound). */
-const MAX_HOP_CONCURRENCY = 3;
+const MAX_HOP_CONCURRENCY = 4;
 /** No median yet: the fallback expected duration (5 min — the house's own
  *  observed hop class, hop-runtime.test.mjs fixtures + the ORBITAL medians). */
 const DEFAULT_EXPECTED_MS = 300_000;
@@ -138,6 +139,8 @@ export interface TasksSheet {
     hopId: string | null;
     nextLane: string | null;
   };
+  /** v0.0.88 — the one-line answer to "is it going well?". */
+  campaignHealth?: CampaignHealth;
 }
 
 function safeJson<T>(p: string, fallback: T): T {
@@ -612,5 +615,6 @@ export function buildTasksSheet(opts: {
         nextLane: first?.nextLane ?? null,
       },
     } : {}),
+    campaignHealth: (() => { try { return buildCampaignHealth(lane, { etaMs: stats.projectedRemainingMs }); } catch { return undefined; } })(),
   };
 }

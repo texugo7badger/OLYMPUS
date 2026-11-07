@@ -2,6 +2,136 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.88] — 2026-11-07
+
+### The campaign that finishes: generations, Atlas recovery, one health line
+
+#### A plan is a generation, not a mutable file
+
+- **The AIME 07/11 specimen:** `dispatch-plan.json` went 79 → 67 → 72 → 75 → 76
+  → 27 → 35 hops while walks were running. A walk held a 21-hop snapshot, the
+  log said `5/21`, and the next resume read a 35-hop plan with 61 completed ids
+  from older generations. The user could never know where the campaign stood.
+- Every plan now carries `generation`, `createdAt`, `parentGeneration` and a
+  sha256 **definition hash per hop**. A completed id survives a generation
+  change only when its prompt/command/verify/artifacts/deps are byte-identical;
+  a changed definition is re-run and the log says so.
+- The live walk **freezes** its snapshot in `.olympus-plan-frozen.json`. A
+  planner rewrite while a walk is live (or parked) is staged as
+  `dispatch-plan.next.json` and the live file is restored; the next generation
+  applies only at a hop boundary (`POST /api/olympus/walk/plan`). The Parthenon
+  shows `apply +N` when a next generation is waiting.
+- `GET /api/olympus/walk/plan` exposes the generation and the diff; apply is
+  refused (409) while a walk is live.
+
+#### Atlas acts, then the walk resumes
+
+- **The Atlas verdict is deterministic and instant.** v0.0.87's verdict was a
+  full hop dispatch raced against 120s; in a heavy campaign it always lost
+  (`Atlas verdict skipped`) and the dispatcher kept running in the background
+  (a leak). The post-run now uses `patrolLane` (0 tokens), writes
+  `.olympus-atlas-verdict.md`, and sends the finding; deep think is opt-in
+  (`OLYMPUS_ATLAS_DEEP=1`) and never blocks the summary.
+- **The blind auto-resume is gone.** The recovery policy decides per park:
+  - `tool-budget` → hop override (budget 24 + “batch tools, write the artifact
+    first”), retry once;
+  - `timeout`/`transport` → lane quarantine + next healthy lane;
+  - `verify-failed` → targeted fix directive naming the failing check;
+  - `script` → retry once with the trace;
+  - `provider`/`auth`/`no-route` → STOP and ask the user;
+  - `unknown` → STOP with the evidence.
+  Max 2 recoveries per hop and 6 per campaign; the ledger is
+  `.olympus-recovery.jsonl` and the override is
+  `.olympus-hop-overrides.json` (no plan rewrite). The walk resumes
+  automatically after a recovery, and a stop publishes `Atlas needs the user`.
+- The **tool budget defaults to 20** (was 14), per-hop `toolBudget` and the
+  override are honored; the prompt states the number. The AIME tool-budget
+  park class was the dominant failure in the 07/11 logs.
+
+#### Apollo sees the campaign and steers instead of rewriting
+
+- Every turn prepends a **CAMPAIGN CONTEXT** block: project, generation,
+  per-generation progress, walk state, park, Atlas verdict, last recovery, and
+  any staged next generation.
+- It carries the **STEERING LAW**: while RUNNING/PARKED, do not write
+  `dispatch-plan.json`, do not add/remove hops; steer a hop via
+  `.olympus-hop-overrides.json` or write `dispatch-plan.next.json` for a
+  boundary. The follow-up “corrija o parked e reinicie” no longer becomes a
+  bigger plan.
+
+#### One health line
+
+- `campaign-health.ts` returns `HEALTHY | DEGRADED | BLOCKED | NEEDS-YOU |
+  PAUSED | DONE` with the reasons, generation, per-generation X/Y, running,
+  parks, dead lanes, staged diff and ETA. It rides `run-state` and the tasks
+  sheet; the Parthenon header has the chip and the phone shows the line.
+- The Parthenon shows the Atlas patrol (`1 parked · replan → lane`, ask Atlas)
+  and the `apply +N` staged-plan control.
+
+#### Warm hop tokens and the cost truth
+
+- The warm transport now reads session totals from the **global** OpenCode DB
+  as well as the hop-data DB; the 59.6% null-token class gets a measured value
+  where the session exists. When it truly cannot, telemetry records
+  `nullReason: warm-session-no-usage` (never a silent gap).
+
+#### Tests, CI and the two stale pages
+
+- The public hermetic core grows to **23 suites** in the core CI, including
+  `plan-recovery`, `campaign-smoke`, `concurrency`, `build-packs`,
+  `demigod-archive`, `atlas-patrol`, `cost-speed`, `apollo-narrative`,
+  `parthenon-live`, `hop-failure-class`, `builds-check`, `build-execution`,
+  `bench-hops`, `sync-map-scope`, `mobile-companion`, `companion-apps`.
+- `docs-check` now covers **V1-READINESS** and the README Testing numbers
+  (derived from `public/stable.json`); the V1 header and the Testing count are
+  current, not three releases behind.
+
+#### Builds: the next wave and packs
+
+- **8 new builds** (68 curated): creative-3d, gen-art-pipeline, game-prototype,
+  audio-lane, pentest-build, supply-chain-gate, k8s-terraform, homelab-ops —
+  all with real gates; `builds:check` resolves 68/68.
+- **Build packs v0 (#344):** export a build set as a digest-signed JSON,
+  import with a deterministic ToxicSkills-style scan (prompt injection,
+  credential exfiltration, pipe-to-shell, command injection, secrets, opaque
+  blobs). A high finding blocks unless the caller explicitly accepts the risk.
+  API: `/api/olympus/design-builds/pack`.
+
+#### The fleet cut (reversible)
+
+- **61 never-used/never-referenced demigods archived**, build-aware: the keep
+  set is the union of the census keep, all 58 demigods referenced by the 68
+  curated builds, and the active plan. The 122 declared → **61 live demigods**
+  (10 gods + 61 = **71 agents**). The prompt files move to
+  `_archive/<god>/`, `opencode.json` agents leave, and
+  `.opencode/demigods-archive-manifest.json` stores the definition;
+  `npx tsx scripts/archive-demigods.mjs --restore` brings them back byte-faithful.
+  `AGENTS.md`/README state the new count and the restore.
+
+#### Concurrency: the 3→4 experiment is real
+
+- Default stays **3**; the hard cap is **4**, `OLYMPUS_HOP_CONCURRENCY`
+  overrides, and `OLYMPUS_HOP_AIMD=0` pins the width for an A/B. The fixture
+  walk (8 hops, 120ms each) measured **317ms at 4 vs 415ms at 3** with peak 4
+  vs 3; the paid/plan lane cap remains lane-aware, the free pool cap stays 2.
+
+#### Note-8 harness
+
+- `npm run soak:note8` runs the 100-hop deterministic certification + a soak
+  (default 480 min; `--smoke` 2 min) + an explicit `--external <slug>` leg. It
+  never invents an external user; a smoke run is labelled SMOKE and the claim
+  stays **NOT CLAIMED**. The soak now sends the auth token, so a healthy app
+  cannot fail every run-state probe with 401.
+
+#### Verification
+
+- New suites: `plan-recovery` 18, `campaign-smoke` 7, `concurrency` 4,
+  `build-packs` 7, `demigod-archive` 8.
+- `campaign-smoke` proves the acceptance: 10 hops, one tool-budget park, Atlas
+  recovery, resumed walk **10/10, no human**, health `DONE`.
+- The note-8 smoke: 100-hop PASS + 2-min soak PASS; claim NOT CLAIMED.
+- Full battery: **170 PASS / 0 FAIL / 1 declared skip of 171 suites**.
+
 ## [v0.0.87] — 2026-11-07
 
 ### Apollo speaks, Atlas thinks, the ledger tells the truth

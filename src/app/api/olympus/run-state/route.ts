@@ -37,6 +37,7 @@ import { readLaneHealth, blockedLanes } from '@/lib/lane-health';
 import { workspaceLaneDir } from '@/lib/opencode-spawn';
 import { getVaultRoot } from '@/lib/vault-root';
 import { getProject } from '@/lib/project-context';
+import { buildCampaignHealth } from '@/lib/campaign-health';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -210,6 +211,9 @@ export async function GET(req: NextRequest) {
             ? `INTERRUPTED · ${lostInFlight.map((h: any) => h.hopId).slice(0, 4).join(', ')}${lostInFlight.length > 4 ? ` +${lostInFlight.length - 4}` : ''} — no live process; resume to re-dispatch`
             : 'IDLE';
 
+  // v0.0.88 — one health line; computed once, exposed both at the top level
+  // (tools/scripts) and inside `hops` (the phone reads run.hops.campaignHealth).
+  const campaignHealth = (() => { try { return buildCampaignHealth(lane); } catch { return null; } })();
   return NextResponse.json({
     slug,
     lane,
@@ -242,6 +246,7 @@ export async function GET(req: NextRequest) {
       lostCount: lostInFlight.length,
       campaignId: hopState?.campaignId ?? campaign?.campaignId ?? null,
       parked: parked ? { hopId: parked.hopId, reason: parked.reason, error: parked.error ?? null, ts: parked.ts } : null,
+      campaignHealth,
       updatedAt: hopState?.updatedAt ?? null,
     },
     telemetry,
@@ -261,6 +266,7 @@ export async function GET(req: NextRequest) {
       blockedCount: blocked.length,
       checkedAt: health.updatedAt || null,
     },
+    campaignHealth,
     // #105: the refusal is explicit when there is no evidence.
     evidence: campaign.state === 'running' ? 'process-alive + lock-heartbeat' : campaign.state === 'unverified' ? 'disk-only' : 'none',
   }, { headers: NO_CACHE_HEADERS });

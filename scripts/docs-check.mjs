@@ -81,6 +81,21 @@ const staleCurrent = [...readme.matchAll(/v(\d+)\.(\d+)\.(\d+)[^.\n]{0,40}is the
   .filter((line) => !line.includes(`v${version}`));
 check('D-8', 'no doc calls an older version the current release', staleCurrent.length === 0, staleCurrent.join(' | '));
 
+// v0.0.88 — the two pages the v5 audit found outside the gate. V1-READINESS
+// must name the current version; README Testing must carry the stable
+// battery's numbers (derived from public/stable.json, never hand-written).
+const v1Readiness = read('V1-READINESS.md') || '';
+check('D-9', 'V1-READINESS names the current version', v1Readiness.slice(0, 2000).includes(`v${version}`), `V1-READINESS header is not v${version}`);
+let stableManifest = {};
+try { stableManifest = JSON.parse(read('public/stable.json') || '{}'); } catch { stableManifest = {}; }
+const st = stableManifest.tests || {};
+if (st.suites) {
+  const expected = `${st.pass} PASS / ${st.fail} FAIL / ${st.skip} declared skip`;
+  check('D-10', 'README Testing carries the stable battery numbers', readme.includes(expected) && readme.includes(`${st.suites} suites`), `README Testing is missing "${expected} ... ${st.suites} suites"`);
+} else {
+  check('D-10', 'README Testing carries the stable battery numbers', false, 'public/stable.json has no tests block');
+}
+
 if (ARGS.includes('--json')) {
   console.log(JSON.stringify({ version, checks, failures }, null, 2));
 } else {
