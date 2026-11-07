@@ -16,14 +16,14 @@ import path from 'path';
 import os from 'os';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 import { withTtl } from '@/lib/ttl-cache';
-import { appSessionSet, isAppSyncEntry, isInternalAppPrompt } from '@/lib/sync-map-scope';
+import { isAppVisibleEntry } from '@/lib/sync-map-scope';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
 const SYNC_MAP_PATH = path.join(OLYMPUS_HOME, 'sync-map.json');
-const SESSION_MAP_PATH = path.join(OLYMPUS_HOME, 'opencode-sessions.json');
+const OPERATOR_SESSIONS_PATH = path.join(OLYMPUS_HOME, 'operator-sessions.json');
 
 interface SyncEntry {
   id: string;
@@ -69,16 +69,13 @@ export async function GET(req: NextRequest) {
     // v0.0.25 — the map file is the heavy read; a 5s cache keeps re-opens instant.
     const map: any = await withTtl('sync-map:file', () => JSON.parse(fs.readFileSync(SYNC_MAP_PATH, 'utf-8')), { ttlMs: 5_000 });
     const entries: Record<string, SyncEntry> = map.entries ?? {};
-    const sessionMap = scope === 'app'
-      ? await withTtl('sync-map:sessions', () => JSON.parse(fs.readFileSync(SESSION_MAP_PATH, 'utf-8')), { ttlMs: 5_000 }).catch(() => ({}))
-      : {};
-    const appSessions = appSessionSet(sessionMap);
-    const scoped = Object.values(entries).filter((e) => {
-      if (scope === 'all') return true;
-      if (!isAppSyncEntry(e, appSessions)) return false;
-      // Machinery prompts (strategy/verdict/hop) are not human turns.
-      return !isInternalAppPrompt(String(e.intent || ''));
-    });
+    const operatorFile = scope === 'app'
+      ? await withTtl('sync-map:operators', () => JSON.parse(fs.readFileSync(OPERATOR_SESSIONS_PATH, 'utf-8')), { ttlMs: 5_000 }).catch(() => ({ sessions: [] }))
+      : { sessions: [] };
+    const operatorSessions = new Set<string>(
+      Array.isArray(operatorFile?.sessions) ? operatorFile.sessions.filter((s: unknown) => typeof s === 'string') : [],
+    );
+    const scoped = Object.values(entries).filter((e) => scope === 'all' || isAppVisibleEntry(e, operatorSessions));
     const rows = scoped
       .sort((a, b) => (b.updatedTs || b.ts).localeCompare(a.updatedTs || a.ts))
       .slice(0, limit)

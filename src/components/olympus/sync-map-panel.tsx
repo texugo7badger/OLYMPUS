@@ -134,9 +134,11 @@ export default function SyncMapPanel() {
       {!loading && rows.length === 0 && (
         <div className="text-center py-12 text-olympus-text-dim text-xs font-mono">
           <Network size={22} className="mx-auto mb-2 text-olympus-gold/40" />
-          <p className="text-olympus-text">The ledger is empty</p>
+          <p className="text-olympus-text">{scope === 'app' ? 'No app turns in this scope' : 'The ledger is empty'}</p>
           <p className="text-olympus-text-dim text-[10px] mt-1">
-            Entries appear as gods dispatch work (chat turns + demigod dispatches, hash-chained).
+            {scope === 'app'
+              ? `Historical/operator rows stay in ALL (${integrity?.count ?? 0} total). Entries appear as gods dispatch work.`
+              : 'Entries appear as gods dispatch work (chat turns + demigod dispatches, hash-chained).'}
           </p>
         </div>
       )}

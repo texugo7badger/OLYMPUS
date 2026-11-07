@@ -78,6 +78,7 @@ import {
   atlasMarkDispatchesFinalized,
   finalizeAtlasOnProcessExit,
   isOlympusAppSession,
+  recordOperatorSession,
 } from "./lib/atlas-sync.js";
 import { isAppPromptMarker, isHopPrompt, isInternalAppPrompt } from "../../src/lib/sync-map-scope.js";
 // SYMPHONY BUS (MADRUGA-3 p3): the cable — heartbeats ride it; Atlas records.
@@ -1390,6 +1391,10 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         const internalPrompt = isInternalAppPrompt(promptText);
         if (promptText && (appSession || appMarker) && !hopPrompt && !internalPrompt) {
           atlasIngestProjectPrompt({ sessionID: input.sessionID, text: promptText, app: true });
+        } else if (promptText && !hopPrompt && !internalPrompt) {
+          // Operator/assistant/TUI session: remember it for the read filter,
+          // but never write it to the ledger.
+          recordOperatorSession(input.sessionID);
         }
       } catch (e: any) {
         console.error(`[olympus] ATLAS project-prompt ingest failed: ${e?.message || e}`);

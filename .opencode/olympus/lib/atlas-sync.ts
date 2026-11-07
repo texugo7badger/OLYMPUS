@@ -50,6 +50,7 @@ import {
 const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), ".olympus");
 const STATE_FILE = path.join(OLYMPUS_HOME, "sync-map.json");
 const SESSION_MAP_FILE = path.join(OLYMPUS_HOME, "opencode-sessions.json");
+const OPERATOR_SESSIONS_FILE = path.join(OLYMPUS_HOME, "operator-sessions.json");
 const LIVE_FEED = path.join(getVaultRoot(), "06_Activity_Feed", "live.jsonl");
 
 /**
@@ -76,6 +77,28 @@ export function olympusAppSessionIds(): Set<string> {
 
 export function isOlympusAppSession(sessionID?: string | null): boolean {
   return typeof sessionID === "string" && Boolean(sessionID) && olympusAppSessionIds().has(sessionID);
+}
+
+/** The operator/assistant sessions the Sync Map must never show as app work. */
+export function operatorSessionSet(): Set<string> {
+  try {
+    const raw = JSON.parse(fs.readFileSync(OPERATOR_SESSIONS_FILE, "utf-8"));
+    return new Set(Array.isArray(raw?.sessions) ? raw.sessions.filter((s: unknown) => typeof s === "string") : []);
+  } catch { return new Set(); }
+}
+
+/** Record a non-app session so historical rows can be filtered from APP. */
+export function recordOperatorSession(sessionID?: string | null): void {
+  if (!sessionID) return;
+  const set = operatorSessionSet();
+  if (set.has(sessionID)) return;
+  set.add(sessionID);
+  try {
+    fs.writeFileSync(OPERATOR_SESSIONS_FILE, JSON.stringify({
+      sessions: [...set].slice(-100),
+      updatedAt: new Date().toISOString(),
+    }, null, 2) + "\n", { mode: 0o600 });
+  } catch { /* best effort */ }
 }
 
 export type SyncOrigin = "project" | "dispatch";

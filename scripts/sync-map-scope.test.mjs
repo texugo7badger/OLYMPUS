@@ -67,9 +67,16 @@ const bridge = fs.readFileSync(OLYMPUS + '/.opencode/olympus/v2-bridge.ts', 'utf
 const route = fs.readFileSync(OLYMPUS + '/src/app/api/olympus/sync-map/route.ts', 'utf-8');
 const panel = fs.readFileSync(OLYMPUS + '/src/components/olympus/sync-map-panel.tsx', 'utf-8');
 const action = fs.readFileSync(OLYMPUS + '/src/app/api/olympus/action/route.ts', 'utf-8');
+const operatorSessions = new Set(['ses_operator']);
+expect('S-18: the default app view keeps history but hides the operator', scope.isAppVisibleEntry(appEntry, operatorSessions) === true && scope.isAppVisibleEntry(operatorEntry, operatorSessions) === false && scope.isAppVisibleEntry(dispatchEntry, operatorSessions) === true, 'app visibility wrong');
+expect('S-19: the default app view hides the current operator session', scope.isAppVisibleEntry({ origin: 'project', intent: 'Perfeito, agora...', meta: { sessionID: 'ses_e67759f7bffecDXf6sTjB83Ort' } }, new Set(['ses_e67759f7bffecDXf6sTjB83Ort'])) === false, 'operator session visible');
+
+atlas.recordOperatorSession('ses_operator');
+expect('S-20: the operator registry records the non-app session', atlas.operatorSessionSet().has('ses_operator'), [...atlas.operatorSessionSet()]);
+
 expect('S-14: the chat.message hook gates on the app session/marker', /isOlympusAppSession\(input\.sessionID\)/.test(hooks) && /isAppPromptMarker\(promptText\)/.test(hooks) && /isHopPrompt\(promptText\)/.test(hooks), 'hook still ingests everything');
 expect('S-15: session.idle carries the session id', /session\.idle.*input\?: \{ sessionID\?: string \}/.test(hooks) && /atlasMarkProjectTurnsDone\(input\?\.sessionID\)/.test(hooks) && /idleHandler\(\{ sessionID/.test(bridge), 'idle is global');
-expect('S-16: the read API defaults to app scope with an all view', /get\('scope'\) === 'all' \? 'all' : 'app'/.test(route) && /isAppSyncEntry\(e, appSessions\)/.test(route) && /scope=\$\{scope\}/.test(panel), 'read path not scoped');
+expect('S-16: the read API defaults to app scope with an all view', /get\('scope'\) === 'all' \? 'all' : 'app'/.test(route) && /isAppVisibleEntry\(e, operatorSessions\)/.test(route) && /scope=\$\{scope\}/.test(panel), 'read path not scoped');
 expect('S-17: the new-session handoff carries the session marker', /\[OLYMPUS-SESSION \$\{conversationId\}\]/.test(action), 'new-session unmarked');
 
 fs.rmSync(tmpHome, { recursive: true, force: true });

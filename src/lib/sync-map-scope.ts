@@ -63,6 +63,20 @@ export function isAppSyncEntry(entry: SyncEntryLike, appSessions: Set<string> = 
   return isAppPromptMarker(String(entry.intent || ''));
 }
 
+/**
+ * The default `app` view: everything that is not the operator/assistant
+ * session and not hop/internal machinery. Legacy rows (before meta.app) stay
+ * visible, so the panel is not empty on a fresh install; the operator
+ * denylist is the only thing hidden.
+ */
+export function isAppVisibleEntry(entry: SyncEntryLike, operatorSessions: Set<string> = new Set()): boolean {
+  const sessionId = typeof entry.meta?.sessionID === 'string' ? entry.meta.sessionID : '';
+  if (sessionId && operatorSessions.has(sessionId)) return false;
+  if (String(entry.origin || '') === 'dispatch') return true;
+  if (isInternalAppPrompt(String(entry.intent || ''))) return false;
+  return true;
+}
+
 /** Internal app prompts that are machinery, not a human turn. */
 export function isInternalAppPrompt(text: string): boolean {
   const prompt = String(text || '').trim();
