@@ -39,7 +39,7 @@ import {
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { admitWorkload } from '@/lib/resource-governor';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import net from 'node:net';
 import { probeDevServer, type DevServerProbe } from './dev-server-probe';
 import { workspaceLaneDir, findOlympusRoot } from './opencode-spawn';
@@ -60,6 +60,10 @@ export interface DevServerState {
   logFile: string;
   /** The last probe this manager ran + when. */
   lastProbe: { at: string; running: boolean } | null;
+  /** v0.0.86 — the listener was already serving the project when the manager
+   *  looked; it ADOPTED it after verifying the pid's cwd, instead of refusing
+   *  a healthy preview as a stranger. */
+  adopted?: boolean;
 }
 
 export type DevServerLifecycle = 'running' | 'starting' | 'down' | 'down-stale' | 'none';
@@ -354,14 +358,39 @@ export async function start(projectSlug: string, port?: number, rootOverride?: s
     resolvedPort = await freeEphemeralPort();
   }
 
-  // A busy port this manager does not own: refuse — never a double-spawn,
-  // never a claim on a process we did not create (#105).
+  // A busy port this manager does not own: adopt it when the listener is
+  // PROVABLY this project's server (pid cwd === projectPath), otherwise
+  // refuse — never a double-spawn, never a claim on a stranger process (#105).
   const pre = await probeDevServer(resolvedPort, 1000);
   if (pre.running) {
+    const ownerPid = findPortOwnerPid(resolvedPort);
+    let ownerCwd: string | null = null;
+    if (ownerPid) {
+      try { ownerCwd = fs.readlinkSync(`/proc/${ownerPid}/cwd`); } catch { ownerCwd = null; }
+    }
+    const sameProject = Boolean(ownerPid && ownerCwd && resolve(ownerCwd) === resolve(projectPath));
+    if (ownerPid && sameProject) {
+      const now = new Date().toISOString();
+      const adopted: DevServerState = {
+        pid: ownerPid,
+        port: resolvedPort,
+        host: (pre as any).host ?? null,
+        projectPath,
+        startedAt: now,
+        logFile: '',
+        lastProbe: { at: now, running: true },
+        adopted: true,
+      };
+      writeStateFile(projectSlug, adopted);
+      return {
+        ok: true, alreadyRunning: true, slug: projectSlug, pid: ownerPid, port: resolvedPort,
+        projectPath, state: adopted,
+      };
+    }
     return {
       ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: resolvedPort,
       projectPath, state: null,
-      error: `port ${resolvedPort} is busy by a process this manager does not own (probe running, no matching state) — refusing to double-spawn; stop it or pass another port`,
+      error: `port ${resolvedPort} is busy by a process this manager does not own (probe running, ${ownerPid ? `pid ${ownerPid} cwd ${ownerCwd ?? '?'}` : 'owner unknown'}) — refusing to double-spawn; stop it or pass another port`,
     };
   }
 
@@ -652,6 +681,12 @@ export async function stop(projectSlug: string, waitMs = 5000): Promise<DevServe
   }
 
   const groupKill = (sig: 'SIGTERM' | 'SIGKILL') => {
+    // An adopted listener is not our process-group leader; killing -pid could
+    // take the app's group down. Kill the verified pid only.
+    if (state.adopted) {
+      try { process.kill(state.pid, sig); } catch {}
+      return;
+    }
     try { process.kill(-state.pid, sig); return; } catch {}
     try { process.kill(state.pid, sig); } catch {}
   };

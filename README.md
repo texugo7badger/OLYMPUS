@@ -61,7 +61,11 @@ injects the build into the dispatch and writes the outcome back to
 turns a lane's telemetry into the AIME benchmark (completion/park rates,
 p50/p90 duration, token and null-token truth) with an optional gate. The
 mobile pairing dialog now shows **one QR for the OLYMPUS app** — the widget
-opens from inside it. **v0.0.85 — the Apollo companion in your pocket.**
+opens from inside it. A live AIME resume on v0.0.86 completed its
+deterministic closes (p4b, f1, campaign-inventory) in under a second each,
+named the first new park (`f2-flip-fix`, `dispatch-failed:timeout`, 20 min)
+instead of an empty error, and adopted the healthy preview on :3038 instead
+of refusing it. **v0.0.85 — the Apollo companion in your pocket.**
 **v0.0.84 — the park that survives a resume.**
 A machine auto-resume (overnight or boot orphan pickup) now keeps the hop
 quarantine: the hops that just parked are not re-run from scratch, while a

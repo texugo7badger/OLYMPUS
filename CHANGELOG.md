@@ -103,6 +103,35 @@ All notable changes to OLYMPUS are documented in this file.
   separate widget QR; the single code opens `/m`, and the widget opens from
   the app's header.
 
+#### Late-night truth fixes (the live AIME run)
+
+- **The Parthenon names the EXECUTING god.** The walker rebalances an
+  overloaded plan in memory (Athena over 40% moves a hop to another god), but
+  the plan on disk keeps the declared god: the Parthenon showed
+  `f2-flip-fix` under Athena while the walker ran it as Persephone. The task
+  sheet and the phone briefing apply the same deterministic `balancePlan()`,
+  so the card, the task sheet and the inFlight state agree. The live capture
+  `screenshots/29-parthenon-live-086.png` shows Persephone **blocked** on
+  f2-flip-fix while Athena works her own hops.
+- **Progress counts the plan's hops only.** After a plan rewrite the state
+  held 26 stale ids and the chip read 33/27; `run-state` now intersects the
+  completed set with the plan's hop ids.
+- **A healthy preview is adopted, not refused.** The manager refused a
+  listening port it did not spawn ("busy by a process this manager does not
+  own"), so the AIME preview served 200 while the panel said down. When the
+  listener's `/proc/<pid>/cwd` is the project path, the manager adopts it
+  (state `adopted: true`, probe-verified) and stop kills the verified pid
+  only — never the app's process group.
+- **Live evidence at 2026-11-07 04:20Z:** AIME 10/27 hops, 1 parked
+  (`f2-flip-fix`, `dispatch-failed:timeout`, 20.2 min), 2 Athena hops running,
+  preview 3038 adopted and 200, walk resumed on v0.0.86. Captures:
+  `screenshots/29-parthenon-live-086.png` (all ten gods, Persephone blocked on
+  the parked hop, Athena working), `30-build-hub-086.png` (60 curated builds,
+  `needs FAL_KEY` badge, generated fallback toggle),
+  `31-lane-health-086.png` (two named dead lanes with Retry),
+  `32-athena-terminal-086.png` (her durable thread + mark notice),
+  `33-olympus-app-qr-086.png` (one QR for the OLYMPUS app).
+
 #### Verification
 
 - `scripts/parthenon-live.test.mjs` — 19 assertions (all gods, overlay,
