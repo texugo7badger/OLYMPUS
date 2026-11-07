@@ -878,6 +878,12 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
   const transport = createHopTransport();
   const ctxWithTransport = { ...ctx, transport };
 
+  // v0.0.86 — a ceiling-kill with no provider error is evidence about the
+  // LANE, not just the prompt. Quarantine it for 10 minutes and try the next
+  // healthy lane ONCE (the AIME d3/f2 specimen: two 20-min stalls on the same
+  // lane while the chain had alternatives). A provider error still returns
+  // immediately — another lane would refuse the same prompt.
+  let timeoutFailovers = 0;
   for (const lane of chain) {
     const outcome = await attemptLane(lane, hop, ctxWithTransport, retriesAbsorbed);
     if (outcome.kind === 'ok') {
@@ -892,8 +898,15 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
       deadNotes.push(`${lane} [${outcome.errorClass ?? 'erro'}] morto até ${until} — ${outcome.error.slice(0, 200)}`);
       continue; // #V2-FAILOVER: next lane
     }
-    // A genuine failure (hang / non-retryable provider error): report it —
-    // another lane would fail the same way for the same prompt.
+    // A timeout with no provider error: quarantine the lane briefly and try
+    // one alternative. Anything else is a genuine failure — another lane
+    // would fail the same way for the same prompt.
+    if (timeoutFailovers < 1 && classifyDispatchFailure(outcome.result) === 'timeout') {
+      timeoutFailovers += 1;
+      markLaneDead(lane, 'timeout', 10 * 60_000, outcome.result.error ?? 'hop ceiling-kill with no provider error');
+      console.log(`[hop-transport] lane '${lane}' hit a ceiling-kill with no provider error — quarantined 10m; trying the next lane`);
+      continue;
+    }
     return outcome.result;
   }
 

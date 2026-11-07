@@ -54,5 +54,10 @@ expect('F-8: a partial plan is never called walked', /blocked-dependencies/.test
 expect('F-9: a fixed plan clears the stale quarantine', /plan changed after the last park/.test(walker) && /quarantined\.clear\(\)/.test(walker), 'fixed hop stays quarantined');
 expect('F-10: the summary still distinguishes parked from walked', /Plan parked at hop/.test(postRun) && /The plan is walked/.test(postRun), 'summary lost its branches');
 
+const laneHealth = await import(ROOT + '/src/lib/lane-health.ts');
+const laneSrc = src('src/lib/lane-health.ts');
+expect('F-11: a ceiling-kill maps to the timeout lane status', laneHealth.statusFromErrorClass('timeout') === 'timeout' && laneHealth.isLaneDeadClass('provider.timeout') === true, laneSrc.slice(0, 0));
+expect('F-12: the dispatcher quarantines a timed-out lane and tries one alternative', /timeoutFailovers < 1/.test(walker) && /markLaneDead\(lane, 'timeout', 10 \* 60_000/.test(walker) && /trying the next lane/.test(walker), 'a timed-out lane absorbs the whole chain');
+
 console.log(failures === 0 ? '\nhop-failure-class: all green.' : `\nhop-failure-class: ${failures} failure(s).`);
 process.exit(failures === 0 ? 0 : 1);
