@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760">
   <rect width="100%" height="100%" fill="#07090C"/>
   <text x="60" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700" letter-spacing="6" text-anchor="start" fill="#D4A574" opacity="1">OLYMPUS</text>
-  <text x="1140" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="2" text-anchor="end" fill="#8A94A6" opacity="1">HOP RUNTIME · v0.0.84</text>
+  <text x="1140" y="58" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="2" text-anchor="end" fill="#8A94A6" opacity="1">HOP RUNTIME · v0.0.88</text>
   <text x="60" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22" font-weight="600" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">a deterministic spine, small hops, artifacts on disk</text>
   <text x="60" y="120" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="400" letter-spacing="1.6" text-anchor="start" fill="#8A94A6" opacity="1">plan → balance → walk → transport → verify → settle</text>
   <rect x="60" y="150" width="1080" height="250" rx="12" fill="#0B0E13" stroke="#1C2044" stroke-width="1" opacity="1"/>
@@ -21,7 +21,7 @@
   <rect x="432" y="200" width="156" height="72" rx="10" fill="#10141A" stroke="#67C9E8" stroke-width="1" opacity="1"/>
   <text x="444" y="220" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="2" text-anchor="start" fill="#67C9E8" opacity="1">03</text>
   <text x="444" y="244" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="700" letter-spacing="1" text-anchor="start" fill="#D6DEE5" opacity="1">WALK</text>
-  <text x="444" y="262" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">3 concurrent</text>
+  <text x="444" y="262" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">3–4 concurrent</text>
   <line x1="588" y1="236" x2="604" y2="236" stroke="#D4A574" stroke-width="1" opacity="0.45"/>
   <polygon points="608,236 603,231 603,241" fill="#D4A574" opacity="0.8"/>
   <rect x="608" y="200" width="156" height="72" rx="10" fill="#10141A" stroke="#7BAE8E" stroke-width="1" opacity="1"/>
@@ -45,15 +45,15 @@
   <text x="78" y="456" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="2.4" text-anchor="start" fill="#67C9E8" opacity="1">BUDGETS</text>
   <text x="80" y="482" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">60 min</text>
   <text x="80" y="500" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">campaign window</text>
-  <text x="248" y="482" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">30 min</text>
+  <text x="248" y="482" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">40 min</text>
   <text x="248" y="500" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">hard hop cap</text>
-  <text x="416" y="482" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">14</text>
+  <text x="416" y="482" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">20</text>
   <text x="416" y="500" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">tool calls</text>
   <text x="80" y="536" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">16k</text>
   <text x="80" y="554" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">output tokens</text>
   <text x="248" y="536" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">150 s</text>
   <text x="248" y="554" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">launch floor</text>
-  <text x="416" y="536" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">3</text>
+  <text x="416" y="536" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" font-weight="700" letter-spacing="0" text-anchor="start" fill="#D4A574" opacity="1">3–4</text>
   <text x="416" y="554" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">concurrent hops</text>
   <rect x="600" y="430" width="540" height="180" rx="12" fill="#0B0E13" stroke="#1C2044" stroke-width="1" opacity="1"/>
   <text x="618" y="456" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="2.4" text-anchor="start" fill="#8E9BD6" opacity="1">STATE</text>
@@ -77,7 +77,7 @@
   <text x="1064" y="503" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="9" font-weight="400" letter-spacing="0" text-anchor="middle" fill="#D4A574" opacity="1">resume</text>
   <text x="618" y="548" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">parked names its cause; resume reads the disk; nothing is lost</text>
   <text x="618" y="572" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#8A94A6" opacity="1">a config error never rescues on pre-existing artifacts</text>
-  <text x="618" y="596" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#67C9E8" opacity="1">the user lane holds NEW hops (the in-flight hop finishes) · a full context hands off to a clean window</text>
+  <text x="618" y="608" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#67C9E8" opacity="1">the user lane holds NEW hops · a full context hands off to a clean window</text>
   <rect x="60" y="640" width="1080" height="64" rx="10" fill="#0A0D12" stroke="#1C2044" stroke-width="1" opacity="1"/>
   <text x="80" y="666" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="700" letter-spacing="2" text-anchor="start" fill="#D4A574" opacity="1">AIME · measured</text>
   <text x="80" y="686" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" font-weight="400" letter-spacing="0" text-anchor="start" fill="#D6DEE5" opacity="1">48/67 hops at 2026-11-06 · p50 5.5 tok/s hop wall-clock · one gate parked by name</text>

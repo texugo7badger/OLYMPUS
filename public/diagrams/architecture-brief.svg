@@ -19,7 +19,7 @@
   <rect x="40" y="412" width="1120" height="110" rx="10" fill="#12141A" stroke="#2A2E38"/>
   <rect x="40" y="412" width="3" height="110" rx="1.5" fill="#B79BE0"/>
   <text x="56" y="438" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">OPENCODE + AGENTS</text>
-  <text x="56" y="460" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">10 gods → 122 demigods → 39 curated tools (28 MCP servers registered)</text>
+  <text x="56" y="460" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">10 gods → 61 demigods → 39 curated tools (28 MCP servers registered)</text>
   <text x="56" y="478" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">deterministic hop runtime · vault brain · verification decides</text>
   <text x="40" y="556" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">One window, one server, one agent runtime. The walk can live in its own process (v0.0.73).</text>
 </svg>

@@ -24,7 +24,7 @@
   <rect x="40" y="424" width="3" height="130" rx="1.5" fill="#B79BE0"/>
   <text x="56" y="450" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">OPENCODE + AGENTS</text>
   <text x="56" y="472" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">warm `opencode serve` :3777 — one persistent instance per app run, reused by every terminal message</text>
-  <text x="56" y="490" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">10 gods → 122 demigods → 39 curated tools (28 MCP servers registered) · verification decides</text>
+  <text x="56" y="490" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">10 gods → 61 demigods → 39 curated tools (28 MCP servers registered) · verification decides</text>
   <text x="56" y="508" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">cache instrumentation (olympus-go-cache + context-cache + native) · VaultBrain v3.0</text>
   <text x="40" y="586" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">The campaign can live in a detached process (v0.0.73): the app can close and the walk continues.</text>
 </svg>

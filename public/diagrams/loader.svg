@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-label="OLYMPUS stardrift loader: the theme's light fills the peak">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-label="OLYMPUS stardrift loader: the theme's light fills the peak">
   <defs>
     <linearGradient id="lbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#080B12"/><stop offset="1" stop-color="#0D1220"/></linearGradient>
     <linearGradient id="lfill" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#D4A574"/><stop offset="0.52" stop-color="#9B7BAE"/><stop offset="1" stop-color="#6BAEB5"/></linearGradient>
@@ -8,7 +8,7 @@
     <clipPath id="c100"><rect x="0" y="0" width="512" height="512"/></clipPath>
     <style>.t{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.dim{fill:#8A93A6}.gold{fill:#D4A574}.cyan{fill:#6BAEB5}</style>
   </defs>
-  <rect width="1200" height="420" fill="url(#lbg)"/>
+  <rect width="1200" height="440" fill="url(#lbg)"/>
   <text x="40" y="46" class="t gold" font-size="14" letter-spacing="5">OLYMPUS · THE DEFAULT LOADER</text>
   <text x="40" y="70" class="t dim" font-size="10">a sphere of stars drifts around the peak; the theme's light fills it as the app loads</text>
 
