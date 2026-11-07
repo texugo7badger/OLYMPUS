@@ -58,7 +58,14 @@ All notable changes to OLYMPUS are documented in this file.
   (`d3-day-all-routes`, `dispatch-failed:timeout`, 20 min) and the next lane
   (`deepseek-v4.1-flash-free`) in the same feed.
 
-#### Late park/lane truth fixes
+#### Late truth fixes
+- The cost chart and the recent list use the same `isRealCostRow` predicate as
+  the per-god table, so 13M chart tokens can no longer sit next to a 3M table.
+- `lane-health.json` honors `OLYMPUS_HOME` like every other home-scoped file;
+  the dev lane no longer inherits the stable lane's dead models.
+- The preview manager adopts a probe-verified listener; a retried hop clears
+  its stale park; a live inFlight outranks a stale park; `campaign_end` is not
+  a park.
 
 - A retried hop clears its stale park at launch; a live `inFlight` record
   outranks a stale park in the task sheet and the phone briefing.
