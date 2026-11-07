@@ -137,7 +137,10 @@ All notable changes to OLYMPUS are documented in this file.
   host shares RAM with the live AIME preview, so the full local suite was run
   with `OLYMPUS_MEMORY_FLOOR_MB=400`; the production guard still defaults to
   1200 MB. Captures: `screenshots/24-companion.png`,
-  `screenshots/25-widget-briefing.png`.
+  `screenshots/25-widget-briefing.png`, plus the real AIME run
+  `screenshots/26-aime-companion.png`, `screenshots/27-aime-widget.png` and
+  the app-scoped ledger `screenshots/28-sync-map-app.png` (30 app entries /
+  660 total, operator conversation hidden).
 
 ## [v0.0.84] — 2026-11-05
 
