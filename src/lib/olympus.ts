@@ -1530,7 +1530,7 @@ export function costSummary(opts: { sinceMs?: number } = {}) {
   // v0.0.87 — the cost screen's time series + recent requests. Both come from
   // the same rows the table already uses (no new source, no invented number).
   const now = Date.now();
-  const stepRows = rows.filter((r) => r?.tool === '_step-finish_');
+  const stepRows = rows.filter((r) => r?.tool === '_step-finish_' && isRealCostRow(r));
   // Hourly for a day, 6-hour for a week, daily for a month — the chart must
   // not pretend a 30-day window is 24 hours.
   const spanMs = sinceMs > 0 ? Math.max(3600_000, now - sinceMs) : 24 * 3600_000;
