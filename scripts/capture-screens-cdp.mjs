@@ -135,9 +135,11 @@ async function main() {
     await sleep(900);
 
     // 7 — Settings (appearance)
-    await go(URL_BASE, 3800);
-    await click(byText(/settings/i));
-    await sleep(3000);
+    await go(URL_BASE, 5000);
+    // v0.0.88 — exact aria: /settings/i also matched the editor's
+    // "Editor settings" button, and the modal never opened.
+    await click(`(() => { const b = [...document.querySelectorAll('[data-tip],[aria-label],button')].find((el) => /^(settings|configurações)$/i.test((el.getAttribute('aria-label') || el.getAttribute('data-tip') || '').trim())); b?.click(); return !!b; })()`);
+    await sleep(3500);
     await shot('07-settings.png');
     await closePanel();
     await sleep(800);

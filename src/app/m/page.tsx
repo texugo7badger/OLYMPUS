@@ -691,6 +691,19 @@ export default function MobileCompanion() {
           {total > 0 ? `${pct}% · ${completed}/${total} ${t('m.hops', language)}` : campaignLabel}
           {run?.hops?.parked?.hopId ? ` · ${t('m.parkedAt', language)} ${run.hops.parked.hopId}` : ''}
         </p>
+        {run?.hops?.campaignHealth?.line && (
+          <p
+            className={`mt-1 text-[9px] font-mono leading-relaxed break-words ${
+              run.hops.campaignHealth.verdict === 'HEALTHY' || run.hops.campaignHealth.verdict === 'DONE'
+                ? 'text-olympus-green'
+                : run.hops.campaignHealth.verdict === 'NEEDS-YOU' || run.hops.campaignHealth.verdict === 'BLOCKED'
+                  ? 'text-olympus-red'
+                  : 'text-olympus-gold'
+            }`}
+          >
+            {run.hops.campaignHealth.line}
+          </p>
+        )}
 
         <button
           onClick={() => { setBriefingOpen(true); void speakBriefing(); }}
