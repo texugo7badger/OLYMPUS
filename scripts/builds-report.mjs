@@ -4,7 +4,7 @@
  *
  * Generated from the live registry (never hand-maintained): counts by category
  * and god, the real gate each build carries, and the optional-key loadouts.
- * Run: npx tsx scripts/builds-report.mjs > docs/BUILD-HUB.md
+ * Run: npx tsx scripts/builds-report.mjs > BUILD-HUB.md
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
