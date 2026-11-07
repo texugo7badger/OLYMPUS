@@ -1,14 +1,14 @@
 {
-  "version": "0.0.87",
-  "tag": "v0.0.87",
+  "version": "0.0.88",
+  "tag": "v0.0.88",
   "stable": true,
   "tests": {
-    "pass": 165,
+    "pass": 170,
     "fail": 0,
     "skip": 1,
-    "suites": 166
+    "suites": 171
   },
-  "releasedAt": "2026-11-07T07:22:37.450Z",
-  "commit": "b2cacdb",
+  "releasedAt": "2026-11-07T17:02:18.488Z",
+  "commit": "4a983b5",
   "note": "Stable means: the full battery ran with 0 FAIL and the declared skips are explicit. The console/GO limits are unrelated and may change."
 }
