@@ -109,7 +109,10 @@ export function mobileManifest(surface: MobileSurface, state: ThemeState = readT
     display: 'standalone',
     orientation: 'portrait',
     background_color: palette.bg,
-    theme_color: palette.gold,
+    // v0.0.87 — the PWA/system status bar follows the active theme's
+    // background, never the gold accent (the Android status strip was gold
+    // on a dark theme). The accent stays in the icon and the in-app chrome.
+    theme_color: palette.bg,
     categories: ['productivity', 'utilities'],
     icons: [
       { src: icon(192), sizes: '192x192', type: 'image/png', purpose: 'any' },

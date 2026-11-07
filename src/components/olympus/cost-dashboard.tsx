@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import OlympusLoader from './olympus-loader';
 import GoUsageBar from './go-usage-bar';
 import { GOD_ICONS } from '@/lib/olympus-store';
-import { DollarSign, Zap, Server, CheckCircle2, ChevronRight, ChevronDown, Cpu, FileText, Globe } from 'lucide-react';
+import { Activity, BarChart3, DollarSign, Zap, Server, CheckCircle2, ChevronRight, ChevronDown, Cpu, FileText, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { demigodShortDescription } from '@/lib/demigod-short-desc';
 import DemigodPromptModal from './demigod-prompt-modal';
@@ -43,6 +43,9 @@ interface CostSummary {
   *  Optional so an older API response never crashes the pane. */
  totalSpendRealUsd?: number;
  totalSpendEstimatedUsd?: number;
+ /** v0.0.87 — the hourly series + recent step-finish rows (same ledger). */
+ hourly?: Array<{ ts: string; input: number; output: number; requests: number; spend: number }>;
+ recent?: Array<{ ts: string; god: string; model: string; input: number; output: number; cached: number; stepUsd: number; listUsd: number }>;
 }
 
 /** Static demigod catalog per god (mirrors dispatch-graph route). */
@@ -407,6 +410,58 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 	 )}
 	 </div>
 
+ {/* v0.0.87 — usage over the window: one bar per hour, measured tokens. */}
+ {data.hourly && data.hourly.length > 0 && (
+ <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3 mb-3">
+ <div className="flex items-center gap-2 mb-2">
+ <BarChart3 size={12} className="text-olympus-cyan" />
+ <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">Usage · {costWindow}</span>
+ <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">
+ {fmt(data.hourly.reduce((n, h) => n + h.input + h.output, 0))} tokens · {data.hourly.reduce((n, h) => n + h.requests, 0)} step(s)
+ </span>
+ </div>
+ {(() => {
+   const max = Math.max(1, ...data.hourly!.map((h) => h.input + h.output));
+   return (
+     <div className="flex items-end gap-0.5 h-16" role="img" aria-label="Hourly token usage">
+       {data.hourly!.map((h) => {
+         const total = h.input + h.output;
+         const pct = Math.max(total > 0 ? 3 : 1, Math.round((total / max) * 100));
+         return (
+           <div
+             key={h.ts}
+             className={cn('flex-1 rounded-t-sm transition-all duration-300', total > 0 ? 'bg-olympus-cyan/60 hover:bg-olympus-cyan' : 'bg-olympus-gold/10')}
+             style={{ height: `${pct}%` }}
+             data-tip={`${new Date(h.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${h.input} in / ${h.output} out · ${h.requests} req`}
+           />
+         );
+       })}
+     </div>
+   );
+ })()}
+ <div className="mt-1 flex justify-between text-[8px] font-mono text-olympus-text-dim">
+ <span>{new Date(data.hourly[0].ts).toLocaleTimeString([], { hour: '2-digit' })}</span>
+ <span>now</span>
+ </div>
+ </div>
+ )}
+
+ {/* v0.0.87 — tips: the three numbers that are easy to confuse. */}
+ <div className="grid grid-cols-3 gap-2 mb-3">
+ <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-2" data-tip="A subscription can report step cost $0 while the catalog price (list) is real; the provider invoice is separate.">
+ <div className="text-[8px] font-mono uppercase text-olympus-gold">step · list · invoice</div>
+ <p className="mt-1 text-[8px] font-mono text-olympus-text-dim leading-relaxed">Step is what the provider charged this call; list is the public price; invoice is the console bill. Never summed.</p>
+ </div>
+ <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-2" data-tip="Cached input is cheaper; the hit rate is cached / (fresh input + cached), measured from the ledger.">
+ <div className="text-[8px] font-mono uppercase text-olympus-cyan">cache hit</div>
+ <p className="mt-1 text-[8px] font-mono text-olympus-text-dim leading-relaxed">Cached reads are cheaper. A high hit rate lowers the effective input price, not the token count.</p>
+ </div>
+ <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-2" data-tip="Turn tok/s is generation-only; hop tok/s includes tool time, so the two are not comparable.">
+ <div className="text-[8px] font-mono uppercase text-olympus-green">tok/s</div>
+ <p className="mt-1 text-[8px] font-mono text-olympus-text-dim leading-relaxed">Turn speed is generation-only; hop speed includes tools. Both are shown with their label.</p>
+ </div>
+ </div>
+
  {/* Budget progress — only when provider has a real cap */}
  {data.cap5h != null && (
  <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3 mb-3">
@@ -455,6 +510,27 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 	 />
 	 ))}
  </div>
+
+ {/* v0.0.87 — recent step-finish rows: the ledger the table is built from. */}
+ {data.recent && data.recent.length > 0 && (
+ <div className="mt-3 rounded-lg border border-olympus-gold/15 bg-olympus-card p-3">
+ <div className="flex items-center gap-2 mb-1.5">
+ <Activity size={11} className="text-olympus-gold" />
+ <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">Recent requests</span>
+ <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">last {data.recent.length}</span>
+ </div>
+ <div className="space-y-0.5">
+ {data.recent.map((r, i) => (
+ <div key={`${r.ts}-${i}`} className="flex items-center gap-2 text-[8.5px] font-mono">
+ <span className="text-olympus-text-dim shrink-0">{new Date(r.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+ <span className="text-olympus-text truncate flex-1">{r.god} · {r.model}</span>
+ <span className="text-olympus-cyan shrink-0">{fmt(r.input)}/{fmt(r.output)}</span>
+ <span className="text-olympus-text-dim shrink-0">{fmtUsd(r.stepUsd)} step · {fmtUsd(r.listUsd)} list</span>
+ </div>
+ ))}
+ </div>
+ </div>
+ )}
 
  {/* Token breakdown — kept (cost-relevant) */}
  <div className="mt-3 rounded-lg border border-olympus-gold/15 bg-olympus-card p-3">

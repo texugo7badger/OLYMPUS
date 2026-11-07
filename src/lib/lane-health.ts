@@ -29,7 +29,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-export type LaneStatus = 'alive' | 'quota' | 'no-route' | 'rate-limit' | 'auth' | 'unknown';
+export type LaneStatus = 'alive' | 'quota' | 'no-route' | 'rate-limit' | 'auth' | 'timeout' | 'unknown';
 
 export interface LaneHealthEntry {
   status: LaneStatus;
@@ -59,7 +59,7 @@ export const DEFAULT_DEAD_TTL_MS = 30 * 60_000;
 export const MAX_DEAD_TTL_MS = 31 * 24 * 60 * 60_000;
 
 export function laneHealthPath(override?: string): string {
-  return override ?? path.join(os.homedir(), '.olympus', 'lane-health.json');
+  return override ?? path.join(process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus'), 'lane-health.json');
 }
 
 /**
@@ -144,6 +144,10 @@ export function isLaneDeadClass(cls: string | null | undefined): boolean {
     || c.includes('payment')
     || c.includes('402')
     || c.includes('muse-wonder')
+    // A provider-side timeout class is worth failing over; the writer gives
+    // it a short TTL, so a transient stall recovers.
+    || c.includes('timeout')
+    || c.includes('ceiling-kill')
   );
 }
 
@@ -155,6 +159,9 @@ export function statusFromErrorClass(cls: string | null | undefined): LaneStatus
   if (c.includes('no-route') || c.includes('no_route') || c.includes('not-found') || c.includes('model-not-found')) return 'no-route';
   if (c.includes('auth') || c.includes('unauthorized') || c.includes('forbidden')) return 'auth';
   if (c.includes('rate')) return 'rate-limit';
+  // v0.0.86 — a ceiling-kill with no provider error is evidence of a sick
+  // lane, not of death: a short TTL quarantine lets the next hop fail over.
+  if (c.includes('timeout') || c.includes('ceiling')) return 'timeout';
   return 'unknown';
 }
 

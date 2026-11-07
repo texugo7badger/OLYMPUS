@@ -50,6 +50,8 @@ import { applyRunManifestFile, buildRunMcpManifest, getRunMcpManifest, setRunMcp
 import { checkCostCaps } from '@/lib/cost-caps';
 import { SEED_DESIGN_BUILDS, buildPrompt, mergeBuildStats, type DesignBuild } from '@/lib/design-builds';
 import { getVaultRoot } from '@/lib/vault-root';
+import { classifyDispatchFailure } from './failure-class';
+import { patrolFinding, recordPatrol } from '@/lib/atlas-patrol';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
@@ -597,30 +599,7 @@ export { isLaneDeadClass } from '@/lib/lane-health';
  * with the #107 crescendo INSIDE the dispatcher: an overload burst is
  * absorbed per resolveRetryPlan(), exhaustion reported for the PARK.
  */
-/**
- * v0.0.86 (#334) — CLASSIFY A DISPATCH FAILURE, never park classless.
- *
- * The spellings below come from the real AIME tails: a warm-transport
- * ECONNREFUSED, a spawn `Agent not found: "hephaestus-hop"`, a tool-budget
- * kill, a provider quota/402, and a ceiling kill. The class is stored in the
- * park + telemetry so the task sheet can name the cause and the walker can
- * decide whether another lane could help.
- */
-export type DispatchFailureClass = 'transport' | 'tool-budget' | 'provider' | 'agent-missing' | 'model-missing' | 'timeout' | 'script' | 'unknown';
-
-export function classifyDispatchFailure(input: { error?: string | null; errorClass?: string | null } | string | null | undefined): DispatchFailureClass {
-  const text = typeof input === 'string' ? input : String(input?.error ?? '');
-  const declared = typeof input === 'object' && input ? String(input.errorClass ?? '') : '';
-  const hay = `${declared} ${text}`;
-  if (/all-lanes-dead|provider\.(quota|free-limit|no-route|auth|rate-limit)|quota|rate.?limit|\b401\b|\b402\b|\b403\b|no-route|auth/i.test(hay)) return 'provider';
-  if (/agent not found|unknown agent|no agent named/i.test(hay)) return 'agent-missing';
-  if (/model not found|unknown model|no such model/i.test(hay)) return 'model-missing';
-  if (/hop-tool-budget|tool.?budget|too many tool/i.test(hay)) return 'tool-budget';
-  if (/econnrefused|econnreset|socket hang up|warm turn stalled|warm-transport|connect timeout|fetch failed|network error/i.test(hay)) return 'transport';
-  if (/ceiling-kill|timed out|timeout|silent|stall/i.test(hay)) return 'timeout';
-  if (/script exit|script-timeout|script spawn failed/i.test(hay)) return 'script';
-  return 'unknown';
-}
+export { classifyDispatchFailure, type DispatchFailureClass } from './failure-class';
 
 /**
  * R31-08 — DETERMINISTIC SCRIPT STEP.
@@ -707,13 +686,13 @@ async function attemptLane(
     // v0.0.86 (#333) — a lane marked dead WHILE this hop was in flight must
     // not absorb another full crescendo. Check before every retry and hand the
     // class up so the chain fails over immediately.
-    if (attempt > 0 && !isLaneAvailable(lane)) {
+    if (!isLaneAvailable(lane)) {
       const entry = readLaneHealth().lanes[lane];
       return {
         kind: 'lane-dead',
         errorClass: entry?.status ?? 'unknown',
         retryAfterMs: entry?.retryUntil ? Math.max(0, entry.retryUntil - Date.now()) : null,
-        error: `lane '${lane}' was marked dead during the hop (${entry?.status ?? 'unknown'}) — failing over instead of retrying it`,
+        error: `lane '${lane}' is marked dead (${entry?.status ?? 'unknown'}) — failing over instead of dispatching on it`,
       };
     }
     // v0.0.52 — never start a retry after the campaign deadline. The in-flight
@@ -878,6 +857,12 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
   const transport = createHopTransport();
   const ctxWithTransport = { ...ctx, transport };
 
+  // v0.0.86 — a ceiling-kill with no provider error is evidence about the
+  // LANE, not just the prompt. Quarantine it for 10 minutes and try the next
+  // healthy lane ONCE (the AIME d3/f2 specimen: two 20-min stalls on the same
+  // lane while the chain had alternatives). A provider error still returns
+  // immediately — another lane would refuse the same prompt.
+  let timeoutFailovers = 0;
   for (const lane of chain) {
     const outcome = await attemptLane(lane, hop, ctxWithTransport, retriesAbsorbed);
     if (outcome.kind === 'ok') {
@@ -892,8 +877,15 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
       deadNotes.push(`${lane} [${outcome.errorClass ?? 'erro'}] morto até ${until} — ${outcome.error.slice(0, 200)}`);
       continue; // #V2-FAILOVER: next lane
     }
-    // A genuine failure (hang / non-retryable provider error): report it —
-    // another lane would fail the same way for the same prompt.
+    // A timeout with no provider error: quarantine the lane briefly and try
+    // one alternative. Anything else is a genuine failure — another lane
+    // would fail the same way for the same prompt.
+    if (timeoutFailovers < 1 && classifyDispatchFailure(outcome.result) === 'timeout') {
+      timeoutFailovers += 1;
+      markLaneDead(lane, 'timeout', 10 * 60_000, outcome.result.error ?? 'hop ceiling-kill with no provider error');
+      console.log(`[hop-transport] lane '${lane}' hit a ceiling-kill with no provider error — quarantined 10m; trying the next lane`);
+      continue;
+    }
     return outcome.result;
   }
 
@@ -1146,7 +1138,7 @@ export type HopWalkEvent = (
    *  hops narrate their elapsed time (the 'demora mt' cure: a silent
    *  2-minute spawn reads as a hang; a heartbeat reads as work). */
   | { type: 'hop_heartbeat'; hop: string; god: string; elapsedMs: number }
-  | { type: 'hop_done'; hop: string; god: string; durationMs: number; tokensIn: number | null; tokensOut: number | null; retriesAbsorbed: number; transport?: 'warm' | 'spawn' }
+  | { type: 'hop_done'; hop: string; god: string; durationMs: number; tokensIn: number | null; tokensOut: number | null; retriesAbsorbed: number; transport?: 'warm' | 'spawn'; lane?: string }
   | { type: 'hop_parked'; hop: string; god: string; reason: string; error?: string }
 ) & { campaignId?: string };
 
@@ -1335,6 +1327,19 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       ...(verify ? { verify } : {}),
     };
     emit({ type: 'hop_parked', hop: hop.id, god: hop.god, reason, error });
+    // v0.0.87 — ATLAS PATROLS EVERY PARK. The deterministic finding names the
+    // cause, the next healthy lane and the replan/retry decision; it lands in
+    // the shared feed so Apollo (and the user) see it without reading logs.
+    try {
+      const finding = patrolFinding(laneRoot, hop, {
+        hopId: hop.id, reason, error, errorClass, status: 'parked',
+      });
+      recordPatrol(laneRoot, {
+        ok: true, lane: laneRoot, scannedAt: finding.ts,
+        parked: [finding], stuck: [], source: 'disk',
+        summary: `Atlas: ${hop.id} — ${finding.verdict} · ${finding.failureClass}${finding.nextLane ? ` → ${finding.nextLane}` : ''}`,
+      });
+    } catch { /* Atlas never blocks the park */ }
     // ≥50% of attempts parked after at least 4 attempts = the lane/system is
     // sick, not the hop. Stop named instead of burning the remaining hops.
     if (attempts >= 4 && parks / Math.max(1, attempts) >= 0.5) {
@@ -1565,6 +1570,10 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         }
         const startedAt = Date.now();
         attempts += 1;
+        // v0.0.86 — a retried hop is RUNNING, not parked. The state kept the
+        // previous park while the new attempt ran, so the Parthenon showed
+        // 'Athena blocked' and d3 running at the same time.
+        if (parkedHop?.hopId === next.id) parkedHop = null;
         const task: WalkTask = { hop: next, startedAt, done: false, promise: Promise.resolve() };
         inFlight.set(next.id, task);
         // #PANTHEON-RAIL: the hop's ARTIFACTS ride the start event — the
@@ -1635,7 +1644,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
                 type: 'hop_done', hop: next.id, god: next.god,
                 durationMs: Date.now() - startedAt, tokensIn: result.tokensIn,
                 tokensOut: result.tokensOut, retriesAbsorbed: result.retriesAbsorbed,
-                transport: result.transport,
+                transport: result.transport, lane: result.lane,
               });
             } else {
               const failed = verify.checks.find((c) => !c.ok);

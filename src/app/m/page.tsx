@@ -57,7 +57,7 @@ type RunState = {
     completed?: number;
     total?: number;
     inFlight?: number;
-    inFlightList?: Array<{ hopId: string; god?: string }>;
+    inFlightList?: Array<{ hopId: string; god?: string; startedAt?: string }>;
     parked?: { hopId?: string; reason?: string } | null;
   };
 };
@@ -748,6 +748,8 @@ export default function MobileCompanion() {
                       className="cursor-pointer rounded-full border border-olympus-cyan/30 px-2 py-0.5 text-[10px] text-olympus-cyan"
                     >
                       {h.hopId}{h.god ? ` · ${h.god}` : ''}
+                      {h.startedAt ? ` · ${Math.max(0, Math.round((Date.now() - new Date(h.startedAt).getTime()) / 1000))}s` : ''}
+                      <span className="ml-1 opacity-60" data-tip="Output tok/s appears when the hop settles — no fake rate while running">· … tok/s</span>
                     </button>
                   ))}
                 </div>

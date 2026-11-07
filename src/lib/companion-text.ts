@@ -184,10 +184,12 @@ export function parkedLine(briefing: ProjectBriefing, lang: Language): string {
 
 export function recentLine(event: BriefEvent, lang: Language): string {
   const tt = TEXT[lang] ?? TEXT.en;
-  return fill(event.status === 'completed' ? tt.recentDone : tt.recentParked, {
+  const line = fill(event.status === 'completed' ? tt.recentDone : tt.recentParked, {
     god: god(event.god, lang),
     hop: event.hopId,
   });
+  // v0.0.87 — measured speed, never a fake number; settled hops only.
+  return event.tokensPerSec ? `${line} · ${event.tokensPerSec.toFixed(1)} tok/s` : line;
 }
 
 export function nextLine(briefing: ProjectBriefing, lang: Language): string {

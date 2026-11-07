@@ -50,6 +50,8 @@ export interface TaskRecord {
   tokensIn?: number | null;
   tokensOut?: number | null;
   durationMs?: number;
+  /** v0.0.87 — measured output tok/s (settled hops). */
+  tokensPerSec?: number | null;
   retriesAbsorbed?: number;
   reasoning?: string | null;
   sessionId?: string | null;
@@ -266,7 +268,7 @@ export default function TaskSheetModal({ hopId, lane, onClose }: { hopId: string
                   <div className="flex items-center gap-1 mb-0.5"><Coins size={10} className="text-olympus-cyan" /><span className="text-[8px] font-mono text-olympus-text-dim uppercase">tokens</span></div>
                   <div className="text-[12px] font-bold font-mono text-olympus-cyan">{fmtTokens(task.tokensIn)} / {fmtTokens(task.tokensOut)}</div>
                   <div className="text-[8px] font-mono text-olympus-text-dim">
-                    {task.live ? 'live · tool calls' : 'in / out'}{typeof task.estimatedCostUsd === 'number' ? ` · ~$${task.estimatedCostUsd.toFixed(4)}` : ''}
+                    {task.live ? 'live · tool calls' : 'in / out'}{task.tokensPerSec ? ` · ${task.tokensPerSec.toFixed(1)} tok/s` : ''}{typeof task.estimatedCostUsd === 'number' ? ` · ~$${task.estimatedCostUsd.toFixed(4)}` : ''}
                   </div>
                 </div>
                 <div className="rounded-lg p-2 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-gold/15">

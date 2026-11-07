@@ -141,6 +141,8 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   // W-D3: the campaign stats — the header's N/M progress + the projected
   // time-to-finish (the user's headline ask).
   const [campaignStats, setCampaignStats] = useState<null | { total: number; completed: number; parked: number; projectedRemainingMs: number }>(null);
+  // v0.0.87 — Atlas's deterministic patrol rides the same tasks poll.
+  const [atlasPatrol, setAtlasPatrol] = useState<null | { summary: string; parked: number; stuck: number; verdict: string | null; hopId: string | null; nextLane: string | null }>(null);
   // The god's LIVE demigod dispatches (the arsenal in action — the
   // parallelism-of-parallelism surface: god → demigod chips).
   const language = useLanguage();
@@ -161,6 +163,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
         }
         setTasks(byGod);
         if (d?.stats) setCampaignStats(d.stats);
+        setAtlasPatrol(d?.atlasPatrol ?? null);
         setDemigods(d?.gods
           ? Object.fromEntries(Object.entries(d.gods as Record<string, { demigods?: DemigodLive[] }>)
               .map(([g, v]) => [g, v.demigods || []]))
@@ -226,6 +229,26 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           </button>
         )}
       </div>
+
+      {atlasPatrol && (
+        <div
+          className="px-2 py-1 text-[8px] font-mono text-olympus-gold/90 bg-olympus-gold/5 border-b border-olympus-gold/10 flex items-center gap-1.5"
+          data-tip={atlasPatrol.summary}
+        >
+          <span className="uppercase tracking-wide text-olympus-text-dim">Atlas patrol</span>
+          <span>{atlasPatrol.parked} parked · {atlasPatrol.stuck} stuck</span>
+          {atlasPatrol.verdict && <span className="text-olympus-cyan">· {atlasPatrol.verdict}</span>}
+          {atlasPatrol.nextLane && <span className="truncate">→ {atlasPatrol.nextLane}</span>}
+          <button
+            type="button"
+            onClick={() => setChatGod('atlas')}
+            className="ml-auto shrink-0 rounded border border-olympus-gold/25 px-1 py-0.5 text-[7px] hover:bg-olympus-gold/10"
+            data-tip="Open Atlas's terminal and ask for the full analysis/replan"
+          >
+            ask Atlas
+          </button>
+        </div>
+      )}
 
       <div className="py-1">
         {ordered.map(s => {
@@ -314,6 +337,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                       ? `${Math.max(0, Math.round((Date.now() - new Date(runStart).getTime()) / 1000))}s…`
                       : t.durationMs ? `${Math.round(t.durationMs / 1000)}s` : '';
                     const tok = t.tokensOut ? `${(t.tokensOut / 1000).toFixed(1)}k out` : '';
+                    const tps = t.tokensPerSec ? `${t.tokensPerSec.toFixed(1)} tok/s` : '';
                     // The task's honest progress: completed = full; running =
                     // elapsed vs the god's own median hop duration (the lane's
                     // telemetry-derived ETA); pending/parked = no bar.
@@ -336,6 +360,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                         <span className="text-[9px] font-mono truncate flex-1" style={{ color: dot }}>{t.id}</span>
                         {dur && <span className="text-[8px] font-mono text-[#6B8F71] shrink-0">{dur}</span>}
                         {tok && <span className="text-[8px] font-mono text-olympus-text-dim shrink-0">{tok}</span>}
+                        {tps && <span className="text-[8px] font-mono text-olympus-cyan shrink-0" data-tip="Measured output tokens per second (settled hop, includes tool time)">{tps}</span>}
                         {(t.status === 'running' || t.status === 'completed') && (
                           <span className="block w-full h-0.5 rounded-full bg-olympus-text-dim/20 overflow-hidden">
                             <span
@@ -378,7 +403,8 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                             <div className="flex items-center gap-1 mt-0.5 min-w-0">
                               {d.skill && <span className="text-[7px] font-mono text-olympus-blue truncate">skill:{d.skill}</span>}
                               {d.mcp && <span className="text-[7px] font-mono text-olympus-cyan truncate">mcp:{d.mcp}</span>}
-                              {d.tokensOut > 0 && <span className="text-[7px] font-mono text-olympus-text-dim ml-auto shrink-0">{d.tokensOut} out</span>}
+                              {d.tokensOut > 0 && <span className="text-[7px] font-mono text-olympus-text-dim shrink-0">{d.tokensOut} out</span>}
+                              {d.tokensPerSec ? <span className="text-[7px] font-mono text-olympus-cyan ml-auto shrink-0" data-tip="Measured output tok/s for this demigod dispatch">{d.tokensPerSec.toFixed(1)} tok/s</span> : null}
                             </div>
                           </div>
                         );

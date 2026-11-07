@@ -1501,7 +1501,9 @@ export function costSummary(opts: { sinceMs?: number } = {}) {
   // per-god rows. A benchmark session boundary filters here, so a "new
   // session" really starts from zero without deleting history.
   const sinceMs = Number.isFinite(opts.sinceMs) && (opts.sinceMs as number) > 0 ? (opts.sinceMs as number) : 0;
-  const allRows = readCostRows();
+  // v0.0.87 — the 7d/30d tabs were filtering a 5h read. Read the full month
+  // once (the TTL cache absorbs it) and let the window filter below decide.
+  const allRows = readCostRows(31 * 24 * 3600_000);
   const rows = sinceMs
     ? allRows.filter((r) => {
         const t = new Date(r?.ts).getTime();
@@ -1525,6 +1527,46 @@ export function costSummary(opts: { sinceMs?: number } = {}) {
   // Hide the aggregate until the per-model table lands (issue A2); the
   // per-god rows still show step cost + list value with their own labels.
   const cap5hTotal = null;
+  // v0.0.87 — the cost screen's time series + recent requests. Both come from
+  // the same rows the table already uses (no new source, no invented number).
+  const now = Date.now();
+  const stepRows = rows.filter((r) => r?.tool === '_step-finish_' && isRealCostRow(r));
+  // Hourly for a day, 6-hour for a week, daily for a month — the chart must
+  // not pretend a 30-day window is 24 hours.
+  const spanMs = sinceMs > 0 ? Math.max(3600_000, now - sinceMs) : 24 * 3600_000;
+  const bucketMs = spanMs <= 24 * 3600_000 ? 3600_000
+    : spanMs <= 7 * 24 * 3600_000 ? 6 * 3600_000
+    : 24 * 3600_000;
+  const bucketCount = Math.max(1, Math.min(31, Math.ceil(spanMs / bucketMs)));
+  const lastBucket = Math.floor(now / bucketMs) * bucketMs;
+  const buckets = new Map<number, { input: number; output: number; requests: number; spend: number }>();
+  for (const r of stepRows) {
+    const t = new Date(r?.ts).getTime();
+    if (!Number.isFinite(t)) continue;
+    const key = Math.floor(t / bucketMs) * bucketMs;
+    if (key < lastBucket - (bucketCount - 1) * bucketMs || key > lastBucket) continue;
+    const b = buckets.get(key) ?? { input: 0, output: 0, requests: 0, spend: 0 };
+    b.input += Number(r.input_tokens ?? 0);
+    b.output += Number(r.output_tokens ?? 0);
+    b.requests += 1;
+    b.spend += Number(r.spend_usd ?? 0) + Number(r.spend_estimated_usd ?? 0);
+    buckets.set(key, b);
+  }
+  const hourly = Array.from({ length: bucketCount }, (_, i) => {
+    const key = lastBucket - (bucketCount - 1 - i) * bucketMs;
+    const b = buckets.get(key) ?? { input: 0, output: 0, requests: 0, spend: 0 };
+    return { ts: new Date(key).toISOString(), ...b };
+  });
+  const recent = stepRows.slice(-12).reverse().map((r) => ({
+    ts: String(r.ts ?? ''),
+    god: String(r.god ?? 'global'),
+    model: String(r.model ?? '').replace(/^opencode-go\//, ''),
+    input: Number(r.input_tokens ?? 0),
+    output: Number(r.output_tokens ?? 0),
+    cached: Number(r.cached_tokens ?? 0),
+    stepUsd: Number(r.spend_usd ?? 0),
+    listUsd: Number(r.spend_estimated_usd ?? 0),
+  }));
   // #179 + #181: the cap tracks REAL provider-reported spend (the metered
   // figure the step-finish rows carry) — heuristic estimates never count
   // against the cap.
@@ -1544,6 +1586,7 @@ export function costSummary(opts: { sinceMs?: number } = {}) {
     windowMs: real.windowMs,
     totalReqs, totalInput, totalOutput, avgLatency, avgSuccess,
     cap5h: cap5hTotal, pctOfCap, activeGods: activeCosts.length, costs, provider: prov,
+    hourly, recent,
   };
 }
 

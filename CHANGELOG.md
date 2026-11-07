@@ -2,6 +2,89 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.87] — 2026-11-07
+
+### Apollo speaks, Atlas thinks, the ledger tells the truth
+
+#### Apollo narrates the wait and names a dead lane
+
+- Every warm turn now emits a 45-second narration line with elapsed time and
+  the last tool (`⏳ apollo is working — 96s · last tool: shell · the warm
+  session and its context are preserved`). A long tool chain no longer shows a
+  silent `thinking (Ns)` and then nothing.
+- The preflight probe is evidence, not a footnote: a failed lane is recorded
+  in `lane-health.json` with its class, and an auth/no-route lane fails fast
+  with the next healthy lane named. A transient 429 keeps the turn alive but
+  still suggests the fallback. The old behavior — log a warning and let Apollo
+  hang for 180s — is gone.
+- The 48 KB reasoning cap, the 26rem thinking box and the 30-min turn ceiling
+  from v0.0.86 stay.
+
+#### The cost ledger is truthful, and speed is everywhere
+
+- **The GO ledger reads the hop-data DB's real shape.** It looked for
+  `model.providerID` while the walker writes `providerID`/`modelID`, so every
+  AIME hop row was skipped. It now reads both shapes, merges the app's
+  `_step-finish_` ledger (deduped) and prices with the catalog; the 5h/week/
+  month windows finally move with the walk. The console remains authoritative
+  and the note says so.
+- **The cost screen has a time series.** `/api/olympus/costs` returns hourly
+  input/output/request buckets and the last 12 step-finish rows; the dashboard
+  renders a bar chart, three honest tips (step/list/invoice, cache hit, tok/s
+  labels) and a recent-requests log inside the existing scroll.
+- **Measured tok/s in every surface.** `TaskRecord` and `DemigodLive` carry
+  `tokensPerSec` (output tokens / wall-clock, settled hops only); the
+  Parthenon task rows, the task sheet, the demigod chips, the phone's recent
+  list and the briefing line show it. A running hop shows its elapsed time and
+  `… tok/s` — never a fabricated rate. `hopSpeed()` returns `null` for a
+  zero-duration turn; the UI renders `—`.
+- **The Android status strip follows the theme.** The PWA manifest's
+  `theme_color` was the gold accent, so a dark theme had a gold system bar; it
+  is now the theme background. The accent stays in the icon and in-app chrome.
+
+#### Atlas patrols every park
+
+- A new deterministic patrol (`src/lib/atlas-patrol.ts`) reads the plan, state
+  and telemetry, classifies each park (timeout, provider, tool-budget,
+  verify-failed, script, unknown), checks the declared artifacts, picks the
+  next healthy lane and emits a verdict: `retry`, `replan` or `ask-user`.
+- The walker calls it on every park; the finding is appended to
+  `.olympus-atlas-patrol.jsonl` and the shared activity feed. The Parthenon
+  header shows `Atlas patrol · N parked · verdict → next lane` with **ask
+  Atlas**. `GET/POST /api/olympus/atlas/patrol` exposes the scan and opt-in
+  `think` (Atlas) / `escalate` (Apollo) model turns — never a hidden LLM turn
+  on every park.
+- The live AIME resume showed the first classified park
+  (`d3-day-all-routes`, `dispatch-failed:timeout`, 20 min) and the next lane
+  (`deepseek-v4.1-flash-free`) in the same feed.
+
+#### Late truth fixes
+- The cost chart and the recent list use the same `isRealCostRow` predicate as
+  the per-god table, so 13M chart tokens can no longer sit next to a 3M table.
+- `lane-health.json` honors `OLYMPUS_HOME` like every other home-scoped file;
+  the dev lane no longer inherits the stable lane's dead models.
+- The preview manager adopts a probe-verified listener; a retried hop clears
+  its stale park; a live inFlight outranks a stale park; `campaign_end` is not
+  a park.
+
+- A retried hop clears its stale park at launch; a live `inFlight` record
+  outranks a stale park in the task sheet and the phone briefing.
+- `campaign_end`/unknown walk events are no longer formatted as
+  `Hop 'undefined' PARKED (undefined)`.
+- A lane is health-checked before the **first** attempt, and a ceiling-kill
+  with no provider error quarantines the lane for 10 minutes and tries one
+  alternative.
+- The preview manager adopts a probe-verified listener (pid cwd === project)
+  instead of refusing a healthy preview.
+
+#### Verification
+
+- New suites: `atlas-patrol` 10, `cost-speed` 10, `apollo-narrative` 7.
+- Updated: `parthenon-live` 24, `hop-failure-class` 22, `companion-apps` A-33
+  (theme color follows bg).
+- Full battery must be green before the tag; the release body carries the
+  final counts.
+
 ## [v0.0.86] — 2026-11-07
 
 ### Every god live, every park named

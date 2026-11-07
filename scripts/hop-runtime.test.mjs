@@ -468,8 +468,10 @@ async function main() {
       return { ok: true, exitCode: 0, output: 'ok', tokensIn: 10, tokensOut: 20, retriesAbsorbed: 0, exhausted: false };
     };
     const q3 = await walkPlan({ plan: qPlan, dispatcher: probeDisp, stateDir: qState, resume: true });
-    expect('Q: the initial state write keeps the park while the walk is live',
-      parkAtDispatch === 'k2', `saw ${parkAtDispatch}`);
+    // v0.0.87 — a retried hop is RUNNING, not parked: the launch clears the
+    // stale park so the Parthenon never shows blocked + running at once.
+    expect('Q: the initial state write clears the park for the hop it re-runs',
+      parkAtDispatch === 'null', `saw ${parkAtDispatch}`);
     expect('Q: the human resume retries the hop and clears the park',
       q3.completed.includes('k2') && q3.completed.includes('k3') && !q3.parked,
       JSON.stringify(q3).slice(0, 240));

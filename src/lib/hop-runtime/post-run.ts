@@ -192,7 +192,10 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
   // #120 (B6b): the POOL — the god's live model lane from the repo config.
   // WHO the god + WHERE the lane + WHICH pool: the three-part narration.
   const pool = resolveGodModelLane(ev.god);
-  const poolNote = pool ? ` · pool ${pool}` : '';
+  // v0.0.87 — the applied/strategy lane is known at start; the ACTUAL lane is
+  // only known after the dispatcher/failover, so a done event names it.
+  const actualLane = (ev as { lane?: string }).lane ?? null;
+  const poolNote = actualLane ? ` · lane ${actualLane}` : pool ? ` · strategy lane ${pool}` : '';
   const ts = new Date().toISOString();
   const campaignId = (ev as { campaignId?: string }).campaignId ?? null;
   const project = laneRoot.split(/[\\/]/).filter(Boolean).pop() ?? null;
@@ -206,10 +209,17 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
   } else if (ev.type === 'hop_done') {
     msg = `Hop '${ev.hop}' GREEN — god ${ev.god}${poolNote}, ${Math.round(ev.durationMs / 1000)}s, ${fmt(ev.tokensIn)} in / ${fmt(ev.tokensOut)} out`;
     if (send) send({ type: 'hop_done', hop: ev.hop, god: ev.god, pool, lane: laneRoot, durationMs: ev.durationMs, tokensIn: ev.tokensIn, tokensOut: ev.tokensOut, msg, ts });
-  } else {
+  } else if (ev.type === 'hop_parked') {
     const errHead = (ev.error || '').slice(0, 160);
     msg = `Hop '${ev.hop}' PARKED (${ev.reason}) — god ${ev.god}${poolNote}${errHead ? `: ${errHead}` : ''}`;
     if (send) send({ type: 'hop_parked', hop: ev.hop, god: ev.god, pool, lane: laneRoot, reason: ev.reason, msg, ts });
+  } else {
+    // v0.0.86 — campaign_end / hop_verify / future event types are NOT parks.
+    // The old `else` formatted every unknown event as "Hop 'undefined' PARKED
+    // (undefined)" — three of them appeared at every walk start.
+    const unknown = ev as { type?: string };
+    if (send) send({ type: 'log', msg: `campaign ${unknown.type === 'campaign_end' ? 'end' : unknown.type ?? 'event'}`, ts });
+    return;
   }
   // v0.0.24 (#227): the single hop stream — every live surface replays this.
   publishHopEvent({
