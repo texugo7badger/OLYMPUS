@@ -69,10 +69,15 @@ export function decideCeiling(input: CeilingInput, opts: CeilingOptions = {}): C
 /**
  * The hard cap a healthy long hop may reach. v0.0.52: 2× was 50 min for the
  * 25-min base, and a live k1-source-audit ran 68 min because the campaign
- * deadline did not clip the transport's hard cap. The cap is now bounded to
- * 30 min; the campaign budget can clip it lower per hop.
+ * deadline did not clip the transport's hard cap. v0.0.86 raises the bound to
+ * 40 min (AIME's `c11-admin-sky` legitimately ran 31 min; the 30-min cap cut
+ * the tail of real artifact work) and makes it env-tunable:
+ * OLYMPUS_HOP_HARD_CAP_MS. The campaign budget still clips it lower per hop.
  */
-export const HOP_HARD_CAP_MS = 30 * 60_000;
+export const HOP_HARD_CAP_MS = (() => {
+  const n = Number.parseInt(process.env.OLYMPUS_HOP_HARD_CAP_MS ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : 40 * 60_000;
+})();
 export function hardCeilingMs(baseTimeoutMs: number): number {
   return Math.min(Math.max(baseTimeoutMs, baseTimeoutMs * 2), HOP_HARD_CAP_MS);
 }

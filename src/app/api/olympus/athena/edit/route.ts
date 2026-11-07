@@ -5,10 +5,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-// Use spawnOpencode() for cross-platform support.
-import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
+import { resolveDispatchCwd } from '@/lib/opencode-spawn';
 import { getVaultRoot } from '@/lib/vault-root';
 import { markUserActivity } from '@/lib/user-activity';
+import { runGodTurn } from '@/lib/god-run';
+import { appendGodInbox, updateGodInbox } from '@/lib/god-inbox';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,8 +37,12 @@ const VAULT_ROOT = getVaultRoot();
  * Returns:
  *   { ok, dispatchId, message }
  *
- * The actual edit is performed asynchronously by Athena (via opencode run).
- * Progress is tracked in the activity feed.
+ * v0.0.86 — the mark LIVES IN ATHENA'S TERMINAL. The request is written to
+ * her durable inbox (the Parthenon's god chat renders it) with status
+ * `pending`, her turn runs in the background, and the reply (or the failure)
+ * is appended to the same thread. Nothing is `stdio: 'ignore'` any more: the
+ * user can watch the mark being worked, and the instruction is framed as a
+ * steering request for the work Athena is already doing.
  */
 export async function POST(req: NextRequest) {
   markUserActivity(120_000);
@@ -72,6 +77,13 @@ export async function POST(req: NextRequest) {
 
 **User's instruction:**
 ${instruction}
+
+## This is a steering request for your CURRENT work
+
+If you are already working on this project (a hop, a task, or a live preview
+fix), treat this mark as an adjustment to that work: apply it in place before
+starting anything new, and keep the current task moving. If nothing is in
+flight, apply the edit directly.
 
 ## Your Task
 
@@ -114,48 +126,72 @@ Use context7 MCP if you need library documentation.`;
       // Non-fatal
     }
 
-    // Dispatch to Athena via opencode run (async — don't block the response)
-    // Use spawnOpencode() for Windows shell:true + stdin:'ignore'.
-    // Spawn Athena asynchronously (fire and forget) — stdio:'ignore' + detached.
-    // #104: the dispatch cwd is the PROJECT dir via resolveDispatchCwd — the
-    // lane-preference resolver (never the repo root, never inside it); without
-    // this, Athena's edits would land inside the OLYMPUS working tree (#99's
-    // defect class, on the one-shot lane).
-    const child = spawnOpencode(
-      ['run', '--agent', 'athena', athenaInstruction],
-      {
-        cwd: resolveDispatchCwd(projectSlug),
-        extraEnv: {
-          OLYMPUS_DISPATCH_ID: dispatchId,
-          OLYMPUS_PROJECT_SLUG: projectSlug || '',
-        },
-        detached: true,
-        stdio: 'ignore',
-      },
-    );
-
-    // Unref the child so it doesn't keep the Node process alive
-    child.unref();
-
-    // Log spawn errors (non-fatal)
-    child.on('error', (err: any) => {
-      try {
-        const errEvent = {
-          ts: new Date().toISOString(),
-          god: 'athena',
-          action: 'error',
-          msg: `Athena dispatch failed: ${err.message}`,
-          project: projectSlug || null,
-          meta: { dispatchId },
-        };
-        fs.appendFileSync(feedPath, JSON.stringify(errEvent) + '\n', 'utf-8');
-      } catch {}
+    // v0.0.86 — THE MARK IS IN ATHENA'S TERMINAL.
+    // One inbox row is the user's mark (pending); her turn runs in the
+    // background and its reply lands in the same thread. `resolveDispatchCwd`
+    // keeps the cwd in the PROJECT lane (never the OLYMPUS repo, #99/#104).
+    const inboxEntry = appendGodInbox('athena', {
+      role: 'you',
+      text: instruction,
+      source: 'mark',
+      status: 'pending',
+      meta: { dispatchId, x, y, route: route || '/', viewport, projectSlug: projectSlug || null },
     });
+
+    const lane = resolveDispatchCwd(projectSlug);
+    void (async () => {
+      updateGodInbox('athena', inboxEntry.id, { status: 'running' });
+      try {
+        const turn = await runGodTurn('athena', athenaInstruction, lane, 300_000);
+        if (turn.ok) {
+          appendGodInbox('athena', {
+            role: 'god',
+            text: turn.text,
+            source: 'mark',
+            status: 'done',
+            replyTo: inboxEntry.id,
+            meta: { dispatchId, projectSlug: projectSlug || null },
+          });
+          updateGodInbox('athena', inboxEntry.id, { status: 'done' });
+          try {
+            fs.appendFileSync(feedPath, JSON.stringify({
+              ts: new Date().toISOString(),
+              god: 'athena',
+              action: 'response',
+              msg: `Mark handled: ${turn.text.slice(0, 300)}`,
+              project: projectSlug || null,
+              meta: { dispatchId, inboxId: inboxEntry.id, durationMs: turn.durationMs },
+            }) + '\n', 'utf-8');
+          } catch { /* non-fatal */ }
+        } else {
+          appendGodInbox('athena', {
+            role: 'system',
+            text: `mark failed: ${turn.error}`,
+            source: 'mark',
+            status: 'failed',
+            replyTo: inboxEntry.id,
+            meta: { dispatchId, projectSlug: projectSlug || null },
+          });
+          updateGodInbox('athena', inboxEntry.id, { status: 'failed' });
+        }
+      } catch (err: any) {
+        appendGodInbox('athena', {
+          role: 'system',
+          text: `mark failed: ${err?.message || String(err)}`,
+          source: 'mark',
+          status: 'failed',
+          replyTo: inboxEntry.id,
+          meta: { dispatchId, projectSlug: projectSlug || null },
+        });
+        updateGodInbox('athena', inboxEntry.id, { status: 'failed' });
+      }
+    })();
 
     return NextResponse.json({
       ok: true,
       dispatchId,
-      message: `Athena dispatched. She will process your request: "${instruction.slice(0, 100)}"`,
+      inboxId: inboxEntry.id,
+      message: `In Athena's terminal. She will apply it to the current work: "${instruction.slice(0, 100)}"`,
       coordinates: { x, y },
       project: projectSlug || null,
     });

@@ -1670,7 +1670,22 @@ function flushAllBenchmarkAccumulators(): void {
  * Buffering is capped: an unbounded reasoning prelude would be an
  * unbounded transcript for a model that thinks at length.
  */
-const PRE_STEP_REASONING_MAX = 8 * 1024;
+/**
+ * v0.0.86 — the default turn ceiling. It was 10 min in this module and 15 min
+ * in the action route, while the hop runtime allows 25 min base / 30 min hard:
+ * a long hop died at the app's shorter ceiling ("maximum runtime of 15
+ * minutes", AIME c13b-sakuga-ingest). 30 min bounds real hangs without
+ * killing legitimate artifact work; OLYMPUS_MAX_RUNTIME_MS overrides both
+ * lanes. Keep this in sync with src/app/api/olympus/action/route.ts.
+ */
+export const DEFAULT_MAX_RUNTIME_MS = 30 * 60_000;
+
+/**
+ * v0.0.86 — the pre-step reasoning cap. 8 KB cut real thinking mid-sentence
+ * (the user's "os pensamentos sempre são cortados" report); 48 KB keeps a
+ * full prelude for long-thinking models while still bounding the transcript.
+ */
+const PRE_STEP_REASONING_MAX = 48 * 1024;
 
 function bufferPreStepReasoning(state: { reasoningPre?: string }, text: string): void {
   if (!text) return;
@@ -2770,7 +2785,7 @@ async function runWarmMessageAttempt(
       // too (best-effort — the same #60 kill the client-gone path uses).
       void sendServerAbort();
       onAbort();
-    }, opts.maxRuntimeMs ?? 10 * 60_000);
+    }, opts.maxRuntimeMs ?? DEFAULT_MAX_RUNTIME_MS);
 
     // Silence watchdog (#62, BATCH 13): if NO frame of any kind arrives from
     // the /event feed for SILENCE_WARN_MS, warn visibly; if it stays silent
@@ -2926,7 +2941,7 @@ async function runWarmMessageAttempt(
               aliveNarrationAt = Date.now();
               deliver({
                 type: 'log',
-                msg: `No stream activity for ${Math.round(silentMs / 1000)}s, but the turn is ALIVE server-side (a step's provider request is stalled, not the session) — waiting, NO re-post (no prompt pileup); kill + auto-retry in ${Math.round(killInMs / 1000)}s, max runtime in ${Math.round((((opts.maxRuntimeMs ?? 10 * 60_000) - (Date.now() - (postStartedAt || state.lastFrameAt))) / 1000))}s.`,
+                msg: `No stream activity for ${Math.round(silentMs / 1000)}s, but the turn is ALIVE server-side (a step's provider request is stalled, not the session) — waiting, NO re-post (no prompt pileup); kill + auto-retry in ${Math.round(killInMs / 1000)}s, max runtime in ${Math.round((((opts.maxRuntimeMs ?? DEFAULT_MAX_RUNTIME_MS) - (Date.now() - (postStartedAt || state.lastFrameAt))) / 1000))}s.`,
                 ts: new Date().toISOString(),
               });
             }
@@ -3106,7 +3121,7 @@ async function runWarmMessageAttempt(
           auth,
           promptPath,
           { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: postBody(dialect) },
-          (opts.maxRuntimeMs ?? 10 * 60_000) + 15_000,
+          (opts.maxRuntimeMs ?? DEFAULT_MAX_RUNTIME_MS) + 15_000,
           postCtrl.signal,
         );
         res = await postPrompt();
@@ -3141,7 +3156,7 @@ async function runWarmMessageAttempt(
         // assistant wave is complete AND carries no running/pending tool,
         // confirmed by TWO consecutive readings >=1s apart (the ~70ms
         // inter-wave gap must not be mistaken for the end).
-        const turnDeadline = Date.now() + (opts.maxRuntimeMs ?? 10 * 60_000);
+        const turnDeadline = Date.now() + (opts.maxRuntimeMs ?? DEFAULT_MAX_RUNTIME_MS);
         const postAt = postStartedAt || Date.now();
         let pollServer = server;
         let authStreak = 0;
@@ -3225,8 +3240,8 @@ async function runWarmMessageAttempt(
             receivedEvents: true,
             postStarted,
             error: turnStarted
-              ? `the v2 turn did not reach idle within ${Math.round((opts.maxRuntimeMs ?? 10 * 60_000) / 1000)}s — the last wave never completed`
-              : `the v2 turn never started within ${Math.round((opts.maxRuntimeMs ?? 10 * 60_000) / 1000)}s (no assistant message appeared after the prompt)`,
+              ? `the v2 turn did not reach idle within ${Math.round((opts.maxRuntimeMs ?? DEFAULT_MAX_RUNTIME_MS) / 1000)}s — the last wave never completed`
+              : `the v2 turn never started within ${Math.round((opts.maxRuntimeMs ?? DEFAULT_MAX_RUNTIME_MS) / 1000)}s (no assistant message appeared after the prompt)`,
           };
         }
         // The final readback: the newest wave WITH TEXT is the turn's answer.
@@ -3421,7 +3436,7 @@ async function runWarmMessageAttempt(
           sessionId: opts.sessionId,
           receivedEvents,
           postStarted,
-          error: `OpenCode exceeded the maximum runtime of ${((opts.maxRuntimeMs ?? 10 * 60_000) / 60000).toFixed(0)} minutes`,
+          error: `OpenCode exceeded the maximum runtime of ${((opts.maxRuntimeMs ?? DEFAULT_MAX_RUNTIME_MS) / 60000).toFixed(0)} minutes`,
         };
       }
       return {

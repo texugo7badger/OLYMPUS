@@ -112,7 +112,54 @@ export default function ProviderSettings() {
   // #224 (v0.0.23) — the lane-health panel: which model lanes are dead right
   // now (quota/route/auth) and until when. Fed by the run-state probe.
   const [blockedLanes, setBlockedLanes] = useState<Array<{ lane: string; status: string; retryUntil?: number | null; error?: string | null }>>([]);
+  const [laneError, setLaneError] = useState<string | null>(null);
+  const [retryingLane, setRetryingLane] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // v0.0.86 — this panel used to declare `blockedLanes` and NEVER load it, so
+  // it always said "all clear" while the status bar reported dead lanes. The
+  // data now comes from /api/olympus/lane-health (the same file the walker
+  // writes), with a Retry action per lane.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const r = await fetch('/api/olympus/lane-health', { cache: 'no-store' });
+        const d = await r.json();
+        if (cancelled) return;
+        if (d?.ok) {
+          setBlockedLanes(Array.isArray(d.lanes) ? d.lanes : []);
+          setLaneError(null);
+        } else {
+          setLaneError(String(d?.error || `HTTP ${r.status}`));
+        }
+      } catch (e: any) {
+        if (!cancelled) setLaneError(e?.message || String(e));
+      }
+    };
+    void load();
+    const iv = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [refreshKey]);
+
+  const retryLane = async (lane: string) => {
+    setRetryingLane(lane);
+    setLaneError(null);
+    try {
+      const r = await fetch('/api/olympus/lane-health', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lane, action: 'retry' }),
+      });
+      const d = await r.json();
+      if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      setBlockedLanes(Array.isArray(d.lanes) ? d.lanes : []);
+    } catch (e: any) {
+      setLaneError(e?.message || String(e));
+    } finally {
+      setRetryingLane(null);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -273,14 +320,32 @@ export default function ProviderSettings() {
         ) : (
           <div className="space-y-1">
             {blockedLanes.slice(0, 6).map((l) => (
-              <div key={l.lane} className="flex items-center gap-2 text-[9.5px] font-mono">
-                <span className="text-olympus-text truncate flex-1">{l.lane}</span>
-                <span className="text-olympus-red uppercase">{l.status}</span>
-                {l.retryUntil && <span className="text-olympus-text-dim">until {new Date(l.retryUntil).toLocaleString()}</span>}
+              <div key={l.lane} className="flex items-start gap-2 text-[9.5px] font-mono">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-olympus-text truncate">{l.lane}</span>
+                    <span className="text-olympus-red uppercase shrink-0">{l.status}</span>
+                    {l.retryUntil && <span className="text-olympus-text-dim shrink-0">until {new Date(l.retryUntil).toLocaleTimeString()}</span>}
+                  </div>
+                  {l.error && <div className="text-[8.5px] text-olympus-text-dim truncate" data-tip={l.error}>{l.error}</div>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void retryLane(l.lane)}
+                  disabled={retryingLane === l.lane}
+                  className="shrink-0 rounded border border-olympus-gold/30 px-1.5 py-0.5 text-[8px] font-mono text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
+                  data-tip="Clear this lane's dead mark so the next dispatch tries it again. A genuinely unkeyed lane will be marked dead again."
+                >
+                  {retryingLane === l.lane ? 'retrying…' : 'retry'}
+                </button>
               </div>
             ))}
+            <div className="pt-0.5 text-[8.5px] font-mono text-olympus-text-dim">
+              Retry clears the local dead mark; it cannot fix a missing key or a provider outage.
+            </div>
           </div>
         )}
+        {laneError && <div className="mt-1 text-[8.5px] font-mono text-olympus-red">lane probe failed: {laneError}</div>}
       </div>
 
       {/* Plan APIs — GO + ZEN authorized status (one place each, same pattern as free-tier providers) */}

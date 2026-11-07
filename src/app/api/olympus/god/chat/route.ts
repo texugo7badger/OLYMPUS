@@ -27,6 +27,7 @@ import { spawnOpencode } from '@/lib/opencode-spawn';
 import { getVaultRoot } from '@/lib/vault-root';
 import { appendActivity } from '@/lib/activity-feed';
 import { runGodTurn } from '@/lib/god-run';
+import { appendGodInbox } from '@/lib/god-inbox';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -66,11 +67,27 @@ export async function POST(req: NextRequest) {
   const slug = lane.split(/[\\/]/).filter(Boolean).pop() || 'project';
   const startedAt = Date.now();
 
+  // v0.0.86 — the conversation is durable: the Parthenon renders the god's
+  // inbox, so a turn typed on the phone is still there when the modal is
+  // reopened (and a mark from the preview lands in the same thread).
+  const userEntry = appendGodInbox(god, {
+    role: 'you', text: message, source: 'chat', status: 'done',
+    meta: { lane, slug, withGod },
+  });
+
   const first = await runGodTurn(god, message, lane);
   if (!first.ok) {
+    appendGodInbox(god, {
+      role: 'system', text: `turn failed: ${first.error}`, source: 'system', status: 'failed',
+      replyTo: userEntry.id, meta: { lane, slug },
+    });
     appendActivity({ god, action: 'chat', project: slug, msg: `Chat with ${god} failed: ${first.error}` });
-    return NextResponse.json({ ok: false, error: first.error, god, lane }, { status: 502 });
+    return NextResponse.json({ ok: false, error: first.error, god, lane, entryId: userEntry.id }, { status: 502 });
   }
+  const firstEntry = appendGodInbox(god, {
+    role: 'god', text: first.text, source: 'chat', status: 'done',
+    replyTo: userEntry.id, meta: { lane, slug },
+  });
   appendActivity({ god, action: 'chat', project: slug, msg: `You → ${god}: ${message.slice(0, 300)}`, meta: { source: 'parthenon' } });
   appendActivity({ god, action: 'chat', project: slug, msg: `${god}: ${first.text.slice(0, 500)}`, meta: { source: 'parthenon' } });
 
@@ -88,6 +105,16 @@ export async function POST(req: NextRequest) {
     const second = await runGodTurn(withGod, context, lane);
     if (second.ok) {
       replies.push({ god: withGod, text: second.text });
+      appendGodInbox(withGod, {
+        role: 'god', text: second.text, source: 'chat', status: 'done',
+        replyTo: userEntry.id, meta: { lane, slug, withGod: god },
+      });
+      // The session thread belongs to the god whose modal is open: keep the
+      // second voice there too, labelled by its sender.
+      appendGodInbox(god, {
+        role: 'god', text: second.text, source: 'chat', status: 'done',
+        replyTo: userEntry.id, meta: { lane, slug, fromGod: withGod },
+      });
       appendActivity({ god: withGod, action: 'chat', project: slug, msg: `${withGod}: ${second.text.slice(0, 500)}`, meta: { source: 'parthenon', withGod: god } });
     } else {
       appendActivity({ god: withGod, action: 'chat', project: slug, msg: `${withGod} could not answer: ${second.error}` });
@@ -101,6 +128,7 @@ export async function POST(req: NextRequest) {
     replies,
     withGod,
     lane,
+    entryIds: [userEntry.id, firstEntry.id],
     durationMs: Date.now() - startedAt,
   });
 }

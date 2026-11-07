@@ -13,7 +13,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send, X, Loader2, Brain, Mic, ListPlus } from 'lucide-react';
+import { MessageSquare, Send, X, Loader2, Brain, Mic, ListPlus, Crosshair } from 'lucide-react';
 import { useLanguage, godName } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme-store';
 import { resolvePalette } from '@/lib/theme';
@@ -30,13 +30,22 @@ interface TaskRow {
   artifacts?: string[];
 }
 
-interface Msg { role: 'you' | 'god'; text: string; god?: string }
+interface Msg {
+  id: string;
+  role: 'you' | 'god' | 'system';
+  text: string;
+  god?: string;
+  source?: string;
+  status?: string;
+  ts?: string;
+}
 
 export default function GodChatModal({ godId, onClose }: { godId: string; onClose: () => void }) {
   const [language] = useLanguage();
   const [theme] = useTheme();
   const palette = resolvePalette(theme);
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [pendingUser, setPendingUser] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +62,32 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
     onError: (msg) => setError(msg),
   });
   const listRef = useRef<HTMLDivElement>(null);
+
+  // v0.0.86 — ONE DURABLE THREAD. The inbox is the authority: chat turns and
+  // mark-preview requests (with Athena's replies) live in the same list, so a
+  // mark sent from the phone is visible here on the desktop and survives a
+  // modal close. Poll while open for in-flight marks.
+  const loadHistory = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/olympus/god/inbox?god=${godId}&limit=80`, { cache: 'no-store' });
+      const d = await r.json();
+      if (!d?.ok) return;
+      setMessages((d.entries || []).map((e: any) => ({
+        id: String(e.id),
+        role: e.role === 'god' ? 'god' : e.role === 'system' ? 'system' : 'you',
+        text: String(e.text ?? ''),
+        god: e?.meta?.fromGod || e.god,
+        source: e.source,
+        status: e.status,
+        ts: e.ts,
+      })));
+    } catch { /* the chat still works without history */ }
+  }, [godId]);
+  useEffect(() => {
+    void loadHistory();
+    const iv = setInterval(() => { void loadHistory(); }, 5_000);
+    return () => clearInterval(iv);
+  }, [loadHistory]);
 
   // The god's latest thought = the reasoning of its last hop (the lane's own
   // telemetry), plus the task status/tokens — "what it is doing", not a guess.
@@ -83,7 +118,7 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
     if (!text || busy) return;
     setInput('');
     setError(null);
-    setMessages((m) => [...m, { role: 'you', text }]);
+    setPendingUser(text);
     setBusy(true);
     try {
       const r = await fetch('/api/olympus/god/chat', {
@@ -93,16 +128,16 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
       });
       const d = await r.json();
       if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
-      const replies = Array.isArray(d.replies) && d.replies.length > 0 ? d.replies : [{ god: godId, text: String(d.text) }];
-      setMessages((m) => [...m, ...replies.map((r: any) => ({ role: 'god' as const, text: String(r.text), god: String(r.god) }))]);
       if (typeof d.lane === 'string') setLane(d.lane);
       setQueued(false);
+      await loadHistory();
     } catch (e: any) {
       setError(e?.message || String(e));
     } finally {
+      setPendingUser(null);
       setBusy(false);
     }
-  }, [godId, input, busy, withGod]);
+  }, [godId, input, busy, withGod, loadHistory]);
 
   const queueAnswer = useCallback(async (text: string) => {
     const slug = lane ? lane.split(/[\\/]/).filter(Boolean).pop() : '';
@@ -162,40 +197,64 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
         )}
 
         <div ref={listRef} className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
-          {messages.length === 0 && (
+          {messages.length === 0 && !pendingUser && (
             <p className="text-[10.5px] font-mono leading-relaxed" style={{ color: palette.textDim }}>
               Ask {name} directly. This is its own session — Apollo is not in the middle.
+              A mark sent from the live preview lands in this same thread.
             </p>
           )}
-          {messages.map((m, i) => (
-            <div key={i} className="flex flex-col gap-0.5">
-              <span className="text-[8px] font-mono uppercase tracking-wide" style={{ color: m.role === 'you' ? palette.textDim : palette.gold }}>
-                {m.role === 'you' ? 'you' : godName(m.god ?? godId, language as any)}
-              </span>
+          {messages.map((m) => {
+            const isMark = m.source === 'mark';
+            const isSystem = m.role === 'system';
+            const waiting = isMark && (m.status === 'pending' || m.status === 'running');
+            return (
+              <div key={m.id} className="flex flex-col gap-0.5">
+                <span className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide" style={{ color: m.role === 'you' ? palette.textDim : isSystem ? palette.red : palette.gold }}>
+                  {isMark && <Crosshair size={8} style={{ color: palette.cyan }} />}
+                  {isSystem ? 'system' : m.role === 'you' ? (isMark ? 'you · mark' : 'you') : godName(m.god ?? godId, language as any)}
+                  {m.ts && <span className="ml-auto normal-case tracking-normal opacity-60">{new Date(m.ts).toLocaleTimeString()}</span>}
+                </span>
+                <div
+                  className="whitespace-pre-wrap break-words rounded-lg px-2.5 py-1.5 text-[11px] leading-relaxed"
+                  style={{
+                    background: isSystem ? `${palette.red}0e` : m.role === 'you' ? `${palette.cyan}12` : `${palette.gold}10`,
+                    border: `1px solid ${isSystem ? palette.red : m.role === 'you' ? palette.cyan : palette.gold}22`,
+                  }}
+                >
+                  {m.text}
+                </div>
+                {waiting && (
+                  <span className="flex items-center gap-1 text-[8px] font-mono" style={{ color: palette.cyan }}>
+                    <Loader2 size={8} className="animate-spin" /> {name} is applying this mark…
+                  </span>
+                )}
+                {m.role === 'god' && !isSystem && (
+                  <button
+                    onClick={() => void queueAnswer(m.text)}
+                    className="mt-0.5 flex items-center gap-1 self-start text-[8px] font-mono"
+                    style={{ color: queued ? palette.green : palette.textDim }}
+                    data-tip="Queue this answer as the next prompt (creative queue)"
+                  >
+                    <ListPlus size={9} /> {queued ? 'queued' : 'queue this'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {pendingUser && (
+            <div className="flex flex-col gap-0.5 opacity-70">
+              <span className="text-[8px] font-mono uppercase tracking-wide" style={{ color: palette.textDim }}>you</span>
               <div
                 className="whitespace-pre-wrap break-words rounded-lg px-2.5 py-1.5 text-[11px] leading-relaxed"
-                style={{
-                  background: m.role === 'you' ? `${palette.cyan}12` : `${palette.gold}10`,
-                  border: `1px solid ${m.role === 'you' ? palette.cyan : palette.gold}22`,
-                }}
+                style={{ background: `${palette.cyan}12`, border: `1px solid ${palette.cyan}22` }}
               >
-                {m.text}
+                {pendingUser}
               </div>
-              {m.role === 'god' && (
-                <button
-                  onClick={() => void queueAnswer(m.text)}
-                  className="mt-0.5 flex items-center gap-1 self-start text-[8px] font-mono"
-                  style={{ color: queued ? palette.green : palette.textDim }}
-                  data-tip="Queue this answer as the next prompt (creative queue)"
-                >
-                  <ListPlus size={9} /> {queued ? 'queued' : 'queue this'}
-                </button>
-              )}
             </div>
-          ))}
+          )}
           {busy && (
             <div className="flex items-center gap-1.5 text-[9px] font-mono" style={{ color: palette.textDim }}>
-              <Loader2 size={10} className="animate-spin" /> {godId} is thinking…
+              <Loader2 size={10} className="animate-spin" /> {name} is thinking…
             </div>
           )}
           {error && <p className="text-[9.5px] font-mono" style={{ color: palette.red }}>{error}</p>}

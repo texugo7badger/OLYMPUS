@@ -239,6 +239,15 @@ export async function GET(req: NextRequest) {
     telemetry,
     laneHealth: {
       blocked,
+      // v0.0.86 — the chip must NAME the lane and the reason, not just count
+      // them: "1 dead model lane" with no name is not actionable. A short
+      // list is enough for the tooltip; the full table lives in Settings.
+      blockedLanes: blocked.slice(0, 8).map((l) => ({
+        lane: l.lane,
+        status: l.status,
+        error: (l.error || '').slice(0, 160) || null,
+        retryUntil: l.retryUntil ?? null,
+      })),
       // Never leak the whole registry to the client — the blocked ones are
       // the only actionable truth (a healthy lane is uninteresting).
       blockedCount: blocked.length,

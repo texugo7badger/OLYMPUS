@@ -432,6 +432,7 @@ function RunStatePill() {
   line: string;
   evidence: string;
   blockedCount: number;
+  blockedLanes: Array<{ lane: string; status: string; error?: string | null; retryUntil?: number | null }>;
   god: string | null;
   model: string | null;
   hopId: string | null;
@@ -452,6 +453,7 @@ function RunStatePill() {
      line: d.line,
      evidence: d.evidence,
      blockedCount: d?.laneHealth?.blockedCount ?? 0,
+   blockedLanes: Array.isArray(d?.laneHealth?.blockedLanes) ? d.laneHealth.blockedLanes : [],
      god: d?.provenance?.god ?? null,
      model: d?.provenance?.model ?? null,
      hopId: d?.provenance?.hopId ?? null,
@@ -481,7 +483,7 @@ function RunStatePill() {
  return (
   <span
    className={cn('flex items-center gap-1 shrink-0 text-[10px] font-mono', tone)}
-   data-tip={`${state.line}\n\nevidence: ${state.evidence}${state.blockedCount ? `\n\n${state.blockedCount} dead model lane(s) — open Settings → LLM Strategy` : ''}`}
+   data-tip={`${state.line}\n\nevidence: ${state.evidence}${state.blockedCount ? `\n\n${state.blockedCount} dead model lane(s):\n${state.blockedLanes.map((l) => `• ${l.lane} — ${l.status}${l.retryUntil ? ` until ${new Date(l.retryUntil).toLocaleTimeString()}` : ''}`).join('\n')}\n\nClick to open Settings → LLM Strategy and retry a lane.` : ''}`}
   >
    <span className={cn('w-1.5 h-1.5 rounded-full', dot)} />
    <span className="hidden xl:inline">{state.verdict}</span>
@@ -492,7 +494,7 @@ function RunStatePill() {
    )}
    {state.blockedCount > 0 && (
     <OlympusTooltip
-      content={`${state.blockedCount} dead model lane(s) (quota/route/key) — click to inspect and retry`}
+      content={`${state.blockedCount} dead model lane(s) (quota/route/key): ${state.blockedLanes.map((l) => `${l.lane} (${l.status})`).join(', ')} — click to inspect and retry`}
       side="bottom"
       delay={150}
     >

@@ -82,6 +82,13 @@ const GOD_NAMES: Record<string, string> = {
   callimachus: 'Callimachus',
 };
 
+/** v0.0.86 — every god is present in the Parthenon from second zero. The
+ *  live event store overlays this baseline; an idle god is still visible,
+ *  selectable and chattable (the user's "all gods live" ask). */
+function idleGodStates(): Map<string, GodState> {
+  return new Map(Object.keys(GOD_NAMES).map((god) => [god, { god, status: 'idle' as const, steps: 0, lastTs: 0 }]));
+}
+
 // -------------------------------------------------------------------
 // Markdown rendering for the Interactive Terminal.
 //
@@ -411,7 +418,7 @@ export default function InteractiveTerminal() {
   // Issue #42: single source of truth for per-god state. Written only by
   // `updateGodActivity` at the existing event call sites — the Parthenon panel
   // reads this, it never re-derives god state from the message log.
-  const [godStates, setGodStates] = useState<Map<string, GodState>>(() => new Map());
+  const [godStates, setGodStates] = useState<Map<string, GodState>>(() => idleGodStates());
   const [focusedGod, setFocusedGod] = useState<string | null>(null);
   // #PANTHEON-RAIL: the minimize toggle — icons only when collapsed (more
   // room for the chat). Persisted: the user's preference survives reloads.
@@ -1363,7 +1370,7 @@ export default function InteractiveTerminal() {
     runEditCount.current = 0;
     runCommandCount.current = 0;
     runReadCount.current = 0;
-    setTodos([]); setGodStates(new Map());
+    setTodos([]); setGodStates(idleGodStates());
     addMessage({
       type: 'user',
       text: text.trim(),
@@ -1725,7 +1732,7 @@ export default function InteractiveTerminal() {
       { id: 'sys-2', type: 'system' as const, text: t('terminal.welcome2', getLanguage()), ts: new Date().toISOString() },
     ]);
     setTodos([]);
-    setGodStates(new Map());
+    setGodStates(idleGodStates());
     setFocusedGod(null);
     setSubmitting(false);
     setAwaitingAnswer(false);
@@ -3047,8 +3054,13 @@ function ThinkingMessage({
     return () => clearInterval(t);
   }, [message.ts]);
   // Auto-scroll the reasoning box while streaming (only when expanded).
+  // v0.0.86 — never yank the viewport if the user scrolled up to read: stick
+  // to the bottom only when they are already near it.
   useEffect(() => {
-    if (expanded && reasoningRef.current) reasoningRef.current.scrollTop = reasoningRef.current.scrollHeight;
+    const el = reasoningRef.current;
+    if (!expanded || !el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    if (nearBottom) el.scrollTop = el.scrollHeight;
   }, [expanded, message.reasoning]);
 
   return (
@@ -3076,7 +3088,7 @@ function ThinkingMessage({
         {expanded && (
           <div
             ref={reasoningRef}
-            className="mt-1 ml-3 max-h-48 overflow-y-auto custom-scroll border-l border-[#5A5A5A]/30 pl-2"
+            className="mt-1 ml-3 max-h-[26rem] overflow-y-auto custom-scroll border-l border-[#5A5A5A]/30 pl-2"
           >
             {hasReasoning ? (
               <div className="text-[13px] italic text-olympus-text-dim whitespace-pre-wrap break-words leading-snug">

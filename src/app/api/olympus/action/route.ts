@@ -58,13 +58,15 @@ export const dynamic = 'force-dynamic';
 // terminal on 2026-07-31).
 const STARTUP_TIMEOUT_MS = 120_000; // 120 seconds
 // Total max runtime — if opencode runs longer than this, we kill it.
-// UAT-5 (the peak-hour evolution): the max-runtime ceiling is now
-// env-tunable — the 10-minute default was the UAT-4/5 specimen: a peak-hour
-// planning turn legitimately needs more wall-clock. OLYMPUS_MAX_RUNTIME_MS
-// (default 15 min — generous for planning, short enough to catch real hangs).
+// UAT-5 (the peak-hour evolution): the max-runtime ceiling is env-tunable.
+// v0.0.86 — the default is 30 min, not 15: the AIME walk lost
+// `c13b-sakuga-ingest` to "OpenCode exceeded the maximum runtime of 15
+// minutes" while the hop runtime's own ceiling is 25 min base / 30 min hard.
+// A turn that owns a real artifact takes longer than a chat reply; the
+// ceiling must bound hangs, not legitimate work. OLYMPUS_MAX_RUNTIME_MS.
 const MAX_RUNTIME_MS = (() => {
   const n = Number.parseInt(process.env.OLYMPUS_MAX_RUNTIME_MS ?? '', 10);
-  return Number.isFinite(n) && n > 0 ? n : 15 * 60_000;
+  return Number.isFinite(n) && n > 0 ? n : 30 * 60_000;
 })();
 
 // Issue #51: unattended mode. When a caller declares body.unattended on a

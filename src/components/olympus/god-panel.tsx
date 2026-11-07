@@ -19,7 +19,7 @@ import { ChevronsLeft, ChevronsRight, Sparkles, MessageSquare, type LucideIcon }
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import { useDocVisible } from '@/lib/use-doc-visible';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
 import GodChatModal from './god-chat-modal';
 import { useLanguage, godName, getLanguage } from '@/lib/i18n';
@@ -98,14 +98,43 @@ interface GodPanelProps {
 export default function GodPanel({ states, focusedGod, onFocus, children, onCollapse }: GodPanelProps) {
   // #231 — always mounted; pause both polls in a hidden tab.
   const docVisible = useDocVisible();
-  const ordered = orderGodStates(states);
-  const active = ordered.filter(s => s.status === 'working').length;
-
   // W1-3 (v0.0.4): the god's OWN task list from the hop runtime's
   // artifacts — every task this god owns in the active campaign, with
   // state, timer, and tokens. Clicking a task opens the TASK SHEET (the
   // drill-down: thinking, files, tokens — the "what did he do" answer).
+  // Declared before `ordered` because the overlay below reads it.
   const [tasks, setTasks] = useState<Record<string, TaskRecord[]>>({});
+  // v0.0.86 — the panel is campaign-global: every god is present, and the
+  // tasks API overlays the terminal's live event state. A god working a hop
+  // is visible even when the terminal has never streamed a frame for it.
+  const ordered = useMemo(() => {
+    const by = new Map(states.map((s) => [s.god, s]));
+    for (const god of Object.keys(DISPLAY_NAMES)) {
+      if (!by.has(god)) by.set(god, { god, status: 'idle', steps: 0, lastTs: 0 });
+    }
+    for (const [god, list] of Object.entries(tasks)) {
+      const current = (list || []).find((t) => t.status === 'running');
+      const parked = (list || []).find((t) => t.status === 'parked');
+      const latest = current || parked;
+      if (!latest) continue;
+      const base = by.get(god) ?? { god, status: 'idle' as ParthenonStatus, steps: 0, lastTs: 0 };
+      const ts = Date.parse(latest.startedAt || latest.ts || '') || base.lastTs;
+      if (ts < (base.lastTs || 0) && base.status !== 'idle') continue;
+      const completed = (list || []).filter((t) => t.status === 'completed').length;
+      by.set(god, {
+        ...base,
+        status: current ? 'working' : 'blocked',
+        task: `${latest.id}${latest.promptExcerpt ? ` — ${latest.promptExcerpt.replace(/\s+/g, ' ').slice(0, 90)}` : ''}`,
+        currentTool: latest.lastTool || base.currentTool,
+        artifacts: latest.artifacts?.length ? latest.artifacts : base.artifacts,
+        steps: completed || base.steps,
+        lastTs: Math.max(base.lastTs || 0, ts),
+      });
+    }
+    return orderGodStates([...by.values()]);
+  }, [states, tasks]);
+  const active = ordered.filter(s => s.status === 'working').length;
+
   // v0.0.76 — the Parthenon chat: ask the focused god directly.
   const [chatGod, setChatGod] = useState<string | null>(null);
 
@@ -231,7 +260,18 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                     {s.steps} step{s.steps === 1 ? '' : 's'}
                   </span>
                 )}
-                <span className="text-[8px] font-mono text-olympus-text-dim ml-auto shrink-0">
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); setChatGod(s.god); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); setChatGod(s.god); } }}
+                  aria-label={`Chat with ${godName(s.god, language)}`}
+                  data-tip={`Open ${godName(s.god, language)}'s terminal — mark, task and hop context`}
+                  className="ml-auto shrink-0 rounded p-0.5 text-olympus-text-dim hover:text-olympus-gold"
+                >
+                  <MessageSquare size={9} />
+                </span>
+                <span className="text-[8px] font-mono text-olympus-text-dim ml-1 shrink-0">
                   {STATUS_LABEL[s.status]}
                 </span>
               </div>

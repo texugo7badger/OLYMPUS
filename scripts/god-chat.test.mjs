@@ -30,7 +30,7 @@ check('G-8: Apollo is not in the middle', !/agent: 'apollo'/.test(route), 'the r
 check('G-9: a second god can join the session', /withGod/.test(route) && /replies/.test(route) && /runGodTurn\(withGod/.test(route), 'no god↔god round');
 check('G-10: the exchange lands in the shared activity feed', /appendActivity/.test(route), 'no durable log');
 check('G-11: the modal offers the second-god selector', /discuss with/.test(modal) && /setWithGod/.test(modal), 'no selector');
-check('G-12: replies carry their god', /replies\.map/.test(modal) && /m\.god/.test(modal), 'replies lose the speaker');
+check('G-12: every reply carries its speaker', /godName\(m\.god \?\? godId/.test(modal) && /fromGod/.test(route), 'replies lose the speaker');
 
 console.log(`\ngod-chat: ${failures === 0 ? 'PASS' : failures + ' FAIL'}`);
 process.exit(failures === 0 ? 0 : 1);
