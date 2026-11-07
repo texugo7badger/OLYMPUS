@@ -1138,7 +1138,7 @@ export type HopWalkEvent = (
    *  hops narrate their elapsed time (the 'demora mt' cure: a silent
    *  2-minute spawn reads as a hang; a heartbeat reads as work). */
   | { type: 'hop_heartbeat'; hop: string; god: string; elapsedMs: number }
-  | { type: 'hop_done'; hop: string; god: string; durationMs: number; tokensIn: number | null; tokensOut: number | null; retriesAbsorbed: number; transport?: 'warm' | 'spawn' }
+  | { type: 'hop_done'; hop: string; god: string; durationMs: number; tokensIn: number | null; tokensOut: number | null; retriesAbsorbed: number; transport?: 'warm' | 'spawn'; lane?: string }
   | { type: 'hop_parked'; hop: string; god: string; reason: string; error?: string }
 ) & { campaignId?: string };
 
@@ -1644,7 +1644,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
                 type: 'hop_done', hop: next.id, god: next.god,
                 durationMs: Date.now() - startedAt, tokensIn: result.tokensIn,
                 tokensOut: result.tokensOut, retriesAbsorbed: result.retriesAbsorbed,
-                transport: result.transport,
+                transport: result.transport, lane: result.lane,
               });
             } else {
               const failed = verify.checks.find((c) => !c.ok);

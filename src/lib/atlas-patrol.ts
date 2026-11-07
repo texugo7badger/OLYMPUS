@@ -73,6 +73,15 @@ function planHop(plan: any, id: string): any | null {
 
 function nextHealthyLane(god: string, current: string | null): string | null {
   const roster = ((FREE_HYBRID_ROSTER as any)?.[god] ?? []).map((l: any) => String(l.id));
+  const entries = readLaneHealth().lanes;
+  // Prefer lanes with a fresh `alive` reading. An auth lane whose TTL expired
+  // is "available" by policy (a fixed key can recover) but it is a bad
+  // RECOMMENDATION when a proven-alive lane is sitting in the roster.
+  const alive = [...(current ? [current] : []), ...roster]
+    .filter((id, i, arr) => id && arr.indexOf(id) === i)
+    .filter((id) => entries[id]?.status === 'alive' && isLaneAvailable(id));
+  const firstAlive = alive.find((id) => id !== current);
+  if (firstAlive) return firstAlive;
   if (!current) return roster.find((id: string) => isLaneAvailable(id)) ?? null;
   return laneChain(current, roster).filter((id) => id !== current)[0] ?? null;
 }

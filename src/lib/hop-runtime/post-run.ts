@@ -192,7 +192,10 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
   // #120 (B6b): the POOL — the god's live model lane from the repo config.
   // WHO the god + WHERE the lane + WHICH pool: the three-part narration.
   const pool = resolveGodModelLane(ev.god);
-  const poolNote = pool ? ` · pool ${pool}` : '';
+  // v0.0.87 — the applied/strategy lane is known at start; the ACTUAL lane is
+  // only known after the dispatcher/failover, so a done event names it.
+  const actualLane = (ev as { lane?: string }).lane ?? null;
+  const poolNote = actualLane ? ` · lane ${actualLane}` : pool ? ` · strategy lane ${pool}` : '';
   const ts = new Date().toISOString();
   const campaignId = (ev as { campaignId?: string }).campaignId ?? null;
   const project = laneRoot.split(/[\\/]/).filter(Boolean).pop() ?? null;
