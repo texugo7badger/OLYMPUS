@@ -32,6 +32,8 @@ Twelve surfaces, captured from the running build in **English**, at
 
 A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every screenshot is captured from the running app.
 
+**v0.0.89 evidence:** [Parthenon command deck](screenshots/screens/01-brain-terminal.png) · [GO forecast](screenshots/screens/38-go-forecast-089.png) · [Mobile Parthenon](screenshots/screens/39-mobile-parthenon-089.png).
+
 ## Latest
 
 **v0.0.89 — Atlas stays on.**

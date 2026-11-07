@@ -101,7 +101,9 @@ export default function GoForecastChart() {
   const hatchPath = `M ${xNow.toFixed(1)} ${y(f.currentPct).toFixed(1)} L ${xReset.toFixed(1)} ${y(f.projectedPct).toFixed(1)} L ${xReset.toFixed(1)} ${y(0).toFixed(1)} L ${xNow.toFixed(1)} ${y(0).toFixed(1)} Z`;
   const gridValues: number[] = [];
   for (let v = 0; v <= yMax; v += 100) gridValues.push(v);
-  const midTs = xHit ?? start + span / 2;
+  // The hit date lives in the pill; the axis uses the period midpoint so
+  // Dec 3 and Dec 5 never collide at the right edge.
+  const midTs = start + span / 2;
   const pace = f.dailyPct >= 0.1 ? f.dailyPct.toFixed(1) : f.dailyPct.toFixed(2);
 
   return (
