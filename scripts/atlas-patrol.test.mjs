@@ -76,6 +76,7 @@ const sheet = src('src/lib/tasks-sheet.ts');
 const api = fs.existsSync(path.join(ROOT, 'src/app/api/olympus/atlas/patrol/route.ts'));
 expect('A-8: the walker patrols every park', /recordPatrol\(laneRoot/.test(walker) && /patrolFinding\(laneRoot, hop/.test(walker), 'the park still only emits a toast');
 expect('A-9: the tasks sheet carries the patrol to the Parthenon', /patrolLane\(lane\)/.test(sheet) && /atlasPatrol/.test(sheet), 'the panel cannot see Atlas');
+expect('A-11: lane health honors OLYMPUS_HOME (dev and stable do not share dead lanes)', /process\.env\.OLYMPUS_HOME/.test(src('src/lib/lane-health.ts')), 'lane health still reads the global home');
 expect('A-10: Atlas/ Apollo can be asked for the deep analysis', api && /askAtlas/.test(src('src/app/api/olympus/atlas/patrol/route.ts')) && /askApollo/.test(src('src/app/api/olympus/atlas/patrol/route.ts')), 'no model escalation path');
 
 fs.rmSync(lane, { recursive: true, force: true });

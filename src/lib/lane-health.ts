@@ -59,7 +59,7 @@ export const DEFAULT_DEAD_TTL_MS = 30 * 60_000;
 export const MAX_DEAD_TTL_MS = 31 * 24 * 60 * 60_000;
 
 export function laneHealthPath(override?: string): string {
-  return override ?? path.join(os.homedir(), '.olympus', 'lane-health.json');
+  return override ?? path.join(process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus'), 'lane-health.json');
 }
 
 /**
