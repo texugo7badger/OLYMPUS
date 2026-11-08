@@ -260,6 +260,7 @@ interface ReviewPayload {
   approval: { approvedAt?: string; scoreAtApproval?: number; note?: string | null } | null;
   approvalValidation: { ok: boolean; reasons: string[] };
   contractValidation: { ok: boolean; reasons: string[] };
+  contract: unknown | null;
 }
 
 function ReviewPanel({ slug }: { slug: string }) {
@@ -344,6 +345,7 @@ function ReviewPanel({ slug }: { slug: string }) {
   const score = typeof review?.overall === 'number' ? review.overall : null;
   const approved = Boolean(data?.approval);
   const gateOk = score != null && score >= 7;
+  const contractOk = Boolean(data?.contractValidation?.ok);
 
   return (
     <div className="h-full overflow-y-auto custom-scroll p-4">
@@ -396,10 +398,10 @@ function ReviewPanel({ slug }: { slug: string }) {
             <button
               type="button"
               onClick={() => void approve()}
-              disabled={busy || !gateOk || approved}
+              disabled={busy || !gateOk || approved || !contractOk}
               className="rounded border border-olympus-green/30 bg-olympus-green/10 px-2.5 py-1 text-[9px] font-mono uppercase tracking-wide text-olympus-green hover:bg-olympus-green/20 disabled:opacity-40"
             >
-              {approved ? 'approved' : gateOk ? 'approve this design' : 'fix first (score < 7)'}
+              {approved ? 'approved' : !gateOk ? 'fix first (score < 7)' : !contractOk ? 'contract first' : 'approve this design'}
             </button>
             {approved && (
               <button type="button" onClick={() => void withdraw()} disabled={busy} className="rounded border border-olympus-red/25 px-2.5 py-1 text-[9px] font-mono uppercase tracking-wide text-olympus-red disabled:opacity-40">
