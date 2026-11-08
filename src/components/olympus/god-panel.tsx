@@ -157,7 +157,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
     total: number; completed: number; parked: number; projectedRemainingMs: number;
     eta50Ms?: number; eta90Ms?: number; etaNextVisibleMs?: number;
     etaConfidence?: string; etaParkRate?: number; etaBasis?: string;
-    designScore?: number | null;
+    designScore?: number | null; designSource?: string | null;
   }>(null);
   // v0.0.87 — Atlas's deterministic patrol rides the same tasks poll.
   const [atlasPatrol, setAtlasPatrol] = useState<null | { summary: string; parked: number; stuck: number; verdict: string | null; hopId: string | null; nextLane: string | null }>(null);
@@ -311,7 +311,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                   'rounded px-1.5 py-0.5 whitespace-nowrap tabular-nums text-[7px]',
                   campaignStats.designScore >= 7 ? 'bg-olympus-green/10 text-olympus-green' : 'bg-olympus-red/10 text-olympus-red',
                 )}
-                data-tip="Latest design review overall (the gate is 7)"
+                data-tip={`Latest design review: ${campaignStats.designScore.toFixed(1)} (${campaignStats.designSource || 'unknown file'}) — the gate is 7`}
               >
                 design {campaignStats.designScore.toFixed(1)}
               </span>

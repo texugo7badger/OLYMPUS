@@ -138,8 +138,10 @@ export interface TasksSheet {
     etaConfidence: EtaConfidence;
     etaParkRate: number;
     etaBasis: string;
-    /** v0.0.91 — the latest design review overall (gate 7), when present. */
+    /** v0.0.91 — the LATEST design review overall (gate 7), when present. */
     designScore: number | null;
+    /** The file the score came from (root vs frontdoor), for the tooltip. */
+    designSource: string | null;
   };
   /** v0.0.87 — Atlas's deterministic patrol of the lane (parked + stuck). */
   atlasPatrol?: {
@@ -422,7 +424,7 @@ export function buildTasksSheet(opts: {
       total: 0, completed: 0, parked: 0, running: 0, lost: 0, pending: 0,
       tokensIn: 0, tokensOut: 0, projectedRemainingMs: 0,
       eta50Ms: 0, eta90Ms: 0, etaNextVisibleMs: 0,
-      etaConfidence: 'low', etaParkRate: 0, etaBasis: 'no campaign', designScore: null,
+      etaConfidence: 'low', etaParkRate: 0, etaBasis: 'no campaign', designScore: null, designSource: null,
     },
     atlasPatrol: undefined,
   };
@@ -600,11 +602,21 @@ export function buildTasksSheet(opts: {
   });
   const projectedRemainingMs = eta.eta50Ms;
 
-  // v0.0.91 — quality is a number too. The latest design review's overall
-  // travels with the same sheet (the frontdoor copy wins; the root is the
-  // legacy location). Missing evidence is null, never a fake 10.
-  const designReview = safeJson<any>(path.join(lane, 'evidence/frontdoor/design-review.json'), null)
-    ?? safeJson<any>(path.join(lane, 'design-review.json'), null);
+  // v0.0.91 — quality is a number too, and the LATEST review wins. AIME had
+  // frontdoor 7.8 (yesterday) and pixel 4.9 (today); showing the best of the
+  // two would hide the real gate. Missing evidence is null, never a fake 10.
+  const rootReview = safeJson<any>(path.join(lane, 'design-review.json'), null);
+  const frontdoorReview = safeJson<any>(path.join(lane, 'evidence/frontdoor/design-review.json'), null);
+  const reviewTs = (r: any): number => {
+    const t = Date.parse(String(r?.measuredAt ?? ''));
+    return Number.isFinite(t) ? t : 0;
+  };
+  const designReview = reviewTs(frontdoorReview) > reviewTs(rootReview) ? frontdoorReview : (rootReview ?? frontdoorReview);
+  const designSource = designReview === frontdoorReview
+    ? 'evidence/frontdoor/design-review.json'
+    : designReview === rootReview
+      ? 'design-review.json'
+      : null;
   const designScore = typeof designReview?.overall === 'number' ? designReview.overall : null;
 
   const stats: TasksSheet['stats'] = {
@@ -624,6 +636,7 @@ export function buildTasksSheet(opts: {
     etaParkRate: eta.parkRate,
     etaBasis: eta.basis,
     designScore,
+    designSource,
   };
   void MAX_HOP_CONCURRENCY; // documented bound — the model itself is per-god serial
 
