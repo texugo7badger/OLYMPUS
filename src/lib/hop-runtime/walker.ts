@@ -51,6 +51,8 @@ import { checkCostCaps } from '@/lib/cost-caps';
 import { SEED_DESIGN_BUILDS, buildPrompt, mergeBuildStats, type DesignBuild } from '@/lib/design-builds';
 import { getVaultRoot } from '@/lib/vault-root';
 import { classifyDispatchFailure, classifyParkReason } from './failure-class';
+import { readContract } from '../design-contract';
+import { readApproval, readLatestReview, validateApproval } from '../design-approval';
 import { patrolFinding, recordPatrol } from '@/lib/atlas-patrol';
 import { ensurePlanGeneration, freezePlan, validCompletedForPlan, computeHopHashes, frozenPlanPath } from './plan-generation';
 import { readHopOverride } from './hop-overrides';
@@ -1604,6 +1606,23 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           emit({ type: 'hop_parked', hop: next.id, god: next.god, reason, error: capVerdict.reason });
           persistState();
           return;
+        }
+        // v0.0.91 — THE HUMAN SIGNATURE. A signature design stop does not
+        // spend a token until the user's approval matches THIS contract and
+        // THIS review. The hop parks with the exact reasons; independent hops
+        // keep running. A human resume clears the quarantine (the explicit
+        // retry contract), so approving in the studio and resuming works.
+        if (next.requiresUserApproval === true) {
+          const contract = readContract(laneRoot);
+          const review = readLatestReview(laneRoot);
+          const approval = readApproval(laneRoot);
+          const approvalCheck = validateApproval(approval, contract, review);
+          if (!approvalCheck.ok) {
+            parkHop(next, 'design-approval-missing', `Design approval required: ${approvalCheck.reasons.join('; ')}`);
+            persistState();
+            if (stopped) return;
+            continue;
+          }
         }
         // v0.0.91 — the per-HOP manifest. A design hop gets the design kit
         // (Nakkas + Playwright + OriginKit when keyed) even if the plan did

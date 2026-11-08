@@ -40,6 +40,9 @@ export interface PlanHop {
   timeoutMs?: number;
   /** The artifacts this hop contracts to write (relative to laneRoot). */
   artifacts: string[];
+  /** v0.0.91 — a signature design stop: the walk pauses until the user's
+   *  design-approval.json matches the contract + review. */
+  requiresUserApproval?: boolean;
   /** Optional skill invoked by this hop (for UI visibility, #225). */
   skill?: string;
   /** Optional MCP used by this hop (for UI visibility, #225). */
@@ -207,6 +210,7 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
         : (h.prompt as string),
       ...(kind === 'script' ? { command: String(h.command), timeoutMs: scriptTimeout } : {}),
       artifacts: Array.isArray(h.artifacts) ? [...(h.artifacts as string[])] : [],
+      ...(h.requiresUserApproval === true ? { requiresUserApproval: true } : {}),
       skill: typeof h.skill === 'string' ? h.skill : undefined,
       mcp: typeof h.mcp === 'string' ? h.mcp : undefined,
       demigod: typeof h.demigod === 'string' ? h.demigod : undefined,
