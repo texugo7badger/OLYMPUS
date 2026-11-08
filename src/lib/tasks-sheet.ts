@@ -138,6 +138,8 @@ export interface TasksSheet {
     etaConfidence: EtaConfidence;
     etaParkRate: number;
     etaBasis: string;
+    /** v0.0.91 — the latest design review overall (gate 7), when present. */
+    designScore: number | null;
   };
   /** v0.0.87 — Atlas's deterministic patrol of the lane (parked + stuck). */
   atlasPatrol?: {
@@ -420,7 +422,7 @@ export function buildTasksSheet(opts: {
       total: 0, completed: 0, parked: 0, running: 0, lost: 0, pending: 0,
       tokensIn: 0, tokensOut: 0, projectedRemainingMs: 0,
       eta50Ms: 0, eta90Ms: 0, etaNextVisibleMs: 0,
-      etaConfidence: 'low', etaParkRate: 0, etaBasis: 'no campaign',
+      etaConfidence: 'low', etaParkRate: 0, etaBasis: 'no campaign', designScore: null,
     },
     atlasPatrol: undefined,
   };
@@ -598,6 +600,13 @@ export function buildTasksSheet(opts: {
   });
   const projectedRemainingMs = eta.eta50Ms;
 
+  // v0.0.91 — quality is a number too. The latest design review's overall
+  // travels with the same sheet (the frontdoor copy wins; the root is the
+  // legacy location). Missing evidence is null, never a fake 10.
+  const designReview = safeJson<any>(path.join(lane, 'evidence/frontdoor/design-review.json'), null)
+    ?? safeJson<any>(path.join(lane, 'design-review.json'), null);
+  const designScore = typeof designReview?.overall === 'number' ? designReview.overall : null;
+
   const stats: TasksSheet['stats'] = {
     total: tasks.length,
     completed: tasks.filter(t => t.status === 'completed').length,
@@ -614,6 +623,7 @@ export function buildTasksSheet(opts: {
     etaConfidence: eta.confidence,
     etaParkRate: eta.parkRate,
     etaBasis: eta.basis,
+    designScore,
   };
   void MAX_HOP_CONCURRENCY; // documented bound — the model itself is per-god serial
 
