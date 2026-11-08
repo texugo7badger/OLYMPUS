@@ -79,7 +79,7 @@ export default function DesignStudioModal({ onClose }: { onClose: () => void }) 
             </button>
           </div>
         </div>
-        <div className="min-h-0 flex-1">
+        <div className="relative min-h-0 flex-1">
           {tab === 'style' ? (
             <ArtcraftStyleBoard references={[]} pendingRef={null} onPendingConsumed={() => { /* no pending ref in the studio yet */ }} />
           ) : tab === 'builds' ? (

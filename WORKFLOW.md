@@ -3,7 +3,7 @@
 ![The workflow](public/diagrams/workflow.svg)
 
 
-> OLYMPUS v0.0.7 — how a task flows through the 10 gods, 122 demigods, Symphony, and the VaultBrain. See [AGENTS.md](AGENTS.md) for the full agent roster and [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) for the cost flow.
+> OLYMPUS v0.0.91 — how a task flows through the 10 gods, 61 demigods, Symphony, and the VaultBrain. See [AGENTS.md](AGENTS.md) for the full agent roster and [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) for the cost flow. The v0.0.91 design-first, quick-edit and night-shift path is in the section below.
 
 ## Task lifecycle
 
@@ -188,6 +188,75 @@ Interactive terminal sessions run their `opencode serve` **inside the workspace 
 2. default: `~/.local/share/olympus/workspace`.
 
 The lane is bootstrapped with the UAT-kit's proven shape (`reports/uat-r1/SPAWN-INVOCATION.sh`): `.opencode` symlinked to the repo's overlay, `opencode.json` + `opencode.demigods.json` copied from the repo (created-if-missing; refresh semantics belong to the #78 drift-detector class). A workspace path pointing inside the OLYMPUS root falls back to the default — projects never silently land in the working tree. On the first cold start that creates the lane, the terminal shows a one-time notice (the ask seam); override it any time via `OLYMPUS_WORKSPACE`. The serve's spawn env also carries `OLYMPUS_ROOT_SESSION=1` (#95) — the app-spawned serve IS the root session, so the Part-3 heartbeat trio registers without any manual export.
+
+---
+
+## v0.0.91 — design-first, quick edit, night shift
+
+The release adds three lanes that share one rule: **the user's decision is an
+artifact, and the machine reads it**.
+
+### 1. The design contract (before the plan)
+
+A refactor/rescue lane starts with a page inventory and a decision ledger, not
+a plan:
+
+```
+intake → page map (src/app/**/page.tsx)
+       → Apollo/Athena interview (purpose, keep, change, tokens, signature)
+       → PROJECT-CONTRACT.md + design-contract.json
+       → P0 decisions resolved ──► plan allowed
+       └─ P0 unknown / pending ──► walk REFUSED (design-contract-incomplete)
+```
+
+`design-contract.json` carries `pages[]`, `tokens`, `unknowns[]`, `stops[]`
+and `signature[]`. A design stop has `requiresUserApproval: true`; before that
+hop spends a token the walker validates `design-approval.json` against the
+current `contractHash` + `reviewHash`. The approval is only valid at review
+**overall ≥ 7**; a 4.9 cannot be clicked away.
+
+The Studio lives in Athena's chat (`design` button): **style**, **builds**,
+**contract** and **review**. ArtCraft keeps apps + references only.
+
+### 2. Quick Edit (the 60-second lane)
+
+A mark or a one-line request that changes ≤3 files / ≤200 lines does not
+become a hop:
+
+```
+mark → one bounded Athena turn → sha256 snapshot diff
+     → typecheck + lint → preview reload
+     → success: "quick edit · N files · N lines" + undo
+     → too large / verify failed: restore snapshot, name the reason
+```
+
+The backup lives in `/tmp/opencode/quick-edit/<lane>-<ts>/`; `undo` restores
+the exact snapshot. The mark bar has a `quick` toggle (default off = plan
+first). The endpoint is `POST /api/olympus/quick-edit`.
+
+### 3. The night shift (headless, outside the app cgroup)
+
+```
+npm run campaign:night-shift -- --slug <slug> --hours 8 --max-hops 100 --headless
+```
+
+`scripts/night-shift.ts` relaunches through `systemd-run --user
+--unit=olympus-night-<slug>`, so closing the Electron app does not kill the
+walk. It enforces the wall-clock deadline and the hop cap, restarts only
+retryable parks (`tool-budget`, `verify-failed`, `timeout`, `transport`,
+`script`), stops on provider/auth/model/unknown, and writes a morning letter
+at `~/.olympus/night-shift/<slug>/morning-report.md` with the six release
+gates and `SHIPPABLE` / `NOT SHIPPABLE — N gates open`.
+
+It refuses a lane with a live walk (the lane lock is the truth). The Parthenon
+has the same control in one tap (`night shift · 8h / stop`).
+
+### 4. The ETA is a band, not a promise
+
+`src/lib/eta.ts` keeps the critical-path shape and adds the two facts the old
+projection ignored: the **park rate** and the **design-gate loop**. The
+Parthenon shows `p50 1h26 · p90 3h04 · 28% park · high`; the tooltip carries
+the basis. A parked walk shows `PAUSED`, never an ETA.
 
 ---
 

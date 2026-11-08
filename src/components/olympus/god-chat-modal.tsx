@@ -207,7 +207,7 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
               onClick={() => setDesignOpen(true)}
               className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-mono ring-1 transition-colors"
               style={{ color: palette.gold, borderColor: `${palette.gold}44`, background: `${palette.gold}10` }}
-              title="Open the Athena design studio — style board + build recipes"
+              data-tip="Open the Athena design studio — style board + build recipes"
             >
               <Palette size={10} /> design
             </button>

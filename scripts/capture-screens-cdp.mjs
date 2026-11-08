@@ -120,10 +120,21 @@ async function main() {
     await click(byText(/craft/i));
     await sleep(4200);
     await shot('03-craft-apps.png');
-    await click(tab('references'));
+    // v0.0.91 — target the Craft pane's tab, not the sidebar references button.
+    await click(`(() => {
+      const appTab = [...document.querySelectorAll('button')].find((el) => (el.textContent || '').trim().toLowerCase() === 'apps');
+      if (!appTab) return false;
+      const ref = [...appTab.parentElement.querySelectorAll('button')].find((el) => (el.textContent || '').trim().toLowerCase() === 'references');
+      ref?.click();
+      return !!ref;
+    })()`);
     await sleep(3500);
     await shot('04-references.png');
-    await click(tab('design'));
+    // v0.0.91 — design moved out of ArtCraft and into Athena's chat. Open her
+    // chat through the same event the terminal uses, then the design studio.
+    await evaluate(`window.dispatchEvent(new CustomEvent('olympus:open-god-chat', { detail: { god: 'athena' } })); true`);
+    await sleep(1200);
+    await click(`(() => { const b = [...document.querySelectorAll('button')].find((el) => /design studio/i.test(el.getAttribute('data-tip') || '') || (el.textContent || '').trim().toLowerCase() === 'design'); b?.click(); return !!b; })()`);
     await sleep(3500);
     await shot('05-design.png');
     await click(tab('builds'));
@@ -176,7 +187,7 @@ async function main() {
       { file: 'screenshots/screens/02-creative.png', title: 'Creative mode', note: 'progress, ring, build crystal and queue' },
       { file: 'screenshots/screens/03-craft-apps.png', title: 'Craft apps', note: 'the vendored creative suite' },
       { file: 'screenshots/screens/04-references.png', title: 'References', note: 'the design reference catalog' },
-      { file: 'screenshots/screens/05-design.png', title: 'Design board', note: 'direction, live preview and brand' },
+      { file: 'screenshots/screens/05-design.png', title: 'Athena design studio', note: 'style, contract, review and approval — inside her chat' },
       { file: 'screenshots/screens/06-builds.png', title: 'Build Hub', note: 'the talent builds and their crystals' },
       { file: 'screenshots/screens/07-settings.png', title: 'Settings', note: 'appearance, themes and performance' },
       { file: 'screenshots/screens/08-talent.png', title: 'Talent Studio', note: 'the build editor and the crystal picker' },

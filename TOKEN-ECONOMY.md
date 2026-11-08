@@ -130,3 +130,87 @@ cat ~/.olympus/cost-caps.json
 4. A month of invoices compared to the list-value estimate.
 
 Until then, this page quotes the measured row and labels the rest.
+
+## 6. v0.0.91 — the honest ETA, the design kit, the 60-second lane
+
+The numbers below are a **snapshot of the AIME lane on 2026-11-08T20:45Z**,
+read from `.olympus-hop-telemetry.jsonl` and the tasks sheet. The walk was
+still live; re-run the commands for the current row.
+
+| Metric | Measured |
+|---|---:|
+| Telemetry rows | 559 |
+| Completed rows | 400 |
+| Parked rows | 159 |
+| Park rate | 28.4% |
+| Duration mean / p50 / p90 / max | 839s / 731s / 1,579s / 5,115s |
+| Tokens in (all rows) | 17,368,177 |
+| Tokens out (all rows) | 1,984,646 |
+| Campaign hops at the snapshot | 96 / 100 |
+| Design review | 7.0 (gate 7) |
+| List value (estimated) | $0.94 |
+| Tokens per completed hop | 64,035 |
+| ETA p50 / p90 | 1h05 / 2h23 |
+
+### The ETA is a band
+
+`src/lib/eta.ts` keeps the v0.0.30 critical-path shape (same-pool hops
+serialize; the max across gods is the projection) and adds the two omissions
+that made the old “~40m” lie:
+
+```
+p50_hop, p90_hop = recent medians by god + hop kind
+parkFactor       = 1 + parkRate * 2   (p90 uses * 3)
+designFactor     = 1 + max(designParkRate, 0.25) * 2  (design gates only)
+eta = criticalPath(hop * parkFactor * designFactor, concurrency)
+```
+
+The answer is always the **band + confidence + basis**: `p50 1h26 · p90 3h04 ·
+28% park · high`. A parked walk says `PAUSED`, never an ETA. A design gate is
+not a normal hop: it carries a higher park factor, and its score is shown as
+`design 7.0` next to the ETA.
+
+### The design kit is per hop
+
+The old manifest was the union of every hop's MCP plus the curated baseline —
+a 16-server fleet for a review. v0.0.91 derives `buildHopMcpManifest()` per
+hop:
+
+- baseline: `filesystem`, `memory`, `context7`, `sequential-thinking`,
+  `olympus-craft`;
+- design hop (Athena, design/hero/logo/landing/onboarding/motion id, or a
+  design skill): `nakkas` + `playwright`, plus `originkit` only when
+  `ORIGINKIT_API_KEY` is present;
+- the hop's own `mcp`/`mcps` always wins;
+- `git` only when the lane is a git repository;
+- known-broken servers are excluded.
+
+The walker re-applies the manifest before every dispatch, so a data hop does
+not carry the design fleet.
+
+### The 60-second lane
+
+`POST /api/olympus/quick-edit` takes a mark or a one-line instruction, runs
+**one bounded Athena turn**, and accepts only a patch of ≤3 files / ≤200
+changed lines. It verifies with typecheck + lint, keeps a sha256 snapshot for
+deterministic undo, and reloads the preview. A larger patch or a failed verify
+restores the snapshot and names the reason. It never creates a hop and never
+touches the campaign budget.
+
+### The night shift
+
+`npm run campaign:night-shift -- --slug <slug> --hours 8 --max-hops 100
+--headless` runs the supervisor through `systemd-run --user` (outside the
+Electron cgroup), enforces the deadline/hop cap, restarts only retryable
+parks, and writes a morning letter with the six release gates. It refuses a
+lane with a live walk. The current AIME walk predates this mode and is still
+inside the app cgroup; do not close the app until it finishes.
+
+### Re-measure
+
+```bash
+npx tsx scripts/cost-audit.ts --lane ~/OLYMPUS-VAULT/02_Projects/<project>
+curl -s http://127.0.0.1:3737/api/olympus/tasks | jq '.stats'
+npx tsx scripts/eta-model.test.mjs
+npx tsx scripts/night-shift.test.mjs
+```
