@@ -51,6 +51,9 @@ export default function LivePreview() {
   // typecheck/lint and deterministic undo, instead of planning a hop.
   const [quickEdit, setQuickEdit] = useState(false);
   const [sending, setSending] = useState(false);
+  // v0.0.91 — the last quick edit stays visible with a deterministic undo.
+  const [lastQuickEdit, setLastQuickEdit] = useState<null | { backupRoot: string; files: number; lines: number }>(null);
+  const [quickUndoBusy, setQuickUndoBusy] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   // #202: the editable URL bar. `customUrl` is a user-pinned origin/path for
@@ -179,6 +182,12 @@ export default function LivePreview() {
           project: activeProject?.slug || null,
           ts: new Date().toISOString(),
         });
+        setLastQuickEdit({
+          backupRoot: String(data.backupRoot || ''),
+          files: (data.changedFiles?.length || 0) + (data.addedFiles?.length || 0),
+          lines: Number(data.changedLines || 0),
+        });
+        setIframeKey((k) => k + 1);
         toast.success('Quick edit applied', {
           description: `${data.message || 'The preview hot-reloads.'} Undo is in the backup: ${data.backupRoot || 'n/a'}`,
         });
@@ -208,6 +217,27 @@ export default function LivePreview() {
       setSending(false);
     }
   }, [pendingMark, instruction, pushEvent, activeProject, quickEdit]);
+
+  const undoQuickEdit = useCallback(async () => {
+    if (!lastQuickEdit?.backupRoot || !activeProject?.slug) return;
+    setQuickUndoBusy(true);
+    try {
+      const r = await fetch('/api/olympus/quick-edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: activeProject.slug, undo: true, backupRoot: lastQuickEdit.backupRoot }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      toast.success('Quick edit reverted', { description: `${d.restored?.length || 0} file(s) restored from the snapshot` });
+      setLastQuickEdit(null);
+      setIframeKey((k) => k + 1);
+    } catch (e: any) {
+      toast.error('Quick edit undo failed', { description: e?.message || String(e) });
+    } finally {
+      setQuickUndoBusy(false);
+    }
+  }, [lastQuickEdit, activeProject]);
 
   // v0.0.30 — the manager is a second source of truth. The 20:12 specimen
   // showed "Code in progress" while the probe/manager were green; the panel
@@ -535,6 +565,24 @@ export default function LivePreview() {
               {sending ? 'sending…' : 'send to Athena'}
             </button>
           </div>
+        </div>
+      )}
+
+      {lastQuickEdit && !pendingMark && (
+        <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-olympus-cyan/10 border-b border-olympus-cyan/20 text-[9px] font-mono">
+          <Zap size={10} className="text-olympus-cyan shrink-0" />
+          <span className="text-olympus-cyan whitespace-nowrap">quick edit · {lastQuickEdit.files} file(s) · {lastQuickEdit.lines} line(s)</span>
+          <span className="ml-auto flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => void undoQuickEdit()}
+              disabled={quickUndoBusy || !lastQuickEdit.backupRoot}
+              className="rounded border border-olympus-cyan/30 px-1.5 py-0.5 text-olympus-cyan hover:bg-olympus-cyan/15 disabled:opacity-40"
+            >
+              {quickUndoBusy ? 'undoing…' : 'undo'}
+            </button>
+            <button type="button" onClick={() => setLastQuickEdit(null)} className="text-olympus-text-dim hover:text-olympus-text">dismiss</button>
+          </span>
         </div>
       )}
 
