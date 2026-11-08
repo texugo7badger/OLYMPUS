@@ -18,6 +18,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Bell, Check, Download, ExternalLink, Loader2, Lock, Mic, Orbit, Palette, Play,
   MousePointerClick, Radio, RefreshCw, Settings2, Smartphone, Sparkles, Square, Volume2, X,
@@ -81,6 +82,7 @@ const TOKEN_KEY = 'olympus:mobile-token';
 const THEME_KEY = 'olympus:mobile-theme';
 
 export default function MobileCompanion() {
+  const router = useRouter();
   const language = useLanguage();
   const [token, setToken] = useState<string | null>(null);
   const [tokenDraft, setTokenDraft] = useState('');
@@ -1072,7 +1074,7 @@ export default function MobileCompanion() {
         active={active || null}
         onClose={() => setParthenonOpen(false)}
         onAsk={(text) => { setParthenonOpen(false); void askApollo(text); }}
-        onNewProject={() => { window.location.assign('/?newProject=1'); }}
+        onNewProject={() => { router.push('/?newProject=1'); }}
         onChanged={() => { void load(); }}
       />
     </main>
