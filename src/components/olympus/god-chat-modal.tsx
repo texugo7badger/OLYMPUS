@@ -13,12 +13,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send, X, Loader2, Brain, Mic, ListPlus, Crosshair, Check } from 'lucide-react';
+import { MessageSquare, Send, X, Loader2, Brain, Mic, ListPlus, Crosshair, Check, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage, godName } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme-store';
 import { resolvePalette } from '@/lib/theme';
 import { useHoldToTalk } from '@/lib/use-hold-to-talk';
+import DesignStudioModal from './design-studio-modal';
 
 interface TaskRow {
   id: string;
@@ -60,6 +61,8 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
   // answer and replies with its own view (one round, two turns).
   const [withGod, setWithGod] = useState<string>('');
   const [queued, setQueued] = useState(false);
+  // v0.0.91 — design moved out of ArtCraft and into Athena's conversation.
+  const [designOpen, setDesignOpen] = useState(false);
   const hold = useHoldToTalk({
     language: language as any,
     onText: (text) => { setInput(text); },
@@ -198,7 +201,18 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
           <MessageSquare size={14} style={{ color: palette.gold }} />
           <span className="text-[12px] font-mono font-semibold" style={{ color: palette.gold }}>{name}</span>
           <span className="text-[9px] font-mono" style={{ color: palette.textDim }}>· {godId}</span>
-          <button onClick={onClose} aria-label="Close the chat" className="ml-auto" style={{ color: palette.textDim }}>
+          {godId === 'athena' && (
+            <button
+              type="button"
+              onClick={() => setDesignOpen(true)}
+              className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-mono ring-1 transition-colors"
+              style={{ color: palette.gold, borderColor: `${palette.gold}44`, background: `${palette.gold}10` }}
+              title="Open the Athena design studio — style board + build recipes"
+            >
+              <Palette size={10} /> design
+            </button>
+          )}
+          <button onClick={onClose} aria-label="Close the chat" className={godId === 'athena' ? 'ml-1' : 'ml-auto'} style={{ color: palette.textDim }}>
             <X size={14} />
           </button>
         </div>
@@ -355,6 +369,7 @@ export default function GodChatModal({ godId, onClose }: { godId: string; onClos
           </button>
         </div>
       </div>
+      {designOpen && <DesignStudioModal onClose={() => setDesignOpen(false)} />}
     </div>
   );
 }

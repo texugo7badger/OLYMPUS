@@ -18,12 +18,11 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import OlympusLoader from './olympus-loader';
-import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload, Palette, Sparkles, Maximize2, Bookmark, BookmarkCheck, Copy, MessageSquare, Trash2 } from 'lucide-react';
+import { Boxes, ExternalLink, RefreshCw, X, ChevronLeft, LayoutGrid, Lightbulb, Download, MonitorUp, Play, HardDriveDownload, Maximize2, Bookmark, BookmarkCheck, Copy, MessageSquare, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
-import ArtcraftStyleBoard from './artcraft-style-board';
-import DesignBuildsPanel from './design-builds-panel';
+
 import ReferencePreview from './reference-preview';
 import { previewFor } from '@/lib/reference-previews';
 import { useLanguage, t, categoryName, searchTerms } from '@/lib/i18n';
@@ -80,7 +79,7 @@ type View =
   | { kind: 'grid' }
   | { kind: 'app'; app: CraftApp; src: string; local: boolean; probe: Probe | null }
   | { kind: 'get'; app: CraftApp; probe: Probe | null };
-type PaneTab = 'apps' | 'references' | 'style' | 'builds';
+type PaneTab = 'apps' | 'references';
 
 interface UiRef {
   id: string;
@@ -112,7 +111,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const [refCat, setRefCat] = useState('all');
   const [refLib, setRefLib] = useState('all');
   const [refLimit, setRefLimit] = useState(60);
-  const [pendingRef, setPendingRef] = useState<{ name: string; demoUrl: string; category: string; library: string } | null>(null);
+
   // #198 — the OriginKit free-tier budget (10 fetches/day), surfaced in the
   // References tab so exhaustion never looks like a broken lane.
   const [originkitBudget, setOriginkitBudget] = useState<{ limit: number; remaining: number; exhausted: boolean; resetAt: string } | null>(null);
@@ -381,8 +380,6 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
       what: r.what,
       fetchLane: r.fetchLane,
     };
-    setPendingRef(reference);
-    setTab('style');
     setRefView(null);
     // v0.0.82 — USE means STAGE, not just a style-board mutation. The
     // terminal and the creative composer listen for this event and put the
@@ -448,8 +445,6 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
         <div className="flex items-center gap-0.5">
           <button onClick={() => { setTab('apps'); setRefView(null); }} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'apps' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><LayoutGrid size={10} /> apps</button>
           <button onClick={() => setTab('references')} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'references' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><Lightbulb size={10} /> references</button>
-          <button onClick={() => { setTab('style'); setRefView(null); }} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'style' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><Palette size={10} /> design</button>
-          <button onClick={() => { setTab('builds'); setRefView(null); }} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'builds' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><Sparkles size={10} /> builds</button>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           {view.kind !== 'grid' && (
@@ -465,12 +460,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
 
       {/* Body */}
       <div className="flex-1 min-h-0 relative">
-        {tab === 'builds' ? (
-          <DesignBuildsPanel />
-        ) : tab === 'style' ? (
-          /* v0.0.32 (Epic Q) — the STYLE BOARD: tokens + prompt + queue */
-          <ArtcraftStyleBoard references={uiRefs.map((r) => ({ name: r.name, demoUrl: r.demoUrl, category: r.category, library: r.library }))} pendingRef={pendingRef} onPendingConsumed={() => setPendingRef(null)} />
-        ) : tab === 'references' ? (
+        {tab === 'references' ? (
           /* W-J: the REFERENCES tab — the curated inspiration catalog */
           <div className="absolute inset-0 flex flex-col">
             {refView ? (
