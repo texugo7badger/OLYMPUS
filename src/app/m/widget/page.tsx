@@ -24,7 +24,6 @@ import { useLanguage, t } from '@/lib/i18n';
 import { speakAs } from '@/lib/voice';
 import { useCompanionNotifications } from '@/lib/use-companion-notifications';
 import CompanionBriefing from '@/components/olympus/companion-briefing';
-import CompanionCaptures from '@/components/olympus/companion-captures';
 import { CompanionNotificationsSheet, CompanionToast } from '@/components/olympus/companion-notifications';
 import type { ProjectBriefing } from '@/lib/project-briefing';
 import { briefingSpeech, isBriefingIntent } from '@/lib/companion-text';
@@ -379,15 +378,6 @@ export default function LiveWidgetPage() {
         onSpeak={speak}
         onInvestigate={(text) => void sendPrompt(text)}
         onRefresh={() => void refreshBriefing()}
-      />
-
-      <CompanionCaptures
-        slug={briefing?.slug || project}
-        token={token}
-        language={language}
-        palette={palette}
-        screenshots={briefing?.screenshots || []}
-        onCritique={(text) => void sendPrompt(text)}
       />
 
       <section className="rounded-xl p-3" style={card}>
