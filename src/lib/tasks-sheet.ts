@@ -37,6 +37,7 @@ import { balancePlan } from './hop-runtime/plan-balance';
 import { hopSpeed } from './token-speed';
 import { patrolLane } from './atlas-patrol';
 import { buildCampaignHealth, type CampaignHealth } from './campaign-health';
+import { buildEtaModel, type EtaConfidence } from './eta';
 
 /** The walker's concurrency law (the projection's honesty bound). */
 const MAX_HOP_CONCURRENCY = 4;
@@ -127,8 +128,16 @@ export interface TasksSheet {
     tokensIn: number;
     tokensOut: number;
     /** W-D3: the whole-project remaining wall-time projection (the critical
-     *  path across gods; ms). 0 when nothing remains. */
+     *  path across gods; ms). 0 when nothing remains. v0.0.91: this is now
+     *  the p50 of the honest band (parks + design loops included). */
     projectedRemainingMs: number;
+    /** v0.0.91 — the honest band: p50/p90 + confidence + park rate. */
+    eta50Ms: number;
+    eta90Ms: number;
+    etaNextVisibleMs: number;
+    etaConfidence: EtaConfidence;
+    etaParkRate: number;
+    etaBasis: string;
   };
   /** v0.0.87 — Atlas's deterministic patrol of the lane (parked + stuck). */
   atlasPatrol?: {
@@ -407,7 +416,12 @@ export function buildTasksSheet(opts: {
   const empty: TasksSheet = {
     lane: '', project: '', updatedAt: '',
     tasks: [], gods: {},
-    stats: { total: 0, completed: 0, parked: 0, running: 0, lost: 0, pending: 0, tokensIn: 0, tokensOut: 0, projectedRemainingMs: 0 },
+    stats: {
+      total: 0, completed: 0, parked: 0, running: 0, lost: 0, pending: 0,
+      tokensIn: 0, tokensOut: 0, projectedRemainingMs: 0,
+      eta50Ms: 0, eta90Ms: 0, etaNextVisibleMs: 0,
+      etaConfidence: 'low', etaParkRate: 0, etaBasis: 'no campaign',
+    },
     atlasPatrol: undefined,
   };
   if (!active) return empty;
@@ -428,13 +442,16 @@ export function buildTasksSheet(opts: {
   // evidence; when it is dead, the inFlight records are LOST, not running.
   const lock = readWalkLock(lane);
 
-  // Telemetry: the LAST row per hop wins (retries append rows).
+  // Telemetry: the LAST row per hop wins for task rendering, but the ETA
+  // model needs EVERY row (parks + retries are the signal, not noise).
   const telemetry = new Map<string, any>();
+  const telemetryRows: any[] = [];
   try {
     const raw = fs.readFileSync(path.join(lane, '.olympus-hop-telemetry.jsonl'), 'utf-8');
     for (const line of raw.trim().split('\n').filter(Boolean)) {
       try {
         const row = JSON.parse(line);
+        telemetryRows.push(row);
         if (row?.hop) telemetry.set(String(row.hop), row);
       } catch { /* skip */ }
     }
@@ -565,21 +582,21 @@ export function buildTasksSheet(opts: {
     g.demigods = demigods[t.god] || [];
   }
 
-  // W-D3: the CRITICAL-PATH projection. Per god, the serial expected time of
-  // that god's remaining hops (same-pool hops serialize; running hops count
-  // down their elapsed); the projection = the max across gods.
-  const remainingByGod = new Map<string, number>();
-  for (const t of tasks) {
-    if (t.status !== 'pending' && t.status !== 'running') continue;
-    let exp = expectedFor(t.god);
-    if (t.status === 'running' && t.startedAt) {
-      try { exp = Math.max(30_000, exp - (now - new Date(t.startedAt).getTime())); } catch { /* keep exp */ }
-    }
-    remainingByGod.set(t.god, (remainingByGod.get(t.god) || 0) + exp);
-  }
-  const projectedRemainingMs = remainingByGod.size > 0
-    ? Math.round(Math.max(...remainingByGod.values()))
-    : 0;
+  // v0.0.91 — the honest ETA band. The v0.0.30 critical-path shape is
+  // preserved (same-pool hops serialize; max across gods), but parks and
+  // design loops are now part of the model instead of a silent omission.
+  const eta = buildEtaModel({
+    hops: tasks.map((t) => ({
+      id: t.id,
+      god: t.god,
+      status: t.status,
+      startedAt: t.startedAt,
+      designGate: /design[-_]?(review|gate)/i.test(t.id) || /design-score:/.test(JSON.stringify(t.verify ?? '')),
+    })),
+    telemetry: telemetryRows,
+    now,
+  });
+  const projectedRemainingMs = eta.eta50Ms;
 
   const stats: TasksSheet['stats'] = {
     total: tasks.length,
@@ -591,6 +608,12 @@ export function buildTasksSheet(opts: {
     tokensIn: tasks.reduce((n, t) => n + (t.tokensIn ?? 0), 0),
     tokensOut: tasks.reduce((n, t) => n + (t.tokensOut ?? 0), 0),
     projectedRemainingMs,
+    eta50Ms: eta.eta50Ms,
+    eta90Ms: eta.eta90Ms,
+    etaNextVisibleMs: eta.nextVisibleMs,
+    etaConfidence: eta.confidence,
+    etaParkRate: eta.parkRate,
+    etaBasis: eta.basis,
   };
   void MAX_HOP_CONCURRENCY; // documented bound — the model itself is per-god serial
 
@@ -615,6 +638,16 @@ export function buildTasksSheet(opts: {
         nextLane: first?.nextLane ?? null,
       },
     } : {}),
-    campaignHealth: (() => { try { return buildCampaignHealth(lane, { etaMs: stats.projectedRemainingMs }); } catch { return undefined; } })(),
+    campaignHealth: (() => {
+      try {
+        return buildCampaignHealth(lane, {
+          etaMs: stats.projectedRemainingMs,
+          eta50Ms: stats.eta50Ms,
+          eta90Ms: stats.eta90Ms,
+          etaConfidence: stats.etaConfidence,
+          parkRate: stats.etaParkRate,
+        });
+      } catch { return undefined; }
+    })(),
   };
 }

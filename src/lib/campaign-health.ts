@@ -22,6 +22,7 @@ import { readPlanFile, planPath, readFrozenPlan, readNextPlan, computeHopHashes 
 import { patrolLane } from './atlas-patrol';
 import { readRecoveries } from './hop-runtime/recovery';
 import { blockedLanes } from './lane-health';
+import { formatEta, type EtaConfidence } from './eta';
 
 export type CampaignVerdict = 'HEALTHY' | 'DEGRADED' | 'BLOCKED' | 'NEEDS-YOU' | 'PAUSED' | 'DONE';
 
@@ -38,7 +39,13 @@ export interface CampaignHealth {
   lanesDead: number;
   nextPlan: { added: number; removed: number; changed: number } | null;
   lastRecovery: string | null;
+  /** Kept for backward compatibility: the p50 (or the old projection). */
   etaMs: number | null;
+  /** v0.0.91 — the honest band + its confidence. */
+  eta50Ms: number | null;
+  eta90Ms: number | null;
+  etaConfidence: EtaConfidence | null;
+  parkRate: number | null;
   reasons: string[];
 }
 
@@ -48,11 +55,17 @@ function median(values: number[]): number {
   return s[Math.min(s.length - 1, Math.floor(s.length / 2))];
 }
 
-export function buildCampaignHealth(laneRoot: string, opts: { etaMs?: number | null } = {}): CampaignHealth {
+export function buildCampaignHealth(laneRoot: string, opts: {
+  etaMs?: number | null;
+  eta50Ms?: number | null;
+  eta90Ms?: number | null;
+  etaConfidence?: EtaConfidence | null;
+  parkRate?: number | null;
+} = {}): CampaignHealth {
   try {
     const plan = readFrozenPlan(laneRoot) ?? readPlanFile(planPath(laneRoot));
     if (!plan || !Array.isArray(plan.hops)) {
-      return { verdict: 'PAUSED', line: 'No plan on this lane.', generation: 0, completed: 0, total: 0, lifetimeCompleted: 0, running: 0, parked: null, parks: 0, lanesDead: blockedLanes().length, nextPlan: null, lastRecovery: null, etaMs: null, reasons: ['no-plan'] };
+      return { verdict: 'PAUSED', line: 'No plan on this lane.', generation: 0, completed: 0, total: 0, lifetimeCompleted: 0, running: 0, parked: null, parks: 0, lanesDead: blockedLanes().length, nextPlan: null, lastRecovery: null, etaMs: null, eta50Ms: null, eta90Ms: null, etaConfidence: null, parkRate: null, reasons: ['no-plan'] };
     }
     const lock = readWalkLock(laneRoot);
     const state = loadHopState(laneRoot);
@@ -118,7 +131,13 @@ export function buildCampaignHealth(laneRoot: string, opts: { etaMs?: number | n
       reasons.push(`${pending.length} hop(s) pending, ${running} running`);
     }
     if (recs.length) reasons.push(`last recovery: ${lastRecovery}`);
-    const eta = etaMs && etaMs > 0 ? ` · ~${Math.round(etaMs / 60_000)} min left` : '';
+    const eta50Ms = opts.eta50Ms ?? etaMs;
+    const eta90Ms = opts.eta90Ms ?? (eta50Ms ? Math.round(eta50Ms * 2) : null);
+    const etaConfidence = opts.etaConfidence ?? (eta50Ms ? 'low' : null);
+    const parkRate = opts.parkRate ?? null;
+    const eta = eta50Ms && eta50Ms > 0
+      ? ` · ~${formatEta(eta50Ms)}${eta90Ms && eta90Ms > eta50Ms ? ` (p90 ${formatEta(eta90Ms)})` : ''} left`
+      : '';
     const line = `${verdict} · gen ${plan.generation ?? 1} · ${completed.length}/${plan.hops.length} hops${running ? ` · ${running} running` : ''}${parked ? ` · parked ${parked.hopId}` : ''}${eta}`;
     return {
       verdict, line, generation: plan.generation ?? 1,
@@ -129,14 +148,14 @@ export function buildCampaignHealth(laneRoot: string, opts: { etaMs?: number | n
       parks: patrol?.parked.length ?? 0,
       lanesDead,
       nextPlan: next.diff ? { added: next.diff.added.length, removed: next.diff.removed.length, changed: next.diff.changed.length } : null,
-      lastRecovery, etaMs, reasons,
+      lastRecovery, etaMs: eta50Ms, eta50Ms, eta90Ms, etaConfidence, parkRate, reasons,
     };
   } catch {
-    return { verdict: 'PAUSED', line: 'Campaign state unreadable.', generation: 0, completed: 0, total: 0, lifetimeCompleted: 0, running: 0, parked: null, parks: 0, lanesDead: 0, nextPlan: null, lastRecovery: null, etaMs: null, reasons: ['unreadable'] };
+    return { verdict: 'PAUSED', line: 'Campaign state unreadable.', generation: 0, completed: 0, total: 0, lifetimeCompleted: 0, running: 0, parked: null, parks: 0, lanesDead: 0, nextPlan: null, lastRecovery: null, etaMs: null, eta50Ms: null, eta90Ms: null, etaConfidence: null, parkRate: null, reasons: ['unreadable'] };
   }
 }
 
 /** The version/status line used by the phone and the status bar. */
-export function campaignHealthLine(laneRoot: string, opts: { etaMs?: number | null } = {}): string {
+export function campaignHealthLine(laneRoot: string, opts: Parameters<typeof buildCampaignHealth>[1] = {}): string {
   return buildCampaignHealth(laneRoot, opts).line;
 }

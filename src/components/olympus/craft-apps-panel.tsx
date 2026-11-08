@@ -123,7 +123,6 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const [memoryOnly, setMemoryOnly] = useState(false);
   const memoryIds = new Set(memory.map((m) => m.id));
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async (check = false) => {
     setLoading(true);
@@ -324,25 +323,10 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
     setRefLimit(60);
   }, [query, refCat, refLib, memoryOnly, tab]);
 
-  // v0.0.34 — infinite scroll: the sentinel loads the next 60 a little
-  // BEFORE the user reaches it (900px). No button, no jank: the cards mount
-  // lazily and the preview canvas only exists near the viewport.
-  useEffect(() => {
-    if (tab !== 'references' || refView) return;
-    const el = loadMoreRef.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === 'undefined') {
-      setRefLimit((n) => Math.min(n + 60, filteredRefs.length));
-      return;
-    }
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) {
-        setRefLimit((n) => Math.min(n + 60, filteredRefs.length));
-      }
-    }, { rootMargin: '900px' });
-    io.observe(el);
-    return () => io.disconnect();
-  }, [tab, refView, filteredRefs.length, visibleRefs.length]);
+  // v0.0.91 — FINITE PAGES. The user asked for no infinite scroll that keeps
+  // appending the same-looking cards. The grid loads 60 at a time on an
+  // explicit click; the catalog remains complete, the page stays predictable.
+  // The QA contract is data-infinite-scroll="false" on the grid.
   // v0.0.32 — the Originkit demo requires a session; embedding it showed a
   // login wall. Use = carry the reference into the project's Style Board;
   // Queue = a design task for Athena (priority high).
@@ -601,7 +585,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   </div>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scroll p-3">
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3" data-infinite-scroll="false">
                     {visibleRefs.map((r) => (
                       <ReferenceCard
                         key={r.id}
@@ -614,9 +598,17 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   </div>
                   {visibleRefs.length === 0 && <p className="text-center py-8 text-olympus-text-dim text-xs font-mono">{t('references.noMatch', language)}</p>}
                   {visibleRefs.length > 0 && visibleRefs.length < filteredRefs.length && (
-                    <div ref={loadMoreRef} className="h-10 flex items-center justify-center gap-2 text-[9px] font-mono text-olympus-text-dim">
-                      <span className="w-1.5 h-1.5 rounded-full bg-olympus-gold animate-pulse" />
-                      loading the next references… {(filteredRefs.length - visibleRefs.length).toLocaleString()} left
+                    <div className="py-4 flex flex-col items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setRefLimit((n) => Math.min(n + 60, filteredRefs.length))}
+                        className="rounded-md border border-olympus-gold/25 bg-olympus-gold/10 px-3 py-1.5 text-[9px] font-mono uppercase tracking-wide text-olympus-gold hover:bg-olympus-gold/20 transition-colors"
+                      >
+                        Load 60 more · {(filteredRefs.length - visibleRefs.length).toLocaleString()} remaining
+                      </button>
+                      <span className="text-[8px] font-mono text-olympus-text-dim">
+                        finite pages · no auto-load
+                      </span>
                     </div>
                   )}
                   {visibleRefs.length > 0 && visibleRefs.length >= filteredRefs.length && (

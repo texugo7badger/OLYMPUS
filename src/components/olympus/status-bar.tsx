@@ -322,10 +322,10 @@ export default function StatusBar({
  {!compact && <span className="text-olympus-text-dim text-[10px]">skills</span>}
  </span>
  <span className="text-olympus-text-dim">·</span>
- <span className="hidden min-[1680px]:flex items-center gap-1 text-olympus-purple" data-tip="Total gods + demigods">
+ <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-olympus-purple" data-tip={`${health?.total_agents ?? 0} gods + demigods`}>
  <Users size={11} />
- <span>{health?.total_agents ?? 0}</span>
- {!compact && <span className="text-olympus-text-dim text-[10px]">agents</span>}
+ <span className="tabular-nums">{health?.total_agents ?? 0}</span>
+ {!compact && <span className="text-olympus-text-dim text-[10px] whitespace-nowrap">agents</span>}
  </span>
  </div>
  </div>

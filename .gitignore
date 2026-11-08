@@ -132,6 +132,7 @@ research/
 # Maintainer-only test suites — they read the local vault, lanes and credentials.
 # The public method and the measured evidence live in TESTING.md.
 scripts/*.test.mjs
+!scripts/eta-model.test.mjs
 
 # v0.0.81 — THE PUBLIC CORE. These pure suites (no vault, no credentials)
 # are published so a clone can verify the project.

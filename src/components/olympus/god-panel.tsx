@@ -25,6 +25,7 @@ import GodChatModal from './god-chat-modal';
 import ParthenonCommand from './parthenon-command';
 import { useLanguage, godName, getLanguage } from '@/lib/i18n';
 import type { DemigodLive } from '@/lib/tasks-sheet';
+import { formatEta } from '@/lib/eta';
 
 /** Coarse status bucket. Finer wire phases collapse into these. */
 export type ParthenonStatus = 'idle' | 'working' | 'blocked' | 'done';
@@ -152,10 +153,20 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
 
   // W-D3: the campaign stats — the header's N/M progress + the projected
   // time-to-finish (the user's headline ask).
-  const [campaignStats, setCampaignStats] = useState<null | { total: number; completed: number; parked: number; projectedRemainingMs: number }>(null);
+  const [campaignStats, setCampaignStats] = useState<null | {
+    total: number; completed: number; parked: number; projectedRemainingMs: number;
+    eta50Ms?: number; eta90Ms?: number; etaNextVisibleMs?: number;
+    etaConfidence?: string; etaParkRate?: number; etaBasis?: string;
+  }>(null);
   // v0.0.87 — Atlas's deterministic patrol rides the same tasks poll.
   const [atlasPatrol, setAtlasPatrol] = useState<null | { summary: string; parked: number; stuck: number; verdict: string | null; hopId: string | null; nextLane: string | null }>(null);
-  const [campaignHealth, setCampaignHealth] = useState<null | { verdict: string; line: string; reasons: string[]; completed: number; total: number; running: number; generation: number; etaMs: number | null; parked: { hopId: string; reason: string } | null; nextPlan: { added: number; removed: number; changed: number } | null }>(null);
+  const [campaignHealth, setCampaignHealth] = useState<null | {
+    verdict: string; line: string; reasons: string[]; completed: number; total: number;
+    running: number; generation: number; etaMs: number | null;
+    eta50Ms?: number | null; eta90Ms?: number | null; etaConfidence?: string | null; parkRate?: number | null;
+    parked: { hopId: string; reason: string } | null;
+    nextPlan: { added: number; removed: number; changed: number } | null;
+  }>(null);
   const [projectSlug, setProjectSlug] = useState<string | null>(null);
   const [applyingPlan, setApplyingPlan] = useState(false);
   // The god's LIVE demigod dispatches (the arsenal in action — the
@@ -199,15 +210,20 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
 
   return (
     <>
-      <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide sticky top-0 bg-olympus-panel border-b border-olympus-gold/10 flex items-center gap-1">
-        <Sparkles size={10} style={{ color: '#D4A574' }} />
-        <span>Parthenon</span>
-        <span className="ml-auto normal-case tracking-normal flex items-center gap-1.5">
-          <span>{active} active / {ordered.length}</span>
+      <div className="sticky top-0 z-10 bg-olympus-panel border-b border-olympus-gold/10">
+        <div className="px-2 py-1.5 text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide flex items-center gap-1.5">
+          <img
+            src="/diagrams/parthenon-mark-static.svg"
+            alt=""
+            aria-hidden
+            className="h-4 w-4 shrink-0 opacity-90"
+          />
+          <span className="shrink-0">Parthenon</span>
+          <span className="normal-case tracking-normal whitespace-nowrap shrink-0">{active} active / {ordered.length}</span>
           {campaignHealth && (
             <span
               className={cn(
-                'rounded px-1 py-0.5 text-[7px] font-mono uppercase tracking-wide',
+                'rounded px-1 py-0.5 text-[7px] font-mono uppercase tracking-wide whitespace-nowrap shrink-0',
                 campaignHealth.verdict === 'HEALTHY' ? 'bg-olympus-green/15 text-olympus-green'
                   : campaignHealth.verdict === 'DONE' ? 'bg-olympus-green/15 text-olympus-green'
                   : campaignHealth.verdict === 'NEEDS-YOU' ? 'bg-olympus-red/15 text-olympus-red'
@@ -219,46 +235,76 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
               {campaignHealth.verdict}
             </span>
           )}
-          {/* W-D3: the persistent campaign header — N/M hops + the projected
-              time-to-finish (the user's headline ask) + the parked badge.
-              Nothing when no campaign is live (the honest empty). */}
-          {campaignStats && campaignStats.total > 0 && (
-            <>
-              <span className="text-olympus-cyan">
-                · {campaignStats.completed}/{campaignStats.total} hops
+          <span className="ml-auto flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => setChatGod(focusedGod ?? ordered[0]?.god ?? 'apollo')}
+              data-tip={`Chat with ${godName(focusedGod ?? ordered[0]?.god ?? 'apollo', language as any)}`}
+              aria-label={`Chat with ${godName(focusedGod ?? ordered[0]?.god ?? 'apollo', language as any)}`}
+              className="text-olympus-text-dim hover:text-olympus-gold transition-colors"
+            >
+              <MessageSquare size={11} />
+            </button>
+            {onCollapse && (
+              <button
+                type="button"
+                onClick={onCollapse}
+                data-tip="Minimize the Parthenon to god icons (more room for the chat)"
+                aria-label="Minimize the Parthenon"
+                className="text-olympus-text-dim hover:text-olympus-gold transition-colors"
+              >
+                <ChevronsRight size={10} />
+              </button>
+            )}
+          </span>
+        </div>
+
+        {/* v0.0.91 — metrics on their own wrapped row. The old single row
+            clipped at narrow rail widths; every value now lives in a pill
+            with whitespace-nowrap, and the band replaces the lone "~40m". */}
+        {campaignStats && campaignStats.total > 0 && (
+          <div className="px-2 pb-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[8px] font-mono">
+            <span className="rounded bg-olympus-cyan/10 px-1.5 py-0.5 text-olympus-cyan whitespace-nowrap tabular-nums">
+              {campaignStats.completed}/{campaignStats.total} hops
+            </span>
+            {campaignStats.parked > 0 && (
+              <span className="rounded bg-olympus-red/10 px-1.5 py-0.5 text-olympus-red whitespace-nowrap tabular-nums">
+                {campaignStats.parked} parked
               </span>
-              {campaignStats.parked > 0 && (
-                <span className="text-olympus-red">· {campaignStats.parked} parked</span>
-              )}
-              {campaignStats.completed < campaignStats.total && campaignStats.projectedRemainingMs > 0 && (
-                <span className="text-olympus-text-dim">
-                  · ~{campaignStats.projectedRemainingMs >= 60_000
-                    ? `${Math.round(campaignStats.projectedRemainingMs / 60_000)}m`
-                    : `${Math.round(campaignStats.projectedRemainingMs / 1000)}s`} left
-                </span>
-              )}
-            </>
-          )}
-        </span>
-        <button
-          type="button"
-          onClick={() => setChatGod(focusedGod ?? ordered[0]?.god ?? 'apollo')}
-          data-tip={`Chat with ${godName(focusedGod ?? ordered[0]?.god ?? 'apollo', language as any)}`}
-          aria-label={`Chat with ${godName(focusedGod ?? ordered[0]?.god ?? 'apollo', language as any)}`}
-          className="ml-1 text-olympus-text-dim hover:text-olympus-gold transition-colors"
-        >
-          <MessageSquare size={11} />
-        </button>
-        {onCollapse && (
-          <button
-            type="button"
-            onClick={onCollapse}
-            data-tip="Minimize the Parthenon to god icons (more room for the chat)"
-            aria-label="Minimize the Parthenon"
-            className="ml-1 text-olympus-text-dim hover:text-olympus-gold transition-colors"
-          >
-            <ChevronsRight size={10} />
-          </button>
+            )}
+            {(campaignStats.eta50Ms || campaignStats.projectedRemainingMs) > 0 && (
+              <span
+                className="rounded bg-olympus-gold/10 px-1.5 py-0.5 text-olympus-gold whitespace-nowrap tabular-nums"
+                data-tip={campaignStats.etaBasis || 'critical-path estimate'}
+              >
+                {formatEta(campaignStats.eta50Ms || campaignStats.projectedRemainingMs)}
+                {campaignStats.eta90Ms && campaignStats.eta90Ms > (campaignStats.eta50Ms || campaignStats.projectedRemainingMs)
+                  ? ` · p90 ${formatEta(campaignStats.eta90Ms)}`
+                  : ''}
+              </span>
+            )}
+            {campaignStats.etaNextVisibleMs && campaignStats.etaNextVisibleMs > 0 && (
+              <span className="rounded bg-olympus-card/60 px-1.5 py-0.5 text-olympus-text-dim whitespace-nowrap tabular-nums" data-tip="Time until the next hop settles">
+                next {formatEta(campaignStats.etaNextVisibleMs)}
+              </span>
+            )}
+            {campaignHealth?.generation ? (
+              <span className="text-olympus-text-dim whitespace-nowrap">gen {campaignHealth.generation}</span>
+            ) : null}
+            {campaignStats.etaConfidence && (
+              <span
+                className={cn(
+                  'rounded px-1.5 py-0.5 whitespace-nowrap uppercase tracking-wide text-[7px]',
+                  campaignStats.etaConfidence === 'high' ? 'bg-olympus-green/10 text-olympus-green'
+                    : campaignStats.etaConfidence === 'medium' ? 'bg-olympus-gold/10 text-olympus-gold'
+                    : 'bg-olympus-red/10 text-olympus-red',
+                )}
+                data-tip={`ETA confidence: ${campaignStats.etaConfidence}${campaignStats.etaParkRate != null ? ` · ${Math.round(campaignStats.etaParkRate * 100)}% park` : ''}`}
+              >
+                {campaignStats.etaConfidence}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
