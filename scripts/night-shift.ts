@@ -28,6 +28,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readWalkLock } from '../src/lib/hop-runtime/walk-lock';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -285,6 +286,13 @@ async function supervise(opts: NightShiftOptions): Promise<number> {
   if (!opts.slug) { console.error('night-shift: --slug is required'); return 2; }
   if (!fs.existsSync(path.join(opts.lane, 'dispatch-plan.json'))) {
     console.error(`night-shift: no dispatch-plan.json in ${opts.lane}`); return 2;
+  }
+  // The lane lock is the truth. A live walk already owns this lane; a second
+  // runner would exit 'already-walking' and write a misleading morning report.
+  const existingLock = readWalkLock(opts.lane);
+  if (existingLock.holder && existingLock.alive) {
+    console.error(`night-shift: a walk already owns ${opts.lane} (pid ${existingLock.holder.pid}) — let it finish or stop it first`);
+    return 2;
   }
   const startMs = Date.now();
   const deadline = deadlineMs(startMs, opts.hours);

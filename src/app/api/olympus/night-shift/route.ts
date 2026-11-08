@@ -17,6 +17,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, execFileSync } from 'node:child_process';
+import { resolveDispatchCwd } from '@/lib/opencode-spawn';
+import { getVaultRoot } from '@/lib/vault-root';
+import { readWalkLock } from '@/lib/hop-runtime/walk-lock';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -88,6 +91,17 @@ export async function POST(req: NextRequest) {
   }
   if (current?.pid && pidAlive(Number(current.pid))) {
     return NextResponse.json({ ok: false, error: 'night shift already running', state: current }, { status: 409 });
+  }
+  // The lane lock is the truth: starting a night shift on a lane that already
+  // has a live walk would only spawn a runner that exits 'already-walking'.
+  const laneRoot = resolveDispatchCwd(slug) || path.join(getVaultRoot(), '02_Projects', slug);
+  const lock = readWalkLock(laneRoot);
+  if (lock.holder && lock.alive) {
+    return NextResponse.json({
+      ok: false,
+      error: `a walk already owns this lane (pid ${lock.holder.pid}) — let it finish or stop it before launching the night shift`,
+      lock: { pid: lock.holder.pid, startedAt: lock.holder.startedAt },
+    }, { status: 409 });
   }
   const hours = Number.isFinite(Number(body?.hours)) ? Math.max(0.1, Math.min(24, Number(body.hours))) : 8;
   const maxHops = Number.isFinite(Number(body?.maxHops)) ? Math.max(1, Math.min(500, Number(body.maxHops))) : 100;
