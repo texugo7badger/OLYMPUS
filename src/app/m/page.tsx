@@ -1019,7 +1019,7 @@ export default function MobileCompanion() {
       {/* v0.0.84 — the personal animated preview + mark. The public share link
           has no mark; only the OLYMPUS session can send an Athena edit. */}
       {previewOpen && preview?.recommendedUrl && (
-        <div className="fixed inset-0 z-[320] flex flex-col bg-olympus-bg text-olympus-text">
+        <div className="olympus-preview-in fixed inset-0 z-[320] flex flex-col bg-olympus-bg text-olympus-text">
           <header className="flex items-center gap-2 border-b border-olympus-gold/15 px-3 pt-[calc(env(safe-area-inset-top)+8px)] pb-2">
             <button onClick={() => { setPreviewOpen(false); setMarkMode(false); }} aria-label="Close preview" className="flex h-10 w-10 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold"><X size={16} /></button>
             <div className="min-w-0 flex-1">
@@ -1042,7 +1042,7 @@ export default function MobileCompanion() {
               />
             )}
             {markPoint && (
-              <span className="pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-olympus-red bg-olympus-red/20" style={{ left: markPoint.x, top: markPoint.y }} />
+              <span className="olympus-mark-in pointer-events-none absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-olympus-red bg-olympus-red/20" style={{ left: markPoint.x, top: markPoint.y }} />
             )}
           </div>
           <div className="border-t border-olympus-gold/15 bg-olympus-panel px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2">
