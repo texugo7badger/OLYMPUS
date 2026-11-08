@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import OlympusLoader from './olympus-loader';
-import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2, ChevronLeft, ChevronRight, Share2, Copy, X, MonitorUp } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2, ChevronLeft, ChevronRight, Share2, Copy, X, MonitorUp, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
@@ -47,6 +47,9 @@ export default function LivePreview() {
   const [dMode, setDMode] = useState<'live-tunnel' | 'proxy' | null>(null);
   const [pendingMark, setPendingMark] = useState<{ x: number; y: number } | null>(null);
   const [instruction, setInstruction] = useState('');
+  // v0.0.91 — the fast lane: patch directly (<=3 files, <=200 lines) with
+  // typecheck/lint and deterministic undo, instead of planning a hop.
+  const [quickEdit, setQuickEdit] = useState(false);
   const [sending, setSending] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -142,10 +145,21 @@ export default function LivePreview() {
       };
       const previewTarget = customUrl ?? status?.url ?? previewUrl;
       const previewPath = (() => { try { return new URL(previewTarget).pathname || '/'; } catch { return '/'; } })();
-      const response = await fetch('/api/olympus/athena/edit', {
+      if (quickEdit && !activeProject?.slug) {
+        throw new Error('Quick edit needs an active project — open the mark from a project lane.');
+      }
+      const endpoint = quickEdit ? '/api/olympus/quick-edit' : '/api/olympus/athena/edit';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(quickEdit ? {
+          slug: activeProject?.slug,
+          instruction: instruction.trim(),
+          mark: { x: pendingMark.x, y: pendingMark.y },
+          viewport,
+          previewUrl: previewTarget,
+          route: previewPath,
+        } : {
           x: pendingMark.x,
           y: pendingMark.y,
           instruction: instruction.trim(),
@@ -157,16 +171,29 @@ export default function LivePreview() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data?.ok) throw new Error(data?.error || `HTTP ${response.status}`);
-      pushEvent({
-        type: 'live_preview_mark',
-        msg: `Athena is planning the mark: "${instruction.trim().slice(0, 80)}" at (${pendingMark.x}, ${pendingMark.y}) in ${viewport.width}x${viewport.height}`,
-        x: pendingMark.x, y: pendingMark.y,
-        project: activeProject?.slug || null,
-        ts: new Date().toISOString(),
-      });
-      // v0.0.90 — the mark lands in HER chat, in front of the user.
-      window.dispatchEvent(new CustomEvent('olympus:open-god-chat', { detail: { god: 'athena' } }));
-      toast.success('Mark sent to Athena', { description: 'She will plan it in her chat; approve to hand Apollo + Atlas the implementation.' });
+      if (quickEdit) {
+        pushEvent({
+          type: 'live_preview_mark',
+          msg: `Quick edit applied: ${data.changedFiles?.length || 0} file(s), ${data.changedLines || 0} line(s) in ${Math.round((data.durationMs || 0) / 1000)}s`,
+          x: pendingMark.x, y: pendingMark.y,
+          project: activeProject?.slug || null,
+          ts: new Date().toISOString(),
+        });
+        toast.success('Quick edit applied', {
+          description: `${data.message || 'The preview hot-reloads.'} Undo is in the backup: ${data.backupRoot || 'n/a'}`,
+        });
+      } else {
+        pushEvent({
+          type: 'live_preview_mark',
+          msg: `Athena is planning the mark: "${instruction.trim().slice(0, 80)}" at (${pendingMark.x}, ${pendingMark.y}) in ${viewport.width}x${viewport.height}`,
+          x: pendingMark.x, y: pendingMark.y,
+          project: activeProject?.slug || null,
+          ts: new Date().toISOString(),
+        });
+        // v0.0.90 — the mark lands in HER chat, in front of the user.
+        window.dispatchEvent(new CustomEvent('olympus:open-god-chat', { detail: { god: 'athena' } }));
+        toast.success('Mark sent to Athena', { description: 'She will plan it in her chat; approve to hand Apollo + Atlas the implementation.' });
+      }
       setPendingMark(null);
       setInstruction('');
     } catch (err) {
@@ -180,7 +207,7 @@ export default function LivePreview() {
     } finally {
       setSending(false);
     }
-  }, [pendingMark, instruction, pushEvent, activeProject]);
+  }, [pendingMark, instruction, pushEvent, activeProject, quickEdit]);
 
   // v0.0.30 — the manager is a second source of truth. The 20:12 specimen
   // showed "Code in progress" while the probe/manager were green; the panel
@@ -470,7 +497,23 @@ export default function LivePreview() {
         <div className="shrink-0 flex flex-col gap-1.5 px-3 py-2 bg-olympus-gold/10 border-b border-olympus-gold/20 text-[10px] font-mono">
           <div className="flex items-center justify-between">
             <span className="text-olympus-gold flex items-center gap-1.5"><MousePointerClick size={11} />Marked ({pendingMark.x}, {pendingMark.y}) — describe the change for Athena:</span>
-            <button onClick={() => { setPendingMark(null); setInstruction(''); }} className="text-olympus-text-dim hover:text-olympus-text px-1.5">cancel</button>
+            <span className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setQuickEdit(v => !v)}
+                aria-pressed={quickEdit}
+                data-tip="Quick edit: patch directly (≤3 files / 200 lines), typecheck + lint, undo available. Off = Athena plans a hop first."
+                className={cn(
+                  'flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-mono ring-1 transition-colors',
+                  quickEdit
+                    ? 'bg-olympus-cyan/15 text-olympus-cyan ring-olympus-cyan/35'
+                    : 'text-olympus-text-dim ring-olympus-gold/15 hover:text-olympus-cyan',
+                )}
+              >
+                <Zap size={9} /> quick
+              </button>
+              <button onClick={() => { setPendingMark(null); setInstruction(''); }} className="text-olympus-text-dim hover:text-olympus-text px-1.5">cancel</button>
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <input

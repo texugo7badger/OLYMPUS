@@ -29,7 +29,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 export type GodInboxRole = 'you' | 'god' | 'system';
-export type GodInboxSource = 'chat' | 'mark' | 'dispatch' | 'system';
+export type GodInboxSource = 'chat' | 'mark' | 'dispatch' | 'system' | 'quick-edit';
 export type GodInboxStatus = 'pending' | 'running' | 'done' | 'failed';
 
 export interface GodInboxEntry {
