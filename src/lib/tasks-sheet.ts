@@ -142,6 +142,10 @@ export interface TasksSheet {
     designScore: number | null;
     /** The file the score came from (root vs frontdoor), for the tooltip. */
     designSource: string | null;
+    /** v0.0.91 — cost/quality economics: measured tokens and list value. */
+    estimatedCostUsd: number;
+    tokensPerCompletedHop: number;
+    costPerCompletedHop: number | null;
   };
   /** v0.0.87 — Atlas's deterministic patrol of the lane (parked + stuck). */
   atlasPatrol?: {
@@ -425,6 +429,7 @@ export function buildTasksSheet(opts: {
       tokensIn: 0, tokensOut: 0, projectedRemainingMs: 0,
       eta50Ms: 0, eta90Ms: 0, etaNextVisibleMs: 0,
       etaConfidence: 'low', etaParkRate: 0, etaBasis: 'no campaign', designScore: null, designSource: null,
+      estimatedCostUsd: 0, tokensPerCompletedHop: 0, costPerCompletedHop: null,
     },
     atlasPatrol: undefined,
   };
@@ -619,15 +624,26 @@ export function buildTasksSheet(opts: {
       : null;
   const designScore = typeof designReview?.overall === 'number' ? designReview.overall : null;
 
+  const completedCount = tasks.filter(t => t.status === 'completed').length;
+  const tokensInTotal = tasks.reduce((n, t) => n + (t.tokensIn ?? 0), 0);
+  const tokensOutTotal = tasks.reduce((n, t) => n + (t.tokensOut ?? 0), 0);
+  const estimatedCostUsd = Math.round(tasks.reduce((n, t) => n + (t.estimatedCostUsd ?? 0), 0) * 10000) / 10000;
+  const tokensPerCompletedHop = completedCount > 0
+    ? Math.round((tokensInTotal + tokensOutTotal) / completedCount)
+    : 0;
+  const costPerCompletedHop = completedCount > 0 && estimatedCostUsd > 0
+    ? Math.round((estimatedCostUsd / completedCount) * 10000) / 10000
+    : null;
+
   const stats: TasksSheet['stats'] = {
     total: tasks.length,
-    completed: tasks.filter(t => t.status === 'completed').length,
+    completed: completedCount,
     parked: tasks.filter(t => t.status === 'parked').length,
     running: tasks.filter(t => t.status === 'running').length,
     lost: tasks.filter(t => t.status === 'lost').length,
     pending: tasks.filter(t => t.status === 'pending').length,
-    tokensIn: tasks.reduce((n, t) => n + (t.tokensIn ?? 0), 0),
-    tokensOut: tasks.reduce((n, t) => n + (t.tokensOut ?? 0), 0),
+    tokensIn: tokensInTotal,
+    tokensOut: tokensOutTotal,
     projectedRemainingMs,
     eta50Ms: eta.eta50Ms,
     eta90Ms: eta.eta90Ms,
@@ -637,6 +653,9 @@ export function buildTasksSheet(opts: {
     etaBasis: eta.basis,
     designScore,
     designSource,
+    estimatedCostUsd,
+    tokensPerCompletedHop,
+    costPerCompletedHop,
   };
   void MAX_HOP_CONCURRENCY; // documented bound — the model itself is per-god serial
 

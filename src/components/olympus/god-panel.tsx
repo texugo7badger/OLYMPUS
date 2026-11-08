@@ -158,6 +158,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
     eta50Ms?: number; eta90Ms?: number; etaNextVisibleMs?: number;
     etaConfidence?: string; etaParkRate?: number; etaBasis?: string;
     designScore?: number | null; designSource?: string | null;
+    estimatedCostUsd?: number; tokensPerCompletedHop?: number; costPerCompletedHop?: number | null;
   }>(null);
   // v0.0.87 — Atlas's deterministic patrol rides the same tasks poll.
   const [atlasPatrol, setAtlasPatrol] = useState<null | { summary: string; parked: number; stuck: number; verdict: string | null; hopId: string | null; nextLane: string | null }>(null);
@@ -314,6 +315,14 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                 data-tip={`Latest design review: ${campaignStats.designScore.toFixed(1)} (${campaignStats.designSource || 'unknown file'}) — the gate is 7`}
               >
                 design {campaignStats.designScore.toFixed(1)}
+              </span>
+            )}
+            {campaignStats.costPerCompletedHop != null && (
+              <span
+                className="rounded bg-olympus-gold/10 px-1.5 py-0.5 whitespace-nowrap tabular-nums text-[7px] text-olympus-gold"
+                data-tip={`${(campaignStats.tokensPerCompletedHop || 0).toLocaleString()} tokens/completed hop · $${campaignStats.costPerCompletedHop.toFixed(4)}/hop · $${(campaignStats.estimatedCostUsd || 0).toFixed(2)} list value — invoice unknown`}
+              >
+                ${(campaignStats.estimatedCostUsd || 0).toFixed(2)}
               </span>
             )}
           </div>
