@@ -46,7 +46,7 @@ import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencod
 import { markLaneAlive, markLaneDead, laneChain, isLaneDeadClass, isLaneAvailable, readLaneHealth } from '@/lib/lane-health';
 import { laneRosterFor } from '@/lib/lane-roster';
 import { backupBeforeDestructiveHop } from '@/lib/destructive-guard';
-import { applyRunManifestFile, buildRunMcpManifest, getRunMcpManifest, setRunMcpManifest } from '@/lib/mcp-run-manifest';
+import { applyRunManifestFile, buildHopMcpManifest, buildRunMcpManifest, getRunMcpManifest, setRunMcpManifest } from '@/lib/mcp-run-manifest';
 import { checkCostCaps } from '@/lib/cost-caps';
 import { SEED_DESIGN_BUILDS, buildPrompt, mergeBuildStats, type DesignBuild } from '@/lib/design-builds';
 import { getVaultRoot } from '@/lib/vault-root';
@@ -1605,6 +1605,15 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           persistState();
           return;
         }
+        // v0.0.91 — the per-HOP manifest. A design hop gets the design kit
+        // (Nakkas + Playwright + OriginKit when keyed) even if the plan did
+        // not declare it; a data hop does not carry the design fleet. The
+        // lane config is re-applied below, so this is real per-task activation
+        // at the config boundary (the warm server reads it on the next turn).
+        try {
+          const hopManifest = buildHopMcpManifest(next, laneRoot);
+          setRunMcpManifest(laneRoot, hopManifest);
+        } catch { /* the campaign manifest remains the fallback */ }
         // #SACRED-RUNTIME: self-healing lane — a god (or anything) may have
         // deleted the runtime config mid-walk (the 10:16 specimen killed the
         // NEXT hop with "Model not found"). Re-assert the lane config before

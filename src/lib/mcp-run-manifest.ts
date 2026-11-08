@@ -40,6 +40,53 @@ export const BASELINE_MCPS = [
  */
 export const KNOWN_BROKEN_MCPS = new Set(['tamp', 'serena']);
 
+/**
+ * v0.0.91 — the DESIGN KIT. The AIME design hops declared `mcp: null`, so the
+ * exact hops that had to create a logo/animation had no Nakkas, no Playwright
+ * and no OriginKit. These are enabled for a design hop even when the plan did
+ * not name them; they are local (or key-gated) and never the 16-server fleet.
+ */
+export const DESIGN_MCPS = ['nakkas', 'playwright'] as const;
+
+/** Hops whose ids/prompts are design work, not just any Athena review. */
+export const DESIGN_HOP_RE = /(^|[-_/])(design|hero|logo|landing|onboarding|motion|ui|card|nav|sakuga|clip)([-_/]|$)/i;
+
+export function isDesignHop(hop: { id?: string; god?: string; prompt?: string; skills?: string[]; mcp?: string | null; mcps?: string[] | null }): boolean {
+  if (String(hop?.god ?? '').toLowerCase() === 'athena') return true;
+  if (DESIGN_HOP_RE.test(String(hop?.id ?? ''))) return true;
+  if (DESIGN_HOP_RE.test(String(hop?.prompt ?? '').slice(0, 400))) return true;
+  const skills = Array.isArray(hop?.skills) ? hop.skills.join(' ') : '';
+  return /impeccable|frontend-design|design-md|color-expert|motion-|gsap-|threejs|shader/i.test(skills);
+}
+
+/**
+ * The per-HOP manifest: baseline + the hop's own declared MCP(s) + the design
+ * kit when the hop is design work + git only in a git lane. This is the real
+ * per-task activation; the campaign union remains the fallback for old callers.
+ */
+export function buildHopMcpManifest(
+  hop: { id?: string; god?: string; prompt?: string; skills?: string[]; mcp?: string | null; mcps?: string[] | null },
+  laneRoot?: string,
+): string[] {
+  const out: string[] = [];
+  const add = (name: string | null | undefined) => {
+    const n = typeof name === 'string' ? name.trim() : '';
+    if (!n || KNOWN_BROKEN_MCPS.has(n) || out.includes(n)) return;
+    out.push(n);
+  };
+  for (const name of BASELINE_MCPS) add(name);
+  add(hop?.mcp ?? null);
+  for (const name of hop?.mcps ?? []) add(name);
+  if (isDesignHop(hop)) {
+    for (const name of DESIGN_MCPS) add(name);
+    // OriginKit is a remote MCP with a free-key gate; enabling it without the
+    // key produces a 401 on every call. The app exports the key to the walker.
+    if (process.env.ORIGINKIT_API_KEY) add('originkit');
+  }
+  if (laneRoot && existsSync(path.join(laneRoot, '.git'))) add('git');
+  return out;
+}
+
 /** The per-lane manifest (campaign-scoped). */
 const manifests = new Map<string, string[]>();
 
