@@ -178,6 +178,19 @@ export function validateContract(contract: DesignContract | null): ContractValid
   return { ok: reasons.length === 0, p0Unknowns, pendingP0Pages, stops: contract.stops.length, reasons };
 }
 
+/**
+ * The plan gate. A lane with a refactor/rescue contract must have its P0
+ * decisions resolved before the walk starts; a lane WITHOUT a contract keeps
+ * the old behaviour (the contract is opt-in, but once present it is binding).
+ */
+export function contractGate(laneRoot: string): { enforce: boolean; ok: boolean; reasons: string[] } {
+  const contract = readContract(laneRoot);
+  if (!contract) return { enforce: false, ok: true, reasons: [] };
+  if (contract.mode !== 'refactor' && contract.mode !== 'rescue') return { enforce: false, ok: true, reasons: [] };
+  const validation = validateContract(contract);
+  return { enforce: true, ok: validation.ok, reasons: validation.reasons };
+}
+
 /** The hops Apollo can append to the plan: one gate per design stop. */
 export function designStopHops(contract: DesignContract): Array<Record<string, unknown>> {
   return contract.stops.map((stop) => ({

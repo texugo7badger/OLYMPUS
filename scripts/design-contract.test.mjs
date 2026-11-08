@@ -16,9 +16,11 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {
   buildPageMap,
+  contractGate,
   defaultContract,
   designStopHops,
   validateContract,
+  writeContract,
 } from '../src/lib/design-contract.ts';
 
 let passed = 0;
@@ -78,6 +80,29 @@ try {
     assert.equal(hops[0].kind, 'design-gate');
     assert.equal(hops[0].god, 'athena');
     assert.ok(hops[0].verify.checks.includes('design-score:7'));
+  });
+
+  ok('contractGate: no contract does not block the lane', () => {
+    const gate = contractGate(lane);
+    assert.equal(gate.enforce, false);
+    assert.equal(gate.ok, true);
+  });
+
+  ok('contractGate: a pending P0 contract blocks the plan', () => {
+    const c = defaultContract(lane, 'demo', 'refactor');
+    writeContract(lane, c);
+    const gate = contractGate(lane);
+    assert.equal(gate.enforce, true);
+    assert.equal(gate.ok, false);
+    assert.match(gate.reasons.join('; '), /P0/);
+  });
+
+  ok('contractGate: deciding the P0 page unblocks the plan', () => {
+    const c = defaultContract(lane, 'demo', 'refactor');
+    c.pages = c.pages.map((p) => p.route === '/' ? { ...p, status: 'decided' } : p);
+    writeContract(lane, c);
+    const gate = contractGate(lane);
+    assert.equal(gate.ok, true, gate.reasons.join('; '));
   });
 } finally {
   fs.rmSync(lane, { recursive: true, force: true });

@@ -157,6 +157,7 @@ import { acquireWalkLock, readWalkLock } from './walk-lock';
 import { loadArsenal } from './arsenal';
 import { buildOvernightDigest, buildWaveReports, writeOvernightDigest } from './overnight';
 import { hopStatePath, saveHopState } from './hop-state';
+import { contractGate } from '../design-contract';
 import { createGate, getPendingGates, listGates, resolveGate } from '@/lib/hitl-gates';
 import { appendActivity } from '@/lib/activity-feed';
 import { patrolLane } from '@/lib/atlas-patrol';
@@ -604,6 +605,15 @@ export async function maybeWalkThePlan(opts: {
       return { walked: false, reason: 'plan-aborted', completed: 0, total, parked: null, summaryLine: msg };
     }
     // approved ('approve' | 'patch') — the walk proceeds below.
+  }
+  // v0.0.91 — THE DESIGN CONTRACT GATE. A lane that has a refactor/rescue
+  // contract with a pending P0 page or P0 unknown does not walk: the user's
+  // decisions come first. A lane without a contract keeps the old behaviour.
+  const contractCheck = contractGate(opts.laneRoot);
+  if (contractCheck.enforce && !contractCheck.ok) {
+    const msg = `Design contract incomplete — the plan is refused: ${contractCheck.reasons.join('; ')}. Resolve the P0 decisions in the Athena design studio (Contract tab), then resume.`;
+    opts.send?.({ type: 'walk_summary', completed: 0, total: planHopCount(plan), parked: null, msg, ts: new Date().toISOString() });
+    return { walked: false, reason: 'design-contract-incomplete', completed: 0, total: planHopCount(plan), parked: null, summaryLine: msg };
   }
   // #ONE-CAMPAIGN (the AIME specimen, 2026-10-24): five concurrent walks of
   // the same hop. The lock is taken HERE — the walk itself is the long
