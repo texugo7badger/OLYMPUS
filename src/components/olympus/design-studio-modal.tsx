@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { ClipboardCheck, Palette, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, Check, ClipboardCheck, Palette, Sparkles, X } from 'lucide-react';
 import { resolvePalette } from '@/lib/theme';
 import { useTheme } from '@/lib/theme-store';
 import { useOlympus } from '@/lib/olympus-store';
@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import ArtcraftStyleBoard from './artcraft-style-board';
 import DesignBuildsPanel from './design-builds-panel';
 
-type StudioTab = 'style' | 'builds' | 'contract';
+type StudioTab = 'style' | 'builds' | 'contract' | 'review';
 
 export default function DesignStudioModal({ onClose }: { onClose: () => void }) {
   const [theme] = useTheme();
@@ -67,6 +67,13 @@ export default function DesignStudioModal({ onClose }: { onClose: () => void }) 
             >
               <ClipboardCheck size={10} /> contract
             </button>
+            <button
+              type="button"
+              onClick={() => setTab('review')}
+              className={cn('flex items-center gap-1 rounded px-2 py-1 text-[9px] font-mono uppercase tracking-wide', tab === 'review' ? 'bg-olympus-green/15 text-olympus-green ring-1 ring-olympus-green/30' : 'text-olympus-text-dim hover:text-olympus-green')}
+            >
+              <Check size={10} /> review
+            </button>
             <button onClick={onClose} aria-label="Close the design studio" className="ml-1 p-1" style={{ color: palette.textDim }}>
               <X size={14} />
             </button>
@@ -77,8 +84,10 @@ export default function DesignStudioModal({ onClose }: { onClose: () => void }) 
             <ArtcraftStyleBoard references={[]} pendingRef={null} onPendingConsumed={() => { /* no pending ref in the studio yet */ }} />
           ) : tab === 'builds' ? (
             <DesignBuildsPanel />
-          ) : (
+          ) : tab === 'contract' ? (
             <ContractPanel slug={activeProject?.slug || ''} />
+          ) : (
+            <ReviewPanel slug={activeProject?.slug || ''} />
           )}
         </div>
       </div>
@@ -222,6 +231,193 @@ function ContractPanel({ slug }: { slug: string }) {
       )}
 
       <pre className="mt-4 max-h-40 overflow-y-auto whitespace-pre-wrap rounded border border-olympus-gold/10 bg-olympus-bg/60 p-2 text-[9px] leading-relaxed font-mono text-olympus-text-dim">{data?.prompt || 'No contract yet.'}</pre>
+    </div>
+  );
+}
+
+interface ReviewIssue {
+  id?: string;
+  severity?: string;
+  selector?: string;
+  observation?: string;
+  hardGate?: boolean;
+}
+
+interface ReviewFix {
+  selector?: string;
+  instruction?: string;
+}
+
+interface ReviewPayload {
+  ok: boolean;
+  review: {
+    overall?: number;
+    scores?: Record<string, number>;
+    issues?: ReviewIssue[];
+    fixInstructions?: Array<ReviewFix | string>;
+    measuredAt?: string;
+  } | null;
+  approval: { approvedAt?: string; scoreAtApproval?: number; note?: string | null } | null;
+  approvalValidation: { ok: boolean; reasons: string[] };
+  contractValidation: { ok: boolean; reasons: string[] };
+}
+
+function ReviewPanel({ slug }: { slug: string }) {
+  const [data, setData] = useState<ReviewPayload | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    if (!slug) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/olympus/design-approval?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
+      const d = await r.json();
+      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      setData(d);
+    } catch (e: any) { setError(e?.message || String(e)); }
+    finally { setBusy(false); }
+  };
+
+  useEffect(() => { void load(); }, [slug]);
+
+  const approve = async () => {
+    if (!slug) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch('/api/olympus/design-approval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, page: 'project', note: 'Approved from the Athena design studio' }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      setData((prev) => prev ? { ...prev, approval: d.approval, approvalValidation: d.approvalValidation } : prev);
+    } catch (e: any) { setError(e?.message || String(e)); }
+    finally { setBusy(false); }
+  };
+
+  const withdraw = async () => {
+    if (!slug) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch('/api/olympus/design-approval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, undo: true }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      setData((prev) => prev ? { ...prev, approval: null, approvalValidation: { ok: false, reasons: ['withdrawn'] } } : prev);
+    } catch (e: any) { setError(e?.message || String(e)); }
+    finally { setBusy(false); }
+  };
+
+  const copyFix = async () => {
+    const review = data?.review;
+    if (!review) return;
+    const fixes = (review.fixInstructions || []).map((f, i) => {
+      if (typeof f === 'string') return `${i + 1}. ${f}`;
+      return `${i + 1}. ${f.selector || 'selector'}: ${f.instruction || ''}`;
+    });
+    const text = [
+      `DESIGN FIX BRIEF — ${slug}`,
+      `score: ${review.overall ?? '?'} (gate 7)`,
+      ...fixes,
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard blocked */ }
+  };
+
+  if (!slug) return <div className="p-6 text-[11px] font-mono text-olympus-text-dim">Open a project to review its design.</div>;
+  if (!data && busy) return <div className="p-6 text-[11px] font-mono text-olympus-text-dim">reading the design review…</div>;
+  if (error && !data) return <div className="p-6 text-[11px] font-mono text-olympus-red">{error}</div>;
+
+  const review = data?.review;
+  const score = typeof review?.overall === 'number' ? review.overall : null;
+  const approved = Boolean(data?.approval);
+  const gateOk = score != null && score >= 7;
+
+  return (
+    <div className="h-full overflow-y-auto custom-scroll p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={cn('rounded px-2 py-1 text-[18px] font-mono tabular-nums ring-1', gateOk ? 'text-olympus-green bg-olympus-green/10 ring-olympus-green/30' : 'text-olympus-red bg-olympus-red/10 ring-olympus-red/30')}>
+          {score != null ? score.toFixed(1) : '—'}
+        </span>
+        <span className={cn('rounded px-2 py-0.5 text-[9px] font-mono uppercase tracking-wide ring-1', gateOk ? 'text-olympus-green bg-olympus-green/10 ring-olympus-green/30' : 'text-olympus-red bg-olympus-red/10 ring-olympus-red/30')}>
+          {gateOk ? 'gate passed' : 'below the gate (7)'}
+        </span>
+        <span className={cn('rounded px-2 py-0.5 text-[9px] font-mono uppercase tracking-wide ring-1', approved ? 'text-olympus-gold bg-olympus-gold/10 ring-olympus-gold/30' : 'text-olympus-text-dim bg-olympus-text-dim/5 ring-olympus-text-dim/20')}>
+          {approved ? 'approved by you' : 'unsigned'}
+        </span>
+        <span className="text-[9px] font-mono text-olympus-text-dim">{review?.measuredAt ? new Date(review.measuredAt).toLocaleString() : 'no review yet'}</span>
+        <button type="button" onClick={() => void load()} disabled={busy} className="ml-auto rounded border border-olympus-gold/20 px-2 py-1 text-[9px] font-mono text-olympus-text-dim hover:text-olympus-gold disabled:opacity-40">refresh</button>
+      </div>
+
+      {error && <p className="mt-2 text-[10px] font-mono text-olympus-red">{error}</p>}
+
+      {!review ? (
+        <div className="mt-4 rounded border border-olympus-gold/15 bg-olympus-card/50 p-3 text-[10px] font-mono text-olympus-text-dim">
+          No design review on disk. Run the design-review hop first; the studio never invents a score.
+        </div>
+      ) : (
+        <>
+          <div className="mt-4 grid grid-cols-2 gap-1.5 md:grid-cols-4">
+            {Object.entries(review.scores || {}).map(([k, v]) => (
+              <div key={k} className="rounded border border-olympus-gold/10 bg-olympus-card/40 px-2 py-1.5">
+                <div className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">{k}</div>
+                <div className={cn('text-[14px] font-mono tabular-nums', Number(v) >= 7 ? 'text-olympus-green' : 'text-olympus-red')}>{v}</div>
+              </div>
+            ))}
+          </div>
+
+          {(review.issues || []).length > 0 && (
+            <div className="mt-4">
+              <div className="flex items-center gap-1 text-[9px] font-mono uppercase tracking-wide text-olympus-red"><AlertTriangle size={10} /> issues</div>
+              <ul className="mt-1 space-y-1">
+                {(review.issues || []).slice(0, 8).map((issue, i) => (
+                  <li key={issue.id || i} className="text-[10px] font-mono text-olympus-text-dim">
+                    <span className={cn('mr-1', issue.severity === 'critical' || issue.severity === 'blocker' ? 'text-olympus-red' : 'text-olympus-gold')}>{issue.severity || 'issue'}</span>
+                    <span className="text-olympus-cyan">{issue.selector || '—'}</span>: {issue.observation || ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void approve()}
+              disabled={busy || !gateOk || approved}
+              className="rounded border border-olympus-green/30 bg-olympus-green/10 px-2.5 py-1 text-[9px] font-mono uppercase tracking-wide text-olympus-green hover:bg-olympus-green/20 disabled:opacity-40"
+            >
+              {approved ? 'approved' : gateOk ? 'approve this design' : 'fix first (score < 7)'}
+            </button>
+            {approved && (
+              <button type="button" onClick={() => void withdraw()} disabled={busy} className="rounded border border-olympus-red/25 px-2.5 py-1 text-[9px] font-mono uppercase tracking-wide text-olympus-red disabled:opacity-40">
+                withdraw
+              </button>
+            )}
+            <button type="button" onClick={() => void copyFix()} className="rounded border border-olympus-gold/30 bg-olympus-gold/10 px-2.5 py-1 text-[9px] font-mono uppercase tracking-wide text-olympus-gold hover:bg-olympus-gold/20">
+              {copied ? 'copied' : 'copy fix brief'}
+            </button>
+          </div>
+
+          {data?.approvalValidation && !data.approvalValidation.ok && data.approvalValidation.reasons.length > 0 && (
+            <ul className="mt-3 space-y-0.5 text-[9px] font-mono text-olympus-text-dim">
+              {data.approvalValidation.reasons.map((r) => <li key={r}>· {r}</li>)}
+            </ul>
+          )}
+        </>
+      )}
     </div>
   );
 }
