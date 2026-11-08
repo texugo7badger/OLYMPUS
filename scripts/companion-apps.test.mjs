@@ -74,12 +74,12 @@ expect('A-21: the notification text ships in seven languages', ['en', "'pt-BR'",
 // ── 4. the live screenshots ──────────────────────────────────────────────
 const screenshotLib = read('src/lib/screenshot.ts');
 const screenshotRoute = read('src/app/api/olympus/screenshots/route.ts');
-const captures = read('src/components/olympus/companion-captures.tsx');
+const mobileLive = read('src/app/m/page.tsx');
 
 expect('A-22: captures use a real Chromium over CDP, never a mock', /remote-debugging-port=0/.test(screenshotLib) && /Page\.captureScreenshot/.test(screenshotLib) && /findChromium/.test(screenshotLib), 'no real capture');
 expect('A-23: captures are private files under the OLYMPUS home', /0o600/.test(screenshotLib) && /screenshots/.test(screenshotLib) && /OLYMPUS_HOME/.test(screenshotLib), 'wrong permissions');
 expect('A-24: the capture route probes the project preview before shooting', /probeDevServer/.test(screenshotRoute) && /live preview is not running/.test(screenshotRoute), 'can shoot a dead port');
-expect('A-25: the widget shows mobile and desktop and sends a critique to Apollo', /mobile/.test(captures) && /desktop/.test(captures) && /onCritique/.test(captures) && /Sobre a tela/.test(captures), 'no critique lane');
+expect('A-25: the phone keeps the live preview + mark, not screen captures', /previewOpen/.test(mobileLive) && /markMode/.test(mobileLive) && /sendMark/.test(mobileLive) && !widgetPage.includes('CompanionCaptures'), 'capture lane still mounted');
 
 // ── 5. the real briefing function ────────────────────────────────────────
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-comp-home-'));

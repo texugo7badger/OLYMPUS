@@ -85,6 +85,14 @@ async function main() {
     const byText = (re, tag = '[data-tip],[aria-label],button') => `(() => { const b = [...document.querySelectorAll('${tag}')].find((el) => ${re}.test((el.getAttribute('data-tip') || '') + ' ' + (el.getAttribute('aria-label') || '') + ' ' + (el.textContent || ''))); b?.click(); return !!b; })()`;
     const tab = (label) => `(() => { const b = [...document.querySelectorAll('button,[role=tab]')].find((el) => (el.textContent || '').trim().toLowerCase() === '${label}'); b?.click(); return !!b; })()`;
     const closePanel = () => click(`(() => { const b = [...document.querySelectorAll('button')].find((el) => /close|fechar/i.test(el.getAttribute('aria-label') || '')); b?.click(); return !!b; })()`);
+    const waitFor = async (expr, timeoutMs = 20_000) => {
+      const steps = Math.ceil(timeoutMs / 300);
+      for (let i = 0; i < steps; i++) {
+        if (await evaluate(`(() => { try { return Boolean(${expr}); } catch { return false; } })()`)) return true;
+        await sleep(300);
+      }
+      return false;
+    };
 
     // Preferences: language + theme are persisted server-side; save, switch,
     // restore at the end (the capture must not change the user's app).
@@ -99,6 +107,8 @@ async function main() {
 
     // 1 — brain + clean terminal
     await go(URL_BASE, 4500);
+    // The gallery should show the Build Hub, not its first-visit tutorial.
+    await evaluate(`localStorage.setItem('olympus:build-tutorial', '1'); true`);
     await click(byText(/terminal/i));
     await sleep(1200);
     await click(byText(/nova sessão|new session/i));
@@ -118,7 +128,9 @@ async function main() {
 
     // 3-6 — Craft: apps, references, design, builds
     await click(byText(/craft/i));
-    await sleep(4200);
+    // The craft API probes all 14 apps; wait for the grid, never a fixed sleep.
+    await waitFor("document.body.innerText.includes('ArtCraft Studio') || document.body.innerText.includes('REFERENCES')", 25_000);
+    await sleep(600);
     await shot('03-craft-apps.png');
     // v0.0.91 — target the Craft pane's tab, not the sidebar references button.
     await click(`(() => {
@@ -128,7 +140,8 @@ async function main() {
       ref?.click();
       return !!ref;
     })()`);
-    await sleep(3500);
+    await waitFor("document.querySelector('[data-reference-collections]') || document.body.innerText.includes('all studies')", 25_000);
+    await sleep(700);
     await shot('04-references.png');
     // v0.0.91 — design moved out of ArtCraft and into Athena's chat. Open her
     // chat through the same event the terminal uses, then the design studio.
@@ -138,9 +151,10 @@ async function main() {
     await sleep(3500);
     await shot('05-design.png');
     await click(tab('builds'));
-    await sleep(3000);
-    await click(`(() => { const b = [...document.querySelectorAll('button')].find((el) => /skip|pular/i.test((el.textContent || '').trim())); b?.click(); return !!b; })()`);
-    await sleep(1200);
+    // The tutorial flag is pre-set above; wait for the curated shelf, never a
+    // fixed sleep (the builds API and the tutorial both race the first paint).
+    await waitFor("document.body.innerText.includes('BUILD HUB') && !document.body.innerText.includes('BUILD HUB 0 hot')", 25_000);
+    await sleep(700);
     await shot('06-builds.png');
     await closePanel();
     await sleep(900);
