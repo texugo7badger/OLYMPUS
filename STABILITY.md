@@ -2,8 +2,10 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.90 · The harness is shipped and measured; the 8-hour / 100-hop
-> certification is **not** claimed yet. This page records what was actually
+> v0.0.91 · The harness is shipped and measured; the 8-hour / 100-hop
+> certification is **not** claimed yet. The v0.0.91 night shift is a headless
+> dress rehearsal (systemd-run, hard stop, morning report), not the note-8
+> claim. This page records what was actually
 > run and what remains. The cost side is now measured by `npm run cost:audit`
 > (tokens/hop, cache hit, list value, invoice unknown) and bounded by the
 > opt-in caps in `~/.olympus/cost-caps.json`. Since v0.0.73 a campaign can

@@ -1072,7 +1072,7 @@ export default function MobileCompanion() {
         active={active || null}
         onClose={() => setParthenonOpen(false)}
         onAsk={(text) => { setParthenonOpen(false); void askApollo(text); }}
-        onNewProject={() => { window.location.href = '/?newProject=1'; }}
+        onNewProject={() => { window.location.assign('/?newProject=1'); }}
         onChanged={() => { void load(); }}
       />
     </main>

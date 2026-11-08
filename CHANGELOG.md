@@ -2,6 +2,71 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.91] — 2026-11-08
+
+### The contract, the 60-second lane and the night shift
+
+#### Design is an artifact, not a late surprise
+
+- **Design contract** (`design-contract.json`): filesystem page map, P0/P1/P2
+  priorities, unknowns, signature stops and a strict validation. A refactor
+  lane with a pending P0 page or P0 unknown **refuses the walk**
+  (`design-contract-incomplete`) before taking the lane lock.
+- **Athena design studio** in her chat: style board, build recipes, contract
+  and review tabs. The ArtCraft design/build tabs are gone; ArtCraft is apps +
+  references.
+- **Signed approval** (`design-approval.json`): binds the contract hash, the
+  review hash and the score. The gate refuses a review below 7; the walker
+  parks a signature design stop until the approval matches.
+- **Design gates never leave Athena**: the balance pass no longer classifies
+  a `design-review.json` artifact as a script hop and moves it to Persephone;
+  `kind: 'design-gate'` is a first-class plan kind.
+
+#### Quick Edit — the 60-second lane
+
+- A mark or one-line request that fits in **≤3 files / ≤200 lines** is one
+  bounded Athena turn, not a hop: sha256 snapshot, diff, typecheck + lint,
+  preview reload, and a visible **undo** that restores the exact snapshot.
+- A larger patch or a failed verify restores the snapshot and names the
+  reason; the campaign budget is untouched.
+
+#### The ETA is a band, and quality is measured
+
+- `src/lib/eta.ts`: critical-path p50/p90 plus the **park rate** and the
+  **design-gate loop**. The Parthenon shows `p50 · p90 · park · confidence`,
+  the next visible hop, `design 7.0` (latest review by `measuredAt`) and the
+  measured list value with tokens/hop.
+- AIME snapshot: 400 completed telemetry rows, 28.4% park, duration
+  p50 731s / p90 1,579s, 64,035 tokens per completed hop, $0.94 list value,
+  design 7.0.
+
+#### Per-hop MCP activation + the design kit
+
+- `buildHopMcpManifest()`: baseline + the hop's own MCP(s) + `nakkas` and
+  `playwright` for design hops (+ `originkit` when keyed); `git` only in a
+  git lane; known-broken servers excluded. The walker re-applies it before
+  every dispatch.
+
+#### Night shift — headless, outside the app cgroup
+
+- `npm run campaign:night-shift -- --slug <slug> --hours 8 --max-hops 100
+  --headless` launches through `systemd-run --user`; hard stop, hop cap,
+  bounded restarts, stop on provider/auth/unknown, and a morning letter with
+  the six release gates. It refuses a lane with a live walk. The Parthenon
+  has the same control in one tap.
+
+#### Surface
+
+- Parthenon header: two rows, wrapped pills, `parthenon-mark.svg` + static
+  twin; status bar `71 agents` no longer clips; references open on **8
+  curated collections** with finite pages; the phone keeps the live preview
+  and mark with a 220ms sheet animation and **no screen captures**.
+- Parks always carry a class and `.olympus-park-diagnostics.json`; a park
+  with no provider text uses the reason (`verify-failed`, `design-evidence-
+  missing`, …).
+
+**Battery: 175 PASS / 0 FAIL / 1 declared skip of 176.**
+
 ## [v0.0.90] — 2026-11-07
 
 ### The wand plans — mark → Athena → approve → Apollo + Atlas

@@ -40,6 +40,19 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.91 — the contract, the 60-second lane and the night shift.**
+A refactor now starts with a page map and a **design contract**: a P0 page or
+P0 unknown refuses the walk until the user decides. Athena's **design studio**
+(style, builds, contract, review) lives in her chat; the approval is a signed
+artifact bound to the exact contract + review and refuses a score below 7. A
+mark that fits in **≤3 files / ≤200 lines** becomes a **Quick Edit** — one
+bounded turn, typecheck + lint, deterministic undo — instead of a hop. The ETA
+is a **p50/p90 band with park rate** (`~1h26 · p90 3h04 · 28% park`), and the
+Parthenon carries the design score and the measured list value. The **night
+shift** runs headless through `systemd-run`, outside the app cgroup, with a
+hard stop and a morning report. Battery **175 PASS / 0 FAIL / 1 declared skip
+of 176**.
+
 **v0.0.90 — the wand plans.**
 A live-preview mark is now a planning turn on the **preview's** pixels: the
 iframe viewport and URL travel with the mark, Athena opens her chat and proposes
@@ -207,7 +220,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**170 PASS / 0 FAIL / 1 declared skip** across 171 suites; a 100-hop
+**175 PASS / 0 FAIL / 1 declared skip** across 176 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache
