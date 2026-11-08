@@ -14,6 +14,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
+import os from 'node:os';
 import path from 'node:path';
 import { maybeWalkThePlan } from '../src/lib/hop-runtime/post-run';
 import { markSupervisor } from '../src/lib/hop-runtime/supervisor';
