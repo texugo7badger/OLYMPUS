@@ -136,6 +136,7 @@ scripts/*.test.mjs
 !scripts/mcp-run-manifest.test.mjs
 !scripts/night-shift.test.mjs
 !scripts/quick-edit.test.mjs
+!scripts/plan-balance.test.mjs
 
 # v0.0.81 — THE PUBLIC CORE. These pure suites (no vault, no credentials)
 # are published so a clone can verify the project.

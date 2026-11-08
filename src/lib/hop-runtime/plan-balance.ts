@@ -32,6 +32,21 @@ function artifactKind(hop: PlanHop): 'ui' | 'data' | 'test' | 'infra' | 'script'
   return 'unknown';
 }
 
+/**
+ * v0.0.91 — a design gate is NOT interchangeable work. The AIME specimen:
+ * `design-review-pixel` (artifacts: design-review.json) was classified as a
+ * script hop and balanced from Athena to Persephone — the database goddess
+ * ran the visual review, parked, and the gate never converged. Design review
+ * and design gates stay with Athena (or the god the plan explicitly named).
+ */
+function isDesignGate(hop: PlanHop): boolean {
+  if (hop.kind === 'design-gate') return true;
+  const id = String(hop.id ?? '').toLowerCase();
+  if (/design[-_]?(review|gate)/.test(id) || /(^|[-_])design([-_]|$)/.test(id)) return true;
+  const checks = Array.isArray(hop.verify?.checks) ? hop.verify.checks.map(String).join(' ') : '';
+  return /design-score:/.test(checks);
+}
+
 function preferred(kind: ReturnType<typeof artifactKind>, current: string): string[] {
   if (kind === 'ui') return ['athena'];
   if (kind === 'data') return ['persephone', 'hephaestus'];
@@ -64,7 +79,7 @@ export function balancePlan(plan: DispatchPlan, opts: { threshold?: number } = {
     const kind = artifactKind(hop);
     // A shell hop (`kind: 'script'`) is deterministic and stays put; a
     // docs/script ARTIFACT can move to a build god.
-    if (hop.kind === 'script' || kind === 'unknown') continue;
+    if (hop.kind === 'script' || kind === 'unknown' || isDesignGate(hop)) continue;
     const candidates = preferred(kind, hop.god).filter((g) => g !== hop.god && (counts[g] ?? 0) < max);
     if (candidates.length === 0) continue;
     const target = candidates.sort((a, b) => (counts[a] ?? 0) - (counts[b] ?? 0))[0];

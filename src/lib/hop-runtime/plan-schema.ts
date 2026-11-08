@@ -27,7 +27,9 @@ export interface PlanHop {
    * deterministic shell command with ZERO LLM tokens and uses the exit code
    * as the gate.
    */
-  kind?: 'llm' | 'script';
+  /** v0.0.91 — design-gate is an LLM hop with a design-score verify; it is
+   *  never balanced to another god and never treated as a shell script. */
+  kind?: 'llm' | 'script' | 'design-gate';
   /** The god that executes this hop. Script hops default to 'system'. */
   god: string;
   /** The spec SLICE for this hop — never the full campaign context. */
@@ -126,9 +128,10 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
     if (!id || !ID_RE.test(id)) errors.push(`${where}.id: required, matching ${ID_RE.source}`);
     else if (ids.has(id)) errors.push(`${where}.id: duplicate hop id '${id}'`);
     else ids.add(id);
-    const kind: 'llm' | 'script' = h.kind === 'script' ? 'script' : 'llm';
-    if (h.kind !== undefined && h.kind !== 'llm' && h.kind !== 'script') {
-      errors.push(`${where}.kind: 'llm' | 'script' (got ${JSON.stringify(h.kind)})`);
+    const kind: 'llm' | 'script' | 'design-gate' =
+      h.kind === 'script' ? 'script' : h.kind === 'design-gate' ? 'design-gate' : 'llm';
+    if (h.kind !== undefined && h.kind !== 'llm' && h.kind !== 'script' && h.kind !== 'design-gate') {
+      errors.push(`${where}.kind: 'llm' | 'script' | 'design-gate' (got ${JSON.stringify(h.kind)})`);
     }
     let scriptTimeout = 10 * 60_000;
     if (kind === 'script') {
