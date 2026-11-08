@@ -25,6 +25,7 @@ import { useOlympus } from '@/lib/olympus-store';
 
 import ReferencePreview from './reference-preview';
 import { previewFor } from '@/lib/reference-previews';
+import { REFERENCE_COLLECTIONS } from '@/lib/reference-collections';
 import { useLanguage, t, categoryName, searchTerms } from '@/lib/i18n';
 
 interface CraftApp {
@@ -111,6 +112,8 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const [refCat, setRefCat] = useState('all');
   const [refLib, setRefLib] = useState('all');
   const [refLimit, setRefLimit] = useState(60);
+  // v0.0.91 — the curated face of the archive: one collection per decision.
+  const [refCollection, setRefCollection] = useState<string>('all');
 
   // #198 — the OriginKit free-tier budget (10 fetches/day), surfaced in the
   // References tab so exhaustion never looks like a broken lane.
@@ -304,8 +307,10 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const refCats = ['all', ...Array.from(new Set(uiRefs.map((r) => r.category)))];
   const query = refSearch.trim().toLowerCase();
   const queryTerms = searchTerms(refSearch, language);
+  const activeCollection = REFERENCE_COLLECTIONS.find((c) => c.id === refCollection) ?? null;
   const filteredRefs = uiRefs.filter((r) => {
     if (memoryOnly && !memoryIds.has(r.id)) return false;
+    if (activeCollection && r.category !== activeCollection.category && !activeCollection.marquee.includes(r.id)) return false;
     if (refCat !== 'all' && r.category !== refCat) return false;
     if (refLib !== 'all' && r.library !== refLib) return false;
     if (!query) return true;
@@ -320,7 +325,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   // references" the maintainer saw while scrolling).
   useEffect(() => {
     setRefLimit(60);
-  }, [query, refCat, refLib, memoryOnly, tab]);
+  }, [query, refCat, refLib, refCollection, memoryOnly, tab]);
 
   // v0.0.91 — FINITE PAGES. The user asked for no infinite scroll that keeps
   // appending the same-looking cards. The grid loads 60 at a time on an
@@ -329,12 +334,13 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   // v0.0.32 — the Originkit demo requires a session; embedding it showed a
   // login wall. Use = carry the reference into the project's Style Board;
   // Queue = a design task for Athena (priority high).
+  // v0.0.91 — the compact, paste-ready block the user asked for: what to use,
+  // where it lives, and what NOT to copy. One reference, one prompt.
   const referencePrompt = (r: UiRef): string => [
-    `Implement the "${r.name}" interaction (${r.library} · ${r.category}) in the open project.`,
-    r.what,
-    `Reference: ${r.demoUrl}`,
-    `Fetch lane: ${r.fetchLane}`,
-    'Recreate the MOTION and structure in the project identity — do not copy colors or demo copy. Verify the result in the live preview and keep all existing content.',
+    `REFERENCE: ${r.name} — ${r.demoUrl}`,
+    `use: ${r.what}`,
+    `lane: ${r.fetchLane}`,
+    'avoid: copying the demo chrome, colors or copy — adapt the motion/structure to the project tokens.',
   ].join('\n');
   const copyReferencePrompt = async (r: UiRef) => {
     try {
@@ -543,11 +549,34 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                     </button>
                     <span className="ml-auto text-[8px] font-mono text-olympus-text-dim tabular-nums">{t('references.count', language, { n: filteredRefs.length.toLocaleString() })}</span>
                   </div>
+                  {/* v0.0.91 — curated collections first: the 939-row archive is
+                      still here, but the user starts from a design decision. */}
+                  <div className="flex items-center gap-1 mt-1.5 overflow-x-auto custom-scroll pb-0.5" data-reference-collections>
+                    <button
+                      onClick={() => { setRefCollection('all'); setRefCat('all'); }}
+                      className={cn('shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-full border uppercase tracking-wide transition-colors', refCollection === 'all' ? 'border-olympus-cyan/50 bg-olympus-cyan/10 text-olympus-cyan' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}
+                    >
+                      all studies
+                    </button>
+                    {REFERENCE_COLLECTIONS.map((c) => {
+                      const count = uiRefs.filter((r) => r.category === c.category || c.marquee.includes(r.id)).length;
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => { setRefCollection(c.id); setRefCat(c.category); }}
+                          data-tip={c.description}
+                          className={cn('shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-full border uppercase tracking-wide transition-colors', refCollection === c.id ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}
+                        >
+                          {c.name} <span className="opacity-60">{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                   <div className="flex items-center gap-1 mt-1.5 overflow-x-auto custom-scroll pb-0.5">
                     {refCats.map((cat) => (
                       <button
                         key={cat}
-                        onClick={() => setRefCat(cat)}
+                        onClick={() => { setRefCat(cat); setRefCollection('all'); }}
                         className={cn('shrink-0 text-[8px] font-mono px-1.5 py-0.5 rounded-full border uppercase tracking-wide transition-colors', refCat === cat ? 'border-olympus-gold/50 bg-olympus-gold/10 text-olympus-gold' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}
                       >
                         {cat === 'all' ? t('common.all', language) : categoryName(cat, language)} {cat !== 'all' && <span className="opacity-60">{uiRefs.filter((r) => (refLib === 'all' || r.library === refLib) && r.category === cat).length}</span>}
@@ -555,7 +584,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                     ))}
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-1">
-                    <p className="text-[8px] font-mono text-olympus-text-dim">{t('references.hint', language)}</p>
+                    <p className="text-[8px] font-mono text-olympus-text-dim">{activeCollection?.description || t('references.hint', language)}</p>
                     {originkitBudget && (
                       <span
                         data-tip={originkitBudget.exhausted
