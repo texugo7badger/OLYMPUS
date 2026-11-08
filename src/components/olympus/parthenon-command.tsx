@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ArrowRight, Check, CirclePause, CirclePlay, FileSearch, MessageSquare,
-  Orbit, Plus, ShieldAlert, Sun, X, Zap,
+  Moon, Orbit, Plus, ShieldAlert, Sun, X, Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOlympus } from '@/lib/olympus-store';
@@ -45,6 +45,12 @@ type Warden = {
   lastAction: { at: string; slug: string; action: string; detail: string } | null;
 };
 
+type NightShiftView = {
+  state: { status?: string; startedAt?: string; deadline?: string; completed?: number; total?: number; reportPath?: string | null } | null;
+  alive: boolean;
+  reportPath?: string;
+} | null;
+
 interface Props {
   health: Health;
   patrol: Patrol;
@@ -65,6 +71,8 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
   const [decision, setDecision] = useState<Decision | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [evidence, setEvidence] = useState(false);
+  const [night, setNight] = useState<NightShiftView>(null);
+  const [nightBusy, setNightBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -81,6 +89,39 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
     const iv = setInterval(() => { void load(); }, 10_000);
     return () => clearInterval(iv);
   }, [load]);
+
+  const loadNight = useCallback(async () => {
+    if (!projectSlug) { setNight(null); return; }
+    try {
+      const r = await fetch(`/api/olympus/night-shift?slug=${encodeURIComponent(projectSlug)}`, { cache: 'no-store' });
+      if (!r.ok) return;
+      setNight(await r.json());
+    } catch { /* the card stays idle */ }
+  }, [projectSlug]);
+
+  useEffect(() => {
+    void loadNight();
+    const iv = setInterval(() => { void loadNight(); }, 30_000);
+    return () => clearInterval(iv);
+  }, [loadNight]);
+
+  const nightAction = useCallback(async (action: 'start' | 'stop') => {
+    if (!projectSlug) return;
+    setNightBusy(true);
+    try {
+      const r = await fetch('/api/olympus/night-shift', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: projectSlug, action, hours: 8, maxHops: 100 }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      toast.success(action === 'start' ? 'Night shift launched — the supervisor is outside the app cgroup' : 'Night shift stopped');
+      void loadNight();
+    } catch (e: any) {
+      toast.error('Night shift failed', { description: e?.message || String(e) });
+    } finally { setNightBusy(false); }
+  }, [projectSlug, loadNight]);
 
   const post = useCallback(async (action: 'continue' | 'new-project' | 'dismiss') => {
     if (!projectSlug && action !== 'new-project') return;
@@ -294,6 +335,47 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
             <FileSearch size={10} /> Evidence
           </button>
         </div>
+      </div>
+
+      {/* v0.0.91 — the night shift: one tap to run the lane headless, outside
+          the app cgroup, with a hard stop and a morning report. */}
+      <div className="mt-1.5 flex items-center gap-1.5 rounded-lg border border-olympus-purple/25 bg-olympus-purple/5 px-2 py-1.5">
+        <Moon size={11} className="shrink-0 text-olympus-purple" />
+        <span className="shrink-0 text-[8px] font-mono uppercase tracking-wide text-olympus-purple">night shift</span>
+        <span
+          className="min-w-0 flex-1 truncate text-[8px] font-mono text-olympus-text-dim"
+          data-tip={night?.alive
+            ? `running since ${night.state?.startedAt ? new Date(night.state.startedAt).toLocaleString() : '—'} — report: ${night.state?.reportPath || night.reportPath || 'pending'}`
+            : night?.state
+              ? `last run: ${night.state.status || 'finished'}${night.state.reportPath ? ` — ${night.state.reportPath}` : ''}`
+              : 'idle — start an 8h headless run; the app can close once the unit is up.'}
+        >
+          {night?.alive
+            ? `${night.state?.completed ?? 0}/${night.state?.total ?? '—'} hops · ${night.state?.status || 'running'}`
+            : night?.state
+              ? `last ${night.state.status || 'run'}${night.state.completed != null ? ` · ${night.state.completed}/${night.state.total ?? '—'}` : ''}`
+              : 'idle · headless 8h'}
+        </span>
+        {night?.alive ? (
+          <button
+            type="button"
+            onClick={() => void nightAction('stop')}
+            disabled={nightBusy}
+            className="shrink-0 rounded border border-olympus-red/30 px-1.5 py-0.5 text-[8px] font-mono text-olympus-red hover:bg-olympus-red/10 disabled:opacity-40"
+          >
+            {nightBusy ? 'stopping…' : 'stop'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => void nightAction('start')}
+            disabled={nightBusy || !projectSlug}
+            className="shrink-0 rounded border border-olympus-purple/30 bg-olympus-purple/10 px-1.5 py-0.5 text-[8px] font-mono text-olympus-purple hover:bg-olympus-purple/20 disabled:opacity-40"
+            data-tip="Launch an 8h headless run via systemd-run; the app can close after the unit starts."
+          >
+            {nightBusy ? 'starting…' : '8h'}
+          </button>
+        )}
       </div>
 
       {evidence && (
