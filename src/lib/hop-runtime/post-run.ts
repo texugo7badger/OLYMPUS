@@ -215,7 +215,7 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
   } else if (ev.type === 'hop_parked') {
     const errHead = (ev.error || '').slice(0, 160);
     msg = `Hop '${ev.hop}' PARKED (${ev.reason}) — god ${ev.god}${poolNote}${errHead ? `: ${errHead}` : ''}`;
-    if (send) send({ type: 'hop_parked', hop: ev.hop, god: ev.god, pool, lane: laneRoot, reason: ev.reason, msg, ts });
+    if (send) send({ type: 'hop_parked', hop: ev.hop, god: ev.god, pool, lane: laneRoot, reason: ev.reason, error: ev.error ?? null, errorClass: ev.errorClass ?? null, msg, ts });
   } else {
     // v0.0.86 — campaign_end / hop_verify / future event types are NOT parks.
     // The old `else` formatted every unknown event as "Hop 'undefined' PARKED
@@ -243,6 +243,7 @@ function bridgeEvent(ev: HopWalkEvent, laneRoot: string, send?: WalkSend, publis
     tokensOut: ev.type === 'hop_done' ? ev.tokensOut : null,
     reason: ev.type === 'hop_parked' ? ev.reason : null,
     error: ev.type === 'hop_parked' ? (ev.error ?? null) : null,
+    errorClass: ev.type === 'hop_parked' ? (ev.errorClass ?? null) : null,
   });
 
   // #120 (B6d): the OPT-IN durable publish — the product flow opts in so

@@ -9,6 +9,25 @@
 
 export type DispatchFailureClass = 'transport' | 'tool-budget' | 'campaign-budget' | 'provider' | 'lane-exhausted' | 'agent-missing' | 'model-missing' | 'timeout' | 'script' | 'unknown';
 
+/**
+ * Classify a PARK (not just a dispatch error). The dispatch classifier
+ * returns `unknown` when the provider sent no text — the AIME design-review
+ * specimen parked 26 times with an empty error. The park reason is still
+ * evidence, so use it before falling back to `unknown`.
+ */
+export function classifyParkReason(reason: string, error?: string | null, declared?: string | null): string {
+  const base = declared || classifyDispatchFailure({ error, errorClass: declared });
+  if (base !== 'unknown') return base;
+  const r = String(reason ?? '').toLowerCase();
+  if (r.includes('verify')) return 'verify-failed';
+  if (r.includes('retry')) return 'retry-exhausted';
+  if (r.includes('destructive')) return 'destructive-backup-failed';
+  if (r.includes('design')) return 'design-evidence-missing';
+  if (r.includes('user')) return 'user-decision';
+  if (r.includes('script')) return 'script';
+  return base;
+}
+
 export function classifyDispatchFailure(input: { error?: string | null; errorClass?: string | null } | string | null | undefined): DispatchFailureClass {
   const text = typeof input === 'string' ? input : String(input?.error ?? '');
   const declared = typeof input === 'object' && input ? String(input.errorClass ?? '') : '';

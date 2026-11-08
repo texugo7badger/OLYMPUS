@@ -44,6 +44,8 @@ export interface HopLiveEvent {
   tokensOut?: number | null;
   reason?: string | null;
   error?: string | null;
+  /** v0.0.91 — the classified cause (video/verify-failed/design-evidence…). */
+  errorClass?: string | null;
   total?: number | null;
   completed?: number | null;
   ts: string;

@@ -50,7 +50,7 @@ import { applyRunManifestFile, buildRunMcpManifest, getRunMcpManifest, setRunMcp
 import { checkCostCaps } from '@/lib/cost-caps';
 import { SEED_DESIGN_BUILDS, buildPrompt, mergeBuildStats, type DesignBuild } from '@/lib/design-builds';
 import { getVaultRoot } from '@/lib/vault-root';
-import { classifyDispatchFailure } from './failure-class';
+import { classifyDispatchFailure, classifyParkReason } from './failure-class';
 import { patrolFinding, recordPatrol } from '@/lib/atlas-patrol';
 import { ensurePlanGeneration, freezePlan, validCompletedForPlan, computeHopHashes, frozenPlanPath } from './plan-generation';
 import { readHopOverride } from './hop-overrides';
@@ -1154,7 +1154,7 @@ export type HopWalkEvent = (
    *  2-minute spawn reads as a hang; a heartbeat reads as work). */
   | { type: 'hop_heartbeat'; hop: string; god: string; elapsedMs: number }
   | { type: 'hop_done'; hop: string; god: string; durationMs: number; tokensIn: number | null; tokensOut: number | null; retriesAbsorbed: number; transport?: 'warm' | 'spawn'; lane?: string }
-  | { type: 'hop_parked'; hop: string; god: string; reason: string; error?: string }
+  | { type: 'hop_parked'; hop: string; god: string; reason: string; error?: string; errorClass?: string | null }
 ) & { campaignId?: string };
 
 export interface WalkOptions {
@@ -1353,15 +1353,36 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   const parkHop = (hop: PlanHop, reason: string, error?: string, verify?: HopVerifyResult, errorClass?: string | null): void => {
     parks += 1;
     quarantined.add(hop.id);
+    // v0.0.91 — never park with an empty class. When the provider sent no
+    // text, the REASON is still evidence (verify-failed, design-evidence-
+    // missing, …). The old `unknown` hid 26 design-review parks.
+    const cls = errorClass || classifyParkReason(reason, error);
     parkedHop = {
       hopId: hop.id,
       reason,
       ts: new Date().toISOString(),
       error,
-      ...(errorClass ? { errorClass } : {}),
+      errorClass: cls,
       ...(verify ? { verify } : {}),
     };
-    emit({ type: 'hop_parked', hop: hop.id, god: hop.god, reason, error });
+    // v0.0.91 — the park card has a diagnosis even when the child was mute.
+    // The file is per-lane (last park wins) and is safe to read from the UI.
+    try {
+      writeFileSync(join(laneRoot, '.olympus-park-diagnostics.json'), JSON.stringify({
+        ts: parkedHop.ts,
+        hopId: hop.id,
+        god: hop.god,
+        reason,
+        errorClass: cls,
+        error: error ?? null,
+        attempts,
+        artifacts: hop.artifacts ?? [],
+        verify: hop.verify ?? null,
+        promptExcerpt: String(hop.prompt ?? '').slice(0, 800),
+        note: error ? undefined : 'the dispatch returned no error text; the class comes from the park reason',
+      }, null, 2) + '\n', 'utf-8');
+    } catch { /* diagnostics never block the park */ }
+    emit({ type: 'hop_parked', hop: hop.id, god: hop.god, reason, error, errorClass: cls });
     // v0.0.87 — ATLAS PATROLS EVERY PARK. The deterministic finding names the
     // cause, the next healthy lane and the replan/retry decision; it lands in
     // the shared feed so Apollo (and the user) see it without reading logs.
