@@ -99,7 +99,10 @@ function routeFromFile(rel: string, root: string): string {
   let r = rel.replace(/\\/g, '/').replace(/\/?page\.(tsx|ts|jsx|js)$/, '');
   // src/app/page.tsx → /
   // src/app/home/page.tsx → /home
-  r = r.replace(/^src\//, '').replace(/^app\//, '').replace(/^pages\//, '');
+  r = r.replace(/^src\//, '');
+  // The root page's directory is exactly 'app' (no trailing slash) or 'pages'.
+  if (r === 'app' || r === 'pages') r = '';
+  else r = r.replace(/^app\//, '').replace(/^pages\//, '');
   r = r.split('/').filter((seg) => seg && !/^\(.*\)$/.test(seg)).join('/');
   return r ? `/${r}` : '/';
 }
