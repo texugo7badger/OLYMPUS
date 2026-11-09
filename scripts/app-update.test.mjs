@@ -89,4 +89,11 @@ ok('the main process checks 5s after launch, in packaged builds', () => {
   assert.match(main, /app\.isPackaged/);
 });
 
+ok('the GPU relaunch kills the Next child and relaunches the AppImage', () => {
+  const main = read('electron/main.ts');
+  assert.match(main, /proc\.kill\('SIGKILL'\)/);
+  assert.match(main, /process\.env\.APPIMAGE \|\| process\.execPath/);
+  assert.match(main, /a server became ready after the spawn failed/);
+});
+
 console.log(`\napp-update: ${passed} passed${process.exitCode ? ', failures' : ', all green'}.`);

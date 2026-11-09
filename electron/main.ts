@@ -194,13 +194,20 @@ async function isNextAlreadyRunning(): Promise<boolean> {
   const CHECK_TIMEOUT_MS = 8000; // 8 seconds max wait for external Next.js
   const start = Date.now();
   return new Promise((resolve) => {
+    // v0.0.91 fix — the health route can be momentarily unavailable while a
+    // server is booting; the root page is enough to prove a Next.js server is
+    // listening. Alternate the two so an orphan that answers `/` is reused
+    // instead of spawning a duplicate that dies with EADDRINUSE.
+    const urls = [`${BASE_URL}/api/olympus/health`, `${BASE_URL}/`];
+    let attemptIndex = 0;
     function attempt() {
       if (Date.now() - start > CHECK_TIMEOUT_MS) {
         resolve(false);
         return;
       }
+      const url = urls[attemptIndex++ % urls.length];
       const req = http.get(
-        `${BASE_URL}/api/olympus/health`,
+        url,
         { timeout: 1000 },
         (res) => {
           res.resume();
@@ -2095,16 +2102,24 @@ if (!gotLock) {
       await waitForNext();
       console.log('[olympus:electron] Next.js is ready. Creating window.');
     } catch (err: any) {
-      console.error(`[olympus:electron] ${err.message}`);
-      const { dialog } = require('electron');
-      dialog.showErrorBox(
-        'Olympus failed to start',
-        `The Next.js dev server did not become ready at ${BASE_URL}.\n\n` +
-          `Error: ${err.message}\n\n` +
-          `Check the console output for details.`,
-      );
-      app.quit();
-      return;
+      // v0.0.91 fix — a spawn can lose a race to a server that was already
+      // booting (the GPU-fallback relaunch specimen: the orphan answered `/`
+      // but the health route was not ready yet). Reuse it instead of showing a
+      // dead-end dialog and leaving the app closed.
+      if (await isNextAlreadyRunning()) {
+        console.log('[olympus:electron] a server became ready after the spawn failed — using it (EADDRINUSE race).');
+      } else {
+        console.error(`[olympus:electron] ${err.message}`);
+        const { dialog } = require('electron');
+        dialog.showErrorBox(
+          'Olympus failed to start',
+          `The Next.js dev server did not become ready at ${BASE_URL}.\n\n` +
+            `Error: ${err.message}\n\n` +
+            `Check the console output for details.`,
+        );
+        app.quit();
+        return;
+      }
     }
 
     // Register a Linux .desktop entry so the taskbar shows the OLYMPUS
@@ -2204,7 +2219,26 @@ if (!gotLock) {
             // disables acceleration in the only window where it takes effect.
             safeConsole('error', '[olympus:electron] GPU crashed twice — persisting the fallback marker and relaunching '
               + '(acceleration is disabled at the next boot, before ready).');
-            app.relaunch({ args: process.argv.slice(1).concat(GPU_FALLBACK_ARG) });
+            // v0.0.91 fix — app.exit() bypasses before-quit, so the Next child
+            // survived the GPU crash and kept port 3737, making the relaunch
+            // look like "OLYMPUS não abre". Kill it first, then relaunch the
+            // AppImage itself (not the Electron binary inside the temp mount,
+            // which is unmounted after exit).
+            try {
+              if (nextProcess) {
+                const proc = nextProcess;
+                nextProcess = null;
+                proc.kill('SIGKILL');
+                console.log('[olympus:electron] killed the Next.js child before the GPU relaunch.');
+              }
+            } catch { /* already gone */ }
+            const relaunchArgs = process.argv.slice(1)
+              .filter((a) => !a.startsWith('--olympus-disable-gpu'))
+              .concat(GPU_FALLBACK_ARG);
+            app.relaunch({
+              execPath: process.env.APPIMAGE || process.execPath,
+              args: relaunchArgs,
+            });
             app.exit(0);
           } catch (err) {
             logError('gpu-fallback-relaunch', err);
