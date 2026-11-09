@@ -9,6 +9,6 @@
     "suites": 177
   },
   "releasedAt": "2026-11-09T01:42:08Z",
-  "commit": "pending",
+  "commit": "b5d35f6",
   "note": "Stable means: the full battery ran with 0 FAIL and the declared skips are explicit. The console/GO limits are unrelated and may change."
 }
