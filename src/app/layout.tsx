@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import GlobalTooltip from "@/components/olympus/global-tooltip";
+import AppUpdateBox from "@/components/olympus/app-update-box";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -173,6 +174,7 @@ export default function RootLayout({
       >
         {children}
         <GlobalTooltip />
+        <AppUpdateBox />
         <Toaster />
       </body>
     </html>

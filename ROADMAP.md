@@ -1,6 +1,11 @@
 # OLYMPUS Roadmap
 
-**v0.0.91 is the current release** (2026-11-08) — the contract, the 60-second
+**v0.0.92 is the current release** (2026-11-09) — the startup update box: the
+electron-updater events finally reach the renderer, the app checks 5s after the
+window opens, and the card offers Update now / Later / progress / Restart and
+install with persisted "check on startup" and "download automatically"
+preferences; source builds fall back to the stable manifest and the release
+page. Battery **176 PASS / 0 FAIL / 1 skip of 177**. **v0.0.91** — the contract, the 60-second
 lane and the night shift: a page map + design contract refuses a plan with a
 pending P0 decision; the Athena design studio (style/builds/contract/review)
 lives in her chat and the approval binds the contract + review at score ≥7; a

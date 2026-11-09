@@ -2119,10 +2119,10 @@ if (!gotLock) {
     initAutoUpdater();
     setTimeout(() => {
       if (app.isPackaged) {
-        console.log('[olympus:auto-update] checking for updates (30s after launch)...');
+        console.log('[olympus:auto-update] checking for updates (5s after launch)...');
         checkForUpdates();
       }
-    }, 30_000);
+    }, 5_000);
 
     // Log renderer crashes + GPU crashes.
     // Electron 35 removed the deprecated `renderer-process-crashed` and

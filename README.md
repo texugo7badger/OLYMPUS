@@ -40,6 +40,16 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.92 — the startup update box (v0.0.91 hotfix).**
+The `electron-updater` events finally reach the renderer: on launch (5s after
+the window opens) OLYMPUS checks for a newer release and shows the **update
+box** — version, notes, **Update now / Later**, download progress and
+**Restart and install**. The box has two persisted preferences: **check on
+startup** (default ON) and **download automatically** (default OFF). Source
+builds fall back to the stable manifest and the release page, so the box is
+not a packaged-only promise. Battery **176 PASS / 0 FAIL / 1 declared skip of
+177**.
+
 **v0.0.91 — the contract, the 60-second lane and the night shift.**
 A refactor now starts with a page map and a **design contract**: a P0 page or
 P0 unknown refuses the walk until the user decides. Athena's **design studio**
@@ -220,7 +230,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**175 PASS / 0 FAIL / 1 declared skip** across 176 suites; a 100-hop
+**176 PASS / 0 FAIL / 1 declared skip** across 177 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

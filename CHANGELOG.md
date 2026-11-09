@@ -2,6 +2,29 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.92] — 2026-11-09
+
+### The startup update box (v0.0.91 hotfix)
+
+- **The box finally appears.** The main process already sent
+  `olympus:update-available`, `update-download-progress`, `update-downloaded`
+  and `update-error`; nothing in the renderer listened. `AppUpdateBox` now
+  subscribes, and the root layout mounts it on every surface.
+- **On launch:** packaged builds check 5s after the window opens (was 30s);
+  source/dev builds check the stable manifest immediately and fall back to the
+  GitHub release page.
+- **The card:** version + notes, **Update now**, **Later**, download progress,
+  **Restart and install**. Preferences persist in
+  `olympus:update-prefs`: **check on startup** (default ON) and **download
+  automatically** (default OFF).
+- **Honest failure:** a dev build never pretends the download started; if
+  `electron-updater` has no `app-update.yml`, the card opens the release page
+  and says so.
+- 9 assertions pin the semver compare, preference validation, layout mount,
+  event listeners and the 5s packaged check.
+
+**Battery: 176 PASS / 0 FAIL / 1 declared skip of 177.**
+
 ## [v0.0.91] — 2026-11-08
 
 ### The contract, the 60-second lane and the night shift
