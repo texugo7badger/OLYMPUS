@@ -120,7 +120,7 @@
     "@radix-ui/primitive": "^1.2.0",
     "better-sqlite3": "^13.0.2",
     "chokidar": "^5.0.0",
-    "electron-updater": "^6.8.9",
+    "electron-updater": "^6.8.11",
     "fflate": "^0.8.3",
     "gray-matter": "^4.0.3",
     "handlebars": "^4.7.10",
