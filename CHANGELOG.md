@@ -2,9 +2,9 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
-## [v0.0.92] — 2026-11-09
+## [v0.0.91] — 2026-11-09
 
-### The startup update box (v0.0.91 hotfix)
+### The startup update box
 
 - **The box finally appears.** The main process already sent
   `olympus:update-available`, `update-download-progress`, `update-downloaded`
@@ -24,8 +24,6 @@ All notable changes to OLYMPUS are documented in this file.
   event listeners and the 5s packaged check.
 
 **Battery: 176 PASS / 0 FAIL / 1 declared skip of 177.**
-
-## [v0.0.91] — 2026-11-08
 
 ### The contract, the 60-second lane and the night shift
 

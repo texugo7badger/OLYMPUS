@@ -40,17 +40,7 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.92 — the startup update box (v0.0.91 hotfix).**
-The `electron-updater` events finally reach the renderer: on launch (5s after
-the window opens) OLYMPUS checks for a newer release and shows the **update
-box** — version, notes, **Update now / Later**, download progress and
-**Restart and install**. The box has two persisted preferences: **check on
-startup** (default ON) and **download automatically** (default OFF). Source
-builds fall back to the stable manifest and the release page, so the box is
-not a packaged-only promise. Battery **176 PASS / 0 FAIL / 1 declared skip of
-177**.
-
-**v0.0.91 — the contract, the 60-second lane and the night shift.**
+**v0.0.91 — the contract, the 60-second lane, the night shift and the startup update box.**
 A refactor now starts with a page map and a **design contract**: a P0 page or
 P0 unknown refuses the walk until the user decides. Athena's **design studio**
 (style, builds, contract, review) lives in her chat; the approval is a signed
@@ -60,8 +50,13 @@ bounded turn, typecheck + lint, deterministic undo — instead of a hop. The ETA
 is a **p50/p90 band with park rate** (`~1h26 · p90 3h04 · 28% park`), and the
 Parthenon carries the design score and the measured list value. The **night
 shift** runs headless through `systemd-run`, outside the app cgroup, with a
-hard stop and a morning report. Battery **175 PASS / 0 FAIL / 1 declared skip
-of 176**.
+hard stop and a morning report. On launch, the **update box** now appears when
+a newer release exists: the `electron-updater` events reach the renderer,
+the check runs **5s** after the window opens, and the card offers **Update
+now / Later / progress / Restart and install** with persisted **check on
+startup** (ON) and **download automatically** (OFF); source builds fall back
+to the stable manifest and the release page. Battery **176 PASS / 0 FAIL / 1
+declared skip of 177**.
 
 **v0.0.90 — the wand plans.**
 A live-preview mark is now a planning turn on the **preview's** pixels: the

@@ -2,7 +2,7 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.92 · The harness is shipped and measured; the 8-hour / 100-hop
+> v0.0.91 · The harness is shipped and measured; the 8-hour / 100-hop
 > certification is **not** claimed yet. The v0.0.91 night shift is a headless
 > dress rehearsal (systemd-run, hard stop, morning report), not the note-8
 > claim. This page records what was actually

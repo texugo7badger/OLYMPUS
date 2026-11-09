@@ -1,19 +1,17 @@
 # OLYMPUS Roadmap
 
-**v0.0.92 is the current release** (2026-11-09) — the startup update box: the
-electron-updater events finally reach the renderer, the app checks 5s after the
-window opens, and the card offers Update now / Later / progress / Restart and
-install with persisted "check on startup" and "download automatically"
-preferences; source builds fall back to the stable manifest and the release
-page. Battery **176 PASS / 0 FAIL / 1 skip of 177**. **v0.0.91** — the contract, the 60-second
-lane and the night shift: a page map + design contract refuses a plan with a
+**v0.0.91 is the current release** (2026-11-09) — the contract, the 60-second
+lane, the night shift and the startup update box: a page map + design contract refuses a plan with a
 pending P0 decision; the Athena design studio (style/builds/contract/review)
 lives in her chat and the approval binds the contract + review at score ≥7; a
 ≤3-file/≤200-line mark becomes a Quick Edit with typecheck/lint and undo; the
 ETA is a p50/p90 band with park rate and the Parthenon carries the design score
 and list value; per-hop MCP activation gives design hops Nakkas + Playwright;
 and the night shift runs headless through systemd-run, outside the app cgroup,
-with a hard stop and a morning report. **v0.0.90** — the wand plans: the live-preview
+with a hard stop and a morning report. The startup update box surfaces the
+electron-updater events on launch (5s), with Update now / Later / progress /
+Restart and persisted check-on-startup and auto-download preferences. Battery
+**176 PASS / 0 FAIL / 1 skip of 177**. **v0.0.90** — the wand plans: the live-preview
 mark sends the iframe viewport/URL, Athena plans in her chat, the user approves
 and Apollo writes the campaign change while Atlas resumes/fixes the walk; a GO
 auth 401 falls back once to a verified model; the preview opens in its own OS
