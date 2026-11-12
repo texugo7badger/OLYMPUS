@@ -25,6 +25,18 @@ All notable changes to OLYMPUS are documented in this file.
 
 **Battery: 176 PASS / 0 FAIL / 1 declared skip of 177.**
 
+### Multi-page marks and the verified mark model
+
+- The **large preview window** now has a mark session: one-shot capture (the
+  app stays navigable between marks), a persisted per-project queue, add/
+  remove, and **send N marks** in one request. Athena receives all marks as
+  ONE batch and returns one consolidated plan grouped by page/file.
+- The 2026-11-12 401 is diagnosed and fixed: `qwen3.7-plus` is **not admitted**
+  by the current GO credential (`provider.auth` 401), while
+  `deepseek-v4.1-flash` replies in seconds. The mark turn now requests the
+  verified model explicitly; it no longer spends the turn on the known 401 or
+  the 180s fallback stall.
+
 ### The contract, the 60-second lane and the night shift
 
 #### Design is an artifact, not a late surprise

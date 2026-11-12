@@ -55,8 +55,11 @@ a newer release exists: the `electron-updater` events reach the renderer,
 the check runs **5s** after the window opens, and the card offers **Update
 now / Later / progress / Restart and install** with persisted **check on
 startup** (ON) and **download automatically** (OFF); source builds fall back
-to the stable manifest and the release page. Battery **176 PASS / 0 FAIL / 1
-declared skip of 177**.
+to the stable manifest and the release page. The large preview window can
+collect **multiple marks across pages** and send them to Athena as one batch;
+the mark turn uses the verified GO model (`deepseek-v4.1-flash`) because the
+current credential does not admit `qwen3.7-plus`. Battery **177 PASS / 0 FAIL
+/ 1 declared skip of 178**.
 
 **v0.0.90 — the wand plans.**
 A live-preview mark is now a planning turn on the **preview's** pixels: the
@@ -225,7 +228,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**176 PASS / 0 FAIL / 1 declared skip** across 177 suites; a 100-hop
+**177 PASS / 0 FAIL / 1 declared skip** across 178 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

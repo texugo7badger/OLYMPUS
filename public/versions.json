@@ -4,10 +4,10 @@
     "tag": "v0.0.91",
     "stable": true,
     "tests": {
-      "pass": 176,
+      "pass": 177,
       "fail": 0,
       "skip": 1,
-      "suites": 177
+      "suites": 178
     },
     "releasedAt": "2026-11-09T01:42:08Z",
     "commit": "b5d35f6",
