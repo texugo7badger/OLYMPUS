@@ -48,7 +48,13 @@ ok('the mark turn uses the verified GO model, never the 401 model', () => {
   assert.match(route, /GO_FALLBACK_MODEL/);
   assert.match(route, /runGodTurn\('athena', athenaInstruction, lane, 300_000, \{ model: GO_FALLBACK_MODEL \}\)/);
   assert.match(godRun, /opts: \{ model\?: string \}/);
-  assert.match(godRun, /opts\.model === GO_FALLBACK_MODEL/);
+  assert.match(godRun, /primaryModel === GO_FALLBACK_MODEL/);
+});
+
+ok('every qwen-configured agent is guarded to the verified model', () => {
+  assert.match(godRun, /turnModelFor/);
+  assert.match(godRun, /\/qwen\/i/);
+  assert.match(godRun, /opts\.model \?\? turnModelFor\(god\)/);
 });
 
 ok('the preview window captures one mark and keeps the app navigable', () => {

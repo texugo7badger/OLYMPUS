@@ -17,9 +17,36 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { spawnOpencode } from './opencode-spawn';
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawnOpencode, findOlympusRoot } from './opencode-spawn';
 
 export const GO_FALLBACK_MODEL = 'opencode-go/deepseek-v4.1-flash';
+
+/**
+ * v0.0.91 — the qwen guard. The current GO credential does not admit
+ * `qwen3.7-plus` (provider.auth 401); `deepseek-v4.1-flash` is verified.
+ * When the agent's configured model is a qwen model, use the verified model
+ * as the PRIMARY model for this turn instead of paying the 401 + fallback
+ * latency. The god's prompt, skills and tools are unchanged.
+ */
+let modelCache: { at: number; models: Record<string, string> } | null = null;
+function turnModelFor(god: string): string | undefined {
+  try {
+    if (!modelCache || Date.now() - modelCache.at > 60_000) {
+      const cfg = JSON.parse(fs.readFileSync(path.join(findOlympusRoot(), 'opencode.json'), 'utf-8'));
+      const models: Record<string, string> = {};
+      for (const [id, agent] of Object.entries<any>(cfg?.agent ?? {})) {
+        if (typeof agent?.model === 'string') models[id] = agent.model;
+      }
+      modelCache = { at: Date.now(), models };
+    }
+    const configured = modelCache.models[god];
+    return configured && /qwen/i.test(configured) ? GO_FALLBACK_MODEL : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export interface GodTurnResult {
   ok: boolean;
@@ -90,14 +117,14 @@ export async function runGodTurn(
   opts: { model?: string } = {},
 ): Promise<GodTurnResult> {
   const startedAt = Date.now();
-  const first = await runOnce(god, message, lane, timeoutMs, opts.model);
+  const primaryModel = opts.model ?? turnModelFor(god);
+  const first = await runOnce(god, message, lane, timeoutMs, primaryModel);
   if (first.ok || !isAuthFailure(first.error || '')) {
     return { ...first, durationMs: Date.now() - startedAt };
   }
-  // The caller may already have picked the verified model. Do not retry the
-  // same model into the same 401 (the mark lane does this: qwen3.7-plus is
-  // not admitted by the current GO credential, deepseek-v4.1-flash is).
-  if (opts.model === GO_FALLBACK_MODEL) {
+  // The caller (or the qwen guard) may already have picked the verified
+  // model. Do not retry the same model into the same 401.
+  if (primaryModel === GO_FALLBACK_MODEL) {
     return { ...first, durationMs: Date.now() - startedAt };
   }
   // One named retry on a verified GO lane; the first attempt got a 401.
