@@ -8,7 +8,7 @@ import path from 'path';
 import { resolveDispatchCwd } from '@/lib/opencode-spawn';
 import { getVaultRoot } from '@/lib/vault-root';
 import { markUserActivity } from '@/lib/user-activity';
-import { runGodTurn } from '@/lib/god-run';
+import { runGodTurn, GO_FALLBACK_MODEL } from '@/lib/god-run';
 import { appendGodInbox, updateGodInbox } from '@/lib/god-inbox';
 
 export const runtime = 'nodejs';
@@ -50,14 +50,30 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { x, y, instruction, projectSlug, viewport, route, previewUrl } = body;
 
-    // Validate required fields
-    if (typeof x !== 'number' || typeof y !== 'number') {
+    // v0.0.91 — BATCH MARKS. The large preview window can collect marks
+    // across pages; one planning turn must see all of them together.
+    const rawMarks = Array.isArray(body?.marks) ? body.marks : null;
+    const batch = Boolean(rawMarks && rawMarks.length > 0);
+    const marks = batch
+      ? rawMarks!.slice(0, 20).map((m: any, i: number) => ({
+          index: i + 1,
+          x: Number(m?.x),
+          y: Number(m?.y),
+          instruction: String(m?.instruction ?? '').trim(),
+          page: String(m?.page ?? route ?? previewUrl ?? '/').slice(0, 500),
+          viewport: m?.viewport ?? viewport ?? null,
+        })).filter((m: any) => Number.isFinite(m.x) && Number.isFinite(m.y) && m.instruction)
+      : [];
+    if (batch && marks.length === 0) {
+      return NextResponse.json({ ok: false, error: 'marks must contain at least one valid {x,y,instruction}' }, { status: 400 });
+    }
+    if (!batch && (typeof x !== 'number' || typeof y !== 'number')) {
       return NextResponse.json(
         { ok: false, error: 'x and y must be numbers' },
         { status: 400 }
       );
     }
-    if (!instruction || typeof instruction !== 'string' || !instruction.trim()) {
+    if (!batch && (!instruction || typeof instruction !== 'string' || !instruction.trim())) {
       return NextResponse.json(
         { ok: false, error: 'instruction is required' },
         { status: 400 }
@@ -67,8 +83,25 @@ export async function POST(req: NextRequest) {
     // Generate a dispatch ID for tracking
     const dispatchId = `athena-edit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    // Build the instruction for Athena
-    const athenaInstruction = `Click-to-element mark — PLANNING turn (do not edit yet):
+    // Build the instruction for Athena.
+    const athenaInstruction = batch
+      ? `Batch mark review — PLANNING turn (do not edit yet):
+
+**Marks:** ${marks.length} collected in the large preview window, across the pages named below.
+**Preview URL:** ${previewUrl || '(unknown — use the project preview)'}
+**Project:** ${projectSlug || '(browsing mode)'}
+
+${marks.map((m: any) => `${m.index}. page ${m.page} — (${m.x}, ${m.y}) in ${m.viewport?.width || viewport?.width || '?'}x${m.viewport?.height || viewport?.height || '?'}: ${m.instruction}`).join('\n')}
+
+## Your job in this turn: one consolidated plan, do NOT edit
+
+1. Inspect the preview and the named pages. Treat all ${marks.length} marks as ONE batch; if an intent is ambiguous, ask at most THREE short questions TOTAL (not per mark).
+2. Produce ONE consolidated plan grouped by page/file. For each group: the exact component/file, the concrete change, and why it belongs with the others. Prefer the smallest coherent set of edits.
+3. End with a single line: "Approve to send to Apollo + Atlas."
+4. Do not write files and do not dispatch anything in this turn. The user's approval is the gate; after approval the consolidated plan becomes a hop override and Atlas applies it; Apollo's deeper plan stays optional.
+
+Keep it concrete and batched. The OLYMPUS terminal is Apollo's; this thread is yours.`
+      : `Click-to-element mark — PLANNING turn (do not edit yet):
 
 **Coordinates:** (${x}, ${y}) in CSS pixels relative to the PREVIEW IFRAME viewport — not the OLYMPUS app window.
 **Preview viewport:** ${viewport?.width || '?'}x${viewport?.height || '?'} (DPR ${viewport?.devicePixelRatio || 1})
@@ -89,6 +122,11 @@ ${instruction}
 Keep it fast and concrete. The OLYMPUS terminal is Apollo's; this thread is yours.`;
 
 
+    const firstInstruction = batch ? marks[0].instruction : String(instruction || '');
+    const feedMsg = batch
+      ? `Batch marks: ${marks.length} across ${Array.from(new Set(marks.map((m: any) => m.page))).slice(0, 3).join(', ')}`
+      : `Click-to-element dispatch: "${firstInstruction.slice(0, 100)}" at (${x}, ${y})`;
+
     // Append to activity feed
     const feedPath = path.join(VAULT_ROOT, '06_Activity_Feed', 'live.jsonl');
     try {
@@ -100,12 +138,13 @@ Keep it fast and concrete. The OLYMPUS terminal is Apollo's; this thread is your
         ts: new Date().toISOString(),
         god: 'athena',
         action: 'delegation',
-        msg: `Click-to-element dispatch: "${instruction.slice(0, 100)}" at (${x}, ${y})`,
+        msg: feedMsg,
         project: projectSlug || null,
         meta: {
           dispatchId,
-          x, y,
-          instruction: instruction.slice(0, 500),
+          ...(batch
+            ? { batch: true, count: marks.length, marks: marks.map((m: any) => ({ x: m.x, y: m.y, page: m.page, instruction: m.instruction.slice(0, 300) })) }
+            : { x, y, instruction: firstInstruction.slice(0, 500) }),
           viewport,
           route,
         },
@@ -121,17 +160,26 @@ Keep it fast and concrete. The OLYMPUS terminal is Apollo's; this thread is your
     // keeps the cwd in the PROJECT lane (never the OLYMPUS repo, #99/#104).
     const inboxEntry = appendGodInbox('athena', {
       role: 'you',
-      text: instruction,
+      text: batch ? `${marks.length} marks — ${firstInstruction.slice(0, 300)}` : firstInstruction,
       source: 'mark',
       status: 'pending',
-      meta: { dispatchId, x, y, route: route || '/', viewport, previewUrl: previewUrl || null, projectSlug: projectSlug || null },
+      meta: {
+        dispatchId,
+        ...(batch
+          ? { batch: true, count: marks.length, marks: marks.map((m: any) => ({ x: m.x, y: m.y, page: m.page, instruction: m.instruction })) }
+          : { x, y }),
+        route: route || '/', viewport, previewUrl: previewUrl || null, projectSlug: projectSlug || null,
+      },
     });
 
     const lane = resolveDispatchCwd(projectSlug);
     void (async () => {
       updateGodInbox('athena', inboxEntry.id, { status: 'running' });
       try {
-        const turn = await runGodTurn('athena', athenaInstruction, lane, 300_000);
+        // v0.0.91 — the current GO credential does not admit qwen3.7-plus
+        // (provider.auth 401); deepseek-v4.1-flash is the verified model and
+        // reacts in seconds. Do not spend the turn on the known 401.
+        const turn = await runGodTurn('athena', athenaInstruction, lane, 300_000, { model: GO_FALLBACK_MODEL });
         if (turn.ok) {
           appendGodInbox('athena', {
             role: 'god',
@@ -180,8 +228,10 @@ Keep it fast and concrete. The OLYMPUS terminal is Apollo's; this thread is your
       ok: true,
       dispatchId,
       inboxId: inboxEntry.id,
-      message: `In Athena's terminal. She will apply it to the current work: "${instruction.slice(0, 100)}"`,
-      coordinates: { x, y },
+      message: batch
+        ? `${marks.length} marks in Athena's terminal — she will plan them together.`
+        : `In Athena's terminal. She will apply it to the current work: "${firstInstruction.slice(0, 100)}"`,
+      ...(batch ? { batch: true, count: marks.length, marks } : { coordinates: { x, y } }),
       project: projectSlug || null,
     });
   } catch (e: any) {

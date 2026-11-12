@@ -82,10 +82,22 @@ function runOnce(god: string, message: string, lane: string, timeoutMs: number, 
   });
 }
 
-export async function runGodTurn(god: string, message: string, lane: string, timeoutMs = 180_000): Promise<GodTurnResult> {
+export async function runGodTurn(
+  god: string,
+  message: string,
+  lane: string,
+  timeoutMs = 180_000,
+  opts: { model?: string } = {},
+): Promise<GodTurnResult> {
   const startedAt = Date.now();
-  const first = await runOnce(god, message, lane, timeoutMs);
+  const first = await runOnce(god, message, lane, timeoutMs, opts.model);
   if (first.ok || !isAuthFailure(first.error || '')) {
+    return { ...first, durationMs: Date.now() - startedAt };
+  }
+  // The caller may already have picked the verified model. Do not retry the
+  // same model into the same 401 (the mark lane does this: qwen3.7-plus is
+  // not admitted by the current GO credential, deepseek-v4.1-flash is).
+  if (opts.model === GO_FALLBACK_MODEL) {
     return { ...first, durationMs: Date.now() - startedAt };
   }
   // One named retry on a verified GO lane; the first attempt got a 401.
