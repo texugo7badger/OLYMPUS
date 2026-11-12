@@ -36,6 +36,11 @@ All notable changes to OLYMPUS are documented in this file.
   `deepseek-v4.1-flash` replies in seconds. The mark turn now requests the
   verified model explicitly; it no longer spends the turn on the known 401 or
   the 180s fallback stall.
+- The same guard covers **every qwen-configured agent** in `runGodTurn` — god
+  chat, quick edit and preview generation included, not only the mark route.
+- The preview overlay can no longer stick: when the iframe finishes loading
+  before hydration, the `onLoad` event is missed; a 3s fallback clears the
+  "Opening…" layer so the page is always visible and markable.
 
 ### The contract, the 60-second lane and the night shift
 

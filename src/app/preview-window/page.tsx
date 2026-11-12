@@ -107,6 +107,16 @@ export default function PreviewWindowPage() {
     return state.localUrl || state.recommendedUrl || '';
   }, [state?.running, state?.localUrl, state?.recommendedUrl]);
 
+  // The frame can finish loading BEFORE React hydrates; in that case the load
+  // event never reaches onLoad and the "Opening…" overlay covers the preview
+  // forever. Keep onLoad as the fast path and clear the overlay on a short
+  // fallback so the window can never sit on a stale loader.
+  useEffect(() => {
+    if (!url) return;
+    const t = setTimeout(() => setLoaded(true), 3000);
+    return () => clearTimeout(t);
+  }, [url, reloadKey]);
+
   // Persist the mark queue per project so a reload of the window does not
   // lose the batch the user just collected.
   useEffect(() => {

@@ -76,4 +76,9 @@ ok('the preview window sends the batch to Athena in one request', () => {
   assert.match(preview, /\/api\/olympus\/athena\/edit/);
 });
 
+ok('the preview overlay clears even when the iframe beats hydration', () => {
+  assert.match(preview, /onLoad=\{\(\) => setLoaded\(true\)\}/);
+  assert.match(preview, /setTimeout\(\(\) => setLoaded\(true\), 3000\)/);
+});
+
 console.log(`\nmark-batch: ${passed} passed${process.exitCode ? ', failures' : ', all green'}.`);
