@@ -38,6 +38,8 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.91 evidence (dev):** [Athena design studio](screenshots/screens/05-design.png) · [curated references](screenshots/screens/04-references.png) · [Parthenon ETA + night shift](screenshots/screens/01-brain-terminal.png).
 
+**v0.0.92 evidence:** [durable marks queue](screenshots/screens/42-marks-v092.png) — two marks saved per project, copy-all and one batch to Apollo.
+
 ## Latest
 
 **v0.0.92 — the walk owns itself, the marks stay.**
