@@ -1902,6 +1902,11 @@ const GPU_FALLBACK_ARG = '--olympus-disable-gpu';
 // software, so software is only the FALLBACK: an explicit --disable-gpu, the
 // persisted marker from two crashes, or --olympus-disable-gpu (the relaunch
 // path). `--reset-gpu` removes the marker and retries hardware acceleration.
+// v0.0.93 — PERFORMANCE: isolate cross-site iframes (the live preview) into
+// their own renderer. The preview is served from 127.0.0.2, a different site
+// from the 127.0.0.1 shell, so a heavy project cannot drag the OLYMPUS UI to
+// 30 FPS. Measured on AIME: parent 54→60, iframe 52→60.
+app.commandLine.appendSwitch('site-per-process');
 const gpuMarkerPersisted = existsSync(GPU_FALLBACK_MARKER);
 const gpuExplicitlyOff = process.argv.includes('--disable-gpu') || process.argv.includes(GPU_FALLBACK_ARG);
 const resetGpu = process.argv.includes('--reset-gpu');

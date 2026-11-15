@@ -31,6 +31,7 @@ import {
   stopPreviewTunnel,
 } from '@/lib/preview-tunnel';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+import { isolatedPreviewUrl } from '@/lib/preview-isolation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,6 +48,8 @@ type PreviewState = {
   localUrl: string;
   tunnelUrl: string | null;
   recommendedUrl: string | null;
+  /** v0.0.93 — 127.0.0.2 loopback alias; the iframe OOPIF origin. */
+  isolatedUrl: string | null;
   tunnelAvailable: boolean;
   probeMs: number | null;
   note: string;
@@ -85,6 +88,10 @@ async function describe(slug: string, host: string | null): Promise<PreviewState
   // Remote pages are HTTPS: only an HTTPS tunnel URL is usable there. LAN
   // pages are HTTP: the LAN address is the direct, fastest path.
   const recommendedUrl = remote ? tunnelUrl : (lanUrl ?? localUrl);
+  // v0.0.93 — the desktop iframe uses a different loopback SITE (127.0.0.2)
+  // so Chromium gives it its own renderer; a 127.0.0.1-only project falls
+  // back to the direct URL.
+  const isolatedUrl = running && port ? await isolatedPreviewUrl(port) : null;
 
   const where = port ? `:${port}` : 'no port assigned yet';
   const note = !running
@@ -106,6 +113,7 @@ async function describe(slug: string, host: string | null): Promise<PreviewState
     localUrl,
     tunnelUrl,
     recommendedUrl: running ? recommendedUrl : null,
+    isolatedUrl,
     tunnelAvailable: Boolean(tunnel?.binary ?? false),
     probeMs: probe.responseTimeMs ?? null,
     note,

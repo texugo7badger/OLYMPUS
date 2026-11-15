@@ -24,6 +24,8 @@ interface PreviewState {
   running: boolean;
   localUrl: string;
   recommendedUrl: string | null;
+  /** v0.0.93 — 127.0.0.2 loopback alias; the iframe OOPIF origin. */
+  isolatedUrl?: string | null;
   note: string;
   probeMs: number | null;
   error?: string;
@@ -112,6 +114,10 @@ export default function PreviewWindowPage() {
     if (!state?.running) return '';
     return state.localUrl || state.recommendedUrl || '';
   }, [state?.running, state?.localUrl, state?.recommendedUrl]);
+  // v0.0.93 — the iframe loads the 127.0.0.2 loopback SITE so Electron's
+  // site isolation gives it its own renderer. The visible/open URL stays
+  // 127.0.0.1; the server probe decides whether the alias is reachable.
+  const frameUrl = state?.isolatedUrl || url;
 
   // The frame can finish loading BEFORE React hydrates; in that case the load
   // event never reaches onLoad and the "Opening…" overlay covers the preview
@@ -423,8 +429,8 @@ export default function PreviewWindowPage() {
               </div>
             )}
             <iframe
-              key={`${url}-${reloadKey}`}
-              src={url}
+              key={`${frameUrl}-${reloadKey}`}
+              src={frameUrl}
               title={`${title} live preview`}
               onLoad={() => setLoaded(true)}
               className="h-full w-full border-0"

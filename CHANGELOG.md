@@ -2,6 +2,26 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.93] — 2026-11-15 (development)
+
+### Performance: the preview gets its own renderer
+
+- **GPU: the stale fallback was the first cause.** The app had been running
+  with `--disable-gpu` since the 2026-11-09 marker. On the AMD RX 6600 the
+  brain atlas now renders at **59.9 FPS** instead of software.
+- **OOPIF preview isolation.** The live preview iframe is served from
+  `127.0.0.2` (same loopback server, different SITE) and Electron runs with
+  `site-per-process`; the iframe gets its own renderer. AIME measured **parent
+  54 → 60 FPS** and **iframe 52 → 60 FPS**. A 127.0.0.1-only project falls back
+  to the direct URL automatically (server-side probe).
+- **Progressive boot.** The shell waits for health/run-state/projects and the
+  window, not nine endpoints plus every dynamic chunk; heavy panes show their
+  own branded loader. The boot ceiling dropped from 20s to 8s.
+- The design studio and choice card still follow the project contract; the
+  walk, marks, hibernation and phone behavior are unchanged.
+
+**Development build; v0.0.93 is not tagged or released.**
+
 ## [v0.0.92] — 2026-11-15
 
 ### The walk owns itself

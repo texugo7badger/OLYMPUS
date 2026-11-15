@@ -360,21 +360,19 @@ export default function OlympusWorkspace() {
     } catch { /* no window */ }
     bootStartedAt.current = performance.now();
     let live = true;
+    // v0.0.93 — boot only waits for the SHELL's data. Costs/tasks/design/
+    // episodes/MCP are panel data; each panel loads them after the shell
+    // appears. Waiting for all nine used to hold the loader on a single slow
+    // endpoint.
     const critical = [
       '/api/olympus/health',
-      '/api/olympus/graph',
       '/api/olympus/run-state',
-      '/api/olympus/costs',
       '/api/olympus/projects',
-      '/api/olympus/mcp/state',
-      '/api/olympus/tasks',
-      '/api/olympus/design-builds',
-      '/api/olympus/episodes?limit=20',
     ];
     const data = Promise.allSettled(critical.map((url) => fetch(url, { cache: 'no-store' })));
     const fonts = (document as any).fonts?.ready ?? Promise.resolve();
-    // A hard 12s cap: a dead endpoint must not trap the user behind the mark.
-    const cap = new Promise<void>((resolve) => setTimeout(resolve, 12_000));
+    // A hard 5s cap: a dead shell endpoint must not trap the user behind the mark.
+    const cap = new Promise<void>((resolve) => setTimeout(resolve, 5_000));
     Promise.race([Promise.all([data, fonts]).then(() => undefined), cap])
       .then(() => { if (live) setDataReady(true); })
       .catch(() => { if (live) setDataReady(true); });
@@ -397,17 +395,18 @@ export default function OlympusWorkspace() {
     if (!booting) return;
     const elapsed = performance.now() - bootStartedAt.current;
     const minWait = Math.max(0, 1400 - elapsed);
-    // Ready = the window loaded, every mounted panel finished its chunk, the
-    // critical data is in, the fonts are ready and the SSE lane is live. A
-    // 20s hard cap keeps a failed endpoint/chunk from trapping the user.
-    const ready = windowLoaded && pendingPanels === 0 && dataReady && sseConnected;
-    const cap = Math.max(0, 20000 - elapsed);
+    // v0.0.93 — the shell appears as soon as the window + core data are
+    // ready; every heavy panel (brain/terminal/3D) shows its OWN branded
+    // loader after the shell. Waiting for `pendingPanels === 0` made the boot
+    // hostage of the slowest chunk. The 8s hard cap is the final ceiling.
+    const ready = windowLoaded && dataReady;
+    const cap = Math.max(0, 8000 - elapsed);
     const timer = setTimeout(() => {
       setBootLeaving(true);
       setTimeout(() => setBooting(false), 520);
     }, ready ? minWait : cap);
     return () => clearTimeout(timer);
-  }, [booting, windowLoaded, pendingPanels, dataReady, sseConnected]);
+  }, [booting, windowLoaded, dataReady]);
   const setGraphData = useOlympus(s => s.setGraphData);
   const leftPane = useOlympus(s => s.leftPane);
   // #197: the window-visibility gate for pane polling surfaces.

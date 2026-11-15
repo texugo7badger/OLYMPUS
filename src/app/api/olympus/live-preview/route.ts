@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { probeDevServer } from '@/lib/dev-server-probe';
 import { status as managerStatus } from '@/lib/dev-server-manager';
 import { getProject, parseFrontmatter, reconcileProjectPath } from '@/lib/project-context';
+import { isolatedPreviewUrl } from '@/lib/preview-isolation';
 import path from 'node:path';
 
 export const runtime = 'nodejs';
@@ -19,6 +20,9 @@ export async function GET(req: NextRequest) {
   // #102: the dual-stack probe — 127.0.0.1 AND ::1 in parallel; the response
   // url is the REACHABLE url (bracketed for IPv6), not a computed guess.
   const probe = await probeDevServer(port, 1500);
+  // v0.0.93 — the OOPIF origin for the desktop iframe (127.0.0.2). Null when
+  // the project only listens on 127.0.0.1; the panel then uses the direct URL.
+  const isolatedUrl = probe.running ? await isolatedPreviewUrl(port) : null;
   // #103: the note/lane reconciliation — the path consumers should show (the
   // lane-aware truth), with the staleness surfaced, never silently clobbered.
   const reconciled = slug ? reconcileProjectPath(slug) : null;
@@ -47,6 +51,7 @@ export async function GET(req: NextRequest) {
     running: probe.running,
     port,
     url: probe.url,
+    isolatedUrl,
     host: probe.host,
     responseTimeMs: probe.responseTimeMs,
     project: projectName,

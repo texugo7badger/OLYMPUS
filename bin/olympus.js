@@ -89,6 +89,10 @@ const ROOT = findOlympusRoot();
  */
 const FLAGS_ELECTRON_UNDERSTANDS = new Set([
   '--dev', '--prod', '--reset-gpu', '--no-sandbox', '--disable-gpu',
+  // v0.0.93 — performance diagnostics: attach Playwright/CDP to the real
+  // Electron renderer to measure FPS and GPU compositing.
+  '--remote-debugging-port', '--disable-gpu-sandbox',
+  '--isolate-origins', '--site-per-process',
 ]);
 
 const PKG_VERSION = (() => {

@@ -19,12 +19,13 @@ import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
 import { normalizePreviewUrl } from '@/lib/live-preview-url';
+import { iframePreviewUrl } from '@/lib/preview-isolation';
 import { useDocVisible } from '@/lib/use-doc-visible';
 
 const DEFAULT_PORT = 3000;
 const PROBE_INTERVAL_MS = 3000;
 
-interface ProbeStatus { running: boolean; port: number; url: string; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; demoLogin?: string | null; manager?: { running: boolean; port: number | null; url: string | null; slug: string; startedAt: string | null; responseTimeMs: number | null; note: string } | null; }
+interface ProbeStatus { running: boolean; port: number; url: string; isolatedUrl?: string | null; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; demoLogin?: string | null; manager?: { running: boolean; port: number | null; url: string | null; slug: string; startedAt: string | null; responseTimeMs: number | null; note: string } | null; }
 
 export default function LivePreview() {
   // #231 — the preview probe pauses when the window is hidden.
@@ -113,7 +114,7 @@ export default function LivePreview() {
       // the panel's real defect; no client-side workaround could fix it.
       const r = await fetch(`/api/olympus/live-preview${params}`);
       const d = await r.json();
-      setStatus({ running: d.running, port: d.port, url: d.url, host: d.host ?? null, responseTimeMs: d.responseTimeMs, path: d.path ?? null, pathSource: d.pathSource ?? null, demoLogin: d.demoLogin ?? null, manager: d.manager ?? null });
+      setStatus({ running: d.running, port: d.port, url: d.url, isolatedUrl: d.isolatedUrl ?? null, host: d.host ?? null, responseTimeMs: d.responseTimeMs, path: d.path ?? null, pathSource: d.pathSource ?? null, demoLogin: d.demoLogin ?? null, manager: d.manager ?? null });
       setProbing(false);
     } catch { setStatus({ running: false, port, url: previewUrl, host: null, responseTimeMs: 0 }); setProbing(false); }
   }, [projectSlug, port, previewUrl]);
@@ -249,6 +250,14 @@ export default function LivePreview() {
   // #202: a user-pinned URL wins over the probe; the frame follows it even
   // when the default port is down (that is the whole point of the bar).
   const frameUrl = customUrl ?? effectiveUrl;
+  // v0.0.93 — the user-facing URL stays 127.0.0.1; the iframe loads the
+  // 127.0.0.2 loopback SITE so Chromium isolates it into its own renderer.
+  // The server probe supplies the isolated origin; a 127.0.0.1-only project
+  // falls back to the direct URL.
+  const iframeSrc = customUrl
+    ? iframePreviewUrl(customUrl)
+    : (status?.isolatedUrl || iframePreviewUrl(effectiveUrl));
+  useEffect(() => { setIframeLoaded(false); }, [iframeSrc]);
   // #103: the RESOLVED project path (note/lane reconciliation) for the tip —
   // the raw note path only as the pre-first-probe fallback.
   const resolvedPath = status?.path ?? activeProject?.path;
@@ -588,7 +597,7 @@ export default function LivePreview() {
 
       <div ref={containerRef} className={cn('flex-1 min-h-0 relative', markMode && 'cursor-crosshair')} onClick={handleContainerClick}>
         {(isRunning || customUrl) && (
-          <iframe ref={iframeRef} key={iframeKey} src={frameUrl} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" data-tip="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
+          <iframe ref={iframeRef} key={iframeKey} src={iframeSrc} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" data-tip="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
         )}
         {showOverlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-olympus-bg">

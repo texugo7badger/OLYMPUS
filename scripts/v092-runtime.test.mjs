@@ -40,6 +40,7 @@ const queue = await import(ROOT + '/src/lib/prompt-queue.ts');
 const drain = await import(ROOT + '/src/lib/prompt-queue-drain.ts');
 const design = await import(ROOT + '/src/lib/design-skin.ts');
 const walk = await import(ROOT + '/src/lib/hop-runtime/walker.ts');
+const previewIsolation = await import(ROOT + '/src/lib/preview-isolation.ts');
 
 ok('M1: a mark queue survives on disk and round-trips', () => {
   marks.writeMarks('aime', [{ x: 10, y: 20, page: '/onboarding', instruction: 'tighten the first gesture', viewport: { width: 1440, height: 900 } }]);
@@ -225,6 +226,30 @@ ok('T1: the tunnel is supervised when the user asked for it', () => {
   assert.match(tunnel, /ensureTunnel/);
   assert.match(tunnel, /desired: true/);
   assert.match(src('src/app/api/olympus/mobile/tunnel/route.ts'), /ensureTunnel/);
+});
+
+ok('PF1: loopback preview URLs move to the isolated 127.0.0.2 site', () => {
+  assert.equal(previewIsolation.iframePreviewUrl('http://127.0.0.1:3038/onboarding?x=1'), 'http://127.0.0.2:3038/onboarding?x=1');
+  assert.equal(previewIsolation.iframePreviewUrl('http://localhost:3038/'), 'http://127.0.0.2:3038/');
+  assert.equal(previewIsolation.iframePreviewUrl('https://example.com/a'), 'https://example.com/a');
+});
+
+ok('PF2: the shell isolates the preview and boots progressively', () => {
+  const main = src('electron/main.ts');
+  const live = src('src/components/olympus/live-preview.tsx');
+  const win = src('src/app/preview-window/page.tsx');
+  const projectPreview = src('src/app/api/olympus/projects/preview/route.ts');
+  const liveRoute = src('src/app/api/olympus/live-preview/route.ts');
+  const page = src('src/app/page.tsx');
+  assert.match(main, /appendSwitch\('site-per-process'\)/);
+  assert.match(live, /isolatedUrl/);
+  assert.match(live, /iframeSrc/);
+  assert.match(win, /state\?\.isolatedUrl/);
+  assert.match(projectPreview, /isolatedPreviewUrl/);
+  assert.match(liveRoute, /isolatedPreviewUrl/);
+  assert.match(page, /const critical = \[\s*'\/api\/olympus\/health',\s*'\/api\/olympus\/run-state',\s*'\/api\/olympus\/projects',\s*\]/);
+  assert.match(page, /const ready = windowLoaded && dataReady/);
+  assert.doesNotMatch(page, /const ready = windowLoaded && pendingPanels === 0/);
 });
 
 async function okAsync(name, fn) {
