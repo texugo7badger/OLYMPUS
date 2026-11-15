@@ -39,6 +39,7 @@ const recovery = await import(ROOT + '/src/lib/hop-runtime/recovery.ts');
 const queue = await import(ROOT + '/src/lib/prompt-queue.ts');
 const drain = await import(ROOT + '/src/lib/prompt-queue-drain.ts');
 const design = await import(ROOT + '/src/lib/design-skin.ts');
+const walk = await import(ROOT + '/src/lib/hop-runtime/walker.ts');
 
 ok('M1: a mark queue survives on disk and round-trips', () => {
   marks.writeMarks('aime', [{ x: 10, y: 20, page: '/onboarding', instruction: 'tighten the first gesture', viewport: { width: 1440, height: 900 } }]);
@@ -224,6 +225,39 @@ ok('T1: the tunnel is supervised when the user asked for it', () => {
   assert.match(tunnel, /ensureTunnel/);
   assert.match(tunnel, /desired: true/);
   assert.match(src('src/app/api/olympus/mobile/tunnel/route.ts'), /ensureTunnel/);
+});
+
+async function okAsync(name, fn) {
+  try { await fn(); console.log('PASS ', name); passed++; }
+  catch (e) { console.log('FAIL ', name, '—', e?.message || e); process.exitCode = 1; }
+}
+
+await okAsync('P1: a preflight-completed hop cannot leave a phantom park', async () => {
+  const lane = fs.mkdtempSync(path.join(HOME, 'lane-preflight-'));
+  const plan = {
+    version: 1,
+    laneRoot: lane,
+    hops: [
+      { id: 'a', god: 'apollo', prompt: 'a', artifacts: ['a.md'], verify: { review: 'deterministic', checks: ['file-exists:a.md', 'file-contains:a.md::## Result'] } },
+      { id: 'b', god: 'apollo', prompt: 'b', artifacts: ['b.md'], after: ['a'], verify: { review: 'deterministic', checks: ['file-exists:b.md', 'file-contains:b.md::## Result'] } },
+    ],
+  };
+  fs.writeFileSync(path.join(lane, 'a.md'), '# a\n\n## Result\n\nAlready complete.\n');
+  fs.writeFileSync(path.join(lane, '.olympus-hop-state.json'), JSON.stringify({
+    version: 1, generation: 1, completed: [], quarantined: ['a'], inFlight: [],
+    parked: { hopId: 'a', reason: 'old-park', ts: new Date().toISOString() },
+    updatedAt: new Date().toISOString(),
+  }) + '\n');
+  const dispatcher = async (hop) => {
+    fs.writeFileSync(path.join(lane, `${hop.id}.md`), `# ${hop.id}\n\n## Result\n\nFixture complete.\n`);
+    return { ok: true, exitCode: 0, output: 'ok', tokensIn: 1, tokensOut: 1, retriesAbsorbed: 0, exhausted: false };
+  };
+  const result = await walk.walkPlan({ plan, dispatcher, stateDir: lane, resume: true });
+  assert.ok(result.completed.includes('a') && result.completed.includes('b'), JSON.stringify(result));
+  assert.equal(result.parked, null);
+  const state = JSON.parse(fs.readFileSync(path.join(lane, '.olympus-hop-state.json'), 'utf8'));
+  assert.equal(state.parked, null);
+  assert.ok(!state.quarantined.includes('a'));
 });
 
 console.log(`\nv092-runtime: ${passed} passed${process.exitCode ? ', failures' : ', all green'}.`);

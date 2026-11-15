@@ -1357,6 +1357,14 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     console.log(`[hop-runtime] preflight verified ${preflight.length} hop(s) from disk: ${preflight.join(', ')} — no tokens spent`);
     opts.onEvent?.({ type: 'log', msg: `Preflight: ${preflight.length} hop(s) already satisfy their deterministic gates — marked done from disk.` } as any);
   }
+  // v0.0.92 — A PREFLIGHT-COMPLETED HOP CANNOT STAY PARKED. The old order
+  // initialized `parkedHop` before preflight; a parked hop whose artifact now
+  // passed remained in the state/UI even though it was completed. Clear the
+  // park and its quarantine when the disk proves the hop done.
+  if (parkedHop && completed.has(parkedHop.hopId)) parkedHop = null;
+  for (const id of [...quarantined]) {
+    if (completed.has(id)) quarantined.delete(id);
+  }
 
   // #RESTART-SPECIMEN (2026-10-16, 22:27): the walk died mid-hop-1 (the app
   // restart killed the dev server) with NO state on disk — the campaign was
