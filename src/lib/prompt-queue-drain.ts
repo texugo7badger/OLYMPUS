@@ -1,6 +1,6 @@
 /**
- * prompt-queue-drain.ts — v0.0.85 (backported to v0.0.84): the phone queue
- * drains while OLYMPUS hibernates.
+ * prompt-queue-drain.ts — v0.0.92: the phone queue is drained by the SERVER,
+ * awake or hibernating.
  *
  * THE SPECIMEN (2026-11-06, ~21:00): the campaign parked while the user was
  * away. They tapped `investigar` in the phone widget; the item landed in the
@@ -8,12 +8,11 @@
  * hibernate destroys that renderer. The prompt sat there until the user woke
  * OLYMPUS. A remote control that needs the remote to be awake is not remote.
  *
- * This server-side drainer runs while `~/.olympus/hibernation.json` says the
- * window is gone. It takes phone items (high-priority investigations and
- * phone chat), pins the active project, calls the normal action route on the
- * warm session, and writes the answer back to the same notification feed the
- * PC and the phone already read. It never runs while the app is awake — the
- * terminal's own queue drain owns that case (one sender, no duplicates).
+ * v0.0.92 — THE SECOND SPECIMEN (2026-11-13): an item claimed at 23:15 stayed
+ * `sending` forever because the drain only selected `queued` and only ran
+ * while hibernating; the awake terminal had been unmounted. The server now
+ * owns phone items in every mode, reconciles stale claims, and gives a turn
+ * 30 minutes before calling it failed.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
@@ -21,13 +20,13 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { isHibernating } from './hibernation';
 import { listQueue, markQueueItem } from './prompt-queue';
 import { appendDesktopNotify, notifyText, readLanguage } from './desktop-notify';
 
 const GLOBAL_KEY = Symbol.for('olympus.prompt-queue-drain');
 const RETRY_BACKOFF_MS = 2 * 60_000;
-const DISPATCH_TIMEOUT_MS = 10 * 60_000;
+const DISPATCH_TIMEOUT_MS = 30 * 60_000;
+const STALE_CLAIM_MS = 10 * 60_000;
 
 interface DrainState {
   timer: ReturnType<typeof setInterval> | null;
@@ -82,6 +81,34 @@ function answerFromStream(stream: string): string {
   return answer;
 }
 
+/**
+ * A claim that never settled (process killed, action route hung, the old
+ * drainer unmounted) must not strand the prompt. Requeue it so the next pass
+ * retries; the phone sees the item move again.
+ */
+export function reconcileStalePhoneClaims(now = Date.now()): string[] {
+  const recovered: string[] = [];
+  for (const item of listQueue()) {
+    if (item.status !== 'sending' || item.source !== 'phone') continue;
+    const claimed = Date.parse(String(item.claimedAt || item.createdAt || ''));
+    if (!Number.isFinite(claimed) || now - claimed < STALE_CLAIM_MS) continue;
+    markQueueItem(item.id, 'queued', now);
+    recovered.push(item.id);
+    try {
+      const lang = readLanguage();
+      appendDesktopNotify({
+        type: 'walk',
+        title: notifyText(lang, 'phoneFail.title'),
+        body: `Requeued a phone prompt claimed ${Math.round((now - claimed) / 60_000)} min ago (${item.text.slice(0, 120)}).`,
+        hop: item.id,
+        slug: item.project,
+        status: 'queued',
+      });
+    } catch { /* the queue is the source of truth */ }
+  }
+  return recovered;
+}
+
 export interface DrainResult {
   dispatched: number;
   skipped: string;
@@ -98,14 +125,14 @@ export async function drainPhoneQueueOnce(opts: {
   fetchImpl?: typeof fetch;
   now?: number;
 } = {}): Promise<DrainResult> {
-  if (!isHibernating()) return { dispatched: 0, skipped: 'not-hibernating' };
   const drain = state();
   if (drain.inFlight) return { dispatched: 0, skipped: 'in-flight' };
 
+  const now = opts.now ?? Date.now();
+  reconcileStalePhoneClaims(now);
   const items = listQueue().filter((item) => item.status === 'queued' && item.source === 'phone');
   if (items.length === 0) return { dispatched: 0, skipped: 'empty' };
   const item = items[0];
-  const now = opts.now ?? Date.now();
   if (now < (drain.retryAt.get(item.id) ?? 0)) return { dispatched: 0, skipped: 'backoff', itemId: item.id };
 
   const project = item.project && item.project !== 'unknown' ? item.project : (activeSlug() || item.project || 'olympus');
@@ -188,7 +215,7 @@ export async function drainPhoneQueueOnce(opts: {
   }
 }
 
-/** Start the 15s hibernation drain once per Next process. */
+/** Start the 15s server drain once per Next process (awake or hibernating). */
 export function ensurePromptQueueDrain(intervalMs = 15_000): void {
   const drain = state();
   if (drain.timer) return;

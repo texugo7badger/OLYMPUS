@@ -467,6 +467,7 @@ let tray: Tray | null = null;
 let hibernating = false;
 let hibernationWatch: ReturnType<typeof setInterval> | null = null;
 const HIBERNATION_MARKER = join(nodeOs.homedir(), '.olympus', 'hibernation.json');
+const HIBERNATION_PLAN = join(nodeOs.homedir(), '.olympus', 'hibernation-plan.json');
 // Extend the app type to track quitting state.
 declare global {
   // Declaration merging requires a namespace (the Electron App type).
@@ -854,6 +855,19 @@ function hibernateNow(): void {
   hibernating = true;
   writeHibernationMarker(true);
   try { tray?.setToolTip('OLYMPUS — hibernating (campaign running; notifications on)'); } catch { /* tray gone */ }
+  // v0.0.92 — hibernation without a valid plan used to become a silent
+  // 60-minute attended walk. If the user did not set a window, authorize a
+  // default 8h; if the old plan expired, replace it. The marker is written
+  // first so the walker never sees a half-state.
+  try {
+    const raw = JSON.parse(readFileSync(HIBERNATION_PLAN, 'utf-8'));
+    const until = Date.parse(String(raw?.until ?? ''));
+    if (raw?.active !== true || !Number.isFinite(until) || until <= Date.now()) {
+      void postJson('/api/olympus/power/hibernate-plan', { hours: 8, autoResume: true });
+    }
+  } catch {
+    void postJson('/api/olympus/power/hibernate-plan', { hours: 8, autoResume: true });
+  }
   void postJson('/api/olympus/chat/hibernate', {});
   if (mainWindow) {
     const win = mainWindow;

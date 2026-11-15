@@ -12,8 +12,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Loader2, RefreshCw, X, MonitorUp, MousePointerClick, Send, Trash2 } from 'lucide-react';
+import { ExternalLink, Loader2, RefreshCw, X, MonitorUp, MousePointerClick, Send, Trash2, Copy, Check, ClipboardList, Bot } from 'lucide-react';
 import OlympusLoader from '@/components/olympus/olympus-loader';
+import { marksMarkdown, type PreviewMark } from '@/lib/marks-format';
 
 interface PreviewState {
   ok: boolean;
@@ -36,16 +37,21 @@ export default function PreviewWindowPage() {
   const [loaded, setLoaded] = useState(false);
   const [retry, setRetry] = useState(0);
   const esRef = useRef<EventSource | null>(null);
-  // v0.0.91 — the large window's mark session: capture across pages, then
-  // send the whole batch to Athena/Apollo in one planning turn.
-  type Mark = { id: string; x: number; y: number; page: string; instruction: string; viewport: { width: number; height: number } };
+  // v0.0.92 — the large window's mark session: capture across pages, keep
+  // the queue on disk (not just localStorage), then copy or send the whole
+  // batch to Apollo in one planning turn.
   const [markMode, setMarkMode] = useState(false);
   const [draft, setDraft] = useState<{ x: number; y: number; page: string; viewport: { width: number; height: number } } | null>(null);
   const [markText, setMarkText] = useState('');
   const [pageText, setPageText] = useState('');
-  const [marks, setMarks] = useState<Mark[]>([]);
+  const [marks, setMarks] = useState<PreviewMark[]>([]);
+  const [marksLoaded, setMarksLoaded] = useState(false);
+  const [marksOpen, setMarksOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
+  const [plan, setPlan] = useState<string | null>(null);
+  const [planTarget, setPlanTarget] = useState<'apollo' | 'athena' | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   // Resolve the slug from the query; fall back to the active project.
   useEffect(() => {
@@ -117,19 +123,55 @@ export default function PreviewWindowPage() {
     return () => clearTimeout(t);
   }, [url, reloadKey]);
 
-  // Persist the mark queue per project so a reload of the window does not
-  // lose the batch the user just collected.
+  // The durable queue lives on disk (one file per project). localStorage is
+  // only the offline fallback; the window never loses a batch on reload.
   useEffect(() => {
     if (!slug) return;
-    try {
-      const raw = JSON.parse(localStorage.getItem(`olympus:marks:${slug}`) || '[]');
-      if (Array.isArray(raw)) setMarks(raw);
-    } catch { /* ignore */ }
+    let cancelled = false;
+    setMarksLoaded(false);
+    const local = () => {
+      try {
+        const raw = JSON.parse(localStorage.getItem(`olympus:marks:${slug}`) || '[]');
+        if (!cancelled && Array.isArray(raw)) setMarks(raw);
+      } catch { /* ignore */ }
+    };
+    void fetch(`/api/olympus/marks?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        if (d?.ok && Array.isArray(d.marks)) setMarks(d.marks);
+        else local();
+      })
+      .catch(local)
+      .finally(() => { if (!cancelled) setMarksLoaded(true); });
+    return () => { cancelled = true; };
   }, [slug]);
+
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || !marksLoaded) return;
     try { localStorage.setItem(`olympus:marks:${slug}`, JSON.stringify(marks)); } catch { /* private */ }
-  }, [marks, slug]);
+    const t = setTimeout(() => {
+      void fetch('/api/olympus/marks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, marks }),
+      }).catch(() => { /* offline: localStorage still has it */ });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [marks, slug, marksLoaded]);
+
+  // Keyboard: M toggles mark mode, Esc cancels the draft/overlay.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement | null)?.isContentEditable;
+      if (e.key === 'Escape') { setDraft(null); setMarkMode(false); setMarkText(''); setPageText(''); return; }
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.toLowerCase() === 'm') { e.preventDefault(); setMarkMode((v) => !v); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const captureMark = (e: React.MouseEvent<HTMLButtonElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -155,34 +197,56 @@ export default function PreviewWindowPage() {
       page: pageText.trim() || draft.page,
       instruction: markText.trim(),
       viewport: draft.viewport,
+      url: url || undefined,
+      createdAt: new Date().toISOString(),
     }]);
     setDraft(null);
     setMarkText('');
     setPageText('');
+    setMarksOpen(true);
   };
 
   const removeMark = (id: string) => setMarks((prev) => prev.filter((m) => m.id !== id));
 
-  const sendMarks = async () => {
+  const copyText = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.select();
+      try { document.execCommand('copy'); } finally { el.remove(); }
+    }
+    setCopied(label);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const copyMarks = () => {
+    if (!slug || marks.length === 0) return;
+    void copyText(marksMarkdown(slug, marks, url), 'marks');
+  };
+
+  const sendMarks = async (target: 'apollo' | 'athena') => {
     if (!slug || marks.length === 0) return;
     setSending(true);
     setSent(null);
+    setPlan(null);
+    setPlanTarget(null);
     try {
-      const r = await fetch('/api/olympus/athena/edit', {
+      const r = await fetch('/api/olympus/marks/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          marks: marks.map((m) => ({ x: m.x, y: m.y, page: m.page, instruction: m.instruction, viewport: m.viewport })),
-          projectSlug: slug,
-          previewUrl: url,
-          route: '/',
-          batch: true,
-        }),
+        body: JSON.stringify({ slug, marks, target, previewUrl: url }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
-      setSent(d.message || `${marks.length} marks sent to Athena`);
-      setMarks([]);
+      setPlan(d.plan || '');
+      setPlanTarget(target);
+      setSent(`${d.count} mark${d.count === 1 ? '' : 's'} · ${target}${d.durationMs ? ` · ${Math.round(d.durationMs / 1000)}s` : ''}`);
+      setMarksOpen(true);
     } catch (e: any) {
       setSent(`failed: ${e?.message || String(e)}`);
     } finally {
@@ -210,22 +274,21 @@ export default function PreviewWindowPage() {
           disabled={!url}
           onClick={() => setMarkMode((v) => !v)}
           aria-pressed={markMode}
-          data-tip="Mark one element; the app stays navigable between marks"
+          aria-keyshortcuts="m"
+          data-tip="Mark one element (M). The app stays navigable between marks; the queue is saved on disk."
           className={`flex h-8 items-center gap-1 rounded-lg border px-2 text-[9px] font-mono disabled:opacity-40 ${markMode ? 'border-olympus-red/40 bg-olympus-red/10 text-olympus-red' : 'border-olympus-cyan/30 text-olympus-cyan hover:bg-olympus-cyan/10'}`}
         >
           <MousePointerClick size={12} /> {markMode ? 'click…' : 'Mark'}
         </button>
-        {marks.length > 0 && (
-          <button
-            type="button"
-            onClick={() => void sendMarks()}
-            disabled={sending}
-            data-tip={`Send all ${marks.length} marks to Athena in one planning turn`}
-            className="flex h-8 items-center gap-1 rounded-lg border border-olympus-gold/40 bg-olympus-gold/15 px-2 text-[9px] font-mono text-olympus-gold hover:bg-olympus-gold/25 disabled:opacity-40"
-          >
-            <Send size={11} /> {sending ? 'sending…' : `${marks.length} mark${marks.length === 1 ? '' : 's'}`}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setMarksOpen((v) => !v)}
+          aria-expanded={marksOpen}
+          data-tip="Marks are saved on disk for this project — open the panel, copy them or send the batch to Apollo"
+          className={`flex h-8 items-center gap-1 rounded-lg border px-2 text-[9px] font-mono disabled:opacity-40 ${marksOpen ? 'border-olympus-gold/50 bg-olympus-gold/20 text-olympus-gold' : 'border-olympus-gold/30 text-olympus-gold hover:bg-olympus-gold/10'}`}
+        >
+          <ClipboardList size={11} /> {marks.length} mark{marks.length === 1 ? '' : 's'}
+        </button>
         {url && (
           <a href={url} target="_blank" rel="noreferrer" aria-label="Open in browser" className="flex h-8 w-8 items-center justify-center rounded-lg border border-olympus-gold/20 text-olympus-gold hover:bg-olympus-gold/10"><ExternalLink size={13} /></a>
         )}
@@ -262,17 +325,74 @@ export default function PreviewWindowPage() {
         </div>
       )}
 
-      {marks.length > 0 && !draft && (
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-olympus-gold/15 bg-[#0B0E13] px-3 py-1.5 text-[8px] font-mono">
-          {marks.map((m, i) => (
-            <span key={m.id} className="inline-flex max-w-full items-center gap-1 rounded border border-olympus-gold/20 bg-olympus-card/60 px-1.5 py-0.5">
-              <span className="text-olympus-gold">{i + 1}.</span>
-              <span className="max-w-[160px] truncate text-olympus-text-dim" data-tip={`${m.page} · (${m.x}, ${m.y})`}>{m.instruction}</span>
-              <button type="button" onClick={() => removeMark(m.id)} aria-label={`Remove mark ${i + 1}`} className="text-olympus-text-dim hover:text-olympus-red"><Trash2 size={9} /></button>
-            </span>
-          ))}
-          <button type="button" onClick={() => setMarks([])} className="ml-auto text-olympus-text-dim hover:text-olympus-red">clear</button>
-        </div>
+      {marksOpen && !draft && (
+        <section className="flex max-h-[46vh] shrink-0 flex-col border-b border-olympus-gold/20 bg-[#0B0E13]">
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-olympus-gold/10 px-3 py-2 text-[9px] font-mono">
+            <span className="uppercase tracking-[0.18em] text-olympus-gold">Marks</span>
+            <span className="text-olympus-text-dim">{marks.length} saved in this project</span>
+            <button
+              type="button"
+              onClick={copyMarks}
+              disabled={marks.length === 0}
+              className="ml-auto flex items-center gap-1 rounded border border-olympus-cyan/30 px-2 py-1 text-olympus-cyan hover:bg-olympus-cyan/10 disabled:opacity-40"
+            >
+              {copied === 'marks' ? <Check size={10} /> : <Copy size={10} />} {copied === 'marks' ? 'copied' : 'copy all'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void sendMarks('apollo')}
+              disabled={marks.length === 0 || sending}
+              className="flex items-center gap-1 rounded border border-olympus-gold/40 bg-olympus-gold/15 px-2 py-1 text-olympus-gold hover:bg-olympus-gold/25 disabled:opacity-40"
+            >
+              <Bot size={10} /> {sending ? 'planning…' : 'send to Apollo'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void sendMarks('athena')}
+              disabled={marks.length === 0 || sending}
+              className="rounded border border-olympus-gold/20 px-2 py-1 text-olympus-text-dim hover:text-olympus-gold disabled:opacity-40"
+            >
+              Athena
+            </button>
+            <button type="button" onClick={() => setMarks([])} disabled={marks.length === 0} className="px-1 text-olympus-text-dim hover:text-olympus-red disabled:opacity-40">clear</button>
+            <button type="button" onClick={() => setMarksOpen(false)} aria-label="Close marks panel" className="px-1 text-olympus-text-dim hover:text-olympus-text"><X size={11} /></button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto px-3 py-2">
+            {marks.length === 0 ? (
+              <p className="text-[10px] leading-relaxed text-olympus-text-dim">
+                No marks yet. Click <span className="text-olympus-gold">Mark</span> (or press <span className="text-olympus-gold">M</span>), click an element, describe the change, and add it. Navigate to another page and repeat; the queue is saved on disk.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {marks.map((m, i) => (
+                  <li key={m.id} className="flex items-start gap-2 rounded border border-olympus-gold/15 bg-olympus-card/40 px-2 py-1.5 text-[9px] font-mono">
+                    <span className="mt-0.5 text-olympus-gold">{i + 1}.</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[9px] text-olympus-gold" data-tip={m.page}>{m.page}</span>
+                      <span className="block text-[10px] leading-relaxed text-olympus-text">{m.instruction}</span>
+                      <span className="text-[8px] text-olympus-text-dim">({m.x}, {m.y}){m.viewport ? ` · ${m.viewport.width}×${m.viewport.height}` : ''}</span>
+                    </span>
+                    <button type="button" onClick={() => void copyText(marksMarkdown(slug || '', [m], url), m.id)} aria-label={`Copy mark ${i + 1}`} className="text-olympus-text-dim hover:text-olympus-cyan">
+                      {copied === m.id ? <Check size={10} /> : <Copy size={10} />}
+                    </button>
+                    <button type="button" onClick={() => removeMark(m.id)} aria-label={`Remove mark ${i + 1}`} className="text-olympus-text-dim hover:text-olympus-red"><Trash2 size={10} /></button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {plan && (
+              <div className="mt-2 rounded border border-olympus-green/25 bg-olympus-green/5">
+                <div className="flex items-center gap-2 border-b border-olympus-green/15 px-2 py-1 text-[9px] font-mono text-olympus-green">
+                  <span>{planTarget === 'athena' ? 'Athena' : 'Apollo'} plan</span>
+                  <button type="button" onClick={() => void copyText(plan, 'plan')} className="ml-auto flex items-center gap-1 text-olympus-green/80 hover:text-olympus-green">
+                    {copied === 'plan' ? <Check size={10} /> : <Copy size={10} />} {copied === 'plan' ? 'copied' : 'copy plan'}
+                  </button>
+                </div>
+                <pre className="max-h-64 overflow-auto whitespace-pre-wrap px-2 py-2 text-[10px] leading-relaxed text-olympus-text">{plan}</pre>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {sent && (
@@ -311,6 +431,15 @@ export default function PreviewWindowPage() {
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation"
               allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay"
             />
+            {draft && (
+              <span
+                className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-1/2"
+                style={{ left: draft.x, top: draft.y }}
+                aria-hidden
+              >
+                <span className="block h-4 w-4 rounded-full border-2 border-olympus-gold bg-olympus-gold/30 shadow-[0_0_0_5px_rgba(212,165,116,0.16)]" />
+              </span>
+            )}
             {markMode && (
               <button
                 type="button"
@@ -318,7 +447,11 @@ export default function PreviewWindowPage() {
                 data-tip="Click the element to mark; the overlay closes so you can navigate to the next page"
                 onClick={captureMark}
                 className="absolute inset-0 z-20 cursor-crosshair bg-olympus-gold/5"
-              />
+              >
+                <span className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded border border-olympus-gold/30 bg-[#0B0E13]/90 px-2 py-1 text-[9px] font-mono text-olympus-gold">
+                  click the element · Esc to cancel
+                </span>
+              </button>
             )}
           </>
         )}

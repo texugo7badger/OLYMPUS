@@ -11,7 +11,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { startTunnel, stopTunnel, tunnelStatus } from '@/lib/mobile-tunnel';
+import { ensureTunnel, startTunnel, stopTunnel } from '@/lib/mobile-tunnel';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 
 export const runtime = 'nodejs';
@@ -20,7 +20,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   const authError = requireAuth(req);
   if (authError) return authError;
-  return NextResponse.json({ ok: true, ...tunnelStatus() }, { headers: NO_CACHE_HEADERS });
+  // A supervised restart is bounded; the status poll returns the current URL.
+  const status = await ensureTunnel().catch((e: any) => ({ running: false, url: null, pid: null, startedAt: null, binary: null, error: e?.message || String(e) }));
+  return NextResponse.json({ ok: true, ...status }, { headers: NO_CACHE_HEADERS });
 }
 
 export async function POST(req: NextRequest) {

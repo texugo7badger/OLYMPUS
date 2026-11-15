@@ -35,7 +35,7 @@ import { userIsActive } from '../user-activity';
 import { composeArsenalDirective } from './arsenal';
 import { createHopTransport, type HopTransport } from './transport';
 import { hardCeilingMs } from './progress';
-import { readHibernationPlan } from '@/lib/hibernation';
+import { isHibernating, readHibernationPlan } from '@/lib/hibernation';
 import { readSessionTotals } from './warm-server';
 import { composeRagContext } from '../rag-inject';
 import { fileURLToPath } from 'node:url';
@@ -272,6 +272,20 @@ export function composeHopPrompt(hop: PlanHop, laneRoot: string): string {
   }
   lines.push(`Budget: at most ${hop.budgetTokens ?? MAX_HOP_BUDGET_TOKENS} output tokens — a small hop, one god, artifacts on disk.`);
   lines.push('The spine verifies the artifacts deterministically (file-exists / build / lint). Sessions are lanes; the disk carries the campaign.');
+  // v0.0.92 — THE CONTRACT WAS INVISIBLE. The plan asked for
+  // `file-contains:evidence/…::## Result`; the hop prompt only said "write
+  // the artifact", so seven AIME roots wrote excellent evidence without the
+  // marker and failed verify after doing the work. The prompt now carries the
+  // exact checks the spine will run.
+  const verifyChecks = hop.verify?.checks ?? [];
+  if (verifyChecks.length) {
+    lines.push('', '[HOP VERIFY — the spine runs these deterministically; your artifact must pass]');
+    for (const check of verifyChecks) lines.push(`- ${check}`);
+    if (verifyChecks.some((c) => c.startsWith('file-contains:'))) {
+      lines.push('Each file-contains check names exact text. If it names `## Result`, end the artifact with a section exactly `## Result` that states what changed, the evidence/gates, and any honest limit.');
+    }
+    lines.push('Write the artifact BEFORE further probing; exploration is not progress. A hop whose artifact passes these checks is done even if you still have ideas.');
+  }
   // v0.0.32 (Epic P) — THE BUILD: up to 3 skills, 3 MCPs and 5 parallel
   // demigods for this mini-task. The god orchestrates them by fit.
   const buildSkills = hop.skills ?? (hop.skill ? [hop.skill] : []);
@@ -1185,6 +1199,9 @@ export interface WalkOptions {
   retryParkedHop?: boolean;
   /** #117: the live narration bridge (optional — the battery fixtures omit it). */
   onEvent?: (ev: HopWalkEvent) => void;
+  /** v0.0.92 — the walk may share the machine with the user: do not pause new
+   *  hops on user activity (hibernation / night shift / detached daemon). */
+  unattended?: boolean;
 }
 
 interface WalkTask {
@@ -1284,13 +1301,18 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   // in-flight, `parked: null`, and no process — a silent stop). The prior
   // park survives until the parked hop is re-run and PASSES, or a new park
   // replaces it.
-  const priorPark = state?.parked && !completed.has(state.parked.hopId) ? state.parked : null;
+  // v0.0.92 — A PARK/QUARANTINE BELONGS TO ITS GENERATION. A new plan (or a
+  // replanned generation) must not inherit the old roots' quarantine: AIME
+  // gen 22 had all seven roots quarantined, so the DAG could never launch.
+  const stateGeneration = Number(state?.generation);
+  const sameGeneration = !state || !Number.isFinite(stateGeneration) || stateGeneration === Number(generation);
+  const priorPark = sameGeneration && state?.parked && !completed.has(state.parked.hopId) ? state.parked : null;
   let parkedHop: (HopPark & { verify?: HopVerifyResult }) | null = priorPark;
   // v0.0.85 — QUARANTINE SURVIVES A MACHINE RESUME. The AIME 06:51 specimen:
   // three hops parked on dispatch-failed (34–40 min each) and the overnight
   // auto-resume re-ran the same three from scratch because the set was always
   // rebuilt empty. The human's explicit resume still clears it.
-  const quarantined = new Set<string>(opts.keepQuarantine ? (state?.quarantined ?? []) : []);
+  const quarantined = new Set<string>(opts.keepQuarantine && sameGeneration ? (state?.quarantined ?? []) : []);
   // v0.0.84 edit — one bounded retry for the hop that parked last, not the
   // whole quarantine. The overnight auto-resume sets this; a boot/orphan
   // pickup keeps the quarantine intact; a human resume clears it entirely.
@@ -1312,6 +1334,29 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     } catch { /* no plan mtime — keep the quarantine */ }
   }
   const rows: HopTelemetryRow[] = [];
+
+  // v0.0.92 — VERIFY THE DISK BEFORE RE-RUNNING THE PLAN. The AIME roots had
+  // complete artifacts on disk but the state was empty; the walk re-ran them
+  // from scratch and parked. A hop whose file-only checks already pass is
+  // done, at zero tokens. Build/lint/test gates are left to the hop itself
+  // (they are expensive and may need the dev server).
+  const preflight: string[] = [];
+  for (const h of plan.hops) {
+    if (completed.has(h.id)) continue;
+    const checks = h.verify?.checks ?? [];
+    if (checks.length === 0) continue;
+    if (checks.some((c) => /^(build|lint|test|typecheck)$/.test(c))) continue;
+    try {
+      if (verifyHopDeterministic(h, laneRoot).ok) {
+        completed.add(h.id);
+        preflight.push(h.id);
+      }
+    } catch { /* a broken artifact is not a completion */ }
+  }
+  if (preflight.length) {
+    console.log(`[hop-runtime] preflight verified ${preflight.length} hop(s) from disk: ${preflight.join(', ')} — no tokens spent`);
+    opts.onEvent?.({ type: 'log', msg: `Preflight: ${preflight.length} hop(s) already satisfy their deterministic gates — marked done from disk.` } as any);
+  }
 
   // #RESTART-SPECIMEN (2026-10-16, 22:27): the walk died mid-hop-1 (the app
   // restart killed the dev server) with NO state on disk — the campaign was
@@ -1399,14 +1444,14 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       });
     } catch { /* Atlas never blocks the park */ }
     // ≥50% of attempts parked after at least 4 attempts = the lane/system is
-    // sick, not the hop. Stop named instead of burning the remaining hops.
+    // sick, not necessarily the whole plan. v0.0.92: quarantine this hop and
+    // keep every independent branch running; the walk ends only when no
+    // ready, non-quarantined hop exists.
     if (attempts >= 4 && parks / Math.max(1, attempts) >= 0.5) {
-      stopped = true;
-      parkedHop = { ...parkedHop, reason: 'systemic-failure' };
       emit({
-        type: 'hop_parked', hop: hop.id, god: hop.god, reason: 'systemic-failure',
-        error: `${parks}/${attempts} attempts parked — stopping the campaign instead of retrying every hop`,
-      });
+        type: 'log',
+        msg: `${parks}/${attempts} attempts parked — '${hop.id}' stays quarantined; independent hops continue.`,
+      } as any);
     }
   };
   const telemetryRow = (hop: PlanHop, r: HopDispatchResult | null, status: string, startedAt: number, extra?: { failedCheck?: string | null }): HopTelemetryRow => {
@@ -1499,9 +1544,12 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   // clipped to it.
   const hibPlan = readHibernationPlan();
   const hibLeft = hibPlan ? Date.parse(hibPlan.until) - Date.now() : 0;
+  // The window is a ceiling, never a floor: a plan with 10 minutes left gets
+  // 10 minutes, not a fresh 60. A hibernation marker without a valid plan
+  // stops cleanly instead of silently turning into an attended hour.
   const budgetMs = hibPlan && hibLeft > 0
-    ? Math.max(60 * 60_000, Math.min(24 * 3600_000, hibLeft))
-    : resolveCampaignBudgetMs();
+    ? Math.min(24 * 3600_000, hibLeft)
+    : (isHibernating() ? 0 : resolveCampaignBudgetMs());
   const deadlineAt = Date.now() + budgetMs;
   let budgetTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -1561,7 +1609,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         persistState();
         return;
       }
-      if (userIsActive()) {
+      if (!opts.unattended && !isHibernating() && userIsActive()) {
         if (!userPauseAnnounced) {
           userPauseAnnounced = true;
           emit({ type: 'log', msg: 'user is active — holding NEW hops so the human turn gets the lane' } as any);

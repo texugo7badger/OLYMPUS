@@ -29,6 +29,14 @@ export interface TunnelStatus {
   pid: number | null;
   startedAt: string | null;
   binary: string | null;
+  /** v0.0.92 — a previous start asked the supervisor to keep this door up. */
+  desired?: boolean;
+  /** v0.0.92 — the last supervised restart error, if any. */
+  error?: string;
+}
+
+function readState(): any {
+  try { return JSON.parse(fs.readFileSync(STATE, 'utf-8')); } catch { return null; }
 }
 
 function findBinary(): string | null {
@@ -51,13 +59,29 @@ function alive(pid: number): boolean {
 
 export function tunnelStatus(): TunnelStatus {
   const binary = findBinary();
+  const raw = readState();
+  if (raw?.pid && alive(Number(raw.pid)) && typeof raw.url === 'string') {
+    return { running: true, url: raw.url, pid: Number(raw.pid), startedAt: raw.startedAt ?? null, binary, desired: raw.desired === true };
+  }
+  return { running: false, url: null, pid: null, startedAt: null, binary, desired: raw?.desired === true };
+}
+
+/**
+ * v0.0.92 — the tunnel is a door, not a one-shot command. When the user asked
+ * for it (desired:true) and cloudflared died, the next status poll restarts
+ * it. Quick-tunnel URLs are ephemeral; the desktop pairing dialog always
+ * shows the current one, and a named tunnel is the fixed-origin upgrade.
+ */
+export async function ensureTunnel(timeoutMs = 30_000): Promise<TunnelStatus> {
+  const current = tunnelStatus();
+  if (current.running) return current;
+  if (current.desired !== true) return current;
   try {
-    const raw = JSON.parse(fs.readFileSync(STATE, 'utf-8'));
-    if (raw?.pid && alive(Number(raw.pid)) && typeof raw.url === 'string') {
-      return { running: true, url: raw.url, pid: Number(raw.pid), startedAt: raw.startedAt ?? null, binary };
-    }
-  } catch { /* no state or dead pid */ }
-  return { running: false, url: null, pid: null, startedAt: null, binary };
+    const next = await startTunnel(timeoutMs);
+    return { ...next, desired: true };
+  } catch (e: any) {
+    return { ...current, error: e?.message || String(e) };
+  }
 }
 
 export function stopTunnel(): TunnelStatus {
@@ -103,8 +127,8 @@ export async function startTunnel(timeoutMs = 30_000): Promise<TunnelStatus> {
       const url = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)?.[0] ?? null;
       if (url) {
         fs.mkdirSync(HOME, { recursive: true });
-        fs.writeFileSync(STATE, JSON.stringify({ url, pid: child.pid, startedAt }, null, 2) + '\n', { mode: 0o600 });
-        return { running: true, url, pid: child.pid ?? null, startedAt, binary };
+        fs.writeFileSync(STATE, JSON.stringify({ url, pid: child.pid, startedAt, desired: true }, null, 2) + '\n', { mode: 0o600 });
+        return { running: true, url, pid: child.pid ?? null, startedAt, binary, desired: true };
       }
       if (child.pid && !alive(child.pid)) break;
     }

@@ -326,7 +326,7 @@ export default function MobileStudio() {
         method: 'POST',
         headers,
         body: JSON.stringify({ action: 'prompt', text: prompt, conversationId: activeSlug ? `mobile-${activeSlug}` : 'mobile' }),
-      }, 180_000);
+      }, 30 * 60_000);
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
       const decoder = new TextDecoder();

@@ -279,8 +279,11 @@ function waitFor(child: ChildProcess, timeoutMs: number): Promise<{ code: number
   });
 }
 
-const RETRYABLE = new Set(['tool-budget', 'verify-failed', 'retry-exhausted', 'timeout', 'transport', 'script']);
-const STOP_CLASSES = new Set(['provider', 'lane-exhausted', 'auth', 'model-missing', 'agent-missing', 'campaign-budget', 'unknown']);
+const RETRYABLE = new Set(['tool-budget', 'verify-failed', 'retry-exhausted', 'timeout', 'transport', 'script', 'campaign-budget']);
+// v0.0.92 — a campaign window ending is a resume boundary, not a failure:
+// the hibernation/night contract opens the next window inside the authorized
+// `until`. Only a real credential/route/unknown failure stops the shift.
+const STOP_CLASSES = new Set(['provider', 'lane-exhausted', 'auth', 'model-missing', 'agent-missing', 'unknown']);
 
 async function supervise(opts: NightShiftOptions): Promise<number> {
   if (!opts.slug) { console.error('night-shift: --slug is required'); return 2; }

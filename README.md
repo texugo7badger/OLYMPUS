@@ -40,6 +40,26 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.92 — the walk owns itself, the marks stay.**
+The large preview window now keeps a **durable mark queue per project**: marks
+are written to disk, survive a reload/restart, can be copied as one block and
+sent to **Apollo** (or Athena) as ONE planning turn. A mark pin shows the exact
+point, and the phone gets 30 minutes for a turn instead of aborting at 3.
+The walker now carries the **exact deterministic contract** into the hop prompt
+(file-exists, file-contains and the `## Result` marker), **verifies artifacts on
+disk before re-running** a plan, scopes **quarantine and recovery budgets per
+campaign/generation**, and no longer lets a dead `auth` lane silently expire
+back into the chain. A sick lane quarantines the hop; independent branches keep
+walking. The status line distinguishes a live supervisor from a hop actually in
+flight, so `RUNNING + parked` cannot be shown together. Hibernation now rejects
+an expired plan, treats the window as a ceiling, bypasses user-activity pauses
+while unattended, and survives more than two supervisor resumes. Athena's design
+studio and in-chat choice card derive their accent, surfaces, radius and density
+from the project's `design-contract.json` instead of a fixed palette. OpenCode
+**2.3.0** passed the isolated gate (serve, v2 API, prompt/SSE, DB schema, tokens,
+abort) and the real `opencode.json` turn; `effect` is 4.1.0. Battery **178 PASS
+/ 0 FAIL / 1 declared skip of 179**.
+
 **v0.0.91 — the contract, the 60-second lane, the night shift and the startup update box.**
 A refactor now starts with a page map and a **design contract**: a P0 page or
 P0 unknown refuses the walk until the user decides. Athena's **design studio**
@@ -228,7 +248,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**177 PASS / 0 FAIL / 1 declared skip** across 178 suites; a 100-hop
+**178 PASS / 0 FAIL / 1 declared skip** across 179 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

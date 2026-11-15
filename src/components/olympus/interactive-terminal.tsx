@@ -1465,7 +1465,10 @@ export default function InteractiveTerminal() {
   useEffect(() => {
     if (submitting) return;
     const head = creativeQueue[0];
-    if (!head || head.priority !== 'high' || autoDrainedQueue.current.has(head.id)) return;
+    // The server drain owns phone items in every mode (awake or hibernating);
+    // the terminal must not race it. Terminal/creative items keep their
+    // renderer-side auto-drain.
+    if (!head || head.priority !== 'high' || head.source === 'phone' || autoDrainedQueue.current.has(head.id)) return;
     const timer = setTimeout(() => {
       autoDrainedQueue.current.add(head.id);
       void drainCreative(head);

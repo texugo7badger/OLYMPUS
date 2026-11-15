@@ -649,6 +649,7 @@ export async function maybeWalkThePlan(opts: {
       keepQuarantine: opts.keepQuarantine,
       retryParkedHop: opts.retryParkedHop,
       campaignId: lock.ok ? lock.holder.campaignId : undefined,
+      unattended: Boolean(opts.unattended || isHibernating()),
       onEvent: (ev) => bridgeEvent(ev, opts.laneRoot, opts.send, opts.publishActivity),
     });
   } catch (e) {
@@ -785,7 +786,10 @@ export async function maybeWalkThePlan(opts: {
   // live.jsonl row per wave records the night durably.
   if (opts.unattended || isHibernating()) {
     const attempt = opts.overnightAttempt ?? 0;
-    const plan = isHibernating() ? readHibernationPlan() : null;
+    // v0.0.92 — the detached walk is unattended even when the hibernation
+    // marker is not set (night shift, boot supervisor). The plan is the
+    // window in both cases; `readHibernationPlan` already rejects expiry.
+    const plan = (opts.unattended || isHibernating()) ? readHibernationPlan() : null;
     // v0.0.59 — the night contract is bounded by the WINDOW, not a flat 12.
     // "Keep working alone until 08:00" must survive more than 12 parks; each
     // resume is ~2 minutes of backoff + walk, so the cap derives from the

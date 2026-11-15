@@ -2,6 +2,64 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.92] — 2026-11-15
+
+### The walk owns itself
+
+- **The hop prompt now carries the exact verify contract.** A plan asked for
+  `file-contains:evidence/…::## Result`; the prompt only said "write the
+  artifact". Seven AIME roots wrote complete evidence without the marker and
+  failed after doing the work. The prompt now prints every deterministic check
+  and the `## Result` law.
+- **Verify the disk before re-running.** File-only gates are checked at walk
+  start; an artifact that already passes is marked done at zero tokens. The
+  AIME generation 22 preflight unlocked its seven roots from disk.
+- **Quarantine and recovery are scoped per campaign/generation.** The old
+  ledger counted six retries from 7–8 November and stopped every later campaign
+  at 6/6; the warden's start count was 69 against a lifetime limit of 6. Legacy
+  rows no longer block a new campaign, and a new generation does not inherit the
+  old roots' quarantine.
+- **A sick lane no longer stops the whole campaign.** The 4-parks/50% breaker
+  now quarantines the failing hop and lets independent branches continue; the
+  walk ends only when no ready, non-quarantined hop exists.
+- **Auth/no-route lanes do not expire on their own.** `qwen3.7-plus` was
+  re-admitted every 30 minutes although the GO credential still rejected it.
+  Only an explicit probe or `markLaneAlive` clears the mark.
+- **Status truth.** The campaign context and `run-state` now say `PARKED` when a
+  park exists without a live in-flight hop, even if the supervisor holds the
+  lock. `RUNNING + parked` is no longer possible.
+
+### Marks that survive
+
+- One JSON queue per project under `~/.olympus/marks`, written atomically.
+- The large preview window loads/saves through `/api/olympus/marks`, keeps the
+  queue across reloads and app restarts, shows the pin, and offers **copy all**.
+- `/api/olympus/marks/send` sends the whole batch to **Apollo** (default) or
+  Athena as one consolidated planning turn; the reply is written back to the
+  god's durable inbox.
+- `M` toggles mark mode; `Esc` cancels; the draft bar keeps the page editable.
+
+### Hibernation, phone and OpenCode
+
+- An expired `hibernation-plan.json` is no longer a plan; the window is a
+  ceiling (10 minutes left means 10 minutes, not a fresh 60). Hibernating
+  without a window authorizes a default 8h; unattended walks ignore user
+  activity; the supervisor gets 8 resumes; `campaign-budget` is retryable in
+  the night shift.
+- The phone action gets 30 minutes, the server drain owns phone items awake or
+  hibernating, and stale `sending` claims are requeued instead of stranded. The
+  tunnel is supervised when the user asked for it.
+- OpenCode 2.3.0 passed the isolated gate and a real Apollo turn; `effect` is
+  4.1.0.
+
+### Athena design follows the project
+
+- The design studio and the in-chat choice card derive accent, surface,
+  elevated, border, radius and density from `design-contract.json`; the
+  fallback is the neutral OLYMPUS surface, never a fixed purple.
+
+**Battery: 178 PASS / 0 FAIL / 1 declared skip of 179.**
+
 ## [v0.0.91] — 2026-11-09
 
 ### The startup update box

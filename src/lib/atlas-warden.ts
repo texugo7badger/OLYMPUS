@@ -30,7 +30,7 @@ import { loadHopState } from './hop-runtime/hop-state';
 import { readFrozenPlan, readPlanFile, planPath } from './hop-runtime/plan-generation';
 import { buildCampaignHealth, type CampaignHealth } from './campaign-health';
 import { patrolLane } from './atlas-patrol';
-import { decideRecovery, applyRecovery, readRecoveries } from './hop-runtime/recovery';
+import { decideRecovery, applyRecovery, readRecoveries, campaignKey } from './hop-runtime/recovery';
 import { startDetachedWalk, readSupervisor } from './hop-runtime/supervisor';
 import { appendActivity } from './activity-feed';
 
@@ -156,24 +156,33 @@ export function writeOptIn(slug: string, on = true): void {
   writeJson(optInPath(), all);
 }
 
-interface StartRecord { last: number; count: number }
+interface StartRecord { last: number; count: number; campaignId?: string }
 function readStarts(): Record<string, StartRecord> {
   const raw = readJson<Record<string, StartRecord | number>>(startsPath(), {});
   const out: Record<string, StartRecord> = {};
   for (const [slug, v] of Object.entries(raw)) {
-    out[slug] = typeof v === 'number' ? { last: v, count: 1 } : { last: Number(v?.last ?? 0), count: Number(v?.count ?? 0) };
+    out[slug] = typeof v === 'number'
+      ? { last: v, count: 1 }
+      : { last: Number(v?.last ?? 0), count: Number(v?.count ?? 0), campaignId: typeof v?.campaignId === 'string' ? v.campaignId : undefined };
   }
   return out;
 }
 
-function noteStart(slug: string, now: number): void {
+function noteStart(slug: string, now: number, campaignId = ''): void {
   const all = readStarts();
-  all[slug] = { last: now, count: (all[slug]?.count ?? 0) + 1 };
+  const prev = all[slug];
+  // v0.0.92 — a new campaign gets a fresh start budget; a machine restart
+  // inside the same campaign keeps counting.
+  const count = prev && (!campaignId || prev.campaignId === campaignId) ? prev.count + 1 : 1;
+  all[slug] = { last: now, count, campaignId };
   writeJson(startsPath(), all);
 }
 
-function startCount(slug: string): number {
-  return readStarts()[slug]?.count ?? 0;
+function startCount(slug: string, campaignId = ''): number {
+  const rec = readStarts()[slug];
+  if (!rec) return 0;
+  if (campaignId && rec.campaignId && rec.campaignId !== campaignId) return 0;
+  return rec.count;
 }
 
 /**
@@ -300,6 +309,7 @@ export function wardenTick(opts: WardenTickOptions = {}): WardenState {
 
     // Opted in: recover + resume, bounded. A provider/auth/unknown park stops
     // and asks; it never burns the night on the same lane.
+    const campaignId = campaignKey(laneRoot);
     const last = readStarts()[slug]?.last ?? 0;
     if (now - last < MIN_START_GAP_MS) {
       lanes.push({
@@ -309,8 +319,8 @@ export function wardenTick(opts: WardenTickOptions = {}): WardenState {
       });
       continue;
     }
-    if (readRecoveries(laneRoot).filter((r) => r?.action === 'retry').length >= MAX_WARDEN_STARTS
-      || startCount(slug) >= MAX_WARDEN_STARTS) {
+    if (readRecoveries(laneRoot).filter((r) => r?.action === 'retry' && r?.campaignId === campaignId).length >= MAX_WARDEN_STARTS
+      || startCount(slug, campaignId) >= MAX_WARDEN_STARTS) {
       const decision: WardenDecision = {
         id: `${slug}:${parked?.hopId ?? 'budget'}:recovery-budget`,
         slug, laneRoot, kind: 'needs-user', hopId: parked?.hopId ?? null,
@@ -353,7 +363,7 @@ export function wardenTick(opts: WardenTickOptions = {}): WardenState {
     if (persist) pinAtlasHy3(laneRoot);
     const started = start({ slug, laneRoot, autoResume: true, keepQuarantine: true, retryParkedHop: true });
     if (persist) {
-      noteStart(slug, now);
+      noteStart(slug, now, campaignId);
       lastAction = {
         at: new Date(now).toISOString(), slug,
         action: started.ok ? 'resume' : 'resume-refused',
@@ -409,7 +419,7 @@ export function resolveDecision(
   clearDecision(slug);
   const start = opts.start ?? startDetachedWalk;
   const started = start({ slug, laneRoot, autoResume: true, keepQuarantine: true, retryParkedHop: true });
-  if (started.ok) noteStart(slug, Date.now());
+  if (started.ok) noteStart(slug, Date.now(), campaignKey(laneRoot));
   try {
     appendActivity({
       god: 'atlas', action: 'milestone', project: slug,

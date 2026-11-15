@@ -8,6 +8,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Palette, Check, Loader2, X, Send, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDocVisible } from '@/lib/use-doc-visible';
+import { useProjectDesignSkin } from '@/lib/use-project-design-skin';
+import { skinVars } from '@/lib/design-skin';
 
 /**
  * DesignChoiceCard — Athena's IN-CHAT design choice (v0.0.24).
@@ -52,25 +54,18 @@ interface Props {
   conversationId?: string;
 }
 
-const KIND_COLORS: Record<string, string> = {
-  logo: 'text-olympus-purple ring-olympus-purple/30',
-  palette: 'text-olympus-cyan ring-olympus-cyan/30',
-  layout: 'text-olympus-gold ring-olympus-gold/30',
-  reference: 'text-olympus-green ring-olympus-green/30',
-  component: 'text-olympus-amber-soft ring-olympus-amber-soft/30',
-};
-
-function svgDataUrl(svg: string): string {
+function svgDataUrl(svg: string, color: string): string {
   // `<img>` renders SVG in a sandboxed image context — no scripts execute.
   // `currentColor` does not inherit inside an <img>; resolve it to the
-  // Olympus cream so a monochrome mark is visible on the dark card.
-  const resolved = svg.replace(/currentColor/gi, '#E8E3D9');
+  // project's text color so a monochrome mark belongs to this interface.
+  const resolved = svg.replace(/currentColor/gi, color);
   return `data:image/svg+xml;utf8,${encodeURIComponent(resolved)}`;
 }
 
 export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
   const docVisible = useDocVisible();
   const [choice, setChoice] = useState<PendingChoice | null>(null);
+  const skin = useProjectDesignSkin(choice?.project || '');
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -136,25 +131,35 @@ export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
   if (!choice) return null;
 
   return (
-    <div className="my-2 rounded-lg border border-olympus-purple/30 bg-olympus-purple/5 overflow-hidden">
+    <div
+      className="my-2 border overflow-hidden"
+      style={{
+        ...skinVars(skin),
+        borderColor: skin.border,
+        background: skin.surface,
+        borderRadius: skin.radius,
+        fontFamily: skin.font ? `var(--athena-font), inherit` : undefined,
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-olympus-purple/20 bg-olympus-purple/10">
-        <Palette size={13} className="text-olympus-purple shrink-0" />
-        <span className="text-[11px] font-mono font-semibold text-olympus-purple">
+      <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: skin.border, background: skin.accentSoft }}>
+        <Palette size={13} className="shrink-0" style={{ color: skin.accent }} />
+        <span className="text-[11px] font-mono font-semibold" style={{ color: skin.accent }}>
           {choice.god.charAt(0).toUpperCase() + choice.god.slice(1)} · choose a direction
         </span>
         <span className="text-[9px] font-mono text-olympus-text-dim ml-1">{choice.options.length} options</span>
         <button
           onClick={dismiss}
-          className="ml-auto w-5 h-5 rounded hover:bg-olympus-purple/20 flex items-center justify-center text-olympus-text-dim hover:text-olympus-purple transition-colors"
+          className="ml-auto w-5 h-5 rounded flex items-center justify-center text-olympus-text-dim transition-colors"
           aria-label="Dismiss"
+          style={{ background: 'transparent' }}
         >
           <X size={11} />
         </button>
       </div>
 
       {choice.taskContext && (
-        <div className="px-3 py-1.5 text-[10px] font-mono text-olympus-text-dim border-b border-olympus-purple/10 bg-olympus-bg/30">
+        <div className="px-3 py-1.5 text-[10px] font-mono text-olympus-text-dim border-b" style={{ borderColor: skin.border, background: skin.elevated }}>
           &ldquo;{choice.taskContext}&rdquo;
         </div>
       )}
@@ -163,7 +168,6 @@ export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
       <div className="p-2.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
         {choice.options.map((o) => {
           const isSelected = selected === o.id;
-          const kindClass = KIND_COLORS[o.kind ?? ''] ?? 'text-olympus-gold ring-olympus-gold/30';
           return (
             <button
               key={o.id}
@@ -171,19 +175,23 @@ export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
               disabled={busy}
               className={cn(
                 'text-left p-2 rounded-md border transition-all flex flex-col gap-1.5',
-                isSelected
-                  ? 'border-olympus-purple bg-olympus-purple/15 ring-1 ring-olympus-purple/40'
-                  : 'border-olympus-gold/15 bg-olympus-card/60 hover:border-olympus-purple/40 hover:bg-olympus-purple/10',
+                isSelected ? 'ring-1' : 'hover:brightness-110',
               )}
+              style={{
+                borderColor: isSelected ? skin.accent : skin.border,
+                background: isSelected ? skin.accentSoft : skin.elevated,
+                borderRadius: Math.min(12, skin.radius),
+                boxShadow: isSelected ? `inset 0 0 0 1px ${skin.border}` : undefined,
+              }}
             >
               <div className="flex items-center gap-1.5 min-w-0">
-                {isSelected ? <Check size={11} className="text-olympus-purple shrink-0" /> : <Palette size={11} className="text-olympus-gold shrink-0" />}
+                {isSelected ? <Check size={11} className="shrink-0" style={{ color: skin.accent }} /> : <Palette size={11} className="shrink-0" style={{ color: skin.accent }} />}
                 <span className="text-[11px] font-mono font-semibold text-olympus-text truncate">{o.label}</span>
                 {o.recommended && (
-                  <span className="text-[7px] font-mono px-1 py-0.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 shrink-0 ml-auto">★ recommended</span>
+                  <span className="text-[7px] font-mono px-1 py-0.5 rounded shrink-0 ml-auto" style={{ background: skin.accentSoft, color: skin.accent, boxShadow: `inset 0 0 0 1px ${skin.border}` }}>★ recommended</span>
                 )}
                 {o.kind && (
-                  <span className={cn('text-[8px] font-mono px-1 py-0.5 rounded ring-1 shrink-0', o.recommended ? '' : 'ml-auto', kindClass)}>
+                  <span className={cn('text-[8px] font-mono px-1 py-0.5 rounded shrink-0', o.recommended ? '' : 'ml-auto')} style={{ color: skin.accent, boxShadow: `inset 0 0 0 1px ${skin.border}` }}>
                     {o.kind}
                   </span>
                 )}
@@ -192,7 +200,7 @@ export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
               {/* Preview */}
               {o.svg ? (
                 <div className="rounded bg-olympus-bg/60 ring-1 ring-white/10 flex items-center justify-center py-2">
-                  <img src={svgDataUrl(o.svg)} alt={`${o.label} preview`} className="w-16 h-16 object-contain" />
+                  <img src={svgDataUrl(o.svg, skin.text)} alt={`${o.label} preview`} className="w-16 h-16 object-contain" />
                 </div>
               ) : o.imageUrl ? (
                 <div className="rounded bg-olympus-bg/60 ring-1 ring-white/10 overflow-hidden">
@@ -226,7 +234,8 @@ export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
             if (o) void post('select', o);
           }}
           disabled={!selected || busy}
-          className="flex items-center gap-1 rounded border border-olympus-purple/40 bg-olympus-purple/15 px-2.5 py-1 text-[10px] font-mono text-olympus-purple hover:bg-olympus-purple/25 disabled:opacity-40"
+          className="flex items-center gap-1 rounded border px-2.5 py-1 text-[10px] font-mono hover:brightness-110 disabled:opacity-40"
+          style={{ borderColor: skin.border, background: skin.accentSoft, color: skin.accent }}
         >
           {busy && selected ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
           Use this
@@ -234,7 +243,8 @@ export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
         {choice.allowRefine && (
           <button
             onClick={() => setRefineOpen((v) => !v)}
-            className="flex items-center gap-1 rounded border border-olympus-gold/25 bg-olympus-gold/5 px-2.5 py-1 text-[10px] font-mono text-olympus-gold hover:bg-olympus-gold/15"
+            className="flex items-center gap-1 rounded border px-2.5 py-1 text-[10px] font-mono hover:brightness-110"
+            style={{ borderColor: skin.border, background: 'transparent', color: skin.text }}
           >
             <Sparkles size={10} />
             Ask Athena to change it
@@ -247,14 +257,15 @@ export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
 
       {/* Refine box */}
       {refineOpen && (
-        <div className="border-t border-olympus-purple/15 bg-olympus-bg/30 px-2.5 py-2 space-y-1.5">
+        <div className="border-t px-2.5 py-2 space-y-1.5" style={{ borderColor: skin.border, background: skin.elevated }}>
           {choice.suggestions.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {choice.suggestions.map((s) => (
                 <button
                   key={s}
                   onClick={() => setInstruction(s)}
-                  className="text-[8.5px] font-mono px-1.5 py-0.5 rounded ring-1 ring-olympus-gold/20 text-olympus-text-dim hover:text-olympus-gold hover:ring-olympus-gold/40"
+                  className="text-[8.5px] font-mono px-1.5 py-0.5 rounded hover:brightness-110"
+                  style={{ color: skin.text, boxShadow: `inset 0 0 0 1px ${skin.border}` }}
                 >
                   {s}
                 </button>
@@ -267,12 +278,14 @@ export default function DesignChoiceCard({ onAnswer, conversationId }: Props) {
               onChange={(e) => setInstruction(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void post('refine'); }}
               placeholder="what should change? (e.g. warmer, simpler mark, more spacing)"
-              className="flex-1 bg-olympus-card/50 border border-olympus-gold/15 rounded px-2 py-1 text-[10px] font-mono text-olympus-text outline-none focus:border-olympus-gold/40"
+              className="flex-1 rounded px-2 py-1 text-[10px] font-mono text-olympus-text outline-none"
+              style={{ background: skin.surface, border: `1px solid ${skin.border}`, borderRadius: Math.min(10, skin.radius) }}
             />
             <button
               onClick={() => void post('refine')}
               disabled={!instruction.trim() || busy}
-              className="flex items-center gap-1 rounded border border-olympus-gold/30 bg-olympus-gold/10 px-2 py-1 text-[9.5px] font-mono text-olympus-gold hover:bg-olympus-gold/20 disabled:opacity-40"
+              className="flex items-center gap-1 rounded border px-2 py-1 text-[9.5px] font-mono hover:brightness-110 disabled:opacity-40"
+              style={{ borderColor: skin.border, background: skin.accentSoft, color: skin.accent }}
             >
               {busy ? <Loader2 size={9} className="animate-spin" /> : <Send size={9} />}
               Send

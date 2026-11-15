@@ -51,7 +51,16 @@ export function campaignContextBlock(slugOverride?: string | null): string {
   const next = readNextPlan(lane);
   const patrol = (() => { try { return patrolLane(lane); } catch { return null; } })();
   const finding = patrol?.parked[0] ?? patrol?.stuck[0] ?? null;
-  const stateKind = lock.holder && lock.alive ? 'RUNNING' : state?.parked ? 'PARKED' : 'IDLE';
+  // v0.0.92 — the lock proves the supervisor is alive, not that a hop is in
+  // flight. Parking wins unless an in-flight row is actually running.
+  const inFlightCount = Array.isArray(state?.inFlight) ? state.inFlight.length : 0;
+  const stateKind = lock.holder && lock.alive && inFlightCount > 0
+    ? 'RUNNING'
+    : state?.parked
+      ? 'PARKED'
+      : lock.holder && lock.alive
+        ? 'RUNNING (waiting for a hop)'
+        : 'IDLE';
   const lines = [
     '## CAMPAIGN CONTEXT — authoritative for this turn',
     `Project: ${slug} · generation ${generation} · plan ${plan.hops.length} hops · ${completed.length}/${plan.hops.length} completed in THIS generation · ${state?.completed?.length ?? 0} lifetime ids.`,

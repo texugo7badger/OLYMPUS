@@ -138,7 +138,10 @@ export async function GET(req: NextRequest) {
 
   const campaign = held?.holder
     ? {
-      state: 'running' as const,
+      // v0.0.92 — a live supervisor holding the lock is not proof that a hop
+      // is in flight. A parked state with no in-flight row is PARKED; the
+      // Parthenon must never render RUNNING + parked at the same time.
+      state: ((hopState?.inFlight?.length ?? 0) > 0 || !hopState?.parked ? 'running' : 'parked') as 'running' | 'parked',
       pid: held.holder.pid,
       campaignId: held.holder.campaignId,
       slug: held.holder.slug,

@@ -57,7 +57,10 @@ export interface SupervisorView {
   ageMs: number;
 }
 
-const MAX_RESUME_ATTEMPTS = 2;
+// v0.0.92 — a long autonomous window survives more than two crashes. The
+// recovery ledger is scoped per campaign, so this is the crash budget, not a
+// lifetime park budget; the plan's `until` is the real wall.
+const MAX_RESUME_ATTEMPTS = 8;
 
 function homeDir(): string {
   return process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');

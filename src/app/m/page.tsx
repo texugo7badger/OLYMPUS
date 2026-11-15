@@ -426,7 +426,7 @@ export default function MobileCompanion() {
             method: 'POST',
             headers,
             body: JSON.stringify({ action: 'prompt', text: prompt, conversationId: active ? `mobile-${active}` : 'mobile' }),
-          }, 180_000);
+          }, 30 * 60_000);
           if (res.ok && res.body) break;
           if (attempt === 0 && (res.status >= 500 || res.status === 0)) {
             await new Promise((r) => setTimeout(r, 1500));

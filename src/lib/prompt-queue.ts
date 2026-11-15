@@ -30,6 +30,8 @@ export interface PromptQueueItem {
   createdAt: string;
   status: 'queued' | 'sending' | 'sent';
   sentAt?: string;
+  /** v0.0.92 — when the drain claimed the item; stale claims are reconciled. */
+  claimedAt?: string;
   /** v0.0.81 — where the prompt was composed. Markview is a first-class lane. */
   source?: 'terminal' | 'creative' | 'phone' | 'markview';
   /** The god whose creative session produced it (creative items only). */
@@ -114,7 +116,8 @@ export function markQueueItem(id: string, status: 'queued' | 'sending' | 'sent',
   all[idx] = {
     ...all[idx],
     status,
-    ...(status === 'sent' ? { sentAt: new Date(now).toISOString() } : {}),
+    ...(status === 'sending' ? { claimedAt: new Date(now).toISOString() } : {}),
+    ...(status === 'sent' ? { sentAt: new Date(now).toISOString(), claimedAt: undefined } : {}),
   };
   write(all);
   return all[idx];

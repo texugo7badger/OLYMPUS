@@ -1,9 +1,15 @@
 # OLYMPUS Roadmap
 
-**v0.0.91 is the current release** (2026-11-09) — the contract, the 60-second
-lane, the night shift and the startup update box: a page map + design contract refuses a plan with a
-pending P0 decision; the Athena design studio (style/builds/contract/review)
-lives in her chat and the approval binds the contract + review at score ≥7; a
+**v0.0.92 is the current release** (2026-11-15) — the walk owns itself and the
+marks stay: durable per-project mark queues with copy/send to Apollo; the hop
+prompt carries the exact deterministic contract and `## Result`; artifacts are
+verified on disk before a plan re-runs; quarantine and recovery budgets are
+scoped per campaign/generation; auth lanes do not silently expire; independent
+branches keep walking; hibernation rejects an expired plan and pauses no
+unattended walk for user activity; OpenCode 2.3.0 passed the isolated gate and a
+real Apollo turn; Athena's design skin follows the project contract. The
+previous release, v0.0.91, delivered the page map + design contract, the Athena
+design studio, Quick Edit, the ETA band and the startup update box; a
 ≤3-file/≤200-line mark becomes a Quick Edit with typecheck/lint and undo; the
 ETA is a p50/p90 band with park rate and the Parthenon carries the design score
 and list value; per-hop MCP activation gives design hops Nakkas + Playwright;

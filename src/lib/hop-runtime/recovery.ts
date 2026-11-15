@@ -42,6 +42,22 @@ export function recoveryLogPath(laneRoot: string): string {
   return path.join(laneRoot, '.olympus-recovery.jsonl');
 }
 
+/**
+ * v0.0.92 — THE BUDGET IS PER CAMPAIGN, NOT PER LANE FOREVER.
+ *
+ * The ledger had six retries from 7–8 November; every later campaign read
+ * "6/6" and stopped on its first park. The campaign id is the scope. Legacy
+ * rows without an id belong to the past and no longer block a new campaign.
+ */
+export function campaignKey(laneRoot: string): string {
+  try {
+    const state = JSON.parse(fs.readFileSync(path.join(laneRoot, '.olympus-hop-state.json'), 'utf-8'));
+    return String(state?.campaignId || (state?.generation ? `gen-${state.generation}` : 'unknown'));
+  } catch {
+    return 'unknown';
+  }
+}
+
 export function readRecoveries(laneRoot: string): any[] {
   try {
     return fs.readFileSync(recoveryLogPath(laneRoot), 'utf-8').trim().split('\n')
@@ -49,16 +65,19 @@ export function readRecoveries(laneRoot: string): any[] {
   } catch { return []; }
 }
 
-export function recoveryAttempts(laneRoot: string, hopId: string): number {
+export function recoveryAttempts(laneRoot: string, hopId: string, campaignId = campaignKey(laneRoot)): number {
   const fromOverrides = Number(readHopOverrides(laneRoot)[hopId]?.attempts ?? 0);
-  const fromLog = readRecoveries(laneRoot).filter((r) => r?.hopId === hopId && r?.action === 'retry').length;
+  const fromLog = readRecoveries(laneRoot)
+    .filter((r) => r?.hopId === hopId && r?.action === 'retry' && r?.campaignId === campaignId).length;
   return Math.max(fromOverrides, fromLog);
 }
 
 /** Turn one deterministic finding into the next bounded action. */
 export function decideRecovery(laneRoot: string, finding: PatrolFinding): RecoveryDecision {
-  const attempts = recoveryAttempts(laneRoot, finding.hopId);
-  const campaignAttempts = readRecoveries(laneRoot).filter((r) => r?.action === 'retry').length;
+  const campaignId = campaignKey(laneRoot);
+  const attempts = recoveryAttempts(laneRoot, finding.hopId, campaignId);
+  const campaignAttempts = readRecoveries(laneRoot)
+    .filter((r) => r?.action === 'retry' && r?.campaignId === campaignId).length;
   const base = (msg: string): string => `${finding.hopId}: ${msg}`;
   if (attempts >= MAX_PER_HOP) {
     return { action: 'stop', kind: 'ask-unknown', delayMs: 0, message: base(`already recovered ${attempts}× — needs the user. ${finding.recommendation}`) };
@@ -139,6 +158,7 @@ export function applyRecovery(laneRoot: string, finding: PatrolFinding, decision
   try {
     fs.appendFileSync(recoveryLogPath(laneRoot), JSON.stringify({
       ts: new Date().toISOString(),
+      campaignId: campaignKey(laneRoot),
       hopId: finding.hopId,
       god: finding.god,
       failureClass: finding.failureClass,

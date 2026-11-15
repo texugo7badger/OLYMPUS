@@ -221,13 +221,12 @@ export function isLaneAvailable(
   const e = entries[lane];
   if (!e) return true;
   if (e.status === 'alive') return true; // even if old: an old success is not a failure
+  // v0.0.92 — AUTH/NO-ROUTE DO NOT EXPIRE ON THEIR OWN. The old 30-minute
+  // TTL re-admitted qwen3.7-plus on every fresh campaign even though the GO
+  // credential still rejected it; the walk paid the 401 again and again.
+  // Only an explicit probe (markLaneAlive) or a config change clears them.
+  if (e.status === 'no-route' || e.status === 'auth') return false;
   if (e.retryUntil && e.retryUntil > now) return false;
-  // A route/auth death has no natural expiry — it needs a config change.
-  // Failing over forever on it would hide a typo; allow a retry after the
-  // default dead TTL so a fixed id recovers without a restart.
-  if (e.status === 'no-route' || e.status === 'auth') {
-    return now - e.at > DEFAULT_DEAD_TTL_MS;
-  }
   return true;
 }
 

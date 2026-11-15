@@ -75,8 +75,11 @@ expect('Q-9: the creative item stays queued', queue.listQueue('aime').find((item
 hibernate(false);
 const awakeItem = queue.enqueuePrompt('aime', 'O hop z está parked. Investigue.', Date.now() + 2, { source: 'phone', priority: 'high' });
 const awake = await drain.drainPhoneQueueOnce({ baseUrl: 'http://test', token: 'tok', fetchImpl: fakeFetch });
-expect('Q-10: while awake the terminal renderer owns the queue', awake.skipped === 'not-hibernating' && calls.length === before, awake);
-expect('Q-11: the awake item stays queued for the renderer', queue.listQueue('aime').find((item) => item.id === awakeItem.id)?.status === 'queued', awakeItem);
+// v0.0.92 — the server owns phone items in every mode. The old contract
+// left them to the terminal renderer, which could be unmounted (the
+// 2026-11-13 `pq-mwflho44-lqli` item stayed `sending` for a day).
+expect('Q-10: the server drains phone items while awake too', awake.dispatched === 1 && calls.length === before + 1, awake);
+expect('Q-11: the awake phone item is sent by the server', queue.listQueue('aime').find((item) => item.id === awakeItem.id)?.status === 'sent', awakeItem);
 
 hibernate(true);
 const failItem = queue.enqueuePrompt('aime', 'O hop y está parked. Investigue agora.', Date.now() + 3, { source: 'phone', priority: 'high' });

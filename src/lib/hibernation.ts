@@ -42,10 +42,16 @@ export function readHibernationPlan(home?: string): HibernationPlan | null {
   try {
     const plan = JSON.parse(fs.readFileSync(hibernationPlanPath(home), 'utf-8'));
     if (!plan || plan.active !== true || !plan.until) return null;
+    // v0.0.92 — AN EXPIRED PLAN IS NOT A PLAN. The AIME file said
+    // `active:true, until: 2026-11-13T05:02` two days later; the walker read
+    // it, granted a 60-minute fallback, and the warden resumed outside the
+    // window. Expiry is now the first truth.
+    const until = Date.parse(String(plan.until));
+    if (!Number.isFinite(until) || until <= Date.now()) return null;
     return {
       active: true,
       hours: Math.max(0, Number(plan.hours) || 0),
-      until: String(plan.until),
+      until: new Date(until).toISOString(),
       autoResume: plan.autoResume !== false,
       createdAt: String(plan.createdAt || ''),
     };

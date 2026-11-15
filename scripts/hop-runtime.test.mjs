@@ -498,12 +498,15 @@ async function main() {
     };
     const sysState = tempLane();
     const sys = await walkPlan({ plan: sysPlan, dispatcher: sysDisp, stateDir: sysState });
-    expect('CB: ≥50% parks after 4 attempts stops named (systemic-failure)',
-      sys.parked?.reason === 'systemic-failure',
-      JSON.stringify(sys.parked));
-    expect('CB: the systemic stop does not burn the remaining hops',
-      !attempted.includes('e') && !attempted.includes('f'),
+    // v0.0.92 — a sick lane no longer stops the whole campaign: every
+    // independent hop is attempted and quarantined, and the last park is
+    // named honestly instead of being rewritten as `systemic-failure`.
+    expect('CB: a systemic park rate quarantines each hop and keeps trying independent hops',
+      attempted.length === 6,
       JSON.stringify(attempted));
+    expect('CB: the final park keeps its cause (no systemic-failure rewrite)',
+      Boolean(sys.parked) && sys.parked.reason !== 'systemic-failure',
+      JSON.stringify(sys.parked));
   }
 
   // ── 4. Telemetry rows ────────────────────────────────────────────────────

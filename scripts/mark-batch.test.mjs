@@ -69,11 +69,15 @@ ok('the preview window persists the batch per project', () => {
   assert.match(preview, /localStorage\.getItem/);
 });
 
-ok('the preview window sends the batch to Athena in one request', () => {
+ok('the preview window sends the durable batch to Apollo or Athena', () => {
   assert.match(preview, /sendMarks/);
-  assert.match(preview, /marks: marks\.map/);
-  assert.match(preview, /batch: true/);
-  assert.match(preview, /\/api\/olympus\/athena\/edit/);
+  assert.match(preview, /\/api\/olympus\/marks\/send/);
+  assert.match(preview, /target/);
+  assert.match(preview, /copyMarks/);
+  assert.match(preview, /\/api\/olympus\/marks\?slug=/);
+  // The panel must be reachable before the first mark (the empty state is the
+  // onboarding for the feature).
+  assert.doesNotMatch(preview, /disabled=\{marks\.length === 0 && !plan\}/);
 });
 
 ok('the preview overlay clears even when the iframe beats hydration', () => {
