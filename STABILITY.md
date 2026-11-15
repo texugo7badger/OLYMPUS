@@ -2,7 +2,7 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.93 · development build (not released). The harness is shipped and measured; the 8-hour / 100-hop
+> v0.0.93 · the current release. The harness is shipped and measured; the 8-hour / 100-hop
 > certification is **not** claimed yet. The v0.0.92 hibernation path is a
 > bounded, detached walk with an explicit window, not the note-8 claim. This
 > page records what was actually

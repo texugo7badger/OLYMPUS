@@ -1,9 +1,9 @@
 # OLYMPUS Roadmap
 
-**v0.0.93 is the current development build** (2026-11-15) — performance:
+**v0.0.93 is the current release** (2026-11-15) — performance:
 the live preview gets its own renderer and the shell boots progressively. It
-is NOT tagged or released; v0.0.92 remains the stable release. The previous
-release, v0.0.92, delivered the walk that owns itself and the marks that stay: durable per-project mark queues with copy/send to Apollo; the hop
+is published; v0.0.92 remains the previous release. The previous release,
+v0.0.92, delivered the walk that owns itself and the marks that stay: durable per-project mark queues with copy/send to Apollo; the hop
 prompt carries the exact deterministic contract and `## Result`; artifacts are
 verified on disk before a plan re-runs; quarantine and recovery budgets are
 scoped per campaign/generation; auth lanes do not silently expire; independent

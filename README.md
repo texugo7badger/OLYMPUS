@@ -42,15 +42,14 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.93 — performance, not a release.**
+**v0.0.93 — performance.**
 The live preview now runs in its **own renderer**: the iframe is served from
 the `127.0.0.2` loopback alias and Electron isolates it with site-per-process,
 so a heavy project can no longer drag the OLYMPUS shell down. Measured on AIME:
 parent **54 → 60 FPS**, iframe **52 → 60 FPS**, with the GPU active (the old
 `gpu-fallback` marker was forcing software rendering). The shell also boots
 progressively: it waits for three core endpoints, not nine, and every heavy pane
-loads behind its own branded loader. This is a development build; no v0.0.93
-tag or release is published.
+loads behind its own branded loader. Published as v0.0.93; v0.0.92 remains the previous stable release.
 
 **v0.0.92 — the walk owns itself, the marks stay.**
 The large preview window now keeps a **durable mark queue per project**: marks

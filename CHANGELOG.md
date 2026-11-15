@@ -2,7 +2,7 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
-## [v0.0.93] — 2026-11-15 (development)
+## [v0.0.93] — 2026-11-15
 
 ### Performance: the preview gets its own renderer
 
@@ -20,7 +20,7 @@ All notable changes to OLYMPUS are documented in this file.
 - The design studio and choice card still follow the project contract; the
   walk, marks, hibernation and phone behavior are unchanged.
 
-**Development build; v0.0.93 is not tagged or released.**
+**Published v0.0.93; v0.0.92 remains the previous stable release.**
 
 ## [v0.0.92] — 2026-11-15
 
