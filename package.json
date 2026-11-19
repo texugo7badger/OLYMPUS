@@ -1,6 +1,6 @@
 {
   "name": "olympus",
-  "version": "0.0.94",
+  "version": "0.0.95",
   "description": "Olympus — automated multi-agent operating system built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
   "author": "OLYMPUS Contributors",
   "homepage": "https://github.com/texugo7badger/OLYMPUS",
@@ -115,8 +115,8 @@
     "@alloc/quick-lru": "^5.2.0",
     "@excalidraw/excalidraw": "^0.18.1",
     "@google/model-viewer": "^4.4.0",
-    "@opencode/cli": "2.3.0",
-    "@opencode/plugin": "2.3.0",
+    "@opencode/cli": "2.3.2",
+    "@opencode/plugin": "2.3.2",
     "@radix-ui/primitive": "^1.2.0",
     "better-sqlite3": "^13.0.2",
     "chokidar": "^5.0.0",

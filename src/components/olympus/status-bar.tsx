@@ -9,7 +9,7 @@ import { useOlympus, GOD_ICONS } from '@/lib/olympus-store';
 import {
  Wifi, WifiOff, DollarSign, Key, Terminal,
  Minus, Square, X, Copy, PanelLeftClose, PanelLeftOpen,
- Lightbulb, Gauge, Layers, Users, Sparkles as StudioIcon, Mic, Smartphone, Gem,
+ Lightbulb, Gauge, Layers, Users, Sparkles as StudioIcon, Mic, Smartphone, Gem, Newspaper,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -184,9 +184,18 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.94'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.0.95'}
    </span>
 )}
+   <button
+     type="button"
+     onClick={() => window.dispatchEvent(new CustomEvent('olympus:open-patch-notes'))}
+     aria-label="Patch notes and updates"
+     data-tip="Patch notes, OLYMPUS updates and OpenCode v2 alignment"
+     className="flex items-center justify-center w-5 h-5 rounded text-olympus-text-dim transition-colors hover:text-olympus-gold hover:bg-olympus-gold/10"
+   >
+     <Newspaper size={11} />
+   </button>
  </div>
 
 	 {/* Focus Mode toggle. */}

@@ -10,6 +10,7 @@ import { Terminal as TerminalIcon, Library, LayoutGrid, AlertCircle, RefreshCw, 
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import OlympusLoader from '@/components/olympus/olympus-loader';
+import { PatchNotesOverlay } from '@/components/olympus/patch-notes';
 import NotificationToast from '@/components/olympus/notification-toast';
 import { getPanelLoadingCount, panelLoadingBump, subscribePanelLoading } from '@/lib/panel-loading-bus';
 import { initTheme } from '@/lib/theme-store';
@@ -687,6 +688,7 @@ export default function OlympusWorkspace() {
     <ChunkErrorBoundary>
     <div suppressHydrationWarning className="h-screen w-screen flex flex-col bg-olympus-bg text-olympus-text overflow-hidden">
       <NotificationToast />
+      <PatchNotesOverlay />
       {booting && (
         <OlympusLoader
           fullscreen

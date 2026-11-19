@@ -1,0 +1,49 @@
+{
+  "updatedAt": "2026-11-19",
+  "current": "0.0.95",
+  "opencode": {
+    "package": "@opencode/cli",
+    "tested": "2.3.2",
+    "min": "2.3.0",
+    "gate": "approved",
+    "gateDate": "2026-11-19",
+    "gateCommand": "npm run opencode:gate -- --version <version> --install",
+    "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; an untested update can break sessions, the v2 API, MCP or the DB schema."
+  },
+  "releases": [
+    {
+      "version": "0.0.95",
+      "date": "2026-11-19",
+      "title": "OpenCode 2.3.2 alignment and the patch-notes screen",
+      "highlights": [
+        "OpenCode v2 2.3.2 passed the isolated conformance gate (serve, v2 sessions, prompt/SSE, DB schema, tokens, abort) and a real Apollo turn.",
+        "The boot loader now shows a What's new card after the first second; a hibernate return repaints the same loader, so the alignment is visible during a slow wake.",
+        "A status-bar Patch notes button opens the full updates screen from anywhere; /patch-notes is also a standalone page.",
+        "The screen reads the installed and npm-latest OpenCode versions live and takes the tested version from patch-notes.json, so it stays updatable without hardcoding the UI.",
+        "The update lane still refuses an ungated version and shows the conformance command instead of updating blind."
+      ]
+    },
+    {
+      "version": "0.0.94",
+      "date": "2026-11-19",
+      "title": "The preview that obeys, the marks that cannot be lost",
+      "highlights": [
+        "Browser previews keep 127.0.0.1 (the project session survives); Electron alone uses the isolated 127.0.0.2 OOPIF origin for 60 FPS.",
+        "Apollo mark batches are durable background plans with plan/latest/retry, a 20-minute budget and boot-aware stale recovery.",
+        "The small preview sends to Apollo; every non-quick mark is saved to the project queue before the turn.",
+        "Hibernation stops managed dev servers and prunes an expired window; dev servers report RSS, adopt the true port owner and restart in place.",
+        "Next.js 16.4.6 closes the advisory that made 16.4.2 fail the build."
+      ]
+    },
+    {
+      "version": "0.0.93",
+      "date": "2026-11-15",
+      "title": "Performance: the preview gets its own renderer",
+      "highlights": [
+        "Electron runs the live preview as an OOPIF on 127.0.0.2; AIME measured parent 54 → 60 FPS and iframe 52 → 60 FPS.",
+        "GPU is on by default; a persisted software-rendering marker was retired.",
+        "Progressive boot waits for the shell, not nine panel endpoints; heavy panes show their own branded loaders."
+      ]
+    }
+  ]
+}

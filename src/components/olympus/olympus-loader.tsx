@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { resolvePalette } from '@/lib/theme';
 import { useTheme } from '@/lib/theme-store';
 import StarDriftSphere from './stardrift-sphere';
+import { PatchNotesTeaser } from './patch-notes';
 import { t, useLanguage } from '@/lib/i18n';
 
 export interface OlympusLoaderProps {
@@ -81,6 +82,7 @@ export default function OlympusLoader({
         </span>
       </div>
       <p className="mt-1 text-[9px] font-mono text-olympus-text-dim/70">{t('common.loadingSubtitle', language)}</p>
+      <PatchNotesTeaser />
     </div>
   );
 }
