@@ -2,12 +2,14 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.94 · 2026-11-19 · the current release. The harness is shipped and
+> v0.0.95 · 2026-11-19 · the current release. The harness is shipped and
 > measured; the 8-hour / 100-hop certification is **not** claimed yet. The
 > hibernation path is a bounded, detached walk with an explicit window, not
-> the note-8 claim. v0.0.94 adds boot-aware durable mark batches (a plan that
-> outlives the window) and hibernation that stops managed dev servers and
-> prunes an expired window. This page records what was actually run and what
+> the note-8 claim. v0.0.95 aligns the vendored OpenCode to v2 **2.3.2**
+> (isolated gate approved + a real Apollo turn) and puts the patch notes /
+> update state on the boot and hibernate loader, in a status-bar screen and
+> on `/patch-notes`. v0.0.94's durable mark batches and dev-server-aware
+> hibernation remain. This page records what was actually run and what
 > remains. The cost side is now measured by `npm run cost:audit`
 > (tokens/hop, cache hit, list value, invoice unknown) and bounded by the
 > opt-in caps in `~/.olympus/cost-caps.json`. Since v0.0.73 a campaign can

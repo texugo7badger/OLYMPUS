@@ -42,7 +42,23 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.94 evidence:** [live preview + flipped card](screenshots/screens/45-live-preview-094.png) · [small-preview Apollo](screenshots/screens/47-small-preview-apollo-094.png) · [durable Apollo plan](screenshots/screens/46-apollo-plan-094.png).
 
+**v0.0.95 evidence:** [patch notes overlay](screenshots/screens/48-patch-notes-095.png) · [boot / hibernate teaser](screenshots/screens/49-patch-notes-loader-095.png) · [standalone page](screenshots/screens/50-patch-notes-page-095.png).
+
 ## Latest
+
+**v0.0.95 — OpenCode 2.3.2 alignment, visible where the wait is.**
+OpenCode v2 **2.3.2** is the vendored CLI and plugin, and it passed the isolated
+conformance gate (serve, v2 sessions, agent/model, prompt/SSE, a real turn, DB
+schema, tokens, abort) plus a real Apollo turn. The boot loader now shows a
+**What's new** card after the first second: the latest OLYMPUS release, the
+tested OpenCode v2 and a button into the full **patch notes & updates** screen.
+The same screen opens from a **status-bar button** at any time and from the
+standalone `/patch-notes` page. It reads the installed and npm-latest OpenCode
+versions live, takes the tested version from `public/patch-notes.json`, and
+keeps the update lane gated: an untested CLI is refused with the exact
+conformance command. A hibernate return repaints the loader, so the alignment
+is visible during a slow wake. Published as v0.0.95; v0.0.94 remains the
+previous release.
 
 **v0.0.94 — the preview that obeys, the marks that cannot be lost.**
 The live preview now keeps the project's own origin in the browser: Firefox
@@ -59,7 +75,7 @@ direct **Apollo** button beside Athena. Dev servers report their real RSS,
 adopt the process that owns the port, and can be restarted in place; hibernation
 now stops managed dev servers and prunes an expired window, freeing the
 multi-GB preview. Next.js **16.4.6** closes the advisory that made 16.4.2 fail
-the release build. Published as v0.0.94; v0.0.93 remains the previous release.
+the release build. v0.0.94 remains the previous release.
 
 **v0.0.93 — performance.**
 The live preview now runs in its **own renderer**: the iframe is served from

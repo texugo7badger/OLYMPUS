@@ -2,6 +2,42 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.95] — 2026-11-19
+
+### OpenCode 2.3.2 alignment, visible where the wait is
+
+- **OpenCode v2 2.3.2 is the vendored CLI and plugin.** `@opencode/cli` and
+  `@opencode/plugin` are pinned at **2.3.2**. The isolated conformance gate
+  passed all checks (serve, v2 session list/create, agent/model select,
+  prompt ack, SSE first event, turn completion, DB schema, tokens, abort) and
+  a real Apollo turn on `opencode-go/deepseek-v4.1-flash`.
+- **The boot and hibernate-return loader now carries a What's new card.** It
+  appears after the first second (a fast boot stays clean), shows the latest
+  OLYMPUS release and the tested OpenCode version, and opens the full screen
+  in one click. A hibernate return repaints the same loader, so the alignment
+  is visible during a slow wake.
+- **The patch notes & updates screen is available inside OLYMPUS.** A
+  status-bar button opens it at any time; `/patch-notes` is also a standalone
+  page. It shows the OLYMPUS release timeline, the running and stable versions,
+  the installed/tested/npm-latest OpenCode triple, and the conformance-gate
+  status.
+- **Always updatable, never blind.** The installed and npm-latest OpenCode
+  versions are read live; the tested version comes from
+  `public/patch-notes.json`, so a new release updates the manifest instead of
+  hardcoding a UI string. The update button still requires the gate; an
+  ungated candidate is refused with the exact `opencode:gate` command. On a
+  fresh install that already runs the shipped tested version, the gate card
+  says `approved (shipped)` instead of a false negative.
+- The v0.0.94 preview/marks/hibernation work remains the previous release.
+
+**Battery: 178 PASS / 0 FAIL / 1 declared skip of 179.**
+`scripts/v092-runtime.test.mjs` **26 passed** (including the OpenCode 2.3.2
+pin and the patch-notes surface); `tsc` clean; `eslint` clean; `docs:check`
+clean; `check-strategy-sync` green; production build and standalone boot gate
+green with Next.js 16.4.6.
+
+**Published v0.0.95; v0.0.94 remains the previous stable release.**
+
 ## [v0.0.94] — 2026-11-19
 
 ### The preview that obeys, the marks that cannot be lost
