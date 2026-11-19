@@ -2,6 +2,48 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.94] — 2026-11-19
+
+### The preview that obeys, the marks that cannot be lost
+
+- **Browser previews keep the project origin.** Firefox and the OLYMPUS web
+  surface use the direct `127.0.0.1:<port>` URL, so the project's cookies and
+  session survive; Electron alone uses `127.0.0.2` with site-per-process for
+  the isolated 60 FPS renderer. Navigation and marks were exercised **inside
+  the OLYMPUS iframe**, not only in a standalone browser.
+- **Apollo mark batches are durable background plans.** `POST
+  /api/olympus/marks/send` writes the batch to the god's inbox and returns an
+  `inboxId` immediately; the turn runs in the background with a **20-minute**
+  budget (the five-mark AIME batch measured 593s, so the old 600s cap was a
+  seven-second margin). `plan`, `latest` and `retry` restore the plan or the honest error
+  after a closed window or an app restart. A batch still `running` under a
+  previous process boot is reported failed and is immediately retryable (the
+  boot id is stamped in the inbox); a live turn that overruns its budget
+  becomes retryable one minute later. This is how the old five-mark batch
+  (Apollo timed out at 300s) is recovered instead of copied by hand.
+- **The small preview sends to Apollo**, beside Athena, and every non-quick
+  mark is written to the project's durable queue before the turn.
+- **Preview health is explicit.** If the page is slow or unreachable, the god
+  is told to plan from the marks and the project source instead of waiting on
+  a dead preview.
+- **Dev server truth and reclaim.** The manager reports the real RSS from
+  `/proc`, adopts the process that actually owns the port when the managed pid
+  died, and the preview offers `restart` (stop → deps/boot → probe) beside
+  `stop`. A multi-GB preview no longer requires a terminal restart.
+- **Hibernation frees the real hogs.** It stops managed dev servers, prunes an
+  expired `hibernation-plan.json`, and keeps the chat/MCP cleanup; servers
+  restart on demand.
+- **Next.js 16.4.6.** The 16.4.2 security advisory became a fatal
+  `SecurityFatalError` at build time; the patch is required, not cosmetic.
+
+**Battery: 178 PASS / 0 FAIL / 1 declared skip of 179.**
+`scripts/v092-runtime.test.mjs` **25 passed** (preview origin, durable batch,
+boot recovery, hibernation); `tsc` clean; `eslint` clean; `docs:check` clean;
+`check-strategy-sync` green; production build and standalone boot gate green
+with Next.js 16.4.6.
+
+**Published v0.0.94; v0.0.93 remains the previous stable release.**
+
 ## [v0.0.93] — 2026-11-15
 
 ### Performance: the preview gets its own renderer

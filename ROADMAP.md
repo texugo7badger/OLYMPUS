@@ -1,9 +1,14 @@
 # OLYMPUS Roadmap
 
-**v0.0.93 is the current release** (2026-11-15) — performance:
-the live preview gets its own renderer and the shell boots progressively. It
-is published; v0.0.92 remains the previous release. The previous release,
-v0.0.92, delivered the walk that owns itself and the marks that stay: durable per-project mark queues with copy/send to Apollo; the hop
+**v0.0.94 is the current release** (2026-11-19) — the preview that obeys and
+the marks that cannot be lost: browser previews keep the project origin
+(`127.0.0.1`, session intact) while Electron keeps the isolated OOPIF origin
+(`127.0.0.2`, 60 FPS); Apollo mark batches are durable background plans with
+`plan`/`latest`/`retry`, a 600s turn and boot-aware stale recovery; the small
+preview sends to Apollo; dev servers expose RSS, adopt the true port owner and
+restart in place; hibernation stops managed dev servers and prunes an expired
+window; Next.js is 16.4.6 (the 16.4.2 advisory was fatal to the build).
+v0.0.93 remains the previous release. v0.0.92 delivered the walk that owns itself and the marks that stay: durable per-project mark queues with copy/send to Apollo; the hop
 prompt carries the exact deterministic contract and `## Result`; artifacts are
 verified on disk before a plan re-runs; quarantine and recovery budgets are
 scoped per campaign/generation; auth lanes do not silently expire; independent

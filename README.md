@@ -40,7 +40,26 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.92 evidence:** [durable marks queue](screenshots/screens/42-marks-v092.png) — two marks saved per project, copy-all and one batch to Apollo.
 
+**v0.0.94 evidence:** [live preview + flipped card](screenshots/screens/45-live-preview-094.png) · [small-preview Apollo](screenshots/screens/47-small-preview-apollo-094.png) · [durable Apollo plan](screenshots/screens/46-apollo-plan-094.png).
+
 ## Latest
+
+**v0.0.94 — the preview that obeys, the marks that cannot be lost.**
+The live preview now keeps the project's own origin in the browser: Firefox
+and the OLYMPUS web surface use `127.0.0.1`, so AIME's cookies and session
+survive; only Electron uses the isolated `127.0.0.2` OOPIF origin for 60 FPS.
+Navigation and marks were exercised **inside the OLYMPUS iframe** (a link
+changed the frame URL; the mark editor exposed both Atlas-bound controls).
+The mark batch is now a **durable background plan**: `send` returns an inbox
+id immediately, the Apollo turn has a **20-minute** budget, and `plan` / `latest` /
+`retry` restore the plan or the honest error after a closed window or an app
+restart. A batch still marked `running` under a previous process boot is
+immediately retryable instead of waiting forever. The small preview has a
+direct **Apollo** button beside Athena. Dev servers report their real RSS,
+adopt the process that owns the port, and can be restarted in place; hibernation
+now stops managed dev servers and prunes an expired window, freeing the
+multi-GB preview. Next.js **16.4.6** closes the advisory that made 16.4.2 fail
+the release build. Published as v0.0.94; v0.0.93 remains the previous release.
 
 **v0.0.93 — performance.**
 The live preview now runs in its **own renderer**: the iframe is served from
@@ -49,7 +68,7 @@ so a heavy project can no longer drag the OLYMPUS shell down. Measured on AIME:
 parent **54 → 60 FPS**, iframe **52 → 60 FPS**, with the GPU active (the old
 `gpu-fallback` marker was forcing software rendering). The shell also boots
 progressively: it waits for three core endpoints, not nine, and every heavy pane
-loads behind its own branded loader. Published as v0.0.93; v0.0.92 remains the previous stable release.
+loads behind its own branded loader. Published as v0.0.93; v0.0.92 is the earlier release.
 
 **v0.0.92 — the walk owns itself, the marks stay.**
 The large preview window now keeps a **durable mark queue per project**: marks

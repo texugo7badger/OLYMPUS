@@ -234,6 +234,19 @@ The backup lives in `/tmp/opencode/quick-edit/<lane>-<ts>/`; `undo` restores
 the exact snapshot. The mark bar has a `quick` toggle (default off = plan
 first). The endpoint is `POST /api/olympus/quick-edit`.
 
+Quick Edit is the small-change lane. A **batch of marks** from the large
+preview window takes the durable path: `POST /api/olympus/marks/send` writes
+the batch to the god's inbox and returns an `inboxId` immediately; the turn
+runs in the background with a **20-minute** budget. `GET /api/olympus/marks/plan`
+returns `pending|running|done|failed` plus the plan, `GET /api/olympus/marks/latest`
+restores the last batch for the project, and `POST /api/olympus/marks/retry`
+re-queues a failed or interrupted batch. A batch still `running` under a
+previous app process boot is reported failed (and is retryable) as soon as
+the new process reads it; a live turn that overruns its budget becomes
+retryable one minute later. Closing the window never loses the marks or the
+plan. If the preview is slow or unreachable, the god is told to plan from the
+marks and the project source instead of waiting on the page.
+
 ### 3. The night shift (headless, outside the app cgroup)
 
 ```

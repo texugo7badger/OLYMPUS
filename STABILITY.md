@@ -2,11 +2,13 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.93 · the current release. The harness is shipped and measured; the 8-hour / 100-hop
-> certification is **not** claimed yet. The v0.0.92 hibernation path is a
-> bounded, detached walk with an explicit window, not the note-8 claim. This
-> page records what was actually
-> run and what remains. The cost side is now measured by `npm run cost:audit`
+> v0.0.94 · 2026-11-19 · the current release. The harness is shipped and
+> measured; the 8-hour / 100-hop certification is **not** claimed yet. The
+> hibernation path is a bounded, detached walk with an explicit window, not
+> the note-8 claim. v0.0.94 adds boot-aware durable mark batches (a plan that
+> outlives the window) and hibernation that stops managed dev servers and
+> prunes an expired window. This page records what was actually run and what
+> remains. The cost side is now measured by `npm run cost:audit`
 > (tokens/hop, cache hit, list value, invoice unknown) and bounded by the
 > opt-in caps in `~/.olympus/cost-caps.json`. Since v0.0.73 a campaign can
 > walk in a **detached supervisor process**: the app restarting no longer
