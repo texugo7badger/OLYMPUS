@@ -75,9 +75,9 @@ ok('M4: the routes expose the durable queue and the Apollo send', () => {
   const send = src('src/app/api/olympus/marks/send/route.ts');
   assert.match(route, /writeMarks/);
   assert.match(route, /requireAuth/);
-  assert.match(send, /runGodTurn/);
-  assert.match(send, /marksPrompt/);
-  assert.match(send, /target === 'athena'/);
+  assert.match(send, /startMarkPlan/);
+  assert.match(send, /queued: true/);
+  assert.match(send, /target/);
 });
 
 ok('H1: the hop prompt carries the exact checks and the ## Result law', () => {
@@ -250,6 +250,52 @@ ok('PF2: the shell isolates the preview and boots progressively', () => {
   assert.match(page, /const critical = \[\s*'\/api\/olympus\/health',\s*'\/api\/olympus\/run-state',\s*'\/api\/olympus\/projects',\s*\]/);
   assert.match(page, /const ready = windowLoaded && dataReady/);
   assert.doesNotMatch(page, /const ready = windowLoaded && pendingPanels === 0/);
+});
+
+ok('PF3: Firefox keeps the AIME session; Electron alone gets the OOPIF origin', () => {
+  const isolation = src('src/lib/preview-isolation.ts');
+  const live = src('src/components/olympus/live-preview.tsx');
+  const win = src('src/app/preview-window/page.tsx');
+  assert.match(isolation, /export function inElectron/);
+  assert.match(live, /inElectron\(\)/);
+  assert.match(win, /inElectron\(\) /);
+});
+
+ok('MK1: Apollo is a durable background plan, not a 300s synchronous turn', () => {
+  const send = src('src/app/api/olympus/marks/send/route.ts');
+  const run = src('src/lib/marks-run.ts');
+  const plan = src('src/lib/marks-plan.ts');
+  assert.match(send, /queued: true/);
+  assert.match(send, /startMarkPlan/);
+  assert.doesNotMatch(send, /await runGodTurn/);
+  assert.match(run, /1_200_000/);
+  assert.match(run, /previewHealthNote/);
+  assert.match(plan, /MARK_TURN_TIMEOUT_MS/);
+  assert.match(plan, /MARK_BOOT_ID/);
+  assert.ok(fs.existsSync(path.join(ROOT, 'src/app/api/olympus/marks/plan/route.ts')));
+  assert.ok(fs.existsSync(path.join(ROOT, 'src/app/api/olympus/marks/latest/route.ts')));
+  assert.ok(fs.existsSync(path.join(ROOT, 'src/app/api/olympus/marks/retry/route.ts')));
+  const win = src('src/app/preview-window/page.tsx');
+  assert.match(win, /pollPlan/);
+  assert.match(win, /retryPlan/);
+  assert.match(win, /marks\/latest/);
+});
+
+ok('HB3: hibernation stops idle dev servers and prunes the expired window', () => {
+  const hibernate = src('src/app/api/olympus/chat/hibernate/route.ts');
+  const manager = src('src/lib/dev-server-manager.ts');
+  const hib = src('src/lib/hibernation.ts');
+  const live = src('src/components/olympus/live-preview.tsx');
+  assert.match(hibernate, /list\(\)/);
+  assert.match(hibernate, /stop\(server\.slug\)/);
+  assert.match(hibernate, /pruneHibernationPlan/);
+  assert.match(manager, /rssMB/);
+  assert.match(manager, /no probe evidence/);
+  assert.match(manager, /security nudge/);
+  assert.match(manager, /readPidRssMB/);
+  assert.match(hib, /pruneHibernationPlan/);
+  assert.match(live, /sendToApollo/);
+  assert.match(live, /restart/);
 });
 
 async function okAsync(name, fn) {

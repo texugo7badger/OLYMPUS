@@ -84,6 +84,8 @@ export interface DevServerStatus {
   logFile: string | null;
   /** true when this call removed a stale state file (the dead-pid self-heal). */
   staleCleared: boolean;
+  /** v0.0.94 — resident memory of the managed server (Linux /proc), MB. */
+  rssMB: number | null;
   /** The honest human sentence — what the caller may quote. */
   note: string;
 }
@@ -233,6 +235,17 @@ function isPidAlive(pid: number | null | undefined): boolean {
   catch (e: any) { return e?.code === 'EPERM'; }
 }
 
+/** v0.0.94 — the managed server's RSS in MB (Linux /proc; null elsewhere). */
+function readPidRssMB(pid: number | null | undefined): number | null {
+  if (typeof pid !== 'number' || pid <= 0) return null;
+  try {
+    const status = readFileSync(`/proc/${pid}/status`, 'utf-8');
+    const m = status.match(/^VmRSS:\s+(\d+)\s+kB/m);
+    if (!m) return null;
+    return Math.round((Number(m[1]) / 1024) * 10) / 10;
+  } catch { return null; }
+}
+
 /** An honest ephemeral port (bind 0, read, release) for the no-note fallback. */
 function freeEphemeralPort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -266,7 +279,7 @@ function baseStatus(slug: string): DevServerStatus {
   return {
     slug, state: 'none', running: false, pid: null, pidAlive: false, port: null,
     host: null, url: null, responseTimeMs: null, projectPath: null, startedAt: null,
-    logFile: null, staleCleared: false,
+    logFile: null, rssMB: null, staleCleared: false,
     note: `no managed dev server for "${slug}"`,
   };
 }
@@ -420,13 +433,13 @@ export async function start(projectSlug: string, port?: number, rootOverride?: s
   try {
     devScript = String(JSON.parse(readFileSync(join(projectPath, 'package.json'), 'utf-8'))?.scripts?.dev ?? '');
   } catch { /* an unreadable package.json keeps the default argv class */ }
-  const child = spawn(npmCmd, ['run', 'dev', '--', ...devServerPortArgs(devScript, resolvedPort)], {
+  const spawnDev = (fd: number) => spawn(npmCmd, ['run', 'dev', '--', ...devServerPortArgs(devScript, resolvedPort)], {
     cwd: projectPath,
     detached: true,          // the durable lane: a new process group, immune to the spawning session's death
-    stdio: ['ignore', outFd, outFd],
+    stdio: ['ignore', fd, fd],
     env: { ...process.env, PORT: String(resolvedPort) }, // belt-and-braces for env-port servers
   });
-  child.unref();             // the manager's session does not wait for the server
+  let child = spawnDev(outFd);
 
   if (typeof child.pid !== 'number') {
     return {
@@ -434,6 +447,68 @@ export async function start(projectSlug: string, port?: number, rootOverride?: s
       projectPath, state: null,
       error: `spawn failed for "${projectSlug}" (npm run dev did not produce a pid) — see ${logFile}`,
     };
+  }
+  child.unref();             // the manager's session does not wait for the server
+
+  // v0.0.94 — Next 16.4.x's security nudge stops the FIRST `next dev` once and
+  // tells the operator to retry. A single click must be enough: if the npm
+  // parent is already gone, spawn once more before declaring the start.
+  const logHasSecurityNudge = () => {
+    try {
+      return /stopped to show the upgrade recommendation|next upgrade --agent=security/.test(readFileSync(logFile, 'utf-8'));
+    } catch { return false; }
+  };
+  // Next 16.4.x prints the nudge and exits; it writes a 5-minute retry receipt
+  // first. Watch the boot window (up to 5s) for the nudge OR a ready probe, so
+  // a normal start returns as soon as it is live and the nudge is caught
+  // before we report a false success.
+  let nudge = false;
+  const bootDeadline = Date.now() + 5000;
+  while (Date.now() < bootDeadline) {
+    nudge = logHasSecurityNudge();
+    if (nudge || !isPidAlive(child.pid)) break;
+    const early = await probeDevServer(resolvedPort, 500);
+    if (early.running) break;
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 200));
+  }
+  if (nudge && isPidAlive(child.pid)) {
+    // The nudge prints before the command exits; let it stop itself so the
+    // retry does not race a dying process. If it lingers, end its group.
+    for (let i = 0; i < 15 && isPidAlive(child.pid); i++) {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 200));
+    }
+    if (isPidAlive(child.pid)) {
+      try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already gone */ }
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 300));
+    }
+  }
+  if (nudge || !isPidAlive(child.pid)) {
+    try { closeSync(outFd); } catch { /* already closed */ }
+    const retryFd = openSync(logFile, 'a');
+    child = spawnDev(retryFd);
+    if (typeof child.pid !== 'number') {
+      try { closeSync(retryFd); } catch { /* already closed */ }
+      return {
+        ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: resolvedPort,
+        projectPath, state: null,
+        error: `spawn failed for "${projectSlug}" (npm run dev did not produce a pid) — see ${logFile}`,
+      };
+    }
+    child.unref();
+    try { closeSync(retryFd); } catch { /* the child owns its dup */ }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 2500));
+    if (!isPidAlive(child.pid)) {
+      try { closeSync(retryFd); } catch { /* already closed */ }
+      let tail = '';
+      try { tail = readFileSync(logFile, 'utf-8').split('\n').slice(-6).join(' ').slice(-600); } catch { /* no log */ }
+      return {
+        ok: false, alreadyRunning: false, slug: projectSlug, pid: null, port: resolvedPort,
+        projectPath, state: null,
+        error: `no probe evidence — the spawned dev server died immediately; log tail: ${tail} — see ${logFile}`,
+      };
+    }
+  } else {
+    try { closeSync(outFd); } catch { /* the child owns its dup */ }
   }
 
   const state: DevServerState = {
@@ -628,14 +703,33 @@ export async function status(slugOrPort: string | number): Promise<DevServerStat
   const pidAlive = isPidAlive(state.pid);
 
   if (probe.running) {
-    const updated: DevServerState = { ...state, host: probe.host, lastProbe: { at: new Date().toISOString(), running: true } };
+    // v0.0.94 — THE PORT IS THE TRUTH. A managed pid can die while another
+    // process (or an adopted child) keeps the port alive; the old state then
+    // reported running with a dead pid, rssMB null, and stop/hibernate killed
+    // nothing. Adopt the verified port owner (cwd must be the project).
+    let effective = state;
+    let effectiveAlive = pidAlive;
+    if (!effectiveAlive) {
+      const ownerPid = findPortOwnerPid(state.port);
+      let ownerCwd: string | null = null;
+      if (ownerPid) { try { ownerCwd = fs.readlinkSync(`/proc/${ownerPid}/cwd`); } catch { ownerCwd = null; } }
+      if (ownerPid && ownerCwd && resolve(ownerCwd) === resolve(state.projectPath)) {
+        effective = {
+          ...state, pid: ownerPid, host: probe.host, startedAt: state.startedAt,
+          lastProbe: { at: new Date().toISOString(), running: true }, adopted: true,
+        };
+        writeStateFile(slug, effective);
+        effectiveAlive = true;
+      }
+    }
+    const updated: DevServerState = { ...effective, host: probe.host, lastProbe: { at: new Date().toISOString(), running: true } };
     writeStateFile(slug, updated);
     return {
-      slug, state: 'running', running: true, pid: state.pid, pidAlive, port: state.port,
+      slug, state: 'running', running: true, pid: effective.pid, pidAlive: effectiveAlive, port: effective.port,
       host: probe.host, url: probe.url, responseTimeMs: probe.responseTimeMs,
-      projectPath: state.projectPath, startedAt: state.startedAt, logFile: state.logFile,
+      rssMB: readPidRssMB(effective.pid), projectPath: effective.projectPath, startedAt: effective.startedAt, logFile: effective.logFile,
       staleCleared: false,
-      note: `running (probe-verified on ${probe.host}, ${probe.responseTimeMs}ms) — pid ${state.pid} on port ${state.port}`,
+      note: `running (probe-verified on ${probe.host}, ${probe.responseTimeMs}ms) — pid ${effective.pid} on port ${effective.port}${effective.adopted ? ' (adopted port owner)' : ''}`,
     };
   }
 
@@ -646,7 +740,7 @@ export async function status(slugOrPort: string | number): Promise<DevServerStat
     return {
       slug, state: 'down-stale', running: false, pid: state.pid, pidAlive: false, port: state.port,
       host: null, url: probe.url, responseTimeMs: probe.responseTimeMs,
-      projectPath: state.projectPath, startedAt: state.startedAt, logFile: state.logFile,
+      rssMB: readPidRssMB(state.pid), projectPath: state.projectPath, startedAt: state.startedAt, logFile: state.logFile,
       staleCleared: true,
       note: `down (stale state, pid dead) — the state file self-healed; port ${state.port} is silent`,
     };
@@ -657,7 +751,7 @@ export async function status(slugOrPort: string | number): Promise<DevServerStat
   return {
     slug, state: 'starting', running: false, pid: state.pid, pidAlive: true, port: state.port,
     host: null, url: probe.url, responseTimeMs: probe.responseTimeMs,
-    projectPath: state.projectPath, startedAt: state.startedAt, logFile: state.logFile,
+    rssMB: readPidRssMB(state.pid), projectPath: state.projectPath, startedAt: state.startedAt, logFile: state.logFile,
     staleCleared: false,
     note: `starting (pid ${state.pid} alive, port ${state.port} not listening yet — probe-verified silence)`,
   };

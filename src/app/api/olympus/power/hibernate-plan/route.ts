@@ -8,13 +8,14 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { readHibernationPlan, writeHibernationPlan } from '@/lib/hibernation';
+import { pruneHibernationPlan, readHibernationPlan, writeHibernationPlan } from '@/lib/hibernation';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  pruneHibernationPlan();
   return NextResponse.json({ ok: true, plan: readHibernationPlan() }, { headers: NO_CACHE_HEADERS });
 }
 

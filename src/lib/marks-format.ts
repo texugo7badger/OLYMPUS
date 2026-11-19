@@ -38,7 +38,7 @@ ${marks.map((m, i) => `${i + 1}. page ${m.page} — (${m.x}, ${m.y})${m.viewport
 
 ## Your job in this turn: one consolidated plan, do NOT edit
 
-1. Inspect the preview and the named pages. Treat all ${marks.length} marks as ONE batch; if an intent is ambiguous, ask at most THREE short questions TOTAL (not per mark).
+1. Read the project source and the named pages. Do NOT launch a browser: the marks carry the exact page and coordinates. If a mark depends on live state you cannot read from source, say so in the plan. Treat all ${marks.length} marks as ONE batch; if an intent is ambiguous, ask at most THREE short questions TOTAL (not per mark).
 2. Produce ONE consolidated plan grouped by page/file. For each group: the exact component/file, the concrete change, and why it belongs with the others. Prefer the smallest coherent set of edits.
 3. End with a single line: "Approve to send to ${target === 'apollo' ? 'Atlas' : 'Apollo + Atlas'}."
 4. Do not write files and do not dispatch anything in this turn. The user's approval is the gate; after approval the consolidated plan becomes a hop override and Atlas applies it.

@@ -58,6 +58,24 @@ export function readHibernationPlan(home?: string): HibernationPlan | null {
   } catch { return null; }
 }
 
+
+/**
+ * v0.0.94 — an expired window must not linger as `active:true`. The file is
+ * removed; callers see null and can authorize a fresh window.
+ */
+export function pruneHibernationPlan(home?: string): boolean {
+  const file = hibernationPlanPath(home);
+  try {
+    const plan = JSON.parse(fs.readFileSync(file, 'utf-8'));
+    const until = Date.parse(String(plan?.until ?? ''));
+    if (plan?.active !== true || !Number.isFinite(until) || until <= Date.now()) {
+      fs.unlinkSync(file);
+      return true;
+    }
+  } catch { /* missing or malformed: nothing to prune */ }
+  return false;
+}
+
 /** The remaining autonomous window, or 0 when none is active. */
 export function hibernationBudgetLeftMs(home?: string): number {
   const plan = readHibernationPlan(home);

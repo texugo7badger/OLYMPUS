@@ -18,7 +18,7 @@ const CACHE = new Map<number, { at: number; url: string | null }>();
 const TTL_MS = 5_000;
 
 /** The isolated loopback origin for a preview port, or null when unreachable. */
-export async function isolatedPreviewUrl(port: number | null | undefined, timeoutMs = 900): Promise<string | null> {
+export async function isolatedPreviewUrl(port: number | null | undefined, timeoutMs = 2500): Promise<string | null> {
   if (!port || !Number.isFinite(Number(port))) return null;
   const p = Number(port);
   const hit = CACHE.get(p);
@@ -39,6 +39,16 @@ export async function isolatedPreviewUrl(port: number | null | undefined, timeou
   }
   CACHE.set(p, { at: Date.now(), url });
   return url;
+}
+
+/**
+ * v0.0.94 — the isolated origin is an ELECTRON optimization. In Firefox/Chrome
+ * the user's AIME session lives on 127.0.0.1; moving the iframe to 127.0.0.2
+ * would log the preview out. The browser gets the direct origin; Electron gets
+ * the OOPIF origin.
+ */
+export function inElectron(): boolean {
+  try { return typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent); } catch { return false; }
 }
 
 /** Client-safe: rewrite a loopback preview URL to the isolated alias. */

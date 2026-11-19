@@ -19,13 +19,13 @@ import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
 import { normalizePreviewUrl } from '@/lib/live-preview-url';
-import { iframePreviewUrl } from '@/lib/preview-isolation';
+import { iframePreviewUrl, inElectron } from '@/lib/preview-isolation';
 import { useDocVisible } from '@/lib/use-doc-visible';
 
 const DEFAULT_PORT = 3000;
 const PROBE_INTERVAL_MS = 3000;
 
-interface ProbeStatus { running: boolean; port: number; url: string; isolatedUrl?: string | null; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; demoLogin?: string | null; manager?: { running: boolean; port: number | null; url: string | null; slug: string; startedAt: string | null; responseTimeMs: number | null; note: string } | null; }
+interface ProbeStatus { running: boolean; port: number; url: string; isolatedUrl?: string | null; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; demoLogin?: string | null; manager?: { running: boolean; port: number | null; url: string | null; slug: string; startedAt: string | null; responseTimeMs: number | null; rssMB?: number | null; note: string } | null; }
 
 export default function LivePreview() {
   // #231 — the preview probe pauses when the window is hidden.
@@ -137,7 +137,7 @@ export default function LivePreview() {
     setMarkMode(false);
   }, [markMode]);
 
-  const sendToAthena = useCallback(async () => {
+  const sendToAthena = async () => {
     if (!pendingMark || !instruction.trim()) return;
     setSending(true);
     try {
@@ -149,6 +149,25 @@ export default function LivePreview() {
       };
       const previewTarget = customUrl ?? status?.url ?? previewUrl;
       const previewPath = (() => { try { return new URL(previewTarget).pathname || '/'; } catch { return '/'; } })();
+      // v0.0.94 — EVERY mark is durable before the god turn. A closed panel,
+      // a failed turn or a slow preview can no longer erase it.
+      if (!quickEdit && activeProject?.slug) {
+        try {
+          await fetch('/api/olympus/marks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              slug: activeProject.slug,
+              mark: {
+                id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                x: pendingMark.x, y: pendingMark.y, page: previewPath,
+                instruction: instruction.trim(), viewport: { width: viewport.width, height: viewport.height },
+                url: previewTarget, createdAt: new Date().toISOString(),
+              },
+            }),
+          });
+        } catch { /* the in-memory mark still goes to Athena */ }
+      }
       if (quickEdit && !activeProject?.slug) {
         throw new Error('Quick edit needs an active project — open the mark from a project lane.');
       }
@@ -217,7 +236,59 @@ export default function LivePreview() {
     } finally {
       setSending(false);
     }
-  }, [pendingMark, instruction, pushEvent, activeProject, quickEdit]);
+  };
+
+  const sendToApollo = async () => {
+    if (!pendingMark || !instruction.trim() || !activeProject?.slug) {
+      toast.error('Open a project mark first — Apollo needs a project lane.');
+      return;
+    }
+    setSending(true);
+    try {
+      const iframeRect = iframeRef.current?.getBoundingClientRect();
+      const viewport = {
+        width: Math.round(iframeRect?.width || containerRef.current?.getBoundingClientRect().width || window.innerWidth),
+        height: Math.round(iframeRect?.height || containerRef.current?.getBoundingClientRect().height || window.innerHeight),
+      };
+      const previewTarget = customUrl ?? status?.url ?? previewUrl;
+      const previewPath = (() => { try { return new URL(previewTarget).pathname || '/'; } catch { return '/'; } })();
+      const mark = {
+        id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        x: pendingMark.x, y: pendingMark.y, page: previewPath,
+        instruction: instruction.trim(), viewport,
+        url: previewTarget, createdAt: new Date().toISOString(),
+      };
+      const saved = await fetch('/api/olympus/marks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: activeProject.slug, mark }),
+      });
+      if (!saved.ok) throw new Error(`could not save the mark (HTTP ${saved.status})`);
+      const r = await fetch('/api/olympus/marks/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: activeProject.slug, target: 'apollo', marks: [mark], previewUrl: previewTarget }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      pushEvent({
+        type: 'live_preview_mark',
+        msg: `Mark saved for Apollo (${d.inboxId || 'queued'}): "${instruction.trim().slice(0, 80)}"`,
+        x: pendingMark.x, y: pendingMark.y,
+        project: activeProject.slug,
+        ts: new Date().toISOString(),
+      });
+      toast.success('Mark saved — Apollo is planning in the background', {
+        description: 'Open the preview window to read the plan. The batch is durable even if you close this panel.',
+      });
+      setPendingMark(null);
+      setInstruction('');
+    } catch (err) {
+      toast.error('Apollo did not receive the mark', { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const undoQuickEdit = useCallback(async () => {
     if (!lastQuickEdit?.backupRoot || !activeProject?.slug) return;
@@ -254,9 +325,11 @@ export default function LivePreview() {
   // 127.0.0.2 loopback SITE so Chromium isolates it into its own renderer.
   // The server probe supplies the isolated origin; a 127.0.0.1-only project
   // falls back to the direct URL.
-  const iframeSrc = customUrl
-    ? iframePreviewUrl(customUrl)
-    : (status?.isolatedUrl || iframePreviewUrl(effectiveUrl));
+  const iframeSrc = inElectron()
+    ? (customUrl
+      ? iframePreviewUrl(customUrl)
+      : (status?.isolatedUrl || iframePreviewUrl(effectiveUrl)))
+    : (customUrl ?? effectiveUrl);
   useEffect(() => { setIframeLoaded(false); }, [iframeSrc]);
   // #103: the RESOLVED project path (note/lane reconciliation) for the tip —
   // the raw note path only as the pre-first-probe fallback.
@@ -535,7 +608,7 @@ export default function LivePreview() {
       {pendingMark && (
         <div className="shrink-0 flex flex-col gap-1.5 px-3 py-2 bg-olympus-gold/10 border-b border-olympus-gold/20 text-[10px] font-mono">
           <div className="flex items-center justify-between">
-            <span className="text-olympus-gold flex items-center gap-1.5"><MousePointerClick size={11} />Marked ({pendingMark.x}, {pendingMark.y}) — describe the change for Athena:</span>
+            <span className="text-olympus-gold flex items-center gap-1.5"><MousePointerClick size={11} />Marked ({pendingMark.x}, {pendingMark.y}) — describe the change for Athena or Apollo:</span>
             <span className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -571,7 +644,15 @@ export default function LivePreview() {
               className="flex items-center gap-1 px-2 py-1 rounded bg-olympus-gold/20 text-olympus-gold hover:bg-olympus-gold/30 ring-1 ring-olympus-gold/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {sending ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
-              {sending ? 'sending…' : 'send to Athena'}
+              Athena
+            </button>
+            <button
+              onClick={sendToApollo}
+              disabled={sending || !instruction.trim()}
+              className="flex items-center gap-1 px-2 py-1 rounded bg-olympus-green/15 text-olympus-green hover:bg-olympus-green/25 ring-1 ring-olympus-green/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {sending ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
+              Apollo
             </button>
           </div>
         </div>
@@ -663,21 +744,29 @@ export default function LivePreview() {
  * answers honest); STOP only when the manager owns the running server (an
  * unmanaged ephemeral server stops with its owner — no fake control). */
 function DevServerControls({ status, onDone }: { status: ProbeStatus | null; onDone: () => void }) {
-  const [busy, setBusy] = useState<null | 'start' | 'stop'>(null);
+  const [busy, setBusy] = useState<null | 'start' | 'stop' | 'restart'>(null);
   const [error, setError] = useState<string | null>(null);
   const managed = status?.manager?.running === true;
   const anythingRunning = status?.running === true;
 
-  const call = async (action: 'start' | 'stop') => {
+  const call = async (action: 'start' | 'stop' | 'restart') => {
     setBusy(action);
     setError(null);
     try {
-      const r = await fetch(action === 'start' ? '/api/olympus/dev-server/start' : '/api/olympus/dev-server/stop', {
+      const post = (path: string) => fetch(path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ port: status?.port }),
       }).then((r) => r.json());
-      if (!r?.ok) setError(String(r?.error || r?.result?.error || `${action} failed`));
+      if (action === 'restart') {
+        const stopped = await post('/api/olympus/dev-server/stop');
+        if (!stopped?.ok) throw new Error(stopped?.error || stopped?.result?.error || 'stop failed');
+        const started = await post('/api/olympus/dev-server/start');
+        if (!started?.ok) throw new Error(started?.error || started?.result?.error || 'start failed');
+      } else {
+        const r = await post(action === 'start' ? '/api/olympus/dev-server/start' : '/api/olympus/dev-server/stop');
+        if (!r?.ok) throw new Error(r?.error || r?.result?.error || `${action} failed`);
+      }
     } catch (e: any) {
       setError(e?.message || String(e));
     } finally {
@@ -687,11 +776,11 @@ function DevServerControls({ status, onDone }: { status: ProbeStatus | null; onD
     }
   };
 
-  if (busy === 'start' || busy === 'stop') {
+  if (busy === 'start' || busy === 'stop' || busy === 'restart') {
     return (
       <span className="flex items-center gap-1 text-[9px] font-mono text-olympus-text-dim">
         <Loader2 size={10} className="animate-spin" />
-        {busy === 'start' ? 'starting (deps + boot + probe)…' : 'stopping…'}
+        {busy === 'start' ? 'starting (deps + boot + probe)…' : busy === 'restart' ? 'restarting preview…' : 'stopping…'}
       </span>
     );
   }
@@ -703,14 +792,30 @@ function DevServerControls({ status, onDone }: { status: ProbeStatus | null; onD
     );
   }
   if (managed) {
+    const rss = status?.manager?.rssMB;
+    const heavy = typeof rss === 'number' && rss > 2400;
     return (
-      <button
-        onClick={() => call('stop')}
-        data-tip={`Stop the durable dev server (${status?.manager?.note ?? 'the #86 manager'})`}
-        className="text-[10px] font-mono text-olympus-text-dim hover:text-olympus-red transition-colors px-1.5"
-      >
-        stop
-      </button>
+      <span className="flex items-center gap-1">
+        {typeof rss === 'number' && (
+          <span className={heavy ? 'text-[9px] font-mono text-olympus-amber-soft' : 'text-[9px] font-mono text-olympus-text-dim'} data-tip={`Dev server RSS ${rss} MB`}>
+            {rss > 1024 ? `${(rss / 1024).toFixed(1)}G` : `${Math.round(rss)}M`}
+          </span>
+        )}
+        <button
+          onClick={() => call('restart')}
+          data-tip={heavy ? `Preview is heavy (${rss} MB) — restart to free memory and rebuild` : 'Restart the preview server (stop → deps/boot → probe)'}
+          className={heavy ? 'text-[10px] font-mono text-olympus-amber-soft hover:text-olympus-gold px-1.5' : 'text-[10px] font-mono text-olympus-text-dim hover:text-olympus-gold px-1.5'}
+        >
+          restart
+        </button>
+        <button
+          onClick={() => call('stop')}
+          data-tip={`Stop the durable dev server (${status?.manager?.note ?? 'the #86 manager'})`}
+          className="text-[10px] font-mono text-olympus-text-dim hover:text-olympus-red transition-colors px-1.5"
+        >
+          stop
+        </button>
+      </span>
     );
   }
   if (!anythingRunning) {
