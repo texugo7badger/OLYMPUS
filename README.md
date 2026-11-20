@@ -53,7 +53,8 @@ X now **quits** by default; hibernate is explicit (tray, lock, or the
 close-to-hibernate preference). A real quit stops the preview/MCP fleet instead
 of leaving it in the app cgroup. Hibernate waits for a streaming chat turn,
 keeps a preview only when a live hop needs it, records the servers it stops and
-**restores them on wake**. The GO graph now uses the **console anchor**
+**restores them on wake**, and the HUD collapses to a 340×190 strip from a
+real button. The GO graph now uses the **console anchor**
 (monthly/5h/weekly) plus the local delta, with the weekly window resetting
 Monday 00:00 UTC; the measured **25.1% / 50.1%** matches the console's 25% /
 on-pace-50%. **Smart burn** chooses a GO-only roster at the next hop/message —

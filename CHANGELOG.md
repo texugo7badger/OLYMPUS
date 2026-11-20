@@ -19,6 +19,10 @@ All notable changes to OLYMPUS are documented in this file.
   idle previews stop. The stopped list is recorded in
   `hibernation-devservers.json` and the wake restores each server with the
   manager's probe. A force-free request is available for the drill/CLI.
+- **The HUD collapses.** A dedicated minimal preload exposes one action:
+  420×720 → 340×190, keeping only campaign progress, GO month and the
+  in-flight hop; expand restores the full widget. The phone widget is
+  unchanged.
 - **GO truth.** The top line is the **console anchor** (monthly/5h/weekly) plus
   the local ledger delta after the sync. The weekly window is Monday 00:00 UTC,
   not a rolling 7 days. Measured on this machine: **25.1%** account,
