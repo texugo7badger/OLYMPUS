@@ -2,15 +2,14 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.0.95 · 2026-11-19 · **GO for a release candidate after two named gates**
+> v0.0.96 · 2026-11-20 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
-> this build "certified v1.0" until those gates are green.** v0.0.95 aligns
-> the vendored OpenCode v2 to **2.3.2** (isolated gate approved plus a real
-> Apollo turn) and surfaces the OLYMPUS/OpenCode update state on the boot and
-> hibernate loader, in the status bar and on `/patch-notes`. v0.0.94's
-> browser-session preview, durable mark plans and dev-server-aware
-> hibernation remain. This page is the report; it does not claim what was
-> not run.
+> this build "certified v1.0" until those gates are green.** v0.0.96 makes X
+> a real quit, gates hibernation on streaming turns, restores previews on
+> wake, anchors the GO graph to the console and adds the smart-burn runtime
+> router without config rewrites. v0.0.95's OpenCode 2.3.2 alignment and
+> patch-notes screen remain. This page is the report; it does not claim what
+> was not run.
 
 ## The ladder that shipped (v0.0.38 → v0.0.58)
 

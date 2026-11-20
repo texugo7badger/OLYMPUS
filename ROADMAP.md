@@ -1,16 +1,15 @@
 # OLYMPUS Roadmap
 
-**v0.0.95 is the current release** (2026-11-19) — OpenCode 2.3.2 alignment,
-visible where the wait is: the vendored `@opencode/cli`/`@opencode/plugin` are
-2.3.2 and passed the isolated conformance gate plus a real Apollo turn; the
-boot/hibernate loader shows a What's new card after the first second; the
-patch notes & updates screen opens from a status-bar button and the standalone
-`/patch-notes` page, reads installed/tested/npm-latest OpenCode versions live,
-and still refuses an ungated update. v0.0.94 remains the previous release: the
-browser preview keeps `127.0.0.1` (session intact), Electron keeps the OOPIF
-origin (`127.0.0.2`, 60 FPS), Apollo mark batches are durable 20-minute
-background plans with `plan`/`latest`/`retry`, hibernation stops managed dev
-servers and prunes an expired window, and Next.js is 16.4.6. v0.0.93 delivered the walk that owns itself and the marks that stay: durable per-project mark queues with copy/send to Apollo; the hop
+**v0.0.96 is the current release** (2026-11-20) — hibernation v2, GO truth and
+the smart burn: X quits by default while hibernate is explicit; hibernate waits
+for streaming turns, keeps a preview only when a live hop needs it, records and
+restores stopped previews; the GO graph uses the console anchor plus local
+delta with a Monday 00:00 UTC weekly reset; smart burn picks a GO-only roster
+at hop/message boundaries without rewriting `opencode.json` or killing the
+warm server. v0.0.95 remains the previous release: OpenCode v2 2.3.2
+gate-approved, boot/hibernate patch-notes teaser and the `/patch-notes` screen.
+v0.0.94 remains the browser-session preview, durable Apollo mark plans and
+dev-server-aware hibernation; v0.0.93 delivered the walk that owns itself and the marks that stay: durable per-project mark queues with copy/send to Apollo; the hop
 prompt carries the exact deterministic contract and `## Result`; artifacts are
 verified on disk before a plan re-runs; quarantine and recovery budgets are
 scoped per campaign/generation; auth lanes do not silently expire; independent

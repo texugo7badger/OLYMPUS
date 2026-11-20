@@ -44,7 +44,25 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.95 evidence:** [patch notes overlay](screenshots/screens/48-patch-notes-095.png) · [boot / hibernate teaser](screenshots/screens/49-patch-notes-loader-095.png) · [standalone page](screenshots/screens/50-patch-notes-page-095.png).
 
+**v0.0.96 evidence:** [GO truth + smart burn](screenshots/screens/51-burn-096.png) — account 25.1%, projection 50.1%, Kimi K3/K2.7 Code roster, console anchor.
+
 ## Latest
+
+**v0.0.96 — hibernation v2, GO truth and the smart burn.**
+X now **quits** by default; hibernate is explicit (tray, lock, or the
+close-to-hibernate preference). A real quit stops the preview/MCP fleet instead
+of leaving it in the app cgroup. Hibernate waits for a streaming chat turn,
+keeps a preview only when a live hop needs it, records the servers it stops and
+**restores them on wake**. The GO graph now uses the **console anchor**
+(monthly/5h/weekly) plus the local delta, with the weekly window resetting
+Monday 00:00 UTC; the measured **25.1% / 50.1%** matches the console's 25% /
+on-pace-50%. **Smart burn** chooses a GO-only roster at the next hop/message —
+Kimi K3, Kimi K2.7 Code, DeepSeek 1017, Qwen3.7 Plus, MiniMax M3 — and never
+rewrites `opencode.json` or cuts a live turn. Claude Opus/Sonnet are **Zen**
+models, not in the GO catalog; the screen says so. OpenCode v2 **2.3.2** is
+still the latest npm release and is gate-approved. The tag-icon/logo audit and
+24px vector brief are in [docs/design/TAG-ICON-BRIEF.md](docs/design/TAG-ICON-BRIEF.md).
+Published as v0.0.96; v0.0.95 remains the previous release.
 
 **v0.0.95 — OpenCode 2.3.2 alignment, visible where the wait is.**
 OpenCode v2 **2.3.2** is the vendored CLI and plugin, and it passed the isolated

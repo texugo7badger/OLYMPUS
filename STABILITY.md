@@ -2,15 +2,15 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.95 · 2026-11-19 · the current release. The harness is shipped and
+> v0.0.96 · 2026-11-20 · the current release. The harness is shipped and
 > measured; the 8-hour / 100-hop certification is **not** claimed yet. The
 > hibernation path is a bounded, detached walk with an explicit window, not
-> the note-8 claim. v0.0.95 aligns the vendored OpenCode to v2 **2.3.2**
-> (isolated gate approved + a real Apollo turn) and puts the patch notes /
-> update state on the boot and hibernate loader, in a status-bar screen and
-> on `/patch-notes`. v0.0.94's durable mark batches and dev-server-aware
-> hibernation remain. This page records what was actually run and what
-> remains. The cost side is now measured by `npm run cost:audit`
+> the note-8 claim. v0.0.96 makes X a real quit, gates hibernate on streaming
+> turns, keeps only a preview a live hop needs and restores stopped previews
+> on wake; the GO graph is anchored to the console (Monday weekly reset) and
+> the smart burn applies at hop/message boundaries without config rewrites.
+> v0.0.95's OpenCode 2.3.2 alignment and patch-notes screen remain. This page
+> records what was actually run and what remains. The cost side is now measured by `npm run cost:audit`
 > (tokens/hop, cache hit, list value, invoice unknown) and bounded by the
 > opt-in caps in `~/.olympus/cost-caps.json`. Since v0.0.73 a campaign can
 > walk in a **detached supervisor process**: the app restarting no longer

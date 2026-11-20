@@ -2,6 +2,50 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.96] — 2026-11-20
+
+### Hibernation v2, GO truth and the smart burn
+
+- **X quits; hibernate is explicit.** The old `close` handler turned every X
+  into a background hibernate, and `window-all-closed` kept the tray app (and
+  its preview/MCP fleet) alive. Now X quits by default, the tray/lock actions
+  hibernate, and a `closeToHibernate` preference keeps the old behavior for
+  anyone who wants it. A real quit calls `power/quit-cleanup` to stop managed
+  preview servers and the chat/MCP fleet.
+- **Hibernation waits instead of cutting.** The chat route waits up to 60s for
+  active warm turns; the Electron main awaits it before destroying the window
+  and keeps the window (with a named reason) if a turn is still streaming.
+- **Preview lifecycle is honest.** A live in-flight hop keeps its preview;
+  idle previews stop. The stopped list is recorded in
+  `hibernation-devservers.json` and the wake restores each server with the
+  manager's probe. A force-free request is available for the drill/CLI.
+- **GO truth.** The top line is the **console anchor** (monthly/5h/weekly) plus
+  the local ledger delta after the sync. The weekly window is Monday 00:00 UTC,
+  not a rolling 7 days. Measured on this machine: **25.1%** account,
+  **50.1%** projection, **1.7%/day** — matching the console's 25% /
+  on-pace-50%. The per-model table remains for attribution.
+- **Smart burn.** A deterministic band controller picks a GO-only roster per
+  god at the next hop/message. It respects per-model headroom, the 5h/weekly
+  windows, a target (Pace 90 / Burn 95 / Reserve 70), and diversifies top lanes
+  (max two top / four daily roles per model). It never rewrites
+  `opencode.json`, never kills the warm server, and never cuts a streaming
+  turn. Claude Opus/Sonnet are Zen models, not in the GO catalog; the UI shows
+  that instead of guessing. Kimi K3/K2.7 Code, DeepSeek V4.1 Flash 1017, Qwen3.7
+  Plus and MiniMax M3 are the GO ladder.
+- **OpenCode 2.3.2.** Still the latest npm release and gate-approved
+  (13/13 checks + a real Apollo turn).
+- **Tag icon/logo audit.** The 16px marks are hand-authored pixel glyphs, not
+  model/MCP output. The brief for a 24px vector set and the AIME logo is in
+  `docs/design/TAG-ICON-BRIEF.md`.
+
+**Battery: 178 PASS / 0 FAIL / 1 declared skip of 179.**
+`scripts/v092-runtime.test.mjs` **29 passed** (including the GO anchor, Monday
+reset, burn ladder/ceiling and hibernate v2 pins); `tsc` clean; `eslint` clean;
+`docs:check` clean; `check-strategy-sync` green; production build and
+standalone boot gate green with Next.js 16.4.6.
+
+**Published v0.0.96; v0.0.95 remains the previous stable release.**
+
 ## [v0.0.95] — 2026-11-19
 
 ### OpenCode 2.3.2 alignment, visible where the wait is
