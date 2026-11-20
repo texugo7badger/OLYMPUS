@@ -23,7 +23,9 @@
         "Smart burn chooses a GO-only roster at the next hop/message (Kimi K3, Kimi K2.7 Code, DeepSeek 1017, Qwen3.7 Plus, MiniMax M3). Claude Opus/Sonnet are Zen models, not in the GO catalog; the screen says so instead of guessing.",
         "The burn toggle never rewrites opencode.json and never cuts a live turn; it applies at the hop/message boundary and diversifies top lanes so one per-model cap cannot carry all ten gods.",
         "OpenCode v2 2.3.2 remains the latest npm release and is gate-approved; the patch-notes screen checks the live latest on every open.",
-        "A tag-icon/logo audit and a 24px vector brief are in docs/design/TAG-ICON-BRIEF.md; the 16px marks are hand-authored, not model-generated."
+        "A tag-icon/logo audit and a 24px vector brief are in docs/design/TAG-ICON-BRIEF.md; the 16px marks are hand-authored, not model-generated.",
+        "Wake ignores ERR_ABORTED (the splash → APP_URL navigation) instead of entering a reload loop; the preview restore probes and retries until verified.",
+        "Max Quality / strategy apply resolves the real app root in standalone (not .next/standalone); the L4 probe falls back to the package binary. Verified ok:true."
       ]
     },
     {

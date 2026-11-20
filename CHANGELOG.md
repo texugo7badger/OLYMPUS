@@ -23,6 +23,17 @@ All notable changes to OLYMPUS are documented in this file.
   420×720 → 340×190, keeping only campaign progress, GO month and the
   in-flight hop; expand restores the full widget. The phone widget is
   unchanged.
+- **Strategy apply works from the real app root.** The Settings route used
+  `process.cwd()`; a standalone run has `.next/standalone` there, so Max
+  Quality hit a missing `opencode.json` and a missing `.bin/opencode`. It now
+  uses `findOlympusRoot()` (plus the `OLYMPUS_ROOT` env from Electron) and the
+  L4 probe falls back to the package binary. Verified: `go-max-quality`
+  returned `ok:true, strategyApplied:true` from the standalone server.
+- **Wake is not a reload loop.** Electron's `did-fail-load` now ignores
+  `ERR_ABORTED` (-3), a superseded navigation (wake splash → APP_URL), rather
+  than treating it as a dead server. The wake restore probes the live preview
+  after each start and retries up to 3 times; the live drill logged
+  `preview restore aime: verified`.
 - **GO truth.** The top line is the **console anchor** (monthly/5h/weekly) plus
   the local ledger delta after the sync. The weekly window is Monday 00:00 UTC,
   not a rolling 7 days. Measured on this machine: **25.1%** account,
