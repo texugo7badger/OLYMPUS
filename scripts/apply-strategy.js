@@ -2244,7 +2244,14 @@ function preflightModelCatalogue(config, opts = {}) {
       byProvider.delete(sp);
     }
   }
-  const opencodeBin = path.join(OLYMPUS_ROOT, 'node_modules', '.bin', 'opencode');
+  // The standalone / packaged tree may carry @opencode/cli's real binary
+  // without npm's .bin symlink (electron-builder copies node_modules but not
+  // the link farm). Resolve the package bin before declaring the probe
+  // missing.
+  const opencodeBin = [
+    path.join(OLYMPUS_ROOT, 'node_modules', '.bin', 'opencode'),
+    path.join(OLYMPUS_ROOT, 'node_modules', '@opencode', 'cli', 'bin', 'opencode.exe'),
+  ].find((p) => fs.existsSync(p)) || path.join(OLYMPUS_ROOT, 'node_modules', '.bin', 'opencode');
   if (!fs.existsSync(opencodeBin)) {
     const msg =
       `L4 catalogue preflight: the opencode catalogue probe is missing (${opencodeBin}) — ` +

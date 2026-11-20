@@ -28,6 +28,7 @@ import {
 import { checkLlmAuth } from '@/lib/llm-auth';
 // Shared no-cache headers for live API routes.
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+import { findOlympusRoot } from '@/lib/opencode-spawn';
 // v0.0.88 — ONE-writer law (strategy-state.ts). The Settings dialog switches
 // strategy through THIS route, so this route must record the apply in the
 // canonical state file; otherwise it rewrites the engine and leaves every
@@ -44,7 +45,9 @@ export const dynamic = 'force-dynamic';
 
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
 const PROVIDERS_FILE = path.join(OLYMPUS_HOME, 'llm-providers.json');
-const ROOT_PROVIDERS = path.join(process.cwd(), '.opencode', 'llm-providers.json');
+// Resolve at use (standalone cwd is .next/standalone; findOlympusRoot walks
+// to the real app root / OLYMPUS_ROOT).
+const rootProvidersPath = () => path.join(findOlympusRoot(), '.opencode', 'llm-providers.json');
 
 // MIRROR of src/lib/model-strategies.ts (go-balanced gods).
 // Do NOT edit by hand — update the canonical file and run `npm run check-strategy-sync`.
@@ -79,7 +82,7 @@ const MODEL_CLASSES = MODEL_CLASSES_BY_FAMILY;
 
 function loadProviders() {
   try {
-    const file = fs.existsSync(PROVIDERS_FILE) ? PROVIDERS_FILE : ROOT_PROVIDERS;
+    const file = fs.existsSync(PROVIDERS_FILE) ? PROVIDERS_FILE : rootProvidersPath();
     if (!fs.existsSync(file)) {
       return {
         default: 'opencode-go',
@@ -111,7 +114,7 @@ function loadProviders() {
  * This reflects what apply-strategy.js wrote, not the static GOD_META defaults.
  */
 function loadOpencodeModels(): Record<string, string> {
-  const opencodePath = path.join(process.cwd(), 'opencode.json');
+  const opencodePath = path.join(findOlympusRoot(), 'opencode.json');
   try {
     if (!fs.existsSync(opencodePath)) return {};
     const raw = JSON.parse(fs.readFileSync(opencodePath, 'utf-8'));
@@ -448,7 +451,8 @@ export async function POST(req: NextRequest) {
     let strategyApplied = false;
     let strategyError: string | null = null;
     let deferred = false;
-    const applyScript = path.join(process.cwd(), 'scripts', 'apply-strategy.js');
+    const root = findOlympusRoot();
+    const applyScript = path.join(root, 'scripts', 'apply-strategy.js');
     if (fs.existsSync(applyScript)) {
       try {
         // Only pass the strategy through to the shell when it matches a
@@ -462,7 +466,7 @@ export async function POST(req: NextRequest) {
             ? cfg.strategy
             : DEFAULT_LLM_STRATEGY;
         execSync(`node "${applyScript}" --strategy ${applyTarget} --keep-overrides`, {
-          cwd: process.cwd(),
+          cwd: root,
           stdio: 'pipe',
           // The apply runs a live-catalogue preflight (L4) over ~450 model ids
           // before writing — 15 s was cutting it off on a cold cache, which
@@ -480,7 +484,7 @@ export async function POST(req: NextRequest) {
         // construction instead of by migration.
         try {
           const appliedCfg = JSON.parse(
-            fs.readFileSync(path.join(process.cwd(), 'opencode.json'), 'utf-8'),
+            fs.readFileSync(path.join(root, 'opencode.json'), 'utf-8'),
           );
           writeStrategyState({
             strategy: applyTarget,

@@ -19,6 +19,7 @@ import { execSync } from 'child_process';
 // dead server.
 import { killWarmServerForStrategy } from '@/lib/opencode-session';
 import { readStrategyState, writeStrategyState } from '@/lib/strategy-state';
+import { findOlympusRoot } from '@/lib/opencode-spawn';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
     // with a template string is treated as a shell command → only non-fatal
     // NFT warnings. The /*turbopackIgnore: true*/ comment suppresses even
     // those warnings.
-    const root = process.cwd();
+    const root = findOlympusRoot();
     const applyScript = path.join(/*turbopackIgnore: true*/ root, 'scripts', 'apply-strategy.js');
     if (!fs.existsSync(applyScript)) {
       return NextResponse.json(

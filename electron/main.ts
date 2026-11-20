@@ -349,6 +349,9 @@ function spawnNext(): ChildProcess {
     env: {
       ...process.env,
       PORT: String(PORT),
+      // v0.0.96 — the standalone cwd is .next/standalone; the strategy apply
+      // must resolve the REAL app root (opencode.json + scripts + bin).
+      OLYMPUS_ROOT: appRoot,
       // The standalone server.js reads process.env.HOSTNAME and falls back to
       // 0.0.0.0, so this is the only lever on the packaged app's bind
       // (issue #33). `next dev` needs -H instead; see spawnNext above.
