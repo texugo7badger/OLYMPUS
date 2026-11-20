@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Bell, Coins, Download, Gauge, Palette, Radio, RefreshCw, Send, Smartphone, Zap } from 'lucide-react';
+import { Bell, Coins, Download, Gauge, Maximize2, Minimize2, Palette, Radio, RefreshCw, Send, Smartphone, Zap } from 'lucide-react';
 import { applyTheme, normalizeThemeState, resolvePalette, THEME_PRESETS, type ThemeState } from '@/lib/theme';
 import { mobileFetch } from '@/lib/mobile-fetch';
 import { useMobilePwa } from '@/lib/use-mobile-pwa';
@@ -85,6 +85,9 @@ export default function LiveWidgetPage() {
   const [briefing, setBriefing] = useState<ProjectBriefing | null>(null);
   const [briefingBusy, setBriefingBusy] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  // v0.0.96 — the HUD window can collapse to a 340×190 strip.
+  const [hudMode, setHudMode] = useState(false);
+  const [compact, setCompact] = useState(false);
   const language = useLanguage();
   // v0.0.85 — one themed worker owns /m and /m/widget; install is shared.
   const pwa = useMobilePwa();
@@ -93,7 +96,15 @@ export default function LiveWidgetPage() {
   useEffect(() => {
     try {
       const hash = window.location.hash || '';
-      const fromHash = new URLSearchParams(hash.replace(/^#/, '')).get('t') || '';
+      const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
+      const fromHash = hashParams.get('t') || '';
+      const hud = hashParams.get('hud') === '1';
+      setHudMode(hud);
+      if (hud) {
+        const stored = localStorage.getItem('olympus:hud-compact') === '1';
+        setCompact(stored);
+        if (stored) setTimeout(() => { try { (window as any).olympusHud?.setCompact(true); } catch { /* browser */ } }, 50);
+      }
       const stored = localStorage.getItem(TOKEN_KEY) || '';
       // The PWA start_url is /m/widget (no hash); persist the QR token so the
       // installed widget keeps its session without the fragment.
@@ -256,6 +267,17 @@ export default function LiveWidgetPage() {
     finally { setSending(false); }
   }, [sending, headers, project, briefing, language, speak]);
 
+  const toggleCompact = () => {
+    const next = !compact;
+    setCompact(next);
+    try { localStorage.setItem('olympus:hud-compact', next ? '1' : '0'); } catch { /* private */ }
+    try {
+      const api = (window as any).olympusHud;
+      if (api?.setCompact) api.setCompact(next);
+      else window.resizeTo(next ? 340 : 420, next ? 190 : 720);
+    } catch { /* browser */ }
+  };
+
   const card = { border: `1px solid ${palette.gold}22`, background: `${palette.card}cc` } as const;
   const dim = { color: palette.textDim } as const;
   const mono = 'font-mono tabular-nums';
@@ -266,6 +288,34 @@ export default function LiveWidgetPage() {
         <div className="max-w-sm text-center">
           <div className="text-[11px] font-semibold uppercase tracking-[0.3em]" style={{ color: palette.gold }}>OLYMPUS</div>
           <p className="mt-3 text-sm" style={dim}>Escaneie o QR de widget no OLYMPUS do PC para herdar a sessão.</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (compact) {
+    return (
+      <main className="mx-auto flex h-dvh w-full flex-col gap-1.5 p-2.5" style={{ background: palette.bg, color: palette.text }}>
+        <header className="flex items-center gap-1.5">
+          <span className="text-[10px] font-semibold tracking-[0.24em]" style={{ color: palette.gold }}>OLYMPUS</span>
+          <span className="text-[8px] font-mono uppercase" style={{ color: state === 'running' ? palette.green : palette.gold }}>{state}</span>
+          <span className="ml-auto text-[8px] font-mono" style={dim}>{updatedAt || '—'}</span>
+          <button onClick={toggleCompact} aria-label="Expand HUD" className="rounded p-1" style={dim}>
+            <Maximize2 size={11} />
+          </button>
+        </header>
+        <div className="flex items-baseline gap-2">
+          <span className={`${mono} text-xl font-semibold`}>{completed}<span className="text-[11px]" style={dim}>/{total || '—'}</span></span>
+          <span className={`${mono} text-[11px]`} style={{ color: palette.cyan }}>{total ? `${progress}%` : '—'}</span>
+          <span className="ml-auto text-[9px] font-mono" style={{ color: palette.gold }}>GO {mo == null ? '—' : `${mo}%`}</span>
+        </div>
+        <div className="h-1 overflow-hidden rounded-full" style={{ background: palette.bg }}>
+          <div className="h-full rounded-full" style={{ width: `${progress}%`, background: palette.gold }} />
+        </div>
+        <p className="line-clamp-1 text-[8px] leading-relaxed" style={dim}>{run?.line || t('m.waitingWalker', language)}</p>
+        <div className="flex items-center gap-1.5 text-[8px] font-mono" style={dim}>
+          <Radio size={7} style={{ color: palette.green }} />
+          <span className="truncate">{inFlight[0]?.hopId ? `▶ ${inFlight[0].hopId}` : 'agora'}{parked?.hopId ? ` · parked ${parked.hopId}` : ''}</span>
         </div>
       </main>
     );
@@ -301,6 +351,11 @@ export default function LiveWidgetPage() {
         <button onClick={() => void load()} aria-label="Refresh widget" className="rounded p-1" style={dim}>
           <RefreshCw size={12} className={busy ? 'animate-spin' : ''} />
         </button>
+        {hudMode && (
+          <button onClick={toggleCompact} aria-label="Minimize HUD" className="rounded p-1" style={dim}>
+            <Minimize2 size={12} />
+          </button>
+        )}
       </header>
 
       <section className="rounded-xl p-3" style={card}>

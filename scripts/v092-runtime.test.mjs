@@ -403,10 +403,24 @@ ok('PN4: hibernate v2 gates active turns, keeps a live preview, and restores idl
   const main = src('electron/main.ts');
   assert.match(main, /readCloseToHibernate/);
   assert.match(main, /restoreHibernatedDevServers/);
+  assert.match(main, /if \(errorCode === -3\) return;/);
   assert.match(main, /if \(hibernating\) return;\n    app\.quit\(\);/);
   assert.match(main, /postJson\('\/api\/olympus\/chat\/hibernate', \{ waitMs: 60_000, forceFree \}, 70_000\)/);
   const prefs = JSON.parse(src('package.json'));
   assert.ok(prefs.version.startsWith('0.0.96'));
+});
+
+ok('PN5: the hibernate HUD collapses to a compact strip from a real button', () => {
+  const widget = src('src/app/m/widget/page.tsx');
+  const main = src('electron/main.ts');
+  assert.match(widget, /olympus:hud-compact/);
+  assert.match(widget, /setCompact/);
+  assert.match(widget, /Minimize2/);
+  assert.ok(fs.existsSync(path.join(ROOT, 'electron', 'hud-preload.ts')));
+  assert.match(main, /hud-preload\.js/);
+  assert.match(main, /setHudCompact/);
+  assert.match(main, /compact \? 340 : 420/);
+  assert.match(main, /compact \? 190 : 720/);
 });
 
 console.log(`\nv092-runtime: ${passed} passed${process.exitCode ? ', failures' : ', all green'}.`);

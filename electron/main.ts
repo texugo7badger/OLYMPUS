@@ -849,10 +849,23 @@ async function restoreHibernatedDevServers(): Promise<void> {
   const stopped: string[] = Array.isArray(data?.stopped) ? data.stopped.filter((s: unknown) => typeof s === 'string') : [];
   try { unlinkSync(HIBERNATION_DEVSERVERS); } catch { /* already gone */ }
   for (const slug of stopped) {
-    const r = await postJson('/api/olympus/dev-server/start', { slug }, 120_000);
-    console.log(`[olympus:hibernate] preview restore ${slug}: ${r?.ok ? 'ok' : 'failed'}`);
-    if (!r?.ok) {
-      try { notifyDesktop('error', 'Preview not restored', `${slug}: ${r?.result?.error || r?.error || 'start refused'}`); } catch { /* optional */ }
+    // The start route can return ok when the npm parent spawned but the dev
+    // server exited a moment later (the Next 16.4.x security nudge is the
+    // specimen). Verify with the live-preview probe and retry once; never
+    // claim "restored" from a spawn result.
+    let restored = false;
+    let lastError = '';
+    for (let attempt = 0; attempt < 3 && !restored; attempt++) {
+      const r = await postJson('/api/olympus/dev-server/start', { slug }, 120_000);
+      if (!r?.ok) lastError = String(r?.result?.error || r?.error || 'start refused');
+      await new Promise((resolve) => setTimeout(resolve, 2_500));
+      const st = await getJson(`/api/olympus/live-preview?project=${encodeURIComponent(slug)}`);
+      restored = st?.running === true;
+      if (!restored && !lastError) lastError = 'the spawned server did not answer the probe';
+    }
+    console.log(`[olympus:hibernate] preview restore ${slug}: ${restored ? 'verified' : 'failed'}`);
+    if (!restored) {
+      try { notifyDesktop('error', 'Preview not restored', `${slug}: ${lastError || 'probe still red'} — open Live preview → start.`); } catch { /* optional */ }
     }
   }
 }
@@ -983,10 +996,15 @@ function showHud(): void {
     skipTaskbar: false,
     backgroundColor: '#0A0E16',
     title: 'OLYMPUS — live status',
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: join(__dirname, 'hud-preload.js'),
+    },
   });
   try { hudWindow.setAlwaysOnTop(true, 'floating'); } catch { /* platform */ }
-  const url = token ? `${BASE_URL}/m/widget#t=${encodeURIComponent(token)}` : `${BASE_URL}/m/widget`;
+  const url = token ? `${BASE_URL}/m/widget#t=${encodeURIComponent(token)}&hud=1` : `${BASE_URL}/m/widget#hud=1`;
   const load = () => { try { void hudWindow?.loadURL(url).catch(() => { /* retry below */ }); } catch { /* gone */ } };
   load();
   hudWindow.webContents.on('did-fail-load', (_e, code, _desc, _url, isMain) => {
@@ -1004,6 +1022,22 @@ function closeHud(): void {
   if (!hudWindow) return;
   try { hudWindow.destroy(); } catch { /* gone */ }
   hudWindow = null;
+}
+
+/** v0.0.96 — collapse/expand the HUD without recreating it. */
+function setHudCompact(compact: boolean): void {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const width = compact ? 340 : 420;
+  const height = compact ? 190 : 720;
+  try {
+    const area = screen.getDisplayMatching(hudWindow.getBounds()).workArea;
+    hudWindow.setBounds({
+      x: area.x + area.width - width - 12,
+      y: area.y + area.height - height - 12,
+      width,
+      height,
+    }, true);
+  } catch { /* window gone */ }
 }
 
 function startHibernationWatch(): void {
@@ -1253,10 +1287,15 @@ function createWindow() {
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMain) => {
     console.error(`[olympus:electron] did-fail-load: code=${errorCode} desc="${errorDescription}" url=${validatedURL} isMain=${isMain}`);
     if (!isMain) return; // Only handle main-frame failures.
+    // v0.0.96 — -3 is ERR_ABORTED: a navigation superseded by another
+    // loadURL (the wake splash → APP_URL, or the recovery page itself). It is
+    // NOT a server failure; treating it as one created a self-sustaining
+    // reload loop after hibernate wake.
+    if (errorCode === -3) return;
     // Force-show the window so the user sees the recovery/error page.
     mainWindow?.show();
 
-    if ((errorCode === -102 || errorCode === -3) && loadFailCount < 8) {
+    if (errorCode === -102 && loadFailCount < 8) {
       loadFailCount++;
       const attempt = loadFailCount;
       const reconnectHtml = brandPage({ title: 'Reconnecting the workspace', detail: `Attempt ${attempt} of 8 — probing the server, respawning if needed, reloading on green…` });
@@ -2018,6 +2057,11 @@ if (!gotLock) {
   console.log('[olympus:electron] another instance is running — asking it to show the window');
   app.quit();
 } else {
+  ipcMain.on('olympus:hud-compact', (event, compact) => {
+    if (!hudWindow || event.sender !== hudWindow.webContents) return;
+    setHudCompact(compact === true);
+  });
+
   ipcMain.handle('olympus:hibernate', () => {
     return hibernateNow();
     return true;
