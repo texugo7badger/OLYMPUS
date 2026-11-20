@@ -26,6 +26,7 @@ import { composeKnowledgeBlock } from '@/lib/knowledge-hints';
 import { uiReferencesMarkerBlock } from '@/lib/ui-references';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 import { isHibernating } from '@/lib/hibernation';
+import { resolveBurnModelForGod } from '@/lib/burn-state';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
 // the running server + session (no cold start, context retained).
@@ -1339,6 +1340,10 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           sessionId,
           text: opts.text,
           agent: opts.agent,
+          // v0.0.96 — the burn roster applies at the next message; the
+          // current stream is never cut. resolveBurnModelForGod is a cheap
+          // sync read of the last decision file.
+          model: resolveBurnModelForGod(opts.agent || 'apollo'),
           onEvent,
           signal: req.signal,
           maxRuntimeMs: MAX_RUNTIME_MS,

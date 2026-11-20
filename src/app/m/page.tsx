@@ -27,6 +27,7 @@ import PlasmaRing from '@/components/olympus/plasma-ring';
 import TaskSheetModal from '@/components/olympus/task-sheet-modal';
 import GoUsageBar from '@/components/olympus/go-usage-bar';
 import GoForecastChart from '@/components/olympus/go-forecast-chart';
+import BurnPanel from '@/components/olympus/burn-panel';
 import MobileParthenon from '@/components/olympus/mobile-parthenon';
 import { THEME_PRESETS, applyTheme, normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
 import { getPerformanceMode, setPerformanceMode } from '@/lib/performance-mode';
@@ -753,7 +754,7 @@ export default function MobileCompanion() {
             {/* v0.0.84 — the phone's spend window carries the same measured GO
                 bar as the creative and the PC Cost panel; the old line printed
                 the $0.00 invoice as if the subscription were free. */}
-            <div className="mb-2 space-y-2"><GoUsageBar /><GoForecastChart /></div>
+            <div className="mb-2 space-y-2"><GoUsageBar /><GoForecastChart /><BurnPanel /></div>
 
             <div className="rounded-xl border border-olympus-gold/10 bg-olympus-card p-3">
               <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-olympus-text-dim">

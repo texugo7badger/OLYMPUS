@@ -15,9 +15,11 @@ import path from 'node:path';
 export interface PowerPrefs {
   /** Hibernate the window when the OS locks/logs out; the campaign stays. */
   autoHibernateOnLock: boolean;
+  /** v0.0.96 — X hibernates instead of quitting. Default OFF: X quits. */
+  closeToHibernate: boolean;
 }
 
-export const DEFAULT_POWER_PREFS: PowerPrefs = { autoHibernateOnLock: true };
+export const DEFAULT_POWER_PREFS: PowerPrefs = { autoHibernateOnLock: true, closeToHibernate: false };
 
 export function powerPrefsPath(home = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus')): string {
   return path.join(home, 'power-prefs.json');
@@ -29,6 +31,9 @@ export function normalizePowerPrefs(input: unknown): PowerPrefs {
     autoHibernateOnLock: typeof raw.autoHibernateOnLock === 'boolean'
       ? raw.autoHibernateOnLock
       : DEFAULT_POWER_PREFS.autoHibernateOnLock,
+    closeToHibernate: typeof raw.closeToHibernate === 'boolean'
+      ? raw.closeToHibernate
+      : DEFAULT_POWER_PREFS.closeToHibernate,
   };
 }
 

@@ -23,6 +23,10 @@ interface Usage {
   ok?: boolean; plan?: string; source?: string; updatedAt?: string;
   windows?: { month?: { pct: number | null; model: string | null; resetAt: string | null } };
   forecast?: Forecast | null;
+  account?: {
+    monthlyPct: number | null; source: 'console' | 'mixed' | 'local';
+    forecast?: Forecast | null; anchorAt?: string | null;
+  };
 }
 
 const PLAN_LABEL: Record<string, string> = { go: 'Go', 'go-plus': 'Go Plus', 'go-teams': 'Go Teams' };
@@ -71,7 +75,10 @@ export default function GoForecastChart() {
     );
   }
 
-  const f = data.forecast;
+  // v0.0.96 — the account forecast (console anchor + local delta) is the
+  // top line; the per-model forecast remains the fallback when no anchor.
+  const f = data.account?.forecast ?? data.forecast;
+  const accountSource = data.account?.source;
   const plan = PLAN_LABEL[String(data.plan || 'go-plus')] ?? 'Go Plus';
   if (!f) {
     return (
@@ -113,7 +120,7 @@ export default function GoForecastChart() {
           <div className="text-[24px] font-semibold leading-none text-olympus-gold">{moneyPct(f.currentPct)}</div>
           <div className="mt-1 text-[9px] font-mono text-olympus-text-dim">
             {plan} usage · Renews {dateLabel(f.resetAt)}
-            {data.source === 'local-ledger' ? ' · local ledger' : ''}
+            {accountSource === 'console' ? ' · console anchor' : accountSource === 'mixed' ? ' · anchor + local delta' : data.source === 'local-ledger' ? ' · local ledger' : ''}
           </div>
         </div>
         <span

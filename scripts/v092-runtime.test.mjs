@@ -41,6 +41,8 @@ const drain = await import(ROOT + '/src/lib/prompt-queue-drain.ts');
 const design = await import(ROOT + '/src/lib/design-skin.ts');
 const walk = await import(ROOT + '/src/lib/hop-runtime/walker.ts');
 const previewIsolation = await import(ROOT + '/src/lib/preview-isolation.ts');
+const goConsole = await import(ROOT + '/src/lib/go-console.ts');
+const burn = await import(ROOT + '/src/lib/burn-policy.ts');
 
 ok('M1: a mark queue survives on disk and round-trips', () => {
   marks.writeMarks('aime', [{ x: 10, y: 20, page: '/onboarding', instruction: 'tighten the first gesture', viewport: { width: 1440, height: 900 } }]);
@@ -336,7 +338,7 @@ ok('PN1: OpenCode 2.3.2 is pinned and the patch-notes surface is wired', () => {
   assert.equal(pkg.dependencies['@opencode/cli'], '2.3.2');
   assert.equal(pkg.dependencies['@opencode/plugin'], '2.3.2');
   const notes = JSON.parse(src('public/patch-notes.json'));
-  assert.equal(notes.current, '0.0.95');
+  assert.equal(notes.current, '0.0.96');
   assert.equal(notes.opencode.tested, '2.3.2');
   assert.match(notes.opencode.gateCommand, /opencode:gate/);
   const component = src('src/components/olympus/patch-notes.tsx');
@@ -348,6 +350,63 @@ ok('PN1: OpenCode 2.3.2 is pinned and the patch-notes surface is wired', () => {
   assert.match(src('src/components/olympus/olympus-loader.tsx'), /PatchNotesTeaser/);
   assert.match(src('src/components/olympus/status-bar.tsx'), /olympus:open-patch-notes/);
   assert.match(src('src/app/page.tsx'), /PatchNotesOverlay/);
+});
+
+ok('PN2: the GO account anchor and the Monday weekly reset are exact', () => {
+  assert.equal(goConsole.nextWeeklyReset(Date.parse('2026-11-20T17:26:00Z')), '2026-11-23T00:00:00.000Z');
+  assert.equal(goConsole.parsePct('25,5%'), 25.5);
+  const anchor = goConsole.normalizeAnchor({
+    plan: 'go-plus', monthlyPct: 25, h5Pct: 3, weeklyPct: 8,
+    resetAt: '2026-12-05T18:15:00Z', capUsd: 220,
+    localSpendMonthUsd: 55, localSpend5hUsd: 1.5, localSpend7dUsd: 8,
+    capturedAt: '2026-11-20T17:00:00Z', source: 'manual',
+  });
+  assert.ok(anchor);
+  const w = goConsole.accountWindows({
+    anchor,
+    spendMonthUsd: 66, spend5hUsd: 2.5, spend7dUsd: 12,
+    now: Date.parse('2026-11-20T18:00:00Z'),
+  });
+  assert.ok(Math.abs(w.monthlyPct - 30) < 1e-9, String(w.monthlyPct));
+  assert.ok(Math.abs(w.h5Pct - 5.272727272727273) < 1e-9, String(w.h5Pct));
+  assert.ok(w.source === 'console' && w.capUsd === 220);
+});
+
+ok('PN3: the burn policy upgrades a behind-pace month and respects model ceilings', () => {
+  const decision = burn.chooseBurnRoster({
+    policy: { mode: 'burn', targetPct: 95, modelCeilingPct: 85 },
+    accountPct: 25, dailyPct: 1.7, daysLeft: 15, h5Pct: 3, weeklyPct: 8,
+    models: [{ model: 'kimi-k3', pctMonth: 2, limitUsd: null }],
+    enabledModels: [],
+  });
+  assert.equal(decision.blocked, null);
+  assert.equal(decision.step, 1);
+  assert.equal(decision.roster.apollo, 'opencode-go/kimi-k3');
+  const capped = burn.chooseBurnRoster({
+    policy: { mode: 'burn', targetPct: 95, modelCeilingPct: 85 },
+    accountPct: 25, dailyPct: 1.7, daysLeft: 15, h5Pct: 3, weeklyPct: 8,
+    models: [{ model: 'kimi-k3', pctMonth: 90, limitUsd: 60 }],
+    enabledModels: [],
+  });
+  assert.notEqual(capped.roster.apollo, 'opencode-go/kimi-k3');
+  assert.equal(burn.chooseBurnRoster({
+    policy: { mode: 'off', targetPct: 95, modelCeilingPct: 85 },
+    accountPct: 25, dailyPct: 1.7, daysLeft: 15, h5Pct: 3, weeklyPct: 8, models: [],
+  }).blocked, 'off');
+});
+
+ok('PN4: hibernate v2 gates active turns, keeps a live preview, and restores idle ones', () => {
+  const route = src('src/app/api/olympus/chat/hibernate/route.ts');
+  assert.match(route, /waitForActiveRuns/);
+  assert.match(route, /keepPreview/);
+  assert.match(route, /hibernation-devservers\.json/);
+  const main = src('electron/main.ts');
+  assert.match(main, /readCloseToHibernate/);
+  assert.match(main, /restoreHibernatedDevServers/);
+  assert.match(main, /if \(hibernating\) return;\n    app\.quit\(\);/);
+  assert.match(main, /postJson\('\/api\/olympus\/chat\/hibernate', \{ waitMs: 60_000, forceFree \}, 70_000\)/);
+  const prefs = JSON.parse(src('package.json'));
+  assert.ok(prefs.version.startsWith('0.0.96'));
 });
 
 console.log(`\nv092-runtime: ${passed} passed${process.exitCode ? ', failures' : ', all green'}.`);

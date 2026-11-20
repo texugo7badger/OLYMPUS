@@ -910,6 +910,25 @@ function performWarmServerKill(reason: string): void {
  * The kill is deferred until the active run count hits zero; the next prompt
  * then cold-starts on the fresh config. Switching while idle kills now.
  */
+/** v0.0.96 — the in-flight chat turns the hibernate gate must not cut. */
+export function activeRunCount(): number {
+  return activeRuns.size;
+}
+
+/**
+ * Wait for every active warm turn to settle. Used by hibernate: a turn that
+ * is streaming must finish (or be explicitly cancelled) before the chat
+ * server is stopped. Returns true when idle, false on timeout.
+ */
+export async function waitForActiveRuns(timeoutMs = 60_000): Promise<boolean> {
+  const deadline = Date.now() + Math.max(0, timeoutMs);
+  while (activeRuns.size > 0) {
+    if (Date.now() >= deadline) return false;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return true;
+}
+
 export function killWarmServerForStrategy(): { deferred: boolean } {
   if (activeRuns.size > 0) {
     pendingStrategyKill = true;
@@ -1411,6 +1430,10 @@ export interface WarmRunOptions {
   /** #62 (BATCH 13): the run's task class — scales the watchdog's idle
    *  budget (complex/architectural get 3x). Absent = base budget. */
   complexity?: string | null;
+  /** v0.0.96 — an optional per-message burn model (`provider/id`). It is
+   *  selected ON THE SESSION before the prompt; the god's agent/prompt is
+   *  unchanged. Selection failure is logged and the configured model stays. */
+  model?: string | null;
 }
 
 /**
@@ -3071,6 +3094,35 @@ async function runWarmMessageAttempt(
 
       // 2. Post the message (waits for the full turn).
       const auth = server.authed ? server.password : null;
+      // v0.0.96 — the burn model is a session-level selection (v2 API). Do
+      // NOT change it on a watch-resume: that turn is already in flight on
+      // its old model, and re-posting/altering it would corrupt the run.
+      if (!watchResume && server.protocol === 'v2' && opts.model && opts.model.includes('/')) {
+        try {
+          const cut = opts.model.indexOf('/');
+          const modelRes = await apiFetch(
+            server.port,
+            auth,
+            `/api/session/${opts.sessionId}/model`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model: { providerID: opts.model.slice(0, cut), id: opts.model.slice(cut + 1) } }),
+            },
+            10_000,
+            postCtrl.signal,
+          );
+          opts.onEvent({
+            type: 'log',
+            msg: modelRes.ok
+              ? `▶ burn policy: ${opts.model} selected for this message (the agent prompt is unchanged)`
+              : `burn policy: ${opts.model} was not selected (HTTP ${modelRes.status}); the configured model stays.`,
+            ts: new Date().toISOString(),
+          });
+        } catch (e: any) {
+          opts.onEvent({ type: 'log', msg: `burn policy: model selection failed (${e?.message || e}); the configured model stays.`, ts: new Date().toISOString() });
+        }
+      }
       postStarted = true;
       postStartedAt = Date.now();
       // Issue #32 (complaint 1: 66s of silence between "Routing to Apollo..."

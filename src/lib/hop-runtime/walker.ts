@@ -28,6 +28,7 @@ import { homedir } from 'node:os';
 import { join, isAbsolute, basename } from 'node:path';
 import { spawn } from 'node:child_process';
 import { syncLaneFile } from '@/lib/lane-config';
+import { resolveBurnModelForGod } from '@/lib/burn-state';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
 import { balancePlan } from './plan-balance';
 import { loadHopState, saveHopState, hopStatePath, pruneStaleInFlight, type HopPark } from './hop-state';
@@ -867,7 +868,13 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
   // lane config, fall back to the repo when the lane has none.
   const laneConfig = join(ctx.laneRoot, 'opencode.json');
   const laneOverride = readHopOverride(ctx.laneRoot, hop.id)?.lane ?? null;
+  // v0.0.96 — the smart burn override is resolved at dispatch time. It is a
+  // per-hop lane, not an opencode.json rewrite: the in-flight hop finishes on
+  // its old model, the next one obeys the fresh roster, and the warm server
+  // is never killed for a strategy change.
+  const burnLane = resolveBurnModelForGod(hop.god);
   const applied = laneOverride
+    ?? burnLane
     ?? (existsSync(laneConfig) ? resolveGodModelLane(hop.god, laneConfig) : null)
     ?? resolveGodModelLane(hop.god);
   if (!applied) {

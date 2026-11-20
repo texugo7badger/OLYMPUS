@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireReadAuth } from '@/lib/auth';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
-import { aggregate, loadCatalog, readGoPlan, readGoPlanStart, readSpendRows, writeGoPlan, type GoPlan } from '@/lib/go-usage';
+import { getUsageSnapshot, readGoPlan, writeGoPlan, type GoPlan } from '@/lib/go-usage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,18 +33,16 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
   const requested = req.nextUrl.searchParams.get('plan');
   const plan = isPlan(requested) ? requested : readGoPlan();
-  if (usageCache && usageCache.plan === plan && Date.now() - usageCache.at < 20_000) {
+  if (usageCache && usageCache.plan === plan && Date.now() - usageCache.at < 120_000) {
     return NextResponse.json({ ...usageCache.data, cached: true }, { headers: NO_CACHE_HEADERS });
   }
-  const catalog = await loadCatalog();
-  const rows = readSpendRows(catalog.models);
-  const usage = aggregate(rows, plan, Date.now(), readGoPlanStart());
+  const snap = await getUsageSnapshot(plan, false);
   const payload = {
     ok: true,
-    ...usage,
-    catalogSource: catalog.source,
-    catalogModels: catalog.models.size,
-    ledgerRows: rows.length,
+    ...snap.usage,
+    catalogSource: snap.catalogSource,
+    catalogModels: snap.catalogModels,
+    ledgerRows: snap.ledgerRows,
   };
   usageCache = { at: Date.now(), plan, data: payload };
   return NextResponse.json(payload, { headers: NO_CACHE_HEADERS });

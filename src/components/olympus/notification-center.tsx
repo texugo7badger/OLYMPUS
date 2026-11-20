@@ -65,6 +65,7 @@ export default function NotificationCenter() {
     try { return localStorage.getItem(SEEN_KEY) || ''; } catch { return ''; }
   });
   const [autoHibernate, setAutoHibernate] = useState(true);
+  const [closeToHibernate, setCloseToHibernate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [hibOpen, setHibOpen] = useState(false);
   const [hibHours, setHibHours] = useState(8);
@@ -89,7 +90,10 @@ export default function NotificationCenter() {
     try {
       const r = await fetch('/api/olympus/power/auto-hibernate', { cache: 'no-store' });
       const d = await r.json();
-      if (d?.ok) setAutoHibernate(d.prefs?.autoHibernateOnLock !== false);
+      if (d?.ok) {
+        setAutoHibernate(d.prefs?.autoHibernateOnLock !== false);
+        setCloseToHibernate(d.prefs?.closeToHibernate === true);
+      }
     } catch { /* default stays */ }
   }, []);
 
@@ -157,6 +161,17 @@ export default function NotificationCenter() {
         body: JSON.stringify({ autoHibernateOnLock: value }),
       });
     } catch { /* the local state stands */ }
+  };
+
+  const toggleCloseHibernate = async (value: boolean) => {
+    setCloseToHibernate(value);
+    try {
+      await fetch('/api/olympus/power/auto-hibernate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ closeToHibernate: value }),
+      });
+    } catch { /* local state stands */ }
   };
 
   const hibernateNow = async () => {
@@ -256,6 +271,20 @@ export default function NotificationCenter() {
             })}
           </div>
 
+          <div className="px-2.5 py-1 border-t border-olympus-gold/10 flex items-center gap-2">
+            <X size={9} className="text-olympus-text-dim" />
+            <span className="text-[8px] font-mono text-olympus-text-dim" data-tip="Keep X as a real quit; turn this on if you prefer X to hibernate">
+              close X = hibernate
+            </span>
+            <button
+              onClick={() => void toggleCloseHibernate(!closeToHibernate)}
+              aria-pressed={closeToHibernate}
+              className={cn('ml-auto w-7 h-3.5 rounded-full transition-colors relative', closeToHibernate ? 'bg-olympus-purple/70' : 'bg-olympus-gold/20')}
+              aria-label="Close X hibernates"
+            >
+              <span className={cn('absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all', closeToHibernate ? 'left-3.5' : 'left-0.5')} />
+            </button>
+          </div>
           <footer className="px-2.5 py-1.5 border-t border-olympus-gold/10 flex items-center gap-2">
             <Moon size={10} className="text-olympus-purple" />
             <span className="text-[8px] font-mono text-olympus-text-dim" data-tip="When the screen locks or logs out, close the window and keep the campaign running">

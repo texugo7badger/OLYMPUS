@@ -28,6 +28,11 @@ import {
 import { checkLlmAuth } from '@/lib/llm-auth';
 // Shared no-cache headers for live API routes.
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
+// v0.0.88 — ONE-writer law (strategy-state.ts). The Settings dialog switches
+// strategy through THIS route, so this route must record the apply in the
+// canonical state file; otherwise it rewrites the engine and leaves every
+// reader serving the previous id (the "settings resets to balanced" class).
+import { writeStrategyState } from '@/lib/strategy-state';
 // Invalidate the warm-server cache after a strategy switch — apply-strategy.js
 // kills `opencode serve` (it keeps its startup config in memory), so the
 // Next.js-side serverPromise must be dropped or the next message posts to a
@@ -459,10 +464,31 @@ export async function POST(req: NextRequest) {
         execSync(`node "${applyScript}" --strategy ${applyTarget} --keep-overrides`, {
           cwd: process.cwd(),
           stdio: 'pipe',
-          timeout: 15000,
+          // The apply runs a live-catalogue preflight (L4) over ~450 model ids
+          // before writing — 15 s was cutting it off on a cold cache, which
+          // made the Settings save look like it "reset": the engine stayed on
+          // the old strategy and no state file was written.
+          timeout: 120000,
           env: { ...process.env, FORCE_COLOR: '0' },
         });
         strategyApplied = true;
+        // v0.0.88 — record the apply in the ONE canonical state file
+        // (~/.olympus/strategy.json). Before this, the Settings dialog switched
+        // the engine here while /api/olympus/strategy kept reading the stale
+        // record, so the UI (and the per-turn strategy header) fell back to
+        // go-balanced after every save. Readers and writer now agree by
+        // construction instead of by migration.
+        try {
+          const appliedCfg = JSON.parse(
+            fs.readFileSync(path.join(process.cwd(), 'opencode.json'), 'utf-8'),
+          );
+          writeStrategyState({
+            strategy: applyTarget,
+            agentCount: Object.keys(appliedCfg?.agent ?? {}).length,
+            plugins: Array.isArray(appliedCfg?.plugin) ? appliedCfg.plugin : null,
+            noOp: false,
+          });
+        } catch { /* the apply itself succeeded; state detail is best-effort */ }
         // The warm serve loads its config at startup — kill it so the next
         // message cold-starts against the fresh opencode.json. #176: a live
         // turn defers the kill until idle (never cut a streaming run).
@@ -472,6 +498,22 @@ export async function POST(req: NextRequest) {
       }
     } else {
       strategyError = 'scripts/apply-strategy.js not found';
+    }
+
+    // Honest failure: the apply is what makes the switch real. Returning
+    // ok:true with a swallowed strategyError is the shape that made Settings
+    // "reset" silently — the dialog saw success, re-read the unchanged state
+    // and rendered the previous strategy. The client now surfaces the reason.
+    if (strategyError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `apply-strategy.js failed: ${strategyError}`,
+          strategy: cfg.strategy,
+          strategyApplied: false,
+        },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({

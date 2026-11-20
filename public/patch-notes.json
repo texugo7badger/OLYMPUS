@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-19",
-  "current": "0.0.95",
+  "updatedAt": "2026-11-20",
+  "current": "0.0.96",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.3.2",
@@ -11,6 +11,20 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; an untested update can break sessions, the v2 API, MCP or the DB schema."
   },
   "releases": [
+    {
+      "version": "0.0.96",
+      "date": "2026-11-20",
+      "title": "Hibernation v2, GO truth and the smart burn",
+      "highlights": [
+        "X now quits by default; hibernate is explicit (tray, lock, or the close-to-hibernate preference). A real quit stops the preview/MCP fleet instead of leaving it in the app cgroup.",
+        "Hibernate waits for a streaming chat turn, keeps a preview only when a live hop needs it, records the servers it stops, and the wake restores them automatically.",
+        "The GO graph uses the console anchor (monthly/5h/weekly) plus the local delta; the weekly window resets Monday 00:00 UTC. The measured 25.1% / 50.1% matches the console's 25% / on-pace-50%.",
+        "Smart burn chooses a GO-only roster at the next hop/message (Kimi K3, Kimi K2.7 Code, DeepSeek 1017, Qwen3.7 Plus, MiniMax M3). Claude Opus/Sonnet are Zen models, not in the GO catalog; the screen says so instead of guessing.",
+        "The burn toggle never rewrites opencode.json and never cuts a live turn; it applies at the hop/message boundary and diversifies top lanes so one per-model cap cannot carry all ten gods.",
+        "OpenCode v2 2.3.2 remains the latest npm release and is gate-approved; the patch-notes screen checks the live latest on every open.",
+        "A tag-icon/logo audit and a 24px vector brief are in docs/design/TAG-ICON-BRIEF.md; the 16px marks are hand-authored, not model-generated."
+      ]
+    },
     {
       "version": "0.0.95",
       "date": "2026-11-19",

@@ -110,7 +110,7 @@ expect('T-9: the phone retries a transient delivery failure once', /for \(let at
 // v0.0.84 edit — fluid hibernate: themed HUD, close-to-hibernate.
 expect('T-10: hibernate opens the live HUD instead of a native toast', /function showHud/.test(main) && /showHud\(\)/.test(main) && /Live status HUD/.test(main), 'no HUD');
 expect('T-11: the HUD loads the themed live widget sheet', /\/m\/widget#t=/.test(main) && /GO Plus|5_000|inFlightList/.test(widget), 'HUD is not the live widget');
-expect('T-12: closing the main window hibernates, it does not quit', /mainWindow\.on\('close'[\s\S]{0,300}hibernateNow\(\)/.test(main), 'close still quits');
+expect('T-12: X quits by default; close-to-hibernate is an explicit preference', /readCloseToHibernate/.test(main) && /if \(readCloseToHibernate\(\)\)[\s\S]{0,200}hibernateNow\(\)/.test(main) && /app\.isQuitting = true/.test(main) && /if \(hibernating\) return;/.test(main), 'close contract drifted');
 
 // v0.0.84 edit — the live phone widget / hibernation HUD.
 expect('T-13: /m/widget is a live campaign + GO + hops view', /run-state/.test(widget) && /go-usage/.test(widget) && /5_000/.test(widget) && /inFlightList/.test(widget), 'widget is not live');

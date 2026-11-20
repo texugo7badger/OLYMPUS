@@ -21,6 +21,7 @@ import { appendGodInbox, updateGodInbox } from './god-inbox';
 import { marksPrompt, type PreviewMark } from './marks-format';
 import { resolveDispatchCwd } from './opencode-spawn';
 import { getVaultRoot } from './vault-root';
+import { resolveBurnModelForGod } from './burn-state';
 
 export type MarkTarget = 'apollo' | 'athena';
 
@@ -71,7 +72,7 @@ async function execute(opts: MarkRunOptions): Promise<void> {
       prompt,
       lane,
       MARK_TURN_TIMEOUT_MS,
-      target === 'athena' ? { model: GO_FALLBACK_MODEL } : {},
+      { model: resolveBurnModelForGod(target) ?? (target === 'athena' ? GO_FALLBACK_MODEL : undefined) },
     );
     if (!turn.ok) {
       appendGodInbox(target, {

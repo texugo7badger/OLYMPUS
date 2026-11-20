@@ -10,6 +10,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { start as managerStart } from '@/lib/dev-server-manager';
 import { getActiveProjectSlug } from '@/lib/project-context';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
@@ -19,6 +22,12 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    // v0.0.96 — a real quit must not race the walk into restarting the
+    // preview it just stopped. The marker is cleared on the next boot.
+    const stoppingFile = path.join(process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus'), 'stopping.json');
+    if (fs.existsSync(stoppingFile)) {
+      return NextResponse.json({ ok: false, error: 'OLYMPUS is quitting — the preview will not start.' }, { status: 409, headers: NO_CACHE_HEADERS });
+    }
     const body = await req.json().catch(() => ({}));
     const slug = (typeof body?.slug === 'string' && body.slug) || getActiveProjectSlug();
     if (!slug) {

@@ -34,6 +34,10 @@ interface ModelUsage {
 interface Usage {
   plan: Plan;
   models: ModelUsage[];
+  account?: {
+    monthlyPct: number | null; h5Pct: number | null; weeklyPct: number | null;
+    source: 'console' | 'mixed' | 'local'; weeklyResetAt: string; resetAt: string | null;
+  };
   windows: Record<WindowKey, { pct: number | null; model: string | null; resetAt: string | null }>;
   binding: { model: string; window: WindowKey; pct: number } | null;
   source: 'local-ledger' | 'unavailable';
@@ -145,14 +149,21 @@ export default function GoUsageBar({ token }: { token?: string | null }) {
   }
   const binding = data?.binding;
   const unavailable = data?.source === 'unavailable';
+  const account = data?.account;
+  const accountPct: Record<WindowKey, number | null> = {
+    h5: account?.h5Pct ?? null,
+    d7: account?.weeklyPct ?? null,
+    month: account?.monthlyPct ?? null,
+  };
+  const hasAccount = account?.source === 'console' || account?.source === 'mixed';
 
   return (
     <div className="w-full rounded-lg border border-olympus-gold/15 bg-olympus-panel/60 px-2 py-1.5">
       <div className="flex items-center gap-1.5">
         <Gauge size={10} className="text-olympus-cyan shrink-0" />
         <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">{data ? PLAN_LABEL[data.plan] : 'GO'}</span>
-        <span className="min-w-0 flex-1 truncate text-[8px] font-mono text-olympus-text-dim" data-tip={binding ? `${binding.model} · ${WINDOW_LABEL[binding.window]}` : 'no ledger'}>
-          {unavailable ? 'ledger unavailable' : binding ? `${binding.model} · ${WINDOW_LABEL[binding.window]} ${fmtPct(binding.pct)}` : 'no usage yet'}
+        <span className="min-w-0 flex-1 truncate text-[8px] font-mono text-olympus-text-dim" data-tip={hasAccount ? 'account-wide console anchor + local delta' : binding ? `${binding.model} · ${WINDOW_LABEL[binding.window]}` : 'no ledger'}>
+          {unavailable ? 'ledger unavailable' : hasAccount ? `account · month ${fmtPct(accountPct.month)}` : binding ? `${binding.model} · ${WINDOW_LABEL[binding.window]} ${fmtPct(binding.pct)}` : 'no usage yet'}
         </span>
         <button
           onClick={() => setOpen((v) => !v)}
@@ -169,10 +180,14 @@ export default function GoUsageBar({ token }: { token?: string | null }) {
 
       <div className="mt-1 space-y-1">
         {(['h5', 'd7', 'month'] as WindowKey[]).map((w) => {
-          const pct = data?.windows?.[w]?.pct ?? null;
-          const reset = fmtReset(data?.windows?.[w]?.resetAt ?? null);
+          const accountValue = accountPct[w];
+          const pct = accountValue != null ? accountValue : (data?.windows?.[w]?.pct ?? null);
+          const resetIso = w === 'month' ? (account?.resetAt ?? data?.windows?.month?.resetAt ?? null)
+            : w === 'd7' ? (account?.weeklyResetAt ?? data?.windows?.d7?.resetAt ?? null)
+              : (data?.windows?.h5?.resetAt ?? null);
+          const reset = fmtReset(resetIso);
           return (
-            <div key={w} className="flex items-center gap-1.5" data-tip={`${WINDOW_LABEL[w]}: ${fmtPct(pct)}${data?.windows?.[w]?.model ? ` · ${data.windows[w].model}` : ''}`}>
+            <div key={w} className="flex items-center gap-1.5" data-tip={`${WINDOW_LABEL[w]}: ${fmtPct(pct)}${accountValue != null ? ' · account' : data?.windows?.[w]?.model ? ` · ${data.windows[w].model}` : ''}`}>
               <span className="w-8 shrink-0 text-[7.5px] font-mono uppercase text-olympus-text-dim">{WINDOW_LABEL[w]}</span>
               <div className="h-1 flex-1 overflow-hidden rounded bg-olympus-bg">
                 <div
@@ -227,7 +242,7 @@ export default function GoUsageBar({ token }: { token?: string | null }) {
             </table>
           </div>
           <p className="mt-1 text-[6.5px] leading-relaxed text-olympus-text-dim">
-            local ledger · console is authoritative · Extra Usage may bill PAYG
+            {hasAccount ? 'account = console anchor + local delta · table = per-model' : 'local ledger · console is authoritative'} · Extra Usage may bill PAYG
           </p>
         </div>
       )}

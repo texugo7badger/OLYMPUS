@@ -468,6 +468,9 @@ let hibernating = false;
 let hibernationWatch: ReturnType<typeof setInterval> | null = null;
 const HIBERNATION_MARKER = join(nodeOs.homedir(), '.olympus', 'hibernation.json');
 const HIBERNATION_PLAN = join(nodeOs.homedir(), '.olympus', 'hibernation-plan.json');
+const HIBERNATION_DEVSERVERS = join(nodeOs.homedir(), '.olympus', 'hibernation-devservers.json');
+const HIBERNATE_REQUEST = join(nodeOs.homedir(), '.olympus', 'hibernate-request.json');
+const WAKE_REQUEST = join(nodeOs.homedir(), '.olympus', 'wake-request.json');
 // Extend the app type to track quitting state.
 declare global {
   // Declaration merging requires a namespace (the Electron App type).
@@ -786,6 +789,22 @@ function startNotifyTail(): void {
   try { notifyOffset = initialNotifyOffset(statSync(NOTIFY_FILE).size); } catch { notifyOffset = 0; }
   const timer = setInterval(() => {
     refreshThemeIfChanged();
+    // v0.0.96 — the local request files (phone/CLI/drill) can drive the
+    // hibernate/wake lifecycle without a GUI click. They are deleted before
+    // the action so a crash cannot replay a stale request.
+    try {
+      if (existsSync(HIBERNATE_REQUEST)) {
+        let forceFree = false;
+        try { forceFree = JSON.parse(readFileSync(HIBERNATE_REQUEST, 'utf-8'))?.forceFree === true; } catch { /* plain request */ }
+        unlinkSync(HIBERNATE_REQUEST);
+        void hibernateNow(forceFree);
+      }
+      if (existsSync(WAKE_REQUEST)) {
+        unlinkSync(WAKE_REQUEST);
+        if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+        else createWindow();
+      }
+    } catch { /* a request file is optional */ }
     try {
       const buf = readFileSync(NOTIFY_FILE);
       if (buf.length < notifyOffset) notifyOffset = 0;
@@ -813,6 +832,31 @@ function writeHibernationMarker(active: boolean): void {
   } catch { /* diagnostics only */ }
 }
 
+/** v0.0.96 — X quits by default; the user can opt into close-to-hibernate. */
+function readCloseToHibernate(): boolean {
+  try {
+    const raw = JSON.parse(readFileSync(join(nodeOs.homedir(), '.olympus', 'power-prefs.json'), 'utf-8'));
+    return raw?.closeToHibernate === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Restore the preview servers the hibernate route stopped, after the wake. */
+async function restoreHibernatedDevServers(): Promise<void> {
+  let data: any = null;
+  try { data = JSON.parse(readFileSync(HIBERNATION_DEVSERVERS, 'utf-8')); } catch { return; }
+  const stopped: string[] = Array.isArray(data?.stopped) ? data.stopped.filter((s: unknown) => typeof s === 'string') : [];
+  try { unlinkSync(HIBERNATION_DEVSERVERS); } catch { /* already gone */ }
+  for (const slug of stopped) {
+    const r = await postJson('/api/olympus/dev-server/start', { slug }, 120_000);
+    console.log(`[olympus:hibernate] preview restore ${slug}: ${r?.ok ? 'ok' : 'failed'}`);
+    if (!r?.ok) {
+      try { notifyDesktop('error', 'Preview not restored', `${slug}: ${r?.result?.error || r?.error || 'start refused'}`); } catch { /* optional */ }
+    }
+  }
+}
+
 function getJson(pathname: string): Promise<any> {
   return new Promise((resolve) => {
     const req = http.get(`${BASE_URL}${pathname}`, { timeout: 5_000 }, (res) => {
@@ -825,13 +869,13 @@ function getJson(pathname: string): Promise<any> {
   });
 }
 
-function postJson(pathname: string, body: unknown): Promise<any> {
+function postJson(pathname: string, body: unknown, timeoutMs = 5_000): Promise<any> {
   return new Promise((resolve) => {
     const payload = JSON.stringify(body ?? {});
     const req = http.request(`${BASE_URL}${pathname}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
-      timeout: 5_000,
+      timeout: timeoutMs,
     }, (res) => {
       let text = '';
       res.on('data', (d) => { text += String(d); });
@@ -850,7 +894,7 @@ function postJson(pathname: string, body: unknown): Promise<any> {
  * the app chat server on :3777 is stopped. The live preview stays up unless
  * the user stops it (a visual hop may need it).
  */
-function hibernateNow(): void {
+async function hibernateNow(forceFree = false): Promise<void> {
   if (hibernating) return;
   hibernating = true;
   writeHibernationMarker(true);
@@ -863,12 +907,27 @@ function hibernateNow(): void {
     const raw = JSON.parse(readFileSync(HIBERNATION_PLAN, 'utf-8'));
     const until = Date.parse(String(raw?.until ?? ''));
     if (raw?.active !== true || !Number.isFinite(until) || until <= Date.now()) {
-      void postJson('/api/olympus/power/hibernate-plan', { hours: 8, autoResume: true });
+      await postJson('/api/olympus/power/hibernate-plan', { hours: 8, autoResume: true }, 10_000);
     }
   } catch {
-    void postJson('/api/olympus/power/hibernate-plan', { hours: 8, autoResume: true });
+    await postJson('/api/olympus/power/hibernate-plan', { hours: 8, autoResume: true }, 10_000);
   }
-  void postJson('/api/olympus/chat/hibernate', {});
+
+  // v0.0.96 — THE GATE. The route waits for active warm turns (up to 60s),
+  // keeps a preview a live hop needs, and stops the idle ones. The renderer
+  // is destroyed only after the route answers; a deferred hibernate keeps the
+  // window and tells the user why instead of cutting a live answer.
+  const result = await postJson('/api/olympus/chat/hibernate', { waitMs: 60_000, forceFree }, 70_000);
+  if (!result || result.ok !== true) {
+    hibernating = false;
+    writeHibernationMarker(false);
+    try { tray?.setToolTip('OLYMPUS'); } catch { /* tray gone */ }
+    try {
+      notifyDesktop('error', 'Hibernation postponed', result?.error || 'The chat turn did not settle; the window stays so nothing is cut.');
+    } catch { /* optional */ }
+    return;
+  }
+
   if (mainWindow) {
     const win = mainWindow;
     mainWindow = null;
@@ -887,7 +946,7 @@ function hibernateNow(): void {
       notifyDesktop('walk', 'OLYMPUS hibernating', 'The window is closed; the campaign keeps running and you will be notified on done/park.');
     }
   }, 500);
-  console.log('[olympus:hibernate] renderer destroyed, chat server stopped, campaign stays alive');
+  console.log(`[olympus:hibernate] renderer destroyed; chat stopped; preview stopped=${(result.devServers || []).join(',') || 'none'} kept=${(result.kept || []).join(',') || 'none'}; campaign stays alive`);
 }
 
 /**
@@ -1144,6 +1203,7 @@ img{width:min(58vmin,420px);height:auto;filter:drop-shadow(0 0 24px ${palette.ac
 
 function createWindow() {
   closeHud();
+  const wokeFromHibernate = hibernating;
   if (hibernating) {
     hibernating = false;
     writeHibernationMarker(false);
@@ -1329,10 +1389,16 @@ function createWindow() {
         try { if (await isNextAlreadyRunning()) break; } catch { /* keep waiting */ }
         await new Promise((r) => setTimeout(r, 500));
       }
-      try { mainWindow?.loadURL(APP_URL); } catch { /* the error page owns it */ }
+      try {
+        void mainWindow?.loadURL(APP_URL).then(() => {
+          if (wokeFromHibernate) setTimeout(() => { void restoreHibernatedDevServers(); }, 1500);
+        }).catch(() => { /* the error page owns it */ });
+      } catch { /* the error page owns it */ }
     })();
   } else {
-    mainWindow.loadURL(BASE_URL);
+    void mainWindow.loadURL(BASE_URL).then(() => {
+      if (wokeFromHibernate) setTimeout(() => { void restoreHibernatedDevServers(); }, 1500);
+    }).catch(() => { /* the error page owns it */ });
   }
 
   mainWindow.on('show', () => {
@@ -1367,7 +1433,7 @@ function createWindow() {
       const contextMenu = Menu.buildFromTemplate([
         { label: 'Show OLYMPUS', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } else createWindow(); } },
         { label: 'Hide to tray', click: () => { if (mainWindow) mainWindow.hide(); } },
-        { label: 'Hibernate (low memory)', click: () => hibernateNow() },
+        { label: 'Hibernate (low memory)', click: () => { void hibernateNow(); } },
         { label: 'Live status HUD', click: () => showHud() },
         { label: 'Hide HUD', click: () => closeHud() },
         { type: 'separator' },
@@ -1390,11 +1456,16 @@ function createWindow() {
   // hibernating app keeps the window hidden on close; otherwise X quits.
   mainWindow.on('close', (event) => {
     if (app.isQuitting) return;
-    // v0.0.84 edit — closing the window HIBERNATES (low memory, campaign
-    // stays, HUD appears). Quit is explicit in the tray menu, so X never
-    // leaves the user waiting on a full Next/opencode teardown.
-    event.preventDefault();
-    hibernateNow();
+    // v0.0.96 — X means QUIT by default. Hibernate is explicit (tray,
+    // notification, lock-screen, or the closeToHibernate preference). The
+    // old handler turned every X into a background hibernate, which is how a
+    // "closed" app kept a preview + walk + MCP fleet in its cgroup.
+    if (readCloseToHibernate()) {
+      event.preventDefault();
+      void hibernateNow();
+      return;
+    }
+    app.isQuitting = true;
   });
 
   // A dead renderer must never leave a zombie window that cannot be closed.
@@ -1948,7 +2019,7 @@ if (!gotLock) {
   app.quit();
 } else {
   ipcMain.handle('olympus:hibernate', () => {
-    hibernateNow();
+    return hibernateNow();
     return true;
   });
 
@@ -1965,6 +2036,7 @@ if (!gotLock) {
   app.on('before-quit', () => { writeHibernationMarker(false); stopHibernationWatch(); });
 
   app.whenReady().then(async () => {
+    try { unlinkSync(join(nodeOs.homedir(), '.olympus', 'stopping.json')); } catch { /* no stale quit marker */ }
     // v0.0.34 — the microphone is a first-class input: allow the studio's
     // getUserMedia/MediaRecorder lane (permission prompts still appear where
     // the platform requires them).
@@ -2054,7 +2126,7 @@ if (!gotLock) {
           if (raw?.autoHibernateOnLock === false) return;
         } catch { /* default: hibernate */ }
         console.log('[olympus:power] screen locked — hibernating (the campaign stays)');
-        hibernateNow();
+        void hibernateNow();
       });
       powerMonitor.on('suspend', () => {
         console.log('[olympus:power] OS suspend — marker written');
@@ -2301,13 +2373,18 @@ if (!gotLock) {
   });
 
   app.on('window-all-closed', () => {
-    // Minimized to tray: keep running in the background instead of quitting.
-    if (tray) return;
+    // v0.0.96 — hibernate destroys the window on purpose and keeps the app
+    // (HUD/tray/campaign). A real X close quits; "Hide to tray" hides the
+    // window without closing it, so it never reaches this handler.
+    if (hibernating) return;
     app.quit();
   });
 
   app.on('before-quit', (event) => {
     closeHud();
+    // v0.0.96 — a real quit must free the preview/MCP fleet, not leave them
+    // in the app scope. The route runs before the Next child is killed below.
+    void postJson('/api/olympus/power/quit-cleanup', {}, 4_000);
     // Tear down the Terminal Bridge WebSocket server + any clients.
     try { shutdownTerminalBridge(); } catch {}
 
@@ -2327,7 +2404,7 @@ if (!gotLock) {
           proc.kill('SIGKILL');
         } catch {}
         app.exit(0);
-      }, 2000);
+      }, 4500);
       proc.on('exit', () => app.exit(0));
     }
   });

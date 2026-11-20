@@ -18,6 +18,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { accountWindows, nextWeeklyReset, readGoConsoleAnchor } from './go-console';
 
 export type GoPlan = 'go' | 'go-plus' | 'go-teams';
 export type GoWindow = 'h5' | 'd7' | 'month';
@@ -34,7 +35,7 @@ export const GO_LIMITS: Record<GoPlan, Record<string, number>> = {
     'deepseek-v4.1-flash': 100, 'deepseek-v4-pro': 15,
     hy4: 60, 'hy4-preview': 30, hy3: 60,
     'grok-4.7': 15, 'gpt-6-luna': 15, 'gpt-5.6-luna': 15,
-    'claude-haiku-5.5': 15, 'gemini-4-argon': 30,
+    'claude-haiku-5-5': 15, 'gemini-4-argon': 30,
   },
   'go-plus': {
     'glm-5.3-flash': 180, 'glm-5.3': 120, 'glm-5.2': 180,
@@ -46,7 +47,7 @@ export const GO_LIMITS: Record<GoPlan, Record<string, number>> = {
     'deepseek-v4.1-flash': 200, 'deepseek-v4-pro': 60,
     hy4: 240, 'hy4-preview': 120, hy3: 240,
     'grok-4.7': 60, 'gpt-6-luna': 60, 'gpt-5.6-luna': 60,
-    'claude-haiku-5.5': 60, 'gemini-4-argon': 120,
+    'claude-haiku-5-5': 60, 'gemini-4-argon': 120,
   },
   'go-teams': {
     'glm-5.3-flash': 65, 'glm-5.3': 20, 'glm-5.2': 65,
@@ -58,7 +59,7 @@ export const GO_LIMITS: Record<GoPlan, Record<string, number>> = {
     'deepseek-v4.1-flash': 105, 'deepseek-v4-pro': 20,
     hy4: 65, 'hy4-preview': 35, hy3: 65,
     'grok-4.7': 20, 'gpt-6-luna': 20, 'gpt-5.6-luna': 20,
-    'claude-haiku-5.5': 20, 'gemini-4-argon': 35,
+    'claude-haiku-5-5': 20, 'gemini-4-argon': 35,
   },
 };
 
@@ -77,7 +78,7 @@ const FALLBACK_COST: Record<string, CatalogModel['cost']> = {
   'kimi-k2.7-code': { text: { input: { price: 0.95, cache: { read: 0.19 } }, output: { price: 4.0 } } },
   hy3: { text: { input: { price: 0.14, cache: { read: 0.035 } }, output: { price: 0.58 } } },
   'minimax-m3': { text: { input: { price: 0.3, cache: { read: 0.06 } }, output: { price: 1.2 } } },
-  'claude-haiku-5.5': { text: { input: { price: 0.1, cache: { read: 0.01, write: 0.125 } }, output: { price: 0.5 } } },
+  'claude-haiku-5-5': { text: { input: { price: 0.1, cache: { read: 0.01, write: 0.125 } }, output: { price: 0.5 } } },
   'gemini-4-argon': { text: { input: { price: 2.0, cache: { read: 0.1 } }, output: { price: 10.0 } } },
   'gpt-6-luna': { text: { input: { price: 0.1, cache: { read: 0.01, write: 0.125 } }, output: { price: 0.5 } } },
   'kimi-k3': { text: { input: { price: 3.0, cache: { read: 0.3, write: 3.0 } }, output: { price: 15.0 } } },
@@ -143,10 +144,35 @@ export interface GoForecast {
   points: GoForecastPoint[];
 }
 
+export interface GoAccountUsage {
+  /** Account-wide percentages; null when no console anchor exists. */
+  monthlyPct: number | null;
+  h5Pct: number | null;
+  weeklyPct: number | null;
+  spendMonthUsd: number;
+  spend5hUsd: number;
+  spend7dUsd: number;
+  /** Spend since the current Monday 00:00 UTC (console weekly window). */
+  spendWeekUsd: number;
+  capUsd: number | null;
+  source: 'console' | 'mixed' | 'local';
+  anchorAt: string | null;
+  anchorAgeMs: number | null;
+  weeklyResetAt: string;
+  resetAt: string | null;
+  requests: number | null;
+  tokens: number | null;
+  modelMix: Array<{ model: string; pct: number }>;
+  /** The account-level forecast (all models), not the binding-model one. */
+  forecast: GoForecast | null;
+}
+
 export interface GoUsage {
   plan: GoPlan;
   models: ModelUsage[];
   windows: Record<GoWindow, { pct: number | null; model: string | null; resetAt: string | null }>;
+  /** v0.0.96 — account-wide truth (console anchor + local delta). */
+  account: GoAccountUsage;
   binding: { model: string; window: GoWindow; pct: number } | null;
   /** v0.0.89 — the monthly forecast for the binding model (local ledger). */
   forecast: GoForecast | null;
@@ -253,6 +279,17 @@ function currentPeriod(now: number, start: number): { start: number; reset: numb
  * cumulative spend per completed day, and the last point is the measured
  * current percentage.
  */
+/** Bound the chart payload: 57k ledger rows must not become 57k SVG points. */
+export function downsampleForecastPoints(points: GoForecastPoint[], max = 240): GoForecastPoint[] {
+  if (points.length <= max) return points;
+  const step = Math.ceil(points.length / max);
+  const out: GoForecastPoint[] = [];
+  for (let i = 0; i < points.length; i += step) out.push(points[i]);
+  const last = points[points.length - 1];
+  if (out[out.length - 1]?.ts !== last.ts) out.push(last);
+  return out;
+}
+
 export function buildGoForecast(
   rows: GoSpendRow[],
   model: ModelUsage,
@@ -292,7 +329,49 @@ export function buildGoForecast(
     hitAt,
     resetAt: new Date(resetAt).toISOString(),
     periodStart: new Date(periodStart).toISOString(),
-    points,
+    points: downsampleForecastPoints(points),
+  };
+}
+
+/**
+ * v0.0.96 — the account forecast. Unlike buildGoForecast, it sums EVERY
+ * model's ledger rows (the console's monthly % is account-wide), anchored at
+ * the console percentage and capped by the plan-wide cap.
+ */
+export function buildAccountForecast(
+  rows: GoSpendRow[],
+  currentPct: number,
+  capUsd: number | null,
+  periodStart: number,
+  resetAt: number,
+  now = Date.now(),
+): GoForecast {
+  const elapsedDays = Math.max(1 / 24, (now - periodStart) / 86400_000);
+  const dailyPct = Math.max(0, currentPct) / elapsedDays;
+  const remainingDays = Math.max(0, (resetAt - now) / 86400_000);
+  const projectedPct = Math.min(999, Math.max(0, currentPct) + dailyPct * remainingDays);
+  const points: GoForecastPoint[] = [{ ts: new Date(periodStart).toISOString(), pct: 0 }];
+  const inPeriod = rows.filter((r) => r.ts >= periodStart && r.ts <= now).sort((a, b) => a.ts - b.ts);
+  let cumulative = 0;
+  for (const r of inPeriod) {
+    cumulative += r.cost;
+    points.push({ ts: new Date(r.ts).toISOString(), pct: capUsd && capUsd > 0 ? Math.min(999, (cumulative / capUsd) * 100) : 0 });
+  }
+  points.push({ ts: new Date(now).toISOString(), pct: currentPct });
+  const hitTs = currentPct >= 100
+    ? now
+    : dailyPct > 0
+      ? now + ((100 - currentPct) / dailyPct) * 86400_000
+      : Infinity;
+  return {
+    model: 'account',
+    currentPct,
+    dailyPct,
+    projectedPct,
+    hitAt: Number.isFinite(hitTs) && hitTs <= resetAt ? new Date(hitTs).toISOString() : null,
+    resetAt: new Date(resetAt).toISOString(),
+    periodStart: new Date(periodStart).toISOString(),
+    points: downsampleForecastPoints(points),
   };
 }
 
@@ -357,9 +436,56 @@ export function aggregate(rows: GoSpendRow[], plan: GoPlan, now = Date.now(), st
     ? buildGoForecast(rows, monthly, period.start, period.reset, now)
     : null;
 
+  // v0.0.96 — the account-wide truth. The console anchor is the top line;
+  // the local ledger supplies the delta and the per-model attribution.
+  const spendMonthUsd = models.reduce((sum, m) => sum + (m.spendMonth || 0), 0);
+  const spend5hUsd = models.reduce((sum, m) => sum + (m.spend5h || 0), 0);
+  const spend7dUsd = models.reduce((sum, m) => sum + (m.spend7d || 0), 0);
+  const weekStart = Date.parse(nextWeeklyReset(now)) - 7 * 86400_000;
+  const spendWeekUsd = rows.filter((r) => r.ts >= weekStart).reduce((sum, r) => sum + r.cost, 0);
+  const anchor = readGoConsoleAnchor();
+  const aw = accountWindows({ anchor, spendMonthUsd, spend5hUsd, spend7dUsd, spendWeekUsd }, now);
+  const accountForecast = aw.monthlyPct != null && aw.capUsd
+    ? buildAccountForecast(rows, aw.monthlyPct, aw.capUsd, period.start, period.reset, now)
+    : null;
+  const tokenShare = (() => {
+    if (anchor?.modelMix?.length) return anchor.modelMix;
+    const byModel = new Map<string, number>();
+    for (const r of rows) {
+      if (r.ts < period.start) continue;
+      byModel.set(r.model, (byModel.get(r.model) ?? 0) + r.input + r.output + r.cacheRead + r.cacheWrite);
+    }
+    const total = [...byModel.values()].reduce((sum, n) => sum + n, 0);
+    return [...byModel.entries()]
+      .filter(([, n]) => n > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([model, n]) => ({ model, pct: total > 0 ? Math.round((n / total) * 1000) / 10 : 0 }));
+  })();
+  const account: GoAccountUsage = {
+    monthlyPct: aw.monthlyPct,
+    h5Pct: aw.h5Pct,
+    weeklyPct: aw.weeklyPct,
+    spendMonthUsd,
+    spend5hUsd,
+    spend7dUsd,
+    spendWeekUsd,
+    capUsd: aw.capUsd,
+    source: aw.source,
+    anchorAt: aw.anchorAt,
+    anchorAgeMs: aw.anchorAgeMs,
+    weeklyResetAt: aw.weeklyResetAt || nextWeeklyReset(now),
+    resetAt: anchor?.resetAt ?? new Date(period.reset).toISOString(),
+    requests: anchor?.requests ?? rows.length,
+    tokens: anchor?.tokens ?? rows.reduce((sum, r) => sum + r.input + r.output + r.cacheRead + r.cacheWrite, 0),
+    modelMix: tokenShare,
+    forecast: accountForecast,
+  };
+
   return {
     plan,
     models,
+    account,
     windows: {
       h5: { ...h5, resetAt: Number.isFinite(h5Oldest) ? new Date(h5Oldest + 5 * 3600_000).toISOString() : null },
       d7: { ...d7, resetAt: Number.isFinite(d7Oldest) ? new Date(d7Oldest + 7 * 86400_000).toISOString() : null },
@@ -520,4 +646,40 @@ export function readSpendRows(catalog: Map<string, CatalogModel>, now = Date.now
     }
   } catch { /* no ledger is not a crash */ }
   return rows;
+}
+
+// ── Shared usage snapshot (v0.0.96) ───────────────────────────────────────
+// The Cost dashboard asks three surfaces (bar, forecast, burn) at the same
+// time. Before this cache each one scanned the 57k-row ledger independently,
+// locking SQLite and making a 6–9s scan into 20s+. One in-flight promise,
+// 30s TTL, shared by every route.
+
+interface UsageSnapshot {
+  usage: GoUsage;
+  catalogSource: 'live' | 'cache' | 'fallback';
+  catalogModels: number;
+  ledgerRows: number;
+  fetchedAt: string;
+}
+
+let snapshotCache: { at: number; plan: GoPlan; promise: Promise<UsageSnapshot> } | null = null;
+
+export async function getUsageSnapshot(plan: GoPlan, force = false): Promise<UsageSnapshot> {
+  if (!force && snapshotCache && snapshotCache.plan === plan && Date.now() - snapshotCache.at < 120_000) {
+    return snapshotCache.promise;
+  }
+  const promise = (async () => {
+    const catalog = await loadCatalog();
+    const rows = readSpendRows(catalog.models);
+    const usage = aggregate(rows, plan, Date.now(), readGoPlanStart());
+    return {
+      usage,
+      catalogSource: catalog.source,
+      catalogModels: catalog.models.size,
+      ledgerRows: rows.length,
+      fetchedAt: new Date().toISOString(),
+    };
+  })();
+  snapshotCache = { at: Date.now(), plan, promise };
+  try { return await promise; } catch (e) { snapshotCache = null; throw e; }
 }
