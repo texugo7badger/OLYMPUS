@@ -186,7 +186,12 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
     const plan = readJson<any>(path.join(laneRoot, 'dispatch-plan.json'), { hops: [] });
     const state = readJson<any>(path.join(laneRoot, '.olympus-hop-state.json'), null);
     const planHops = Array.isArray(plan?.hops) ? plan.hops : [];
-    const planById = new Map(planHops.map((h: any) => [String(h?.id), h]));
+    // v0.0.98 — the live plan is overwritten by each generation; the frozen
+    // plan keeps the previous generation's hop definitions so a historical
+    // row still shows its prompt/artifacts/checks.
+    const frozen = readJson<any>(path.join(laneRoot, '.olympus-plan-frozen.json'), { hops: [] });
+    const frozenHops = Array.isArray(frozen?.hops) ? frozen.hops : [];
+    const planById = new Map([...frozenHops, ...planHops].map((h: any) => [String(h?.id), h]));
     const parks = state?.parks && typeof state.parks === 'object' ? state.parks : {};
     const recovery = readJsonlTail(path.join(laneRoot, '.olympus-recovery.jsonl'), 400);
     const recoveryByHop = new Map<string, any>();

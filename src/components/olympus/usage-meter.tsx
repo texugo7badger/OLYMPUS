@@ -45,6 +45,7 @@ function readWindow(): UsageWindow {
 
 function pctText(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return '—';
+  if (n === 0) return '0%';
   return `${n >= 100 ? Math.round(n) : n.toFixed(n < 10 ? 1 : 0)}%`;
 }
 
