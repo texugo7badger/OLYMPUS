@@ -24,8 +24,10 @@ import { appendActivity } from '../activity-feed';
 import { readLaneHealth } from '../lane-health';
 import type { PatrolFinding } from '../atlas-patrol';
 import { writeHopOverride, readHopOverrides, type HopOverride } from './hop-overrides';
+import { readGoConsoleAnchor } from '../go-console';
+import { readHibernationPlan } from '../hibernation';
 
-export type RecoveryKind = 'retry-budget' | 'retry-campaign-budget' | 'retry-lane' | 'retry-verify' | 'retry-script' | 'ask-lane' | 'ask-unknown' | 'none';
+export type RecoveryKind = 'retry-budget' | 'retry-campaign-budget' | 'retry-lane' | 'retry-verify' | 'retry-script' | 'retry-blocked-deps' | 'wait-quota' | 'ask-lane' | 'ask-unknown' | 'none';
 
 export interface RecoveryDecision {
   action: 'retry' | 'stop';
@@ -35,8 +37,20 @@ export interface RecoveryDecision {
   message: string;
 }
 
-const MAX_PER_HOP = 2;
-const MAX_PER_CAMPAIGN = 6;
+/** v0.0.98 — the night window is the budget. A 2/hop + 6/campaign cap
+ *  stopped an 8h night after a handful of parks; the window (up to 120
+ *  starts) is the bound, with a per-hop cap so one hop cannot burn it all. */
+const MAX_PER_HOP = 4;
+const DEFAULT_MAX_PER_CAMPAIGN = 12;
+function recoveryBudget(): { perHop: number; perCampaign: number } {
+  const plan = readHibernationPlan();
+  if (!plan) return { perHop: MAX_PER_HOP, perCampaign: DEFAULT_MAX_PER_CAMPAIGN };
+  const left = Math.max(0, Date.parse(plan.until) - Date.now());
+  return {
+    perHop: MAX_PER_HOP,
+    perCampaign: Math.min(120, Math.max(DEFAULT_MAX_PER_CAMPAIGN, Math.ceil(left / 120_000))),
+  };
+}
 
 export function recoveryLogPath(laneRoot: string): string {
   return path.join(laneRoot, '.olympus-recovery.jsonl');
@@ -78,12 +92,13 @@ export function decideRecovery(laneRoot: string, finding: PatrolFinding): Recove
   const attempts = recoveryAttempts(laneRoot, finding.hopId, campaignId);
   const campaignAttempts = readRecoveries(laneRoot)
     .filter((r) => r?.action === 'retry' && r?.campaignId === campaignId).length;
+  const budget = recoveryBudget();
   const base = (msg: string): string => `${finding.hopId}: ${msg}`;
-  if (attempts >= MAX_PER_HOP) {
+  if (attempts >= budget.perHop) {
     return { action: 'stop', kind: 'ask-unknown', delayMs: 0, message: base(`already recovered ${attempts}× — needs the user. ${finding.recommendation}`) };
   }
-  if (campaignAttempts >= MAX_PER_CAMPAIGN) {
-    return { action: 'stop', kind: 'ask-unknown', delayMs: 0, message: base(`campaign recovery budget exhausted (${campaignAttempts}/${MAX_PER_CAMPAIGN}) — stopping so the loop cannot burn the night. ${finding.recommendation}`) };
+  if (campaignAttempts >= budget.perCampaign) {
+    return { action: 'stop', kind: 'ask-unknown', delayMs: 0, message: base(`campaign recovery budget exhausted (${campaignAttempts}/${budget.perCampaign}) — stopping so the loop cannot burn the night. ${finding.recommendation}`) };
   }
   const laneNote = finding.nextLane ? ` Next lane: ${finding.nextLane}.` : ' No healthy fallback lane.';
   switch (finding.failureClass) {
@@ -96,8 +111,8 @@ export function decideRecovery(laneRoot: string, finding: PatrolFinding): Recove
       return {
         action: 'retry', kind: 'retry-budget', delayMs: 5_000,
         override: {
-          toolBudget: 24,
-          promptAppend: `RECOVERY: the previous attempt exhausted the tool budget. Use at most 24 tool calls; batch shell commands into ONE call; write the declared artifact BEFORE further probing. Do not add scope. The failing evidence: ${finding.evidence}.`,
+          toolBudget: 36,
+          promptAppend: `RECOVERY: the previous attempt exhausted the tool budget. Use at most 36 tool calls; batch shell commands into ONE call; write the declared artifact BEFORE further probing; do not read files outside the declared set. Do not add scope. The failing evidence: ${finding.evidence}.`,
           reason: `tool-budget recovery (attempt ${attempts + 1})`,
         },
         message: base(`tool-budget → budget 24 + narrow directive; retry now.${laneNote}`),
@@ -125,6 +140,24 @@ export function decideRecovery(laneRoot: string, finding: PatrolFinding): Recove
         override: { reason: `script retry (attempt ${attempts + 1})`, promptAppend: `RECOVERY: the deterministic script failed. Read the traced command/stderr in telemetry, fix the check or the artifact it asserts, and re-run.` },
         message: base(`script failure → retry once with the trace; then ask the user.`),
       };
+    case 'provider-quota': {
+      // v0.0.98 — WAIT, don't stop. The console anchor is the reset truth;
+      // a provider retryAfterMs is the fallback. The cap keeps a bad clock
+      // from turning a night into a week.
+      const anchor = readGoConsoleAnchor();
+      const reset = anchor?.rollingResetAt ? Date.parse(anchor.rollingResetAt) : 0;
+      const retryAfter = Number((finding as any).retryAfterMs ?? 0);
+      const resumeAt = reset > Date.now() ? reset : (retryAfter > 0 ? Date.now() + retryAfter : 0);
+      const delayMs = resumeAt
+        ? Math.min(6 * 3600_000, Math.max(60_000, resumeAt - Date.now()))
+        : 15 * 60_000;
+      return {
+        action: 'retry', kind: 'wait-quota', delayMs,
+        message: base(`GO quota window exhausted — waiting ${Math.round(delayMs / 60_000)} min for ${resumeAt ? new Date(resumeAt).toISOString() : 'a bounded reset'}; the same hop resumes, no requests are burned.`),
+      };
+    }
+    case 'provider-auth':
+    case 'provider-route':
     case 'provider':
     case 'agent-missing':
     case 'model-missing':
@@ -132,12 +165,17 @@ export function decideRecovery(laneRoot: string, finding: PatrolFinding): Recove
         action: 'stop', kind: 'ask-lane', delayMs: 0,
         message: base(`${finding.failureClass} is a lane/identity problem — no retry until the key/route/agent is fixed.${laneNote}`),
       };
+    case 'blocked-dependencies':
+      return {
+        action: 'retry', kind: 'retry-blocked-deps', delayMs: 0,
+        message: base(`blocked by quarantined dependencies — recover those hops, not the gate. ${finding.recommendation}`),
+      };
     default:
       if (finding.reason.startsWith('verify-failed') || finding.errorClass === 'verify') {
         return {
           action: 'retry', kind: 'retry-verify', delayMs: 5_000,
           override: {
-            toolBudget: 24,
+            toolBudget: 32,
             promptAppend: `RECOVERY: the deterministic verify failed (${finding.evidence}). Fix exactly that check — do not add scope, do not rewrite the plan. Missing artifacts: ${finding.artifactsMissing.join(', ') || 'none'}.`,
             reason: `verify recovery (attempt ${attempts + 1})`,
           },

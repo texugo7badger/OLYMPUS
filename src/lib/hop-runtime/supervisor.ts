@@ -144,6 +144,9 @@ export function startDetachedWalk(opts: {
   keepQuarantine?: boolean;
   /** v0.0.84 edit — retry ONLY the last parked hop (overnight/boot). */
   retryParkedHop?: boolean;
+  /** v0.0.98 — retry these quarantined dependencies (the real parks behind
+   *  a blocked gate), never the blocked gate itself. */
+  retryHopIds?: string[];
 }): StartResult {
   const existing = readSupervisor(opts.slug);
   if (existing.alive) return { ok: false, reason: 'already-running', pid: existing.state?.pid, logFile: existing.state?.logFile };
@@ -168,7 +171,7 @@ export function startDetachedWalk(opts: {
   const fd = fs.openSync(logFile, 'a');
   let child;
   try {
-    child = spawn(tsx, [runner, '--lane', opts.laneRoot, '--slug', opts.slug, ...(opts.keepQuarantine ? ['--keep-quarantine'] : []), ...(opts.retryParkedHop ? ['--retry-parked'] : [])], {
+    child = spawn(tsx, [runner, '--lane', opts.laneRoot, '--slug', opts.slug, ...(opts.keepQuarantine ? ['--keep-quarantine'] : []), ...(opts.retryParkedHop ? ['--retry-parked'] : []), ...(opts.retryHopIds?.length ? ['--retry-hops', opts.retryHopIds.join(',')] : [])], {
       cwd: root,
       detached: true,
       stdio: ['ignore', fd, fd],

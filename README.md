@@ -48,7 +48,23 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
+**v0.0.98 evidence:** [Logs — the flight recorder](screenshots/screens/54-logs-098.png) · [terminal usage meter](screenshots/screens/55-usage-meter-098.png) — hops, walks, models, economy and the 5h/weekly/monthly limit in the terminal header.
+
 ## Latest
+
+**v0.0.98 — the walk that waits, recovers and reports.**
+The GO 5-hour limit is now a **wait**, not an unknown stop: `provider.go-limit`
+canonicalizes to `provider-quota`, the walk pauses and resumes at the console
+reset. A blocked design gate recovers the **quarantined dependencies** (the real
+QA parks), never the gate blindly; the report is deterministic, always written,
+counts the hop state (6/10, not 4/10), and lands in Apollo's chat. The new
+**Logs** workspace shows every hop, walk, model and the economy with full
+detail — god, build, declared abilities, evidence, park, recovery, tokens,
+step cost/list/invoice — and the terminal header carries the **5h/weekly/
+monthly limit meter**. Hibernation now starts the detached walk and opts the
+active lane in. OpenCode v2 **2.3.2** remains the latest npm release and
+gate-approved. Published as v0.0.98; v0.0.97 remains the previous stable
+release.
 
 **v0.0.97 — the GO console is the anchor.**
 The logged-in OpenCode GO console is already an OLYMPUS frame, so the app now

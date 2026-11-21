@@ -93,23 +93,32 @@ function latestRows(rows: HopTelemetryRow[]): Map<string, HopTelemetryRow> {
   return latest;
 }
 
-export function buildWaveReports(plan: unknown, rows: HopTelemetryRow[]): WaveReport[] {
+export interface DigestState {
+  completed?: string[];
+  quarantined?: string[];
+  parks?: Record<string, { reason?: string; failureClass?: string | null; kind?: string }>;
+}
+
+export function buildWaveReports(plan: unknown, rows: HopTelemetryRow[], state?: DigestState | null): WaveReport[] {
   const latest = latestRows(rows);
+  const stateDone = new Set((state?.completed ?? []).map(String));
+  const quarantined = new Set((state?.quarantined ?? []).map(String));
   return computeWaves(plan).map((wave) => {
     const hops = wave.hops.map((h) => {
-      const row = latest.get(String(h.id));
-      const status: 'completed' | 'parked' | 'pending' = !row
-        ? 'pending'
-        : row.status === 'completed'
-          ? 'completed'
-          : row.status.startsWith('parked')
-            ? 'parked'
-            : 'pending';
+      const id = String(h.id);
+      const row = latest.get(id);
+      const park = state?.parks?.[id];
+      const stateParked = quarantined.has(id) || (park && park.kind !== 'blocked');
+      const status: 'completed' | 'parked' | 'pending' = stateDone.has(id) || row?.status === 'completed'
+        ? 'completed'
+        : stateParked || (row?.status.startsWith('parked') ?? false)
+          ? 'parked'
+          : 'pending';
       return {
         id: String(h.id),
         god: String(h.god),
         status,
-        detail: row?.status ?? 'not reached',
+        detail: park?.reason ?? row?.status ?? 'not reached',
         durationMs: row?.durationMs ?? null,
         tokensOut: row?.tokensOut ?? null,
       };
@@ -134,6 +143,9 @@ export interface OvernightDigestInput {
   plan: unknown;
   rows?: HopTelemetryRow[];
   parked?: { hopId: string; reason: string } | null;
+  /** v0.0.98 — the hop state is the completion truth; telemetry alone
+   *  missed preflight/artifact-rescued completions (AIME 4/10 vs 6/10). */
+  state?: DigestState | null;
   autoApproved: boolean;
   resumeAttempts: number;
   startedAt: string;
@@ -154,7 +166,7 @@ function fmtDuration(ms: number | null): string {
  */
 export function buildOvernightDigest(input: OvernightDigestInput): string {
   const rows = input.rows ?? readHopTelemetry(input.laneRoot);
-  const waves = buildWaveReports(input.plan, rows);
+  const waves = buildWaveReports(input.plan, rows, input.state);
   const totalHops = waves.reduce((n, w) => n + w.hops.length, 0);
   const completed = waves.reduce((n, w) => n + w.hops.filter((h) => h.status === 'completed').length, 0);
   const parkedHops = waves.flatMap((w) => w.hops.filter((h) => h.status === 'parked'));
@@ -165,6 +177,9 @@ export function buildOvernightDigest(input: OvernightDigestInput): string {
     `Finished: ${input.finishedAt}`,
     'Mode: unattended (no human input — the plan-walk gate auto-approved)',
     `Plan: ${totalHops} hops across ${waves.length} wave${waves.length === 1 ? '' : 's'} · Completed: ${completed}/${totalHops} · Parked: ${input.parked ? `${input.parked.hopId} (${input.parked.reason})` : parkedHops.length > 0 ? parkedHops.map((h) => h.id).join(', ') : 'none'}`,
+    ...(input.state?.quarantined?.length
+      ? [`Quarantined dependencies: ${input.state.quarantined.join(', ')} — recover these, not the blocked gate.`]
+      : []),
     `Auto-approved: ${input.autoApproved ? 'yes — the plan-walk gate (unattended overnight run)' : 'no — the gate was already approved'}`,
     `Auto-resumes: ${input.resumeAttempts}`,
     `Lane: ${input.laneRoot}`,

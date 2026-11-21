@@ -21,6 +21,14 @@ export interface HopPark {
   error?: string;
   /** v0.0.87 — the classified cause (timeout/tool-budget/provider/…). */
   errorClass?: string | null;
+  /** v0.0.98 — the canonical class (provider-quota, blocked-dependencies, …). */
+  failureClass?: string | null;
+  /** v0.0.98 — the provider's own back-off hint, when it sent one. */
+  retryAfterMs?: number | null;
+  /** v0.0.98 — for a quota park: the console reset (ISO) to resume at. */
+  resumeAt?: string | null;
+  /** v0.0.98 — 'parked' (a real failure) or 'blocked' (a derived state). */
+  kind?: 'parked' | 'blocked';
 }
 
 export interface HopInFlight {
@@ -59,6 +67,14 @@ export interface HopStateFile {
   /** v0.0.88 — the hop definition hashes at the time each completed id was
    *  marked. A changed definition invalidates the completed id. */
   hopHashes?: Record<string, string>;
+  /** v0.0.98 — THE PARK MAP. `parked` only carries the LAST park; when a
+   *  walk ends on a blocked gate, the real recoverable parks of its
+   *  dependencies were lost. This map keeps one entry per hop. */
+  parks?: Record<string, HopPark>;
+  /** v0.0.98 — a quota wait is a state, not a park: the walk pauses until
+   *  this ISO time and then resumes the same hop. */
+  waitingUntil?: string | null;
+  waitingReason?: string | null;
   updatedAt: string;
 }
 
@@ -101,6 +117,9 @@ export function loadHopState(stateDir: string): HopStateFile | null {
       lastHeartbeatAt: typeof f?.lastHeartbeatAt === 'string' ? f.lastHeartbeatAt : undefined,
       transport: f?.transport === 'warm' || f?.transport === 'spawn' ? f.transport : undefined,
     })).filter((f) => f.hopId) : [],
+    ...(s.parks && typeof s.parks === 'object' ? { parks: s.parks } : {}),
+    ...(typeof s.waitingUntil === 'string' ? { waitingUntil: s.waitingUntil } : {}),
+    ...(typeof s.waitingReason === 'string' ? { waitingReason: s.waitingReason } : {}),
     updatedAt: typeof s.updatedAt === 'string' ? s.updatedAt : new Date().toISOString(),
   };
 }

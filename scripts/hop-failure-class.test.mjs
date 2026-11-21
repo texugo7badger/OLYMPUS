@@ -33,8 +33,8 @@ const cases = [
   ['Agent not found: "hephaestus-hop"', 'agent-missing'],
   ['Model not found: opencode-go/nope', 'model-missing'],
   ['hop-tool-budget-exceeded after 12 calls', 'tool-budget'],
-  ['provider.quota: monthly limit reached', 'provider'],
-  ['APIError 402 payment required', 'provider'],
+  ['provider.quota: monthly limit reached', 'provider-quota'],
+  ['APIError 402 payment required', 'provider-quota'],
   ['ceiling-kill (OLYMPUS_HOP_TIMEOUT_MS 1500000ms): the stream hung', 'timeout'],
   ['script exit 1 — set -euo pipefail', 'script'],
   ['something odd happened', 'unknown'],
@@ -43,7 +43,7 @@ for (const [text, expected] of cases) {
   const got = classifyDispatchFailure({ error: text });
   expect(`F-1: '${text.slice(0, 42)}' → ${expected}`, got === expected, got);
 }
-expect('F-2: an explicit provider class wins', classifyDispatchFailure({ error: 'whatever', errorClass: 'provider.no-route' }) === 'provider', 'class ignored');
+expect('F-2: an explicit provider class wins', classifyDispatchFailure({ error: 'whatever', errorClass: 'provider.no-route' }) === 'provider-route', 'class ignored');
 expect('F-2b: a campaign-budget park is its own class (fresh window, not a provider)', classifyDispatchFailure({ error: 'dispatch-failed:campaign-budget' }) === 'campaign-budget', classifyDispatchFailure({ error: 'dispatch-failed:campaign-budget' }));
 
 expect('F-3: the telemetry row carries the error, the class and the failed check', /error: String\(r\.error \?\? ''\)\.slice\(0, 2_000\)/.test(walker) && /errorClass: r\.errorClass \?\? classifyDispatchFailure\(r\)/.test(walker) && /failedCheck: extra\.failedCheck/.test(walker), 'grey row');

@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-21",
-  "current": "0.0.97",
+  "current": "0.0.98",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.3.2",
@@ -11,6 +11,20 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; an untested update can break sessions, the v2 API, MCP or the DB schema."
   },
   "releases": [
+    {
+      "version": "0.0.98",
+      "date": "2026-11-21",
+      "title": "The walk waits, recovers and reports — and the Logs tell the truth",
+      "highlights": [
+        "The GO 5-hour limit is now a WAIT, not an unknown stop: provider.go-limit/quota maps to provider-quota, the walk pauses and resumes at the console reset. The old overnight park (21:31 → 06:25) can no longer burn a night.",
+        "A blocked design gate recovers its quarantined dependencies (the real QA parks), not the gate. The end-of-walk report is deterministic and always written; the digest now counts the hop state (6/10, not 4/10).",
+        "Apollo's chat gets a durable campaign reporter: hop green/parked, quota wait and the final report are in the inbox, so a detached walk still speaks after a reload.",
+        "New Logs workspace: Visão geral, Hops, Walks, Models and Economy, with full hop/walk detail — god, build, model, declared abilities, artifacts, checks, park, recovery, resonance, tokens, step cost/list/invoice.",
+        "The terminal header now carries the GO limit meter: 5h by default, one button toggles weekly/monthly; stale anchor and quota-hit are labelled. The meter reads the console anchor only (no 57k ledger scan).",
+        "Hibernation now opts the active lane in and starts the detached walk, so the night contract survives the renderer being destroyed.",
+        "The qwen3.7-plus guard and the exact console windows from v0.0.97 remain. OpenCode v2 2.3.2 remains the latest npm release and gate-approved."
+      ]
+    },
     {
       "version": "0.0.97",
       "date": "2026-11-21",

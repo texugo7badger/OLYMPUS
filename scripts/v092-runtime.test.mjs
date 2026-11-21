@@ -45,6 +45,9 @@ const goConsole = await import(ROOT + '/src/lib/go-console.ts');
 const burn = await import(ROOT + '/src/lib/burn-policy.ts');
 const goRead = await import(ROOT + '/src/lib/go-console-read.ts');
 const agentModel = await import(ROOT + '/src/lib/agent-model.ts');
+const failureClass = await import(ROOT + '/src/lib/hop-runtime/failure-class.ts');
+const overnight = await import(ROOT + '/src/lib/hop-runtime/overnight.ts');
+const postRun = await import(ROOT + '/src/lib/hop-runtime/post-run.ts');
 
 ok('M1: a mark queue survives on disk and round-trips', () => {
   marks.writeMarks('aime', [{ x: 10, y: 20, page: '/onboarding', instruction: 'tighten the first gesture', viewport: { width: 1440, height: 900 } }]);
@@ -146,11 +149,11 @@ ok('R1: legacy recovery rows do not exhaust a new campaign', () => {
   assert.equal(decision.kind, 'retry-budget');
 });
 
-ok('R2: the current campaign still has a hard 6/6 budget', () => {
+ok('R2: the campaign budget is the window (12 default), not the old 6', () => {
   const lane = path.join(HOME, 'lane-budget');
   fs.mkdirSync(lane, { recursive: true });
   fs.writeFileSync(path.join(lane, '.olympus-hop-state.json'), JSON.stringify({ generation: 22, campaignId: 'cmp_budget', completed: [] }) + '\n');
-  const rows = Array.from({ length: 6 }, (_, i) => JSON.stringify({ ts: new Date().toISOString(), campaignId: 'cmp_budget', hopId: `h-${i}`, action: 'retry' })).join('\n') + '\n';
+  const rows = Array.from({ length: 12 }, (_, i) => JSON.stringify({ ts: new Date().toISOString(), campaignId: 'cmp_budget', hopId: `h-${i}`, action: 'retry' })).join('\n') + '\n';
   fs.writeFileSync(path.join(lane, '.olympus-recovery.jsonl'), rows);
   const decision = recovery.decideRecovery(lane, {
     ts: new Date().toISOString(), hopId: 'onboarding', god: 'athena', status: 'parked',
@@ -159,7 +162,7 @@ ok('R2: the current campaign still has a hard 6/6 budget', () => {
     artifactsPresent: [], artifactsMissing: [], verdict: 'REPLAN', recommendation: 'narrow', evidence: 'tool budget',
   });
   assert.equal(decision.action, 'stop');
-  assert.match(decision.message, /6\/6/);
+  assert.match(decision.message, /12\/12/);
 });
 
 ok('HIB1: an expired hibernation plan is not a plan', () => {
@@ -340,7 +343,7 @@ ok('PN1: OpenCode 2.3.2 is pinned and the patch-notes surface is wired', () => {
   assert.equal(pkg.dependencies['@opencode/cli'], '2.3.2');
   assert.equal(pkg.dependencies['@opencode/plugin'], '2.3.2');
   const notes = JSON.parse(src('public/patch-notes.json'));
-  assert.equal(notes.current, '0.0.97');
+  assert.equal(notes.current, '0.0.98');
   assert.equal(notes.opencode.tested, '2.3.2');
   assert.match(notes.opencode.gateCommand, /opencode:gate/);
   const component = src('src/components/olympus/patch-notes.tsx');
@@ -411,7 +414,7 @@ ok('PN4: hibernate v2 gates active turns, keeps a live preview, and restores idl
   assert.match(main, /if \(hibernating\) return;\n    app\.quit\(\);/);
   assert.match(main, /postJson\('\/api\/olympus\/chat\/hibernate', \{ waitMs: 60_000, forceFree \}, 70_000\)/);
   const prefs = JSON.parse(src('package.json'));
-  assert.ok(prefs.version.startsWith('0.0.97'));
+  assert.ok(prefs.version.startsWith('0.0.98'));
 });
 
 ok('PN5: the hibernate HUD collapses to a compact strip from a real button', () => {
@@ -473,6 +476,83 @@ ok('PN8: the unverified qwen lane is guarded to the verified GO fallback', () =>
   assert.doesNotMatch(consoleRoute, /getUsageSnapshot/);
   assert.match(src('src/lib/hop-runtime/walker.ts'), /readGoConsoleAnchor/);
   assert.match(src('src/lib/hop-runtime/walker.ts'), /anchor\.h5Pct >= 100/);
+});
+
+
+ok('PN9: the GO limit is a quota WAIT, not an unknown stop', () => {
+  assert.equal(failureClass.classifyDispatchFailure({ errorClass: 'provider.go-limit', error: 'OpenCode Go 5 hour usage limit reached' }), 'provider-quota');
+  assert.equal(failureClass.classifyDispatchFailure({ errorClass: 'provider.quota', error: 'quota exceeded' }), 'provider-quota');
+  assert.equal(failureClass.classifyDispatchFailure({ errorClass: 'provider.auth', error: 'OpenCode Go requires an API key' }), 'provider-auth');
+  assert.equal(failureClass.classifyDispatchFailure({ errorClass: 'provider.no-route', error: 'model not found' }), 'provider-route');
+  assert.equal(failureClass.classifyParkReason('blocked-dependencies', '2 blocked by qa-art-fit'), 'blocked-dependencies');
+  assert.equal(failureClass.classifyParkReason('verify-failed', 'MISSING Overall: PASS'), 'verify-failed');
+  assert.equal(failureClass.classifyParkReason('tool-budget', 'hop-tool-budget-exceeded'), 'tool-budget');
+  const rec = src('src/lib/hop-runtime/recovery.ts');
+  assert.match(rec, /case 'provider-quota'/);
+  assert.match(rec, /wait-quota/);
+  assert.match(rec, /blocked-dependencies/);
+});
+
+ok('PN10: the digest counts state-completed hops (6/10, not 4/10)', () => {
+  const plan = { hops: [
+    { id: 'a', god: 'athena', artifacts: [] }, { id: 'b', god: 'dionysus', artifacts: [] },
+  ] };
+  const rows = [{ ts: '2026-11-21T00:00:00Z', hop: 'a', god: 'athena', status: 'completed', durationMs: 1, tokensIn: 1, tokensOut: 1 }];
+  const digest = overnight.buildOvernightDigest({
+    slug: 'aime', laneRoot: '/tmp/aime', plan, rows,
+    state: { completed: ['a', 'b'], quarantined: ['qa-x'], parks: {} },
+    autoApproved: false, resumeAttempts: 0,
+    startedAt: '2026-11-21T00:00:00Z', finishedAt: '2026-11-21T01:00:00Z',
+  });
+  assert.match(digest, /Completed: 2\/2/);
+  assert.match(digest, /Quarantined dependencies: qa-x/);
+});
+
+ok('PN11: the terminal meter and the Logs workspace are wired', () => {
+  const meter = src('src/app/api/olympus/go-usage/meter/route.ts');
+  assert.match(meter, /peekUsageSnapshot/);
+  assert.doesNotMatch(meter, /getUsageSnapshot/);
+  assert.match(src('src/components/olympus/interactive-terminal.tsx'), /UsageMeter/);
+  const logs = src('src/app/api/olympus/logs/route.ts');
+  assert.match(logs, /buildLogsPayload/);
+  assert.match(src('src/components/olympus/activity-bar.tsx'), /leftPane === 'logs'/);
+  assert.match(src('src/components/olympus/logs-dashboard.tsx'), /HopsTable/);
+  assert.match(src('src/lib/logs-index.ts'), /parksByClass/);
+  assert.match(src('src/lib/hop-runtime/walker.ts'), /parkMap/);
+  assert.match(src('src/lib/hop-runtime/walker.ts'), /retryHopIds/);
+  assert.match(src('src/lib/hop-runtime/post-run.ts'), /recoverBlockedDependencies/);
+  assert.match(src('src/lib/atlas-warden.ts'), /retryHopIds/);
+  assert.match(src('src/lib/hop-runtime/supervisor.ts'), /retry-hops/);
+});
+
+
+ok('PN12: a blocked gate recovers its quarantined dependencies, not the gate', () => {
+  const lane = path.join(HOME, 'lane-blocked');
+  fs.mkdirSync(lane, { recursive: true });
+  const plan = { hops: [
+    { id: 'impl', god: 'athena', artifacts: [] },
+    { id: 'qa-a', god: 'dionysus', artifacts: [], after: ['impl'] },
+    { id: 'qa-b', god: 'dionysus', artifacts: [], after: ['impl'] },
+    { id: 'gate', god: 'athena', artifacts: [], after: ['qa-a', 'qa-b'] },
+  ] };
+  fs.writeFileSync(path.join(lane, 'dispatch-plan.json'), JSON.stringify(plan));
+  fs.writeFileSync(path.join(lane, '.olympus-hop-state.json'), JSON.stringify({
+    version: 1, generation: 1, campaignId: 'cmp_blocked',
+    completed: ['impl'], quarantined: ['qa-a', 'qa-b'],
+    parked: { hopId: 'gate', reason: 'blocked-dependencies', errorClass: 'blocked-dependencies', failureClass: 'blocked-dependencies', kind: 'blocked', ts: new Date().toISOString() },
+    parks: {
+      'qa-a': { hopId: 'qa-a', reason: 'dispatch-failed:tool-budget', errorClass: 'tool-budget', failureClass: 'tool-budget', kind: 'parked', ts: new Date().toISOString() },
+      'qa-b': { hopId: 'qa-b', reason: 'verify-failed', errorClass: 'verify-failed', failureClass: 'verify-failed', kind: 'parked', ts: new Date().toISOString() },
+      gate: { hopId: 'gate', reason: 'blocked-dependencies', failureClass: 'blocked-dependencies', kind: 'blocked', ts: new Date().toISOString() },
+    },
+    updatedAt: new Date().toISOString(),
+  }));
+  const result = postRun.recoverBlockedDependencies(lane, plan);
+  assert.deepEqual(result.ids.sort(), ['qa-a', 'qa-b']);
+  assert.equal(result.waitMs, 0);
+  const red = src('src/lib/hop-runtime/post-run.ts');
+  assert.match(red, /retryHopIds: dep\.ids/);
+  assert.match(red, /recoverBlockedDependencies/);
 });
 
 console.log(`\nv092-runtime: ${passed} passed${process.exitCode ? ', failures' : ', all green'}.`);

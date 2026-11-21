@@ -26,13 +26,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { getVaultRoot } from './vault-root';
 import { readWalkLock } from './hop-runtime/walk-lock';
-import { loadHopState } from './hop-runtime/hop-state';
+import { loadHopState, saveHopState } from './hop-runtime/hop-state';
 import { readFrozenPlan, readPlanFile, planPath } from './hop-runtime/plan-generation';
 import { buildCampaignHealth, type CampaignHealth } from './campaign-health';
-import { patrolLane } from './atlas-patrol';
+import { patrolLane, patrolFinding } from './atlas-patrol';
 import { decideRecovery, applyRecovery, readRecoveries, campaignKey } from './hop-runtime/recovery';
 import { startDetachedWalk, readSupervisor } from './hop-runtime/supervisor';
 import { appendActivity } from './activity-feed';
+import { readHibernationPlan } from './hibernation';
 
 export const ATLAS_MODEL = 'opencode-go/hy3';
 export const ATLAS_DECISION_FILE = 'atlas-decision.json';
@@ -42,7 +43,7 @@ export const ATLAS_STARTS_FILE = 'atlas-warden-starts.json';
 
 const TICK_MS = 30_000;
 const MIN_START_GAP_MS = 120_000;
-const MAX_WARDEN_STARTS = 6;
+const MAX_WARDEN_STARTS = 12;
 
 export type WardenDecisionKind = 'interrupted' | 'parked' | 'needs-user';
 
@@ -232,7 +233,7 @@ function listLanes(vaultRoot: string): string[] {
 
 export interface WardenTickOptions {
   /** Test seam: the real default spawns the detached walker. */
-  start?: (opts: { slug: string; laneRoot: string; autoResume?: boolean; keepQuarantine?: boolean; retryParkedHop?: boolean }) => { ok: boolean; pid?: number; reason?: string };
+  start?: (opts: { slug: string; laneRoot: string; autoResume?: boolean; keepQuarantine?: boolean; retryParkedHop?: boolean; retryHopIds?: string[] }) => { ok: boolean; pid?: number; reason?: string };
   now?: number;
   vaultRoot?: string;
   /** Do not touch the real supervisor/opt-in in a fixture. */
@@ -257,9 +258,27 @@ export function wardenTick(opts: WardenTickOptions = {}): WardenState {
     const lock = readWalkLock(laneRoot);
     const live = Boolean(lock.holder && lock.alive);
     const state = loadHopState(laneRoot);
+    // v0.0.98 — a quota wait is a state, not a parked failure. Respect it
+    // until the console reset; then clear it and resume the same hop.
+    const waitingUntil = state?.waitingUntil ? Date.parse(state.waitingUntil) : 0;
+    if (Number.isFinite(waitingUntil) && waitingUntil > now) {
+      lanes.push({
+        slug, laneRoot, generation: state?.generation ?? 0, completed: state?.completed?.length ?? 0, total: 0,
+        running: 0, verdict: 'DEGRADED', health: `WAITING · GO reset ${new Date(waitingUntil).toISOString()}`,
+        parked: state?.parked?.hopId ?? null, optedIn: true, supervisor: 'idle', lastAction: 'waiting',
+      });
+      continue;
+    }
+    if (state?.waitingUntil) {
+      try { saveHopState(laneRoot, { ...state, waitingUntil: null, waitingReason: null }); } catch { /* best effort */ }
+    }
     const health = buildCampaignHealth(laneRoot);
     const supervisor = readSupervisor(slug);
-    const optedIn = readOptIn(slug) || supervisor.state?.autoResume === true;
+    // v0.0.98 — hibernating with an active lane opts that lane into the
+    // night contract, even when the supervisor file predates it.
+    const hibPlan = readHibernationPlan();
+    const optedIn = readOptIn(slug) || supervisor.state?.autoResume === true
+      || (Boolean(hibPlan) && activeSlug() === slug);
     const parked = state?.parked ?? null;
     const pending = health.total - health.completed;
 
@@ -319,8 +338,11 @@ export function wardenTick(opts: WardenTickOptions = {}): WardenState {
       });
       continue;
     }
-    if (readRecoveries(laneRoot).filter((r) => r?.action === 'retry' && r?.campaignId === campaignId).length >= MAX_WARDEN_STARTS
-      || startCount(slug, campaignId) >= MAX_WARDEN_STARTS) {
+    const hib = readHibernationPlan();
+    const hibLeft = hib ? Math.max(0, Date.parse(hib.until) - now) : 0;
+    const maxStarts = hib ? Math.min(120, Math.max(MAX_WARDEN_STARTS, Math.ceil(hibLeft / 120_000))) : MAX_WARDEN_STARTS;
+    if (readRecoveries(laneRoot).filter((r) => r?.action === 'retry' && r?.campaignId === campaignId).length >= maxStarts
+      || startCount(slug, campaignId) >= maxStarts) {
       const decision: WardenDecision = {
         id: `${slug}:${parked?.hopId ?? 'budget'}:recovery-budget`,
         slug, laneRoot, kind: 'needs-user', hopId: parked?.hopId ?? null,
@@ -337,9 +359,74 @@ export function wardenTick(opts: WardenTickOptions = {}): WardenState {
     }
 
     const patrol = (() => { try { return patrolLane(laneRoot); } catch { return null; } })();
-    const finding = patrol?.parked[0] ?? patrol?.stuck[0] ?? null;
+    let finding = patrol?.parked[0] ?? patrol?.stuck[0] ?? null;
+    // v0.0.98 — THE BLOCKED GATE HIDES THE REAL PARKS. Recover the
+    // quarantined dependencies named in the state's parks map, not the gate.
+    let retryIds: string[] = [];
+    let waitMs = 0;
+    if (finding && (finding.failureClass === 'blocked-dependencies' || String(finding.reason).startsWith('blocked'))) {
+      const recoverable = new Set(['tool-budget', 'verify-failed', 'provider-quota', 'transport', 'timeout', 'script', 'lane-exhausted']);
+      for (const park of Object.values(state?.parks ?? {}) as any[]) {
+        if (!park || park.kind === 'blocked' || !park.hopId) continue;
+        if (!(state?.quarantined ?? []).includes(park.hopId)) continue;
+        if (!recoverable.has(String(park.failureClass ?? park.errorClass ?? ''))) continue;
+        const hop = (plan?.hops ?? []).find((h: any) => String(h?.id) === park.hopId);
+        if (!hop) continue;
+        const depFinding = patrolFinding(laneRoot, hop, park);
+        const decision = decideRecovery(laneRoot, depFinding);
+        if (decision.action !== 'retry') continue;
+        if (persist) applyRecovery(laneRoot, depFinding, decision);
+        retryIds.push(park.hopId);
+        if (decision.kind === 'wait-quota') waitMs = Math.max(waitMs, decision.delayMs);
+      }
+      if (retryIds.length > 0) {
+        finding = null; // the dependencies are the recovery, not the gate
+        if (waitMs > 0) {
+          if (persist && state) {
+            try {
+              saveHopState(laneRoot, { ...state, waitingUntil: new Date(now + Math.min(6 * 3600_000, waitMs)).toISOString(), waitingReason: 'provider-quota' });
+            } catch { /* best effort */ }
+          }
+          const decision: WardenDecision = {
+            id: `${slug}:quota-wait:${retryIds.join(',')}`,
+            slug, laneRoot, kind: 'parked', hopId: retryIds[0] ?? null,
+            reason: 'provider-quota',
+            message: `${slug}: GO quota window — waiting ${Math.round(Math.min(6 * 3600_000, waitMs) / 60_000)} min for the console reset; the ${retryIds.length} quarantined hop(s) will resume automatically.`,
+            at: new Date(now).toISOString(), actions: ['dismiss'],
+          };
+          decisions.push(decision);
+          lanes.push({
+            slug, laneRoot, generation: health.generation, completed: health.completed, total: health.total,
+            running: 0, verdict: 'DEGRADED', health: health.line, parked: retryIds[0] ?? null,
+            optedIn: true, supervisor: supervisor.state ? 'idle' : 'none', lastAction: 'waiting',
+          });
+          continue;
+        }
+      }
+    }
     if (finding) {
       const recovery = decideRecovery(laneRoot, finding);
+      if (recovery.kind === 'wait-quota') {
+        if (persist && state) {
+          try {
+            saveHopState(laneRoot, { ...state, waitingUntil: new Date(now + Math.min(6 * 3600_000, recovery.delayMs)).toISOString(), waitingReason: 'provider-quota' });
+          } catch { /* best effort */ }
+        }
+        const decision: WardenDecision = {
+          id: `${slug}:${finding.hopId}:quota-wait`,
+          slug, laneRoot, kind: 'parked', hopId: finding.hopId,
+          reason: 'provider-quota',
+          message: `${slug}: GO quota window — waiting ${Math.round(Math.min(6 * 3600_000, recovery.delayMs) / 60_000)} min for the console reset; the hop resumes automatically.`,
+          at: new Date(now).toISOString(), actions: ['dismiss'],
+        };
+        decisions.push(decision);
+        lanes.push({
+          slug, laneRoot, generation: health.generation, completed: health.completed, total: health.total,
+          running: 0, verdict: 'DEGRADED', health: health.line, parked: finding.hopId,
+          optedIn: true, supervisor: supervisor.state ? 'idle' : 'none', lastAction: 'waiting',
+        });
+        continue;
+      }
       if (recovery.action === 'stop') {
         const decision: WardenDecision = {
           id: `${slug}:${finding.hopId}:${finding.failureClass}:stop`,
@@ -361,7 +448,7 @@ export function wardenTick(opts: WardenTickOptions = {}): WardenState {
     }
 
     if (persist) pinAtlasHy3(laneRoot);
-    const started = start({ slug, laneRoot, autoResume: true, keepQuarantine: true, retryParkedHop: true });
+    const started = start({ slug, laneRoot, autoResume: true, keepQuarantine: true, retryParkedHop: retryIds.length === 0, ...(retryIds.length ? { retryHopIds: retryIds } : {}) });
     if (persist) {
       noteStart(slug, now, campaignId);
       lastAction = {

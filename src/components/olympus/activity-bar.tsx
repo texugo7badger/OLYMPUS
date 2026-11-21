@@ -5,7 +5,7 @@
 'use client';
 
 import { useOlympus, GOD_ICONS, GOD_IDS } from '@/lib/olympus-store';
-import { BarChart3, Brain, BrainCog, DollarSign, Eye, History, Network, Palette, Plug, Settings, SlidersHorizontal, Boxes } from 'lucide-react';
+import { BarChart3, Brain, BrainCog, DollarSign, Eye, History, Network, Palette, Plug, Settings, SlidersHorizontal, Boxes, ScrollText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
@@ -52,6 +52,7 @@ export default function ActivityBar() {
       <ActBtn icon={Eye} label="Live preview" active={leftPane === 'live-preview'} onClick={() => setLeftPane('live-preview')} />
       <ActBtn icon={BrainCog} label="God intelligence" active={leftPane === 'god-intelligence'} onClick={() => setLeftPane('god-intelligence')} accent />
       <ActBtn icon={History} label="Recent activity" active={leftPane === 'timeline'} onClick={() => setLeftPane('timeline')} />
+      <ActBtn icon={ScrollText} label="Logs" active={leftPane === 'logs'} onClick={() => setLeftPane('logs')} accent />
       <ActBtn icon={DollarSign} label="Cost" active={leftPane === 'cost'} onClick={() => setLeftPane('cost')} />
       <ActBtn icon={BarChart3} label="Benchmarks" active={leftPane === 'benchmarks'} onClick={() => setLeftPane('benchmarks')} />
       <ActBtn icon={Network} label="Sync map" active={leftPane === 'sync-map'} onClick={() => setLeftPane('sync-map')} />

@@ -23,7 +23,7 @@ import path from 'node:path';
 import { appendActivity } from './activity-feed';
 import { laneChain, readLaneHealth, isLaneAvailable } from './lane-health';
 import { laneRosterFor } from './lane-roster';
-import { classifyDispatchFailure } from './hop-runtime/failure-class';
+import { classifyParkReason, type DispatchFailureClass } from './hop-runtime/failure-class';
 import { runGodTurn } from './god-run';
 
 export type PatrolVerdict = 'retry' | 'replan' | 'ask-user' | 'none';
@@ -35,7 +35,7 @@ export interface PatrolFinding {
   status: string;
   reason: string;
   errorClass: string | null;
-  failureClass: ReturnType<typeof classifyDispatchFailure>;
+  failureClass: DispatchFailureClass;
   lane: string | null;
   nextLane: string | null;
   artifactsPresent: string[];
@@ -103,7 +103,9 @@ export function patrolFinding(laneRoot: string, hop: any, park: any, opts: { now
   const god = String(hop?.god ?? 'system');
   const reason = String(park?.reason ?? (opts.stuck ? 'running' : 'unknown'));
   const errorClass = park?.errorClass ? String(park.errorClass) : null;
-  const failureClass = classifyDispatchFailure({ error: park?.error, errorClass });
+  // v0.0.98 — classify the PARK (reason included), not only the error text.
+  // The old path read `provider.go-limit` as unknown and asked the user.
+  const failureClass = classifyParkReason(reason, park?.error, errorClass) as DispatchFailureClass;
   const lane = (() => {
     const rows = readTelemetry(laneRoot);
     const match = [...rows].reverse().find((r) => String(r?.hop) === hopId && typeof r?.lane === 'string');
@@ -121,11 +123,22 @@ export function patrolFinding(laneRoot: string, hop: any, park: any, opts: { now
     recommendation = nextLane
       ? `The hop has been running for ${Math.round((now - Date.parse(String(park?.startedAt ?? ''))) / 60_000)} min. Quarantine ${lane ?? 'its lane'} and retry on ${nextLane}.`
       : 'The hop is stuck and no healthy fallback lane is known — stop the walk and open Settings → LLM Strategy.';
-  } else if (failureClass === 'provider' || failureClass === 'agent-missing' || failureClass === 'model-missing') {
+  } else if (failureClass === 'provider-quota') {
+    // v0.0.98 — a quota window is a WAIT, never a stop. The recovery reads
+    // the console anchor for the exact reset; the hop stays pending.
+    verdict = 'retry';
+    recommendation = `GO quota window exhausted (${reason}). Wait for the console reset and resume the same hop; do not re-dispatch into a 100% window.`;
+  } else if (failureClass === 'blocked-dependencies') {
+    verdict = 'replan';
+    recommendation = `The hop is blocked by unfinished dependencies (${arts.missing.join(', ') || 'not readable'}). Recover the quarantined dependencies — never retry the blocked gate blindly.`;
+  } else if (failureClass === 'provider-auth' || failureClass === 'provider-route' || failureClass === 'agent-missing' || failureClass === 'model-missing') {
+    verdict = 'ask-user';
+    recommendation = `Cause is ${failureClass} (${lane ?? 'lane unknown'}). A key/route/agent must be fixed; no automatic retry.`;
+  } else if (failureClass === 'provider') {
     verdict = nextLane ? 'retry' : 'ask-user';
     recommendation = nextLane
-      ? `Cause is ${failureClass} (${lane ?? 'lane unknown'}). Re-dispatch the same hop on ${nextLane}; do not burn the same lane again.`
-      : `Cause is ${failureClass}; no healthy fallback in the roster — ask the user to fix the key/route.`;
+      ? `Cause is provider (${lane ?? 'lane unknown'}). Re-dispatch the same hop on ${nextLane}; do not burn the same lane again.`
+      : `Cause is provider; no healthy fallback in the roster — ask the user to fix the key/route.`;
   } else if (failureClass === 'timeout' || failureClass === 'transport') {
     verdict = nextLane ? 'retry' : 'ask-user';
     recommendation = nextLane
@@ -137,7 +150,7 @@ export function patrolFinding(laneRoot: string, hop: any, park: any, opts: { now
   } else if (failureClass === 'tool-budget') {
     verdict = 'replan';
     recommendation = `Tool budget exhausted (${reason}). Replan the hop with a narrower prompt: name the exact files, cap the shell calls, write the artifact before probing. ${arts.missing.length ? `Missing: ${arts.missing.join(', ')}.` : 'Artifacts exist — verify before rerunning.'}`;
-  } else if (reason.startsWith('verify-failed')) {
+  } else if (failureClass === 'verify-failed' || reason.startsWith('verify-failed')) {
     verdict = 'replan';
     recommendation = `Deterministic verify failed. ${arts.missing.length ? `Missing: ${arts.missing.join(', ')}.` : 'The artifacts exist but do not satisfy the checks.'} Replan the hop around the failing check, not a blind retry.`;
   } else if (failureClass === 'script') {

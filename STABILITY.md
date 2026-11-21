@@ -2,10 +2,12 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.97 · 2026-11-21 · the current release. The GO console frame is the
-> anchor; a stale anchor pauses upgrades and rolling 100 parks the walk. The
-> chat pins the model per god and maps the unverified qwen3.7-plus GO lane to
-> verified DeepSeek. v0.0.96's hibernation v2 remains. The harness is shipped and
+> v0.0.98 · 2026-11-21 · the current release. The GO 5-hour limit is a WAIT
+> with the console reset; a blocked gate recovers its quarantined
+> dependencies; the report is deterministic and lands in Apollo's chat; the
+> Logs workspace and the terminal 5h/weekly/monthly meter make every hop and
+> cost visible. v0.0.97's exact console anchor, stale-anchor pause, rolling
+> 65/80/100 and qwen→DeepSeek guard remain. v0.0.96's hibernation v2 remains. The harness is shipped and
 > measured; the 8-hour / 100-hop certification is **not** claimed yet. The
 > hibernation path is a bounded, detached walk with an explicit window, not
 > the note-8 claim. v0.0.96 turned hibernation into a real quit, gated it on

@@ -60,6 +60,7 @@ import { patrolFinding, recordPatrol } from '@/lib/atlas-patrol';
 import { ensurePlanGeneration, freezePlan, validCompletedForPlan, computeHopHashes, frozenPlanPath } from './plan-generation';
 import { readHopOverride } from './hop-overrides';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
+import { appendGodInbox } from '@/lib/god-inbox';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
 export const MAX_HOP_CONCURRENCY = 4;
@@ -1225,6 +1226,13 @@ export interface WalkOptions {
    * hops quarantined. Boot/orphan pickup does not set it.
    */
   retryParkedHop?: boolean;
+  /**
+   * v0.0.98 — retry specific QUARANTINED hops (the real dependencies of a
+   * blocked gate), not just the last parked hop. The overnight/warden
+   * recovery passes the recoverable ids here; the gate itself is never
+   * retried blindly.
+   */
+  retryHopIds?: string[];
   /** #117: the live narration bridge (optional — the battery fixtures omit it). */
   onEvent?: (ev: HopWalkEvent) => void;
   /** v0.0.92 — the walk may share the machine with the user: do not pause new
@@ -1341,10 +1349,31 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   // auto-resume re-ran the same three from scratch because the set was always
   // rebuilt empty. The human's explicit resume still clears it.
   const quarantined = new Set<string>(opts.keepQuarantine && sameGeneration ? (state?.quarantined ?? []) : []);
+  // v0.0.98 — THE PARK MAP. `parked` is only the last park; keep one entry
+  // per hop so a blocked gate can never hide the two recoverable QA parks
+  // that block it (the AIME gen 35 specimen).
+  const parkMap = new Map<string, HopPark>(
+    sameGeneration && state?.parks && typeof state.parks === 'object'
+      ? Object.entries(state.parks).filter(([, v]) => v && typeof v === 'object') as Array<[string, HopPark]>
+      : [],
+  );
   // v0.0.84 edit — one bounded retry for the hop that parked last, not the
   // whole quarantine. The overnight auto-resume sets this; a boot/orphan
   // pickup keeps the quarantine intact; a human resume clears it entirely.
   if (opts.retryParkedHop && state?.parked?.hopId) quarantined.delete(state.parked.hopId);
+  // v0.0.98 — retry the recoverable dependencies named by the recovery.
+  for (const id of opts.retryHopIds ?? []) {
+    if (!id) continue;
+    quarantined.delete(id);
+    parkMap.delete(id);
+  }
+  // A blocked gate is a derived state, not a failure: when its deps are
+  // being retried it must not keep the campaign parked. The end-of-walk
+  // check re-adds it if the gate is still blocked.
+  if ((opts.retryHopIds?.length ?? 0) > 0
+    && (parkedHop?.kind === 'blocked' || parkedHop?.failureClass === 'blocked-dependencies')) {
+    parkedHop = null;
+  }
   // v0.0.86 — A FIXED PLAN DESERVES A RETRY. AIME's p4b was quarantined on a
   // silent script exit; the plan was then rewritten with a traced, node-based
   // close, but the auto-resume kept the quarantine and declared the walk
@@ -1406,6 +1435,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     parked: parkedHop,
     campaignId: opts.campaignId,
     quarantined: [...quarantined],
+    parks: Object.fromEntries(parkMap),
     inFlight: [],
     generation,
     hopHashes: generationHashes,
@@ -1440,14 +1470,18 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     // text, the REASON is still evidence (verify-failed, design-evidence-
     // missing, …). The old `unknown` hid 26 design-review parks.
     const cls = errorClass || classifyParkReason(reason, error);
-    parkedHop = {
+    const record: HopPark = {
       hopId: hop.id,
       reason,
       ts: new Date().toISOString(),
       error,
       errorClass: cls,
+      failureClass: cls,
+      kind: 'parked',
       ...(verify ? { verify } : {}),
     };
+    parkedHop = record;
+    parkMap.set(hop.id, record);
     // v0.0.91 — the park card has a diagnosis even when the child was mute.
     // The file is per-lane (last park wins) and is safe to read from the UI.
     try {
@@ -1570,6 +1604,22 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         status,
       });
     } catch { /* a notification never blocks a hop */ }
+    // v0.0.98 — THE DURABLE CHAT REPORTER. A detached walk has no action
+    // stream; Apollo's inbox is the conversation the terminal can poll after
+    // a restart. One concise entry per settled hop (never per token).
+    try {
+      const ok = status === 'completed';
+      const slug = basename(stateDir);
+      appendGodInbox('apollo', {
+        role: 'system',
+        source: 'system',
+        status: ok ? 'done' : 'failed',
+        text: ok
+          ? `Atlas · ${row.hop} GREEN (${row.god}, ${Math.round(row.durationMs / 1000)}s) — next hop continues. Open Live Preview to verify the served page.`
+          : `Atlas · ${row.hop} PARKED (${row.god}) — ${row.errorClass ?? 'unknown'}: ${String(row.error ?? status).slice(0, 180)}. The recovery will retry or report the next action.`,
+        meta: { kind: 'campaign-hop', slug, hop: row.hop, god: row.god, status, failureClass: row.errorClass ?? null, preview: `/preview-window?slug=${encodeURIComponent(slug)}` },
+      });
+    } catch { /* the reporter never blocks a hop */ }
     rows.push(row);
     return row;
   };
@@ -1604,6 +1654,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           parked: parkedHop,
           campaignId: opts.campaignId,
           quarantined: [...quarantined],
+          parks: Object.fromEntries(parkMap),
           generation,
           hopHashes: generationHashes,
           inFlight: [...inFlight.values()].map((t) => ({
@@ -1809,6 +1860,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
             const verify = verifyHopDeterministic(next, laneRoot);
             if (verify.ok) {
               completed.add(next.id);
+              parkMap.delete(next.id);
               // v0.0.85 — the hop that was parked re-ran and PASSED: the park
               // is no longer the campaign's state.
               if (parkedHop?.hopId === next.id) parkedHop = null;
@@ -1929,7 +1981,13 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         ? `${pendingAtEnd.length} hop(s) pending — ${trulyBlocked.length} blocked by unfinished dependencies: ` +
           trulyBlocked.slice(0, 6).map((b) => `${b.hop.id} (after ${b.missing.join(', ')})`).join('; ')
         : `${pendingAtEnd.length} hop(s) ready but the walk stopped without dispatching them — a walker defect, resume is safe`;
-      parkedHop = { hopId: first.id, reason, ts: new Date().toISOString(), error: detail };
+      const blocked: HopPark = {
+        hopId: first.id, reason, ts: new Date().toISOString(), error: detail,
+        errorClass: 'blocked-dependencies', failureClass: 'blocked-dependencies',
+        kind: trulyBlocked.length > 0 ? 'blocked' : 'parked',
+      };
+      parkedHop = blocked;
+      parkMap.set(first.id, blocked);
       emit({ type: 'hop_parked', hop: first.id, god: first.god, reason, error: detail });
       console.log(`[hop-runtime] ${reason}: ${detail}`);
     }
@@ -1948,6 +2006,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     parked: parkedHop,
     campaignId: opts.campaignId,
     quarantined: [...quarantined],
+    parks: Object.fromEntries(parkMap),
     inFlight: [],
     generation,
     hopHashes: generationHashes,

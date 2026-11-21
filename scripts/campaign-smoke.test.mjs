@@ -3,7 +3,7 @@
  * campaign-smoke.test.mjs — v0.0.88: one campaign, one park, zero human.
  *
  * The acceptance the user asked for: 10 hops, a tool-budget park on h4, Atlas
- * recovery (budget 24 + narrow directive), and a resumed walk that finishes
+ * recovery (budget 36 + narrow directive), and a resumed walk that finishes
  * 10/10 without the user touching the plan. The fixture dispatcher reads the
  * override at dispatch, so the test proves the recovery reaches the lane.
  *
@@ -55,13 +55,13 @@ expect('S-1: the first walk parks h4 and completes the independent hops', first.
 const finding = patrolLane(lane).parked[0];
 expect('S-2: Atlas classifies the park as tool-budget', finding?.failureClass === 'tool-budget' && finding?.verdict === 'replan', finding);
 const decision = decideRecovery(lane, finding);
-expect('S-3: the recovery is retry with budget 24 + a narrow directive', decision.action === 'retry' && decision.override?.toolBudget === 24 && /batch/i.test(decision.override?.promptAppend ?? ''), decision);
+expect('S-3: the recovery is retry with budget 36 + a narrow directive', decision.action === 'retry' && decision.override?.toolBudget === 36 && /batch/i.test(decision.override?.promptAppend ?? ''), decision);
 applyRecovery(lane, finding, decision);
-expect('S-4: the override reaches the hop without a plan rewrite', readHopOverride(lane, 'h4')?.toolBudget === 24, readHopOverride(lane, 'h4'));
+expect('S-4: the override reaches the hop without a plan rewrite', readHopOverride(lane, 'h4')?.toolBudget === 36, readHopOverride(lane, 'h4'));
 
 const second = await walkPlan({ plan, dispatcher, stateDir: lane, resume: true, keepQuarantine: true, retryParkedHop: true });
 expect('S-5: the resumed walk finishes 10/10 with no park', second.completed.length === 10 && !second.parked, { completed: second.completed, parked: second.parked });
-expect('S-6: the retried h4 actually saw the 24-budget override', h4Attempts === 2 && sawBudget === 24, { h4Attempts, sawBudget });
+expect('S-6: the retried h4 actually saw the 36-budget override', h4Attempts === 2 && sawBudget === 36, { h4Attempts, sawBudget });
 const health = buildCampaignHealth(lane);
 expect('S-7: the campaign health ends DONE on the same generation', health.verdict === 'DONE' && health.completed === 10 && health.total === 10, health);
 

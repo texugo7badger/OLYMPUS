@@ -156,11 +156,12 @@ import { walkPlan, resolveGodModelLane, readHopTelemetry, type HopDispatcher, ty
 import { acquireWalkLock, readWalkLock } from './walk-lock';
 import { loadArsenal } from './arsenal';
 import { buildOvernightDigest, buildWaveReports, writeOvernightDigest } from './overnight';
-import { hopStatePath, saveHopState } from './hop-state';
+import { hopStatePath, loadHopState, saveHopState } from './hop-state';
 import { contractGate } from '../design-contract';
 import { createGate, getPendingGates, listGates, resolveGate } from '@/lib/hitl-gates';
 import { appendActivity } from '@/lib/activity-feed';
-import { patrolLane } from '@/lib/atlas-patrol';
+import { patrolLane, patrolFinding } from '@/lib/atlas-patrol';
+import { appendGodInbox } from '@/lib/god-inbox';
 import { decideRecovery, applyRecovery } from './recovery';
 import { stagePlanRewriteIfWalking } from './plan-generation';
 import { publishHopEvent } from './hop-events';
@@ -326,6 +327,37 @@ function planGods(plan: unknown): string {
  * WITHHELD until the user approves. Never throws into the turn's close
  * path — the caller wraps non-fatally.
  */
+/**
+ * v0.0.98 — THE BLOCKED GATE IS NOT THE FAILURE. When the walk ends on
+ * `blocked-dependencies`, the real parks live in the state's `parks` map and
+ * `quarantined` list. Recover those recoverable hops (tool-budget, verify,
+ * quota, transport, timeout, script) and hand their ids to the walker; the
+ * gate is never retried blindly. Returns the ids + the longest quota wait.
+ */
+export function recoverBlockedDependencies(laneRoot: string, plan: any): { ids: string[]; waitMs: number } {
+  const state = loadHopState(laneRoot);
+  const ids: string[] = [];
+  let waitMs = 0;
+  if (!state) return { ids, waitMs };
+  const quarantined = new Set(state.quarantined ?? []);
+  const recoverable = new Set(['tool-budget', 'verify-failed', 'provider-quota', 'transport', 'timeout', 'script', 'lane-exhausted']);
+  for (const park of Object.values(state.parks ?? {}) as any[]) {
+    if (!park || park.kind === 'blocked' || !park.hopId) continue;
+    if (!quarantined.has(park.hopId)) continue;
+    const cls = String(park.failureClass ?? park.errorClass ?? '');
+    if (!recoverable.has(cls)) continue;
+    const hop = (plan?.hops ?? []).find((h: any) => String(h?.id) === park.hopId);
+    if (!hop) continue;
+    const finding = patrolFinding(laneRoot, hop, park);
+    const decision = decideRecovery(laneRoot, finding);
+    if (decision.action !== 'retry') continue;
+    applyRecovery(laneRoot, finding, decision);
+    ids.push(park.hopId);
+    if (decision.kind === 'wait-quota') waitMs = Math.max(waitMs, decision.delayMs);
+  }
+  return { ids, waitMs };
+}
+
 export async function maybeWalkThePlan(opts: {
   slug: string;
   laneRoot: string;
@@ -366,6 +398,9 @@ export async function maybeWalkThePlan(opts: {
   unattended?: boolean;
   /** #211: internal resume counter — bounds the auto-resume chain. */
   overnightAttempt?: number;
+  /** v0.0.98 — retry specific quarantined dependencies (the real parks
+   *  behind a blocked gate), never the gate itself. */
+  retryHopIds?: string[];
   /** v0.0.85 — a machine resume keeps the quarantine (never re-runs the
    *  hops that just parked). The human's resume leaves it false. */
   keepQuarantine?: boolean;
@@ -648,6 +683,7 @@ export async function maybeWalkThePlan(opts: {
       resume,
       keepQuarantine: opts.keepQuarantine,
       retryParkedHop: opts.retryParkedHop,
+      ...(opts.retryHopIds?.length ? { retryHopIds: opts.retryHopIds } : {}),
       campaignId: lock.ok ? lock.holder.campaignId : undefined,
       unattended: Boolean(opts.unattended || isHibernating()),
       onEvent: (ev) => bridgeEvent(ev, opts.laneRoot, opts.send, opts.publishActivity),
@@ -798,8 +834,25 @@ export async function maybeWalkThePlan(opts: {
     const planAttempts = planLeftMs > 0
       ? Math.min(120, Math.max(12, Math.ceil(planLeftMs / 120_000)))
       : 12;
-    const maxAttempts = plan?.autoResume ? planAttempts : Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_ATTEMPTS ?? 3));
+    const maxAttempts = plan?.autoResume ? planAttempts : Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_ATTEMPTS ?? 12));
     if (parked && attempt < maxAttempts) {
+      // v0.0.98 — a blocked gate is a derived state: recover the quarantined
+      // dependencies it names, then resume. The old path asked the user and
+      // the next resume re-ran the blocked gate forever.
+      if (String(parked.reason).startsWith('blocked') || (parked as any).failureClass === 'blocked-dependencies') {
+        const blockedPlan = JSON.parse(sanitizePlanJson(readFileSync(planPath, 'utf-8')));
+        const dep = recoverBlockedDependencies(opts.laneRoot, blockedPlan);
+        if (dep.ids.length > 0) {
+          opts.send?.({ type: 'log', msg: `[ATLAS] blocked gate '${parked.hopId}' — recovering ${dep.ids.length} quarantined dependency(ies): ${dep.ids.join(', ')}.`, ts: new Date().toISOString() });
+          if (dep.waitMs > 0) {
+            const wait = Math.min(6 * 3600_000, dep.waitMs);
+            opts.send?.({ type: 'log', msg: `[ATLAS] waiting ${Math.round(wait / 60_000)} min for the GO quota reset before retrying the dependencies.`, ts: new Date().toISOString() });
+            if (!opts.unattended) return { walked: false, completed: 0, total: 0, reason: 'waiting for the GO quota reset', summaryLine: `WAITING — GO reset in ${Math.round(wait / 60_000)} min` } as any;
+            await new Promise((r) => setTimeout(r, wait));
+          }
+          return maybeWalkThePlan({ ...opts, unattended: true, overnightAttempt: attempt + 1, keepQuarantine: true, retryHopIds: dep.ids });
+        }
+      }
       // v0.0.88 — ATLAS RECOVERS, NOT A BLIND RE-RUN. The old block re-ran the
       // same hop/lane/prompt three times and produced three identical parks.
       opts.send?.({ type: 'log', msg: `[OVERNIGHT] wave parked at '${parked.hopId}' (${parked.reason}) — Atlas is deciding the recovery (${attempt + 1}/${maxAttempts}).`, ts: new Date().toISOString() });
@@ -841,19 +894,35 @@ export async function maybeWalkThePlan(opts: {
       const planOnDisk = JSON.parse(sanitizePlanJson(readFileSync(planPath, 'utf-8')));
       const rows = readHopTelemetry(opts.laneRoot);
       const gate = listGates().filter((g) => g.targetFile === planPath).pop() ?? null;
+      const stateOnDisk = loadHopState(opts.laneRoot);
       const digest = buildOvernightDigest({
         slug: opts.slug,
         laneRoot: opts.laneRoot,
         plan: planOnDisk,
         rows,
+        state: stateOnDisk,
         parked,
         autoApproved: (gate?.userNote ?? '').includes('auto-approved'),
         resumeAttempts: attempt,
-        startedAt: opts.turnStartedAt ? new Date(opts.turnStartedAt).toISOString() : rows[0]?.ts ?? new Date().toISOString(),
+        startedAt: (() => {
+          const created = Date.parse(String((planOnDisk as any)?.createdAt ?? ''));
+          if (Number.isFinite(created)) return new Date(created).toISOString();
+          return opts.turnStartedAt ? new Date(opts.turnStartedAt).toISOString() : rows[0]?.ts ?? new Date().toISOString();
+        })(),
         finishedAt: new Date().toISOString(),
       });
       const digestPath = writeOvernightDigest(opts.laneRoot, digest);
-      for (const wave of buildWaveReports(planOnDisk, rows)) {
+      // v0.0.98 — the report lands in the chat even when the walk is detached.
+      try {
+        appendGodInbox('apollo', {
+          role: 'system',
+          source: 'system',
+          status: 'done',
+          text: `Campaign ${opts.slug}: ${completed}/${totalHops} completed${parked ? ` · parked at ${parked.hopId} (${parked.reason})` : ' · all waves green'}. Report: ${digestPath}. Open Live Preview to verify the served page.`,
+          meta: { kind: 'campaign-report', slug: opts.slug, completed, total: totalHops, parked: parked?.hopId ?? null, report: digestPath, preview: `/preview-window?slug=${encodeURIComponent(opts.slug)}` },
+        });
+      } catch { /* the report file is the source of truth */ }
+      for (const wave of buildWaveReports(planOnDisk, rows, stateOnDisk)) {
         try {
           appendActivity({
             god: 'atlas', action: 'milestone', project: opts.slug,

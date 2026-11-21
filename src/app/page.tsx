@@ -202,6 +202,7 @@ const QuickOpen = dynamic(() => import('@/components/olympus/quick-open'), { ssr
 const InteractiveTerminal = dynamic(() => import('@/components/olympus/interactive-terminal'), { ssr: false, loading: () => <PanelLoading label="InteractiveTerminal" /> });
 const LivePreview = dynamic(() => import('@/components/olympus/live-preview'), { ssr: false, loading: () => <PanelLoading label="LivePreview" /> });
 const CustomFrames = dynamic(() => import('@/components/olympus/custom-frames'), { ssr: false, loading: () => <PanelLoading label="CustomFrames" /> });
+const LogsDashboard = dynamic(() => import('@/components/olympus/logs-dashboard'), { ssr: false, loading: () => <PanelLoading label="Logs" /> });
 const SSEStreamPanel = dynamic(() => import('@/components/olympus/sse-stream-panel'), { ssr: false, loading: () => <PanelLoading label="SSEStreamPanel" /> });
 const ShortcutsOverlay = dynamic(() => import('@/components/olympus/shortcuts-overlay'), { ssr: false, loading: () => <PanelLoading label="ShortcutsOverlay" /> });
 const TimeSlider = dynamic(() => import('@/components/olympus/time-slider'), { ssr: false, loading: () => <PanelLoading label="TimeSlider" /> });
@@ -752,6 +753,7 @@ export default function OlympusWorkspace() {
                 {leftPane === 'craft-apps' && <ChunkErrorBoundary><CraftAppsPanel initialApp={craftAppFocus} /></ChunkErrorBoundary>}
                 {leftPane === 'benchmarks' && <ChunkErrorBoundary><BenchmarksPanel /></ChunkErrorBoundary>}
                 {leftPane === 'timeline' && <ChunkErrorBoundary><ActivityTimeline /></ChunkErrorBoundary>}
+                {leftPane === 'logs' && <ChunkErrorBoundary><LogsDashboard /></ChunkErrorBoundary>}
                 {leftPane === 'god-detail' && <ChunkErrorBoundary><GodDetail /></ChunkErrorBoundary>}
                 {leftPane === 'provider-settings' && <ChunkErrorBoundary><ProviderSettings /></ChunkErrorBoundary>}
                 {leftPane === 'mcp-config' && <ChunkErrorBoundary><MCPConfigPanel /></ChunkErrorBoundary>}

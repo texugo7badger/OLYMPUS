@@ -1,10 +1,12 @@
 # OLYMPUS Roadmap
 
-**v0.0.97 is the current release** (2026-11-21) — the GO console anchor: the
-logged-in console frame auto-syncs the account graph, a stale anchor pauses
-upgrades, rolling ≥65/80/100 steps down/reserves/parks the walk, and the chat
-pins the model per god with a qwen→DeepSeek guard. v0.0.96 remains the previous
-release: hibernation v2, GO truth and the smart burn: X quits by default while hibernate is explicit; hibernate waits
+**v0.0.98 is the current release** (2026-11-21) — the walk that waits,
+recovers and reports: the GO 5-hour limit is a quota wait with the console
+reset, a blocked gate recovers its quarantined dependencies, the report is
+deterministic and lands in Apollo's chat, the new Logs workspace shows hops/
+walks/models/economy, and the terminal carries the 5h/weekly/monthly meter.
+v0.0.97 remains the previous release: the GO console anchor, stale-anchor
+pause, rolling 65/80/100 and the qwen→DeepSeek guard. v0.0.96: hibernation v2, GO truth and the smart burn: X quits by default while hibernate is explicit; hibernate waits
 for streaming turns, keeps a preview only when a live hop needs it, records and
 restores stopped previews; the GO graph uses the console anchor plus local
 delta with a Monday 00:00 UTC weekly reset; smart burn picks a GO-only roster

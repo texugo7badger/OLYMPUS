@@ -291,6 +291,23 @@ The chat pins the session model to the current god on every message, so a turn
 for Athena cannot leave Apollo on the Athena lane. The exact unverified lane
 `opencode-go/qwen3.7-plus` maps to `opencode-go/deepseek-v4.1-flash`.
 
+## v0.0.98 — the walk that waits, recovers and reports
+
+The walk's failure vocabulary now separates a temporary quota (`provider-quota`
+→ wait for the console reset) from a terminal auth/route problem (stop and ask).
+A blocked gate is not a park: the state's `parks` map keeps every hop's last
+failure, and the post-run/warden recover the quarantined dependencies, then
+resume with `retryHopIds`. The report is deterministic, always written, and
+posted to Apollo's inbox; the terminal polls the campaign entries.
+
+Hibernation writes the night plan, opts the active lane in and starts the
+detached supervisor. The warden respects `waitingUntil` for a quota reset and
+treats an active plan as opt-in.
+
+The new Logs workspace (left nav) shows hops, walks, models and economy with
+full detail. The terminal header's usage meter shows the 5h window by default;
+the button cycles weekly/monthly. Both read the console anchor, not the ledger.
+
 ## Release ritual — the tag IS the release notes
 
 Every version follows the same order; no step is optional.

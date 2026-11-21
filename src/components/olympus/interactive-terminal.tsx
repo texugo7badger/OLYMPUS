@@ -37,6 +37,7 @@ import DesignChoiceCard from './design-choice-card';
 // #212 — the honest OpenCode v2 update indicator (renders only when a
 // newer npm `latest` exists; OLYMPUS controls the update lane).
 import OpencodeUpdateBadge from './opencode-update-badge';
+import UsageMeter from './usage-meter';
 // Issue #44: file-touching tool frames show the shape of the change (M/A
 // badge, +/- counts, a truncated preview) instead of just naming a path.
 import { ToolFrame } from './tool-frame';
@@ -1429,6 +1430,44 @@ export default function InteractiveTerminal() {
     }
   }, [submitting, addMessage, updateGodActivity, pushEvent, pushPulse, setActiveGod, handleServerEvent, uploadedFileDetails, pendingImage]);
 
+  // v0.0.98 — the durable campaign reporter. A detached walk writes to
+  // Apollo's inbox; the terminal polls the campaign entries so a hop that
+  // finishes while the chat is idle still speaks (and survives a reload).
+  const seenCampaignInbox = useRef<Set<string>>(new Set());
+  const campaignInboxPrimed = useRef(false);
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const r = await fetch('/api/olympus/god/inbox?god=apollo&limit=40', { cache: 'no-store' });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !Array.isArray(d?.entries)) return;
+        const campaign = d.entries.filter((e: any) =>
+          e?.role === 'system'
+          && typeof e?.meta?.kind === 'string'
+          && e.meta.kind.startsWith('campaign')
+          && Date.parse(String(e.ts ?? '')) > Date.now() - 24 * 3600_000,
+        );
+        if (cancelled) return;
+        if (!campaignInboxPrimed.current) {
+          campaignInboxPrimed.current = true;
+          for (const e of campaign.slice(-4)) addMessage({ type: 'system', text: String(e.text) });
+          for (const e of campaign) seenCampaignInbox.current.add(String(e.id));
+          return;
+        }
+        for (const e of campaign) {
+          const id = String(e.id);
+          if (seenCampaignInbox.current.has(id)) continue;
+          seenCampaignInbox.current.add(id);
+          addMessage({ type: 'system', text: String(e.text) });
+        }
+      } catch { /* the reporter is best-effort; the walk is not blocked */ }
+    };
+    const first = setTimeout(() => { void tick(); }, 2500);
+    const iv = setInterval(() => { if (document.visibilityState !== 'hidden') void tick(); }, 10_000);
+    return () => { cancelled = true; clearTimeout(first); clearInterval(iv); };
+  }, [addMessage]);
+
   // v0.0.71 — poll the shared creative queue for the active project.
   useEffect(() => {
     const slug = activeProject?.slug;
@@ -2211,6 +2250,7 @@ export default function InteractiveTerminal() {
             <span style={{ color: GOD_COLOR }}>CLI:</span>
             <span style={{ color: GOD_COLOR }} className="font-semibold">{activeCli}</span>
           </span>
+          <UsageMeter />
           <OpencodeUpdateBadge />
           {/* Removed the 2-way mode toggle (Apollo | OpenCode).
               Only the Interactive (Apollo) chat remains. The OpenCode Chat pane

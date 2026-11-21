@@ -37,6 +37,8 @@ if (!laneRoot || !slug) {
 const keepQuarantine = process.argv.includes('--keep-quarantine');
 // v0.0.84 edit — the boot parked resume retries only the last parked hop.
 const retryParkedHop = process.argv.includes('--retry-parked');
+// v0.0.98 — the recovery names the quarantined dependencies to retry.
+const retryHopIds = (arg('retry-hops') ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 
 function log(msg: string) {
   console.log(`[walk-lane ${new Date().toISOString()}] ${msg}`);
@@ -56,6 +58,7 @@ async function main() {
       publishActivity: true,
       ...(keepQuarantine ? { keepQuarantine: true } : {}),
       ...(retryParkedHop ? { retryParkedHop: true } : {}),
+      ...(retryHopIds.length ? { retryHopIds } : {}),
       send: (ev: any) => {
         if (ev?.msg) log(String(ev.msg));
       },

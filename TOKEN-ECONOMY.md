@@ -243,3 +243,28 @@ a cold 57k-row scan** — the first boot sync used to block the event loop long
 enough for the burn route to time out. The Cost/usage route warms the cache
 for the next sync.
 
+## 8. v0.0.98 — the wait, the recovery and the flight recorder
+
+A quota window is a **pause**, not a stop. `provider.go-limit` and
+`provider.quota` canonicalize to `provider-quota`; the walk reads the console
+anchor's rolling reset, waits (capped at 6h), and resumes the same hop. No
+request is spent collecting a refusal. A blocked design gate is a derived
+state: the state's `parks` map names the real quarantined dependencies, and
+the walk retries those — never the gate blindly.
+
+The recovery budget is the night window: 4 recoveries per hop and a
+window-derived campaign budget (up to 120 starts), not the old 2/6. Tool
+budget recovery rises to 36 (verify 32) with a narrower directive.
+
+The report is deterministic and always written. The digest merges the hop
+state with telemetry (AIME 6/10, not 4/10), names the quarantined
+dependencies, and is posted to Apollo's inbox; the terminal polls the durable
+campaign entries.
+
+The new **Logs** workspace (Visão geral, Hops, Walks, Models, Economy) reads
+one cached server slice — never the 57k-row ledger on the request path — and
+shows step cost, list value and `invoice unknown` side by side. The terminal
+header's **usage meter** reads only the anchor (5h by default; one button
+cycles weekly/monthly), labels a stale anchor and a quota hit, and never
+fabricates 0%.
+

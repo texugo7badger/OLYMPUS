@@ -2,6 +2,47 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98] — 2026-11-21
+
+### The walk that waits, recovers and reports — with a flight recorder
+
+- **The GO 5-hour limit is a WAIT, not an unknown stop.** `provider.go-limit`
+  and `provider.quota` canonicalize to `provider-quota`; the walk reads the
+  console reset, pauses, and resumes the same hop. The old overnight
+  `fix-design` park (21:31 → 06:25) can no longer burn a night.
+- **A blocked gate recovers its dependencies.** The hop state now keeps a
+  `parks` map (one entry per hop), not just the last park. When the design gate
+  is `blocked-dependencies`, the walk recovers the quarantined QA hops — never
+  the gate blindly — and the `retryHopIds` contract carries them through the
+  detached walker/warden.
+- **The report always lands.** The digest merges the hop state with telemetry
+  (AIME 6/10, not 4/10), includes the quarantined dependencies and the next
+  action, and is posted to Apollo's inbox. The terminal polls the durable
+  campaign entries, so a detached walk still speaks after a reload.
+- **Recovery budget = the night window.** 4 recoveries per hop and a
+  window-derived campaign budget (up to 120 starts), instead of 2/6. Tool
+  budget recovery rises to 36 (verify 32) with a narrower directive.
+- **Hibernation starts the detached walk.** The night plan opts the active
+  lane in and starts the supervisor; the warden also treats an active plan as
+  opt-in, so the walk survives the renderer being destroyed.
+- **The Logs workspace.** A new left-nav `Logs` opens Visão geral, Hops, Walks,
+  Models and Economy, with full hop/walk detail: god, build, model, declared
+  abilities, artifacts, checks, park, recovery, resonance, tokens,
+  step cost/list/invoice. One API read, 10s cache, no 57k-row scan.
+- **The terminal limit meter.** The header shows the GO 5-hour window by
+  default; one button cycles weekly/monthly. It reads the console anchor only,
+  labels a stale anchor and a quota hit, and never fabricates 0%.
+- **The v0.0.97 guards remain:** exact console windows, stale-anchor pause,
+  rolling 65/80/100, qwen3.7-plus → verified DeepSeek, and the per-god model
+  pin. OpenCode v2 2.3.2 remains the latest npm release and gate-approved.
+
+**Battery: 178 PASS / 0 FAIL / 1 declared skip of 179.**
+`scripts/v092-runtime.test.mjs` **37 passed** (taxonomy, blocked-gate recovery,
+digest 2/2, meter/logs wiring, qwen guard, exact windows). `tsc`/`eslint`/
+`docs:check`/`repo:privacy` clean; production build and standalone gate green.
+
+**Published v0.0.98; v0.0.97 remains the previous stable release.**
+
 ## [v0.0.97] — 2026-11-21
 
 ### The GO console is the anchor — no more stale burn
