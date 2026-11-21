@@ -690,7 +690,7 @@ export default function OlympusWorkspace() {
     <ChunkErrorBoundary>
     <div suppressHydrationWarning className="h-screen w-screen flex flex-col bg-olympus-bg text-olympus-text overflow-hidden">
       <NotificationToast />
-      <PatchNotesOverlay />
+      {!booting && <PatchNotesOverlay />}
       {booting && (
         <OlympusLoader
           fullscreen
@@ -794,13 +794,14 @@ export default function OlympusWorkspace() {
           </ResizablePanel>
         </RawGroup>
       </div>
-      <SSEStreamPanel />
+      {!booting && <SSEStreamPanel />}
 
-      {/* Global overlays — Command Palette removed. */}
-      <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      {/* Global overlays — not mounted during boot (their chunks are not
+          part of the shell; mounting them stacked a loader per dialog). */}
+      {!booting && <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />}
 
       {/* Quick Open (Cmd/Ctrl+P). Selecting a file launches the user's external editor on its parent directory. */}
-      <QuickOpen
+      {!booting && <QuickOpen
         open={quickOpenOpen}
         onClose={() => setQuickOpenOpen(false)}
         onSelect={async (filePath) => {
@@ -822,16 +823,16 @@ export default function OlympusWorkspace() {
             toast.error(`Editor launch failed: ${e.message}`);
           }
         }}
-      />
+      />}
 
-      <SettingsDialog />
-      <NewProjectDialog />
+      {!booting && <SettingsDialog />}
+      {!booting && <NewProjectDialog />}
 
       {/* First-run onboarding wizard. */}
-      <OnboardingWizard open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
+      {!booting && <OnboardingWizard open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />}
 
       {/* HITL DAG gate toast (approval prompts). */}
-      <HitlGateToast />
+      {!booting && <HitlGateToast />}
     </div>
     </ChunkErrorBoundary>
   );
