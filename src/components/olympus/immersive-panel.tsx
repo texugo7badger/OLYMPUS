@@ -228,6 +228,35 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const ActiveGodIcon = GOD_ICONS[activeGod] ?? Sparkles;
 
   // Live gods: the run-state in flight list (5s poll; no churn when hidden).
+  const seededThoughts = useRef(false);
+  useEffect(() => {
+    if (!activeProject?.path || seededThoughts.current) return;
+    seededThoughts.current = true;
+    fetch(`/api/olympus/tasks?lane=${encodeURIComponent(activeProject.path)}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const tasks = Array.isArray(d?.tasks) ? d.tasks.slice(0, 8) : [];
+        if (!tasks.length) return;
+        setThoughts((prev) => {
+          if (prev.length > 0) return prev;
+          return tasks.map((t: any, i: number) => {
+            const angle = i * 2.399963 + 0.6;
+            return {
+              id: `${t.id}:seed`,
+              kind: 'task',
+              god: String(t.god || ''),
+              label: String(t.id || ''),
+              detail: `${t.god || 'god'} · ${t.status || 'pending'}`,
+              ts: String(t.startedAt || t.ts || new Date().toISOString()),
+              angle,
+              radius: 0.28 + (i % 3) * 0.05,
+            };
+          });
+        });
+      })
+      .catch(() => { /* no seed */ });
+  }, [activeProject?.path]);
+
   useEffect(() => {
     fetch('/api/olympus/projects', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
@@ -1008,7 +1037,7 @@ function ThoughtDetailModal({
   onTask: (id: string) => void;
   onLogs: () => void;
 }) {
-  const connections = thoughts.filter((t) => t.id !== thought.id && (t.god === thought.god || t.label === thought.label)).slice(-6);
+  const connections = thoughts.filter((t) => t.id !== thought.id).slice(-6).reverse();
   const learning = learnings.find((l) => l.name.toLowerCase() === thought.label.toLowerCase() || thought.label.toLowerCase().includes(l.name.toLowerCase()));
   return (
     <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/65 p-4" onClick={onClose} role="dialog" aria-modal="true" aria-label={`Thought: ${thought.label}`}>

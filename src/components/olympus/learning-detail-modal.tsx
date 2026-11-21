@@ -71,7 +71,7 @@ export default function LearningDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/65 p-4" onClick={onClose} role="dialog" aria-modal="true" aria-label={`Learning: ${item.name}`}>
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/65 p-4" onClick={onClose} role="dialog" aria-modal="true" aria-label={`Learning: ${item.name}`}>
       <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-olympus-green/25 bg-olympus-bg shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <header className="flex shrink-0 items-center gap-2 border-b border-olympus-green/15 bg-olympus-panel px-4 py-3">
           <Sparkles size={15} className="text-olympus-green" />

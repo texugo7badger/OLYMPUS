@@ -48,7 +48,7 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
-**v0.0.98 evidence:** [Logs — the flight recorder](screenshots/screens/54-logs-098.png) · [terminal usage meter](screenshots/screens/55-usage-meter-098.png) — hops, walks, models, economy and the 5h/weekly/monthly limit in the terminal header.
+**v0.0.98 evidence:** [Logs — the flight recorder](screenshots/screens/54-logs-098.png) · [hop detail](screenshots/screens/56-hop-detail-098.png) · [terminal usage meter](screenshots/screens/55-usage-meter-098.png) · [learning box](screenshots/screens/57-learning-detail-098.png) · [Callimachus brain health](screenshots/screens/58-callimachus-098.png) · [Pattern Studio thought](screenshots/screens/60-thought-detail-098.png) — the full truth: hops, walks, models, economy, learning and the live creative surface.
 
 ## Latest
 

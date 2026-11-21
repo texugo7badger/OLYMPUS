@@ -397,13 +397,12 @@ export default function OlympusWorkspace() {
     if (!booting) return;
     const elapsed = performance.now() - bootStartedAt.current;
     const minWait = Math.max(0, 1400 - elapsed);
-    // v0.0.98 — ONE loader until the SHELL IS ACTUALLY LOADABLE. The old
-    // 8s gate revealed the shell while several panel chunks were still
-    // pending, so the user saw a stack of per-panel loaders (StatusBar, SSE,
-    // Shortcuts, QuickOpen…). The full-screen mark now waits for every
-    // mounted dynamic panel, with a generous 30s emergency ceiling.
-    const ready = windowLoaded && dataReady && pendingPanels === 0;
-    const cap = Math.max(0, 30_000 - elapsed);
+    // v0.0.98 — one loader until the shell's data is loadable. The dialogs/
+    // overlays are NOT mounted during boot (see the render), so the old
+    // per-dialog loader stack is gone. The panel chunks fill in after the
+    // shell; waiting for every chunk held the mark hostage (30s specimen).
+    const ready = windowLoaded && dataReady;
+    const cap = Math.max(0, 8000 - elapsed);
     const timer = setTimeout(() => {
       setBootLeaving(true);
       setTimeout(() => setBooting(false), 520);

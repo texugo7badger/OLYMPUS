@@ -117,7 +117,7 @@ export default function GodDetail() {
  const loadDispatch = async () => {
  try {
  const ctrl = new AbortController();
- const timeout = setTimeout(() => ctrl.abort(), 5000);
+ const timeout = setTimeout(() => ctrl.abort(), 15000);
  const r = await fetch(`/api/olympus/god/dispatch-graph?god=${god}`, { signal: ctrl.signal, cache: 'no-store' });
  clearTimeout(timeout);
  if (!r.ok) return;
@@ -137,7 +137,7 @@ export default function GodDetail() {
  const loadStats = async () => {
  try {
  const ctrl = new AbortController();
- const timeout = setTimeout(() => ctrl.abort(), 5000);
+ const timeout = setTimeout(() => ctrl.abort(), 15000);
  const r = await fetch('/api/olympus/brain-stats', { signal: ctrl.signal, cache: 'no-store' });
  clearTimeout(timeout);
  if (!r.ok) return;
@@ -397,7 +397,7 @@ export default function GodDetail() {
          <div className="text-[12px] text-olympus-text">{stats?.instinctCounts.seed ?? 0} seed · {stats?.instinctCounts.empirical ?? 0} empirical</div>
        </div>
        <div>
-         <div className="text-olympus-text-dim">confiança média</div>
+         <div className="text-olympus-text-dim">confiança empírica</div>
          <div className="text-[12px] text-olympus-text">{stats ? `${Math.round(stats.avgConfidence * 100)}%` : '—'}</div>
        </div>
        <div>
@@ -409,9 +409,11 @@ export default function GodDetail() {
        <div className="h-full rounded-full bg-olympus-green" style={{ width: `${Math.min(100, Math.round((stats?.avgConfidence ?? 0) * 100))}%` }} />
      </div>
      <p className="mt-1.5 text-[9px] font-mono leading-relaxed text-olympus-text-dim">
-       {(stats?.instinctCounts.empirical ?? 0) === 0
-         ? 'Cérebro novo: só instintos seed. O curador aprende com outcomes reais; cada padrão precisa cruzar 85% para curto-circuitar.'
-         : `${stats?.instinctCounts.empirical ?? 0} instinto(s) empírico(s) já aprendidos.`}
+       {stats == null
+         ? 'lendo o cérebro…'
+         : (stats.instinctCounts.empirical ?? 0) === 0
+           ? 'Cérebro novo: seed-only, 0% empírico. O curador aprende com outcomes reais; cada padrão precisa cruzar 85% para curto-circuitar.'
+           : `${stats.instinctCounts.empirical ?? 0} instinto(s) empírico(s) já aprendidos.`}
      </p>
      <button
        onClick={() => void curateBrain()}
