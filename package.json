@@ -167,7 +167,7 @@
     "css-select": "^7.0.0",
     "css-tree": "^3.2.1",
     "domutils": "^4.0.2",
-    "electron": "^44.10.1",
+    "electron": "^45.3.4",
     "electron-builder": "^26.15.3",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.2",
