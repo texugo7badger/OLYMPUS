@@ -61,6 +61,19 @@ export interface TaskRecord {
   progress?: number;
   /** W-D5: the derived $ cost (tokens x the active strategy's rates). */
   estimatedCostUsd?: number | null;
+  /** v0.0.98 — the build's own loadout + lane health + attempts/recovery. */
+  buildModel?: string | null;
+  buildSkills?: string[];
+  buildMcps?: string[];
+  buildDemigods?: string[];
+  laneStatus?: string | null;
+  laneRetryUntil?: string | null;
+  attempts?: number;
+  lastPark?: { reason: string; failureClass: string | null; error: string | null; ts: string } | null;
+  recovery?: { kind: string; message: string; ts: string } | null;
+  tools?: Array<{ tool: string; count: number }>;
+  toolCount?: number;
+  outputTail?: string | null;
 }
 
 const STATUS_CHIP: Record<string, string> = {
@@ -186,7 +199,8 @@ export default function TaskSheetModal({ hopId, lane, onClose }: { hopId: string
           {task && (
             <>
               {/* v0.0.32 — THE BUILDER: what this mini-task actually equipped. */}
-              {(task.demigods?.length || task.skills?.length || task.mcps?.length) ? (
+              {(task.demigods?.length || task.skills?.length || task.mcps?.length
+                || task.buildDemigods?.length || task.buildSkills?.length || task.buildMcps?.length) ? (
                 <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card/60 p-2.5">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <Wrench size={11} className="text-olympus-gold" />
@@ -195,29 +209,34 @@ export default function TaskSheetModal({ hopId, lane, onClose }: { hopId: string
                   </div>
                   <div className="grid gap-2 sm:grid-cols-3">
                     <div>
-                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">subagents ({(task.demigods || []).length}/5)</div>
+                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">subagents</div>
                       <div className="flex flex-wrap gap-1">
-                        {(task.demigods || []).length === 0 && <span className="text-[9px] font-mono text-olympus-text-dim">— solo</span>}
+                        {((task.demigods || []).length + (task.buildDemigods || []).length) === 0 && <span className="text-[9px] font-mono text-olympus-text-dim">— solo</span>}
                         {(task.demigods || []).map((d) => (
-                          <span key={d} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/10 border border-olympus-purple/25 text-olympus-purple">{d}</span>
+                          <span key={`h:${d}`} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/10 border border-olympus-purple/25 text-olympus-purple">{d}</span>
+                        ))}
+                        {(task.buildDemigods || []).filter((d) => !(task.demigods || []).includes(d)).map((d) => (
+                          <span key={`b:${d}`} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-purple/5 border border-olympus-purple/15 text-olympus-purple/80" data-tip="from the build">{d} · build</span>
                         ))}
                       </div>
                     </div>
                     <div>
-                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">skills ({(task.skills || []).length}/3)</div>
+                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">skills</div>
                       <div className="flex flex-wrap gap-1">
-                        {(task.skills || []).length === 0 && <span className="text-[9px] font-mono text-olympus-text-dim">—</span>}
-                        {(task.skills || []).map((k) => (
-                          <span key={k} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 border border-olympus-cyan/25 text-olympus-cyan">{k}</span>
+                        {((task.skills || []).length + (task.buildSkills || []).length) === 0 && <span className="text-[9px] font-mono text-olympus-text-dim">—</span>}
+                        {(task.skills || []).map((k) => <span key={`h:${k}`} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/10 border border-olympus-cyan/25 text-olympus-cyan">{k}</span>)}
+                        {(task.buildSkills || []).filter((k) => !(task.skills || []).includes(k)).map((k) => (
+                          <span key={`b:${k}`} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-cyan/5 border border-olympus-cyan/15 text-olympus-cyan/80" data-tip="from the build">{k} · build</span>
                         ))}
                       </div>
                     </div>
                     <div>
-                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">mcps ({(task.mcps || []).length}/3)</div>
+                      <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">mcps</div>
                       <div className="flex flex-wrap gap-1">
-                        {(task.mcps || []).length === 0 && <span className="text-[9px] font-mono text-olympus-text-dim">—</span>}
-                        {(task.mcps || []).map((m) => (
-                          <span key={m} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 border border-olympus-gold/25 text-olympus-gold">{m}</span>
+                        {((task.mcps || []).length + (task.buildMcps || []).length) === 0 && <span className="text-[9px] font-mono text-olympus-text-dim">—</span>}
+                        {(task.mcps || []).map((m) => <span key={`h:${m}`} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/10 border border-olympus-gold/25 text-olympus-gold">{m}</span>)}
+                        {(task.buildMcps || []).filter((m) => !(task.mcps || []).includes(m)).map((m) => (
+                          <span key={`b:${m}`} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-gold/5 border border-olympus-gold/15 text-olympus-gold/80" data-tip="from the build">{m} · build</span>
                         ))}
                       </div>
                     </div>
@@ -249,6 +268,10 @@ export default function TaskSheetModal({ hopId, lane, onClose }: { hopId: string
                     <div>
                       <div className="text-[8px] font-mono text-olympus-text-dim uppercase mb-1">model / strategy</div>
                       <div className="text-[11px] font-mono text-olympus-cyan">{task.model || '—'}{task.strategy ? ` · ${task.strategy}` : ''}</div>
+                      {task.buildModel && task.buildModel !== task.model && <div className="text-[8px] font-mono text-olympus-text-dim">build: {task.buildModel}</div>}
+                      <div className="text-[8px] font-mono" style={{ color: task.laneStatus === 'alive' ? '#5FC9D8' : task.laneStatus ? '#E0A458' : undefined }}>
+                        lane: {task.laneStatus ?? 'unknown'}{task.laneRetryUntil ? ` · retry ${new Date(task.laneRetryUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                      </div>
                     </div>
                   </div>
                   {task.talent && (
@@ -288,7 +311,7 @@ export default function TaskSheetModal({ hopId, lane, onClose }: { hopId: string
                 <div className="rounded-lg p-2 bg-olympus-card border border-olympus-gold/10 ring-1 ring-olympus-red/15">
                   <div className="flex items-center gap-1 mb-0.5"><Wrench size={10} className="text-olympus-red" /><span className="text-[8px] font-mono text-olympus-text-dim uppercase">files</span></div>
                   <div className="text-[12px] font-bold font-mono text-olympus-red">{task.files.length}</div>
-                  <div className="text-[8px] font-mono text-olympus-text-dim">{task.lastTool ? `last: ${task.lastTool}` : 'touched'}</div>
+                  <div className="text-[8px] font-mono text-olympus-text-dim">{task.lastTool ? `last: ${task.lastTool}` : 'touched'} · {task.toolCount ?? 0} tools</div>
                 </div>
               </div>
 
@@ -346,6 +369,36 @@ export default function TaskSheetModal({ hopId, lane, onClose }: { hopId: string
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* v0.0.98 — TOOLS + LANE + PREVIOUS PARK: the live truth. */}
+              {(task.tools?.length || task.lastPark || task.recovery) && (
+                <div className="rounded-lg border border-olympus-gold/15 p-2.5 space-y-1.5">
+                  {task.tools?.length ? (
+                    <div>
+                      <div className="text-[9px] font-mono uppercase text-olympus-text-dim mb-1">tools · {task.toolCount ?? task.tools.reduce((n, t) => n + t.count, 0)} calls</div>
+                      <div className="flex flex-wrap gap-1">
+                        {task.tools.slice(0, 14).map((t) => (
+                          <span key={t.tool} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-bg border border-olympus-gold/15 text-olympus-text-dim">{t.tool} ×{t.count}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {task.lastPark && (
+                    <div className="text-[9px] font-mono text-olympus-red">
+                      last park: {task.lastPark.reason} · {task.lastPark.failureClass ?? '—'}{task.attempts ? ` · ${task.attempts} recovery(ies)` : ''}
+                    </div>
+                  )}
+                  {task.recovery && <div className="text-[9px] font-mono text-olympus-amber-soft">recovery: {task.recovery.kind} — {task.recovery.message}</div>}
+                </div>
+              )}
+
+              {/* v0.0.98 — the settled output tail (what the hop actually said). */}
+              {task.outputTail && (
+                <details className="rounded-lg border border-olympus-gold/10 p-2.5">
+                  <summary className="cursor-pointer text-[9px] font-mono uppercase text-olympus-text-dim">output (tail) · {task.outputTail.length.toLocaleString()} chars</summary>
+                  <pre className="mt-1.5 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[9px] font-mono leading-relaxed text-olympus-text-dim">{task.outputTail}</pre>
+                </details>
               )}
 
               {/* DIRECTIVE — the hop's prompt excerpt */}

@@ -45,8 +45,8 @@ function readWindow(): UsageWindow {
 
 function pctText(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return '—';
-  if (n === 0) return '0%';
-  return `${n >= 100 ? Math.round(n) : n.toFixed(n < 10 ? 1 : 0)}%`;
+  if (Number.isInteger(n)) return `${Math.round(n)}%`;
+  return `${n >= 100 ? Math.round(n) : n.toFixed(1)}%`;
 }
 
 function resetText(iso: string | null | undefined, now = Date.now()): string | null {

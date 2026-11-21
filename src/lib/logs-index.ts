@@ -46,6 +46,7 @@ export interface LogHop {
   checks: string[];
   abilities: { skills: string[]; mcps: string[]; demigods: string[] };
   promptExcerpt: string;
+  outputTail: string | null;
   toolBudget: number | null;
   park: { reason: string; errorClass: string | null; error: string | null; ts: string } | null;
   recovery: { kind: string; message: string; ts: string } | null;
@@ -238,6 +239,7 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
           demigods: [...(Array.isArray(hopDef?.demigods) ? hopDef.demigods : []), ...(hopDef?.demigod ? [hopDef.demigod] : [])].filter((x: unknown) => typeof x === 'string'),
         },
         promptExcerpt: String(hopDef?.prompt ?? '').slice(0, 1200),
+        outputTail: row?.outputTail ? String(row.outputTail).slice(-2400) : null,
         toolBudget: Number.isFinite(Number(hopDef?.toolBudget)) ? Number(hopDef.toolBudget) : null,
         park: park ? { reason: String(park.reason ?? ''), errorClass: park.errorClass ?? null, error: park.error ?? null, ts: String(park.ts ?? '') } : null,
         recovery: recoveryByHop.get(hopId) ? {

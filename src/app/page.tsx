@@ -397,12 +397,13 @@ export default function OlympusWorkspace() {
     if (!booting) return;
     const elapsed = performance.now() - bootStartedAt.current;
     const minWait = Math.max(0, 1400 - elapsed);
-    // v0.0.93 — the shell appears as soon as the window + core data are
-    // ready; every heavy panel (brain/terminal/3D) shows its OWN branded
-    // loader after the shell. Waiting for `pendingPanels === 0` made the boot
-    // hostage of the slowest chunk. The 8s hard cap is the final ceiling.
-    const ready = windowLoaded && dataReady;
-    const cap = Math.max(0, 8000 - elapsed);
+    // v0.0.98 — ONE loader until the SHELL IS ACTUALLY LOADABLE. The old
+    // 8s gate revealed the shell while several panel chunks were still
+    // pending, so the user saw a stack of per-panel loaders (StatusBar, SSE,
+    // Shortcuts, QuickOpen…). The full-screen mark now waits for every
+    // mounted dynamic panel, with a generous 30s emergency ceiling.
+    const ready = windowLoaded && dataReady && pendingPanels === 0;
+    const cap = Math.max(0, 30_000 - elapsed);
     const timer = setTimeout(() => {
       setBootLeaving(true);
       setTimeout(() => setBooting(false), 520);

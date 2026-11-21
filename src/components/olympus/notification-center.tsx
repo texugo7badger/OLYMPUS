@@ -17,16 +17,10 @@ import { Bell, ChevronRight, Loader2, Moon, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOlympus } from '@/lib/olympus-store';
 import type { NotifyType } from '@/lib/desktop-notify';
+import type { LearningItem } from '@/lib/learning-types';
+import LearningDetailModal from './learning-detail-modal';
 import { useLanguage, t, godName, godDomain } from '@/lib/i18n';
 import { speakAs } from '@/lib/voice';
-
-interface LearningItem {
-  id: string;
-  type: 'instinct' | 'knowledge' | 'skill' | 'mcp';
-  name: string;
-  god: string;
-  summary: string;
-}
 
 interface NotifyEvent {
   ts: string;
@@ -60,6 +54,8 @@ export default function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const [events, setEvents] = useState<NotifyEvent[]>([]);
   const [learnings, setLearnings] = useState<LearningItem[]>([]);
+  const [selectedLearning, setSelectedLearning] = useState<LearningItem | null>(null);
+  const [learningLive, setLearningLive] = useState(false);
   const language = useLanguage();
   const [seenAt, setSeenAt] = useState<string>(() => {
     try { return localStorage.getItem(SEEN_KEY) || ''; } catch { return ''; }
@@ -106,10 +102,24 @@ export default function NotificationCenter() {
 
   useEffect(() => {
     if (!open) return;
-    fetch('/api/olympus/learning/recent?limit=4', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => setLearnings(Array.isArray(d?.learnings) ? d.learnings : []))
-      .catch(() => { /* offline */ });
+    let cancelled = false;
+    let previous = new Set<string>();
+    const loadLearnings = async (first: boolean) => {
+      try {
+        const r = await fetch('/api/olympus/learning/recent?limit=6', { cache: 'no-store' });
+        const d = await r.json().catch(() => ({}));
+        if (cancelled || !Array.isArray(d?.learnings)) return;
+        const next = d.learnings as LearningItem[];
+        if (!first) {
+          const fresh = next.some((l) => !previous.has(l.id));
+          if (fresh) { setLearningLive(true); setTimeout(() => setLearningLive(false), 2200); }
+        }
+        previous = new Set(next.map((l) => l.id));
+        setLearnings(next);
+      } catch { /* offline */ }
+    };
+    void loadLearnings(true);
+    const lv = setInterval(() => { if (document.visibilityState !== 'hidden') void loadLearnings(false); }, 10_000);
     const onDown = (e: MouseEvent) => {
       const target = e.target as Node;
       if (wrapRef.current?.contains(target)) return;
@@ -117,7 +127,7 @@ export default function NotificationCenter() {
       setOpen(false);
     };
     window.addEventListener('mousedown', onDown);
-    return () => window.removeEventListener('mousedown', onDown);
+    return () => { cancelled = true; clearInterval(lv); window.removeEventListener('mousedown', onDown); };
   }, [open]);
 
   const unread = events.filter((e) => !seenAt || e.ts > seenAt).length;
@@ -229,21 +239,35 @@ export default function NotificationCenter() {
               <div className="border-b border-olympus-green/15 bg-olympus-green/5">
                 <div className="flex items-center gap-1 px-2.5 pt-1.5 text-[8px] font-mono uppercase tracking-wide text-olympus-green">
                   <Sparkles size={9} /> {t('learning.title', language)}
+                  {learningLive && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-olympus-green animate-pulse" aria-label="new learning" />}
                 </div>
-                {learnings.slice(0, 4).map((l) => (
-                  <button
-                    key={l.id}
-                    onClick={() => { void speakAs(`${t('learning.learned', language)} ${l.name}. ${l.summary}. ${t('learning.improved', language, { domain: godDomain(l.god, language) })}`, l.god, language); }}
-                    className="w-full text-left px-2.5 py-1 border-t border-olympus-green/5 hover:bg-olympus-green/10 flex items-start gap-1.5"
-                    data-tip="Click to hear what the god learned"
-                  >
-                    <span className="text-[7px] font-mono uppercase px-1 rounded bg-olympus-green/15 text-olympus-green shrink-0">{l.type}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[9px] font-mono text-olympus-text truncate">{l.name}</span>
-                      <span className="block text-[8px] font-mono text-olympus-text-dim truncate">{godName(l.god, language)} · click to hear it</span>
-                    </span>
-                  </button>
-                ))}
+                {learnings.slice(0, 5).map((l) => {
+                  const cur = l.confidence ?? l.rate ?? null;
+                  const width = Math.max(0, Math.min(100, (cur ?? 0) * 100));
+                  return (
+                    <button
+                      key={l.id}
+                      onClick={() => setSelectedLearning(l)}
+                      className="w-full text-left px-2.5 py-1 border-t border-olympus-green/5 hover:bg-olympus-green/10 flex items-start gap-1.5"
+                      data-tip="Open the learning detail"
+                    >
+                      <span className="text-[7px] font-mono uppercase px-1 rounded bg-olympus-green/15 text-olympus-green shrink-0">{l.type}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1">
+                          <span className="block text-[9px] font-mono text-olympus-text truncate">{l.name}</span>
+                          <span className="ml-auto shrink-0 text-[8px] font-mono text-olympus-green">{cur != null ? `${Math.round(cur * 100)}%` : '—'}</span>
+                        </span>
+                        <span className="mt-0.5 flex items-center gap-1">
+                          <span className="h-0.5 flex-1 overflow-hidden rounded-full bg-olympus-text-dim/15">
+                            <span className={cn('block h-full rounded-full', cur != null && cur >= l.threshold ? 'bg-olympus-green' : 'bg-olympus-amber-soft')} style={{ width: `${width}%` }} />
+                          </span>
+                          <span className="shrink-0 text-[7px] font-mono text-olympus-text-dim">→ 85%</span>
+                        </span>
+                        <span className="block text-[8px] font-mono text-olympus-text-dim truncate">{godName(l.god, language)} · click to analyze</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
             {events.length === 0 && (
@@ -355,6 +379,10 @@ export default function NotificationCenter() {
             </div>
           </div>
         </div>
+      )}
+      {selectedLearning && typeof document !== 'undefined' && createPortal(
+        <LearningDetailModal item={selectedLearning} onClose={() => setSelectedLearning(null)} />,
+        document.body,
       )}
     </div>
   );

@@ -34,7 +34,7 @@ const GOD_REFERENCE_DIRS: Record<string, string[]> = {
   hermes:      ['integrations'],
   persephone:  ['backend'],
   prometheus:  ['devops'],
-  callimachus: [],
+  callimachus: ['vault', 'brain'],
 };
 
 /**

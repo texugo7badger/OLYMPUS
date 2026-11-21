@@ -51,6 +51,13 @@ function fmtCost(n: number | null): string {
   return n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
 }
 
+function fmtClock(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return '—';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 function fmtTime(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -76,7 +83,7 @@ function StatusChip({ status, failureClass }: { status: string; failureClass?: s
       : status.toUpperCase();
   return (
     <span className={cn(
-      'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-mono ring-1',
+      'inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-mono ring-1',
       tone === 'green' ? 'text-olympus-green ring-olympus-green/25 bg-olympus-green/5'
         : tone === 'red' ? 'text-olympus-red ring-olympus-red/25 bg-olympus-red/5'
           : tone === 'amber' ? 'text-olympus-amber-soft ring-olympus-amber-soft/25 bg-olympus-amber-soft/5'
@@ -225,7 +232,7 @@ export default function LogsDashboard() {
           <Card label="hops" value={summary ? String(summary.hops) : '—'} sub={summary ? `${summary.completed} green · ${summary.parked} parked` : 'lendo…'} />
           <Card label="tokens out" value={summary ? fmtTokens(summary.tokensOut) : '—'} sub={summary ? `${fmtTokens(summary.tokensIn)} in` : ''} />
           <Card label="custo (step)" value={summary ? fmtCost(summary.costUsd) : '—'} sub="invoice unknown" tone="text-olympus-gold" />
-          <Card label="parks" value={summary ? String(summary.parked) : '—'} sub={summary?.parksByClass?.[0] ? `${summary.parksByClass[0].klass} ×${summary.parksByClass[0].count}` : 'nenhum'} tone={summary?.parked ? 'text-olympus-red' : 'text-olympus-green'} />
+          <Card label="park attempts" value={summary ? String(summary.parked) : '—'} sub={summary?.parksByClass?.[0] ? `${summary.parksByClass[0].klass} ×${summary.parksByClass[0].count}` : 'nenhum'} tone={summary?.parked ? 'text-olympus-red' : 'text-olympus-green'} />
           <Card label="walks" value={walks.length ? String(walks.length) : '—'} sub={walks[0] ? `${walks[0].slug} · ${walks[0].status}` : 'sem campanha'} />
           <Card label="window" value={economy?.windows?.h5 != null ? `${Math.round(economy.windows.h5)}%` : '—'} sub="5h rolling" tone={economy?.windows?.h5 != null && economy.windows.h5 >= 80 ? 'text-olympus-red' : 'text-olympus-green'} />
         </div>
@@ -424,37 +431,41 @@ export default function LogsDashboard() {
 
 function HopsTable({ rows, onPick, compact }: { rows: LogHop[]; onPick: (h: LogHop) => void; compact?: boolean }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[820px] border-collapse text-[11px] font-mono">
-        <thead>
-          <tr className="text-left text-[10px] uppercase tracking-wider text-olympus-text-dim">
-            <th className="py-1.5 pr-3">quando</th>
-            <th className="py-1.5 pr-3">hop</th>
-            <th className="py-1.5 pr-3">god</th>
-            <th className="py-1.5 pr-3">modelo</th>
-            {!compact && <th className="py-1.5 pr-3">build</th>}
-            <th className="py-1.5 pr-3">status</th>
-            <th className="py-1.5 pr-3">tempo</th>
-            <th className="py-1.5 pr-3">tokens</th>
-            <th className="py-1.5">custo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((h) => (
-            <tr key={h.id} onClick={() => onPick(h)} className="cursor-pointer border-t border-olympus-gold/5 hover:bg-olympus-gold/5">
-              <td className="whitespace-nowrap py-2 pr-3 text-olympus-text-dim">{fmtTime(h.ts)}</td>
-              <td className="max-w-[220px] truncate py-2 pr-3 text-olympus-text">{h.hop}</td>
-              <td className="py-2 pr-3 text-olympus-text-dim">{h.god}</td>
-              <td className="max-w-[200px] truncate py-2 pr-3 text-olympus-text-dim">{h.model.replace(/^opencode-go\//, '')}</td>
-              {!compact && <td className="max-w-[140px] truncate py-2 pr-3 text-olympus-text-dim">{h.build ?? '—'}</td>}
-              <td className="py-2 pr-3"><StatusChip status={h.status} failureClass={h.failureClass} /></td>
-              <td className="py-2 pr-3 tabular-nums text-olympus-text-dim">{fmtDuration(h.durationMs)}</td>
-              <td className="py-2 pr-3 tabular-nums text-olympus-text-dim">{fmtTokens(h.tokensOut)}</td>
-              <td className="py-2 tabular-nums text-olympus-gold">{fmtCost(h.costUsd)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div>
+      <div className="flex items-center gap-3 border-b border-olympus-gold/10 px-2 pb-1 text-[9px] font-mono uppercase tracking-wider text-olympus-text-dim">
+        <span className="w-12 shrink-0">hora</span>
+        <span className="flex-1">hop · god · modelo</span>
+        <span className="w-[260px] shrink-0 text-right">status · tempo · custo</span>
+      </div>
+      <div className="divide-y divide-olympus-gold/5">
+        {rows.map((h) => (
+          <button
+            key={h.id}
+            type="button"
+            data-testid={`hop-row-${h.id}`}
+            onClick={() => onPick(h)}
+            className="flex w-full items-center gap-3 px-2 py-2 text-left transition-colors hover:bg-olympus-gold/5"
+          >
+            <span className="w-12 shrink-0 text-[10px] font-mono tabular-nums text-olympus-text-dim" data-tip={fmtTime(h.ts)}>{fmtClock(h.ts)}</span>
+            <span className="min-w-0 flex-1">
+              <span className="flex min-w-0 items-baseline gap-2">
+                <span className="truncate text-[12px] font-mono text-olympus-text">{h.hop}</span>
+                <span className="shrink-0 text-[9px] font-mono text-olympus-text-dim">{h.god}</span>
+              </span>
+              <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[10px] font-mono text-olympus-text-dim">
+                <span className="truncate">{h.model.replace(/^opencode-go\//, '')}</span>
+                {!compact && h.build && <span className="shrink-0">· {h.build}</span>}
+                {h.status.startsWith('parked') && h.failureClass && <span className="shrink-0 text-olympus-red">· {h.failureClass}</span>}
+              </span>
+            </span>
+            <span className="flex w-[260px] shrink-0 items-center justify-end gap-2">
+              <StatusChip status={h.status} failureClass={h.failureClass} />
+              <span className="w-10 text-right text-[10px] font-mono tabular-nums text-olympus-text-dim">{fmtDuration(h.durationMs)}</span>
+              <span className="w-14 text-right text-[10px] font-mono tabular-nums text-olympus-gold">{fmtCost(h.costUsd)}</span>
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -526,7 +537,12 @@ function HopDetail({ hop, onBack, onCopy, copied }: { hop: LogHop; onBack: () =>
 
           <section className="rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
             <h2 className="mb-2 text-[12px] font-semibold text-olympus-text">Prompt (slice)</h2>
-            <pre className="max-h-[260px] overflow-auto whitespace-pre-wrap rounded-lg bg-olympus-bg/60 p-2 text-[10px] leading-relaxed text-olympus-text-dim">{hop.promptExcerpt || '—'}</pre>
+            <pre className="max-h-[220px] overflow-auto whitespace-pre-wrap rounded-lg bg-olympus-bg/60 p-2 text-[10px] leading-relaxed text-olympus-text-dim">{hop.promptExcerpt || '—'}</pre>
+          </section>
+
+          <section className="rounded-xl border border-olympus-gold/15 bg-olympus-card p-4 lg:col-span-2">
+            <h2 className="mb-2 text-[12px] font-semibold text-olympus-text">Output (tail)</h2>
+            <pre className="max-h-[240px] overflow-auto whitespace-pre-wrap rounded-lg bg-olympus-bg/60 p-2 text-[10px] leading-relaxed text-olympus-text-dim">{hop.outputTail || 'sem output registrado para este hop (linha antiga ou em execução)'}</pre>
           </section>
         </div>
       </div>

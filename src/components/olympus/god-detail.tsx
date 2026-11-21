@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useDocVisible } from '@/lib/use-doc-visible';
 import { demigodShortDescription } from '@/lib/demigod-short-desc';
 import DemigodPromptModal from './demigod-prompt-modal';
+import { toast } from 'sonner';
 // Instincts section removed from God-Detail (instincts
 // are now browsable in the Vault-Summary panel). InstinctDetailModal import
 // removed. Added KnowledgeDetailModal so clicking a knowledge row opens a
@@ -77,6 +78,7 @@ export default function GodDetail() {
  const [dispatch, setDispatch] = useState<DispatchInfo | null>(null);
  const language = useLanguage();
  const [stats, setStats] = useState<GodStats | null>(null);
+ const [curating, setCurating] = useState(false);
  // v0.0.32 — the human's intent between dispatches (planning / attention).
  const [notes, setNotes] = useState<GodNote[]>([]);
  const [noteText, setNoteText] = useState('');
@@ -239,6 +241,31 @@ export default function GodDetail() {
 
 
 
+ const curateBrain = async () => {
+   setCurating(true);
+   try {
+     const r = await fetch('/api/olympus/callimachus/heartbeat', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ deep: false }),
+     });
+     const ct = r.headers.get('content-type') || '';
+     if (ct.includes('application/json')) {
+       const d = await r.json().catch(() => ({}));
+       toast.info(String(d?.message || d?.error || 'curadoria em cooldown'));
+     } else {
+       const text = await r.text();
+       const lines = text.split('\n').filter((l) => l.startsWith('data:')).map((l) => { try { return JSON.parse(l.slice(5)); } catch { return null; } }).filter(Boolean);
+       const last = [...lines].reverse().find((e: any) => e?.msg || e?.type === 'exit');
+       toast.success(last?.msg ? String(last.msg).slice(0, 180) : 'curadoria concluída');
+     }
+   } catch (e: any) {
+     toast.error(e?.message || 'a curadoria falhou');
+   } finally {
+     setCurating(false);
+   }
+ };
+
  if (!god || !GodIcon) {
  return (
  <div className="p-4 text-olympus-text-dim text-xs font-mono">
@@ -352,11 +379,48 @@ export default function GodDetail() {
  </div>
 
  {god === 'callimachus' && (
- <div className="rounded-lg border border-olympus-purple/20 bg-olympus-purple/5 p-3 text-[11px] font-mono text-olympus-text leading-relaxed">
- Vault curator — runs the 7-stage brain maintenance loop (observe, distill, inject,
- prune, compact, evolve, stocktake) AND dispatches to demigods for vault work
- (instinct curation, backup, restore, docs verification). Use{' '}
- <code className="text-olympus-gold">Compact Brain</code> for on-demand deep cleanup.
+ <div className="space-y-2">
+   <div className="rounded-lg border border-olympus-purple/20 bg-olympus-purple/5 p-3 text-[11px] font-mono text-olympus-text leading-relaxed">
+   Vault curator — runs the 7-stage brain maintenance loop (observe, distill, inject,
+   prune, compact, evolve, stocktake) AND dispatches to demigods for vault work
+   (instinct curation, backup, restore, docs verification). Use{' '}
+   <code className="text-olympus-gold">Compact Brain</code> for on-demand deep cleanup.
+   </div>
+   <div className="rounded-lg border border-olympus-green/20 bg-olympus-green/5 p-3">
+     <div className="flex items-center gap-1.5 mb-2">
+       <span className="text-[10px] font-mono font-semibold uppercase tracking-wide text-olympus-green">brain health</span>
+       <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">gate 85%</span>
+     </div>
+     <div className="grid grid-cols-3 gap-2 text-[10px] font-mono">
+       <div>
+         <div className="text-olympus-text-dim">instintos</div>
+         <div className="text-[12px] text-olympus-text">{stats?.instinctCounts.seed ?? 0} seed · {stats?.instinctCounts.empirical ?? 0} empirical</div>
+       </div>
+       <div>
+         <div className="text-olympus-text-dim">confiança média</div>
+         <div className="text-[12px] text-olympus-text">{stats ? `${Math.round(stats.avgConfidence * 100)}%` : '—'}</div>
+       </div>
+       <div>
+         <div className="text-olympus-text-dim">curto-circuito</div>
+         <div className="text-[12px]" style={{ color: (stats?.shortCircuitHitRate ?? 0) > 0 ? '#5FC9D8' : undefined }}>{stats ? `${Math.round(stats.shortCircuitHitRate * 100)}%` : '—'}</div>
+       </div>
+     </div>
+     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-olympus-text-dim/15">
+       <div className="h-full rounded-full bg-olympus-green" style={{ width: `${Math.min(100, Math.round((stats?.avgConfidence ?? 0) * 100))}%` }} />
+     </div>
+     <p className="mt-1.5 text-[9px] font-mono leading-relaxed text-olympus-text-dim">
+       {(stats?.instinctCounts.empirical ?? 0) === 0
+         ? 'Cérebro novo: só instintos seed. O curador aprende com outcomes reais; cada padrão precisa cruzar 85% para curto-circuitar.'
+         : `${stats?.instinctCounts.empirical ?? 0} instinto(s) empírico(s) já aprendidos.`}
+     </p>
+     <button
+       onClick={() => void curateBrain()}
+       disabled={curating}
+       className="mt-2 flex items-center gap-1 rounded border border-olympus-green/30 px-2 py-1 text-[10px] font-mono text-olympus-green hover:bg-olympus-green/10 disabled:opacity-50"
+     >
+       {curating ? 'curando…' : 'curar agora'}
+     </button>
+   </div>
  </div>
  )}
 

@@ -22,7 +22,13 @@
         "New Logs workspace: Visão geral, Hops, Walks, Models and Economy, with full hop/walk detail — god, build, model, declared abilities, artifacts, checks, park, recovery, resonance, tokens, step cost/list/invoice.",
         "The terminal header now carries the GO limit meter: 5h by default, one button toggles weekly/monthly; stale anchor and quota-hit are labelled. The meter reads the console anchor only (no 57k ledger scan).",
         "Hibernation now opts the active lane in and starts the detached walk, so the night contract survives the renderer being destroyed.",
-        "The qwen3.7-plus guard and the exact console windows from v0.0.97 remain. OpenCode v2 2.3.2 remains the latest npm release and gate-approved."
+        "The qwen3.7-plus guard and the exact console windows from v0.0.97 remain. OpenCode v2 2.3.2 remains the latest npm release and gate-approved.",
+        "The task sheet now shows the build's own loadout (skills/MCPs/demigods even when the hop declares none), lane health, live tool counts, the last park/recovery and the settled output tail — no more 0/0 with no explanation.",
+        "Learning notifications are live and clickable: the box shows the teaching, measured confidence/samples and exactly how far it is from the 85% short-circuit gate, with the last outcomes.",
+        "Callimachus gets a brain-health card (seed/empirical, average confidence, short-circuit rate, the 85% gate) and a 'curar agora' action; his reference shelf now includes the vault knowledge docs.",
+        "Pattern Studio: moving the pointer attracts the particle field, clicking the background pulses it, and clicking a thought opens its analysis box (what it is, connections, associated learning) — the learning rows open the same detail.",
+        "Boot: one full-screen loader loops until every mounted panel is loadable, instead of a stack of per-panel loaders; the brain's focus card no longer covers the live logo.",
+        "The Logs hop detail now shows the output tail and falls back to the frozen plan for historical hop definitions; the hop table is a responsive two-line list with cost visible."
       ]
     },
     {

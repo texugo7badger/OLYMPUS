@@ -28,6 +28,8 @@ import ThemedLogo from './themed-logo';
 import PlasmaRing from './plasma-ring';
 import ProgressStrip from './progress-strip';
 import TaskSheetModal from './task-sheet-modal';
+import LearningDetailModal from './learning-detail-modal';
+import type { LearningItem } from '@/lib/learning-types';
 import AlignmentBar from './alignment-bar';
 import GoUsageBar from './go-usage-bar';
 
@@ -35,16 +37,6 @@ interface Particle { x: number; y: number; vx: number; vy: number; r: number; c:
 interface Cell { x: number; y: number; r: number; phase: number; splitAt: number; c: number; drift: number }
 interface Stroke { x: number; y: number; angle: number; len: number; c: number; speed: number }
 interface InFlight { hopId: string; god?: string; status?: string; startedAt?: string }
-interface LearningItem {
-  id: string;
-  type: 'instinct' | 'knowledge' | 'skill' | 'mcp';
-  name: string;
-  god: string;
-  ts: string;
-  summary: string;
-  confidence?: number;
-}
-
 interface Thought {
   id: string;
   kind: string;
@@ -62,6 +54,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const [theme] = useTheme();
   const palette = resolvePalette(theme);
   const activeProject = useOlympus((s) => s.activeProject);
+  const setLeftPane = useOlympus((s) => s.setLeftPane);
   // v0.0.77 — a hop click opens its info sheet (the same live sheet Recent
   // Activity uses), scoped to the active lane.
   const [sheetHop, setSheetHop] = useState<string | null>(null);
@@ -73,6 +66,11 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
   const [inflight, setInflight] = useState<InFlight[]>([]);
   const [thoughts, setThoughts] = useState<Thought[]>([]);
   const [learnings, setLearnings] = useState<LearningItem[]>([]);
+  const [selectedLearning, setSelectedLearning] = useState<LearningItem | null>(null);
+  const [selectedThought, setSelectedThought] = useState<Thought | null>(null);
+  const [hoveredThought, setHoveredThought] = useState<string | null>(null);
+  const pointerRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0.5, y: 0.5, active: false });
+  const burstRef = useRef<((at?: { x: number; y: number }) => void) | null>(null);
   const thoughtSeq = useRef(0);
   const language = useLanguage();
   const [activeGod, setActiveGod] = useState('apollo');
@@ -407,6 +405,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
       }
       if (particles.length > 120) particles = particles.slice(particles.length - 120);
     };
+    burstRef.current = burst;
     const draw = () => {
       const w = canvas.width;
       const h = canvas.height;
@@ -482,7 +481,19 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
       }
 
       // ── layer 3: the particles + their short connections ────────────────
+      const ptr = pointerRef.current;
       for (const p of particles) {
+        if (ptr.active) {
+          const dx = ptr.x - p.x;
+          const dy = ptr.y - p.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < 0.045) {
+            p.vx += dx * 0.000004;
+            p.vy += dy * 0.000004;
+          }
+        }
+        const speed = Math.hypot(p.vx, p.vy);
+        if (speed > 0.0022) { p.vx *= 0.0022 / speed; p.vy *= 0.0022 / speed; }
         p.x += p.vx + Math.sin(p.y * 8 + now * 0.0002) * 0.00006;
         p.y += p.vy + Math.cos(p.x * 7 - now * 0.00017) * 0.00006;
         if (p.x < 0 || p.x > 1) p.vx *= -1;
@@ -601,6 +612,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     return () => {
       running = false;
       cancelAnimationFrame(raf);
+      burstRef.current = null;
       es?.close();
       window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', onVis);
@@ -614,8 +626,19 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-label="OLYMPUS pattern studio"
+      onPointerMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        pointerRef.current = { x: (e.clientX - r.left) / Math.max(1, r.width), y: (e.clientY - r.top) / Math.max(1, r.height), active: true };
+      }}
+      onPointerLeave={() => { pointerRef.current.active = false; }}
+      onPointerDown={(e) => {
+        const target = e.target as HTMLElement;
+        if (target?.dataset?.bg !== '1') return;
+        const r = e.currentTarget.getBoundingClientRect();
+        burstRef.current?.({ x: (e.clientX - r.left) / Math.max(1, r.width), y: (e.clientY - r.top) / Math.max(1, r.height) });
+      }}
     >
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" aria-hidden="true" />
+      <canvas ref={canvasRef} data-bg="1" className="absolute inset-0 w-full h-full" aria-hidden="true" />
       <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(circle at 50% 45%, ${palette.gold}14, transparent 58%)` }} />
 
       <header className="relative z-10 flex items-center gap-2 px-4 py-3">
@@ -659,13 +682,13 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
               </p>
             ) : (
               thoughts.slice(-7).reverse().map((th) => (
-                <div key={th.id} className="flex items-start gap-1.5 mb-1">
+                <button key={th.id} onClick={() => setSelectedThought(th)} onMouseEnter={() => setHoveredThought(th.id)} onMouseLeave={() => setHoveredThought(null)} className="mb-1 flex w-full items-start gap-1.5 rounded px-1 py-0.5 text-left hover:bg-white/5">
                   <span className="w-1.5 h-1.5 rounded-full mt-0.5 shrink-0" style={{ background: godTint(th.god) }} />
                   <div className="min-w-0">
                     <div className="text-[9px] font-mono truncate" style={{ color: palette.text }}>{th.label}</div>
                     <div className="text-[8px] font-mono truncate" style={{ color: palette.textDim }}>{th.detail}</div>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>
@@ -679,14 +702,17 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
             ) : learnings.slice(0, 5).map((l) => (
               <button
                 key={l.id}
-                onClick={() => explainLearning(l)}
+                onClick={() => setSelectedLearning(l)}
                 className="w-full text-left flex items-start gap-1.5 mb-1 rounded px-1 py-0.5 hover:bg-olympus-gold/5"
                 data-tip={`${l.type} · ${l.god}`}
               >
                 <span className="text-[7px] font-mono uppercase px-1 rounded shrink-0" style={{ background: `${godTint(l.god)}18`, color: godTint(l.god) }}>{l.type}</span>
                 <span className="min-w-0">
-                  <span className="block text-[8px] font-mono truncate" style={{ color: palette.text }}>{l.name}</span>
-                  <span className="block text-[7px] font-mono truncate" style={{ color: palette.textDim }}>{godName(l.god, language)} · click to hear it</span>
+                  <span className="flex items-center gap-1">
+                    <span className="block text-[8px] font-mono truncate" style={{ color: palette.text }}>{l.name}</span>
+                    <span className="ml-auto shrink-0 text-[7px] font-mono" style={{ color: palette.green }}>{l.confidence != null || l.rate != null ? `${Math.round((l.confidence ?? l.rate ?? 0) * 100)}%` : '—'}</span>
+                  </span>
+                  <span className="block text-[7px] font-mono truncate" style={{ color: palette.textDim }}>{godName(l.god, language)} · click to analyze</span>
                 </span>
               </button>
             ))}
@@ -704,9 +730,9 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
                   key={`line:${th.id}`}
                   x1="50" y1="50" x2={nx} y2={ny}
                   stroke={godTint(th.god)}
-                  strokeWidth="0.18"
+                  strokeWidth={hoveredThought === th.id || selectedThought?.id === th.id ? '0.45' : '0.18'}
                   vectorEffect="non-scaling-stroke"
-                  opacity="0.38"
+                  opacity={hoveredThought === th.id || selectedThought?.id === th.id ? '0.9' : '0.38'}
                 />
               );
             })}
@@ -719,7 +745,9 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
             return (
               <div
                 key={th.id}
-                onClick={() => { setActiveGod(th.god || 'apollo'); setSheetHop(th.label); }}
+                onClick={() => { setActiveGod(th.god || 'apollo'); setSelectedThought(th); }}
+                onMouseEnter={() => setHoveredThought(th.id)}
+                onMouseLeave={() => setHoveredThought(null)}
                 className="absolute pointer-events-auto cursor-pointer rounded-lg border px-2 py-1 max-w-[150px] transition-opacity duration-500 hover:scale-[1.03]"
                 style={{
                   left: `${nx}%`,
@@ -795,6 +823,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
               ? `${thoughts.length} ${t('studio.thoughts', language)} · ${t('studio.live', language)}`
               : t('studio.startWalk', language)}
           </p>
+          <p className="mt-0.5 text-[7px] font-mono" style={{ color: palette.textDim }}>mova o mouse para atrair · clique no fundo para um pulso · clique num pensamento para analisar</p>
         </main>
 
         {/* the voice orb */}
@@ -944,6 +973,91 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
         </aside>
       </div>
       {sheetHop && <TaskSheetModal hopId={sheetHop} lane={activeProject?.path ?? null} onClose={() => setSheetHop(null)} />}
+      {selectedLearning && (
+        <LearningDetailModal
+          item={selectedLearning}
+          onClose={() => setSelectedLearning(null)}
+          onLogs={() => { setLeftPane('logs'); onClose(); }}
+        />
+      )}
+      {selectedThought && (
+        <ThoughtDetailModal
+          thought={selectedThought}
+          thoughts={thoughts}
+          learnings={learnings}
+          godTint={godTint}
+          onClose={() => setSelectedThought(null)}
+          onPick={setSelectedThought}
+          onTask={(id) => { setSheetHop(id); setSelectedThought(null); }}
+          onLogs={() => { setLeftPane('logs'); onClose(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ThoughtDetailModal({
+  thought, thoughts, learnings, godTint, onClose, onPick, onTask, onLogs,
+}: {
+  thought: Thought;
+  thoughts: Thought[];
+  learnings: LearningItem[];
+  godTint: (god?: string) => string;
+  onClose: () => void;
+  onPick: (t: Thought) => void;
+  onTask: (id: string) => void;
+  onLogs: () => void;
+}) {
+  const connections = thoughts.filter((t) => t.id !== thought.id && (t.god === thought.god || t.label === thought.label)).slice(-6);
+  const learning = learnings.find((l) => l.name.toLowerCase() === thought.label.toLowerCase() || thought.label.toLowerCase().includes(l.name.toLowerCase()));
+  return (
+    <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/65 p-4" onClick={onClose} role="dialog" aria-modal="true" aria-label={`Thought: ${thought.label}`}>
+      <div className="flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-olympus-gold/25 bg-olympus-bg shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <header className="flex shrink-0 items-center gap-2 border-b border-olympus-gold/15 bg-olympus-panel px-4 py-3">
+          <Waypoints size={14} className="text-olympus-cyan" />
+          <span className="rounded bg-olympus-cyan/10 px-1.5 py-0.5 text-[9px] font-mono uppercase text-olympus-cyan ring-1 ring-olympus-cyan/25">{thought.kind}</span>
+          <span className="truncate text-[14px] font-semibold text-olympus-text">{thought.label}</span>
+          <span className="shrink-0 text-[10px] font-mono text-olympus-text-dim">· {godName(thought.god, getLanguage())}</span>
+          <button onClick={onClose} aria-label="Close thought detail" className="ml-auto text-olympus-text-dim hover:text-olympus-red"><X size={14} /></button>
+        </header>
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
+          <section className="rounded-lg border border-olympus-cyan/15 bg-olympus-card/50 p-3">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-olympus-cyan">O que é</div>
+            <p className="mt-1 text-[12px] leading-relaxed text-olympus-text">{thought.detail}</p>
+            <p className="mt-1 text-[10px] font-mono text-olympus-text-dim">{thought.ts ? new Date(thought.ts).toLocaleString() : '—'}</p>
+          </section>
+          <section className="rounded-lg border border-olympus-gold/15 bg-olympus-card/50 p-3">
+            <div className="mb-1.5 text-[10px] font-mono uppercase tracking-wider text-olympus-gold">Conexões ({connections.length})</div>
+            {connections.length ? connections.map((c) => (
+              <button key={c.id} onClick={() => onPick(c)} className="flex w-full items-center gap-2 rounded px-1 py-1 text-left hover:bg-white/5">
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: godTint(c.god) }} />
+                <span className="truncate text-[11px] font-mono text-olympus-text">{c.label}</span>
+                <span className="ml-auto shrink-0 text-[9px] font-mono text-olympus-text-dim">{c.god}</span>
+              </button>
+            )) : <p className="text-[10px] font-mono text-olympus-text-dim">sem conexões no recorte atual</p>}
+          </section>
+          <section className="rounded-lg border border-olympus-green/15 bg-olympus-card/50 p-3">
+            <div className="mb-1.5 text-[10px] font-mono uppercase tracking-wider text-olympus-green">Aprendizado</div>
+            {learning ? (
+              <div>
+                <div className="text-[12px] font-mono text-olympus-text">{learning.name}</div>
+                <p className="mt-1 text-[11px] text-olympus-text-dim">{learning.summary}</p>
+                <div className="mt-2 flex items-center gap-2 text-[10px] font-mono text-olympus-green">
+                  <span>{learning.confidence != null || learning.rate != null ? `${Math.round((learning.confidence ?? learning.rate ?? 0) * 100)}%` : '—'}</span>
+                  <span className="text-olympus-text-dim">→ 85% para curto-circuitar</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-[10px] font-mono text-olympus-text-dim">sem aprendizado associado a este pensamento; abra os Logs para a evidência completa.</p>
+            )}
+          </section>
+        </div>
+        <footer className="flex shrink-0 flex-wrap items-center gap-2 border-t border-olympus-gold/15 bg-olympus-panel px-4 py-2.5">
+          <button onClick={() => onTask(thought.label)} className="rounded border border-olympus-gold/25 px-2 py-1 text-[10px] font-mono text-olympus-gold hover:bg-olympus-gold/10">abrir task sheet</button>
+          <button onClick={onLogs} className="rounded border border-olympus-cyan/25 px-2 py-1 text-[10px] font-mono text-olympus-cyan hover:bg-olympus-cyan/10">abrir Logs</button>
+          <button onClick={onClose} className="ml-auto rounded px-2 py-1 text-[10px] font-mono text-olympus-text-dim hover:text-olympus-text">fechar</button>
+        </footer>
+      </div>
     </div>
   );
 }

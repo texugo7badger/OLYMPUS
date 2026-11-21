@@ -36,6 +36,23 @@ All notable changes to OLYMPUS are documented in this file.
   rolling 65/80/100, qwen3.7-plus → verified DeepSeek, and the per-god model
   pin. OpenCode v2 2.3.2 remains the latest npm release and gate-approved.
 
+- **The task sheet tells the whole story.** The build's own loadout (even
+  when the hop declares none), lane health, live tool counts, the last
+  park/recovery and the settled output tail are visible. The Logs hop detail
+  adds the output tail and falls back to the frozen plan for old hops.
+- **Learning is live and explainable.** The bell polls the learning ledger;
+  clicking an item opens the box with the teaching, confidence/samples and the
+  exact gap to the 85% short-circuit gate, plus the last outcomes.
+- **Callimachus has a brain-health card and a `curar agora` action.** His
+  reference shelf now includes the vault knowledge docs; the card explains
+  why a seed-only brain shows 0% short-circuits.
+- **Pattern Studio is interactive.** The pointer attracts the particle field,
+  a background click pulses it, and a thought opens its analysis box (what it
+  is, connections, associated learning). The learning rows open the same box.
+- **Boot is one loop.** The full-screen loader waits for every mounted panel
+  (30s emergency ceiling) instead of revealing a stack of per-panel loaders;
+  the brain's focus card is lifted off the live logo.
+
 **Battery: 178 PASS / 0 FAIL / 1 declared skip of 179.**
 `scripts/v092-runtime.test.mjs` **37 passed** (taxonomy, blocked-gate recovery,
 digest 2/2, meter/logs wiring, qwen guard, exact windows). `tsc`/`eslint`/

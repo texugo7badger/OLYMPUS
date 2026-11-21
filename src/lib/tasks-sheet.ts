@@ -38,6 +38,7 @@ import { hopSpeed } from './token-speed';
 import { patrolLane } from './atlas-patrol';
 import { buildCampaignHealth, type CampaignHealth } from './campaign-health';
 import { buildEtaModel, type EtaConfidence } from './eta';
+import { readLaneHealth } from './lane-health';
 
 /** The walker's concurrency law (the projection's honesty bound). */
 const MAX_HOP_CONCURRENCY = 4;
@@ -81,6 +82,21 @@ export interface TaskRecord {
   buildName?: string | null;
   buildMatch?: 'declared' | 'matched' | null;
   talent?: { temperature?: number; speed?: string; budgetTokens?: number; quality?: string } | null;
+  /** v0.0.98 — the BUILD's own loadout, shown even when the hop declares none. */
+  buildModel?: string | null;
+  buildSkills?: string[];
+  buildMcps?: string[];
+  buildDemigods?: string[];
+  /** v0.0.98 — lane health + the last park/recovery for this hop. */
+  laneStatus?: string | null;
+  laneRetryUntil?: string | null;
+  attempts?: number;
+  lastPark?: { reason: string; failureClass: string | null; error: string | null; ts: string } | null;
+  recovery?: { kind: string; message: string; ts: string } | null;
+  /** v0.0.98 — live tool counts and the settled output tail. */
+  tools?: Array<{ tool: string; count: number }>;
+  toolCount?: number;
+  outputTail?: string | null;
   tokensIn?: number | null;
   tokensOut?: number | null;
   durationMs?: number;
@@ -238,7 +254,7 @@ function liveStatsInWindow(
   god: string,
   fromMs: number,
   toMs: number,
-): { tokensIn: number; tokensOut: number; files: TaskFile[]; lastTool: string | null } {
+): { tokensIn: number; tokensOut: number; files: TaskFile[]; lastTool: string | null; tools: Record<string, number>; toolCount: number } {
   let raw = '';
   try {
     const size = fs.statSync(feedPath).size;
@@ -249,11 +265,13 @@ function liveStatsInWindow(
     fs.closeSync(fh);
     raw = buf.toString('utf-8');
     if (size > take) raw = raw.slice(raw.indexOf('\n') + 1);
-  } catch { return { tokensIn: 0, tokensOut: 0, files: [], lastTool: null }; }
+  } catch { return { tokensIn: 0, tokensOut: 0, files: [], lastTool: null, tools: {}, toolCount: 0 }; }
   const key = String(god || '').toLowerCase();
   let tokensIn = 0, tokensOut = 0, lastTool: string | null = null;
   const files: TaskFile[] = [];
   const seen = new Set<string>();
+  const tools: Record<string, number> = {};
+  let toolCount = 0;
   for (const line of raw.trim().split('\n').filter(Boolean).slice(-12000)) {
     let ev: any;
     try { ev = JSON.parse(line); } catch { continue; }
@@ -270,6 +288,8 @@ function liveStatsInWindow(
       if (typeof tk.output === 'number' && Number.isFinite(tk.output)) tokensOut += tk.output;
     }
     lastTool = String(meta.tool || 'tool');
+    toolCount += 1;
+    tools[lastTool] = (tools[lastTool] ?? 0) + 1;
     const file = meta.file;
     if (typeof file === 'string' && file) {
       const fkey = `${meta.tool || ''}:${file}`;
@@ -279,7 +299,7 @@ function liveStatsInWindow(
       }
     }
   }
-  return { tokensIn, tokensOut, files, lastTool };
+  return { tokensIn, tokensOut, files, lastTool, tools, toolCount };
 }
 
 /**
@@ -360,6 +380,7 @@ function buildSnapshot(god: string, hop: any): {
   model: string | null; strategy: string | null;
   buildName: string | null; buildMatch: 'declared' | 'matched' | null;
   talent: { temperature?: number; speed?: string; budgetTokens?: number; quality?: string } | null;
+  buildModel: string | null; buildSkills: string[]; buildMcps: string[]; buildDemigods: string[];
 } {
   const root = process.env.OLYMPUS_ROOT || process.cwd();
   const home = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
@@ -398,7 +419,7 @@ function buildSnapshot(god: string, hop: any): {
     if (declared && (b.id === declared || b.name === declared)) score += 10;
     if (score > bestScore) { bestScore = score; best = b; }
   }
-  if (!best) return { model, strategy, buildName: null, buildMatch: null, talent: null };
+  if (!best) return { model, strategy, buildName: null, buildMatch: null, talent: null, buildModel: null, buildSkills: [], buildMcps: [], buildDemigods: [] };
   const matched = declared && (best.id === declared || best.name === declared);
   return {
     model,
@@ -406,6 +427,10 @@ function buildSnapshot(god: string, hop: any): {
     buildName: String(best.name || best.id || ''),
     buildMatch: matched ? 'declared' : (bestScore > 1 ? 'matched' : null),
     talent: best.params ?? null,
+    buildModel: typeof best.model === 'string' ? best.model : null,
+    buildSkills: Array.isArray(best.skills) ? best.skills.map(String) : [],
+    buildMcps: Array.isArray(best.mcps) ? best.mcps.map(String) : [],
+    buildDemigods: Array.isArray(best.demigods) ? best.demigods.map(String) : [],
   };
 }
 
@@ -522,6 +547,24 @@ export function buildTasksSheet(opts: {
     const live = status === 'running' && startedAt
       ? liveStatsInWindow(feedPath, String(h?.god || '').toLowerCase(), new Date(startedAt).getTime(), now + 60_000)
       : null;
+    const snap = buildSnapshot(String(h?.god ?? 'apollo').toLowerCase(), h);
+    const laneEntry = snap.model ? readLaneHealth().lanes[snap.model] : null;
+    const park = state?.parks?.[String(h?.id ?? '')] ?? null;
+    const recoveryRows = (() => {
+      try {
+        return fs.readFileSync(path.join(lane, '.olympus-recovery.jsonl'), 'utf-8').trim().split('\n').slice(-300)
+          .map((l) => { try { return JSON.parse(l); } catch { return null; } })
+          .filter((r) => r && r.hopId === String(h?.id ?? '') && r.action === 'retry');
+      } catch { return []; }
+    })();
+    const lastRecovery = recoveryRows.length ? recoveryRows[recoveryRows.length - 1] : null;
+    const tail = typeof tel?.outputTail === 'string' ? tel.outputTail : null;
+    const tailTools = (() => {
+      if (!tail) return [] as Array<{ tool: string; count: number }>;
+      const counts: Record<string, number> = {};
+      for (const m of tail.matchAll(/"tool"\s*:\s*"([^"]+)"/g)) counts[m[1]] = (counts[m[1]] ?? 0) + 1;
+      return Object.entries(counts).map(([tool, count]) => ({ tool, count })).sort((a, b) => b.count - a.count).slice(0, 12);
+    })();
     const files: TaskFile[] = tel
       ? filesInWindow(
           feedPath,
@@ -551,7 +594,15 @@ export function buildTasksSheet(opts: {
       durationMs: tel?.durationMs ?? (status === 'running' && startedAt ? Math.max(0, now - new Date(startedAt).getTime()) : undefined),
       lastTool: live?.lastTool ?? null,
       live: Boolean(live),
-      ...buildSnapshot(String(h?.god ?? 'apollo').toLowerCase(), h),
+      ...snap,
+      laneStatus: laneEntry?.status ?? null,
+      laneRetryUntil: laneEntry?.retryUntil ? new Date(laneEntry.retryUntil).toISOString() : null,
+      attempts: recoveryRows.length,
+      lastPark: park ? { reason: String(park.reason ?? ''), failureClass: park.failureClass ?? park.errorClass ?? null, error: park.error ?? null, ts: String(park.ts ?? '') } : null,
+      recovery: lastRecovery ? { kind: String(lastRecovery.kind ?? ''), message: String(lastRecovery.message ?? ''), ts: String(lastRecovery.ts ?? '') } : null,
+      tools: live ? Object.entries(live.tools).map(([tool, count]) => ({ tool, count })).sort((a, b) => b.count - a.count).slice(0, 12) : tailTools,
+      toolCount: live ? live.toolCount : tailTools.reduce((n, t) => n + t.count, 0),
+      outputTail: tail,
       retriesAbsorbed: tel?.retriesAbsorbed ?? 0,
       reasoning: tel?.reasoning ?? null,
       sessionId: tel?.sessionId ?? null,

@@ -865,7 +865,7 @@ export default function BrainAtlas3D() {
           Lifted from `bottom-3` to `bottom-9` so it never collides with
           the bottom-center rotation hint when the Brain is zoomed out. */}
       {focusNode && !bootError && (
-        <div className="absolute bottom-9 left-3 bg-olympus-card/85 backdrop-blur border border-olympus-gold/15 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] text-olympus-text font-mono pointer-events-none max-w-44 sm:max-w-72 z-10">
+        <div className="absolute bottom-28 left-3 bg-olympus-card/85 backdrop-blur border border-olympus-gold/15 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] text-olympus-text font-mono pointer-events-none max-w-44 sm:max-w-72 z-10">
           <div className="text-[8px] text-olympus-text-dim uppercase tracking-wide mb-0.5">
             {focusNode.kindLabel} · {focusNode._lobeName ?? 'parietal'}
           </div>
