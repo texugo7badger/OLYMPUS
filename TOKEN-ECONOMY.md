@@ -237,7 +237,9 @@ attributes spend to models between syncs.
 
 Measured on v0.0.97: the frame synced 46% monthly / 100% rolling / 52% weekly
 and the quota guard parked the walk; after the rolling window reset the frame
-reported 0% rolling and the guard released. The 30s sync uses the 120s ledger
-snapshot — scanning the ledger on every post blocked the event loop long
-enough for the app watchdog to declare the server silent.
+reported 0% rolling (then 1%) and the guard released. The 30s sync reads a
+resolved 120s snapshot or the previous anchor's attribution and **never starts
+a cold 57k-row scan** — the first boot sync used to block the event loop long
+enough for the burn route to time out. The Cost/usage route warms the cache
+for the next sync.
 

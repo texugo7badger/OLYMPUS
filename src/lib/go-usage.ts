@@ -654,7 +654,13 @@ export function readSpendRows(catalog: Map<string, CatalogModel>, now = Date.now
 // The Cost dashboard asks three surfaces (bar, forecast, burn) at the same
 // time. Before this cache each one scanned the 57k-row ledger independently,
 // locking SQLite and making a 6–9s scan into 20s+. One in-flight promise,
-// 30s TTL, shared by every route.
+// 120s TTL, shared by every route.
+//
+// v0.0.97 — peekUsageSnapshot() lets the GO frame sync read an ALREADY
+// resolved snapshot without starting a cold scan at boot. The first frame
+// sync used to trigger the 57k-row scan and block the event loop for ~2 min
+// (the burn route timed out); the console percentages are the graph, so the
+// sync now falls back to the previous anchor's local attribution instead.
 
 interface UsageSnapshot {
   usage: GoUsage;
@@ -664,7 +670,14 @@ interface UsageSnapshot {
   fetchedAt: string;
 }
 
-let snapshotCache: { at: number; plan: GoPlan; promise: Promise<UsageSnapshot> } | null = null;
+let snapshotCache: { at: number; plan: GoPlan; promise: Promise<UsageSnapshot>; value?: UsageSnapshot } | null = null;
+
+/** A resolved, fresh snapshot — never starts a scan. */
+export function peekUsageSnapshot(plan: GoPlan): UsageSnapshot | null {
+  if (!snapshotCache || snapshotCache.plan !== plan) return null;
+  if (Date.now() - snapshotCache.at >= 120_000) return null;
+  return snapshotCache.value ?? null;
+}
 
 export async function getUsageSnapshot(plan: GoPlan, force = false): Promise<UsageSnapshot> {
   if (!force && snapshotCache && snapshotCache.plan === plan && Date.now() - snapshotCache.at < 120_000) {
@@ -682,6 +695,8 @@ export async function getUsageSnapshot(plan: GoPlan, force = false): Promise<Usa
       fetchedAt: new Date().toISOString(),
     };
   })();
-  snapshotCache = { at: Date.now(), plan, promise };
+  const entry: { at: number; plan: GoPlan; promise: Promise<UsageSnapshot>; value?: UsageSnapshot } = { at: Date.now(), plan, promise };
+  snapshotCache = entry;
+  promise.then((v) => { if (snapshotCache === entry) { entry.value = v; entry.at = Date.now(); } }).catch(() => { /* the getter reports it */ });
   try { return await promise; } catch (e) { snapshotCache = null; throw e; }
 }

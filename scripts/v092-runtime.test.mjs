@@ -468,6 +468,9 @@ ok('PN8: the unverified qwen lane is guarded to the verified GO fallback', () =>
   assert.match(panel, /hardPressure/);
   assert.match(panel, /mode\.id === 'burn' \|\| mode\.id === 'pace'/);
   assert.match(src('src/lib/go-console.ts'), /const monthPct = anchor\.monthlyPct;/);
+  const consoleRoute = src('src/app/api/olympus/go-usage/console/route.ts');
+  assert.match(consoleRoute, /peekUsageSnapshot/);
+  assert.doesNotMatch(consoleRoute, /getUsageSnapshot/);
   assert.match(src('src/lib/hop-runtime/walker.ts'), /readGoConsoleAnchor/);
   assert.match(src('src/lib/hop-runtime/walker.ts'), /anchor\.h5Pct >= 100/);
 });

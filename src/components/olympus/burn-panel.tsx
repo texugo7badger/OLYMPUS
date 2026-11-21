@@ -193,7 +193,7 @@ export default function BurnPanel() {
         <Flame size={12} className="text-olympus-gold" />
         <span className="text-[9px] font-mono uppercase tracking-[0.16em] text-olympus-gold">Smart burn</span>
         <span className="text-[8px] font-mono text-olympus-text-dim">
-          {loading && !data ? 'reading the account…' : account?.source === 'console' ? `console anchor · ${pct(account.monthlyPct)} account${anchorAgeMin != null ? ` · ${anchorAgeMin}m ago` : ''}` : 'console sync required for exact account %'}
+          {loading && !data ? 'reading the account…' : (account?.source === 'console' || account?.source === 'mixed') ? `console anchor · ${pct(account.monthlyPct)} account${anchorAgeMin != null ? ` · ${anchorAgeMin}m ago` : ''}` : 'console sync required for exact account %'}
         </span>
         <button
           type="button"

@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireReadAuth } from '@/lib/auth';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
-import { getUsageSnapshot, readGoPlan, writeGoPlan, type GoPlan } from '@/lib/go-usage';
+import { peekUsageSnapshot, readGoPlan, writeGoPlan, type GoPlan } from '@/lib/go-usage';
 import { normalizeAnchor, readGoConsoleAnchor, writeGoConsoleAnchor } from '@/lib/go-console';
 
 export const runtime = 'nodejs';
@@ -55,12 +55,22 @@ export async function POST(req: NextRequest) {
     }, { status: 400, headers: NO_CACHE_HEADERS });
   }
   // Capture the local attribution at the same instant as the console numbers.
-  // The frame auto-sync runs every 30s. Use the shared 120s ledger snapshot;
-  // scanning 57k rows on every post blocked the Next event loop long enough
-  // for the app watchdog to declare the server silent (the v0.0.97 boot hang).
-  const snap = await getUsageSnapshot(plan, false);
-  const usage = snap.usage;
-  const inferredCap = monthlyPct > 0 ? usage.account.spendMonthUsd / (monthlyPct / 100) : null;
+  // v0.0.97 — NEVER start a cold ledger scan here. The frame sync runs every
+  // 30s from boot; the first post used to scan 57k rows and block the event
+  // loop for ~2 min (the burn route timed out). Use a resolved shared
+  // snapshot when one exists, otherwise the previous anchor's attribution —
+  // the console percentages are the graph, and the next sync picks up the
+  // fresh spend once the Cost/usage route has warmed the cache.
+  const snap = peekUsageSnapshot(plan);
+  const prev = readGoConsoleAnchor();
+  const account = snap?.usage.account;
+  const spendMonthUsd = account?.spendMonthUsd ?? prev?.localSpendMonthUsd ?? 0;
+  const spend5hUsd = account?.spend5hUsd ?? prev?.localSpend5hUsd ?? 0;
+  const spend7dUsd = account?.spend7dUsd ?? prev?.localSpend7dUsd ?? 0;
+  const spendWeekUsd = account?.spendWeekUsd ?? prev?.localSpendWeekUsd ?? 0;
+  const inferredCap = monthlyPct > 0 && spendMonthUsd > 0
+    ? spendMonthUsd / (monthlyPct / 100)
+    : (prev?.capUsd ?? null);
   const anchor = normalizeAnchor({
     plan,
     monthlyPct,
@@ -68,15 +78,15 @@ export async function POST(req: NextRequest) {
     weeklyPct,
     resetAt: new Date(resetAt).toISOString(),
     capUsd: Number(body?.capUsd) > 0 ? Number(body.capUsd) : inferredCap,
-    localSpendMonthUsd: usage.account.spendMonthUsd,
-    localSpend5hUsd: usage.account.spend5hUsd,
-    localSpend7dUsd: usage.account.spend7dUsd,
-    localSpendWeekUsd: usage.account.spendWeekUsd,
+    localSpendMonthUsd: spendMonthUsd,
+    localSpend5hUsd: spend5hUsd,
+    localSpend7dUsd: spend7dUsd,
+    localSpendWeekUsd: spendWeekUsd,
     rollingResetAt: body?.rollingResetAt,
     weeklyResetAt: body?.weeklyResetAt,
-    requests: body?.requests ?? usage.account.requests,
-    tokens: body?.tokens ?? usage.account.tokens,
-    modelMix: usage.account.modelMix,
+    requests: body?.requests ?? account?.requests ?? prev?.requests ?? null,
+    tokens: body?.tokens ?? account?.tokens ?? prev?.tokens ?? null,
+    modelMix: account?.modelMix ?? prev?.modelMix ?? [],
     capturedAt: new Date().toISOString(),
     source: body?.source === 'browser' || body?.source === 'import' ? body.source : 'manual',
   });
@@ -93,10 +103,10 @@ export async function POST(req: NextRequest) {
     exact: true,
     inferredCap: anchor.capUsd,
     local: {
-      spendMonthUsd: usage.account.spendMonthUsd,
-      spend5hUsd: usage.account.spend5hUsd,
-      spend7dUsd: usage.account.spend7dUsd,
-      spendWeekUsd: usage.account.spendWeekUsd,
+      spendMonthUsd,
+      spend5hUsd,
+      spend7dUsd,
+      spendWeekUsd,
     },
   }, { headers: NO_CACHE_HEADERS });
 }

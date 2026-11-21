@@ -15,6 +15,11 @@ All notable changes to OLYMPUS are documented in this file.
 - **Rolling is the immediate ceiling.** ≥65% steps down, ≥80% enforces Reserve,
   and 100% is a quota hit: the walker parks with the console resume time,
   Burn/Pace are disabled, and Off/Reserve remain available.
+- **The first sync no longer stalls boot.** The frame sync never starts a
+  cold 57k-row ledger scan: it reads a resolved snapshot or the previous
+  anchor's attribution, so the console percentages land immediately and the
+  burn route stays responsive. The Cost/usage route warms the cache for the
+  next sync.
 - **The session no longer keeps the wrong god's model.** The interactive chat
   pins the session model to the current god on every message. The unverified
   GO `qwen3.7-plus` lane (provider.auth / “requires an API key”) falls back to

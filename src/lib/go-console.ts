@@ -223,7 +223,7 @@ export function accountWindows(input: AccountWindowInput, now = input.now ?? Dat
     h5Pct,
     weeklyPct,
     capUsd: safeCap,
-    source: safeCap ? 'console' : 'mixed',
+    source: 'console',
     anchorAt: anchor.capturedAt,
     anchorAgeMs: Number.isFinite(anchorMs) ? Math.max(0, now - anchorMs) : null,
     weeklyResetAt: anchor.weeklyResetAt ?? weeklyResetAt,
