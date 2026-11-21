@@ -56,6 +56,7 @@ export default function NotificationCenter() {
   const [learnings, setLearnings] = useState<LearningItem[]>([]);
   const [selectedLearning, setSelectedLearning] = useState<LearningItem | null>(null);
   const [learningLive, setLearningLive] = useState(false);
+  const [freshLearningIds, setFreshLearningIds] = useState<Set<string>>(new Set());
   const language = useLanguage();
   const [seenAt, setSeenAt] = useState<string>(() => {
     try { return localStorage.getItem(SEEN_KEY) || ''; } catch { return ''; }
@@ -111,8 +112,12 @@ export default function NotificationCenter() {
         if (cancelled || !Array.isArray(d?.learnings)) return;
         const next = d.learnings as LearningItem[];
         if (!first) {
-          const fresh = next.some((l) => !previous.has(l.id));
-          if (fresh) { setLearningLive(true); setTimeout(() => setLearningLive(false), 2200); }
+          const freshIds = next.filter((l) => !previous.has(l.id)).map((l) => l.id);
+          if (freshIds.length) {
+            setLearningLive(true);
+            setFreshLearningIds(new Set(freshIds));
+            setTimeout(() => { setLearningLive(false); setFreshLearningIds(new Set()); }, 2600);
+          }
         }
         previous = new Set(next.map((l) => l.id));
         setLearnings(next);
@@ -248,7 +253,7 @@ export default function NotificationCenter() {
                     <button
                       key={l.id}
                       onClick={() => setSelectedLearning(l)}
-                      className="w-full text-left px-2.5 py-1 border-t border-olympus-green/5 hover:bg-olympus-green/10 flex items-start gap-1.5"
+                      className={cn('w-full text-left px-2.5 py-1 border-t border-olympus-green/5 hover:bg-olympus-green/10 flex items-start gap-1.5 transition-colors', freshLearningIds.has(l.id) && 'bg-olympus-green/10')}
                       data-tip="Open the learning detail"
                     >
                       <span className="text-[7px] font-mono uppercase px-1 rounded bg-olympus-green/15 text-olympus-green shrink-0">{l.type}</span>

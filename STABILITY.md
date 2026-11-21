@@ -2,7 +2,9 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.98 · 2026-11-21 · the current release. The GO 5-hour limit is a WAIT
+> v0.0.98-9 · 2026-11-21 · the current release. The 98.x line adds the plan archive,
+> the telemetry definition/tool ledger, the Callimachus status card and the
+> learning animation on top of v0.0.98. The GO 5-hour limit is a WAIT
 > with the console reset; a blocked gate recovers its quarantined
 > dependencies; the report is deterministic and lands in Apollo's chat; the
 > Logs workspace and the terminal 5h/weekly/monthly meter make every hop and

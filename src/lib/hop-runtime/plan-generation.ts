@@ -101,8 +101,31 @@ export function frozenPlanPath(laneRoot: string): string { return path.join(lane
 export function nextPlanPath(laneRoot: string): string { return path.join(laneRoot, NEXT_PLAN_FILE); }
 
 /** Freeze the snapshot the walk will use. Returns the frozen plan. */
+/**
+ * v0.0.98.1 — THE PLAN ARCHIVE. The live/frozen plan is overwritten on every
+ * generation; the Logs detail then lost the prompt/artifacts/checks of an
+ * older hop (the qa-vitrine-flow specimen). Keep the replaced generation.
+ */
+export function planArchiveDir(laneRoot: string): string {
+  return path.join(laneRoot, '.olympus-plan-archive');
+}
+
+function archivePlan(laneRoot: string, plan: DispatchPlan | null | undefined): void {
+  if (!plan || !Array.isArray(plan.hops) || plan.hops.length === 0) return;
+  try {
+    const dir = planArchiveDir(laneRoot);
+    fs.mkdirSync(dir, { recursive: true });
+    const gen = Number(plan.generation);
+    const file = path.join(dir, `gen-${Number.isFinite(gen) ? gen : 'unknown'}.json`);
+    if (!fs.existsSync(file)) fs.writeFileSync(file, JSON.stringify(plan, null, 2) + '\n');
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => ({ f, m: fs.statSync(path.join(dir, f)).mtimeMs })).sort((a, b) => b.m - a.m);
+    for (const old of files.slice(20)) { try { fs.unlinkSync(path.join(dir, old.f)); } catch { /* gone */ } }
+  } catch { /* archive is evidence, never a walk blocker */ }
+}
+
 export function freezePlan(laneRoot: string, plan: DispatchPlan): DispatchPlan {
   const frozen = ensurePlanGeneration(plan, plan.parentGeneration);
+  try { archivePlan(laneRoot, readFrozenPlan(laneRoot)); } catch { /* best effort */ }
   try { fs.writeFileSync(frozenPlanPath(laneRoot), JSON.stringify(frozen, null, 2) + '\n'); } catch { /* best effort */ }
   return frozen;
 }
@@ -153,6 +176,7 @@ export function applyNextPlan(laneRoot: string): { applied: boolean; generation?
   if (!plan) return { applied: false };
   const frozen = readFrozenPlan(laneRoot) ?? readPlanFile(planPath(laneRoot));
   const applied = ensurePlanGeneration({ ...plan, parentGeneration: frozen?.generation ?? 1 }, frozen?.generation ?? 1);
+  archivePlan(laneRoot, frozen);
   fs.writeFileSync(planPath(laneRoot), JSON.stringify(applied, null, 2) + '\n');
   try { fs.unlinkSync(nextPlanPath(laneRoot)); } catch { /* gone */ }
   try { fs.unlinkSync(frozenPlanPath(laneRoot)); } catch { /* gone */ }

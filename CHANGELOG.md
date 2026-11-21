@@ -2,6 +2,40 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98-9] — 2026-11-21
+
+### The 98.x culmination — every hop has a definition, a ledger and a brain
+
+- **Plan archive per generation.** `freezePlan`/`applyNextPlan` keep the
+  replaced generation under `.olympus-plan-archive/gen-<n>.json` (last 20).
+  The Logs detail resolves an old hop's prompt/artifacts/checks from the
+  archive, so a plan rewrite no longer erases its evidence.
+- **Telemetry carries the definition and the tools.** Every settled row now
+  records artifacts, checks, abilities, a prompt excerpt, the tool budget and
+  a tool-call summary. The Logs and the task sheet use the row as a fallback
+  when the plan moved on; the tool chips and the output tail are visible.
+- **Old-hop cost, labelled.** When the session id is absent, the Logs sums
+  the ledger's one-minute window for the hop's model and marks it with `~`;
+  step cost/invoice unknown keep their labels.
+- **Callimachus status + brain health.** The card shows the last curation,
+  the next regular/deep window, the reference-doc count and the 85% gate;
+  `curar agora` runs the 7-stage heartbeat. His reference shelf now includes
+  the vault and the new `brain/` notes (instinct lifecycle, seven-stage loop).
+- **Learning animation.** Fresh learning rows flash as the bell polls; the
+  detail box still shows confidence/samples and the gap to 0.85.
+- **Task sheet tools from telemetry.** When the live feed carries no tool
+  calls, the sheet uses the row's tool summary; the output tail remains.
+- **Everything from v0.0.98 remains:** quota wait, blocked-dependency
+  recovery, deterministic report, chat reporter, Logs, terminal meter,
+  interactive Pattern Studio and the single boot loop.
+
+**Battery: 178 PASS / 0 FAIL / 1 declared skip of 179.**
+`scripts/v092-runtime.test.mjs` **37 passed**. `tsc`/`eslint`/`docs:check`/
+`repo:privacy` clean; build + standalone gate green.
+
+**Published v0.0.98-9; v0.0.98 remains the previous stable. The 2-hour night
+drill and the 8h/100-hop certification remain unclaimed.**
+
 ## [v0.0.98] — 2026-11-21
 
 ### The walk that waits, recovers and reports — with a flight recorder

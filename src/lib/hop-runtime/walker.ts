@@ -192,6 +192,14 @@ export interface HopTelemetryRow {
   build?: string | null;
   /** v0.0.88 — why tokens are null (never a silent gap). */
   nullReason?: string | null;
+  /** v0.0.98.1 — the hop definition at settle time, so the detail survives
+   *  a plan rewrite even before the archive existed. */
+  artifacts?: string[];
+  checks?: string[];
+  abilities?: { skills: string[]; mcps: string[]; demigods: string[] };
+  promptExcerpt?: string;
+  toolBudget?: number | null;
+  tools?: Array<{ tool: string; count: number }>;
 }
 
 export function hopTelemetryPath(stateDir: string): string {
@@ -1524,6 +1532,15 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       } as any);
     }
   };
+  const summarizeTools = (output: string | null | undefined): Array<{ tool: string; count: number }> => {
+    const counts = new Map<string, number>();
+    for (const m of String(output ?? '').matchAll(/"tool"\s*:\s*"([^"]+)"/g)) {
+      const tool = m[1];
+      if (!tool) continue;
+      counts.set(tool, (counts.get(tool) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20).map(([tool, count]) => ({ tool, count }));
+  };
   const telemetryRow = (hop: PlanHop, r: HopDispatchResult | null, status: string, startedAt: number, extra?: { failedCheck?: string | null }): HopTelemetryRow => {
     // `lane` is the MODEL lane (the pool the hop actually ran on), not the
     // project directory. The dir is already in every other row/event and the
@@ -1536,6 +1553,16 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
       hop: hop.id,
       god: hop.god,
       build: hopBuild?.id ?? null,
+      artifacts: Array.isArray(hop.artifacts) ? hop.artifacts.map(String) : [],
+      checks: Array.isArray(hop.verify?.checks) ? hop.verify.checks.map(String) : [],
+      abilities: {
+        skills: [...(Array.isArray(hop.skills) ? hop.skills : []), ...(hop.skill ? [hop.skill] : [])].filter(Boolean).map(String),
+        mcps: [...(Array.isArray(hop.mcps) ? hop.mcps : []), ...(hop.mcp ? [hop.mcp] : [])].filter(Boolean).map(String),
+        demigods: [...(Array.isArray(hop.demigods) ? hop.demigods : []), ...(hop.demigod ? [hop.demigod] : [])].filter(Boolean).map(String),
+      },
+      promptExcerpt: String(hop.prompt ?? '').slice(0, 1200),
+      toolBudget: Number.isFinite(Number(hop.toolBudget)) ? Number(hop.toolBudget) : null,
+      tools: summarizeTools(r?.output),
       lane: r?.lane ?? resolveGodModelLane(hop.god) ?? laneRoot,
       tokensIn: r?.tokensIn ?? null,
       tokensOut: r?.tokensOut ?? null,

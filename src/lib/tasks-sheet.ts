@@ -600,8 +600,14 @@ export function buildTasksSheet(opts: {
       attempts: recoveryRows.length,
       lastPark: park ? { reason: String(park.reason ?? ''), failureClass: park.failureClass ?? park.errorClass ?? null, error: park.error ?? null, ts: String(park.ts ?? '') } : null,
       recovery: lastRecovery ? { kind: String(lastRecovery.kind ?? ''), message: String(lastRecovery.message ?? ''), ts: String(lastRecovery.ts ?? '') } : null,
-      tools: live ? Object.entries(live.tools).map(([tool, count]) => ({ tool, count })).sort((a, b) => b.count - a.count).slice(0, 12) : tailTools,
-      toolCount: live ? live.toolCount : tailTools.reduce((n, t) => n + t.count, 0),
+      tools: live
+        ? Object.entries(live.tools).map(([tool, count]) => ({ tool, count })).sort((a, b) => b.count - a.count).slice(0, 12)
+        : (Array.isArray((tel as any)?.tools) && (tel as any).tools.length ? (tel as any).tools : tailTools),
+      toolCount: live
+        ? live.toolCount
+        : (Array.isArray((tel as any)?.tools) && (tel as any).tools.length
+          ? (tel as any).tools.reduce((n: number, t: any) => n + Number(t?.count ?? 0), 0)
+          : tailTools.reduce((n, t) => n + t.count, 0)),
       outputTail: tail,
       retriesAbsorbed: tel?.retriesAbsorbed ?? 0,
       reasoning: tel?.reasoning ?? null,

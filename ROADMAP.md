@@ -1,7 +1,9 @@
 # OLYMPUS Roadmap
 
-**v0.0.98 is the current release** (2026-11-21) — the walk that waits,
-recovers and reports: the GO 5-hour limit is a quota wait with the console
+**v0.0.98-9 is the current release** (2026-11-21) — the 98.x culmination:
+the plan archive + telemetry definition/tool ledger, the Callimachus status
+and brain-health card, the learning animation and everything from v0.0.98
+(the walk that waits, recovers and reports): the GO 5-hour limit is a quota wait with the console
 reset, a blocked gate recovers its quarantined dependencies, the report is
 deterministic and lands in Apollo's chat, the new Logs workspace shows hops/
 walks/models/economy, and the terminal carries the 5h/weekly/monthly meter.

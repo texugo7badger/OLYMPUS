@@ -79,6 +79,7 @@ export default function GodDetail() {
  const language = useLanguage();
  const [stats, setStats] = useState<GodStats | null>(null);
  const [curating, setCurating] = useState(false);
+ const [curator, setCurator] = useState<{ lastRunAt: string | null; nextRegularAt: string | null; nextDeepAt: string | null; knowledgeDocs: number; instincts: { seed: number; empirical: number; archived: number } } | null>(null);
  // v0.0.32 — the human's intent between dispatches (planning / attention).
  const [notes, setNotes] = useState<GodNote[]>([]);
  const [noteText, setNoteText] = useState('');
@@ -241,6 +242,21 @@ export default function GodDetail() {
 
 
 
+ useEffect(() => {
+   if (god !== 'callimachus') return;
+   let cancelled = false;
+   const load = async () => {
+     try {
+       const r = await fetch('/api/olympus/callimachus/status', { cache: 'no-store' });
+       const d = await r.json();
+       if (!cancelled && d?.ok) setCurator(d);
+     } catch { /* best effort */ }
+   };
+   void load();
+   const iv = setInterval(() => { if (document.visibilityState !== 'hidden') void load(); }, 30_000);
+   return () => { cancelled = true; clearInterval(iv); };
+ }, [god]);
+
  const curateBrain = async () => {
    setCurating(true);
    try {
@@ -263,6 +279,11 @@ export default function GodDetail() {
      toast.error(e?.message || 'a curadoria falhou');
    } finally {
      setCurating(false);
+     try {
+       const r = await fetch('/api/olympus/callimachus/status', { cache: 'no-store' });
+       const d = await r.json();
+       if (d?.ok) setCurator(d);
+     } catch { /* best effort */ }
    }
  };
 
@@ -414,6 +435,11 @@ export default function GodDetail() {
          : (stats.instinctCounts.empirical ?? 0) === 0
            ? 'Cérebro novo: seed-only, 0% empírico. O curador aprende com outcomes reais; cada padrão precisa cruzar 85% para curto-circuitar.'
            : `${stats.instinctCounts.empirical ?? 0} instinto(s) empírico(s) já aprendidos.`}
+     </p>
+     <p className="mt-1 text-[8px] font-mono text-olympus-text-dim">
+       última curadoria: {curator?.lastRunAt ? new Date(curator.lastRunAt).toLocaleString([], { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'nunca'}
+       {' · '}próxima regular: {curator?.nextRegularAt ? (Date.parse(curator.nextRegularAt) <= Date.now() ? 'livre' : new Date(curator.nextRegularAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) : 'livre'}
+       {curator ? ` · ${curator.knowledgeDocs} doc(s) de referência` : ''}
      </p>
      <button
        onClick={() => void curateBrain()}

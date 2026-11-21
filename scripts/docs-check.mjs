@@ -55,7 +55,7 @@ const statusBar = read('src/components/olympus/status-bar.tsx') || '';
 
 check('D-1', 'VERSION matches package.json', version && pkg.version === version, `VERSION=${version} package.json=${pkg.version}`);
 
-const statusFallback = statusBar.match(/\|\|\s*'(\d+\.\d+\.\d+)'/)?.[1] ?? null;
+const statusFallback = statusBar.match(/\|\|\s*'(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)'/)?.[1] ?? null;
 check('D-2', 'the status bar fallback matches VERSION', statusFallback === version, `status-bar=${statusFallback} VERSION=${version}`);
 
 const latestStart = readme.indexOf('## Latest');

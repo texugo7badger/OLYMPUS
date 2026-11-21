@@ -52,6 +52,17 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.98-9 — the 98.x culmination.**
+Every hop now keeps its definition: the plan archive preserves the replaced
+generation, and the telemetry row records artifacts, checks, abilities, the
+prompt and a tool-call summary. The Logs detail can still explain an old hop
+after a rewrite, estimates a missing session cost with a `~`, and shows the
+tool ledger. Callimachus's card now shows the last curation, the next window
+and the reference shelf; `curar agora` runs the 7-stage heartbeat. Learning
+rows animate as they arrive. Everything from v0.0.98 remains: quota wait,
+blocked-dependency recovery, deterministic report, chat reporter, Logs,
+terminal meter, interactive Pattern Studio and the single boot loop.
+
 **v0.0.98 — the walk that waits, recovers and reports.**
 The GO 5-hour limit is now a **wait**, not an unknown stop: `provider.go-limit`
 canonicalizes to `provider-quota`, the walk pauses and resumes at the console

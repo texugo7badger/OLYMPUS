@@ -461,7 +461,7 @@ function HopsTable({ rows, onPick, compact }: { rows: LogHop[]; onPick: (h: LogH
             <span className="flex w-[260px] shrink-0 items-center justify-end gap-2">
               <StatusChip status={h.status} failureClass={h.failureClass} />
               <span className="w-10 text-right text-[10px] font-mono tabular-nums text-olympus-text-dim">{fmtDuration(h.durationMs)}</span>
-              <span className="w-14 text-right text-[10px] font-mono tabular-nums text-olympus-gold">{fmtCost(h.costUsd)}</span>
+              <span className="w-14 text-right text-[10px] font-mono tabular-nums text-olympus-gold">{h.costSource === 'window' ? '~' : ''}{fmtCost(h.costUsd)}</span>
             </span>
           </button>
         ))}
@@ -502,7 +502,7 @@ function HopDetail({ hop, onBack, onCopy, copied }: { hop: LogHop; onBack: () =>
               <dt className="text-olympus-text-dim">transporte</dt><dd className="text-olympus-text">{hop.transport ?? '—'}</dd>
               <dt className="text-olympus-text-dim">sessão</dt><dd className="truncate text-olympus-text-dim">{hop.sessionId ?? '—'}</dd>
               <dt className="text-olympus-text-dim">tok in/out</dt><dd className="text-olympus-text">{fmtTokens(hop.tokensIn)} / {fmtTokens(hop.tokensOut)}</dd>
-              <dt className="text-olympus-text-dim">custo</dt><dd className="text-olympus-gold">{fmtCost(hop.costUsd)} <span className="text-olympus-text-dim">step · invoice unknown</span></dd>
+              <dt className="text-olympus-text-dim">custo</dt><dd className="text-olympus-gold">{hop.costSource === 'window' ? '~' : ''}{fmtCost(hop.costUsd)} <span className="text-olympus-text-dim">{hop.costSource === 'window' ? 'janela estimada' : 'step'} · invoice unknown</span></dd>
               <dt className="text-olympus-text-dim">tool budget</dt><dd className="text-olympus-text">{hop.toolBudget ?? '—'}</dd>
             </dl>
           </section>
@@ -528,6 +528,14 @@ function HopDetail({ hop, onBack, onCopy, copied }: { hop: LogHop; onBack: () =>
             <div className="space-y-2 text-[11px] font-mono">
               {hop.errorClass && <div><span className="text-olympus-text-dim">classe:</span> <span className="text-olympus-red">{hop.errorClass}</span></div>}
               {hop.failedCheck && <div><span className="text-olympus-text-dim">check que falhou:</span> <span className="text-olympus-text">{hop.failedCheck}</span></div>}
+              {hop.tools?.length ? (
+                <div>
+                  <span className="text-olympus-text-dim">tools:</span>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {hop.tools.map((t) => <span key={t.tool} className="rounded bg-olympus-bg px-1.5 py-0.5 text-[9px] text-olympus-text-dim ring-1 ring-olympus-gold/10">{t.tool} ×{t.count}</span>)}
+                  </div>
+                </div>
+              ) : null}
               {hop.error && <div className="rounded-md bg-olympus-red/5 p-2 text-[10px] text-olympus-red">{hop.error}</div>}
               {hop.park && <div><span className="text-olympus-text-dim">park:</span> {hop.park.reason} · {fmtTime(hop.park.ts)}</div>}
               {hop.recovery && <div><span className="text-olympus-text-dim">recovery:</span> {hop.recovery.kind} — {hop.recovery.message}</div>}

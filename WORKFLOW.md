@@ -308,6 +308,19 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.98-9 — the plan archive and the tool ledger
+
+When a plan generation is replaced, `freezePlan`/`applyNextPlan` archive it
+under `.olympus-plan-archive/`; the Logs detail resolves the old hop's
+prompt/artifacts/checks from the archive. Each settled telemetry row also
+carries the hop definition and a tool-call summary, so future rows survive a
+rewrite. Old hops without a session id get a `~` window cost from the ledger.
+
+Callimachus's card reads `/api/olympus/callimachus/status` (last run, next
+window, reference docs) and `curar agora` posts the 7-stage heartbeat. The
+learning rows animate on a fresh poll; the detail box is the shared
+`LearningDetailModal`.
+
 ## Release ritual — the tag IS the release notes
 
 Every version follows the same order; no step is optional.

@@ -268,3 +268,20 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 9. v0.0.98-9 — every hop keeps its ledger
+
+The plan archive (`.olympus-plan-archive/gen-<n>.json`, last 20) keeps the
+replaced generation. A settled telemetry row now records the artifacts,
+checks, abilities, prompt excerpt, tool budget and a tool-call summary; the
+Logs detail and the task sheet use the row when the live plan has moved on.
+When a hop has no session id, the Logs estimates the one-minute ledger
+window for its model and marks the value with `~`; step cost/invoice unknown
+keep their labels.
+
+Callimachus's brain-health card now shows the last curation, the next
+regular/deep window and the reference-doc count; `curar agora` runs the
+7-stage heartbeat. The learning rows animate as the bell polls, and the
+detail box still shows the 0.85 gate, samples and last outcomes.
+
+The 2-hour night drill and the 8h/100-hop certification remain unclaimed.
+

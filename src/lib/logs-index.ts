@@ -48,6 +48,8 @@ export interface LogHop {
   promptExcerpt: string;
   outputTail: string | null;
   toolBudget: number | null;
+  tools: Array<{ tool: string; count: number }>;
+  costSource: 'session' | 'window' | null;
   park: { reason: string; errorClass: string | null; error: string | null; ts: string } | null;
   recovery: { kind: string; message: string; ts: string } | null;
   resonance: { build: string | null; skill: string | null; mcp: string | null; demigod: string | null; outcome: string | null } | null;
@@ -164,11 +166,19 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
   const costRows = readJsonlTail(path.join(HOME(), 'metrics', 'cost.jsonl'), COST_TAIL);
   const costBySession = new Map<string, number>();
   const costByModel = new Map<string, { requests: number; cost: number; last: string | null }>();
+  const costByModelMinute = new Map<string, Map<number, number>>();
   for (const r of costRows) {
     const sid = typeof r?.session_id === 'string' ? r.session_id : '';
     const cost = Number(r?.spend_usd ?? 0) + Number(r?.spend_estimated_usd ?? 0);
     if (sid && Number.isFinite(cost)) costBySession.set(sid, (costBySession.get(sid) ?? 0) + cost);
     const model = String(r?.model ?? 'unknown');
+    const ts = Date.parse(String(r?.ts ?? ''));
+    if (Number.isFinite(ts) && Number.isFinite(cost) && cost > 0) {
+      const minute = Math.floor(ts / 60_000);
+      const buckets = costByModelMinute.get(model) ?? new Map<number, number>();
+      buckets.set(minute, (buckets.get(minute) ?? 0) + cost);
+      costByModelMinute.set(model, buckets);
+    }
     const m = costByModel.get(model) ?? { requests: 0, cost: 0, last: null };
     m.requests += 1;
     if (Number.isFinite(cost)) m.cost += cost;
@@ -192,7 +202,16 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
     // row still shows its prompt/artifacts/checks.
     const frozen = readJson<any>(path.join(laneRoot, '.olympus-plan-frozen.json'), { hops: [] });
     const frozenHops = Array.isArray(frozen?.hops) ? frozen.hops : [];
-    const planById = new Map([...frozenHops, ...planHops].map((h: any) => [String(h?.id), h]));
+    // v0.0.98.1 — the generation archive keeps older hop definitions.
+    const archiveHops: any[] = [];
+    try {
+      const archiveDir = path.join(laneRoot, '.olympus-plan-archive');
+      for (const f of fs.readdirSync(archiveDir).filter((x) => x.endsWith('.json')).slice(-20)) {
+        const p = readJson<any>(path.join(archiveDir, f), { hops: [] });
+        if (Array.isArray(p?.hops)) archiveHops.push(...p.hops);
+      }
+    } catch { /* no archive yet */ }
+    const planById = new Map([...archiveHops, ...frozenHops, ...planHops].map((h: any) => [String(h?.id), h]));
     const parks = state?.parks && typeof state.parks === 'object' ? state.parks : {};
     const recovery = readJsonlTail(path.join(laneRoot, '.olympus-recovery.jsonl'), 400);
     const recoveryByHop = new Map<string, any>();
@@ -209,6 +228,18 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
       const errorClass = row?.errorClass ? String(row.errorClass) : (park?.errorClass ?? null);
       const failureClass = classifyParkReason(String(row?.status ?? '').replace(/^parked-/, ''), row?.error ?? park?.error, errorClass) as DispatchFailureClass;
       const sessionId = typeof row?.sessionId === 'string' ? row.sessionId : null;
+      let costUsd = sessionId && costBySession.has(sessionId) ? costBySession.get(sessionId)! : null;
+      let costSource: 'session' | 'window' | null = costUsd != null ? 'session' : null;
+      if (costUsd == null && typeof row?.ts === 'string') {
+        const end = Date.parse(row.ts);
+        const start = end - Math.max(60_000, Number(row?.durationMs) || 0);
+        const buckets = costByModelMinute.get(String(row?.lane ?? ''));
+        if (Number.isFinite(end) && buckets) {
+          let sum = 0;
+          for (let m = Math.floor(start / 60_000); m <= Math.floor(end / 60_000); m += 1) sum += buckets.get(m) ?? 0;
+          if (sum > 0) { costUsd = Math.round(sum * 1e6) / 1e6; costSource = 'window'; }
+        }
+      }
       const resonanceRow = resonanceByHop.get(`${hopId}:${row?.god ?? ''}`) ?? null;
       hops.push({
         id: `${slug}:${hopId}:${row?.ts ?? ''}`,
@@ -223,7 +254,8 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
         durationMs: Number(row?.durationMs ?? 0),
         tokensIn: Number.isFinite(Number(row?.tokensIn)) ? Number(row.tokensIn) : null,
         tokensOut: Number.isFinite(Number(row?.tokensOut)) ? Number(row.tokensOut) : null,
-        costUsd: sessionId && costBySession.has(sessionId) ? costBySession.get(sessionId)! : null,
+        costUsd,
+        costSource,
         errorClass,
         failureClass,
         error: row?.error ? String(row.error).slice(0, 2000) : (park?.error ? String(park.error).slice(0, 2000) : null),
@@ -231,16 +263,21 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
         sessionId,
         transport: row?.transport ? String(row.transport) : null,
         retries: Number(row?.retriesAbsorbed ?? 0),
-        artifacts: Array.isArray(hopDef?.artifacts) ? hopDef.artifacts.filter((a: unknown) => typeof a === 'string') : [],
-        checks: Array.isArray(hopDef?.verify?.checks) ? hopDef.verify.checks.filter((a: unknown) => typeof a === 'string') : [],
-        abilities: {
+        artifacts: Array.isArray(hopDef?.artifacts) ? hopDef.artifacts.filter((a: unknown) => typeof a === 'string') : (Array.isArray(row?.artifacts) ? row.artifacts.map(String) : []),
+        checks: Array.isArray(hopDef?.verify?.checks) ? hopDef.verify.checks.filter((a: unknown) => typeof a === 'string') : (Array.isArray(row?.checks) ? row.checks.map(String) : []),
+        abilities: hopDef ? {
           skills: [...(Array.isArray(hopDef?.skills) ? hopDef.skills : []), ...(hopDef?.skill ? [hopDef.skill] : [])].filter((x: unknown) => typeof x === 'string'),
           mcps: [...(Array.isArray(hopDef?.mcps) ? hopDef.mcps : []), ...(hopDef?.mcp ? [hopDef.mcp] : [])].filter((x: unknown) => typeof x === 'string'),
           demigods: [...(Array.isArray(hopDef?.demigods) ? hopDef.demigods : []), ...(hopDef?.demigod ? [hopDef.demigod] : [])].filter((x: unknown) => typeof x === 'string'),
-        },
-        promptExcerpt: String(hopDef?.prompt ?? '').slice(0, 1200),
+        } : (row?.abilities && typeof row.abilities === 'object' ? {
+          skills: Array.isArray(row.abilities.skills) ? row.abilities.skills.map(String) : [],
+          mcps: Array.isArray(row.abilities.mcps) ? row.abilities.mcps.map(String) : [],
+          demigods: Array.isArray(row.abilities.demigods) ? row.abilities.demigods.map(String) : [],
+        } : { skills: [], mcps: [], demigods: [] }),
+        promptExcerpt: String(hopDef?.prompt ?? row?.promptExcerpt ?? '').slice(0, 1200),
         outputTail: row?.outputTail ? String(row.outputTail).slice(-2400) : null,
-        toolBudget: Number.isFinite(Number(hopDef?.toolBudget)) ? Number(hopDef.toolBudget) : null,
+        toolBudget: Number.isFinite(Number(hopDef?.toolBudget)) ? Number(hopDef.toolBudget) : (Number.isFinite(Number(row?.toolBudget)) ? Number(row.toolBudget) : null),
+        tools: Array.isArray(row?.tools) ? row.tools.filter((t: any) => t && typeof t.tool === 'string').slice(0, 20) : [],
         park: park ? { reason: String(park.reason ?? ''), errorClass: park.errorClass ?? null, error: park.error ?? null, ts: String(park.ts ?? '') } : null,
         recovery: recoveryByHop.get(hopId) ? {
           kind: String(recoveryByHop.get(hopId)?.kind ?? ''),

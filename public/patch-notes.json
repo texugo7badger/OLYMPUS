@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-21",
-  "current": "0.0.98",
+  "current": "0.0.98-9",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.3.2",
@@ -11,6 +11,19 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; an untested update can break sessions, the v2 API, MCP or the DB schema."
   },
   "releases": [
+    {
+      "version": "0.0.98-9",
+      "date": "2026-11-21",
+      "title": "The 98.x culmination — every hop has a definition, a ledger and a brain",
+      "highlights": [
+        "Plan archive per generation: a hop rewritten tomorrow still shows its prompt, artifacts and checks in the Logs detail. New telemetry rows also carry the artifacts/checks/abilities/prompt and a tool-call summary, so the task sheet and Logs no longer show 0/0 for future hops.",
+        "Per-hop cost for old rows: when the session id is missing, the Logs estimates the window from the ledger and marks it with '~' — step cost is still labelled, invoice stays unknown.",
+        "Callimachus status: the brain-health card shows the last curation, the next regular/deep window and the reference-doc count; 'curar agora' runs the 7-stage heartbeat. His reference shelf now includes the vault and the new brain notes.",
+        "The learning rows animate when a fresh item arrives, and the detail box still shows the 0.85 gate, samples and last outcomes.",
+        "Task sheet tools now come from the telemetry's tool summary when the live feed has none; the Logs detail shows the tool ledger and the output tail.",
+        "Everything from v0.0.98 remains: quota wait, blocked-dependency recovery, deterministic report, chat reporter, Logs, terminal meter, interactive Pattern Studio and the single boot loop."
+      ]
+    },
     {
       "version": "0.0.98",
       "date": "2026-11-21",
