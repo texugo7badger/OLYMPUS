@@ -46,7 +46,7 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.96 evidence:** [GO truth + smart burn](screenshots/screens/51-burn-096.png) — account 25.1%, projection 50.1%, Kimi K3/K2.7 Code roster, console anchor.
 
-**v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/0/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
+**v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
 ## Latest
 

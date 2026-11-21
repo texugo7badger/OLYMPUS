@@ -28,7 +28,8 @@ All notable changes to OLYMPUS are documented in this file.
 - **Verified live:** the console frame auto-sync posted 46/100/52; the quota
   guard parked the walk; the qwen guard maps to
   `opencode-go/deepseek-v4.1-flash`. After the rolling window reset the frame
-  reported 0% rolling and the guard released. OpenCode v2 2.3.2 remains the
+  reported 0% rolling, then 1% as the first post-reset turn landed, and the guard
+  released. OpenCode v2 2.3.2 remains the
   latest npm release and gate-approved.
 - **Repo hygiene:** the v0.0.96 design brief (`docs/design/TAG-ICON-BRIEF.md`)
   was tracked even though `docs/` is a private root. It is now local-only, and

@@ -20,7 +20,7 @@
         "A console anchor older than 5 minutes PAUSES upgrades. Rolling ≥65% steps down, ≥80% enforces Reserve, and 100% is a quota-hit: the walker parks with the console reset time and Burn/Pace are disabled.",
         "The burn panel shows the console anchor age, the rolling number, the stale/quota banners and the resume time; off/reserve remain available.",
         "The interactive chat now pins the session model to the current god's model every message. The unverified GO qwen3.7-plus lane falls back to verified DeepSeek, so a qwen turn can no longer leave Apollo riding the same dead lane.",
-        "Verified live: the console frame auto-synced 46% monthly / 100% rolling / 52% weekly and the quota guard parked the walk; after the rolling window reset the frame reported 0% rolling and the guard released. The qwen guard maps to opencode-go/deepseek-v4.1-flash.",
+        "Verified live: the console frame auto-synced 46% monthly / 100% rolling / 52% weekly and the quota guard parked the walk; after the rolling window reset the frame reported 0% rolling, then 47% monthly / 1% rolling / 52% weekly as the first post-reset turn landed, and the guard released. The qwen guard maps to opencode-go/deepseek-v4.1-flash.",
         "OpenCode v2 2.3.2 remains the latest npm release and gate-approved."
       ]
     },
