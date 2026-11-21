@@ -36,6 +36,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isValidFrameUrl, defaultSandboxFor } from '@/lib/custom-frames-engine';
+import { parseGoConsoleText } from '@/lib/go-console-read';
 import OlympusTooltip from './olympus-tooltip';
 
 function faviconFor(url: string | undefined | null): string | null {
@@ -329,12 +330,85 @@ function FrameListItem({ frame, active, onClick, onDelete }: {
 
 function FrameView({ frame, onRefresh }: { frame: Frame; onRefresh: () => void }) {
  const ref = useRef<any>(null);
+ const [syncStatus, setSyncStatus] = useState<string | null>(null);
+ const [syncTick, setSyncTick] = useState(0);
+ const isGoConsole = /opencode\.ai\/console/i.test(frame.url);
+
+ // v0.0.97 — the console is already a trusted, authenticated webview. Read
+ // its visible usage every 30s and anchor the GO graph to it. The parser is
+ // pure; no credentials leave the webview. If the user logs out/close the
+ // frame, the anchor goes stale and the burn guard pauses upgrades.
+ useEffect(() => {
+   if (!isGoConsole) return;
+   let cancelled = false;
+   let timer: ReturnType<typeof setInterval> | null = null;
+   const sync = async () => {
+     const w = ref.current;
+     if (!w?.executeJavaScript || cancelled) return;
+     try {
+       const text = await w.executeJavaScript('document.body?.innerText || ""', true);
+       const parsed = parseGoConsoleText(String(text || ''));
+       if (!parsed) {
+         if (!cancelled) setSyncStatus('login or usage not visible');
+         return;
+       }
+       const response = await fetch('/api/olympus/go-usage/console', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           plan: 'go-plus',
+           monthlyPct: parsed.monthlyPct,
+           h5Pct: parsed.h5Pct,
+           weeklyPct: parsed.weeklyPct,
+           resetAt: parsed.resetAt,
+           rollingResetAt: parsed.rollingResetAt,
+           weeklyResetAt: parsed.weeklyResetAt,
+           source: 'browser',
+         }),
+       });
+       const data = await response.json().catch(() => ({}));
+       if (cancelled) return;
+       if (!response.ok || !data?.ok) {
+         setSyncStatus(String(data?.error || `sync HTTP ${response.status}`).slice(0, 90));
+         return;
+       }
+       setSyncStatus(`synced ${parsed.monthlyPct}% / ${parsed.h5Pct}% / ${parsed.weeklyPct}%`);
+       try { window.dispatchEvent(new CustomEvent('olympus:go-console-synced', { detail: parsed })); } catch { /* non-DOM */ }
+     } catch (e: any) {
+       if (!cancelled) setSyncStatus(String(e?.message || e).slice(0, 90));
+     }
+   };
+   const start = () => {
+     if (cancelled) return;
+     void sync();
+     if (timer) clearInterval(timer);
+     timer = setInterval(() => { if (document.visibilityState !== 'hidden') void sync(); }, 30_000);
+   };
+   const el = ref.current;
+   if (el) {
+     el.addEventListener('dom-ready', start);
+     try { if (el.getURL?.()) start(); } catch { /* not ready */ }
+   }
+   return () => {
+     cancelled = true;
+     if (timer) clearInterval(timer);
+     el?.removeEventListener('dom-ready', start);
+   };
+ }, [isGoConsole, frame.url, syncTick]);
 
  return (
  <div className="w-full h-full flex flex-col bg-olympus-bg">
  <div className="h-7 shrink-0 flex items-center gap-2 px-3 bg-olympus-panel border-b border-olympus-gold/10 text-[10px] font-mono text-olympus-text-dim">
  <Globe size={10} />
  <span className="truncate flex-1">{frame.url}</span>
+ {isGoConsole && (
+   <>
+     <span className="truncate max-w-[220px] text-[9px] text-olympus-green" data-tip="GO console anchor — auto-synced from this logged-in frame">{syncStatus || 'GO sync…'}</span>
+     <button onClick={() => setSyncTick((n) => n + 1)} aria-label="Sync GO console now" className="text-olympus-text-dim hover:text-olympus-gold transition-colors">
+       <RefreshCw size={10} />
+     </button>
+   </>
+ )}
  <OlympusTooltip content="Open in system browser" side="bottom">
  <button
  onClick={() => window.olympus?.openExternal?.(frame.url)}

@@ -159,6 +159,7 @@ export interface GoAccountUsage {
   anchorAt: string | null;
   anchorAgeMs: number | null;
   weeklyResetAt: string;
+  rollingResetAt: string | null;
   resetAt: string | null;
   requests: number | null;
   tokens: number | null;
@@ -475,6 +476,7 @@ export function aggregate(rows: GoSpendRow[], plan: GoPlan, now = Date.now(), st
     anchorAt: aw.anchorAt,
     anchorAgeMs: aw.anchorAgeMs,
     weeklyResetAt: aw.weeklyResetAt || nextWeeklyReset(now),
+    rollingResetAt: aw.rollingResetAt ?? null,
     resetAt: anchor?.resetAt ?? new Date(period.reset).toISOString(),
     requests: anchor?.requests ?? rows.length,
     tokens: anchor?.tokens ?? rows.reduce((sum, r) => sum + r.input + r.output + r.cacheRead + r.cacheWrite, 0),

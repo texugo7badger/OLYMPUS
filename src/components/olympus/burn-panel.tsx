@@ -22,13 +22,14 @@ interface Reason { god: string; model: string; tier: string; reason: string }
 interface Decision {
   active: boolean; mode: Mode; targetPct: number; accountPct: number | null; dailyPct: number;
   projectedPct: number | null; daysLeft: number; step: number; roster: Record<string, string>;
-  reasons: Reason[]; blocked: 'off' | 'console-sync-required' | null; generatedAt: string;
+  reasons: Reason[]; blocked: 'off' | 'console-sync-required' | 'stale-anchor' | 'quota-hit' | null; resumeAt?: string | null; generatedAt: string;
 }
 interface Account {
   monthlyPct: number | null; h5Pct: number | null; weeklyPct: number | null;
   spendMonthUsd: number; spend5hUsd: number; spend7dUsd: number; capUsd: number | null;
   source: 'console' | 'mixed' | 'local'; anchorAt: string | null; anchorAgeMs: number | null;
   weeklyResetAt: string; resetAt: string | null; requests: number | null; tokens: number | null;
+  rollingResetAt?: string | null;
   modelMix: Array<{ model: string; pct: number }>;
 }
 interface Anchor {
@@ -104,7 +105,14 @@ export default function BurnPanel() {
     // instant.
     void load(false);
     const iv = setInterval(() => { if (document.visibilityState !== 'hidden') void load(false); }, 60_000);
-    return () => clearInterval(iv);
+    // v0.0.97 — the GO console frame posts a fresh anchor every 30s; follow it
+    // immediately so the graph and the decision never trail the console.
+    const onSync = () => { if (document.visibilityState !== 'hidden') void load(false); };
+    window.addEventListener('olympus:go-console-synced', onSync);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener('olympus:go-console-synced', onSync);
+    };
   }, [load]);
 
   const setMode = async (mode: Mode) => {
@@ -162,6 +170,22 @@ export default function BurnPanel() {
   const decision = data?.decision;
   const account = data?.account;
   const activeMode = policy?.mode ?? 'off';
+  const rolling = account?.h5Pct ?? null;
+  const weekly = account?.weeklyPct ?? null;
+  const monthly = account?.monthlyPct ?? null;
+  // The hard reserve line — same thresholds as burn-policy.ts. At this line
+  // Burn/Pace cannot upgrade; Off and Reserve stay available.
+  const hardPressure = (rolling != null && rolling >= 80)
+    || (weekly != null && weekly >= 90)
+    || (monthly != null && monthly >= 80);
+  // v0.0.97 — the console truth is surfaced even when Burn is Off: the
+  // decision short-circuits to blocked:'off', but a fresh 100% rolling anchor
+  // is still a quota hit, and a >5 min anchor is still stale (no upgrades).
+  const anchorAgeMin = account?.anchorAgeMs != null ? Math.round(account.anchorAgeMs / 60_000) : null;
+  const quotaHit = decision?.blocked === 'quota-hit' || (rolling != null && rolling >= 100);
+  const staleAnchor = decision?.blocked === 'stale-anchor'
+    || (account?.anchorAgeMs != null && account.anchorAgeMs > 5 * 60_000);
+  const resumeAt = decision?.resumeAt || account?.rollingResetAt || null;
 
   return (
     <section className="rounded-xl border border-olympus-gold/15 bg-olympus-card p-3" aria-label="Smart burn policy">
@@ -169,7 +193,7 @@ export default function BurnPanel() {
         <Flame size={12} className="text-olympus-gold" />
         <span className="text-[9px] font-mono uppercase tracking-[0.16em] text-olympus-gold">Smart burn</span>
         <span className="text-[8px] font-mono text-olympus-text-dim">
-          {loading && !data ? 'reading the account…' : account?.source === 'console' ? `console anchor · ${pct(account.monthlyPct)} account` : 'console sync required for exact account %'}
+          {loading && !data ? 'reading the account…' : account?.source === 'console' ? `console anchor · ${pct(account.monthlyPct)} account${anchorAgeMin != null ? ` · ${anchorAgeMin}m ago` : ''}` : 'console sync required for exact account %'}
         </span>
         <button
           type="button"
@@ -188,8 +212,14 @@ export default function BurnPanel() {
             key={mode.id}
             type="button"
             onClick={() => void setMode(mode.id)}
-            disabled={saving}
-            data-tip={mode.hint}
+            disabled={saving || ((quotaHit || staleAnchor || hardPressure) && (mode.id === 'burn' || mode.id === 'pace'))}
+            data-tip={quotaHit
+              ? 'GO 5-hour limit hit — wait for the reset; Off and Reserve remain available'
+              : staleAnchor
+                ? 'Console anchor is stale — keep the Frames → OpenCode frame open to auto-sync; Off and Reserve remain available'
+                : hardPressure
+                  ? 'Pressure at the reserve line (rolling/weekly/monthly) — Burn/Pace are paused; Reserve is enforced'
+                  : mode.hint}
             className={cn(
               'rounded-lg border px-2 py-1.5 text-left transition-colors disabled:opacity-50',
               activeMode === mode.id
@@ -229,7 +259,7 @@ export default function BurnPanel() {
               <div className="text-[8px] font-mono text-olympus-text-dim">decision</div>
               <div className="flex items-center gap-1 text-[11px] font-mono font-semibold text-olympus-text">
                 {decision.blocked === 'console-sync-required' ? <AlertTriangle size={11} className="text-olympus-amber-soft" /> : decision.step > 0 ? <ArrowUpCircle size={11} className="text-olympus-gold" /> : decision.step < 0 ? <ShieldCheck size={11} className="text-olympus-cyan" /> : <CheckCircle2 size={11} className="text-olympus-green" />}
-                {decision.blocked === 'console-sync-required' ? 'sync console' : decision.step > 0 ? 'upgrade' : decision.step < 0 ? 'step down' : 'hold'}
+                {decision.blocked === 'console-sync-required' ? 'sync console' : decision.blocked === 'stale-anchor' ? 'paused (stale)' : decision.blocked === 'quota-hit' ? 'limit hit' : decision.step > 0 ? 'upgrade' : decision.step < 0 ? 'step down' : 'hold'}
               </div>
               <div className="text-[8px] font-mono text-olympus-text-dim">applies at the next hop/message</div>
             </div>
@@ -237,7 +267,22 @@ export default function BurnPanel() {
 
           {decision.blocked === 'console-sync-required' && (
             <div className="mt-2 rounded-lg border border-olympus-amber-soft/30 bg-olympus-amber-soft/5 px-2 py-1.5 text-[9px] font-mono text-olympus-amber-soft">
-              The account percentage has no console anchor. Sync the GO console numbers once; then the projection and the burn decision become exact.
+              The account percentage has no console anchor. Open Frames → OpenCode (the logged-in GO console) or use Sync GO console.
+            </div>
+          )}
+          {staleAnchor && (
+            <div className="mt-2 rounded-lg border border-olympus-amber-soft/35 bg-olympus-amber-soft/5 px-2 py-1.5 text-[9px] font-mono text-olympus-amber-soft">
+              Console anchor is {anchorAgeMin != null ? `${anchorAgeMin} min` : 'stale'} old — upgrades are PAUSED. Keep the Frames → OpenCode console open; it auto-syncs every 30s, or use Sync GO console.
+            </div>
+          )}
+          {quotaHit && (
+            <div className="mt-2 rounded-lg border border-olympus-red/35 bg-olympus-red/5 px-2 py-1.5 text-[9px] font-mono text-olympus-red">
+              GO 5-hour limit hit — no new hops until {resumeAt ? new Date(resumeAt).toLocaleString() : 'the rolling reset'}. The walk is parked; Burn cannot upgrade.
+            </div>
+          )}
+          {!quotaHit && !staleAnchor && hardPressure && (
+            <div className="mt-2 rounded-lg border border-olympus-amber-soft/35 bg-olympus-amber-soft/5 px-2 py-1.5 text-[9px] font-mono text-olympus-amber-soft">
+              Pressure at the reserve line (rolling {pct(rolling)} · weekly {pct(weekly)} · monthly {pct(monthly)}) — Burn/Pace are paused; Reserve is enforced. The policy re-evaluates on the next console sync.
             </div>
           )}
 
@@ -274,7 +319,7 @@ export default function BurnPanel() {
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {([
                   ['monthlyPct', 'monthly %'],
-                  ['h5Pct', '5h %'],
+                  ['h5Pct', 'rolling %'],
                   ['weeklyPct', 'weekly %'],
                   ['resetAt', 'reset (YYYY-MM-DD)'],
                   ['capUsd', 'cap USD (optional)'],

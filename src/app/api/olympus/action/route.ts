@@ -27,6 +27,7 @@ import { uiReferencesMarkerBlock } from '@/lib/ui-references';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 import { isHibernating } from '@/lib/hibernation';
 import { resolveBurnModelForGod } from '@/lib/burn-state';
+import { guardedModelForGod } from '@/lib/agent-model';
 // Warm OpenCode session manager — one persistent `opencode serve` per app
 // run. First message cold-starts the server; every subsequent message reuses
 // the running server + session (no cold start, context retained).
@@ -1336,6 +1337,13 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         // W-T PLAN-FRESHNESS: the turn's start — the walk uses it to tell a
         // plan the turn WROTE from a stale one the turn only echoed about.
         const turnStartedAt = Date.now();
+        const turnAgent = opts.agent || 'apollo';
+        // v0.0.97 — ALWAYS pin the session model to the model for THIS god.
+        // The old code left the session on the previous god's model; after an
+        // Athena/qwen turn, Apollo kept riding the dead qwen lane. A known
+        // unverified qwen3.7-plus lane is mapped to the verified DeepSeek GO
+        // fallback; the burn override still wins when active.
+        const turnModel = guardedModelForGod(turnAgent, resolveBurnModelForGod(turnAgent));
         const result = await runWarmMessage({
           sessionId,
           text: opts.text,
@@ -1343,7 +1351,7 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           // v0.0.96 — the burn roster applies at the next message; the
           // current stream is never cut. resolveBurnModelForGod is a cheap
           // sync read of the last decision file.
-          model: resolveBurnModelForGod(opts.agent || 'apollo'),
+          model: turnModel,
           onEvent,
           signal: req.signal,
           maxRuntimeMs: MAX_RUNTIME_MS,

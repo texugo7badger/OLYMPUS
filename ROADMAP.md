@@ -1,7 +1,10 @@
 # OLYMPUS Roadmap
 
-**v0.0.96 is the current release** (2026-11-20) — hibernation v2, GO truth and
-the smart burn: X quits by default while hibernate is explicit; hibernate waits
+**v0.0.97 is the current release** (2026-11-21) — the GO console anchor: the
+logged-in console frame auto-syncs the account graph, a stale anchor pauses
+upgrades, rolling ≥65/80/100 steps down/reserves/parks the walk, and the chat
+pins the model per god with a qwen→DeepSeek guard. v0.0.96 remains the previous
+release: hibernation v2, GO truth and the smart burn: X quits by default while hibernate is explicit; hibernate waits
 for streaming turns, keeps a preview only when a live hop needs it, records and
 restores stopped previews; the GO graph uses the console anchor plus local
 delta with a Monday 00:00 UTC weekly reset; smart burn picks a GO-only roster

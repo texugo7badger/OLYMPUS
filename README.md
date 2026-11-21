@@ -46,7 +46,22 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.96 evidence:** [GO truth + smart burn](screenshots/screens/51-burn-096.png) — account 25.1%, projection 50.1%, Kimi K3/K2.7 Code roster, console anchor.
 
+**v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/0/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
+
 ## Latest
+
+**v0.0.97 — the GO console is the anchor.**
+The logged-in OpenCode GO console is already an OLYMPUS frame, so the app now
+reads it every 30s and anchors the graph to **46% monthly / 100% rolling / 52%
+weekly** (or whatever the console says) instead of a stale manual snapshot. A
+console anchor older than **5 minutes pauses upgrades**; rolling **≥65%** steps
+down, **≥80%** enforces Reserve, and **100% is a quota hit** — the walker parks
+with the console reset time and Burn/Pace are disabled. The interactive chat now
+pins the session model to the current god every message; the unverified
+`qwen3.7-plus` GO lane falls back to verified DeepSeek, so a qwen turn can no
+longer leave Apollo riding the same dead lane. OpenCode v2 **2.3.2** remains the
+latest npm release and gate-approved. Published as v0.0.97; v0.0.96 remains the
+previous stable release.
 
 **v0.0.96 — hibernation v2, GO truth and the smart burn.**
 X now **quits** by default; hibernate is explicit (tray, lock, or the
@@ -63,7 +78,7 @@ rewrites `opencode.json` or cuts a live turn. Claude Opus/Sonnet are **Zen**
 models, not in the GO catalog; the screen says so. OpenCode v2 **2.3.2** is
 still the latest npm release and is gate-approved. The tag-icon/logo audit and
 24px vector brief are in [docs/design/TAG-ICON-BRIEF.md](docs/design/TAG-ICON-BRIEF.md).
-Published as v0.0.96; v0.0.95 remains the previous release.
+v0.0.96 remains the previous release.
 
 **v0.0.95 — OpenCode 2.3.2 alignment, visible where the wait is.**
 OpenCode v2 **2.3.2** is the vendored CLI and plugin, and it passed the isolated

@@ -2,6 +2,41 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.97] — 2026-11-21
+
+### The GO console is the anchor — no more stale burn
+
+- **The console frame is the source.** The logged-in OpenCode GO console is a
+  custom OLYMPUS frame; every 30s the frame is parsed (monthly, rolling,
+  weekly, reset) and posted as the anchor with `source:browser`. The app graph
+  now follows the real 46% / 100% / 52% instead of a stale 41% / 71% snapshot.
+- **Stale anchor pauses upgrades.** More than 5 minutes old → no roster, no
+  upgrade; the Burn panel says “paused (stale)” and points at the frame.
+- **Rolling is the immediate ceiling.** ≥65% steps down, ≥80% enforces Reserve,
+  and 100% is a quota hit: the walker parks with the console resume time,
+  Burn/Pace are disabled, and Off/Reserve remain available.
+- **The session no longer keeps the wrong god's model.** The interactive chat
+  pins the session model to the current god on every message. The unverified
+  GO `qwen3.7-plus` lane (provider.auth / “requires an API key”) falls back to
+  the verified DeepSeek GO lane; a qwen turn can no longer leave Apollo riding
+  the same dead model.
+- **Verified live:** the console frame auto-sync posted 46/100/52; the quota
+  guard parked the walk; the qwen guard maps to
+  `opencode-go/deepseek-v4.1-flash`. After the rolling window reset the frame
+  reported 0% rolling and the guard released. OpenCode v2 2.3.2 remains the
+  latest npm release and gate-approved.
+- **Repo hygiene:** the v0.0.96 design brief (`docs/design/TAG-ICON-BRIEF.md`)
+  was tracked even though `docs/` is a private root. It is now local-only, and
+  `repo:privacy` is clean (2086 tracked files). `security:audit` reports 0
+  high/critical (23 moderate, tracked for the next dependency pass).
+
+**Battery: 178 PASS / 0 FAIL / 1 declared skip of 179.**
+`scripts/v092-runtime.test.mjs` **33 passed** (console parser 41/71/40 and
+46/86/46, stale/rolling/quota guards, qwen guard); `tsc`/`eslint`/`docs:check`
+clean; production build and standalone boot gate green.
+
+**Published v0.0.97; v0.0.96 remains the previous stable release.**
+
 ## [v0.0.96] — 2026-11-20
 
 ### Hibernation v2, GO truth and the smart burn

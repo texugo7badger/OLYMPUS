@@ -273,6 +273,24 @@ the basis. A parked walk shows `PAUSED`, never an ETA.
 
 ---
 
+## v0.0.97 — the GO console anchor
+
+Frames → OpenCode (the logged-in GO console) is the account truth. Every 30s
+`FrameView` executes `document.body.innerText` in that webview, parses the
+three windows (monthly, rolling / 5-hour, weekly) plus reset times, and posts
+the anchor. The burn panel follows the `olympus:go-console-synced` event.
+
+The walk resolves the lane per hop (lane override → burn roster → configured
+god model), then the guard. A **fresh** anchor at 100% rolling parks the hop
+before dispatch (`provider quota hit — GO resumes <time>`); a stale anchor
+(>5 min) is not a quota claim and never blocks a hop, but it freezes burn
+upgrades. Burn/Pace are disabled in the panel at a quota hit; Off/Reserve
+remain available.
+
+The chat pins the session model to the current god on every message, so a turn
+for Athena cannot leave Apollo on the Athena lane. The exact unverified lane
+`opencode-go/qwen3.7-plus` maps to `opencode-go/deepseek-v4.1-flash`.
+
 ## Release ritual — the tag IS the release notes
 
 Every version follows the same order; no step is optional.

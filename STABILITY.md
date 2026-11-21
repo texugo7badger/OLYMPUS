@@ -2,12 +2,15 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.96 · 2026-11-20 · the current release. The harness is shipped and
+> v0.0.97 · 2026-11-21 · the current release. The GO console frame is the
+> anchor; a stale anchor pauses upgrades and rolling 100 parks the walk. The
+> chat pins the model per god and maps the unverified qwen3.7-plus GO lane to
+> verified DeepSeek. v0.0.96's hibernation v2 remains. The harness is shipped and
 > measured; the 8-hour / 100-hop certification is **not** claimed yet. The
 > hibernation path is a bounded, detached walk with an explicit window, not
-> the note-8 claim. v0.0.96 makes X a real quit, gates hibernate on streaming
-> turns, keeps only a preview a live hop needs and restores stopped previews
-> on wake; the GO graph is anchored to the console (Monday weekly reset) and
+> the note-8 claim. v0.0.96 turned hibernation into a real quit, gated it on
+> streaming turns, kept only a preview a live hop needs and restored stopped
+> previews on wake; the GO graph is anchored to the console (Monday weekly reset) and
 > the smart burn applies at hop/message boundaries without config rewrites.
 > v0.0.95's OpenCode 2.3.2 alignment and patch-notes screen remain. This page
 > records what was actually run and what remains. The cost side is now measured by `npm run cost:audit`

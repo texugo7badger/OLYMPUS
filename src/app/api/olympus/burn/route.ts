@@ -40,6 +40,8 @@ export async function GET(req: NextRequest) {
     daysLeft,
     h5Pct: account.h5Pct,
     weeklyPct: account.weeklyPct,
+    anchorAgeMs: account.anchorAgeMs,
+    rollingResetAt: account.rollingResetAt,
     models,
     enabledModels: [],
   });

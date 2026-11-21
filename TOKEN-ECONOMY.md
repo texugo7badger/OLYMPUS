@@ -214,3 +214,30 @@ curl -s http://127.0.0.1:3737/api/olympus/tasks | jq '.stats'
 npx tsx scripts/eta-model.test.mjs
 npx tsx scripts/night-shift.test.mjs
 ```
+
+## 7. v0.0.97 — the console anchor and the quota guard
+
+The GO account percentage is read from the logged-in OpenCode GO console frame
+every 30s (`src/lib/go-console-read.ts` → `POST /api/olympus/go-usage/console`).
+The console is the source of truth for the three windows; the local ledger only
+attributes spend to models between syncs.
+
+- **A stale anchor cannot upgrade.** Anchor age >5 min →
+  `blocked:'stale-anchor'`, no roster, no upgrade. Keep Frames → OpenCode open
+  (it auto-syncs) or use Sync GO console.
+- **Rolling is the immediate ceiling.** ≥65% steps the roster down, ≥80%
+  enforces Reserve, and 100% is `blocked:'quota-hit'`: Burn/Pace are disabled
+  and the walker parks before dispatch with the console's resume time. No
+  request is spent collecting a refusal.
+- **Weekly/monthly pressure.** Weekly ≥75/90 and monthly ≥80 step down; a
+  projection >100% steps down.
+- **The session is pinned per god.** Every chat message pins the session model
+  to the current god's model (a burn override wins); the unverified GO
+  `qwen3.7-plus` lane maps to `opencode-go/deepseek-v4.1-flash`.
+
+Measured on v0.0.97: the frame synced 46% monthly / 100% rolling / 52% weekly
+and the quota guard parked the walk; after the rolling window reset the frame
+reported 0% rolling and the guard released. The 30s sync uses the 120s ledger
+snapshot — scanning the ledger on every post blocked the event loop long
+enough for the app watchdog to declare the server silent.
+

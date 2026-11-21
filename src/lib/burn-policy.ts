@@ -80,6 +80,10 @@ export interface BurnInput {
   daysLeft: number;
   h5Pct: number | null;
   weeklyPct: number | null;
+  /** Age of the console anchor; >5 min freezes upgrades. */
+  anchorAgeMs?: number | null;
+  /** The console's rolling reset, shown when quota-hit. */
+  rollingResetAt?: string | null;
   models: BurnModelUsage[];
   /** Registered/enabled model ids (`opencode-go/<id>`); empty = no filter. */
   enabledModels?: string[];
@@ -104,7 +108,9 @@ export interface BurnDecision {
   roster: Partial<Record<GodId, string>>;
   reasons: BurnReason[];
   /** Set when the decision cannot be made honestly. */
-  blocked: 'off' | 'console-sync-required' | null;
+  blocked: 'off' | 'console-sync-required' | 'stale-anchor' | 'quota-hit' | null;
+  /** When quota-hit, the console's rolling reset (resume time). */
+  resumeAt?: string | null;
   generatedAt: string;
 }
 
@@ -141,12 +147,36 @@ export function chooseBurnRoster(input: BurnInput): BurnDecision {
       blocked: 'console-sync-required', generatedAt: now,
     };
   }
+  // v0.0.97 — A STALE ANCHOR CANNOT UPGRADE. The old controller saw the local
+  // 26.6% while the console was 41%/71% rolling and recommended an upgrade.
+  // An anchor older than five minutes freezes the roster; the user must sync.
+  if (input.anchorAgeMs != null && Number.isFinite(input.anchorAgeMs) && input.anchorAgeMs > 5 * 60_000) {
+    return {
+      active: true, mode: policy.mode, targetPct: policy.targetPct,
+      accountPct: input.accountPct, dailyPct: input.dailyPct, projectedPct,
+      daysLeft: input.daysLeft, step: 0, roster: {}, reasons: [],
+      blocked: 'stale-anchor', generatedAt: now,
+    };
+  }
 
-  const pressure = (input.h5Pct != null && input.h5Pct >= 85) || (input.weeklyPct != null && input.weeklyPct >= 90);
+  const rolling = input.h5Pct ?? 0;
+  const weekly = input.weeklyPct ?? 0;
   const target = Math.max(10, Math.min(100, Number(policy.targetPct) || 95));
   const behind = projectedPct < target - 8;
   const ahead = projectedPct > target + 5;
-  const step: -1 | 0 | 1 = pressure || ahead ? -1 : behind ? 1 : 0;
+  // The rolling window is the immediate ceiling; 65% is the step-down line,
+  // 80% the hard reserve line. The monthly/weekly guards are equally hard.
+  if (rolling >= 100) {
+    return {
+      active: true, mode: policy.mode, targetPct: policy.targetPct,
+      accountPct: input.accountPct, dailyPct: input.dailyPct, projectedPct,
+      daysLeft: input.daysLeft, step: -1, roster: {}, reasons: [],
+      blocked: 'quota-hit', resumeAt: input.rollingResetAt ?? null, generatedAt: now,
+    };
+  }
+  const pressure = rolling >= 65 || weekly >= 75;
+  const hardPressure = rolling >= 80 || weekly >= 90 || input.accountPct >= 80 || projectedPct > 100;
+  const step: -1 | 0 | 1 = pressure || hardPressure || ahead ? -1 : behind ? 1 : 0;
 
   const usage = new Map(input.models.map((m) => [bare(m.model), m]));
   const enabled = new Set((input.enabledModels ?? []).map(full));
@@ -188,7 +218,7 @@ export function chooseBurnRoster(input: BurnInput): BurnDecision {
     const why = step > 0
       ? `behind: projected ${Math.round(projectedPct)}% < ${target}% target`
       : step < 0
-        ? (pressure ? 'window pressure (5h/weekly) — step down' : `ahead: projected ${Math.round(projectedPct)}% > ${target}% target`)
+        ? (pressure || hardPressure ? `window pressure (rolling ${Math.round(rolling)}%, weekly ${Math.round(weekly)}%) — step down` : `ahead: projected ${Math.round(projectedPct)}% > ${target}% target`)
         : `inside the ${Math.max(0, target - 8)}–${target + 5}% band`;
     reasons.push({ god, model: picked.model, tier: picked.tier, reason: `${why} → ${picked.tier}` });
   }

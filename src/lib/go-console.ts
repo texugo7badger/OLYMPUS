@@ -10,9 +10,11 @@
  *     localSpendMonthUsd, localSpend5hUsd, localSpend7dUsd,
  *     requests, tokens, modelMix, capturedAt, source }
  *
- * The capture stores the local spend at the same instant, so the app can
- * interpolate the account percentage between syncs without inventing a
- * history: pctNow = anchorPct + (spendNow - spendAtAnchor) / cap * 100.
+ * The capture also stores the local spend at the same instant for attribution.
+ * v0.0.97: the account graph shows the console's own numbers EXACTLY. The old
+ * interpolation (anchor + local delta) made the app read 41% while the console
+ * read 46% and 1% rolling while the console read 0%; the frame now syncs every
+ * 30s, so the anchor itself is the number the user sees.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
@@ -43,6 +45,10 @@ export interface GoConsoleAnchor {
   localSpendWeekUsd: number;
   requests: number | null;
   tokens: number | null;
+  /** The console's rolling-window reset (5h), when read from the frame. */
+  rollingResetAt?: string | null;
+  /** The console's weekly reset, when read from the frame. */
+  weeklyResetAt?: string | null;
   modelMix: GoConsoleModelMix[];
   capturedAt: string;
   source: GoConsoleSource;
@@ -106,6 +112,8 @@ export function normalizeAnchor(input: unknown): GoConsoleAnchor | null {
     localSpendWeekUsd: local('localSpendWeekUsd') || local('localSpend7dUsd'),
     requests: Number.isFinite(requests) && requests >= 0 ? requests : null,
     tokens: Number.isFinite(tokens) && tokens >= 0 ? tokens : null,
+    ...(Number.isFinite(Date.parse(String(raw.rollingResetAt ?? ''))) ? { rollingResetAt: new Date(String(raw.rollingResetAt)).toISOString() } : {}),
+    ...(Number.isFinite(Date.parse(String(raw.weeklyResetAt ?? ''))) ? { weeklyResetAt: new Date(String(raw.weeklyResetAt)).toISOString() } : {}),
     modelMix,
     capturedAt: Number.isFinite(Date.parse(String(raw.capturedAt ?? '')))
       ? new Date(String(raw.capturedAt)).toISOString()
@@ -150,10 +158,12 @@ export function nextWeeklyReset(now = Date.now()): string {
 
 export interface AccountWindowInput {
   anchor: GoConsoleAnchor | null;
+  /** Kept for callers/attribution; v0.0.97 the three windows are the
+   *  anchor's own numbers, never adjusted by local spend. */
   spendMonthUsd: number;
   spend5hUsd: number;
   spend7dUsd: number;
-  /** Spend since the current Monday 00:00 UTC (the console's weekly window). */
+  /** Spend since the current Monday 00:00 UTC (attribution only). */
   spendWeekUsd?: number;
   now?: number;
 }
@@ -167,6 +177,7 @@ export interface AccountWindowResult {
   anchorAt: string | null;
   anchorAgeMs: number | null;
   weeklyResetAt: string;
+  rollingResetAt: string | null;
   monthlyResetAt: string | null;
 }
 
@@ -179,6 +190,7 @@ export interface AccountWindowResult {
 export function accountWindows(input: AccountWindowInput, now = input.now ?? Date.now()): AccountWindowResult {
   const anchor = input.anchor;
   const weeklyResetAt = nextWeeklyReset(now);
+  const rollingResetAt = anchor?.rollingResetAt ?? null;
   if (!anchor) {
     return {
       monthlyPct: null,
@@ -189,28 +201,23 @@ export function accountWindows(input: AccountWindowInput, now = input.now ?? Dat
       anchorAt: null,
       anchorAgeMs: null,
       weeklyResetAt,
+      rollingResetAt,
       monthlyResetAt: null,
     };
   }
   const cap = anchor.capUsd
     ?? (anchor.monthlyPct > 0 ? (anchor.localSpendMonthUsd / (anchor.monthlyPct / 100)) : null);
   const safeCap = cap && Number.isFinite(cap) && cap > 0 ? cap : null;
-  const delta = (nowSpend: number, atAnchor: number) => Math.max(0, Number(nowSpend || 0) - Number(atAnchor || 0));
-  const pct = (base: number, deltaSpend: number, limit: number | null) => {
-    if (!limit || limit <= 0) return null;
-    return Math.max(0, Math.min(999, base + (deltaSpend / limit) * 100));
-  };
-  const monthPct = safeCap ? pct(anchor.monthlyPct, delta(input.spendMonthUsd, anchor.localSpendMonthUsd), safeCap) : anchor.monthlyPct;
-  const h5Cap = safeCap ? safeCap * 0.20 : null;
-  const weekCap = safeCap ? safeCap * 0.50 : null;
-  const h5Pct = h5Cap ? pct(anchor.h5Pct, delta(input.spend5hUsd, anchor.localSpend5hUsd), h5Cap) : anchor.h5Pct;
+  // The console is authoritative. The graph shows the anchor's own numbers;
+  // the local ledger is attribution and projection input, never a silent
+  // adjustment of the three windows (the 41-vs-46 mismatch this hotfix ends).
+  const monthPct = anchor.monthlyPct;
+  const h5Pct = anchor.h5Pct;
   // The weekly anchor is only valid inside its own week; a week has passed
   // when the captured reset is before the next boundary.
   const anchorMs = Date.parse(anchor.capturedAt);
   const sameWeek = Number.isFinite(anchorMs) && Date.parse(nextWeeklyReset(anchorMs)) > now;
-  const weeklyPct = sameWeek && weekCap
-    ? pct(anchor.weeklyPct, delta(input.spendWeekUsd ?? input.spend7dUsd, anchor.localSpendWeekUsd ?? anchor.localSpend7dUsd), weekCap)
-    : null;
+  const weeklyPct = sameWeek ? anchor.weeklyPct : null;
   return {
     monthlyPct: monthPct,
     h5Pct,
@@ -219,7 +226,8 @@ export function accountWindows(input: AccountWindowInput, now = input.now ?? Dat
     source: safeCap ? 'console' : 'mixed',
     anchorAt: anchor.capturedAt,
     anchorAgeMs: Number.isFinite(anchorMs) ? Math.max(0, now - anchorMs) : null,
-    weeklyResetAt,
+    weeklyResetAt: anchor.weeklyResetAt ?? weeklyResetAt,
+    rollingResetAt: anchor.rollingResetAt ?? null,
     monthlyResetAt: anchor.resetAt,
   };
 }

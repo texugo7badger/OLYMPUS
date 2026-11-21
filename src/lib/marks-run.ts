@@ -22,6 +22,7 @@ import { marksPrompt, type PreviewMark } from './marks-format';
 import { resolveDispatchCwd } from './opencode-spawn';
 import { getVaultRoot } from './vault-root';
 import { resolveBurnModelForGod } from './burn-state';
+import { guardedModelForGod } from './agent-model';
 
 export type MarkTarget = 'apollo' | 'athena';
 
@@ -72,7 +73,7 @@ async function execute(opts: MarkRunOptions): Promise<void> {
       prompt,
       lane,
       MARK_TURN_TIMEOUT_MS,
-      { model: resolveBurnModelForGod(target) ?? (target === 'athena' ? GO_FALLBACK_MODEL : undefined) },
+      { model: guardedModelForGod(target, resolveBurnModelForGod(target)) ?? (target === 'athena' ? GO_FALLBACK_MODEL : undefined) },
     );
     if (!turn.ok) {
       appendGodInbox(target, {

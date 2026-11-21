@@ -29,6 +29,8 @@ import { join, isAbsolute, basename } from 'node:path';
 import { spawn } from 'node:child_process';
 import { syncLaneFile } from '@/lib/lane-config';
 import { resolveBurnModelForGod } from '@/lib/burn-state';
+import { readGoConsoleAnchor } from '@/lib/go-console';
+import { guardedModelForGod } from '@/lib/agent-model';
 import { validateDispatchPlan, MAX_HOP_BUDGET_TOKENS, type DispatchPlan, type PlanHop } from './plan-schema';
 import { balancePlan } from './plan-balance';
 import { loadHopState, saveHopState, hopStatePath, pruneStaleInFlight, type HopPark } from './hop-state';
@@ -872,11 +874,30 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
   // per-hop lane, not an opencode.json rewrite: the in-flight hop finishes on
   // its old model, the next one obeys the fresh roster, and the warm server
   // is never killed for a strategy change.
+  // v0.0.97 — a FRESH console anchor at 100% rolling means the GO 5-hour
+  // limit is hit; dispatching would only collect a provider refusal. Read the
+  // anchor directly, not the burn decision: the guard must hold even when Burn
+  // is Off and no panel has refreshed a decision. A stale anchor is not a
+  // quota claim — the window may have reset — so only a fresh one parks.
+  const anchor = readGoConsoleAnchor();
+  const anchorAgeMs = anchor ? Date.now() - Date.parse(anchor.capturedAt) : Infinity;
+  if (anchor && anchorAgeMs <= 5 * 60_000 && anchor.h5Pct >= 100) {
+    return {
+      ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,
+      retriesAbsorbed: 0, exhausted: false,
+      error: `provider quota hit — the console shows the GO rolling window at 100%; GO resumes ${anchor.rollingResetAt ? new Date(anchor.rollingResetAt).toISOString() : 'at the rolling reset'}; no hop dispatched`,
+    };
+  }
   const burnLane = resolveBurnModelForGod(hop.god);
-  const applied = laneOverride
+  const resolvedLane = laneOverride
     ?? burnLane
     ?? (existsSync(laneConfig) ? resolveGodModelLane(hop.god, laneConfig) : null)
     ?? resolveGodModelLane(hop.god);
+  // v0.0.97 — the exact unverified qwen3.7-plus lane is mapped to the
+  // verified DeepSeek GO lane no matter which layer resolved it (burn, the
+  // lane config, or a manual override). A qwen hop can no longer fail on
+  // provider.auth while the rest of the GO account works.
+  const applied = resolvedLane ? guardedModelForGod(hop.god, resolvedLane) : null;
   if (!applied) {
     return {
       ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,

@@ -43,6 +43,8 @@ const walk = await import(ROOT + '/src/lib/hop-runtime/walker.ts');
 const previewIsolation = await import(ROOT + '/src/lib/preview-isolation.ts');
 const goConsole = await import(ROOT + '/src/lib/go-console.ts');
 const burn = await import(ROOT + '/src/lib/burn-policy.ts');
+const goRead = await import(ROOT + '/src/lib/go-console-read.ts');
+const agentModel = await import(ROOT + '/src/lib/agent-model.ts');
 
 ok('M1: a mark queue survives on disk and round-trips', () => {
   marks.writeMarks('aime', [{ x: 10, y: 20, page: '/onboarding', instruction: 'tighten the first gesture', viewport: { width: 1440, height: 900 } }]);
@@ -338,7 +340,7 @@ ok('PN1: OpenCode 2.3.2 is pinned and the patch-notes surface is wired', () => {
   assert.equal(pkg.dependencies['@opencode/cli'], '2.3.2');
   assert.equal(pkg.dependencies['@opencode/plugin'], '2.3.2');
   const notes = JSON.parse(src('public/patch-notes.json'));
-  assert.equal(notes.current, '0.0.96');
+  assert.equal(notes.current, '0.0.97');
   assert.equal(notes.opencode.tested, '2.3.2');
   assert.match(notes.opencode.gateCommand, /opencode:gate/);
   const component = src('src/components/olympus/patch-notes.tsx');
@@ -367,8 +369,10 @@ ok('PN2: the GO account anchor and the Monday weekly reset are exact', () => {
     spendMonthUsd: 66, spend5hUsd: 2.5, spend7dUsd: 12,
     now: Date.parse('2026-11-20T18:00:00Z'),
   });
-  assert.ok(Math.abs(w.monthlyPct - 30) < 1e-9, String(w.monthlyPct));
-  assert.ok(Math.abs(w.h5Pct - 5.272727272727273) < 1e-9, String(w.h5Pct));
+  // v0.0.97 — the console's own numbers, never a local-delta adjustment.
+  assert.equal(w.monthlyPct, 25);
+  assert.equal(w.h5Pct, 3);
+  assert.equal(w.weeklyPct, 8);
   assert.ok(w.source === 'console' && w.capUsd === 220);
 });
 
@@ -407,7 +411,7 @@ ok('PN4: hibernate v2 gates active turns, keeps a live preview, and restores idl
   assert.match(main, /if \(hibernating\) return;\n    app\.quit\(\);/);
   assert.match(main, /postJson\('\/api\/olympus\/chat\/hibernate', \{ waitMs: 60_000, forceFree \}, 70_000\)/);
   const prefs = JSON.parse(src('package.json'));
-  assert.ok(prefs.version.startsWith('0.0.96'));
+  assert.ok(prefs.version.startsWith('0.0.97'));
 });
 
 ok('PN5: the hibernate HUD collapses to a compact strip from a real button', () => {
@@ -421,6 +425,51 @@ ok('PN5: the hibernate HUD collapses to a compact strip from a real button', () 
   assert.match(main, /setHudCompact/);
   assert.match(main, /compact \? 340 : 420/);
   assert.match(main, /compact \? 190 : 720/);
+});
+
+ok('PN6: the GO console frame parser reads both snapshots exactly', () => {
+  const a = goRead.parseGoConsoleText(
+    '41% Go Plus usage · Renews Dec 5 · On pace for 82% 5-hour window Resets in 3h 27m 71% used Weekly Resets in 2d 2h 40% used Monthly Resets in 15d 1h 41% used',
+    Date.parse('2026-11-20T16:16:00Z'),
+  );
+  assert.ok(a);
+  assert.equal(a.monthlyPct, 41); assert.equal(a.h5Pct, 71); assert.equal(a.weeklyPct, 40);
+  assert.equal(a.resetAt, '2026-12-05T18:15:00.000Z');
+  const b = goRead.parseGoConsoleText(
+    'Monthly 44% used\nGo Plus usage · Renews Dec 5 · On pace for 87%\n5-hour window Resets in 3h 21m 86% used\nWeekly Resets in 2d 2h 46% used',
+    Date.parse('2026-11-20T16:30:00Z'),
+  );
+  assert.ok(b); assert.equal(b.monthlyPct, 44); assert.equal(b.h5Pct, 86); assert.equal(b.weeklyPct, 46);
+});
+
+ok('PN7: a stale anchor pauses upgrades; rolling 86 steps down; rolling 100 is a quota hit', () => {
+  const base = {
+    policy: { mode: 'burn', targetPct: 95, modelCeilingPct: 85 },
+    accountPct: 41, dailyPct: 2.7, daysLeft: 14, h5Pct: 71, weeklyPct: 40,
+    models: [], enabledModels: [],
+  };
+  assert.equal(burn.chooseBurnRoster({ ...base, anchorAgeMs: 10 * 60_000 }).blocked, 'stale-anchor');
+  const down = burn.chooseBurnRoster({ ...base, anchorAgeMs: 1000, h5Pct: 86 });
+  assert.equal(down.step, -1);
+  assert.equal(down.blocked, null);
+  const hit = burn.chooseBurnRoster({ ...base, anchorAgeMs: 1000, h5Pct: 100, rollingResetAt: '2026-11-20T20:00:00Z' });
+  assert.equal(hit.blocked, 'quota-hit');
+  assert.equal(hit.resumeAt, '2026-11-20T20:00:00Z');
+});
+
+ok('PN8: the unverified qwen lane is guarded to the verified GO fallback', () => {
+  assert.equal(agentModel.isUnverifiedQwenLane('opencode-go/qwen3.7-plus'), true);
+  assert.equal(agentModel.guardedModelForGod('athena', 'opencode-go/qwen3.7-plus'), 'opencode-go/deepseek-v4.1-flash');
+  assert.equal(agentModel.guardedModelForGod('athena', 'opencode-go/kimi-k2.7-code'), 'opencode-go/kimi-k2.7-code');
+  assert.match(src('src/app/api/olympus/action/route.ts'), /guardedModelForGod/);
+  assert.match(src('src/components/olympus/custom-frames.tsx'), /parseGoConsoleText/);
+  assert.match(src('src/components/olympus/custom-frames.tsx'), /olympus:go-console-synced/);
+  const panel = src('src/components/olympus/burn-panel.tsx');
+  assert.match(panel, /hardPressure/);
+  assert.match(panel, /mode\.id === 'burn' \|\| mode\.id === 'pace'/);
+  assert.match(src('src/lib/go-console.ts'), /const monthPct = anchor\.monthlyPct;/);
+  assert.match(src('src/lib/hop-runtime/walker.ts'), /readGoConsoleAnchor/);
+  assert.match(src('src/lib/hop-runtime/walker.ts'), /anchor\.h5Pct >= 100/);
 });
 
 console.log(`\nv092-runtime: ${passed} passed${process.exitCode ? ', failures' : ', all green'}.`);

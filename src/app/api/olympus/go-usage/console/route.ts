@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireReadAuth } from '@/lib/auth';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
-import { aggregate, loadCatalog, readGoPlan, readGoPlanStart, readSpendRows, writeGoPlan, type GoPlan } from '@/lib/go-usage';
+import { getUsageSnapshot, readGoPlan, writeGoPlan, type GoPlan } from '@/lib/go-usage';
 import { normalizeAnchor, readGoConsoleAnchor, writeGoConsoleAnchor } from '@/lib/go-console';
 
 export const runtime = 'nodejs';
@@ -55,9 +55,11 @@ export async function POST(req: NextRequest) {
     }, { status: 400, headers: NO_CACHE_HEADERS });
   }
   // Capture the local attribution at the same instant as the console numbers.
-  const catalog = await loadCatalog();
-  const rows = readSpendRows(catalog.models);
-  const usage = aggregate(rows, plan, Date.now(), readGoPlanStart());
+  // The frame auto-sync runs every 30s. Use the shared 120s ledger snapshot;
+  // scanning 57k rows on every post blocked the Next event loop long enough
+  // for the app watchdog to declare the server silent (the v0.0.97 boot hang).
+  const snap = await getUsageSnapshot(plan, false);
+  const usage = snap.usage;
   const inferredCap = monthlyPct > 0 ? usage.account.spendMonthUsd / (monthlyPct / 100) : null;
   const anchor = normalizeAnchor({
     plan,
@@ -70,6 +72,8 @@ export async function POST(req: NextRequest) {
     localSpend5hUsd: usage.account.spend5hUsd,
     localSpend7dUsd: usage.account.spend7dUsd,
     localSpendWeekUsd: usage.account.spendWeekUsd,
+    rollingResetAt: body?.rollingResetAt,
+    weeklyResetAt: body?.weeklyResetAt,
     requests: body?.requests ?? usage.account.requests,
     tokens: body?.tokens ?? usage.account.tokens,
     modelMix: usage.account.modelMix,

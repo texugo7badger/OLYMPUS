@@ -2,12 +2,14 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.0.96 · 2026-11-20 · **GO for a release candidate after two named gates**
+> v0.0.97 · 2026-11-21 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
-> this build "certified v1.0" until those gates are green.** v0.0.96 makes X
-> a real quit, gates hibernation on streaming turns, restores previews on
-> wake, anchors the GO graph to the console and adds the smart-burn runtime
-> router without config rewrites. v0.0.95's OpenCode 2.3.2 alignment and
+> this build "certified v1.0" until those gates are green.** v0.0.97 anchors
+> the GO graph to the logged-in console frame and pauses/holds the burn at the
+> rolling quota; the session model is pinned per god. v0.0.96 turned
+> hibernation into a real quit, gated it on streaming turns, restored previews
+> on wake, anchored the GO graph to the console and added the smart-burn
+> runtime router without config rewrites. v0.0.95's OpenCode 2.3.2 alignment and
 > patch-notes screen remain. This page is the report; it does not claim what
 > was not run.
 
