@@ -1513,7 +1513,11 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     // v0.0.91 — never park with an empty class. When the provider sent no
     // text, the REASON is still evidence (verify-failed, design-evidence-
     // missing, …). The old `unknown` hid 26 design-review parks.
-    const cls = errorClass || classifyParkReason(reason, error);
+    // v0.0.98-9.1 — canonicalize ALWAYS. The verify path passes the short
+    // 'verify' label; taking it verbatim meant isLoopClass('verify') was false
+    // and a repeated QA verify failure escaped the loop guard. The reason is
+    // the fallback evidence; the declared class is the first canonical input.
+    const cls = classifyParkReason(reason, error, errorClass ?? null);
     const record: HopPark = {
       hopId: hop.id,
       reason,
