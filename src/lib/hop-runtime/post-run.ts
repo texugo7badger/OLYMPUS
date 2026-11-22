@@ -161,8 +161,11 @@ import { contractGate } from '../design-contract';
 import { createGate, getPendingGates, listGates, resolveGate } from '@/lib/hitl-gates';
 import { appendActivity } from '@/lib/activity-feed';
 import { patrolLane, patrolFinding } from '@/lib/atlas-patrol';
+import { blockLoopHop, blockedLoopHops, clearLoopHop, seedLoopGuardFromTelemetry } from './loop-guard';
+import { planQaRepair } from './qa-repair';
+import { readOptIn } from '@/lib/atlas-warden';
 import { appendGodInbox } from '@/lib/god-inbox';
-import { decideRecovery, applyRecovery } from './recovery';
+import { decideRecovery, applyRecovery, readRecoveries as readRecoveryRows } from './recovery';
 import { stagePlanRewriteIfWalking } from './plan-generation';
 import { publishHopEvent } from './hop-events';
 
@@ -349,7 +352,7 @@ export function recoverBlockedDependencies(laneRoot: string, plan: any): { ids: 
     const hop = (plan?.hops ?? []).find((h: any) => String(h?.id) === park.hopId);
     if (!hop) continue;
     const finding = patrolFinding(laneRoot, hop, park);
-    const decision = decideRecovery(laneRoot, finding);
+    const decision = decideRecovery(laneRoot, finding, { allowQaRetry: true });
     if (decision.action !== 'retry') continue;
     applyRecovery(laneRoot, finding, decision);
     ids.push(park.hopId);
@@ -599,6 +602,16 @@ export async function maybeWalkThePlan(opts: {
     // (retired ids must not leak into the new counts — the "12/5" hybrid).
     try { unlinkSync(hopStatePath(opts.laneRoot)); } catch { /* best-effort */ }
   }
+  // v0.0.98-9.1 — THE AUTONOMY WINDOW IS A CONTRACT. `opts.unattended` is an
+  // explicit caller permission (the night-shift switch / a detached walk);
+  // a stale hibernation marker or a supervisor's `autoResume: true` is NOT.
+  // The window (readHibernationPlan rejects expiry) or the warden's explicit
+  // opt-in is the other permission. The AIME specimen resumed all morning
+  // after its 8h window expired.
+  const autonomyWindow = readHibernationPlan();
+  const autoResumeWindow = Boolean(autonomyWindow?.autoResume);
+  const explicitOptIn = (() => { try { return readOptIn(opts.slug); } catch { return false; } })();
+  const unattendedLane = Boolean(opts.unattended) || autoResumeWindow || explicitOptIn;
   if (!resume) {
     const total = planHopCount(plan);
     const gates = listGates().filter((g) => g.phase === PLAN_WALK_PHASE && g.targetFile === planPath);
@@ -616,7 +629,7 @@ export async function maybeWalkThePlan(opts: {
       // #211 OVERNIGHT AUTO-QUEUE: no human is at the keyboard tonight —
       // the gate approves itself, LOUDLY (the record carries who approved
       // and why; the night log gets a row). An attended run still waits.
-      if (!opts.unattended) {
+      if (!unattendedLane) {
         return {
           walked: false, reason: 'awaiting-approval',
           completed: 0, total, parked: null,
@@ -650,11 +663,28 @@ export async function maybeWalkThePlan(opts: {
     opts.send?.({ type: 'walk_summary', completed: 0, total: planHopCount(plan), parked: null, msg, ts: new Date().toISOString() });
     return { walked: false, reason: 'design-contract-incomplete', completed: 0, total: planHopCount(plan), parked: null, summaryLine: msg };
   }
+  // v0.0.98-9.1 — SEED THE LOOP GUARD BEFORE THE LOCK. The live specimen
+  // (15 qa-glow-local parks) predates the guard file; a manual resume must
+  // see the same evidence the warden does. A new plan generation ignores
+  // these entries by design.
+  try {
+    seedLoopGuardFromTelemetry(opts.laneRoot, Number((plan as any)?.generation ?? 1), (plan as any)?.createdAt);
+  } catch { /* evidence */ }
+
   // #ONE-CAMPAIGN (the AIME specimen, 2026-10-24): five concurrent walks of
   // the same hop. The lock is taken HERE — the walk itself is the long
   // section that must never run twice on one lane — and released in the
   // finally below, so a throwing walk still frees the lane.
-  const lock = acquireWalkLock(opts.laneRoot, { slug: opts.slug, sessionId: opts.sessionId });
+  // v0.0.98-9.1 — THE CAMPAIGN ID IS STABLE ACROSS RESUMES. The old lock
+  // generated a new cmp_… on every recursive/warden resume, so the per-hop
+  // recovery budget reset and qa-glow-local ran 15 times. Reuse the state's
+  // campaign while the plan generation is unchanged.
+  const lockState = loadHopState(opts.laneRoot);
+  const planGeneration = Number((plan as any)?.generation ?? 1);
+  const stableCampaign = lockState && Number(lockState.generation) === planGeneration && lockState.campaignId
+    ? lockState.campaignId
+    : undefined;
+  const lock = acquireWalkLock(opts.laneRoot, { slug: opts.slug, sessionId: opts.sessionId, ...(stableCampaign ? { campaignId: stableCampaign } : {}) });
   if (!lock.ok && lock.reason === 'held') {
     const who = lock.holder;
     const msg =
@@ -814,28 +844,97 @@ export async function maybeWalkThePlan(opts: {
     } catch { /* the self-correction never breaks the summary */ }
   }
 
+  // #QA-REPAIR (v0.0.98-9.1): A FAILED QA GATE SCHEDULES A REPAIR, NEVER A
+  // BLIND RE-RUN. The qa-glow-local specimen re-ran the same 7-check prompt
+  // 15 times while the evidence named the upstream defect. The repair is
+  // bounded to 2 cycles; after that the hop is BLOCKED and the campaign
+  // stops with the evidence.
+  const parkedDetail: any = result.parked ?? null;
+  if (parkedDetail && /^qa[-_]/i.test(String(parkedDetail.hopId ?? ''))
+    && (String(parkedDetail.reason ?? '') === 'verify-failed'
+      || String(parkedDetail.failureClass ?? parkedDetail.errorClass ?? '') === 'tool-budget'
+      || String(parkedDetail.reason ?? '').startsWith('dispatch-failed:tool-budget'))) {
+    try {
+      const planOnDisk = JSON.parse(sanitizePlanJson(readFileSync(planPath, 'utf-8'))) as any;
+      const qaHop = Array.isArray(planOnDisk?.hops)
+        ? planOnDisk.hops.find((h: any) => String(h?.id) === String(parkedDetail.hopId))
+        : null;
+      if (qaHop) {
+        const outcome = planQaRepair({
+          laneRoot: opts.laneRoot,
+          plan: planOnDisk,
+          qaHop,
+          failureClass: String(parkedDetail.failureClass ?? parkedDetail.errorClass ?? (parkedDetail.reason === 'verify-failed' ? 'verify-failed' : 'tool-budget')),
+          error: parkedDetail.error ?? null,
+        });
+        if (outcome.status === 'repaired') {
+          // The plan is a NEW generation: the loop count for the QA hop starts
+          // fresh, because the upstream evidence changed. The repair counter
+          // (not the loop guard) is the 2-cycle cap.
+          try { clearLoopHop(opts.laneRoot, parkedDetail.hopId); } catch { /* evidence */ }
+          opts.send?.({ type: 'log', msg: `[QA REPAIR] ${outcome.reason}`, ts: new Date().toISOString() });
+          try {
+            appendActivity({
+              god: 'atlas', action: 'recovery', project: opts.slug,
+              msg: `QA repair scheduled: ${outcome.reason}`,
+              meta: { kind: 'qa-repair', hop: parkedDetail.hopId, fix: outcome.fixHop?.id ?? null, cycle: outcome.cycles ?? null, generation: outcome.generation ?? null, lane: opts.laneRoot },
+            });
+          } catch { /* best effort */ }
+          return maybeWalkThePlan({ ...opts, expectPlan: true });
+        }
+        if (outcome.status === 'blocked') {
+          const generation = Number(planOnDisk?.generation ?? 1);
+          blockLoopHop(opts.laneRoot, parkedDetail.hopId, generation, String(parkedDetail.failureClass ?? 'verify-failed'), 2);
+          opts.send?.({ type: 'log', msg: `[QA REPAIR] ${outcome.reason} — blocked; no auto-resume.`, ts: new Date().toISOString() });
+          try {
+            appendActivity({
+              god: 'atlas', action: 'needs-user', project: opts.slug,
+              msg: `QA gate stopped: ${outcome.reason}`,
+              meta: { kind: 'qa-repair-blocked', hop: parkedDetail.hopId, cycle: outcome.cycles ?? null, lane: opts.laneRoot },
+            });
+          } catch { /* best effort */ }
+        } else {
+          opts.send?.({ type: 'log', msg: `[QA REPAIR] ${outcome.reason}`, ts: new Date().toISOString() });
+        }
+      }
+    } catch { /* the repair never breaks the summary */ }
+  }
+
   // #211 OVERNIGHT AUTO-QUEUE: the unattended campaign never waits for a
   // morning click. A park auto-resumes within the bounded budget (each
   // resume is a fresh walk call — the walker isolates every hop in its own
   // session, so the next wave starts with a clean window); when the
   // campaign finally settles, the morning digest lands in the lane and one
   // live.jsonl row per wave records the night durably.
-  if (opts.unattended || isHibernating()) {
+  if (unattendedLane) {
     const attempt = opts.overnightAttempt ?? 0;
-    // v0.0.92 — the detached walk is unattended even when the hibernation
-    // marker is not set (night shift, boot supervisor). The plan is the
-    // window in both cases; `readHibernationPlan` already rejects expiry.
-    const plan = (opts.unattended || isHibernating()) ? readHibernationPlan() : null;
+    // v0.0.98-9.1 — THE SAME-HOP LOOP BREAKER. A new campaign id must never
+    // reset a hop's failure memory. Seed from the telemetry for the live
+    // specimen; if blocked, do NOT auto-resume; the digest/decision names it.
+    const nightPlan = autoResumeWindow ? autonomyWindow : null;
     // v0.0.59 — the night contract is bounded by the WINDOW, not a flat 12.
     // "Keep working alone until 08:00" must survive more than 12 parks; each
     // resume is ~2 minutes of backoff + walk, so the cap derives from the
     // plan's remaining time (still hard-capped at 120 attempts).
-    const planLeftMs = plan ? Date.parse(plan.until) - Date.now() : 0;
+    const planLeftMs = nightPlan ? Date.parse(nightPlan.until) - Date.now() : 0;
     const planAttempts = planLeftMs > 0
       ? Math.min(120, Math.max(12, Math.ceil(planLeftMs / 120_000)))
       : 12;
-    const maxAttempts = plan?.autoResume ? planAttempts : Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_ATTEMPTS ?? 12));
-    if (parked && attempt < maxAttempts) {
+    const maxAttempts = nightPlan?.autoResume ? planAttempts : Math.max(0, Number(process.env.OLYMPUS_OVERNIGHT_RESUME_ATTEMPTS ?? 12));
+    const loopGeneration = Number((plan as any)?.generation ?? 1);
+    try { seedLoopGuardFromTelemetry(opts.laneRoot, loopGeneration, (plan as any)?.createdAt); } catch { /* evidence */ }
+    const blocked = (() => { try { return blockedLoopHops(opts.laneRoot, loopGeneration); } catch { return []; } })();
+    if (blocked.length > 0) {
+      const names = blocked.map((b) => `${b.hopId} (${b.entry.failures}× ${b.entry.lastClass ?? 'unknown'})`).join(', ');
+      opts.send?.({ type: 'log', msg: `[LOOP GUARD] ${names} — the same hop already failed twice in gen ${loopGeneration}; no auto-resume. Fix the upstream or create a new generation, then Continue.`, ts: new Date().toISOString() });
+      try {
+        appendActivity({
+          god: 'atlas', action: 'needs-user', project: opts.slug,
+          msg: `Atlas stopped the loop: ${names}. The QA evidence names the upstream fix; a new generation resets the count.`,
+          meta: { kind: 'loop-guard', generation: loopGeneration, hops: blocked.map((b) => b.hopId), lane: opts.laneRoot },
+        });
+      } catch { /* best effort */ }
+    } else if (parked && attempt < maxAttempts) {
       // v0.0.98 — a blocked gate is a derived state: recover the quarantined
       // dependencies it names, then resume. The old path asked the user and
       // the next resume re-ran the blocked gate forever.
@@ -903,7 +1002,20 @@ export async function maybeWalkThePlan(opts: {
         state: stateOnDisk,
         parked,
         autoApproved: (gate?.userNote ?? '').includes('auto-approved'),
-        resumeAttempts: attempt,
+        // v0.0.98-9.1 — the digest must count the CAMPAIGN's recoveries, not
+        // this call's local attempt (the AIME digest said 0 while the lane
+        // had resumed across many campaign ids).
+        resumeAttempts: Math.max(
+          attempt,
+          (() => {
+            try {
+              const campaign = stateOnDisk?.campaignId ?? null;
+              return readRecoveryRows(opts.laneRoot)
+                .filter((r) => r?.action === 'retry' && (!campaign || !r?.campaignId || r.campaignId === campaign))
+                .length;
+            } catch { return 0; }
+          })(),
+        ),
         startedAt: (() => {
           const created = Date.parse(String((planOnDisk as any)?.createdAt ?? ''));
           if (Number.isFinite(created)) return new Date(created).toISOString();

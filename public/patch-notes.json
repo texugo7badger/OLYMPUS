@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-21",
-  "current": "0.0.98-9",
+  "updatedAt": "2026-11-22",
+  "current": "0.0.98-9.1",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.3.2",
@@ -12,12 +12,25 @@
   },
   "releases": [
     {
+      "version": "0.0.98-9.1",
+      "date": "2026-11-22",
+      "title": "The loop breaker \u2014 a QA gate repairs or blocks, never re-runs",
+      "highlights": [
+        "Same-hop loop guard: a deterministic failure is counted per lane + plan generation + hop; the second one blocks the hop and the warden/post-run refuse to auto-resume it. The live AIME qa-glow-local specimen (16 parks) seeds from telemetry and blocks on the first tick.",
+        "Stable campaign id: the walk lock reuses the state's campaignId while the generation is unchanged, so a new campaign no longer resets the per-hop recovery budget.",
+        "QA repair, not a blind retry: verify-failed schedules one upstream fix hop built from the evidence, then the QA re-runs as a judge; tool-budget schedules a deterministic harness + JSON judge. Two cycles maximum, then BLOCKED with evidence.",
+        "QA hops are clamped to 16 tool calls and a hard 12-minute ceiling; lint is baseline-aware, and a repeated park no longer appends duplicate desktop notices.",
+        "Autonomy window: opts.unattended is the explicit night-shift permission; an expired hibernation plan or a stale supervisor autoResume is not. The warden refuses a loop-blocked lane.",
+        "Everything from v0.0.98-9 remains: plan archive, telemetry ledger, quota wait, blocked-dependency recovery, deterministic report and the Logs workspace."
+      ]
+    },
+    {
       "version": "0.0.98-9",
       "date": "2026-11-21",
-      "title": "The 98.x culmination — every hop has a definition, a ledger and a brain",
+      "title": "The 98.x culmination \u2014 every hop has a definition, a ledger and a brain",
       "highlights": [
         "Plan archive per generation: a hop rewritten tomorrow still shows its prompt, artifacts and checks in the Logs detail. New telemetry rows also carry the artifacts/checks/abilities/prompt and a tool-call summary, so the task sheet and Logs no longer show 0/0 for future hops.",
-        "Per-hop cost for old rows: when the session id is missing, the Logs estimates the window from the ledger and marks it with '~' — step cost is still labelled, invoice stays unknown.",
+        "Per-hop cost for old rows: when the session id is missing, the Logs estimates the window from the ledger and marks it with '~' \u2014 step cost is still labelled, invoice stays unknown.",
         "Callimachus status: the brain-health card shows the last curation, the next regular/deep window and the reference-doc count; 'curar agora' runs the 7-stage heartbeat. His reference shelf now includes the vault and the new brain notes.",
         "The learning rows animate when a fresh item arrives, and the detail box still shows the 0.85 gate, samples and last outcomes.",
         "Task sheet tools now come from the telemetry's tool summary when the live feed has none; the Logs detail shows the tool ledger and the output tail.",
@@ -27,19 +40,19 @@
     {
       "version": "0.0.98",
       "date": "2026-11-21",
-      "title": "The walk waits, recovers and reports — and the Logs tell the truth",
+      "title": "The walk waits, recovers and reports \u2014 and the Logs tell the truth",
       "highlights": [
-        "The GO 5-hour limit is now a WAIT, not an unknown stop: provider.go-limit/quota maps to provider-quota, the walk pauses and resumes at the console reset. The old overnight park (21:31 → 06:25) can no longer burn a night.",
+        "The GO 5-hour limit is now a WAIT, not an unknown stop: provider.go-limit/quota maps to provider-quota, the walk pauses and resumes at the console reset. The old overnight park (21:31 \u2192 06:25) can no longer burn a night.",
         "A blocked design gate recovers its quarantined dependencies (the real QA parks), not the gate. The end-of-walk report is deterministic and always written; the digest now counts the hop state (6/10, not 4/10).",
         "Apollo's chat gets a durable campaign reporter: hop green/parked, quota wait and the final report are in the inbox, so a detached walk still speaks after a reload.",
-        "New Logs workspace: Visão geral, Hops, Walks, Models and Economy, with full hop/walk detail — god, build, model, declared abilities, artifacts, checks, park, recovery, resonance, tokens, step cost/list/invoice.",
+        "New Logs workspace: Vis\u00e3o geral, Hops, Walks, Models and Economy, with full hop/walk detail \u2014 god, build, model, declared abilities, artifacts, checks, park, recovery, resonance, tokens, step cost/list/invoice.",
         "The terminal header now carries the GO limit meter: 5h by default, one button toggles weekly/monthly; stale anchor and quota-hit are labelled. The meter reads the console anchor only (no 57k ledger scan).",
         "Hibernation now opts the active lane in and starts the detached walk, so the night contract survives the renderer being destroyed.",
         "The qwen3.7-plus guard and the exact console windows from v0.0.97 remain. OpenCode v2 2.3.2 remains the latest npm release and gate-approved.",
-        "The task sheet now shows the build's own loadout (skills/MCPs/demigods even when the hop declares none), lane health, live tool counts, the last park/recovery and the settled output tail — no more 0/0 with no explanation.",
+        "The task sheet now shows the build's own loadout (skills/MCPs/demigods even when the hop declares none), lane health, live tool counts, the last park/recovery and the settled output tail \u2014 no more 0/0 with no explanation.",
         "Learning notifications are live and clickable: the box shows the teaching, measured confidence/samples and exactly how far it is from the 85% short-circuit gate, with the last outcomes.",
         "Callimachus gets a brain-health card (seed/empirical, average confidence, short-circuit rate, the 85% gate) and a 'curar agora' action; his reference shelf now includes the vault knowledge docs.",
-        "Pattern Studio: moving the pointer attracts the particle field, clicking the background pulses it, and clicking a thought opens its analysis box (what it is, connections, associated learning) — the learning rows open the same detail.",
+        "Pattern Studio: moving the pointer attracts the particle field, clicking the background pulses it, and clicking a thought opens its analysis box (what it is, connections, associated learning) \u2014 the learning rows open the same detail.",
         "Boot: one full-screen loader loops until every mounted panel is loadable, instead of a stack of per-panel loaders; the brain's focus card no longer covers the live logo.",
         "The Logs hop detail now shows the output tail and falls back to the frozen plan for historical hop definitions; the hop table is a responsive two-line list with cost visible."
       ]
@@ -47,10 +60,10 @@
     {
       "version": "0.0.97",
       "date": "2026-11-21",
-      "title": "The GO console is the anchor — no more stale burn",
+      "title": "The GO console is the anchor \u2014 no more stale burn",
       "highlights": [
         "The logged-in OpenCode GO console is already an OLYMPUS frame; every 30s it is parsed (monthly / rolling / weekly + reset) and posted as the anchor, source browser. The app graph follows 46% / 100% / 52% with no manual copy.",
-        "A console anchor older than 5 minutes PAUSES upgrades. Rolling ≥65% steps down, ≥80% enforces Reserve, and 100% is a quota-hit: the walker parks with the console reset time and Burn/Pace are disabled.",
+        "A console anchor older than 5 minutes PAUSES upgrades. Rolling \u226565% steps down, \u226580% enforces Reserve, and 100% is a quota-hit: the walker parks with the console reset time and Burn/Pace are disabled.",
         "The burn panel shows the console anchor age, the rolling number, the stale/quota banners and the resume time; off/reserve remain available.",
         "The interactive chat now pins the session model to the current god's model every message. The unverified GO qwen3.7-plus lane falls back to verified DeepSeek, so a qwen turn can no longer leave Apollo riding the same dead lane.",
         "Verified live: the console frame auto-synced 46% monthly / 100% rolling / 52% weekly and the quota guard parked the walk; after the rolling window reset the frame reported 0% rolling, then 47% monthly / 1% rolling / 52% weekly as the first post-reset turn landed, and the guard released. The qwen guard maps to opencode-go/deepseek-v4.1-flash.",
@@ -64,13 +77,13 @@
       "highlights": [
         "X now quits by default; hibernate is explicit (tray, lock, or the close-to-hibernate preference). A real quit stops the preview/MCP fleet instead of leaving it in the app cgroup.",
         "Hibernate waits for a streaming chat turn, keeps a preview only when a live hop needs it, records the servers it stops, and the wake restores them automatically.",
-        "The hibernation HUD has a collapse button: 420×720 → 340×190 (campaign, GO month, in-flight hop only); expand restores the full widget.",
+        "The hibernation HUD has a collapse button: 420\u00d7720 \u2192 340\u00d7190 (campaign, GO month, in-flight hop only); expand restores the full widget.",
         "The GO graph uses the console anchor (monthly/5h/weekly) plus the local delta; the weekly window resets Monday 00:00 UTC. The measured 25.1% / 50.1% matches the console's 25% / on-pace-50%.",
         "Smart burn chooses a GO-only roster at the next hop/message (Kimi K3, Kimi K2.7 Code, DeepSeek 1017, Qwen3.7 Plus, MiniMax M3). Claude Opus/Sonnet are Zen models, not in the GO catalog; the screen says so instead of guessing.",
         "The burn toggle never rewrites opencode.json and never cuts a live turn; it applies at the hop/message boundary and diversifies top lanes so one per-model cap cannot carry all ten gods.",
         "OpenCode v2 2.3.2 remains the latest npm release and is gate-approved; the patch-notes screen checks the live latest on every open.",
         "A tag-icon/logo audit and a 24px vector brief are in docs/design/TAG-ICON-BRIEF.md; the 16px marks are hand-authored, not model-generated.",
-        "Wake ignores ERR_ABORTED (the splash → APP_URL navigation) instead of entering a reload loop; the preview restore probes and retries until verified.",
+        "Wake ignores ERR_ABORTED (the splash \u2192 APP_URL navigation) instead of entering a reload loop; the preview restore probes and retries until verified.",
         "Max Quality / strategy apply resolves the real app root in standalone (not .next/standalone); the L4 probe falls back to the package binary. Verified ok:true."
       ]
     },
@@ -103,7 +116,7 @@
       "date": "2026-11-15",
       "title": "Performance: the preview gets its own renderer",
       "highlights": [
-        "Electron runs the live preview as an OOPIF on 127.0.0.2; AIME measured parent 54 → 60 FPS and iframe 52 → 60 FPS.",
+        "Electron runs the live preview as an OOPIF on 127.0.0.2; AIME measured parent 54 \u2192 60 FPS and iframe 52 \u2192 60 FPS.",
         "GPU is on by default; a persisted software-rendering marker was retired.",
         "Progressive boot waits for the shell, not nine panel endpoints; heavy panes show their own branded loaders."
       ]

@@ -1,6 +1,9 @@
 # OLYMPUS Roadmap
 
-**v0.0.98-9 is the current release** (2026-11-21) — the 98.x culmination:
+**v0.0.98-9.1 is the current release** (2026-11-22) — the loop breaker:
+the same-hop loop guard, the stable campaign id, the bounded QA repair
+(upstream fix or deterministic harness + judge, two cycles) and the QA
+16-tool/12-minute clamp. **v0.0.98-9 remains the base stable** — the 98.x culmination:
 the plan archive + telemetry definition/tool ledger, the Callimachus status
 and brain-health card, the learning animation and everything from v0.0.98
 (the walk that waits, recovers and reports): the GO 5-hour limit is a quota wait with the console

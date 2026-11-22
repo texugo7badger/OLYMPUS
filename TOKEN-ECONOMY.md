@@ -268,6 +268,20 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 10. v0.0.98-9.1 — the loop breaker spends nothing twice
+
+A hop that failed deterministically twice in the same plan generation is
+blocked by the loop guard; the next walk dispatches it zero times. The
+campaign id is stable across resumes, so the recovery ledger no longer resets
+and the same QA cannot burn 16 attempts.
+
+A QA gate is split on demand: a harness hop writes a deterministic script +
+`evidence/qa/<name>.json` on a tool-budget failure, and a judge hop reads the
+JSON with at most 10 tool calls. A verify-failed QA schedules one upstream fix
+hop built from its evidence, then a 12-call judge. Two cycles maximum, then
+the hop blocks with the evidence. QA hops are clamped to 16 tool calls and 12
+minutes; the repo-wide lint baseline is not charged to the feature.
+
 ## 9. v0.0.98-9 — every hop keeps its ledger
 
 The plan archive (`.olympus-plan-archive/gen-<n>.json`, last 20) keeps the

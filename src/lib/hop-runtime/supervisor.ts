@@ -78,6 +78,16 @@ export function supervisorLogPath(slug: string): string {
   return path.join(supervisorDir(), `${slug.replace(/[^a-zA-Z0-9._-]/g, '_')}.log`);
 }
 
+/** v0.0.98-9.1 — the user's explicit "keep this campaign walking" opt-in.
+ *  Read directly (the warden imports this module; a reverse import would
+ *  create a cycle). A stale `autoResume: true` is NOT permission. */
+function hasExplicitOptIn(slug: string): boolean {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(homeDir(), 'atlas-optin.json'), 'utf-8'));
+    return Boolean(raw?.[slug]);
+  } catch { return false; }
+}
+
 function pidAlive(pid: number): boolean {
   if (!Number.isFinite(pid) || pid <= 0) return false;
   try { process.kill(pid, 0); return true; } catch (e: any) { return e?.code === 'EPERM'; }
@@ -234,7 +244,10 @@ export function resumeOrphanedSupervisors(): Array<{ slug: string; resumed: bool
     // autoResume, retry ONLY the last park (bounded), keeping older quarantine.
     if (state.status === 'finished' && !view.alive) {
       const plan = readHibernationPlan();
-      if (!plan?.autoResume) { out.push({ slug: state.slug, resumed: false, reason: 'autoResume is off' }); continue; }
+      if (!plan?.autoResume && !hasExplicitOptIn(state.slug)) {
+        out.push({ slug: state.slug, resumed: false, reason: 'autoResume is off (window expired and no explicit opt-in)' });
+        continue;
+      }
       let parked: string | null = null;
       try { parked = loadHopState(state.laneRoot)?.parked?.hopId ?? null; } catch { /* no state */ }
       if (!parked) { out.push({ slug: state.slug, resumed: false, reason: 'finished with no parked hop' }); continue; }
@@ -255,6 +268,12 @@ export function resumeOrphanedSupervisors(): Array<{ slug: string; resumed: bool
     }
     if (state.status !== 'running' || view.alive) continue;
     if (!state.autoResume) { out.push({ slug: state.slug, resumed: false, reason: 'autoResume is off' }); continue; }
+    // v0.0.98-9.1 — a crash inside an EXPIRED window is not permission to
+    // start another walk. The window or the user's explicit opt-in must say so.
+    if (!readHibernationPlan()?.autoResume && !hasExplicitOptIn(state.slug)) {
+      out.push({ slug: state.slug, resumed: false, reason: 'resume window expired (no hibernation plan, no explicit opt-in)' });
+      continue;
+    }
     const attempts = Number(state.resumeAttempts) || 0;
     if (attempts >= MAX_RESUME_ATTEMPTS) {
       markSupervisor(state.slug, { status: 'failed', finishedAt: new Date().toISOString(), outcome: `resume budget exhausted (${attempts}/${MAX_RESUME_ATTEMPTS})` });

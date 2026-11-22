@@ -52,6 +52,16 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.98-9.1 — the loop breaker.**
+A hop that failed deterministically twice in the same plan generation is
+blocked by the loop guard; the warden and the post-run will not auto-resume
+it, and a stale campaign id can no longer reset the recovery budget. A failed
+QA gate now schedules one bounded repair — an upstream fix hop built from its
+evidence, or a deterministic harness + JSON judge — and only re-runs the QA
+after that. Two cycles maximum, then BLOCKED with evidence. QA hops are
+clamped to 16 tool calls and 12 minutes. The AIME `qa-glow-local` specimen
+(16 parks) is seeded from its telemetry and blocks on the first tick.
+
 **v0.0.98-9 — the 98.x culmination.**
 Every hop now keeps its definition: the plan archive preserves the replaced
 generation, and the telemetry row records artifacts, checks, abilities, the
@@ -355,7 +365,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**178 PASS / 0 FAIL / 1 declared skip** across 179 suites; a 100-hop
+**179 PASS / 0 FAIL / 1 declared skip** across 180 suites; a 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

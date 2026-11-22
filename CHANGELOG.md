@@ -2,6 +2,42 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98-9.1] — 2026-11-22
+
+### The loop breaker — a QA gate repairs or blocks, never re-runs
+
+- **Same-hop loop guard.** A deterministic failure (`tool-budget`,
+  `verify-failed`, `script`, `unknown`) is counted per lane + plan generation
+  + hop. The second failure blocks the hop. A new plan generation starts a
+  fresh count; the user's Continue on an unchanged plan is refused. The live
+  AIME specimen (`qa-glow-local`, 16 parks) is seeded from its telemetry and
+  blocks on the first tick after the update.
+- **Stable campaign id.** The walk lock reuses the state's `campaignId` while
+  the plan generation is unchanged. A new campaign id no longer resets the
+  per-hop recovery budget on every resume.
+- **QA repair, not a blind retry.** A QA `verify-failed` schedules one
+  upstream fix hop built from the evidence's FAIL rows and its own "next hop"
+  paragraph, then the QA re-runs as a small judge. A QA `tool-budget` schedules
+  a deterministic harness hop (`scripts/qa/<name>.mjs` + JSON), then the QA
+  judge reads the JSON. Max 2 cycles; the third failure blocks the hop.
+- **QA budget and ceiling.** A `qa-*` hop is clamped to 16 tool calls and a
+  hard 12-minute ceiling; the repository-wide lint baseline is not the gate.
+- **Autonomy window.** `opts.unattended` is the explicit night-shift
+  permission; a stale hibernation marker or a supervisor's `autoResume: true`
+  outside an active window is not. The warden refuses a loop-blocked lane.
+- **One notification, one decision.** A repeated park of the same hop no
+  longer appends a second desktop notice; the loop guard writes one
+  `needs-user` decision and the digest reports the real auto-resume count.
+
+**Battery: 179 PASS / 0 FAIL / 1 declared skip of 180.**
+`scripts/v092-runtime.test.mjs` **37 passed**; `hop-loop-guard` 24 checks
+(loop guard, stable campaign, QA fix+judge, warden refusal); `tsc` clean;
+build + standalone gate green. The 2-hour night drill and the 8h/100-hop
+certification remain unclaimed.
+
+**Published v0.0.98-9.1 on the v0.0.98-9 line; v0.0.98-9 remains the base
+stable.**
+
 ## [v0.0.98-9] — 2026-11-21
 
 ### The 98.x culmination — every hop has a definition, a ledger and a brain

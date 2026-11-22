@@ -308,6 +308,20 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.98-9.1 — the loop breaker
+
+A deterministic failure is counted per lane + plan generation + hop. The
+second one blocks the hop (`.olympus-loop-guard.json`); the warden and the
+post-run refuse to auto-resume it, and the digest names it. A new plan
+generation is the reset. `opts.unattended` is the night-shift permission; an
+expired hibernation window or a stale supervisor flag is not.
+
+A QA gate is never blind-retried: `verify-failed` schedules one upstream fix
+hop built from the evidence (then the QA re-runs as a judge), and
+`tool-budget` schedules a deterministic harness + JSON judge. The cap is two
+cycles; the third failure blocks. QA hops are clamped to 16 tool calls and a
+12-minute ceiling, and lint is baseline-aware.
+
 ## v0.0.98-9 — the plan archive and the tool ledger
 
 When a plan generation is replaced, `freezePlan`/`applyNextPlan` archive it

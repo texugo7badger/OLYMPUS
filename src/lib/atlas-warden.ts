@@ -34,6 +34,7 @@ import { decideRecovery, applyRecovery, readRecoveries, campaignKey } from './ho
 import { startDetachedWalk, readSupervisor } from './hop-runtime/supervisor';
 import { appendActivity } from './activity-feed';
 import { readHibernationPlan } from './hibernation';
+import { blockedLoopHops, seedLoopGuardFromTelemetry } from './hop-runtime/loop-guard';
 
 export const ATLAS_MODEL = 'opencode-go/hy3';
 export const ATLAS_DECISION_FILE = 'atlas-decision.json';
@@ -277,8 +278,12 @@ export function wardenTick(opts: WardenTickOptions = {}): WardenState {
     // v0.0.98 — hibernating with an active lane opts that lane into the
     // night contract, even when the supervisor file predates it.
     const hibPlan = readHibernationPlan();
-    const optedIn = readOptIn(slug) || supervisor.state?.autoResume === true
-      || (Boolean(hibPlan) && activeSlug() === slug);
+    // v0.0.98-9.1 — A STALE SUPERVISOR IS NOT PERMISSION. `autoResume: true`
+    // survives the hibernation window it was started for; the warden must
+    // require a LIVE window or the user's explicit opt-in. The AIME specimen
+    // kept starting walks all morning after its 8h window expired.
+    const explicitOptIn = readOptIn(slug);
+    const optedIn = explicitOptIn || (Boolean(hibPlan) && (supervisor.state?.autoResume === true || activeSlug() === slug));
     const parked = state?.parked ?? null;
     const pending = health.total - health.completed;
 
@@ -298,6 +303,36 @@ export function wardenTick(opts: WardenTickOptions = {}): WardenState {
         slug, laneRoot, generation: health.generation, completed: health.completed, total: health.total,
         running: health.running, verdict: health.verdict, health: health.line, parked: parked?.hopId ?? null,
         optedIn, supervisor: 'running', lastAction: null,
+      });
+      continue;
+    }
+
+    // v0.0.98-9.1 — THE SAME-HOP LOOP BREAKER IS THE WARDEN'S FIRST TRUTH.
+    // A hop that failed twice in this generation (or the live qa-glow-local
+    // specimen, seeded from its 15 telemetry rows) is never started again.
+    // One decision names it; the user fixes the upstream or writes a new plan.
+    const guardGeneration = Number(state?.generation ?? plan.generation ?? health.generation ?? 0);
+    try { seedLoopGuardFromTelemetry(laneRoot, guardGeneration, plan.createdAt); } catch { /* evidence */ }
+    const loopBlocked = (() => {
+      try {
+        return blockedLoopHops(laneRoot, guardGeneration).filter((b) =>
+          (plan.hops ?? []).some((h: any) => String(h?.id) === b.hopId) && !(state?.completed ?? []).includes(b.hopId));
+      } catch { return []; }
+    })();
+    if (loopBlocked.length > 0) {
+      const names = loopBlocked.map((b) => `${b.hopId} (${b.entry.failures}× ${b.entry.lastClass ?? 'unknown'})`).join(', ');
+      const decision: WardenDecision = {
+        id: `${slug}:${loopBlocked.map((b) => b.hopId).join(',')}:loop-blocked`,
+        slug, laneRoot, kind: 'needs-user', hopId: loopBlocked[0].hopId,
+        reason: 'loop-blocked',
+        message: `${slug}: ${names} failed twice in plan generation ${guardGeneration}. The loop guard stopped the automatic resume — fix the upstream or write a new plan generation, then Continue.`,
+        at: new Date(now).toISOString(), actions: ['new-project', 'dismiss'],
+      };
+      decisions.push(decision);
+      lanes.push({
+        slug, laneRoot, generation: health.generation, completed: health.completed, total: health.total,
+        running: 0, verdict: 'NEEDS-YOU', health: health.line, parked: loopBlocked[0].hopId,
+        optedIn, supervisor: supervisor.state ? 'idle' : 'none', lastAction: 'loop-blocked',
       });
       continue;
     }
@@ -373,7 +408,7 @@ export function wardenTick(opts: WardenTickOptions = {}): WardenState {
         const hop = (plan?.hops ?? []).find((h: any) => String(h?.id) === park.hopId);
         if (!hop) continue;
         const depFinding = patrolFinding(laneRoot, hop, park);
-        const decision = decideRecovery(laneRoot, depFinding);
+        const decision = decideRecovery(laneRoot, depFinding, { allowQaRetry: true });
         if (decision.action !== 'retry') continue;
         if (persist) applyRecovery(laneRoot, depFinding, decision);
         retryIds.push(park.hopId);

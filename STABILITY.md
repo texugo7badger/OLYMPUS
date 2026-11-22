@@ -2,7 +2,9 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.98-9 · 2026-11-21 · the current release. The 98.x line adds the plan archive,
+> v0.0.98-9.1 · 2026-11-22 · the current release. The hotfix adds the same-hop loop
+> breaker, the stable campaign id and the bounded QA repair; a QA gate that
+> fails twice blocks with evidence instead of re-running all night. The 98.x line adds the plan archive,
 > the telemetry definition/tool ledger, the Callimachus status card and the
 > learning animation on top of v0.0.98. The GO 5-hour limit is a WAIT
 > with the console reset; a blocked gate recovers its quarantined
@@ -24,6 +26,28 @@
 > kills the walk, and an orphaned state is resumed once at boot (bounded).
 > The suspend contract is drilled (`npm run suspend:drill`): a hop with 1.5s
 > timers survives a suspend marker written mid-flight.
+
+## The same-hop loop breaker (v0.0.98-9.1)
+
+The AIME specimen failed `qa-glow-local` 16 times between 03:52 and 16:15 —
+16 campaign ids, 9.5–29.6 minutes each. Every new campaign reset the recovery
+ledger. The hotfix makes the hop, not the campaign, the unit of memory:
+
+- a deterministic failure (`tool-budget`, `verify-failed`, `script`,
+  `unknown`) is counted per lane + plan generation + hop; the second one
+  writes `.olympus-loop-guard.json` and blocks the hop;
+- the walk lock reuses the state's campaign id while the generation is
+  unchanged, so the recovery ledger no longer resets;
+- the warden and the post-run refuse to auto-resume a blocked hop; the digest
+  and one decision name it;
+- a QA `verify-failed` schedules an upstream fix hop from the evidence, then
+  the QA re-runs as a judge; a QA `tool-budget` schedules a deterministic
+  harness + JSON judge. Two cycles, then BLOCKED.
+- a QA hop is clamped to 16 tool calls and a hard 12-minute ceiling; lint is
+  measured on the touched files, not the repo baseline.
+
+`opts.unattended` is the explicit night-shift permission. An expired
+hibernation plan or a supervisor's stale `autoResume: true` is not.
 
 ## What the harness measures
 

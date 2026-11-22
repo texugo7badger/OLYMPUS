@@ -343,7 +343,7 @@ ok('PN1: OpenCode 2.3.2 is pinned and the patch-notes surface is wired', () => {
   assert.equal(pkg.dependencies['@opencode/cli'], '2.3.2');
   assert.equal(pkg.dependencies['@opencode/plugin'], '2.3.2');
   const notes = JSON.parse(src('public/patch-notes.json'));
-  assert.equal(notes.current, '0.0.98');
+  assert.equal(notes.current, pkg.version);
   assert.equal(notes.opencode.tested, '2.3.2');
   assert.match(notes.opencode.gateCommand, /opencode:gate/);
   const component = src('src/components/olympus/patch-notes.tsx');

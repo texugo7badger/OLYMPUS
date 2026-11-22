@@ -51,7 +51,8 @@ expect('D-6: the ceiling log prints remaining seconds, not epoch',
 expect('D-11: a hop is never launched with less than the useful slice left', /MIN_HOP_LAUNCH_MS = 150_000/.test(walker) && /budgetLeft < MIN_HOP_LAUNCH_MS/.test(walker) && /launch floor/.test(walker), 'the 12:28 doomed-launch specimen can repeat');
 expect('D-8: the exploration budget defaults to 20 and is bounded', walkerMod.DEFAULT_HOP_TOOL_BUDGET === 20 && walkerMod.resolveHopToolBudget({ OLYMPUS_HOP_TOOL_BUDGET: '99' }) === 40 && walkerMod.resolveHopToolBudget({}) === 20, 'tool budget drifted');
 expect('D-9: the warm transport counts distinct tool parts and aborts once', /seenToolParts/.test(warm) && /seenToolParts\.size > toolBudget/.test(warm) && /tool-budget-exceeded/.test(warm), 'the exploration loop is unbounded');
-expect('D-10: the walker passes the budget (override > hop > global) to the transport', /toolBudget: readHopOverride\(ctx\.laneRoot, hop\.id\)\?\.toolBudget \?\? hop\.toolBudget \?\? resolveHopToolBudget\(\)/.test(walker), 'the budget never reaches the lane');
+expect('D-10: the walker passes the budget (override > hop > global) to the transport', /readHopOverride\(ctx\.laneRoot, hop\.id\)\?\.toolBudget \?\? hop\.toolBudget \?\? resolveHopToolBudget\(\)/.test(walker), 'the budget never reaches the lane');
+expect('D-10b: a QA hop is clamped to 16 tool calls (the qa-glow-local specimen)', /qa\[-_\].*\? 16 : 40/s.test(walker), 'the QA budget is unbounded');
 expect('D-7: the campaign budget is still 60 min',
   /DEFAULT_CAMPAIGN_BUDGET_MS = 60 \* 60_000/.test(walker),
   'the project budget changed silently');

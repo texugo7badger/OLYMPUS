@@ -61,6 +61,7 @@ import { ensurePlanGeneration, freezePlan, validCompletedForPlan, computeHopHash
 import { readHopOverride } from './hop-overrides';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 import { appendGodInbox } from '@/lib/god-inbox';
+import { blockedLoopHops, clearLoopHop, isLoopClass, noteLoopFailure } from './loop-guard';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
 export const MAX_HOP_CONCURRENCY = 4;
@@ -405,9 +406,12 @@ export async function composeHopPromptWithRag(
   const recovery = override?.promptAppend
     ? `\n\n## RECOVERY DIRECTIVE (attempt ${override.attempts ?? 1})\n${override.promptAppend}\n`
     : '';
-  const base = build
+  const qaBaseline = /^qa[-_]/i.test(hop.id)
+    ? `\n\n## QA BASELINE (v0.0.98-9.1)\nThe repository-wide lint may be red on files this hop did not change. Run \`npx tsc --noEmit\` once and lint ONLY the files you touched (or compare the baseline); never fail this gate on pre-existing repo-wide lint errors. The gate's subject is the feature, not the baseline.`
+    : '';
+  const base = (build
     ? `${composeHopPrompt(hop, laneRoot)}\n\n${buildPrompt(mergeBuildStats([build], [])[0])}${recovery}`
-    : `${composeHopPrompt(hop, laneRoot)}${recovery}`;
+    : `${composeHopPrompt(hop, laneRoot)}${recovery}`) + qaBaseline;
   // The hop's own slice is the query; campaignQuery is only the fallback
   // for the degenerate empty-slice shape (never the shared-mush primary).
   const query = String(hop.prompt ?? '').slice(0, 400) || campaignQuery || '';
@@ -773,7 +777,10 @@ async function attemptLane(
       hardTimeoutMs: ctx.deadlineAt
         ? Math.max(60_000, Math.min(hardCeilingMs(resolveHopTimeoutMs()), ctx.deadlineAt - Date.now()))
         : hardCeilingMs(resolveHopTimeoutMs()),
-      toolBudget: readHopOverride(ctx.laneRoot, hop.id)?.toolBudget ?? hop.toolBudget ?? resolveHopToolBudget(),
+      toolBudget: Math.min(
+        /^qa[-_]/i.test(hop.id) ? 16 : 40,
+        readHopOverride(ctx.laneRoot, hop.id)?.toolBudget ?? hop.toolBudget ?? resolveHopToolBudget(),
+      ),
       firstByteMs: resolveHopFirstByteMs(),
       silenceMs: resolveHopSilenceMs(),
       onNotice: (msg) => console.log(`[hop-transport] ${msg}`),
@@ -1430,6 +1437,33 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   for (const id of [...quarantined]) {
     if (completed.has(id)) quarantined.delete(id);
   }
+  // v0.0.98-9.1 — THE SAME-HOP LOOP BREAKER, AT THE WALKER. A hop blocked by
+  // the loop guard is quarantined for this generation; independent hops keep
+  // running, but the blocked hop never spends another token. A new plan
+  // generation (the QA repair / a human replan) starts a fresh count.
+  const loopBlocked = (() => { try { return blockedLoopHops(laneRoot, generation); } catch { return []; } })();
+  const planById = new Map(plan.hops.map((h) => [h.id, h]));
+  for (const b of loopBlocked) {
+    if (!planById.has(b.hopId) || completed.has(b.hopId)) continue;
+    quarantined.add(b.hopId);
+    const record: HopPark = {
+      hopId: b.hopId,
+      reason: 'loop-blocked',
+      ts: b.entry.lastAt || new Date().toISOString(),
+      error: `${b.hopId} failed ${b.entry.failures}× in plan generation ${generation} (${b.entry.lastClass ?? 'unknown'}) — the loop guard stopped the walk. Fix the upstream or write a new plan generation, then Continue.`,
+      errorClass: b.entry.lastClass ?? 'unknown',
+      failureClass: b.entry.lastClass ?? 'unknown',
+      kind: 'parked',
+    };
+    parkMap.set(b.hopId, record);
+    // The loop block is the CURRENT truth for this hop; a prior park with
+    // the same id must not hide it (the third-walk summary).
+    if (!parkedHop || parkedHop.hopId === b.hopId) parkedHop = record;
+    emit({ type: 'hop_parked', hop: b.hopId, god: planById.get(b.hopId)?.god ?? 'system', reason: 'loop-blocked', error: record.error, errorClass: record.errorClass });
+  }
+  if (loopBlocked.length > 0) {
+    opts.onEvent?.({ type: 'log', msg: `Loop guard: ${loopBlocked.map((b) => `${b.hopId} (${b.entry.failures}× ${b.entry.lastClass ?? 'unknown'})`).join(', ')} — quarantined for generation ${generation}; no further attempts.` } as any);
+  }
 
   // #RESTART-SPECIMEN (2026-10-16, 22:27): the walk died mid-hop-1 (the app
   // restart killed the dev server) with NO state on disk — the campaign was
@@ -1471,8 +1505,10 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
    */
   let attempts = 0;
   let parks = 0;
+  const parksByHop = new Map<string, number>();
   const parkHop = (hop: PlanHop, reason: string, error?: string, verify?: HopVerifyResult, errorClass?: string | null): void => {
     parks += 1;
+    parksByHop.set(hop.id, (parksByHop.get(hop.id) ?? 0) + 1);
     quarantined.add(hop.id);
     // v0.0.91 — never park with an empty class. When the provider sent no
     // text, the REASON is still evidence (verify-failed, design-evidence-
@@ -1490,6 +1526,15 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     };
     parkedHop = record;
     parkMap.set(hop.id, record);
+    // v0.0.98-9.1 — the same-hop loop breaker: two failures in the same plan
+    // generation block the hop, regardless of how many new campaign ids the
+    // warden creates.
+    // A lane/transport disconnect is transient and the recovery ledger
+    // bounds it; only a class a blind re-run reproduces byte-for-byte
+    // counts toward the same-hop loop breaker.
+    if (isLoopClass(cls)) {
+      try { noteLoopFailure(laneRoot, hop.id, generation, cls); } catch { /* evidence */ }
+    }
     // v0.0.91 — the park card has a diagnosis even when the child was mute.
     // The file is per-lane (last park wins) and is safe to read from the UI.
     try {
@@ -1636,6 +1681,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     // a restart. One concise entry per settled hop (never per token).
     try {
       const ok = status === 'completed';
+      if (!ok && (parksByHop.get(hop.id) ?? 0) > 1) throw new Error('duplicate park — the loop guard owns the final notice');
       const slug = basename(stateDir);
       appendGodInbox('apollo', {
         role: 'system',
@@ -1842,9 +1888,16 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           try {
           let result: HopDispatchResult;
           try {
+            // v0.0.98-9.1 — QA has a HARD 12-minute ceiling; the transport's
+            // +300s extension stops at this deadline, so no QA hop can run
+            // the 20–30 minute specimens again.
+            const qaHop = /^qa[-_]/i.test(next.id);
+            const hopDeadlineAt = qaHop && deadlineAt
+              ? Math.min(deadlineAt, Date.now() + 12 * 60_000)
+              : deadlineAt;
             result = next.kind === 'script'
               ? await runScriptHop(next, laneRoot)
-              : await dispatch(next, { laneRoot, prompt: await composeHopPromptWithRag(next, laneRoot), deadlineAt });
+              : await dispatch(next, { laneRoot, prompt: await composeHopPromptWithRag(next, laneRoot), deadlineAt: hopDeadlineAt });
           } catch (e) {
             result = {
               ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,
@@ -1888,6 +1941,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
             if (verify.ok) {
               completed.add(next.id);
               parkMap.delete(next.id);
+              try { clearLoopHop(laneRoot, next.id); } catch { /* evidence */ }
               // v0.0.85 — the hop that was parked re-ran and PASSED: the park
               // is no longer the campaign's state.
               if (parkedHop?.hopId === next.id) parkedHop = null;

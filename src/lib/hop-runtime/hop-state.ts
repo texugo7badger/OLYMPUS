@@ -117,6 +117,8 @@ export function loadHopState(stateDir: string): HopStateFile | null {
       lastHeartbeatAt: typeof f?.lastHeartbeatAt === 'string' ? f.lastHeartbeatAt : undefined,
       transport: f?.transport === 'warm' || f?.transport === 'spawn' ? f.transport : undefined,
     })).filter((f) => f.hopId) : [],
+    ...(Number.isFinite(Number(s.generation)) ? { generation: Number(s.generation) } : {}),
+    ...(s.hopHashes && typeof s.hopHashes === 'object' ? { hopHashes: s.hopHashes as Record<string, string> } : {}),
     ...(s.parks && typeof s.parks === 'object' ? { parks: s.parks } : {}),
     ...(typeof s.waitingUntil === 'string' ? { waitingUntil: s.waitingUntil } : {}),
     ...(typeof s.waitingReason === 'string' ? { waitingReason: s.waitingReason } : {}),

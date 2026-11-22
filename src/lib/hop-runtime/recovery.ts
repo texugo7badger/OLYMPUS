@@ -87,7 +87,7 @@ export function recoveryAttempts(laneRoot: string, hopId: string, campaignId = c
 }
 
 /** Turn one deterministic finding into the next bounded action. */
-export function decideRecovery(laneRoot: string, finding: PatrolFinding): RecoveryDecision {
+export function decideRecovery(laneRoot: string, finding: PatrolFinding, opts: { allowQaRetry?: boolean } = {}): RecoveryDecision {
   const campaignId = campaignKey(laneRoot);
   const attempts = recoveryAttempts(laneRoot, finding.hopId, campaignId);
   const campaignAttempts = readRecoveries(laneRoot)
@@ -101,6 +101,15 @@ export function decideRecovery(laneRoot: string, finding: PatrolFinding): Recove
     return { action: 'stop', kind: 'ask-unknown', delayMs: 0, message: base(`campaign recovery budget exhausted (${campaignAttempts}/${budget.perCampaign}) — stopping so the loop cannot burn the night. ${finding.recommendation}`) };
   }
   const laneNote = finding.nextLane ? ` Next lane: ${finding.nextLane}.` : ' No healthy fallback lane.';
+  // v0.0.98-9.1 — A QA GATE NEVER GETS A BLIND RETRY. The qa-glow-local
+  // specimen re-ran the same 7-check prompt 15 times on inflated budgets;
+  // the walker's QA repair builds a fix/harness hop and a judge instead.
+  if (!opts.allowQaRetry && /^qa[-_]/i.test(finding.hopId) && (finding.failureClass === 'tool-budget' || finding.failureClass === 'verify-failed' || finding.failureClass === 'script')) {
+    return {
+      action: 'stop', kind: 'ask-unknown', delayMs: 0,
+      message: base(`${finding.failureClass} on a QA gate — the walker owns the repair hop (upstream fix or harness split + judge); a blind retry is refused. ${finding.recommendation}`),
+    };
+  }
   switch (finding.failureClass) {
     case 'campaign-budget':
       return {
@@ -115,7 +124,7 @@ export function decideRecovery(laneRoot: string, finding: PatrolFinding): Recove
           promptAppend: `RECOVERY: the previous attempt exhausted the tool budget. Use at most 36 tool calls; batch shell commands into ONE call; write the declared artifact BEFORE further probing; do not read files outside the declared set. Do not add scope. The failing evidence: ${finding.evidence}.`,
           reason: `tool-budget recovery (attempt ${attempts + 1})`,
         },
-        message: base(`tool-budget → budget 24 + narrow directive; retry now.${laneNote}`),
+        message: base(`tool-budget → budget 36 + narrow directive; retry now.${laneNote}`),
       };
     case 'lane-exhausted':
       return {
