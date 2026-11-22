@@ -9,8 +9,8 @@
       "skip": 1,
       "suites": 180
     },
-    "releasedAt": "2026-11-22T00:00:00.000Z",
-    "commit": "pending",
+    "releasedAt": "2026-11-22T17:13:16Z",
+    "commit": "7d87133",
     "note": "Stable means: the full battery ran with 0 FAIL and the declared skips are explicit. The console/GO limits are unrelated and may change."
   },
   "versions": [
