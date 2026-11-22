@@ -1,10 +1,10 @@
 /**
  * loop-guard.ts — v0.0.98-9.1: the same-hop loop breaker.
  *
- * THE SPECIMEN (AIME qa-glow-local, 2026-11-22): the QA correctly failed 15
- * times between 04:47 and 15:52 — 15 different campaign ids. Every new walk
- * reset the per-campaign recovery budget, so the warden kept re-running the
- * same hop all night and all morning. A campaign id is not a hop's memory.
+ * THE SPECIMEN (AIME qa-glow-local, 2026-11-22): the QA correctly failed 16
+ * times between 03:52 and 16:15 across 9 campaign ids. Every new walk reset
+ * the per-campaign recovery budget, so the warden kept re-running the same
+ * hop all night and all morning. A campaign id is not a hop's memory.
  *
  * The guard is per lane + plan generation + hop: after TWO failed attempts
  * with no new generation, the hop is BLOCKED; the post-run/warden must not
@@ -147,7 +147,7 @@ export function blockedLoopHops(laneRoot: string, generation: number): Array<{ h
  * Seed from the telemetry when the state predates the guard. Counts parked
  * rows for each hop since the current plan was created; if the latest row is
  * parked and there are >=2, writes a blocked entry. This blocks the live
- * qa-glow-local (15 attempts) on the first boot after the update.
+ * qa-glow-local (16 attempts) on the first boot after the update.
  */
 export function seedLoopGuardFromTelemetry(laneRoot: string, generation: number, planCreatedAt: string | null | undefined): Array<{ hopId: string; entry: LoopEntry }> {
   const since = Date.parse(String(planCreatedAt ?? ''));

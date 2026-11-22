@@ -30,8 +30,8 @@
 ## The same-hop loop breaker (v0.0.98-9.1)
 
 The AIME specimen failed `qa-glow-local` 16 times between 03:52 and 16:15 —
-16 campaign ids, 9.5–29.6 minutes each. Every new campaign reset the recovery
-ledger. The hotfix makes the hop, not the campaign, the unit of memory:
+across 9 campaign ids, 9.5–29.6 minutes each. Every new campaign reset the
+recovery ledger. The hotfix makes the hop, not the campaign, the unit of memory:
 
 - a deterministic failure (`tool-budget`, `verify-failed`, `script`,
   `unknown`) is counted per lane + plan generation + hop; the second one
