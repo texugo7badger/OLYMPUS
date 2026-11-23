@@ -78,5 +78,15 @@
     "file": "screenshots/screens/65-plan-health-98-13.png",
     "title": "Plan Health",
     "note": "25-hop plan flagged oversized; 7 verification hops, 3 tight budgets, 10 large hops; header v0.0.98-13"
+  },
+  {
+    "file": "screenshots/screens/66-recovery-log-98-14.png",
+    "title": "Recovery Log",
+    "note": "the recovery ledger as a timeline: lane, hop, class, kind, budget, next lane, message; header v0.0.98-14"
+  },
+  {
+    "file": "screenshots/screens/67-real-errors-98-14.png",
+    "title": "Real errors only",
+    "note": "preload/CSP/GitHub-stats noise filtered; two real errors with source/version/stack; header v0.0.98-14"
   }
 ]

@@ -15,13 +15,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ScrollText, RefreshCw, Search, ArrowLeft, Copy, Check,
-  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench, Server, Activity, ListTree,
+  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench, Server, Activity, ListTree, RotateCcw, TriangleAlert,
 } from 'lucide-react';
 import { planHealth, estimateHopToolBudget } from '@/lib/plan-health';
 import { cn } from '@/lib/utils';
 import type { LogHop, LogWalk, LogsPayload } from '@/lib/logs-index';
 
-type Tab = 'overview' | 'hops' | 'walks' | 'blocked' | 'boot' | 'plan' | 'models' | 'economy';
+type Tab = 'overview' | 'hops' | 'walks' | 'blocked' | 'boot' | 'plan' | 'recovery' | 'errors' | 'models' | 'economy';
 
 interface BootHealth {
   app: { version: string; port: number; portAlive: boolean; health: { ok: boolean; status: number | null; ms: number; error: string | null }; mode: string };
@@ -38,6 +38,8 @@ const TABS: Array<{ id: Tab; label: string; icon: any }> = [
   { id: 'blocked', label: 'Blocked', icon: ShieldAlert },
   { id: 'boot', label: 'Boot', icon: Server },
   { id: 'plan', label: 'Plan', icon: ListTree },
+  { id: 'recovery', label: 'Recovery', icon: RotateCcw },
+  { id: 'errors', label: 'Errors', icon: TriangleAlert },
   { id: 'models', label: 'Models', icon: Cpu },
   { id: 'economy', label: 'Economy', icon: Coins },
 ];
@@ -223,6 +225,12 @@ export default function LogsDashboard() {
     }))),
   })), [walks]);
 
+  const recoveries = useMemo(() => (data?.recoveries ?? []).filter((r) => !lane || r.slug === lane).slice(0, 120), [data, lane]);
+  const realErrors = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (data?.errors ?? []).filter((e) => !q || `${e.source} ${e.message} ${e.appVersion ?? ''}`.toLowerCase().includes(q)).slice(0, 120);
+  }, [data, query]);
+
   const summary = data?.summary;
   const economy = data?.economy;
 
@@ -292,7 +300,7 @@ export default function LogsDashboard() {
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
-            const count = t.id === 'hops' ? hops.length : t.id === 'walks' ? walks.length : t.id === 'blocked' ? blocked.length : null;
+            const count = t.id === 'hops' ? hops.length : t.id === 'walks' ? walks.length : t.id === 'blocked' ? blocked.length : t.id === 'recovery' ? recoveries.length : t.id === 'errors' ? realErrors.length : null;
             return (
               <button
                 key={t.id}
@@ -565,6 +573,84 @@ export default function LogsDashboard() {
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {tab === 'recovery' && (
+          <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 text-olympus-cyan">
+                  <RotateCcw size={14} />
+                  <h2 className="text-[13px] font-semibold text-olympus-text">Recovery Log</h2>
+                  <span className="rounded bg-olympus-cyan/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-cyan ring-1 ring-olympus-cyan/20">atlas actions</span>
+                </div>
+                <p className="mt-1 max-w-[780px] text-[11px] text-olympus-text-dim">
+                  Cada recovery registrado no disco: lane, hop, classe, ação, orçamento aplicado e a mensagem do Atlas.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono text-olympus-text-dim">{recoveries.length} row(s)</span>
+            </div>
+            {recoveries.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-olympus-green/20 bg-olympus-green/5 px-3 py-3 text-[11px] font-mono text-olympus-green">Nenhum recovery no recorte.</div>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {recoveries.map((r) => (
+                  <div key={`${r.lane}:${r.hopId}:${r.ts}`} className="rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-mono text-olympus-text-dim">{fmtTime(r.ts)}</span>
+                      <span className="font-mono text-[12px] text-olympus-text">{r.hopId}</span>
+                      <span className="text-[10px] font-mono text-olympus-text-dim">{r.slug} · {r.god}</span>
+                      <span className="rounded bg-olympus-cyan/5 px-1.5 py-0.5 text-[9px] font-mono text-olympus-cyan ring-1 ring-olympus-cyan/20">{r.kind}</span>
+                      {r.failureClass && <span className="rounded bg-olympus-red/5 px-1.5 py-0.5 text-[9px] font-mono text-olympus-red ring-1 ring-olympus-red/20">{r.failureClass}</span>}
+                      {r.toolBudget != null && <span className="text-[9px] font-mono text-olympus-text-dim">budget {r.toolBudget}</span>}
+                      {r.nextLane && <span className="text-[9px] font-mono text-olympus-text-dim">next {r.nextLane}</span>}
+                    </div>
+                    {r.message && <p className="mt-1 text-[10px] font-mono text-olympus-text-dim">{r.message}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {tab === 'errors' && (
+          <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 text-olympus-red">
+                  <TriangleAlert size={14} />
+                  <h2 className="text-[13px] font-semibold text-olympus-text">Errors</h2>
+                  <span className="rounded bg-olympus-red/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-red ring-1 ring-olympus-red/20">real only</span>
+                </div>
+                <p className="mt-1 max-w-[820px] text-[11px] text-olympus-text-dim">
+                  Preload/CSP/GitHub-stats noise é filtrado. O que sobra é o erro que importa: fonte, versão, mensagem e stack.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono text-olympus-text-dim">{realErrors.length} real error(s)</span>
+            </div>
+            {realErrors.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-olympus-green/20 bg-olympus-green/5 px-3 py-3 text-[11px] font-mono text-olympus-green">Nenhum erro real no recorte — só ruído de console, já filtrado.</div>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {realErrors.map((e, i) => (
+                  <div key={`${e.ts}:${i}`} className="rounded-lg border border-olympus-red/15 bg-olympus-bg/40 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-mono text-olympus-text-dim">{fmtTime(e.ts)}</span>
+                      <span className="rounded bg-olympus-red/5 px-1.5 py-0.5 text-[9px] font-mono text-olympus-red ring-1 ring-olympus-red/20">{e.source}</span>
+                      {e.appVersion && <span className="text-[9px] font-mono text-olympus-text-dim">v{e.appVersion}</span>}
+                    </div>
+                    <p className="mt-1 text-[11px] font-mono text-olympus-text">{e.message}</p>
+                    {e.stack && (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-[9px] font-mono text-olympus-text-dim">stack</summary>
+                        <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-[9px] font-mono text-olympus-text-dim">{e.stack}</pre>
+                      </details>
+                    )}
                   </div>
                 ))}
               </div>

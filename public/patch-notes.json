@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-23",
-  "current": "0.0.98-13",
+  "current": "0.0.98-14",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.1",
@@ -11,6 +11,17 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.1 passed the full gate on 2026-11-23."
   },
   "releases": [
+    {
+      "version": "0.0.98-14",
+      "date": "2026-11-23",
+      "title": "Recovery Log + real errors",
+      "highlights": [
+        "Logs \u2192 Recovery: the recovery ledger as a timeline (lane, hop, class, kind, action, tool budget, next lane, message), newest first.",
+        "Logs \u2192 Errors: only real errors. Chromium preload, CSP, GitHub-stats CORS and ResizeObserver noise are filtered; stack is one click away.",
+        "errors.log rotation/filter from 0.0.98-10 remains; this release reads the same evidence into the UI instead of the console.",
+        "Plan Health, Apply guard, OpenCode 2.4.1, boot truth and slow-lane truth remain."
+      ]
+    },
     {
       "version": "0.0.98-13",
       "date": "2026-11-23",

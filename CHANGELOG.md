@@ -2,6 +2,24 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98-14] — 2026-11-23
+
+### Recovery Log + real errors
+
+- **Logs → Recovery.** The recovery ledger as a timeline: lane, hop, class,
+  kind, action, tool budget, next lane and message, newest first.
+- **Logs → Errors.** Only real errors: Chromium preload, CSP, GitHub-stats
+  CORS and ResizeObserver noise filtered; source/version/message/stack kept.
+- **Payload.** `logs-index` now returns `recoveries` (bounded 200) and
+  `errors` (bounded 200, benign filter); the UI never receives the raw noise.
+- **Tests.** `logs-truth.test.mjs` builds a fixture lane + error log and proves
+  the recovery ledger, the real/benign split and the two tabs. Battery: 51/51
+  hermetic.
+
+**The 132 local suites read the live app/vault and are not re-run while AIME
+walks; the full 180-suite battery at v0.0.98-9.1 was 179/0/1. The 2h drill and
+8h/100-hop remain unclaimed.**
+
 ## [v0.0.98-13] — 2026-11-23
 
 ### Plan health — the plan before the walk

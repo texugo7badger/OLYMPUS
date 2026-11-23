@@ -2,10 +2,10 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.98-13 · 2026-11-23 · the current release. The plan is visible before
-> the walk: the Logs Plan tab names size, verification count, tight budgets
-> and oversized prompts; Apply plan is disabled while a walk holds the lane.
-> v0.0.98-12 added OpenCode 2.4.1 and slow-lane truth. v0.0.98-11 made the socket the port owner and the
+> v0.0.98-14 · 2026-11-23 · the current release. The recovery ledger and
+> the filtered error log are first-class Logs screens; the plan is visible
+> before the walk. v0.0.98-13 added Plan Health/Apply boundary; v0.0.98-12
+> OpenCode 2.4.1 and slow-lane truth. v0.0.98-11 made the socket the port owner and the
 > process group the MCP owner; v0.0.98-10 added the verification-hop guard,
 > the blocked-signal dedupe and the log filter. The 98.x line adds the plan archive,
 > the telemetry definition/tool ledger, the Callimachus status card and the

@@ -83,6 +83,61 @@ export interface LogModelRow {
   lastUsed: string | null;
 }
 
+export interface LogRecovery {
+  lane: string;
+  slug: string;
+  ts: string;
+  hopId: string;
+  god: string;
+  failureClass: string | null;
+  kind: string;
+  action: string;
+  message: string;
+  nextLane: string | null;
+  toolBudget: number | null;
+  campaignId: string | null;
+}
+
+export interface LogError {
+  ts: string;
+  source: string;
+  message: string;
+  stack: string | null;
+  appVersion: string | null;
+}
+
+/** v0.0.98-14 — the same benign-noise filter the Electron crash log uses. */
+export function isBenignErrorLogEntry(message: string): boolean {
+  const m = String(message || '');
+  return /preloaded using link preload but not used/i.test(m)
+    || /Electron Security Warning \(Insecure Content-Security-Policy\)/i.test(m)
+    || /Access to fetch at 'https:\/\/api\.github\.com\/_private\/browser\/stats/i.test(m)
+    || /Oversized browser stats delivery failed/i.test(m)
+    || /ResizeObserver loop completed with undelivered notifications/i.test(m)
+    || /Download the React DevTools/i.test(m);
+}
+
+function readRealErrors(max = 200): LogError[] {
+  const rows: LogError[] = [];
+  const file = path.join(HOME(), 'errors.log');
+  let lines: string[] = [];
+  try { lines = fs.readFileSync(file, 'utf-8').trim().split('\n').slice(-1500); } catch { return rows; }
+  for (const line of lines) {
+    let r: any;
+    try { r = JSON.parse(line); } catch { continue; }
+    const message = String(r?.message ?? '');
+    if (!message || isBenignErrorLogEntry(message)) continue;
+    rows.push({
+      ts: String(r?.ts ?? ''),
+      source: String(r?.source ?? 'unknown'),
+      message: message.slice(0, 1_000),
+      stack: r?.stack ? String(r.stack).slice(0, 1_500) : null,
+      appVersion: r?.appVersion ? String(r.appVersion) : null,
+    });
+  }
+  return rows.sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, max);
+}
+
 export interface LogSummary {
   hops: number;
   completed: number;
@@ -114,6 +169,8 @@ export interface LogsPayload {
   summary: LogSummary;
   hops: LogHop[];
   walks: LogWalk[];
+  recoveries: LogRecovery[];
+  errors: LogError[];
   models: LogModelRow[];
   economy: LogEconomy;
   truncated: boolean;
@@ -161,6 +218,7 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
   const lanes = laneDirs();
   const hops: LogHop[] = [];
   const walks: LogWalk[] = [];
+  const recoveries: LogRecovery[] = [];
   let truncated = false;
 
   const costRows = readJsonlTail(path.join(HOME(), 'metrics', 'cost.jsonl'), COST_TAIL);
@@ -217,6 +275,17 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
     const recoveryByHop = new Map<string, any>();
     for (const r of recovery) {
       if (typeof r?.hopId === 'string' && r?.action === 'retry') recoveryByHop.set(r.hopId, r);
+      if (typeof r?.hopId === 'string') {
+        recoveries.push({
+          lane: laneRoot, slug, ts: String(r?.ts ?? ''), hopId: String(r.hopId), god: String(r?.god ?? 'system'),
+          failureClass: r?.failureClass ? String(r.failureClass) : null,
+          kind: String(r?.kind ?? 'unknown'), action: String(r?.action ?? 'retry'),
+          message: String(r?.message ?? '').slice(0, 1_000),
+          nextLane: r?.nextLane ? String(r.nextLane) : null,
+          toolBudget: Number.isFinite(Number(r?.override?.toolBudget)) ? Number(r.override.toolBudget) : null,
+          campaignId: r?.campaignId ? String(r.campaignId) : null,
+        });
+      }
     }
     const telemetry = readJsonlTail(path.join(laneRoot, '.olympus-hop-telemetry.jsonl'), HOP_TAIL);
     if (telemetry.length >= HOP_TAIL) truncated = true;
@@ -336,6 +405,8 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
 
   hops.sort((a, b) => (a.ts < b.ts ? 1 : -1));
   walks.sort((a, b) => String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')));
+  recoveries.sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+  const errors = readRealErrors(200);
 
   const summary = summarize(hops, costByModel);
   const economy = buildEconomy();
@@ -345,6 +416,8 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
     summary,
     hops,
     walks,
+    recoveries: recoveries.slice(0, 200),
+    errors,
     models: summary.byModel,
     economy,
     truncated,

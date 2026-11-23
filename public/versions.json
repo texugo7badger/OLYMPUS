@@ -1,19 +1,24 @@
 {
   "stable": {
-    "version": "0.0.98-13",
-    "tag": "v0.0.98-13",
+    "version": "0.0.98-14",
+    "tag": "v0.0.98-14",
     "stable": true,
     "tests": {
-      "pass": 50,
+      "pass": 51,
       "fail": 0,
       "skip": 0,
-      "suites": 50
+      "suites": 51
     },
-    "releasedAt": "2026-11-23T21:22:14Z",
-    "commit": "aa8357e",
-    "note": "Hermetic release-branch battery: 50/50 tracked suites. The 132 maintainer-local suites read the live app/vault and are not re-run while AIME walks; the full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip."
+    "releasedAt": "2026-11-23T22:23:42Z",
+    "commit": "pending",
+    "note": "Hermetic release-branch battery: 51/51 tracked suites. The 132 maintainer-local suites read the live app/vault and are not re-run while AIME walks; the full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip."
   },
   "versions": [
+    {
+      "version": "0.0.98-13",
+      "tag": "v0.0.98-13",
+      "stable": false
+    },
     {
       "version": "0.0.98-12",
       "tag": "v0.0.98-12",

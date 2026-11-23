@@ -308,6 +308,13 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.98-14 — Recovery Log + real errors
+
+Logs → Recovery renders every recovery row (lane, hop, class, kind, action,
+budget, next lane, message). Logs → Errors filters Chromium preload/CSP/
+GitHub-stats noise and shows the real error with its stack. The underlying
+recovery/error files stay the evidence; the UI is the read model.
+
 ## v0.0.98-13 — plan health
 
 The Logs Plan tab names plan size, pending hops, verification count, tight

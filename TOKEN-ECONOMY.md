@@ -268,6 +268,13 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 15. v0.0.98-14 — recovery and errors are evidence, not console
+
+The recovery ledger and the filtered error log are now readable in the Logs
+workspace. A recovery row carries the lane, hop, class, action, tool budget
+and next lane; an error row carries the source, version, message and stack.
+The benign Chromium/GitHub noise is filtered before it reaches the UI.
+
 ## 14. v0.0.98-13 — the plan is priced before the walk
 
 Plan Health flags hops whose declared tool budget is below the work estimate,
