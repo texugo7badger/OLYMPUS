@@ -2,6 +2,26 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98-12] — 2026-11-23
+
+### OpenCode 2.4.1 + slow-lane truth
+
+- **OpenCode 2.4.1.** `@opencode/cli`/`@opencode/plugin` pinned to 2.4.1 and
+  approved by the isolated conformance gate: serve boot, suspend recovery, v2
+  session/agent/model, prompt/SSE, DB schema, tokens, abort, clean exit.
+- **Slow is not dead.** A ceiling-kill with recent output (the
+  `mimo-v2.6-flash` specimen produced 1s before the hard cap) writes
+  `status: 'slow'`, not `timeout`. The lane stays available; the provider
+  panel says "slow", not "1 dead". The timeout still tries one alternate lane,
+  and if that fails the original result is returned instead of "all lanes
+  dead".
+- **Tests.** `hop-failure-class` adds F-12b–d: slow status, not in
+  blockedLanes, walker progress detection. Battery: 49/49 hermetic.
+
+**The 132 local suites read the live app/vault and are not re-run while AIME
+walks; the full 180-suite battery at v0.0.98-9.1 was 179/0/1. The 2h drill and
+8h/100-hop remain unclaimed.**
+
 ## [v0.0.98-11] — 2026-11-23
 
 ### Boot truth — the socket owns the port, the group owns the MCP

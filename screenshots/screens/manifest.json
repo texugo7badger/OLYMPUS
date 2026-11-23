@@ -68,5 +68,10 @@
     "file": "screenshots/screens/63-boot-health-98-11.png",
     "title": "Boot Health",
     "note": "TCP port ownership, Electron/Next PIDs, watchdog respawns, OpenCode port and live MCP git children; header v0.0.98-11"
+  },
+  {
+    "file": "screenshots/screens/64-slow-lane-98-12.png",
+    "title": "Slow lane, not dead",
+    "note": "provider panel: 1 slow (mimo-v2.6-flash, ceiling-kill while producing), no dead lanes; header v0.0.98-12"
   }
 ]

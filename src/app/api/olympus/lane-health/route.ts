@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireReadAuth } from '@/lib/auth';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
-import { readLaneHealth, blockedLanes, markLaneAlive } from '@/lib/lane-health';
+import { readLaneHealth, blockedLanes, slowLanes, markLaneAlive } from '@/lib/lane-health';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,6 +34,12 @@ export async function GET(req: NextRequest) {
       status: l.status,
       error: l.error ?? null,
       retryUntil: l.retryUntil ?? null,
+    })),
+    slow: slowLanes(health.lanes).map((l) => ({
+      lane: l.lane,
+      status: l.status,
+      error: l.error ?? null,
+      at: l.at,
     })),
     checkedAt: health.updatedAt || null,
   }, { headers: NO_CACHE_HEADERS });
@@ -56,6 +62,9 @@ export async function POST(req: NextRequest) {
     action,
     lanes: blockedLanes(health.lanes).map((l) => ({
       lane: l.lane, status: l.status, error: l.error ?? null, retryUntil: l.retryUntil ?? null,
+    })),
+    slow: slowLanes(health.lanes).map((l) => ({
+      lane: l.lane, status: l.status, error: l.error ?? null, at: l.at,
     })),
   }, { headers: NO_CACHE_HEADERS });
 }

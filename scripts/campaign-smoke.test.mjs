@@ -15,6 +15,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// v0.0.98-12 — isolate from the LIVE app's user-activity lease. A real AIME
+// walk would otherwise hold every new hop and the fixture would "stop early".
+const TEST_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-fixture-home-'));
+process.env.OLYMPUS_HOME = TEST_HOME;
+process.on('exit', () => { try { fs.rmSync(TEST_HOME, { recursive: true, force: true }); } catch { /* gone */ } });
 let failures = 0;
 const expect = (name, cond, detail) => {
   console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${cond ? '' : ' — ' + String(detail).slice(0, 260)}`);

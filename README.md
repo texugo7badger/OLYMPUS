@@ -48,6 +48,8 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
+**v0.0.98-12 evidence:** [Slow lane, not dead](screenshots/screens/64-slow-lane-98-12.png) — `mimo-v2.6-flash` is **slow** (ceiling-kill while still producing), not dead; header v0.0.98-12.
+
 **v0.0.98-11 evidence:** [Boot Health](screenshots/screens/63-boot-health-98-11.png) — TCP port ownership, process PIDs, watchdog respawns, OpenCode port and live MCP git children; header v0.0.98-11.
 
 **v0.0.98-10 evidence:** [Blocked & Recovery](screenshots/screens/62-blocked-recovery-98-10.png) — the loop guard names the blocked hop, its cause, the evidence and the next action; the header carries v0.0.98-10.
@@ -56,16 +58,13 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.98-11 — boot truth (98.3).**
-The watchdog now proves port ownership with a TCP connect before spawning and
-is single-flight: a busy 3737 is attached/reused, never duplicated (the 174
-EADDRINUSE lines are the specimen). The warm `opencode serve` is killed by
-process group (SIGTERM → SIGKILL), so `uvx mcp-server-git` children die with
-it; a boot reaper clears ppid-1 orphans older than 30 minutes. The new **Boot
-Health** tab shows app health latency, the port, Electron/Next PIDs, watchdog
-respawns, the OpenCode port and any live MCP git children. The verification
-guard, Blocked & Recovery, narrowed tool-budget retry and log filter from
-0.0.98-10 remain.
+**v0.0.98-12 — OpenCode 2.4.1 + slow-lane truth (98.4).**
+The vendored CLI/plugin is **OpenCode 2.4.1**, approved by the isolated
+conformance gate (serve, v2 sessions, prompt/SSE, DB schema, tokens, abort,
+clean exit). A ceiling-kill with recent output is now a **slow** lane, not a
+dead one: the lane stays available, the provider panel says "slow" (not
+"1 dead"), and the timeout still fails over to the next lane once. The Boot
+Health/TCP/process-group work from 0.0.98-11 remains.
 
 **v0.0.98-10 — hygiene + guard v2 (98.2).**
 The retired 98-9 preview line is out of Releases; `v0.0.98` is the base and
@@ -84,8 +83,8 @@ counts the hop state (6/10, not 4/10), and lands in Apollo's chat. The new
 detail — god, build, declared abilities, evidence, park, recovery, tokens,
 step cost/list/invoice — and the terminal header carries the **5h/weekly/
 monthly limit meter**. Hibernation now starts the detached walk and opts the
-active lane in. OpenCode v2 **2.3.2** remains the latest npm release and
-gate-approved. Published as v0.0.98; v0.0.97 remains the previous stable
+active lane in. OpenCode v2 **2.4.1** is the current gate-approved CLI
+(2.3.2 shipped with this release). Published as v0.0.98; v0.0.97 remains the previous stable
 release.
 
 **v0.0.97 — the GO console is the anchor.**
@@ -97,8 +96,8 @@ down, **≥80%** enforces Reserve, and **100% is a quota hit** — the walker pa
 with the console reset time and Burn/Pace are disabled. The interactive chat now
 pins the session model to the current god every message; the unverified
 `qwen3.7-plus` GO lane falls back to verified DeepSeek, so a qwen turn can no
-longer leave Apollo riding the same dead lane. OpenCode v2 **2.3.2** remains the
-latest npm release and gate-approved. Published as v0.0.97; v0.0.96 remains the
+longer leave Apollo riding the same dead lane. OpenCode v2 **2.4.1** is the current gate-approved CLI
+(2.3.2 shipped with this release). Published as v0.0.97; v0.0.96 remains the
 previous stable release.
 
 **v0.0.96 — hibernation v2, GO truth and the smart burn.**
@@ -113,8 +112,8 @@ Monday 00:00 UTC; the measured **25.1% / 50.1%** matches the console's 25% /
 on-pace-50%. **Smart burn** chooses a GO-only roster at the next hop/message —
 Kimi K3, Kimi K2.7 Code, DeepSeek 1017, Qwen3.7 Plus, MiniMax M3 — and never
 rewrites `opencode.json` or cuts a live turn. Claude Opus/Sonnet are **Zen**
-models, not in the GO catalog; the screen says so. OpenCode v2 **2.3.2** is
-still the latest npm release and is gate-approved. The tag-icon/logo audit and
+models, not in the GO catalog; the screen says so. OpenCode v2 **2.4.1** is the current gate-approved CLI (2.3.2 shipped
+with this release). The tag-icon/logo audit and
 24px vector brief are in [docs/design/TAG-ICON-BRIEF.md](docs/design/TAG-ICON-BRIEF.md).
 v0.0.96 remains the previous release.
 

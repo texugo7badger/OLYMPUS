@@ -1,7 +1,7 @@
 {
   "stable": {
-    "version": "0.0.98-11",
-    "tag": "v0.0.98-11",
+    "version": "0.0.98-12",
+    "tag": "v0.0.98-12",
     "stable": true,
     "tests": {
       "pass": 49,
@@ -9,11 +9,16 @@
       "skip": 0,
       "suites": 49
     },
-    "releasedAt": "2026-11-23T19:27:50Z",
-    "commit": "ef591bb",
+    "releasedAt": "2026-11-23T20:09:30Z",
+    "commit": "pending",
     "note": "Hermetic release-branch battery: 49/49 tracked suites. The 132 maintainer-local suites read the live app/vault and are not re-run while AIME walks; the full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip."
   },
   "versions": [
+    {
+      "version": "0.0.98-11",
+      "tag": "v0.0.98-11",
+      "stable": false
+    },
     {
       "version": "0.0.98-10",
       "tag": "v0.0.98-10",

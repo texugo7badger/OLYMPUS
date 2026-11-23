@@ -46,7 +46,7 @@ import { dirname } from 'node:path';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
 import { findOlympusRoot } from '@/lib/opencode-spawn';
 import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencode-session';
-import { markLaneAlive, markLaneDead, laneChain, isLaneDeadClass, isLaneAvailable, readLaneHealth } from '@/lib/lane-health';
+import { markLaneAlive, markLaneDead, markLaneSlow, laneChain, isLaneDeadClass, isLaneAvailable, readLaneHealth } from '@/lib/lane-health';
 import { laneRosterFor } from '@/lib/lane-roster';
 import { backupBeforeDestructiveHop } from '@/lib/destructive-guard';
 import { applyRunManifestFile, buildHopMcpManifest, buildRunMcpManifest, getRunMcpManifest, setRunMcpManifest } from '@/lib/mcp-run-manifest';
@@ -937,6 +937,7 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
   // lane while the chain had alternatives). A provider error still returns
   // immediately — another lane would refuse the same prompt.
   let timeoutFailovers = 0;
+  let timeoutResult: HopDispatchResult | null = null;
   for (const lane of chain) {
     const outcome = await attemptLane(lane, hop, ctxWithTransport, retriesAbsorbed);
     if (outcome.kind === 'ok') {
@@ -956,13 +957,26 @@ export const spawnHopDispatcher: HopDispatcher = async (hop, ctx) => {
     // would fail the same way for the same prompt.
     if (timeoutFailovers < 1 && classifyDispatchFailure(outcome.result) === 'timeout') {
       timeoutFailovers += 1;
-      markLaneDead(lane, 'timeout', 10 * 60_000, outcome.result.error ?? 'hop ceiling-kill with no provider error');
-      console.log(`[hop-transport] lane '${lane}' hit a ceiling-kill with no provider error — quarantined 10m; trying the next lane`);
+      timeoutResult = outcome.result as HopDispatchResult;
+      // v0.0.98-12 — a ceiling-kill with recent output is a SLOW lane, not a
+      // dead one. The 2026-11-23 mimo specimen was still producing 1s before
+      // the hard cap, yet the UI said "1 dead" and forced a manual retry.
+      const stillProducing = /hop-ceiling-extended|still producing output/i.test(String((outcome.result as any).stderr ?? outcome.result.error ?? ''));
+      if (stillProducing) {
+        markLaneSlow(lane, outcome.result.error ?? 'hop ceiling-kill while still producing output');
+        console.log(`[hop-transport] lane '${lane}' reached the hard ceiling while still producing output — marked slow (not dead); trying the next lane`);
+      } else {
+        markLaneDead(lane, 'timeout', 10 * 60_000, outcome.result.error ?? 'hop ceiling-kill with no provider error');
+        console.log(`[hop-transport] lane '${lane}' hit a ceiling-kill with no provider error — quarantined 10m; trying the next lane`);
+      }
       continue;
     }
     return outcome.result;
   }
 
+  if (timeoutResult && deadNotes.length === 0) {
+    return timeoutResult;
+  }
   return {
     ok: false, exitCode: null, output: '', tokensIn: null, tokensOut: null,
     retriesAbsorbed, exhausted: false,

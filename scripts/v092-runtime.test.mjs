@@ -340,11 +340,11 @@ await okAsync('P1: a preflight-completed hop cannot leave a phantom park', async
 
 ok('PN1: OpenCode 2.3.2 is pinned and the patch-notes surface is wired', () => {
   const pkg = JSON.parse(src('package.json'));
-  assert.equal(pkg.dependencies['@opencode/cli'], '2.3.2');
-  assert.equal(pkg.dependencies['@opencode/plugin'], '2.3.2');
+  assert.equal(pkg.dependencies['@opencode/cli'], '2.4.1');
+  assert.equal(pkg.dependencies['@opencode/plugin'], '2.4.1');
   const notes = JSON.parse(src('public/patch-notes.json'));
   assert.equal(notes.current, pkg.version);
-  assert.equal(notes.opencode.tested, '2.3.2');
+  assert.equal(notes.opencode.tested, pkg.dependencies['@opencode/cli']);
   assert.match(notes.opencode.gateCommand, /opencode:gate/);
   const component = src('src/components/olympus/patch-notes.tsx');
   assert.match(component, /opencode-update/);

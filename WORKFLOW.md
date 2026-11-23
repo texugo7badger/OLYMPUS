@@ -308,6 +308,13 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.98-12 — slow is not dead, OpenCode 2.4.1
+
+A ceiling-kill with recent output marks the lane **slow**, not dead; the
+provider panel separates slow from dead and the timeout still tries one
+alternate lane. The vendored CLI/plugin is **OpenCode 2.4.1**, approved by the
+isolated conformance gate.
+
 ## v0.0.98-11 — boot truth
 
 A busy TCP port is attached, never duplicated: the watchdog probes the socket

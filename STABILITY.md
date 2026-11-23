@@ -2,11 +2,11 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.98-11 · 2026-11-23 · the current release. The socket is the port's
-> owner and the process group is the MCP children's owner: the watchdog no
-> longer spawns a second Next on 3737, and the warm serve kills its children
-> with it. The Boot Health tab exposes the evidence. v0.0.98-10 added the
-> verification-hop guard, the blocked-signal dedupe and the log filter. The 98.x line adds the plan archive,
+> v0.0.98-12 · 2026-11-23 · the current release. OpenCode v2 **2.4.1** is
+> vendored and gate-approved; a ceiling-kill with recent output is a slow
+> lane, not a dead one. v0.0.98-11 made the socket the port owner and the
+> process group the MCP owner; v0.0.98-10 added the verification-hop guard,
+> the blocked-signal dedupe and the log filter. The 98.x line adds the plan archive,
 > the telemetry definition/tool ledger, the Callimachus status card and the
 > learning animation on top of v0.0.98. The GO 5-hour limit is a WAIT
 > with the console reset; a blocked gate recovers its quarantined
@@ -87,6 +87,21 @@ The 2026-11-23 audit found **174 EADDRINUSE** lines and **five orphan
   and the Logs **Boot Health** tab read it with live probes.
 - Regression: `scripts/boot-health.test.mjs` — TCP/HTTP probes, a real
   process-group kill, reaper bounds and watchdog wiring.
+
+## Slow is not dead (v0.0.98-12)
+
+The 2026-11-23 `mimo-v2.6-flash` specimen was still producing output **1s
+before** the 30-minute hard cap, yet the lane was marked `timeout` and the UI
+said "1 dead"; retry only cleared a local mark.
+
+- `markLaneSlow` writes `status: 'slow'` — available, not blocked. The
+  provider panel says **slow**, not dead.
+- The walker distinguishes progress (`hop-ceiling-extended` / "still
+  producing") from a pure hang. A slow lane still triggers one alternate-lane
+  try, and if that fails the original timeout result is returned — never
+  "all lanes dead" for a lane that was working.
+- OpenCode **2.4.1** is vendored and gate-approved (serve, v2 sessions,
+  prompt/SSE, DB schema, tokens, abort, clean exit).
 
 ## What the harness measures
 

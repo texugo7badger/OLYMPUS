@@ -60,6 +60,23 @@ const laneSrc = src('src/lib/lane-health.ts');
 expect('F-11: a ceiling-kill maps to the timeout lane status', laneHealth.statusFromErrorClass('timeout') === 'timeout' && laneHealth.isLaneDeadClass('provider.timeout') === true, laneSrc.slice(0, 0));
 expect('F-12: the dispatcher quarantines a timed-out lane and tries one alternative', /timeoutFailovers < 1/.test(walker) && /markLaneDead\(lane, 'timeout', 10 \* 60_000/.test(walker) && /trying the next lane/.test(walker), 'a timed-out lane absorbs the whole chain');
 
+// v0.0.98-12 — a ceiling-kill with recent output is SLOW, not dead. The
+// 2026-11-23 mimo-v2.6-flash specimen produced until the hard cap yet the UI
+// said "1 dead" and demanded a manual retry.
+{
+  const os = await import('node:os');
+  const fs2 = await import('node:fs');
+  const tmp = fs2.mkdtempSync(path.join(os.tmpdir(), 'olympus-lane-slow-'));
+  const file = path.join(tmp, 'lane-health.json');
+  const lane = 'opencode-go/mimo-v2.6-flash';
+  const entry = laneHealth.markLaneSlow(lane, 'ceiling-kill while still producing output', file);
+  const fileState = laneHealth.readLaneHealth(file);
+  expect('F-12b: a progress-at-ceiling lane is SLOW, not dead', entry?.status === 'slow' && laneHealth.isLaneAvailable(lane, fileState.lanes), JSON.stringify(entry));
+  expect('F-12c: slow lanes are not in blockedLanes', laneHealth.blockedLanes(fileState.lanes).length === 0 && laneHealth.slowLanes(fileState.lanes).some((l) => l.lane === lane), JSON.stringify(laneHealth.blockedLanes(fileState.lanes)));
+  expect('F-12d: the walker distinguishes progress from a pure hang', /stillProducing/.test(walker) && /markLaneSlow\(lane/.test(walker), 'ceiling progress still marks the lane dead');
+  fs2.rmSync(tmp, { recursive: true, force: true });
+}
+
 const postSrc = src('src/lib/hop-runtime/post-run.ts');
 expect('F-13: only a hop_parked event formats a park (no undefined parks)', /else if \(ev\.type === 'hop_parked'\)/.test(postSrc) && /campaign_end \/ hop_verify \/ future event types are NOT parks/.test(postSrc), 'unknown events still print undefined parks');
 expect('F-14: a lane is health-checked before the FIRST attempt too', /if \(!isLaneAvailable\(lane\)\)/.test(walker), 'attempt 0 can launch on a dead lane');

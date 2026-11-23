@@ -112,6 +112,8 @@ export default function ProviderSettings() {
   // #224 (v0.0.23) — the lane-health panel: which model lanes are dead right
   // now (quota/route/auth) and until when. Fed by the run-state probe.
   const [blockedLanes, setBlockedLanes] = useState<Array<{ lane: string; status: string; retryUntil?: number | null; error?: string | null }>>([]);
+  // v0.0.98-12 — ceiling-kill with recent output is SLOW, not dead.
+  const [slowLanes, setSlowLanes] = useState<Array<{ lane: string; status: string; at?: number | null; error?: string | null }>>([]);
   const [laneError, setLaneError] = useState<string | null>(null);
   const [retryingLane, setRetryingLane] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -129,6 +131,7 @@ export default function ProviderSettings() {
         if (cancelled) return;
         if (d?.ok) {
           setBlockedLanes(Array.isArray(d.lanes) ? d.lanes : []);
+          setSlowLanes(Array.isArray(d.slow) ? d.slow : []);
           setLaneError(null);
         } else {
           setLaneError(String(d?.error || `HTTP ${r.status}`));
@@ -154,6 +157,7 @@ export default function ProviderSettings() {
       const d = await r.json();
       if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
       setBlockedLanes(Array.isArray(d.lanes) ? d.lanes : []);
+      setSlowLanes(Array.isArray(d.slow) ? d.slow : []);
     } catch (e: any) {
       setLaneError(e?.message || String(e));
     } finally {
@@ -311,12 +315,28 @@ export default function ProviderSettings() {
       <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3 mb-3">
         <div className="flex items-center gap-2 mb-1.5">
           <span className="text-[9px] font-mono text-olympus-text-dim uppercase tracking-wide">Model lanes</span>
-          <span className={`text-[8px] px-1 py-0.5 rounded font-mono ml-auto ${blockedLanes.length ? 'bg-olympus-red/15 text-olympus-red' : 'bg-olympus-green/15 text-olympus-green'}`}>
-            {blockedLanes.length ? `${blockedLanes.length} dead` : 'all clear'}
+          <span className={`text-[8px] px-1 py-0.5 rounded font-mono ml-auto ${blockedLanes.length ? 'bg-olympus-red/15 text-olympus-red' : slowLanes.length ? 'bg-olympus-amber-soft/15 text-olympus-amber-soft' : 'bg-olympus-green/15 text-olympus-green'}`}>
+            {blockedLanes.length ? `${blockedLanes.length} dead` : slowLanes.length ? `${slowLanes.length} slow` : 'all clear'}
           </span>
         </div>
+        {blockedLanes.length === 0 && slowLanes.length > 0 && (
+          <div className="mb-1 space-y-1">
+            {slowLanes.slice(0, 4).map((l) => (
+              <div key={`slow-${l.lane}`} className="flex items-start gap-2 text-[9.5px] font-mono">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-olympus-text truncate">{l.lane}</span>
+                    <span className="text-olympus-amber-soft uppercase shrink-0">slow</span>
+                    {l.at && <span className="text-olympus-text-dim shrink-0">since {new Date(l.at).toLocaleTimeString()}</span>}
+                  </div>
+                  <div className="text-[8.5px] text-olympus-text-dim truncate" data-tip={l.error ?? ''}>ceiling-kill while still producing — the next dispatch may try it again</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {blockedLanes.length === 0 ? (
-          <div className="text-[9.5px] font-mono text-olympus-text-dim">No lane is known-dead right now.</div>
+          <div className="text-[9.5px] font-mono text-olympus-text-dim">{slowLanes.length ? 'No lane is known-dead. The slow lane above is not blocked.' : 'No lane is known-dead right now.'}</div>
         ) : (
           <div className="space-y-1">
             {blockedLanes.slice(0, 6).map((l) => (

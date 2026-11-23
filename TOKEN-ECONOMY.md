@@ -268,6 +268,13 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 13. v0.0.98-12 — a slow lane is not a wasted retry
+
+A ceiling-kill with recent output no longer marks the model dead, so the UI
+does not demand a manual retry for a lane that was working. The timeout still
+tries one alternate lane once; if that fails, the original result is returned
+instead of "all lanes dead". OpenCode 2.4.1 is vendored and gate-approved.
+
 ## 12. v0.0.98-11 — a dead MCP child is wasted context
 
 The boot path no longer spawns a duplicate Next on a busy port or leaves

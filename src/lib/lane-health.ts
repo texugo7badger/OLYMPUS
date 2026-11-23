@@ -29,7 +29,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-export type LaneStatus = 'alive' | 'quota' | 'no-route' | 'rate-limit' | 'auth' | 'timeout' | 'unknown';
+export type LaneStatus = 'alive' | 'quota' | 'no-route' | 'rate-limit' | 'auth' | 'timeout' | 'slow' | 'unknown';
 
 export interface LaneHealthEntry {
   status: LaneStatus;
@@ -162,6 +162,7 @@ export function statusFromErrorClass(cls: string | null | undefined): LaneStatus
   // v0.0.86 — a ceiling-kill with no provider error is evidence of a sick
   // lane, not of death: a short TTL quarantine lets the next hop fail over.
   if (c.includes('timeout') || c.includes('ceiling')) return 'timeout';
+  if (c.includes('slow')) return 'slow';
   return 'unknown';
 }
 
@@ -206,6 +207,26 @@ export function markLaneDead(
   return entry;
 }
 
+/**
+ * v0.0.98-12 — a ceiling-kill with recent output is a SLOW lane, not a dead
+ * one. The retry/failover still happens, but the UI must not tell the user
+ * the model is disconnected when it was producing until the hard cap.
+ */
+export function markLaneSlow(lane: string, error?: string | null, filePath = laneHealthPath()): LaneHealthEntry | null {
+  if (!lane) return null;
+  const entry: LaneHealthEntry = {
+    status: 'slow',
+    at: Date.now(),
+    errorClass: 'ceiling-slow',
+    ...(error ? { error: error.slice(0, 500) } : {}),
+  };
+  const file = readLaneHealth(filePath);
+  file.lanes[lane] = entry;
+  file.updatedAt = new Date().toISOString();
+  writeLaneHealth(file, filePath);
+  return entry;
+}
+
 /* ------------------------------------------------------------------ */
 /* Readers                                                            */
 /* ------------------------------------------------------------------ */
@@ -220,7 +241,7 @@ export function isLaneAvailable(
 ): boolean {
   const e = entries[lane];
   if (!e) return true;
-  if (e.status === 'alive') return true; // even if old: an old success is not a failure
+  if (e.status === 'alive' || e.status === 'slow') return true; // an old success or a slow-but-working lane is not dead
   // v0.0.92 — AUTH/NO-ROUTE DO NOT EXPIRE ON THEIR OWN. The old 30-minute
   // TTL re-admitted qwen3.7-plus on every fresh campaign even though the GO
   // credential still rejected it; the walk paid the 401 again and again.
@@ -237,6 +258,17 @@ export function blockedLanes(
 ): Array<{ lane: string } & LaneHealthEntry> {
   return Object.entries(entries)
     .filter(([lane, e]) => !isLaneAvailable(lane, entries, now) && e)
+    .map(([lane, e]) => ({ lane, ...e }));
+}
+
+/** Lanes that reached the hard ceiling while still producing output. They are
+ *  AVAILABLE, but the UI should say "slow", never "dead". */
+export function slowLanes(
+  entries: Record<string, LaneHealthEntry> = readLaneHealth().lanes,
+  now = Date.now(),
+): Array<{ lane: string } & LaneHealthEntry> {
+  return Object.entries(entries)
+    .filter(([, e]) => e?.status === 'slow' && now - e.at < 24 * 60 * 60_000)
     .map(([lane, e]) => ({ lane, ...e }));
 }
 

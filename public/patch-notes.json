@@ -1,16 +1,28 @@
 {
   "updatedAt": "2026-11-23",
-  "current": "0.0.98-11",
+  "current": "0.0.98-12",
   "opencode": {
     "package": "@opencode/cli",
-    "tested": "2.3.2",
+    "tested": "2.4.1",
     "min": "2.3.0",
     "gate": "approved",
-    "gateDate": "2026-11-19",
+    "gateDate": "2026-11-23",
     "gateCommand": "npm run opencode:gate -- --version <version> --install",
-    "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; an untested update can break sessions, the v2 API, MCP or the DB schema."
+    "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.1 passed the full gate on 2026-11-23."
   },
   "releases": [
+    {
+      "version": "0.0.98-12",
+      "date": "2026-11-23",
+      "title": "OpenCode 2.4.1 + slow-lane truth",
+      "highlights": [
+        "OpenCode v2 2.4.1 is vendored and gate-approved (serve, v2 sessions, prompt/SSE, DB schema, tokens, abort, clean exit).",
+        "A ceiling-kill with recent output is now a SLOW lane, not a dead one: the lane stays available, the UI says slow, and the timeout still fails over to the next lane once.",
+        "The provider panel separates dead lanes from slow lanes; retry still clears a local dead mark, but a slow lane no longer demands it.",
+        "Boot truth from 0.0.98-11 remains: TCP port ownership, single-flight watchdog, process-group MCP shutdown and the Boot Health tab.",
+        "Pinned CLI/plugin 2.4.1; package/lock and patch-notes tested version updated."
+      ]
+    },
     {
       "version": "0.0.98-11",
       "date": "2026-11-23",
