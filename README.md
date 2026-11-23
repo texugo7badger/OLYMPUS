@@ -48,30 +48,23 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
+**v0.0.98-10 evidence:** [Blocked & Recovery](screenshots/screens/62-blocked-recovery-98-10.png) — the loop guard names the blocked hop, its cause, the evidence and the next action; the header carries v0.0.98-10.
+
 **v0.0.98 evidence:** [Logs — the flight recorder](screenshots/screens/54-logs-098.png) · [hop detail](screenshots/screens/56-hop-detail-098.png) · [terminal usage meter](screenshots/screens/55-usage-meter-098.png) · [learning box](screenshots/screens/57-learning-detail-098.png) · [Callimachus brain health](screenshots/screens/58-callimachus-098.png) · [Pattern Studio thought](screenshots/screens/60-thought-detail-098.png) — the full truth: hops, walks, models, economy, learning and the live creative surface.
 
 ## Latest
 
-**v0.0.98-9.1 — the loop breaker.**
-A hop that failed deterministically twice in the same plan generation is
-blocked by the loop guard; the warden and the post-run will not auto-resume
-it, and a stale campaign id can no longer reset the recovery budget. A failed
-QA gate now schedules one bounded repair — an upstream fix hop built from its
-evidence, or a deterministic harness + JSON judge — and only re-runs the QA
-after that. Two cycles maximum, then BLOCKED with evidence. QA hops are
-clamped to 16 tool calls and 12 minutes. The AIME `qa-glow-local` specimen
-(16 parks) is seeded from its telemetry and blocks on the first tick.
-
-**v0.0.98-9 — the 98.x culmination.**
-Every hop now keeps its definition: the plan archive preserves the replaced
-generation, and the telemetry row records artifacts, checks, abilities, the
-prompt and a tool-call summary. The Logs detail can still explain an old hop
-after a rewrite, estimates a missing session cost with a `~`, and shows the
-tool ledger. Callimachus's card now shows the last curation, the next window
-and the reference shelf; `curar agora` runs the 7-stage heartbeat. Learning
-rows animate as they arrive. Everything from v0.0.98 remains: quota wait,
-blocked-dependency recovery, deterministic report, chat reporter, Logs,
-terminal meter, interactive Pattern Studio and the single boot loop.
+**v0.0.98-10 — hygiene + guard v2 (98.2).**
+The retired 98-9 preview line is out of Releases; `v0.0.98` is the base and
+the tags remain for history. Every verification hop — `qa-*`, `gate-*` and
+`design-gate` — now shares one clamp (20/18 min, bounded tools) and one
+repair path: an upstream fix or a deterministic harness, then a judge.
+`gate-back-parity` can no longer burn a night. A blocked hop emits one event
+and one decision per generation; tool-budget gets a narrowed 28-call retry
+focused on the missing artifact, not blind inflation. The error log filters
+the Chromium preload/CSP noise and rotates; the Logs workspace gains the
+**Blocked & Recovery** tab. Five dependency PRs were triaged, the branches
+are down to `main`/`dev`, and the suite manifest covers 180 suites.
 
 **v0.0.98 — the walk that waits, recovers and reports.**
 The GO 5-hour limit is now a **wait**, not an unknown stop: `provider.go-limit`
@@ -365,7 +358,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**179 PASS / 0 FAIL / 1 declared skip** across 180 suites; a 100-hop
+**48 PASS / 0 FAIL / 0 declared skip** across 48 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

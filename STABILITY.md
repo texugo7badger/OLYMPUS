@@ -2,9 +2,11 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.98-9.1 · 2026-11-22 · the current release. The hotfix adds the same-hop loop
-> breaker, the stable campaign id and the bounded QA repair; a QA gate that
-> fails twice blocks with evidence instead of re-running all night. The 98.x line adds the plan archive,
+> v0.0.98-10 · 2026-11-23 · the current release. The 98-9 preview line is
+> retired from Releases (tags kept); `v0.0.98` is the base. This release extends
+> the loop breaker to every verification hop (`qa-*`, `gate-*`, `design-gate`),
+> dedupes the blocked signal, narrows the tool-budget retry and filters the
+> renderer noise out of the error log. The 98.x line adds the plan archive,
 > the telemetry definition/tool ledger, the Callimachus status card and the
 > learning animation on top of v0.0.98. The GO 5-hour limit is a WAIT
 > with the console reset; a blocked gate recovers its quarantined
@@ -48,6 +50,27 @@ recovery ledger. The hotfix makes the hop, not the campaign, the unit of memory:
 
 `opts.unattended` is the explicit night-shift permission. An expired
 hibernation plan or a supervisor's stale `autoResume: true` is not.
+
+## Verification-hop coverage (v0.0.98-10)
+
+The 9.1 loop breaker only knew `qa-*`. The next AIME generation proved the gap:
+`gate-back-parity` (a hard gate) parked eight times, ran 25.5 minutes, and the
+loop guard blocked it six times without a repair path.
+
+- One definition (`src/lib/hop-runtime/verification-hop.ts`) covers `qa-*`,
+  `gate-*` and `design-gate`; the walker, recovery, post-run repair and UI
+  agree on it.
+- Clamps: QA 16 calls / 12 min; gate 20 calls / 18 min; design gate 24 calls /
+  20 min. The judge after a repair gets 10/14 calls.
+- A failed gate schedules an upstream fix (from the evidence's FAIL rows and
+  its own next-step paragraph) or a deterministic harness + JSON; two cycles,
+  then BLOCKED with evidence.
+- A blocked hop emits **one** event/decision per generation; repeated walks
+  keep the state current but no longer repeat the notification.
+- A tool-budget park is a **narrowed retry**: 28 calls, missing artifacts only,
+  one shell batch. No blind 36-call inflation.
+- `errors.log` filters Chromium preload/CSP noise and rotates to `.1` at 10 MB;
+  the desktop launcher rotates its log at 10 MB.
 
 ## What the harness measures
 

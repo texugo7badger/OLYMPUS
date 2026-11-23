@@ -22,7 +22,7 @@
   {
     "file": "screenshots/screens/05-design.png",
     "title": "Athena design studio",
-    "note": "style, contract, review and approval — inside her chat"
+    "note": "style, contract, review and approval \u2014 inside her chat"
   },
   {
     "file": "screenshots/screens/06-builds.png",
@@ -58,5 +58,10 @@
     "file": "screenshots/screens/12-mobile-studio.png",
     "title": "Mobile creative",
     "note": "the same surface in one hand"
+  },
+  {
+    "file": "screenshots/screens/62-blocked-recovery-98-10.png",
+    "title": "Blocked & Recovery",
+    "note": "the loop guard names the blocked hop, its cause, the evidence and the next action; the header carries v0.0.98-10"
   }
 ]

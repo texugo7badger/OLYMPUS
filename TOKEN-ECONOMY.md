@@ -268,6 +268,16 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 11. v0.0.98-10 — the retry is narrower, the log is evidence
+
+A verification hop (`qa-*`, `gate-*`, `design-gate`) has a hard tool/wall
+clamp and a repair path; a failed gate no longer burns a night on the same
+prompt. A tool-budget park retries with 28 calls and only the missing
+artifacts, so the spend is a second focused attempt, not a blind 36-call
+exploration. A blocked hop emits one event/decision per generation;
+`errors.log` filters 1,784 preload/CSP noise rows and rotates at 10 MB, so the
+error surface is evidence rather than a console mirror.
+
 ## 10. v0.0.98-9.1 — the loop breaker spends nothing twice
 
 A hop that failed deterministically twice in the same plan generation is

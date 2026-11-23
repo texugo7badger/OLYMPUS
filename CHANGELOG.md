@@ -2,6 +2,35 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98-10] — 2026-11-23
+
+### Hygiene + guard v2 — every verification hop is one class
+
+- **Release line reset.** The retired `v0.0.98-9` and `v0.0.98-9.1` releases
+  are out of Releases; the tags remain for history. `v0.0.98` is the base and
+  `v0.0.98-10` starts the 98.2–98.9 series (semver-safe: `-10 > -9.1`).
+- **One verification definition.** `qa-*`, `gate-*` and `design-gate` share
+  `isVerificationHop`; QA 16 calls/12 min, gate 20/18 min, design gate 24/20.
+  A failed gate gets an upstream fix (from its evidence) or a deterministic
+  harness + JSON judge; two cycles, then BLOCKED with evidence.
+- **One blocked signal.** A loop-blocked hop emits one event/decision per plan
+  generation; repeated walks keep the state current but stay silent.
+- **Narrowed tool-budget retry.** 28 calls, missing artifacts only, one shell
+  batch — no blind 36-call inflation.
+- **Evidence, not console mirror.** `errors.log` filters Chromium preload/CSP
+  noise and rotates to `.1` at 10 MB; the desktop launcher rotates its log.
+- **Blocked & Recovery.** New Logs tab: latest park per hop, cause, evidence,
+  artifacts and the next action.
+- **Repo hygiene.** #361/#362/#359 merged, #358/#360 deferred to 0.0.99,
+  branches reduced to `main`/`dev`, `delete_branch_on_merge` on, and
+  `suites:manifest` covers 180 suites.
+
+**Battery: 48/48 hermetic suites on the release branch** (the 132
+maintainer-local suites read the live app/vault and are not re-run while AIME
+is walking; the full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL /
+1 declared skip). The 0.0.98-11 boot/MCP work and the 8h/100-hop
+certification remain unclaimed.
+
 ## [v0.0.98-9.1] — 2026-11-22
 
 ### The loop breaker — a QA gate repairs or blocks, never re-runs

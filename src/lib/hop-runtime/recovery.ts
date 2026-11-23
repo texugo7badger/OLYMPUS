@@ -26,6 +26,7 @@ import type { PatrolFinding } from '../atlas-patrol';
 import { writeHopOverride, readHopOverrides, type HopOverride } from './hop-overrides';
 import { readGoConsoleAnchor } from '../go-console';
 import { readHibernationPlan } from '../hibernation';
+import { isVerificationHopId } from './verification-hop';
 
 export type RecoveryKind = 'retry-budget' | 'retry-campaign-budget' | 'retry-lane' | 'retry-verify' | 'retry-script' | 'retry-blocked-deps' | 'wait-quota' | 'ask-lane' | 'ask-unknown' | 'none';
 
@@ -104,10 +105,10 @@ export function decideRecovery(laneRoot: string, finding: PatrolFinding, opts: {
   // v0.0.98-9.1 — A QA GATE NEVER GETS A BLIND RETRY. The qa-glow-local
   // specimen re-ran the same 7-check prompt 15 times on inflated budgets;
   // the walker's QA repair builds a fix/harness hop and a judge instead.
-  if (!opts.allowQaRetry && /^qa[-_]/i.test(finding.hopId) && (finding.failureClass === 'tool-budget' || finding.failureClass === 'verify-failed' || finding.failureClass === 'script')) {
+  if (!opts.allowQaRetry && isVerificationHopId(finding.hopId) && (finding.failureClass === 'tool-budget' || finding.failureClass === 'verify-failed' || finding.failureClass === 'script')) {
     return {
       action: 'stop', kind: 'ask-unknown', delayMs: 0,
-      message: base(`${finding.failureClass} on a QA gate — the walker owns the repair hop (upstream fix or harness split + judge); a blind retry is refused. ${finding.recommendation}`),
+      message: base(`${finding.failureClass} on a verification gate — the walker owns the repair hop (upstream fix or harness split + judge); a blind retry is refused. ${finding.recommendation}`),
     };
   }
   switch (finding.failureClass) {
@@ -120,11 +121,15 @@ export function decideRecovery(laneRoot: string, finding: PatrolFinding, opts: {
       return {
         action: 'retry', kind: 'retry-budget', delayMs: 5_000,
         override: {
-          toolBudget: 36,
-          promptAppend: `RECOVERY: the previous attempt exhausted the tool budget. Use at most 36 tool calls; batch shell commands into ONE call; write the declared artifact BEFORE further probing; do not read files outside the declared set. Do not add scope. The failing evidence: ${finding.evidence}.`,
-          reason: `tool-budget recovery (attempt ${attempts + 1})`,
+          // v0.0.98-10 — a NARROW retry, not a blind budget inflation. The
+          // qa-glow-local/gate-back-parity class exhausted 20–30 calls while
+          // exploring; the next attempt gets 28 calls and an explicit
+          // "missing artifacts only" fence. The loop guard blocks after two.
+          toolBudget: 28,
+          promptAppend: `RECOVERY — NARROWED RETRY: the previous attempt exhausted the tool budget. Write ONLY the missing declared artifact(s): ${finding.artifactsMissing.join(', ') || 'the declared artifacts'}. Batch ALL shell work into ONE call. Do not read files outside the declared artifact set; do not add scope; do not re-diagnose. If you cannot finish, write a PARTIAL evidence file and stop before call 28. The failing evidence: ${finding.evidence}.`,
+          reason: `tool-budget narrowed retry (attempt ${attempts + 1})`,
         },
-        message: base(`tool-budget → budget 36 + narrow directive; retry now.${laneNote}`),
+        message: base(`tool-budget → narrowed retry (28 calls, missing artifacts only); no blind inflation.${laneNote}`),
       };
     case 'lane-exhausted':
       return {

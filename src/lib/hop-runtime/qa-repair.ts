@@ -1,5 +1,5 @@
 /**
- * qa-repair.ts — v0.0.98-9.1: a failed QA gate schedules a REPAIR, not a
+ * qa-repair.ts — v0.0.98-9.1: a failed verification gate schedules a REPAIR, not a
  * blind re-run.
  *
  * THE SPECIMEN (AIME qa-glow-local, 2026-11-22): the QA correctly reported
@@ -25,7 +25,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { DispatchPlan, PlanHop } from './plan-schema';
-import { applyNextPlan, nextPlanPath, planPath, computeHopHashes } from './plan-generation';
+import { applyNextPlan, nextPlanPath, computeHopHashes } from './plan-generation';
+import { isVerificationHop, verificationJudgeBudget, verificationLabel } from './verification-hop';
 
 export const QA_REPAIR_FILENAME = '.olympus-qa-repairs.json';
 export const QA_REPAIR_LIMIT = 2;
@@ -146,6 +147,9 @@ export function planQaRepair(input: {
   error?: string | null;
 }): QaRepairOutcome {
   const { laneRoot, plan, qaHop } = input;
+  if (!isVerificationHop(qaHop)) {
+    return { status: 'refused', reason: `${qaHop.id}: not a verification hop — the QA repair path does not own it.` };
+  }
   const generation = Number(plan.generation ?? 1);
   const file = readRepairs(laneRoot);
   const prev = file.hops[qaHop.id];
@@ -167,13 +171,14 @@ export function planQaRepair(input: {
   const failureClass = String(input.failureClass ?? '').toLowerCase();
   const harness = failureClass === 'tool-budget' || failureClass === 'script' || failureClass === 'timeout';
   const cycle = cycles + 1;
-  const suffix = String(qaHop.id).replace(/^qa[-_]/, '');
+  const suffix = String(qaHop.id).replace(/^(qa|gate|design-gate)[-_]/, '');
   const fixId = harness ? `qa-harness-${suffix}-${cycle}` : `fix-${suffix}-${cycle}`;
   const fixGod = harness ? 'hephaestus' : chooseFixGod(evidenceText, qaHop);
   const evidenceFile = evidence?.file ?? `evidence/qa/${suffix}.md`;
+  const label = verificationLabel(qaHop);
 
   const evidenceBlock = [
-    `QA gate: \`${qaHop.id}\` (${failureClass || 'unknown'}) — cycle ${cycle} of ${QA_REPAIR_LIMIT}.`,
+    `${label}: \`${qaHop.id}\` (${failureClass || 'unknown'}) — cycle ${cycle} of ${QA_REPAIR_LIMIT}.`,
     `Evidence: \`${evidenceFile}\`.`,
     failRows.length > 0 ? `Failing checks:\n${failRows.map((r) => `- ${r}`).join('\n')}` : '',
     nextStep ? `The evidence's own next step:\n${nextStep}` : '',
@@ -182,8 +187,8 @@ export function planQaRepair(input: {
   ].filter(Boolean).join('\n\n');
 
   const fixPrompt = harness
-    ? `QA HARNESS REPAIR (cycle ${cycle}/${QA_REPAIR_LIMIT}) — the QA gate ran out of tools because the checks and the judgment shared one budget.\n\n${evidenceBlock}\n\nWrite ONE deterministic script at \`scripts/qa/${suffix}.mjs\` (or extend the existing one) that performs the measurements with Playwright/tsc/lint and writes \`evidence/qa/${suffix}.json\` with one object per check: { id, verdict: 'PASS'|'FAIL'|'UNMEASURED', evidence }. Do NOT write the final markdown and do NOT judge the feature — the QA judge hop does that from your JSON. Keep the script runnable with \`node scripts/qa/${suffix}.mjs\`; print the JSON path.`
-    : `QA REPAIR (cycle ${cycle}/${QA_REPAIR_LIMIT}) — the QA gate failed and the upstream defect must be fixed before the gate re-runs.\n\n${evidenceBlock}\n\nFix the upstream surface(s) named above. Do NOT edit the QA evidence or the QA prompt; do NOT re-run the full QA gate. Make the smallest change that turns the failing comparator(s) into a measurable PASS, then write a short note to \`evidence/qa/${suffix}-repair-${cycle}.md\` with the files changed and why. The QA gate re-runs immediately after this hop.`;
+    ? `VERIFICATION HARNESS REPAIR (cycle ${cycle}/${QA_REPAIR_LIMIT}) — the ${label} ran out of tools because the checks and the judgment shared one budget.\n\n${evidenceBlock}\n\nWrite ONE deterministic script at \`scripts/qa/${suffix}.mjs\` (or extend the existing one) that performs the measurements with Playwright/tsc/lint and writes \`evidence/qa/${suffix}.json\` with one object per check: { id, verdict: 'PASS'|'FAIL'|'UNMEASURED', evidence }. Do NOT write the final markdown and do NOT judge the feature — the judge hop does that from your JSON. Keep the script runnable with \`node scripts/qa/${suffix}.mjs\`; print the JSON path.`
+    : `VERIFICATION REPAIR (cycle ${cycle}/${QA_REPAIR_LIMIT}) — the ${label} failed and the upstream defect must be fixed before the gate re-runs.\n\n${evidenceBlock}\n\nFix the upstream surface(s) named above. Do NOT edit the verification evidence or the gate prompt; do NOT re-run the full gate. Make the smallest change that turns the failing comparator(s) into a measurable PASS, then write a short note to \`evidence/qa/${suffix}-repair-${cycle}.md\` with the files changed and why. The gate re-runs immediately after this hop.`;
 
   const baseAfter = (qaHop.after ?? []).filter((d) => d !== qaHop.id);
   const fixHop: PlanHop = {
@@ -200,14 +205,14 @@ export function planQaRepair(input: {
   };
 
   const qaJudge = harness
-    ? `\n\n## JUDGE PASS (cycle ${cycle}/${QA_REPAIR_LIMIT})\nThe harness wrote \`evidence/qa/${suffix}.json\`. Read that JSON (and only that JSON plus the served page for a spot check) and write the final evidence markdown. Do not re-run the full measurement suite; do not read component sources. At most 10 tool calls. The literal final line is \`Overall: PASS\` only if every check is PASS; otherwise \`Overall: FAIL\` with the failing check ids.`
-    : `\n\n## RE-RUN AFTER THE FIX (cycle ${cycle}/${QA_REPAIR_LIMIT})\nThe upstream fix hop \`${fixId}\` ran. Re-run the checks above against the served app and write the evidence markdown. At most 12 tool calls: measure, then judge; do not read component sources. The literal final line is \`Overall: PASS\` only if every check passed.`;
+    ? `\n\n## JUDGE PASS (cycle ${cycle}/${QA_REPAIR_LIMIT})\nThe harness wrote \`evidence/qa/${suffix}.json\`. Read that JSON (and only that JSON plus the served page for a spot check) and write the final evidence markdown. Do not re-run the full measurement suite; do not read component sources. At most ${verificationJudgeBudget(qaHop)} tool calls. The literal final line is \`Overall: PASS\` only if every check is PASS; otherwise \`Overall: FAIL\` with the failing check ids.`
+    : `\n\n## RE-RUN AFTER THE FIX (cycle ${cycle}/${QA_REPAIR_LIMIT})\nThe upstream fix hop \`${fixId}\` ran. Re-run the checks above against the served app and write the evidence markdown. At most ${verificationJudgeBudget(qaHop)} tool calls: measure, then judge; do not read component sources. The literal final line is \`Overall: PASS\` only if every check passed.`;
 
   const qaHopNext: PlanHop = {
     ...qaHop,
-    prompt: trimPrompt(qaHop, qaJudge, harness ? 10 : 12),
+    prompt: trimPrompt(qaHop, qaJudge, verificationJudgeBudget(qaHop)),
     after: [...baseAfter, fixId],
-    toolBudget: Math.min(harness ? 10 : 12, Number(qaHop.toolBudget ?? 26)),
+    toolBudget: Math.min(verificationJudgeBudget(qaHop), Number(qaHop.toolBudget ?? 26)),
     budgetTokens: Math.min(4_096, Number(qaHop.budgetTokens ?? 4_096)),
   };
 

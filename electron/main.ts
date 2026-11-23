@@ -33,7 +33,7 @@
 
 import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage, Tray, Menu, powerMonitor, Notification, screen } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync, cpSync } from 'node:fs';
+import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync, cpSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import * as nodeOs from 'node:os';
 import http from 'node:http';
@@ -1726,6 +1726,22 @@ function urlMatches(actual: string, hint: string): boolean {
 const ERROR_LOG = join(nodeOs.homedir(), '.olympus', 'errors.log');
 const ERROR_LOG_MAX_BYTES = 10 * 1024 * 1024;
 
+/**
+ * v0.0.98-10 — the error log is EVIDENCE, not a renderer console mirror.
+ * The 2026-11-23 audit: 1,784 of 1,847 rows were Chromium preload warnings,
+ * 59 were the generic Electron CSP warning, and only 3 were real errors.
+ * Known-benign console noise never enters the crash log; the rest still does.
+ */
+function isBenignRendererNoise(message: string): boolean {
+  const m = String(message || '');
+  return /preloaded using link preload but not used within a few seconds/i.test(m)
+    || /Electron Security Warning \(Insecure Content-Security-Policy\)/i.test(m)
+    || /Access to fetch at 'https:\/\/api\.github\.com\/_private\/browser\/stats/i.test(m)
+    || /Oversized browser stats delivery failed/i.test(m)
+    || /ResizeObserver loop completed with undelivered notifications/i.test(m)
+    || /Download the React DevTools/i.test(m);
+}
+
 function logError(source: string, error: any, context?: Record<string, any>): void {
   try {
     const entry = {
@@ -1747,10 +1763,13 @@ function logError(source: string, error: any, context?: Record<string, any>): vo
     try {
       const stat = require('node:fs').statSync(ERROR_LOG);
       if (stat.size > ERROR_LOG_MAX_BYTES) {
-        const content = readFileSync(ERROR_LOG, 'utf-8');
-        const lines = content.split('\n');
-        const keepLines = lines.slice(Math.floor(lines.length / 2));
-        writeFileSync(ERROR_LOG, keepLines.join('\n'), 'utf-8');
+        // Keep the whole previous generation; never bisect a JSONL row.
+        try { renameSync(ERROR_LOG, ERROR_LOG + '.1'); } catch {
+          const content = readFileSync(ERROR_LOG, 'utf-8');
+          const lines = content.split('\n');
+          const keepLines = lines.slice(Math.floor(lines.length / 2));
+          writeFileSync(ERROR_LOG, keepLines.join('\n'), 'utf-8');
+        }
       }
     } catch {}
   } catch (err) {
@@ -2322,9 +2341,11 @@ if (!gotLock) {
       // blank/frozen window is diagnosable instead of a mystery. The user's
       // 'tela congelada' specimen had zero evidence in errors.log before this.
       webContents.on('console-message', (_e, level, message, line, sourceId) => {
-        if (level >= 2) {
-          // 2 = warning, 3 = error — only log the loud ones to avoid noise.
-          logError('renderer-console', new Error(String(message)), {
+        const text = String(message);
+        if (level >= 2 && !isBenignRendererNoise(text)) {
+          // 2 = warning, 3 = error — the known Chromium/Electron noise is
+          // filtered above, so a warning here is actionable evidence.
+          logError('renderer-console', new Error(text), {
             level,
             source: sourceId || 'unknown',
             line,

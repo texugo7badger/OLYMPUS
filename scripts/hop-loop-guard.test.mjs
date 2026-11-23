@@ -71,8 +71,35 @@ function seedState(laneRoot, generation = 1, campaignId = 'cmp_stable', parked =
 async function main() {
   fs.mkdirSync(path.join(TEST_VAULT, '05_Auto_Learning'), { recursive: true });
   const loop = await import(OLYMPUS + '/src/lib/hop-runtime/loop-guard.ts');
+  const vh = await import(OLYMPUS + '/src/lib/hop-runtime/verification-hop.ts');
   const walker = await import(OLYMPUS + '/src/lib/hop-runtime/walker.ts');
   const post = await import(OLYMPUS + '/src/lib/hop-runtime/post-run.ts');
+
+  // ── 0. the verification vocabulary is one definition ─────────────────────
+  {
+    expect('qa-* is a verification hop', vh.isVerificationHop({ id: 'qa-glow-local', prompt: '' }));
+    expect('gate-* is a verification hop', vh.isVerificationHop({ id: 'gate-back-parity', prompt: '' }));
+    expect('design-gate is a verification hop', vh.isVerificationHop({ id: 'design-gate-44', kind: 'design-gate', prompt: '' }));
+    expect('implementation hop is not verification', !vh.isVerificationHop({ id: 'audio-chrome-off', prompt: 'fix the audio chrome' }));
+    expect('qa budget is 16', vh.verificationToolBudget({ id: 'qa-x' }) === 16);
+    expect('gate budget is 20', vh.verificationToolBudget({ id: 'gate-back-parity' }) === 20);
+    expect('gate ceiling is 18 min', vh.verificationDeadlineMs({ id: 'gate-back-parity' }) === 18 * 60_000);
+    expect('gate judge budget is 14', vh.verificationJudgeBudget({ id: 'gate-back-parity' }) === 14);
+  }
+
+  // ── 0b. the walker/recovery/post-run agree with the shared definition ───
+  {
+    const walkerSrc = fs.readFileSync(path.join(OLYMPUS, 'src/lib/hop-runtime/walker.ts'), 'utf-8');
+    const postSrc = fs.readFileSync(path.join(OLYMPUS, 'src/lib/hop-runtime/post-run.ts'), 'utf-8');
+    const recSrc = fs.readFileSync(path.join(OLYMPUS, 'src/lib/hop-runtime/recovery.ts'), 'utf-8');
+    const mainSrc = fs.readFileSync(path.join(OLYMPUS, 'electron/main.ts'), 'utf-8');
+    expect('walker clamps with the shared verification definition', /isVerificationHop\(hop\) \? verificationToolBudget\(hop\)/.test(walkerSrc));
+    expect('walker gives verification hops a hard deadline', /verificationDeadlineMs\(next\)/.test(walkerSrc));
+    expect('post-run repairs every verification hop', /isVerificationHop\(qaHop\)/.test(postSrc));
+    expect('recovery refuses a blind verification retry', /isVerificationHopId\(finding\.hopId\)/.test(recSrc));
+    expect('the error log filters benign renderer noise', /isBenignRendererNoise/.test(mainSrc) && /preloaded using link preload/.test(mainSrc));
+    expect('the crash log rotates instead of bisecting', /renameSync\(ERROR_LOG, ERROR_LOG \+ '\.1'\)/.test(mainSrc));
+  }
 
   // ── 1. two failures block; one does not; a new generation is fresh ───────
   {
@@ -214,6 +241,26 @@ async function main() {
     expect('QA repair reached GREEN', result.completed === 2 && !result.parked, JSON.stringify({ completed: result.completed, total: result.total, parked: result.parked }));
     const repairLedger = JSON.parse(fs.readFileSync(path.join(lane, '.olympus-qa-repairs.json'), 'utf-8'));
     expect('QA repair ledger records cycle 1', repairLedger.hops?.['qa-glow-local']?.count === 1, JSON.stringify(repairLedger));
+  }
+
+  // ── 5b. a gate-* verification hop takes the same repair path ────────────
+  {
+    const lane = tempLane();
+    const plan = {
+      version: 1, laneRoot: lane, generation: 1, createdAt: new Date().toISOString(),
+      hops: [{
+        id: 'gate-back-parity', god: 'dionysus', prompt: 'HARD GATE - compare the backs. CHECKS: (1) bands; (2) texts; (3) scroll.',
+        artifacts: ['evidence/qa/back-parity.md'], verify: { review: 'deterministic', checks: ['file-exists:evidence/qa/back-parity.md'] }, toolBudget: 20,
+      }],
+    };
+    fs.mkdirSync(path.join(lane, 'evidence/qa'), { recursive: true });
+    fs.writeFileSync(path.join(lane, 'evidence/qa/back-parity.md'), '| 1 | bands | **FAIL** | 3 vs 4 |\n\nOverall: FAIL\n');
+    writePlan(lane, plan.hops, 1);
+    const qa = await import(OLYMPUS + '/src/lib/hop-runtime/qa-repair.ts');
+    const outcome = qa.planQaRepair({ laneRoot: lane, plan, qaHop: plan.hops[0], failureClass: 'verify-failed', error: null });
+    expect('gate repair is scheduled', outcome.status === 'repaired', JSON.stringify(outcome));
+    expect('gate repair fixes the gate, not QA', outcome.fixHop?.id === 'fix-back-parity-1', JSON.stringify(outcome.fixHop));
+    expect('gate judge keeps a 14-call budget', outcome.qaHop?.toolBudget === 14, JSON.stringify(outcome.qaHop));
   }
 
   // ── 6. the QA repair cap: a third failure blocks instead of looping ─────

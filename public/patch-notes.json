@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-22",
-  "current": "0.0.98-9.1",
+  "updatedAt": "2026-11-23",
+  "current": "0.0.98-10",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.3.2",
@@ -12,29 +12,16 @@
   },
   "releases": [
     {
-      "version": "0.0.98-9.1",
-      "date": "2026-11-22",
-      "title": "The loop breaker \u2014 a QA gate repairs or blocks, never re-runs",
+      "version": "0.0.98-10",
+      "date": "2026-11-23",
+      "title": "Hygiene + guard v2 \u2014 every verification hop is one class",
       "highlights": [
-        "Same-hop loop guard: a deterministic failure is counted per lane + plan generation + hop; the second one blocks the hop and the warden/post-run refuse to auto-resume it. The live AIME qa-glow-local specimen (16 parks) seeds from telemetry and blocks on the first tick.",
-        "Stable campaign id: the walk lock reuses the state's campaignId while the generation is unchanged, so a new campaign no longer resets the per-hop recovery budget.",
-        "QA repair, not a blind retry: verify-failed schedules one upstream fix hop built from the evidence, then the QA re-runs as a judge; tool-budget schedules a deterministic harness + JSON judge. Two cycles maximum, then BLOCKED with evidence.",
-        "QA hops are clamped to 16 tool calls and a hard 12-minute ceiling; lint is baseline-aware, and a repeated park no longer appends duplicate desktop notices.",
-        "Autonomy window: opts.unattended is the explicit night-shift permission; an expired hibernation plan or a stale supervisor autoResume is not. The warden refuses a loop-blocked lane.",
-        "Everything from v0.0.98-9 remains: plan archive, telemetry ledger, quota wait, blocked-dependency recovery, deterministic report and the Logs workspace."
-      ]
-    },
-    {
-      "version": "0.0.98-9",
-      "date": "2026-11-21",
-      "title": "The 98.x culmination \u2014 every hop has a definition, a ledger and a brain",
-      "highlights": [
-        "Plan archive per generation: a hop rewritten tomorrow still shows its prompt, artifacts and checks in the Logs detail. New telemetry rows also carry the artifacts/checks/abilities/prompt and a tool-call summary, so the task sheet and Logs no longer show 0/0 for future hops.",
-        "Per-hop cost for old rows: when the session id is missing, the Logs estimates the window from the ledger and marks it with '~' \u2014 step cost is still labelled, invoice stays unknown.",
-        "Callimachus status: the brain-health card shows the last curation, the next regular/deep window and the reference-doc count; 'curar agora' runs the 7-stage heartbeat. His reference shelf now includes the vault and the new brain notes.",
-        "The learning rows animate when a fresh item arrives, and the detail box still shows the 0.85 gate, samples and last outcomes.",
-        "Task sheet tools now come from the telemetry's tool summary when the live feed has none; the Logs detail shows the tool ledger and the output tail.",
-        "Everything from v0.0.98 remains: quota wait, blocked-dependency recovery, deterministic report, chat reporter, Logs, terminal meter, interactive Pattern Studio and the single boot loop."
+        "The retired 98-9 preview line is out of Releases (tags kept); v0.0.98 is the base and v0.0.98-10 starts the 98.2-98.9 series.",
+        "Every verification hop (qa-*, gate-*, design-gate) shares one definition, one tool/wall clamp and one repair path: upstream fix or deterministic harness + JSON judge, two cycles max.",
+        "A blocked hop emits one event and one decision per plan generation; repeated walks no longer repeat the loop-blocked notification.",
+        "A tool-budget park is a narrowed 28-call retry focused on the missing artifact, not a blind 36-call inflation.",
+        "The Logs workspace gains the Blocked & Recovery tab; the error log filters Chromium preload/CSP noise and rotates at 10 MB.",
+        "Five dependency PRs triaged; branches reduced to main/dev; the suite manifest covers 180 suites."
       ]
     },
     {

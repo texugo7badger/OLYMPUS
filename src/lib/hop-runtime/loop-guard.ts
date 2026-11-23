@@ -26,6 +26,8 @@ export interface LoopEntry {
   lastClass: string | null;
   lastAt: string;
   blockedAt: string | null;
+  /** v0.0.98-10 — the one notification/decision for this block. */
+  notifiedAt: string | null;
 }
 
 interface LoopFile {
@@ -94,6 +96,7 @@ export function noteLoopFailure(laneRoot: string, hopId: string, generation: num
     lastClass: failureClass ?? 'unknown',
     lastAt: now,
     blockedAt: sameGen?.blockedAt ?? null,
+    notifiedAt: sameGen?.notifiedAt ?? null,
   };
   if (entry.failures >= LOOP_FAILURE_LIMIT) entry.blockedAt = now;
   file.hops[hopId] = entry;
@@ -120,6 +123,7 @@ export function blockLoopHop(laneRoot: string, hopId: string, generation: number
     lastClass: failureClass ?? sameGen?.lastClass ?? 'unknown',
     lastAt: now,
     blockedAt: now,
+    notifiedAt: sameGen?.notifiedAt ?? null,
   };
   file.hops[hopId] = entry;
   write(laneRoot, file);
@@ -132,6 +136,21 @@ export function clearLoopHop(laneRoot: string, hopId: string): void {
   if (!file.hops[hopId]) return;
   delete file.hops[hopId];
   write(laneRoot, file);
+}
+
+/**
+ * Claim the one notification/decision for a blocked hop in this generation.
+ * Returns true only for the caller that wins the claim; repeated walks/ticks
+ * see `false` and stay silent. The state itself is still updated every time.
+ */
+export function markLoopNotified(laneRoot: string, hopId: string, generation: number): boolean {
+  const file = read(laneRoot);
+  const entry = file.hops[hopId];
+  if (!entry || Number(entry.generation) !== Number(generation) || !entry.blockedAt) return false;
+  if (entry.notifiedAt) return false;
+  entry.notifiedAt = new Date().toISOString();
+  write(laneRoot, file);
+  return true;
 }
 
 /** Blocked hops for the CURRENT plan generation. Old generations are ignored. */
@@ -192,6 +211,7 @@ export function seedLoopGuardFromTelemetry(laneRoot: string, generation: number,
       lastClass: latestClass,
       lastAt: String(latest?.ts ?? new Date().toISOString()),
       blockedAt: String(latest?.ts ?? new Date().toISOString()),
+      notifiedAt: null,
     };
     changed = true;
   }

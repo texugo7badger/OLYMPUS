@@ -61,7 +61,8 @@ import { ensurePlanGeneration, freezePlan, validCompletedForPlan, computeHopHash
 import { readHopOverride } from './hop-overrides';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 import { appendGodInbox } from '@/lib/god-inbox';
-import { blockedLoopHops, clearLoopHop, isLoopClass, noteLoopFailure } from './loop-guard';
+import { blockedLoopHops, clearLoopHop, isLoopClass, markLoopNotified, noteLoopFailure } from './loop-guard';
+import { isVerificationHop, verificationDeadlineMs, verificationToolBudget } from './verification-hop';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
 export const MAX_HOP_CONCURRENCY = 4;
@@ -406,12 +407,12 @@ export async function composeHopPromptWithRag(
   const recovery = override?.promptAppend
     ? `\n\n## RECOVERY DIRECTIVE (attempt ${override.attempts ?? 1})\n${override.promptAppend}\n`
     : '';
-  const qaBaseline = /^qa[-_]/i.test(hop.id)
-    ? `\n\n## QA BASELINE (v0.0.98-9.1)\nThe repository-wide lint may be red on files this hop did not change. Run \`npx tsc --noEmit\` once and lint ONLY the files you touched (or compare the baseline); never fail this gate on pre-existing repo-wide lint errors. The gate's subject is the feature, not the baseline.`
+  const verificationBaseline = isVerificationHop(hop)
+    ? `\n\n## VERIFICATION BASELINE (v0.0.98-10)\nThis is a verification hop, not an implementation hop. The repository-wide lint may be red on files this hop did not change: run \`npx tsc --noEmit\` once and lint ONLY the files you touched (or compare the baseline); never fail this gate on pre-existing repo-wide lint errors. Measure, judge, write the declared evidence artifact; do not read component sources or add scope.`
     : '';
   const base = (build
     ? `${composeHopPrompt(hop, laneRoot)}\n\n${buildPrompt(mergeBuildStats([build], [])[0])}${recovery}`
-    : `${composeHopPrompt(hop, laneRoot)}${recovery}`) + qaBaseline;
+    : `${composeHopPrompt(hop, laneRoot)}${recovery}`) + verificationBaseline;
   // The hop's own slice is the query; campaignQuery is only the fallback
   // for the degenerate empty-slice shape (never the shared-mush primary).
   const query = String(hop.prompt ?? '').slice(0, 400) || campaignQuery || '';
@@ -778,7 +779,7 @@ async function attemptLane(
         ? Math.max(60_000, Math.min(hardCeilingMs(resolveHopTimeoutMs()), ctx.deadlineAt - Date.now()))
         : hardCeilingMs(resolveHopTimeoutMs()),
       toolBudget: Math.min(
-        /^qa[-_]/i.test(hop.id) ? 16 : 40,
+        isVerificationHop(hop) ? verificationToolBudget(hop) : 40,
         readHopOverride(ctx.laneRoot, hop.id)?.toolBudget ?? hop.toolBudget ?? resolveHopToolBudget(),
       ),
       firstByteMs: resolveHopFirstByteMs(),
@@ -1459,10 +1460,21 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     // The loop block is the CURRENT truth for this hop; a prior park with
     // the same id must not hide it (the third-walk summary).
     if (!parkedHop || parkedHop.hopId === b.hopId) parkedHop = record;
-    emit({ type: 'hop_parked', hop: b.hopId, god: planById.get(b.hopId)?.god ?? 'system', reason: 'loop-blocked', error: record.error, errorClass: record.errorClass });
+    // v0.0.98-10 — ONE event per hop/generation. The old code emitted a
+    // loop-blocked park on every walk, so the user saw gate-back-parity six
+    // times; the state remains current, the notification does not repeat.
+    let firstNotice = false;
+    try { firstNotice = markLoopNotified(laneRoot, b.hopId, generation); } catch { /* evidence */ }
+    if (firstNotice) {
+      b.entry.notifiedAt = new Date().toISOString();
+      emit({ type: 'hop_parked', hop: b.hopId, god: planById.get(b.hopId)?.god ?? 'system', reason: 'loop-blocked', error: record.error, errorClass: record.errorClass });
+    }
   }
   if (loopBlocked.length > 0) {
-    opts.onEvent?.({ type: 'log', msg: `Loop guard: ${loopBlocked.map((b) => `${b.hopId} (${b.entry.failures}× ${b.entry.lastClass ?? 'unknown'})`).join(', ')} — quarantined for generation ${generation}; no further attempts.` } as any);
+    const fresh = loopBlocked.filter((b) => !b.entry.notifiedAt);
+    if (fresh.length > 0) {
+      opts.onEvent?.({ type: 'log', msg: `Loop guard: ${fresh.map((b) => `${b.hopId} (${b.entry.failures}× ${b.entry.lastClass ?? 'unknown'})`).join(', ')} — quarantined for generation ${generation}; no further attempts.` } as any);
+    }
   }
 
   // #RESTART-SPECIMEN (2026-10-16, 22:27): the walk died mid-hop-1 (the app
@@ -1892,12 +1904,12 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
           try {
           let result: HopDispatchResult;
           try {
-            // v0.0.98-9.1 — QA has a HARD 12-minute ceiling; the transport's
-            // +300s extension stops at this deadline, so no QA hop can run
-            // the 20–30 minute specimens again.
-            const qaHop = /^qa[-_]/i.test(next.id);
-            const hopDeadlineAt = qaHop && deadlineAt
-              ? Math.min(deadlineAt, Date.now() + 12 * 60_000)
+            // v0.0.98-10 — every verification hop (qa-*, gate-*, design-gate)
+            // has a hard ceiling; the transport's +300s extension stops here,
+            // so no gate can run the 20–30 minute specimens again.
+            const verificationHop = isVerificationHop(next);
+            const hopDeadlineAt = verificationHop && deadlineAt
+              ? Math.min(deadlineAt, Date.now() + verificationDeadlineMs(next))
               : deadlineAt;
             result = next.kind === 'script'
               ? await runScriptHop(next, laneRoot)

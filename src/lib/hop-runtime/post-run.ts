@@ -161,7 +161,8 @@ import { contractGate } from '../design-contract';
 import { createGate, getPendingGates, listGates, resolveGate } from '@/lib/hitl-gates';
 import { appendActivity } from '@/lib/activity-feed';
 import { patrolLane, patrolFinding } from '@/lib/atlas-patrol';
-import { blockLoopHop, blockedLoopHops, clearLoopHop, seedLoopGuardFromTelemetry } from './loop-guard';
+import { blockLoopHop, blockedLoopHops, clearLoopHop, markLoopNotified, seedLoopGuardFromTelemetry } from './loop-guard';
+import { isVerificationHop } from './verification-hop';
 import { planQaRepair } from './qa-repair';
 import { readOptIn } from '@/lib/atlas-warden';
 import { appendGodInbox } from '@/lib/god-inbox';
@@ -850,7 +851,7 @@ export async function maybeWalkThePlan(opts: {
   // bounded to 2 cycles; after that the hop is BLOCKED and the campaign
   // stops with the evidence.
   const parkedDetail: any = result.parked ?? null;
-  if (parkedDetail && /^qa[-_]/i.test(String(parkedDetail.hopId ?? ''))
+  if (parkedDetail
     && (String(parkedDetail.reason ?? '') === 'verify-failed'
       || String(parkedDetail.failureClass ?? parkedDetail.errorClass ?? '') === 'tool-budget'
       || String(parkedDetail.reason ?? '').startsWith('dispatch-failed:tool-budget'))) {
@@ -859,7 +860,7 @@ export async function maybeWalkThePlan(opts: {
       const qaHop = Array.isArray(planOnDisk?.hops)
         ? planOnDisk.hops.find((h: any) => String(h?.id) === String(parkedDetail.hopId))
         : null;
-      if (qaHop) {
+      if (qaHop && isVerificationHop(qaHop)) {
         const outcome = planQaRepair({
           laneRoot: opts.laneRoot,
           plan: planOnDisk,
@@ -872,7 +873,7 @@ export async function maybeWalkThePlan(opts: {
           // fresh, because the upstream evidence changed. The repair counter
           // (not the loop guard) is the 2-cycle cap.
           try { clearLoopHop(opts.laneRoot, parkedDetail.hopId); } catch { /* evidence */ }
-          opts.send?.({ type: 'log', msg: `[QA REPAIR] ${outcome.reason}`, ts: new Date().toISOString() });
+          opts.send?.({ type: 'log', msg: `[VERIFY REPAIR] ${outcome.reason}`, ts: new Date().toISOString() });
           try {
             appendActivity({
               god: 'atlas', action: 'recovery', project: opts.slug,
@@ -885,7 +886,7 @@ export async function maybeWalkThePlan(opts: {
         if (outcome.status === 'blocked') {
           const generation = Number(planOnDisk?.generation ?? 1);
           blockLoopHop(opts.laneRoot, parkedDetail.hopId, generation, String(parkedDetail.failureClass ?? 'verify-failed'), 2);
-          opts.send?.({ type: 'log', msg: `[QA REPAIR] ${outcome.reason} — blocked; no auto-resume.`, ts: new Date().toISOString() });
+          opts.send?.({ type: 'log', msg: `[VERIFY REPAIR] ${outcome.reason} — blocked; no auto-resume.`, ts: new Date().toISOString() });
           try {
             appendActivity({
               god: 'atlas', action: 'needs-user', project: opts.slug,
@@ -894,7 +895,7 @@ export async function maybeWalkThePlan(opts: {
             });
           } catch { /* best effort */ }
         } else {
-          opts.send?.({ type: 'log', msg: `[QA REPAIR] ${outcome.reason}`, ts: new Date().toISOString() });
+          opts.send?.({ type: 'log', msg: `[VERIFY REPAIR] ${outcome.reason}`, ts: new Date().toISOString() });
         }
       }
     } catch { /* the repair never breaks the summary */ }
@@ -925,15 +926,23 @@ export async function maybeWalkThePlan(opts: {
     try { seedLoopGuardFromTelemetry(opts.laneRoot, loopGeneration, (plan as any)?.createdAt); } catch { /* evidence */ }
     const blocked = (() => { try { return blockedLoopHops(opts.laneRoot, loopGeneration); } catch { return []; } })();
     if (blocked.length > 0) {
+      // v0.0.98-10 — the walker already claimed the one event for this hop;
+      // the post-run only appends when it is the first witness (a resume that
+      // found a pre-existing guard file). Repeated walks stay silent.
+      const fresh = blocked.filter((b) => {
+        try { return markLoopNotified(opts.laneRoot, b.hopId, loopGeneration); } catch { return false; }
+      });
       const names = blocked.map((b) => `${b.hopId} (${b.entry.failures}× ${b.entry.lastClass ?? 'unknown'})`).join(', ');
-      opts.send?.({ type: 'log', msg: `[LOOP GUARD] ${names} — the same hop already failed twice in gen ${loopGeneration}; no auto-resume. Fix the upstream or create a new generation, then Continue.`, ts: new Date().toISOString() });
-      try {
-        appendActivity({
-          god: 'atlas', action: 'needs-user', project: opts.slug,
-          msg: `Atlas stopped the loop: ${names}. The QA evidence names the upstream fix; a new generation resets the count.`,
-          meta: { kind: 'loop-guard', generation: loopGeneration, hops: blocked.map((b) => b.hopId), lane: opts.laneRoot },
-        });
-      } catch { /* best effort */ }
+      if (fresh.length > 0) {
+        opts.send?.({ type: 'log', msg: `[LOOP GUARD] ${names} — the same hop already failed twice in gen ${loopGeneration}; no auto-resume. Fix the upstream or create a new generation, then Continue.`, ts: new Date().toISOString() });
+        try {
+          appendActivity({
+            god: 'atlas', action: 'needs-user', project: opts.slug,
+            msg: `Atlas stopped the loop: ${names}. The verification evidence names the upstream fix; a new generation resets the count.`,
+            meta: { kind: 'loop-guard', generation: loopGeneration, hops: blocked.map((b) => b.hopId), lane: opts.laneRoot },
+          });
+        } catch { /* best effort */ }
+      }
     } else if (parked && attempt < maxAttempts) {
       // v0.0.98 — a blocked gate is a derived state: recover the quarantined
       // dependencies it names, then resume. The old path asked the user and

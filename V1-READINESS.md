@@ -2,18 +2,15 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.0.98-9.1 · 2026-11-22 · **GO for a release candidate after two named gates**
+> v0.0.98-10 · 2026-11-23 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
-> this build "certified v1.0" until those gates are green.** v0.0.98-9.1 adds
-> the same-hop loop guard and the bounded QA repair on top of v0.0.98-9's plan
-> archive/telemetry ledger and the Callimachus status; v0.0.98-9 keeps the 98.x
-> plan archive; v0.0.98 made the GO quota a wait, recovered a blocked gate's quarantined dependencies,
-> always reports, and adds the Logs workspace + terminal usage meter. v0.0.97
-> remains the console anchor/stale-pause/qwen guard; v0.0.96 turned
-> hibernation into a real quit, gated it on streaming turns, restored previews
-> on wake, anchored the GO graph to the console and added the smart-burn
-> runtime router without config rewrites. v0.0.95's OpenCode 2.3.2 alignment and
-> patch-notes screen remain. This page is the report; it does not claim what
+> this build "certified v1.0" until those gates are green.** v0.0.98-10 is the
+> hygiene/guard-v2 release: the retired 98-9 preview line is out of Releases
+> (tags kept), `v0.0.98` is the base, every verification hop shares one clamp
+> and repair path, and the repo is down to `main`/`dev`. v0.0.98 remains the
+> quota-wait/blocked-dependency/Logs release; v0.0.97 the GO console anchor;
+> v0.0.96 the hibernation v2 and smart burn; v0.0.95's OpenCode 2.3.2 alignment
+> and patch-notes screen remain. This page is the report; it does not claim what
 > was not run.
 
 ## The ladder that shipped (v0.0.38 → v0.0.58)

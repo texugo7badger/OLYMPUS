@@ -82,7 +82,7 @@ const finding = (failureClass, reason = 'dispatch-failed') => ({
   verdict: 'retry', recommendation: 'do the thing', evidence: 'reason=x',
 });
 const budget = decideRecovery(lane, finding('tool-budget'));
-expect('R-1: tool-budget → budget 36 + narrow directive', budget.action === 'retry' && budget.kind === 'retry-budget' && budget.override?.toolBudget === 36 && /batch/i.test(budget.override?.promptAppend ?? ''), budget);
+expect('R-1: tool-budget → budget 28 + narrow directive', budget.action === 'retry' && budget.kind === 'retry-budget' && budget.override?.toolBudget === 28 && /batch/i.test(budget.override?.promptAppend ?? ''), budget);
 const timeout = decideRecovery(lane, finding('timeout'));
 expect('R-2: timeout → lane failover override', timeout.action === 'retry' && timeout.override?.lane === 'opencode/deepseek-v4.1-flash-free', timeout);
 const atlasTimeout = decideRecovery(lane, { ...finding('timeout'), god: 'atlas' });
@@ -95,7 +95,7 @@ expect('R-3: provider/auth → STOP and ask the user', provider.action === 'stop
 const verify = decideRecovery(lane, finding('unknown', 'verify-failed'));
 expect('R-4: verify-failed → targeted retry', verify.action === 'retry' && verify.kind === 'retry-verify' && /verify/i.test(verify.override?.promptAppend ?? ''), verify);
 applyRecovery(lane, finding('tool-budget'), budget);
-expect('R-5: the recovery writes the override and the ledger', readHopOverride(lane, 'h1')?.toolBudget === 36 && recoveryAttempts(lane, 'h1') >= 1, recoveryAttempts(lane, 'h1'));
+expect('R-5: the recovery writes the override and the ledger', readHopOverride(lane, 'h1')?.toolBudget === 28 && recoveryAttempts(lane, 'h1') >= 1, recoveryAttempts(lane, 'h1'));
 applyRecovery(lane, finding('tool-budget'), decideRecovery(lane, finding('tool-budget')));
 applyRecovery(lane, finding('tool-budget'), decideRecovery(lane, finding('tool-budget')));
 applyRecovery(lane, finding('tool-budget'), decideRecovery(lane, finding('tool-budget')));

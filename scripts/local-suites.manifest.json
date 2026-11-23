@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-07T16:42:38.164Z",
+  "generatedAt": "2026-11-23T17:58:30.928Z",
   "note": "PUBLIC suites are tracked and run by .github/workflows/core.yml; TRACKED_LOCAL suites are in the repo but need the local OpenCode run state/overlay; LOCAL suites stay on the maintainer machine and declare why. A fresh clone reproduces the public core; the full battery numbers ride public/stable.json.",
   "public": [
     "alignment-preview.test.mjs",
@@ -33,11 +33,27 @@
   ],
   "trackedLocal": [
     {
+      "suite": "app-update.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "design-approval.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "design-contract.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
       "suite": "dev-server-manager.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
     {
       "suite": "dispatch-cwd.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "eta-model.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
     {
@@ -49,11 +65,31 @@
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
     {
+      "suite": "hop-loop-guard.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
       "suite": "hop-runtime.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
     {
       "suite": "lane-config-sync.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "mark-batch.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "mcp-run-manifest.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "night-shift.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "plan-balance.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
     {
@@ -69,7 +105,15 @@
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
     {
+      "suite": "quick-edit.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
       "suite": "skill-index-refresh.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "v092-runtime.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     }
   ],
@@ -359,10 +403,6 @@
       "reason": "reads the local app home (~/.olympus)"
     },
     {
-      "suite": "mcp-run-manifest.test.mjs",
-      "reason": "needs a real browser/CDP runtime"
-    },
-    {
       "suite": "mcp-unify.test.mjs",
       "reason": "development-only suite; hermetic core does not include it"
     },
@@ -431,10 +471,6 @@
       "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
     },
     {
-      "suite": "plan-balance.test.mjs",
-      "reason": "development-only suite; hermetic core does not include it"
-    },
-    {
       "suite": "power-suspend.test.mjs",
       "reason": "development-only suite; hermetic core does not include it"
     },
@@ -456,7 +492,7 @@
     },
     {
       "suite": "project-exit-gate.test.mjs",
-      "reason": "reads local credentials/auth state"
+      "reason": "needs a live local service (LLM/probe host)"
     },
     {
       "suite": "project-passport.test.mjs",
@@ -612,9 +648,9 @@
     }
   ],
   "count": {
-    "total": 171,
+    "total": 180,
     "public": 27,
-    "trackedLocal": 10,
-    "local": 134
+    "trackedLocal": 21,
+    "local": 132
   }
 }

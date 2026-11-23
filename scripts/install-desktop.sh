@@ -14,7 +14,14 @@ cat > "$BIN/olympus-desktop" <<LAUNCH
 set -e
 export OLYMPUS_WINDOWED=1
 cd "$ROOT"
-exec node "$ROOT/bin/olympus.js" dev >> "\$HOME/.olympus/desktop-launch.log" 2>&1
+LOG="\$HOME/.olympus/desktop-launch.log"
+mkdir -p "\$HOME/.olympus"
+# v0.0.98-10 — keep the launcher log bounded; the old append-only file grew
+# to 14 MB across watchdog respawns.
+if [ -f "\$LOG" ] && [ "\$(stat -c %s "\$LOG" 2>/dev/null || echo 0)" -gt 10485760 ]; then
+  mv "\$LOG" "\$LOG.1"
+fi
+exec node "$ROOT/bin/olympus.js" dev >> "\$LOG" 2>&1
 LAUNCH
 chmod +x "$BIN/olympus-desktop"
 ln -sf "$ROOT/bin/olympus.js" "$BIN/olympus" 2>/dev/null || true

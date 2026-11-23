@@ -125,6 +125,11 @@ vault-sim*/
 # Private debug transcript (user session log) — never publish
 Todas as estrat*deram erro* Ajuda..md
 
+# v0.0.98-10 — local tooling/scratch that must not enter a release.
+.serena/
+opencode.json.bak-*
+scripts/walk-aime.ts
+
 # Maintainer-only docs/research/planning — they live on the maintainer's machine, never in the repo.
 docs/
 research/

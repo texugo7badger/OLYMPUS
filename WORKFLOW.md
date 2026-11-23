@@ -308,6 +308,20 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.98-10 — verification hops are one class
+
+`qa-*`, `gate-*` and `design-gate` share `isVerificationHop`: QA 16 calls/12
+min, gate 20/18 min, design gate 24/20 min. A failed gate gets an upstream
+fix (from the evidence) or a deterministic harness + JSON judge; two cycles,
+then BLOCKED with evidence. A blocked hop notifies once per generation; the
+walker keeps the state current. A tool-budget park is a narrowed 28-call retry
+focused on the missing artifact, never a blind budget increase.
+
+The release line was reset: the 98-9 preview releases are retired (tags kept),
+`v0.0.98` is the base, and the next releases are `v0.0.98-10` … `v0.0.98-17`
+(displayed as 98.2 … 98.9). Repository hygiene is part of the release: PRs
+triaged, branches down to `main`/`dev`, `suites:manifest` current.
+
 ## v0.0.98-9.1 — the loop breaker
 
 A deterministic failure is counted per lane + plan generation + hop. The

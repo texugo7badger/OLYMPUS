@@ -15,17 +15,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ScrollText, RefreshCw, Search, ArrowLeft, Copy, Check,
-  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge,
+  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LogHop, LogWalk, LogsPayload } from '@/lib/logs-index';
 
-type Tab = 'overview' | 'hops' | 'walks' | 'models' | 'economy';
+type Tab = 'overview' | 'hops' | 'walks' | 'blocked' | 'models' | 'economy';
 
 const TABS: Array<{ id: Tab; label: string; icon: any }> = [
   { id: 'overview', label: 'Visão geral', icon: Gauge },
   { id: 'hops', label: 'Hops', icon: Route },
   { id: 'walks', label: 'Walks', icon: Boxes },
+  { id: 'blocked', label: 'Blocked', icon: ShieldAlert },
   { id: 'models', label: 'Models', icon: Cpu },
   { id: 'economy', label: 'Economy', icon: Coins },
 ];
@@ -156,6 +157,23 @@ export default function LogsDashboard() {
 
   const walks = useMemo(() => (data?.walks ?? []).filter((w) => !lane || w.slug === lane), [data, lane]);
 
+  // v0.0.98-10 — Blocked & Recovery. The latest park per hop/lane, with the
+  // cause and the next action. Loop-blocked rows are the same hop after two
+  // deterministic failures; one card, not eight repeated notifications.
+  const blocked = useMemo(() => {
+    const latest = new Map<string, LogHop>();
+    for (const h of data?.hops ?? []) {
+      const parked = h.status.startsWith('parked') || String(h.failureClass) === 'loop-blocked';
+      if (!parked) continue;
+      const key = `${h.slug}:${h.hop}`;
+      if (!latest.has(key)) latest.set(key, h);
+    }
+    return [...latest.values()]
+      .filter((h) => !lane || h.slug === lane)
+      .sort((a, b) => String(b.ts).localeCompare(String(a.ts)))
+      .slice(0, 40);
+  }, [data, lane]);
+
   const copy = useCallback(async (value: unknown) => {
     try {
       await navigator.clipboard.writeText(JSON.stringify(value, null, 2));
@@ -241,7 +259,7 @@ export default function LogsDashboard() {
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
-            const count = t.id === 'hops' ? hops.length : t.id === 'walks' ? walks.length : null;
+            const count = t.id === 'hops' ? hops.length : t.id === 'walks' ? walks.length : t.id === 'blocked' ? blocked.length : null;
             return (
               <button
                 key={t.id}
@@ -339,6 +357,60 @@ export default function LogsDashboard() {
               </button>
             ))}
             {!walks.length && <Empty text="Nenhuma campanha com plano." />}
+          </section>
+        )}
+
+        {tab === 'blocked' && (
+          <section className="mt-4 rounded-xl border border-olympus-red/20 bg-olympus-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 text-olympus-red">
+                  <ShieldAlert size={14} />
+                  <h2 className="text-[13px] font-semibold text-olympus-text">Blocked &amp; Recovery</h2>
+                  <span className="rounded bg-olympus-red/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-red ring-1 ring-olympus-red/20">loop guard</span>
+                </div>
+                <p className="mt-1 max-w-[780px] text-[11px] text-olympus-text-dim">
+                  Um hop determinístico que falha duas vezes na mesma geração é <strong className="text-olympus-text">bloqueado</strong>.
+                  O walk não gasta outro token nele; “Continue” no mesmo plano é recusado. Corrija o upstream ou escreva uma nova geração.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono text-olympus-text-dim">{blocked.length} hop(s)</span>
+            </div>
+
+            {blocked.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-olympus-green/20 bg-olympus-green/5 px-3 py-3 text-[11px] font-mono text-olympus-green">
+                Nenhum hop bloqueado no recorte. O loop guard está silencioso.
+              </div>
+            ) : (
+              <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                {blocked.map((h) => (
+                  <div key={`${h.slug}:${h.hop}:${h.ts}`} className="rounded-lg border border-olympus-red/20 bg-olympus-bg/40 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusChip status={h.status} failureClass={h.failureClass} />
+                      <span className="font-mono text-[12px] text-olympus-text">{h.hop}</span>
+                      <span className="text-[10px] font-mono text-olympus-text-dim">{h.god} · {h.model || 'lane?'}</span>
+                      <span className="ml-auto text-[10px] font-mono text-olympus-text-dim">{fmtTime(h.ts)}</span>
+                    </div>
+                    <div className="mt-2 text-[10px] font-mono text-olympus-red">
+                      {h.failureClass || h.errorClass || 'unclassified'}{h.failedCheck ? ` · ${h.failedCheck}` : ''}
+                    </div>
+                    {(h.error || h.park?.error) && (
+                      <p className="mt-1 line-clamp-3 text-[10px] font-mono text-olympus-text-dim">{h.error || h.park?.error}</p>
+                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {h.recovery?.kind && <span className="rounded bg-olympus-amber-soft/5 px-1.5 py-0.5 text-[9px] font-mono text-olympus-amber-soft ring-1 ring-olympus-amber-soft/20">recovery: {h.recovery.kind}</span>}
+                      {h.artifacts.slice(0, 2).map((a) => <span key={a} className="max-w-[220px] truncate rounded bg-olympus-text-dim/10 px-1.5 py-0.5 text-[9px] font-mono text-olympus-text-dim">{a}</span>)}
+                      <button onClick={() => setSelectedHop(h)} className="ml-auto flex items-center gap-1 rounded border border-olympus-gold/15 px-2 py-1 text-[10px] font-mono text-olympus-gold hover:bg-olympus-gold/10">
+                        <Wrench size={10} /> evidência
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="mt-3 text-[10px] font-mono text-olympus-text-dim/80">
+              Regra: 2 falhas determinísticas → bloqueio; 2 ciclos de repair → BLOCKED com evidência. Falhas de transporte/quota não contam aqui.
+            </p>
           </section>
         )}
 

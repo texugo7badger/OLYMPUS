@@ -1,15 +1,15 @@
 # OLYMPUS Roadmap
 
-**v0.0.98-9.1 is the current release** (2026-11-22) — the loop breaker:
-the same-hop loop guard, the stable campaign id, the bounded QA repair
-(upstream fix or deterministic harness + judge, two cycles) and the QA
-16-tool/12-minute clamp. **v0.0.98-9 remains the base stable** — the 98.x culmination:
-the plan archive + telemetry definition/tool ledger, the Callimachus status
-and brain-health card, the learning animation and everything from v0.0.98
-(the walk that waits, recovers and reports): the GO 5-hour limit is a quota wait with the console
-reset, a blocked gate recovers its quarantined dependencies, the report is
-deterministic and lands in Apollo's chat, the new Logs workspace shows hops/
-walks/models/economy, and the terminal carries the 5h/weekly/monthly meter.
+**v0.0.98-10 is the current release** (2026-11-23) — hygiene + guard v2:
+the 98-9 preview releases are retired (tags kept), `v0.0.98` is the base,
+every verification hop (`qa-*`, `gate-*`, `design-gate`) shares one clamp and
+one repair path, the loop-blocked signal is deduped, tool-budget gets a
+narrowed retry, and the repo is down to `main`/`dev`. **v0.0.98 remains the
+stable base** — the walk that waits, recovers and reports: the GO 5-hour limit
+is a quota wait with the console reset, a blocked gate recovers its
+quarantined dependencies, the report is deterministic and lands in Apollo's
+chat, the Logs workspace shows hops/walks/models/economy, and the terminal
+carries the 5h/weekly/monthly meter.
 v0.0.97 remains the previous release: the GO console anchor, stale-anchor
 pause, rolling 65/80/100 and the qwen→DeepSeek guard. v0.0.96: hibernation v2, GO truth and the smart burn: X quits by default while hibernate is explicit; hibernate waits
 for streaming turns, keeps a preview only when a live hop needs it, records and
