@@ -1347,7 +1347,7 @@ function createWindow() {
         // app sat on ERR_CONNECTION_REFUSED while the walk died with it).
         if (!nextProcess || nextProcess.exitCode !== null || nextProcess.signalCode !== null) {
           // v0.0.98-11 — if the port answers, reuse it; only spawn when free.
-          if (await isNextAlreadyRunning()) {
+          if ((await isPortListening('127.0.0.1', PORT, 750)) || (await isNextAlreadyRunning())) {
             console.log('[olympus:electron] reconnect: port already answered — reusing it.');
             nextWasSpawnedExternally = true;
           } else {
@@ -1415,7 +1415,7 @@ function createWindow() {
         try {
           // v0.0.98-11 — TCP first, then HTTP. Never spawn a second server on
           // an occupied 3737 (the EADDRINUSE -> kill -> reload loop).
-          const portAlive = await isNextAlreadyRunning();
+          const portAlive = (await isPortListening('127.0.0.1', PORT, 750)) || (await isNextAlreadyRunning());
           if (portAlive) {
             silentRounds = 0;
             writeBootHealth({ watchdog: 'attach-existing' });
@@ -2301,7 +2301,7 @@ if (!gotLock) {
     });
 
     console.log('[olympus:electron] checking for existing Next.js server...');
-    const alreadyRunning = await isNextAlreadyRunning();
+    const alreadyRunning = (await isPortListening('127.0.0.1', PORT, 750)) || (await isNextAlreadyRunning());
     if (alreadyRunning) {
       console.log('[olympus:electron] Next.js already running externally — skipping spawn.');
       nextWasSpawnedExternally = true;

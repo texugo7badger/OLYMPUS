@@ -105,6 +105,7 @@ setInterval(()=>{},1000);`;
     const route = fs.readFileSync(path.join(OLYMPUS, 'src/app/api/olympus/boot-health/route.ts'), 'utf-8');
     const ui = fs.readFileSync(path.join(OLYMPUS, 'src/components/olympus/logs-dashboard.tsx'), 'utf-8');
     expect('the watchdog checks the TCP port before spawn', /isPortListening\('127\.0\.0\.1', PORT/.test(main));
+    expect('the spawn veto is TCP-only (HTTP 500 cannot force a second server)', /const portAlive = \(await isPortListening\('127\.0\.0\.1', PORT, 750\)\) \|\| \(await isNextAlreadyRunning\(\)\)/.test(main));
     expect('the watchdog is single-flight', /watchdogBusy/.test(main) && /finally[\s\S]{0,120}watchdogBusy = false/.test(main));
     expect('the boot-health record is written', /BOOT_HEALTH_FILE/.test(main) && /writeBootHealth/.test(main));
     expect('the warm-serve kill signals the group', /killProcessGroup\(serverChild/.test(sess) || /killProcessGroup\(pid/.test(sess));
