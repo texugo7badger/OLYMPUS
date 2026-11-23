@@ -2,9 +2,10 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.98-12 · 2026-11-23 · the current release. OpenCode v2 **2.4.1** is
-> vendored and gate-approved; a ceiling-kill with recent output is a slow
-> lane, not a dead one. v0.0.98-11 made the socket the port owner and the
+> v0.0.98-13 · 2026-11-23 · the current release. The plan is visible before
+> the walk: the Logs Plan tab names size, verification count, tight budgets
+> and oversized prompts; Apply plan is disabled while a walk holds the lane.
+> v0.0.98-12 added OpenCode 2.4.1 and slow-lane truth. v0.0.98-11 made the socket the port owner and the
 > process group the MCP owner; v0.0.98-10 added the verification-hop guard,
 > the blocked-signal dedupe and the log filter. The 98.x line adds the plan archive,
 > the telemetry definition/tool ledger, the Callimachus status card and the
@@ -102,6 +103,23 @@ said "1 dead"; retry only cleared a local mark.
   "all lanes dead" for a lane that was working.
 - OpenCode **2.4.1** is vendored and gate-approved (serve, v2 sessions,
   prompt/SSE, DB schema, tokens, abort, clean exit).
+
+## Plan health and the Apply guard (v0.0.98-13)
+
+The AIME gen-44 plan reached **51 hops**; the verification guard then had to
+stop individual gates. The plan itself is now visible before the walk.
+
+- **Logs → Plan:** hops, pending, verification count, tight budgets (below the
+  declared-work estimate), large hops (>6 checks or >6k prompt), soft cap 20
+  and hard warning 40, plus the delivery-profile recommendation.
+- **Apply plan** is disabled while `campaignHealth.liveWalk` is true; the label
+  says “walk live” and an API 409 is shown inline, not only in the console.
+- `campaign-health` exposes `liveWalk` from the same walk lock the walker
+  holds; the release lock clears it.
+- Advisory by design: the walker never blocks on Plan Health. The delivery
+  profiles (0.0.98-15) will turn the recommendation into a selected budget.
+- Regression: `plan-health.test.mjs` — pure signals, tight/large flags,
+  liveWalk true/false and the Apply guard wiring.
 
 ## What the harness measures
 

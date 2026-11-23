@@ -1,12 +1,12 @@
 # OLYMPUS Roadmap
 
-**v0.0.98-12 is the current release** (2026-11-23) — OpenCode 2.4.1 +
-slow-lane truth: the vendored CLI/plugin passed the full isolated gate, and
-a ceiling-kill with recent output is marked **slow** (available), not dead.
-The provider panel separates slow from dead; the timeout still tries one
-alternate lane. **v0.0.98-11** added boot truth (TCP ownership, single-flight
-watchdog, process-group MCP shutdown, Boot Health); **v0.0.98-10** the
-verification-hop guard and Blocked & Recovery; **v0.0.98** is the base.
+**v0.0.98-13 is the current release** (2026-11-23) — plan health:
+the Logs Plan tab names plan size, verification count, tight budgets and
+oversized prompts before the walk; Apply plan is disabled while the walker
+holds the lane. The guards are advisory until the delivery profiles land in
+0.0.98-15. **v0.0.98-12** added OpenCode 2.4.1 and slow-lane truth;
+**v0.0.98-11** boot truth; **v0.0.98-10** the verification-hop guard;
+**v0.0.98** is the base.
 v0.0.97 remains the previous release: the GO console anchor, stale-anchor
 pause, rolling 65/80/100 and the qwen→DeepSeek guard. v0.0.96: hibernation v2, GO truth and the smart burn: X quits by default while hibernate is explicit; hibernate waits
 for streaming turns, keeps a preview only when a live hop needs it, records and

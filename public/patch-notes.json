@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-23",
-  "current": "0.0.98-12",
+  "current": "0.0.98-13",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.1",
@@ -11,6 +11,18 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.1 passed the full gate on 2026-11-23."
   },
   "releases": [
+    {
+      "version": "0.0.98-13",
+      "date": "2026-11-23",
+      "title": "Plan health \u2014 the plan before the walk",
+      "highlights": [
+        "Logs \u2192 Plan: plan size, pending hops, verification count, tight tool budgets, large prompts/checklists and the profile recommendation before the walk starts.",
+        "Apply plan is disabled while a walk holds the lane (liveWalk); the label says 'walk live' and a 409 is shown inline, not only in the console.",
+        "Advisory plan guardrails: soft cap 20 hops, hard warning 40, >6 verification hops, >6 checks or >6k prompts, and budgets below the declared-work estimate.",
+        "campaign-health now exposes liveWalk; the Apply guard uses the same lock the walker uses.",
+        "OpenCode v2 2.4.1, boot truth and slow-lane truth from 0.0.98-10..12 remain."
+      ]
+    },
     {
       "version": "0.0.98-12",
       "date": "2026-11-23",

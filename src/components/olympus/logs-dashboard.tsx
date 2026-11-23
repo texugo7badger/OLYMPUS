@@ -15,12 +15,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ScrollText, RefreshCw, Search, ArrowLeft, Copy, Check,
-  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench, Server, Activity,
+  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench, Server, Activity, ListTree,
 } from 'lucide-react';
+import { planHealth, estimateHopToolBudget } from '@/lib/plan-health';
 import { cn } from '@/lib/utils';
 import type { LogHop, LogWalk, LogsPayload } from '@/lib/logs-index';
 
-type Tab = 'overview' | 'hops' | 'walks' | 'blocked' | 'boot' | 'models' | 'economy';
+type Tab = 'overview' | 'hops' | 'walks' | 'blocked' | 'boot' | 'plan' | 'models' | 'economy';
 
 interface BootHealth {
   app: { version: string; port: number; portAlive: boolean; health: { ok: boolean; status: number | null; ms: number; error: string | null }; mode: string };
@@ -36,6 +37,7 @@ const TABS: Array<{ id: Tab; label: string; icon: any }> = [
   { id: 'walks', label: 'Walks', icon: Boxes },
   { id: 'blocked', label: 'Blocked', icon: ShieldAlert },
   { id: 'boot', label: 'Boot', icon: Server },
+  { id: 'plan', label: 'Plan', icon: ListTree },
   { id: 'models', label: 'Models', icon: Cpu },
   { id: 'economy', label: 'Economy', icon: Coins },
 ];
@@ -212,6 +214,14 @@ export default function LogsDashboard() {
     a.href = url; a.download = `olympus-logs-hops-${Date.now()}.json`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, [hops]);
+
+  const plans = useMemo(() => walks.map((w) => ({
+    walk: w,
+    health: planHealth(w.hops.map((h) => ({
+      id: h.id, god: h.god, status: h.status, toolBudget: h.toolBudget,
+      artifacts: h.artifacts, after: h.after, checks: h.checks, promptExcerpt: h.promptExcerpt, promptChars: h.promptChars,
+    }))),
+  })), [walks]);
 
   const summary = data?.summary;
   const economy = data?.economy;
@@ -486,6 +496,79 @@ export default function LogsDashboard() {
                 <p className="mt-2 text-[10px] font-mono text-olympus-text-dim">O reaper limpa `uvx mcp-server-git` órfão (ppid 1) acima de 30 min.</p>
               </div>
             </div>
+          </section>
+        )}
+
+        {tab === 'plan' && (
+          <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 text-olympus-gold">
+                  <ListTree size={14} />
+                  <h2 className="text-[13px] font-semibold text-olympus-text">Plan Health</h2>
+                  <span className="rounded bg-olympus-gold/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-gold ring-1 ring-olympus-gold/20">guardrails</span>
+                </div>
+                <p className="mt-1 max-w-[820px] text-[11px] text-olympus-text-dim">
+                  O plano antes do walk: tamanho, hops de verificação, budgets apertados e prompts grandes. O walker não bloqueia por isto; ele nomeia o risco.
+                </p>
+              </div>
+            </div>
+            {plans.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-olympus-gold/15 bg-olympus-bg/40 px-3 py-3 text-[11px] font-mono text-olympus-text-dim">Nenhum plano no recorte.</div>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {plans.map(({ walk: w, health: h }) => (
+                  <div key={`plan-${w.slug}`} className="rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-[12px] text-olympus-text">{w.slug}</span>
+                      <span className="text-[10px] font-mono text-olympus-text-dim">gen {w.generation} · {w.completed}/{w.total}</span>
+                      <StatusChip status={w.status === 'DONE' ? 'completed' : w.status === 'PARKED' || w.status === 'BLOCKED' ? 'parked' : w.status === 'WAITING' ? 'waiting' : 'running'} />
+                      {h.oversized && <span className="rounded bg-olympus-red/10 px-1.5 py-0.5 text-[9px] font-mono text-olympus-red ring-1 ring-olympus-red/20">oversized</span>}
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-6">
+                      <Card label="hops" value={String(h.hops)} sub={`${h.pending} pending`} />
+                      <Card label="verify" value={String(h.verification)} sub="qa/gate" tone={h.verification > 6 ? 'text-olympus-amber-soft' : undefined} />
+                      <Card label="tight budgets" value={String(h.tightBudgets)} sub="below estimate" tone={h.tightBudgets ? 'text-olympus-amber-soft' : 'text-olympus-green'} />
+                      <Card label="large hops" value={String(h.largeHops)} sub=">6 checks / >6k" tone={h.largeHops ? 'text-olympus-amber-soft' : 'text-olympus-green'} />
+                      <Card label="soft cap" value={String(20)} sub="hops/profile" />
+                      <Card label="parked" value={String(w.hops.filter((x) => x.status === 'parked').length)} sub="in plan" tone={w.hops.some((x) => x.status === 'parked') ? 'text-olympus-red' : 'text-olympus-green'} />
+                    </div>
+                    {h.reasons.length > 0 && (
+                      <div className="mt-2 rounded border border-olympus-amber-soft/20 bg-olympus-amber-soft/5 px-2 py-1.5 text-[10px] font-mono text-olympus-amber-soft">
+                        {h.reasons.map((r) => <div key={r}>· {r}</div>)}
+                      </div>
+                    )}
+                    {h.recommendation && <div className="mt-1 text-[10px] font-mono text-olympus-text-dim">{h.recommendation}</div>}
+                    <div className="mt-2 overflow-x-auto">
+                      <table className="w-full min-w-[720px] border-collapse text-[10px] font-mono">
+                        <thead>
+                          <tr className="text-left text-[9px] uppercase tracking-wider text-olympus-text-dim">
+                            <th className="py-1 pr-2">hop</th><th className="py-1 pr-2">god</th><th className="py-1 pr-2">status</th><th className="py-1 pr-2">budget</th><th className="py-1 pr-2">estimate</th><th className="py-1 pr-2">checks</th><th className="py-1 pr-2">after</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {w.hops.map((x) => {
+                            const estimate = estimateHopToolBudget(x);
+                            const tight = x.toolBudget != null && x.toolBudget < estimate - 4;
+                            return (
+                              <tr key={x.id} className="border-t border-olympus-gold/5">
+                                <td className="py-1 pr-2 text-olympus-text">{x.id}</td>
+                                <td className="py-1 pr-2 text-olympus-text-dim">{x.god}</td>
+                                <td className={cn('py-1 pr-2', x.status === 'completed' ? 'text-olympus-green' : x.status === 'parked' ? 'text-olympus-red' : x.status === 'running' ? 'text-olympus-cyan' : 'text-olympus-text-dim')}>{x.status}</td>
+                                <td className={cn('py-1 pr-2 tabular-nums', tight ? 'text-olympus-amber-soft' : 'text-olympus-text')}>{x.toolBudget ?? '—'}</td>
+                                <td className="py-1 pr-2 tabular-nums text-olympus-text-dim">{estimate}</td>
+                                <td className="py-1 pr-2 tabular-nums text-olympus-text-dim">{x.checks?.length ?? 0}</td>
+                                <td className="py-1 pr-2 truncate text-olympus-text-dim">{x.after?.join(', ') || 'root'}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 

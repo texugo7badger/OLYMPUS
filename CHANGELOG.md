@@ -2,6 +2,26 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98-13] — 2026-11-23
+
+### Plan health — the plan before the walk
+
+- **Logs → Plan.** New Plan Health tab: plan size, pending hops, verification
+  count, tight tool budgets (below the declared-work estimate), large hops
+  (>6 checks or >6k prompt), soft cap 20 and hard warning 40, plus the
+  delivery-profile recommendation.
+- **Apply guard.** `campaign-health` exposes `liveWalk`; the Apply button is
+  disabled while the walker holds the lane, says “walk live”, and an API 409
+  is shown inline instead of only in the console.
+- **Advisory guardrails.** The walker never blocks on Plan Health; the
+  delivery profiles (0.0.98-15) will enforce the selected budget.
+- **Tests.** `plan-health.test.mjs`: pure signals, tight/large flags,
+  liveWalk true/false and the Apply guard wiring. Battery: 50/50 hermetic.
+
+**The 132 local suites read the live app/vault and are not re-run while AIME
+walks; the full 180-suite battery at v0.0.98-9.1 was 179/0/1. The 2h drill and
+8h/100-hop remain unclaimed.**
+
 ## [v0.0.98-12] — 2026-11-23
 
 ### OpenCode 2.4.1 + slow-lane truth

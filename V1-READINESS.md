@@ -2,11 +2,12 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.0.98-12 · 2026-11-23 · **GO for a release candidate after two named gates**
+> v0.0.98-13 · 2026-11-23 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
-> this build "certified v1.0" until those gates are green.** v0.0.98-12 is
-> the OpenCode 2.4.1 + slow-lane-truth release: a ceiling-kill with recent
-> output is slow, not dead, and the CLI/plugin passed the full isolated gate.
+> this build "certified v1.0" until those gates are green.** v0.0.98-13 is
+> the plan-health release: the Logs Plan tab names oversized plans and tight
+> budgets before the walk, and Apply plan is disabled while a walk holds the
+> lane. v0.0.98-12 was OpenCode 2.4.1 + slow-lane truth.
 > v0.0.98-11 was the boot-truth release; v0.0.98-10 was
 > the hygiene/guard-v2 release; v0.0.98 remains the
 > quota-wait/blocked-dependency/Logs release; v0.0.97 the GO console anchor;

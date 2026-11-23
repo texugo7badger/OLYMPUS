@@ -66,7 +66,7 @@ export interface LogWalk {
   status: 'RUNNING' | 'PARKED' | 'BLOCKED' | 'WAITING' | 'DONE' | 'IDLE';
   updatedAt: string | null;
   planCreatedAt: string | null;
-  hops: Array<{ id: string; god: string; status: string; after: string[]; artifacts: string[]; toolBudget: number | null; build: string | null }>;
+  hops: Array<{ id: string; god: string; status: string; after: string[]; artifacts: string[]; toolBudget: number | null; build: string | null; checks?: string[]; promptExcerpt?: string; promptChars?: number }>;
   quarantined: string[];
   parks: Record<string, { reason: string; failureClass: string | null; error: string | null }>;
   report: string | null;
@@ -324,6 +324,9 @@ export function buildLogsPayload(now = Date.now()): LogsPayload {
         artifacts: Array.isArray(h?.artifacts) ? h.artifacts.filter((a: unknown) => typeof a === 'string') : [],
         toolBudget: Number.isFinite(Number(h?.toolBudget)) ? Number(h.toolBudget) : null,
         build: h?.buildId ? String(h.buildId) : null,
+        checks: Array.isArray(h?.verify?.checks) ? h.verify.checks.filter((c: unknown) => typeof c === 'string') : [],
+        promptExcerpt: String(h?.prompt ?? '').slice(0, 1_200),
+        promptChars: String(h?.prompt ?? '').length,
       })),
       quarantined,
       parks: Object.fromEntries(Object.entries(parks).map(([id, p]: [string, any]) => [id, { reason: String(p?.reason ?? ''), failureClass: p?.failureClass ?? p?.errorClass ?? null, error: p?.error ?? null }])),

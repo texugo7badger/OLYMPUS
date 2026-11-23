@@ -308,6 +308,13 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.98-13 — plan health
+
+The Logs Plan tab names plan size, pending hops, verification count, tight
+tool budgets and oversized prompts before the walk. Apply plan is disabled
+while a walk holds the lane (`liveWalk`), and the refusal is inline. The guards
+are advisory; the delivery profiles in 0.0.98-15 will enforce the chosen one.
+
 ## v0.0.98-12 — slow is not dead, OpenCode 2.4.1
 
 A ceiling-kill with recent output marks the lane **slow**, not dead; the

@@ -34,6 +34,8 @@ export interface CampaignHealth {
   total: number;
   lifetimeCompleted: number;
   running: number;
+  /** v0.0.98-13 — a live walker holds the lane; Apply waits for a boundary. */
+  liveWalk: boolean;
   parked: { hopId: string; reason: string; errorClass?: string | null } | null;
   parks: number;
   lanesDead: number;
@@ -65,7 +67,7 @@ export function buildCampaignHealth(laneRoot: string, opts: {
   try {
     const plan = readFrozenPlan(laneRoot) ?? readPlanFile(planPath(laneRoot));
     if (!plan || !Array.isArray(plan.hops)) {
-      return { verdict: 'PAUSED', line: 'No plan on this lane.', generation: 0, completed: 0, total: 0, lifetimeCompleted: 0, running: 0, parked: null, parks: 0, lanesDead: blockedLanes().length, nextPlan: null, lastRecovery: null, etaMs: null, eta50Ms: null, eta90Ms: null, etaConfidence: null, parkRate: null, reasons: ['no-plan'] };
+      return { verdict: 'PAUSED', line: 'No plan on this lane.', generation: 0, completed: 0, total: 0, lifetimeCompleted: 0, running: 0, liveWalk: false, parked: null, parks: 0, lanesDead: blockedLanes().length, nextPlan: null, lastRecovery: null, etaMs: null, eta50Ms: null, eta90Ms: null, etaConfidence: null, parkRate: null, reasons: ['no-plan'] };
     }
     const lock = readWalkLock(laneRoot);
     const state = loadHopState(laneRoot);
@@ -144,6 +146,7 @@ export function buildCampaignHealth(laneRoot: string, opts: {
       completed: completed.length, total: plan.hops.length,
       lifetimeCompleted: state?.completed?.length ?? 0,
       running,
+      liveWalk,
       parked: parked ? { hopId: parked.hopId, reason: parked.reason, errorClass: parked.errorClass ?? null } : null,
       parks: patrol?.parked.length ?? 0,
       lanesDead,
@@ -151,7 +154,7 @@ export function buildCampaignHealth(laneRoot: string, opts: {
       lastRecovery, etaMs: eta50Ms, eta50Ms, eta90Ms, etaConfidence, parkRate, reasons,
     };
   } catch {
-    return { verdict: 'PAUSED', line: 'Campaign state unreadable.', generation: 0, completed: 0, total: 0, lifetimeCompleted: 0, running: 0, parked: null, parks: 0, lanesDead: 0, nextPlan: null, lastRecovery: null, etaMs: null, eta50Ms: null, eta90Ms: null, etaConfidence: null, parkRate: null, reasons: ['unreadable'] };
+    return { verdict: 'PAUSED', line: 'Campaign state unreadable.', generation: 0, completed: 0, total: 0, lifetimeCompleted: 0, running: 0, liveWalk: false, parked: null, parks: 0, lanesDead: 0, nextPlan: null, lastRecovery: null, etaMs: null, eta50Ms: null, eta90Ms: null, etaConfidence: null, parkRate: null, reasons: ['unreadable'] };
   }
 }
 

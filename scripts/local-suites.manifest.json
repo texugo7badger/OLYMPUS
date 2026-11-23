@@ -119,6 +119,10 @@
     {
       "suite": "boot-health.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "plan-health.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     }
   ],
   "local": [
@@ -652,9 +656,9 @@
     }
   ],
   "count": {
-    "total": 181,
+    "total": 182,
     "public": 27,
-    "trackedLocal": 22,
+    "trackedLocal": 23,
     "local": 132
   }
 }

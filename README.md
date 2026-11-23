@@ -48,6 +48,8 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
+**v0.0.98-13 evidence:** [Plan Health](screenshots/screens/65-plan-health-98-13.png) — 25-hop plan flagged oversized; verification, tight budgets and large hops named before the walk; header v0.0.98-13.
+
 **v0.0.98-12 evidence:** [Slow lane, not dead](screenshots/screens/64-slow-lane-98-12.png) — `mimo-v2.6-flash` is **slow** (ceiling-kill while still producing), not dead; header v0.0.98-12.
 
 **v0.0.98-11 evidence:** [Boot Health](screenshots/screens/63-boot-health-98-11.png) — TCP port ownership, process PIDs, watchdog respawns, OpenCode port and live MCP git children; header v0.0.98-11.
@@ -58,13 +60,22 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.0.98-13 — plan health (98.5).**
+The Logs workspace gains a **Plan** tab: plan size, pending hops, verification
+count, tight tool budgets, large prompts/checklists and the delivery-profile
+recommendation — before the walk starts. **Apply plan** is disabled while a
+walk holds the lane (`liveWalk`), says “walk live”, and shows a refusal
+inline instead of only in the console. The guards are advisory: soft cap 20
+hops, hard warning 40, >6 verification hops, >6 checks or >6k prompts, and
+budgets below the declared-work estimate. OpenCode 2.4.1 and the slow-lane
+truth remain.
+
 **v0.0.98-12 — OpenCode 2.4.1 + slow-lane truth (98.4).**
 The vendored CLI/plugin is **OpenCode 2.4.1**, approved by the isolated
 conformance gate (serve, v2 sessions, prompt/SSE, DB schema, tokens, abort,
 clean exit). A ceiling-kill with recent output is now a **slow** lane, not a
 dead one: the lane stays available, the provider panel says "slow" (not
-"1 dead"), and the timeout still fails over to the next lane once. The Boot
-Health/TCP/process-group work from 0.0.98-11 remains.
+"1 dead"), and the timeout still fails over to the next lane once.
 
 **v0.0.98-10 — hygiene + guard v2 (98.2).**
 The retired 98-9 preview line is out of Releases; `v0.0.98` is the base and
@@ -365,7 +376,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**49 PASS / 0 FAIL / 0 declared skip** across 49 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
+**50 PASS / 0 FAIL / 0 declared skip** across 50 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

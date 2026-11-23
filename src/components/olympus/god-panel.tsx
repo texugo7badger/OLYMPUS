@@ -164,13 +164,14 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   const [atlasPatrol, setAtlasPatrol] = useState<null | { summary: string; parked: number; stuck: number; verdict: string | null; hopId: string | null; nextLane: string | null }>(null);
   const [campaignHealth, setCampaignHealth] = useState<null | {
     verdict: string; line: string; reasons: string[]; completed: number; total: number;
-    running: number; generation: number; etaMs: number | null;
+    running: number; liveWalk?: boolean; generation: number; etaMs: number | null;
     eta50Ms?: number | null; eta90Ms?: number | null; etaConfidence?: string | null; parkRate?: number | null;
     parked: { hopId: string; reason: string } | null;
     nextPlan: { added: number; removed: number; changed: number } | null;
   }>(null);
   const [projectSlug, setProjectSlug] = useState<string | null>(null);
   const [applyingPlan, setApplyingPlan] = useState(false);
+  const [applyPlanError, setApplyPlanError] = useState<string | null>(null);
   // The god's LIVE demigod dispatches (the arsenal in action — the
   // parallelism-of-parallelism surface: god → demigod chips).
   const language = useLanguage();
@@ -348,9 +349,10 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           {campaignHealth?.nextPlan && projectSlug && (
             <button
               type="button"
-              disabled={applyingPlan}
+              disabled={applyingPlan || Boolean(campaignHealth.liveWalk)}
               onClick={async () => {
                 setApplyingPlan(true);
+                setApplyPlanError(null);
                 try {
                   const r = await fetch('/api/olympus/walk/plan', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -359,14 +361,17 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                   const d = await r.json().catch(() => ({}));
                   if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
                   window.location.reload();
-                } catch (e) { console.warn('apply next plan', e); }
+                } catch (e: any) { setApplyPlanError(e?.message || String(e)); }
                 setApplyingPlan(false);
               }}
               className="shrink-0 rounded border border-olympus-gold/30 px-1 py-0.5 text-[7px] text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
-              data-tip={`Staged next generation: +${campaignHealth.nextPlan.added} / -${campaignHealth.nextPlan.removed} / ~${campaignHealth.nextPlan.changed}. Applies only at a hop boundary.`}
+              data-tip={campaignHealth.liveWalk ? 'A walk holds this lane. Apply waits for a hop boundary.' : `Staged next generation: +${campaignHealth.nextPlan.added} / -${campaignHealth.nextPlan.removed} / ~${campaignHealth.nextPlan.changed}. Applies only at a hop boundary.`}
             >
-              {applyingPlan ? 'applying…' : `apply +${campaignHealth.nextPlan.added}`}
+              {campaignHealth.liveWalk ? 'walk live' : applyingPlan ? 'applying…' : `apply +${campaignHealth.nextPlan.added}`}
             </button>
+          )}
+          {applyPlanError && (
+            <span className="truncate text-[7px] text-olympus-red" data-tip={applyPlanError}>apply refused</span>
           )}
           <button
             type="button"

@@ -268,6 +268,13 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 14. v0.0.98-13 — the plan is priced before the walk
+
+Plan Health flags hops whose declared tool budget is below the work estimate,
+plus oversized plans and >6-check prompts. The numbers are advisory, but the
+user sees the cost shape before a 51-hop campaign starts. Apply plan waits for
+a hop boundary; a live walk cannot be rewritten under its own feet.
+
 ## 13. v0.0.98-12 — a slow lane is not a wasted retry
 
 A ceiling-kill with recent output no longer marks the model dead, so the UI
