@@ -268,6 +268,15 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 12. v0.0.98-11 — a dead MCP child is wasted context
+
+The boot path no longer spawns a duplicate Next on a busy port or leaves
+`uvx mcp-server-git` children alive after a serve reset. The watchdog is
+single-flight, the group kill reaps the tree, and the Boot Health tab shows
+the process truth (port, PIDs, respawns, MCP children, error-log size). The
+saving is not a token line: it is the removal of a second server and its
+orphan fleet from the same machine.
+
 ## 11. v0.0.98-10 — the retry is narrower, the log is evidence
 
 A verification hop (`qa-*`, `gate-*`, `design-gate`) has a hard tool/wall

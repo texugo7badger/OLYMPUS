@@ -15,18 +15,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ScrollText, RefreshCw, Search, ArrowLeft, Copy, Check,
-  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench,
+  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench, Server, Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { LogHop, LogWalk, LogsPayload } from '@/lib/logs-index';
 
-type Tab = 'overview' | 'hops' | 'walks' | 'blocked' | 'models' | 'economy';
+type Tab = 'overview' | 'hops' | 'walks' | 'blocked' | 'boot' | 'models' | 'economy';
+
+interface BootHealth {
+  app: { version: string; port: number; portAlive: boolean; health: { ok: boolean; status: number | null; ms: number; error: string | null }; mode: string };
+  boot: { at: string | null; bootId: string | null; electronPid: number | null; nextPid: number | null; nextExternal: boolean; watchdogRespawns: number; lastRespawnAt: string | null; lastWatchdogAt: string | null } | null;
+  opencode: { port: number; alive: boolean };
+  mcpGit: Array<{ pid: number; ppid: number; etimes: number }>;
+  errorLog: { bytes: number; rotated: boolean; lastErrorAt: string | null };
+}
 
 const TABS: Array<{ id: Tab; label: string; icon: any }> = [
   { id: 'overview', label: 'Visão geral', icon: Gauge },
   { id: 'hops', label: 'Hops', icon: Route },
   { id: 'walks', label: 'Walks', icon: Boxes },
   { id: 'blocked', label: 'Blocked', icon: ShieldAlert },
+  { id: 'boot', label: 'Boot', icon: Server },
   { id: 'models', label: 'Models', icon: Cpu },
   { id: 'economy', label: 'Economy', icon: Coins },
 ];
@@ -116,6 +125,7 @@ export default function LogsDashboard() {
   const [query, setQuery] = useState('');
   const [selectedHop, setSelectedHop] = useState<LogHop | null>(null);
   const [selectedWalk, setSelectedWalk] = useState<LogWalk | null>(null);
+  const [bootHealth, setBootHealth] = useState<BootHealth | null>(null);
   const [visible, setVisible] = useState(120);
   const [copied, setCopied] = useState(false);
 
@@ -133,11 +143,24 @@ export default function LogsDashboard() {
     }
   }, []);
 
+  const loadBoot = useCallback(async () => {
+    try {
+      const r = await fetch('/api/olympus/boot-health', { cache: 'no-store' });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d?.ok) setBootHealth(d as BootHealth);
+    } catch { /* the Boot tab degrades to — */ }
+  }, []);
+
   useEffect(() => {
     void load();
-    const iv = setInterval(() => { if (document.visibilityState !== 'hidden') void load(); }, 15_000);
+    void loadBoot();
+    const iv = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      void load();
+      void loadBoot();
+    }, 15_000);
     return () => clearInterval(iv);
-  }, [load]);
+  }, [load, loadBoot]);
 
   const lanes = useMemo(() => {
     const set = new Map<string, string>();
@@ -411,6 +434,58 @@ export default function LogsDashboard() {
             <p className="mt-3 text-[10px] font-mono text-olympus-text-dim/80">
               Regra: 2 falhas determinísticas → bloqueio; 2 ciclos de repair → BLOCKED com evidência. Falhas de transporte/quota não contam aqui.
             </p>
+          </section>
+        )}
+
+        {tab === 'boot' && (
+          <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 text-olympus-gold">
+                  <Server size={14} />
+                  <h2 className="text-[13px] font-semibold text-olympus-text">Boot Health</h2>
+                  <span className="rounded bg-olympus-gold/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-gold ring-1 ring-olympus-gold/20">one server</span>
+                </div>
+                <p className="mt-1 max-w-[780px] text-[11px] text-olympus-text-dim">
+                  A porta e o processo são a prova. O watchdog só respawna quando o socket está livre; o MCP git vive no grupo do serve.
+                </p>
+              </div>
+              <button onClick={() => void loadBoot()} className="flex items-center gap-1 rounded border border-olympus-gold/15 px-2 py-1 text-[10px] font-mono text-olympus-text-dim hover:text-olympus-gold">
+                <Activity size={10} /> probe
+              </button>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+              <Card label="app" value={bootHealth ? (bootHealth.app.health.ok ? 'GREEN' : 'DOWN') : '—'} sub={bootHealth ? `${bootHealth.app.health.ms}ms · HTTP ${bootHealth.app.health.status ?? '—'}` : 'lendo…'} tone={bootHealth?.app.health.ok ? 'text-olympus-green' : 'text-olympus-red'} />
+              <Card label="port" value={bootHealth ? String(bootHealth.app.port) : '—'} sub={bootHealth ? (bootHealth.app.portAlive ? 'TCP listening' : 'TCP closed') : ''} tone={bootHealth?.app.portAlive ? 'text-olympus-green' : 'text-olympus-red'} />
+              <Card label="next pid" value={bootHealth?.boot?.nextPid ? String(bootHealth.boot.nextPid) : (bootHealth?.boot?.nextExternal ? 'external' : '—')} sub={bootHealth?.boot ? `boot ${bootHealth.boot.bootId ?? '?'}` : ''} />
+              <Card label="watchdog" value={bootHealth?.boot ? String(bootHealth.boot.watchdogRespawns) : '—'} sub={bootHealth?.boot?.lastRespawnAt ? `last ${fmtTime(bootHealth.boot.lastRespawnAt)}` : 'no respawn'} tone={bootHealth?.boot && bootHealth.boot.watchdogRespawns > 0 ? 'text-olympus-amber-soft' : 'text-olympus-green'} />
+              <Card label="opencode" value={bootHealth ? (bootHealth.opencode.alive ? 'UP' : 'DOWN') : '—'} sub={bootHealth ? `:${bootHealth.opencode.port}` : ''} tone={bootHealth?.opencode.alive ? 'text-olympus-green' : 'text-olympus-red'} />
+              <Card label="mcp git" value={bootHealth ? String(bootHealth.mcpGit.length) : '—'} sub={bootHealth?.mcpGit.length ? 'children alive' : 'no orphans'} tone={bootHealth?.mcpGit.length ? 'text-olympus-amber-soft' : 'text-olympus-green'} />
+            </div>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <div className="rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 p-3">
+                <h3 className="text-[11px] font-semibold text-olympus-text">Process truth</h3>
+                <div className="mt-2 space-y-1 text-[10px] font-mono text-olympus-text-dim">
+                  <div>app version: <span className="text-olympus-text">{bootHealth?.app.version ?? '—'}</span> · mode: {bootHealth?.app.mode ?? '—'}</div>
+                  <div>electron pid: <span className="text-olympus-text">{bootHealth?.boot?.electronPid ?? '—'}</span> · next pid: <span className="text-olympus-text">{bootHealth?.boot?.nextPid ?? (bootHealth?.boot?.nextExternal ? 'external' : '—')}</span></div>
+                  <div>last watchdog: {bootHealth?.boot?.lastWatchdogAt ? fmtTime(bootHealth.boot.lastWatchdogAt) : '—'} · last respawn: {bootHealth?.boot?.lastRespawnAt ? fmtTime(bootHealth.boot.lastRespawnAt) : 'none'}</div>
+                  <div>error log: {bootHealth ? `${(bootHealth.errorLog.bytes / 1024).toFixed(1)} KB` : '—'} · rotated: {bootHealth?.errorLog.rotated ? 'yes' : 'no'} · last: {bootHealth?.errorLog.lastErrorAt ? fmtTime(bootHealth.errorLog.lastErrorAt) : 'none'}</div>
+                </div>
+              </div>
+              <div className="rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 p-3">
+                <h3 className="text-[11px] font-semibold text-olympus-text">MCP git children</h3>
+                {bootHealth?.mcpGit.length ? (
+                  <div className="mt-2 space-y-1">
+                    {bootHealth.mcpGit.slice(0, 8).map((p) => (
+                      <div key={p.pid} className="flex items-center gap-2 text-[10px] font-mono text-olympus-amber-soft">
+                        <span>pid {p.pid}</span><span className="text-olympus-text-dim">ppid {p.ppid}</span><span className="text-olympus-text-dim">{fmtDuration(p.etimes * 1000)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <div className="mt-2 text-[10px] font-mono text-olympus-green">none — the serve owns no orphan child.</div>}
+                <p className="mt-2 text-[10px] font-mono text-olympus-text-dim">O reaper limpa `uvx mcp-server-git` órfão (ppid 1) acima de 30 min.</p>
+              </div>
+            </div>
           </section>
         )}
 

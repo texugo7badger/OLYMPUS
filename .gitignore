@@ -149,6 +149,7 @@ scripts/*.test.mjs
 !scripts/v092-runtime.test.mjs
 # v0.0.98-9.1 — the loop-guard / QA-repair acceptance (temp dirs, no vault).
 !scripts/hop-loop-guard.test.mjs
+!scripts/boot-health.test.mjs
 
 # v0.0.81 — THE PUBLIC CORE. These pure suites (no vault, no credentials)
 # are published so a clone can verify the project.

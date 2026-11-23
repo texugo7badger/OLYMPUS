@@ -41,6 +41,7 @@ import { registerNativeTerminal } from './native-terminal.js';
 import { resolveBootMode } from './boot-mode.js';
 import { registerTerminalBridge, shutdownTerminalBridge } from './terminal-bridge.js';
 import { ensureLinuxSandboxReady } from './linux-sandbox.js';
+import { isPortListening } from './port-probe.js';
 import { NOTIFY_COLORS, NOTIFY_LABELS, isNotifyType, themeMarkPng, trayPng, decideNotification, initialNotifyOffset, EMPTY_NOTIFY_STATE, type NotifyType, type NotifyPolicyState } from './desktop-notify.js';
 
 // __dirname / __filename are available natively in CommonJS (electron/tsconfig.json
@@ -169,6 +170,35 @@ ensureLinuxSandboxReady(appRoot, app.isPackaged);
 
 let nextProcess: ChildProcess | null = null;
 let nextWasSpawnedExternally = false;
+// v0.0.98-11 — the boot-health evidence the UI reads. One file, written on
+// spawn/exit/watchdog events; no IPC coupling between Electron and Next.
+const BOOT_HEALTH_FILE = join(nodeOs.homedir(), '.olympus', 'boot-health.json');
+const BOOT_ID = `${Date.now().toString(36)}-${process.pid}`;
+let watchdogRespawns = 0;
+let lastRespawnAt: string | null = null;
+let lastWatchdogAt: string | null = null;
+
+function writeBootHealth(extra: Record<string, unknown> = {}): void {
+  try {
+    mkdirSync(dirname(BOOT_HEALTH_FILE), { recursive: true });
+    const living = !!nextProcess && nextProcess.exitCode === null && nextProcess.signalCode === null;
+    const payload = {
+      at: new Date().toISOString(),
+      bootId: BOOT_ID,
+      appVersion: readAppVersion(),
+      mode: isDev ? 'development' : 'production',
+      port: PORT,
+      electronPid: process.pid,
+      nextPid: living ? nextProcess?.pid ?? null : null,
+      nextExternal: nextWasSpawnedExternally,
+      watchdogRespawns,
+      lastRespawnAt,
+      lastWatchdogAt,
+      ...extra,
+    };
+    writeFileSync(BOOT_HEALTH_FILE, JSON.stringify(payload, null, 2) + '\n', { mode: 0o600 });
+  } catch { /* boot evidence is best-effort */ }
+}
 
 // #177: the launching terminal can die (EIO on stdout/stderr). A console
 // write must NEVER take the app down — safeConsole swallows the failure and
@@ -191,7 +221,12 @@ let safeRelaunching = false;
  * Check whether a Next.js server is ALREADY listening on 127.0.0.1:3737.
  */
 async function isNextAlreadyRunning(): Promise<boolean> {
-  const CHECK_TIMEOUT_MS = 8000; // 8 seconds max wait for external Next.js
+  // v0.0.98-11 — TCP ownership first. The HTTP health route can be slow
+  // under a walk; a listening socket is proof the port is not free. This is
+  // the 174-EADDRINUSE cure: no second spawn on an occupied 3737.
+  const tcpAlive = await isPortListening('127.0.0.1', PORT, 750);
+  if (!tcpAlive) return false;
+  const CHECK_TIMEOUT_MS = 1500; // the port is alive; only confirm the app answers
   const start = Date.now();
   return new Promise((resolve) => {
     // v0.0.91 fix — the health route can be momentarily unavailable while a
@@ -402,8 +437,10 @@ function spawnNext(): ChildProcess {
   child.on('exit', (code, signal) => {
     console.log(`[olympus:electron] Next.js exited (code=${code} signal=${signal})`);
     if (nextProcess === child) nextProcess = null;
+    writeBootHealth({ lastNextExit: { code, signal, at: new Date().toISOString() } });
   });
 
+  writeBootHealth({ nextSpawnedAt: new Date().toISOString() });
   return child;
 }
 
@@ -1309,8 +1346,14 @@ function createWindow() {
         // dead dev server could never respawn (the 2026-11-03 specimen: the
         // app sat on ERR_CONNECTION_REFUSED while the walk died with it).
         if (!nextProcess || nextProcess.exitCode !== null || nextProcess.signalCode !== null) {
-          console.log('[olympus:electron] our Next server is gone — respawning…');
-          try { nextProcess = spawnNext(); } catch (e) { console.error('[olympus:electron] respawn failed', e); }
+          // v0.0.98-11 — if the port answers, reuse it; only spawn when free.
+          if (await isNextAlreadyRunning()) {
+            console.log('[olympus:electron] reconnect: port already answered — reusing it.');
+            nextWasSpawnedExternally = true;
+          } else {
+            console.log('[olympus:electron] our Next server is gone — respawning…');
+            try { nextProcess = spawnNext(); } catch (e) { console.error('[olympus:electron] respawn failed', e); }
+          }
         }
         // Probe with bounded patience; reload on green (a failed reload
         // re-enters this handler → the next round, until 8).
@@ -1344,8 +1387,12 @@ function createWindow() {
   let healthMisses = 0;
   let silentRounds = 0;
   let nextWatchdogAt = 0;
+  let watchdogBusy = false;
   const watchdog = setInterval(() => {
     if (!mainWindow || app.isQuitting) return;
+    if (watchdogBusy) return;
+    lastWatchdogAt = new Date().toISOString();
+    writeBootHealth();
     if (Date.now() < nextWatchdogAt) return;
     const req = http.get(`${BASE_URL}/api/olympus/health`, { timeout: 4000 }, (res) => {
       res.resume();
@@ -1358,33 +1405,45 @@ function createWindow() {
       healthMisses = 0;
       silentRounds += 1;
       nextWatchdogAt = Date.now() + 30_000;
+      watchdogBusy = true;
       const alive = !!nextProcess && nextProcess.exitCode === null && nextProcess.signalCode === null;
       // v0.0.84 edit — a live Next server that is still compiling is NOT dead.
       // The old loop respawned/reloaded every ~20s during hibernate wake and
       // cold start, which read as "OLYMPUS reiniciando sozinho". Only respawn
       // a dead process, or a live one silent for two full rounds (60s).
       void (async () => {
-        // v0.0.84 edit — a port that answers is a living Next, even when the
-        // health route is slow under a walk. Never spawn a second server on
-        // an occupied 3737 (the EADDRINUSE -> kill -> reload loop).
-        const portAlive = await isNextAlreadyRunning();
-        if (portAlive) {
-          silentRounds = 0;
-          try { mainWindow?.loadURL(APP_URL); } catch { /* the error page owns it */ }
-          return;
-        }
-        if (!alive || silentRounds >= 2) {
-          silentRounds = 0;
-          console.log(`[olympus:electron] watchdog: server ${alive ? 'silent for 60s' : 'dead'} — respawning`);
-          try { nextProcess = spawnNext(); nextWatchdogAt = Date.now() + 60_000; } catch (e) { console.error('[olympus:electron] watchdog respawn failed', e); }
-        }
-        const start = Date.now();
-        while (Date.now() - start < 30_000) {
-          if (await isNextAlreadyRunning()) {
+        try {
+          // v0.0.98-11 — TCP first, then HTTP. Never spawn a second server on
+          // an occupied 3737 (the EADDRINUSE -> kill -> reload loop).
+          const portAlive = await isNextAlreadyRunning();
+          if (portAlive) {
+            silentRounds = 0;
+            writeBootHealth({ watchdog: 'attach-existing' });
             try { mainWindow?.loadURL(APP_URL); } catch { /* the error page owns it */ }
             return;
           }
-          await new Promise((r) => setTimeout(r, 1500));
+          if (!alive || silentRounds >= 2) {
+            silentRounds = 0;
+            watchdogRespawns += 1;
+            lastRespawnAt = new Date().toISOString();
+            console.log(`[olympus:electron] watchdog: server ${alive ? 'silent for 60s' : 'dead'} — respawning (${watchdogRespawns})`);
+            try {
+              nextProcess = spawnNext();
+              nextWatchdogAt = Date.now() + 60_000;
+              writeBootHealth({ watchdog: 'respawn' });
+            } catch (e) { console.error('[olympus:electron] watchdog respawn failed', e); }
+          }
+          const start = Date.now();
+          while (Date.now() - start < 30_000) {
+            if (await isNextAlreadyRunning()) {
+              writeBootHealth({ watchdog: 'ready' });
+              try { mainWindow?.loadURL(APP_URL); } catch { /* the error page owns it */ }
+              return;
+            }
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+        } finally {
+          watchdogBusy = false;
         }
       })();
     }
@@ -2246,18 +2305,21 @@ if (!gotLock) {
     if (alreadyRunning) {
       console.log('[olympus:electron] Next.js already running externally — skipping spawn.');
       nextWasSpawnedExternally = true;
+      writeBootHealth({ boot: 'attached-external' });
     } else {
       // Production is the default: say WHICH build is being served, and warn
       // loudly when the standalone artifact predates the source tree.
       standaloneStalenessWarn();
       console.log('[olympus:electron] no external Next.js detected — spawning our own...');
       nextProcess = spawnNext();
+      writeBootHealth({ boot: 'spawned' });
     }
 
     try {
       console.log(`[olympus:electron] waiting for ${BASE_URL}...`);
       await waitForNext();
       console.log('[olympus:electron] Next.js is ready. Creating window.');
+      writeBootHealth({ boot: nextWasSpawnedExternally ? 'external-ready' : 'ready' });
     } catch (err: any) {
       // v0.0.91 fix — a spawn can lose a race to a server that was already
       // booting (the GPU-fallback relaunch specimen: the orphan answered `/`

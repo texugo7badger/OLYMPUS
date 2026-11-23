@@ -2,6 +2,29 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98-11] — 2026-11-23
+
+### Boot truth — the socket owns the port, the group owns the MCP
+
+- **TCP ownership before spawn.** The watchdog probes `127.0.0.1:3737` with a
+  socket, not only the HTTP health route; a busy port is attached/reused. The
+  watchdog is single-flight. This is the 174-EADDRINUSE cure.
+- **Process-group shutdown.** `opencode serve` is detached; `performWarmServerKill`,
+  `cleanupServer` and `killStaleServe` signal the whole group (SIGTERM → 5s →
+  SIGKILL), so `uvx mcp-server-git` children die with the serve. A boot reaper
+  clears ppid-1 MCP children older than 30 minutes.
+- **Boot Health.** Electron writes `~/.olympus/boot-health.json`; the new
+  `/api/olympus/boot-health` route and Logs **Boot Health** tab show app
+  health/latency, port, Electron/Next PIDs, watchdog respawns, OpenCode port,
+  MCP git children and error-log size.
+- **Regression suite.** `boot-health.test.mjs`: TCP/HTTP probes, a real
+  process-group kill, reaper bounds and watchdog/boot-health wiring.
+
+**Battery: 49/49 hermetic suites on the release branch.** The 132
+maintainer-local suites read the live app/vault and are not re-run while AIME
+walks; the full 180-suite battery at v0.0.98-9.1 was 179/0/1. The 2h drill
+and 8h/100-hop certification remain unclaimed.
+
 ## [v0.0.98-10] — 2026-11-23
 
 ### Hygiene + guard v2 — every verification hop is one class

@@ -2,11 +2,11 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.98-10 · 2026-11-23 · the current release. The 98-9 preview line is
-> retired from Releases (tags kept); `v0.0.98` is the base. This release extends
-> the loop breaker to every verification hop (`qa-*`, `gate-*`, `design-gate`),
-> dedupes the blocked signal, narrows the tool-budget retry and filters the
-> renderer noise out of the error log. The 98.x line adds the plan archive,
+> v0.0.98-11 · 2026-11-23 · the current release. The socket is the port's
+> owner and the process group is the MCP children's owner: the watchdog no
+> longer spawns a second Next on 3737, and the warm serve kills its children
+> with it. The Boot Health tab exposes the evidence. v0.0.98-10 added the
+> verification-hop guard, the blocked-signal dedupe and the log filter. The 98.x line adds the plan archive,
 > the telemetry definition/tool ledger, the Callimachus status card and the
 > learning animation on top of v0.0.98. The GO 5-hour limit is a WAIT
 > with the console reset; a blocked gate recovers its quarantined
@@ -71,6 +71,22 @@ loop guard blocked it six times without a repair path.
   one shell batch. No blind 36-call inflation.
 - `errors.log` filters Chromium preload/CSP noise and rotates to `.1` at 10 MB;
   the desktop launcher rotates its log at 10 MB.
+
+## Boot truth (v0.0.98-11)
+
+The 2026-11-23 audit found **174 EADDRINUSE** lines and **five orphan
+`uvx mcp-server-git`** children, with a SIGTERM waiting 2,630 seconds.
+
+- `isPortListening` (TCP) is checked before every watchdog spawn; the HTTP
+  health route is readiness, not ownership. A busy port is attached/reused.
+- The watchdog is single-flight; one probe at a time.
+- `opencode serve` is detached; shutdown signals the **process group**
+  (SIGTERM → 5s → SIGKILL), and a boot reaper clears ppid-1 MCP children
+  older than 30 minutes.
+- Electron writes `~/.olympus/boot-health.json`; `/api/olympus/boot-health`
+  and the Logs **Boot Health** tab read it with live probes.
+- Regression: `scripts/boot-health.test.mjs` — TCP/HTTP probes, a real
+  process-group kill, reaper bounds and watchdog wiring.
 
 ## What the harness measures
 

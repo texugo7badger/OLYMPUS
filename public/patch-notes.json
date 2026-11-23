@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-23",
-  "current": "0.0.98-10",
+  "current": "0.0.98-11",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.3.2",
@@ -11,6 +11,18 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; an untested update can break sessions, the v2 API, MCP or the DB schema."
   },
   "releases": [
+    {
+      "version": "0.0.98-11",
+      "date": "2026-11-23",
+      "title": "Boot truth \u2014 the socket owns the port, the group owns the MCP",
+      "highlights": [
+        "Boot Health tab: app health latency, TCP port ownership, Electron/Next PIDs, watchdog respawns, OpenCode port and live MCP git children.",
+        "The watchdog probes the TCP socket before spawning and is single-flight; a busy 3737 is attached/reused, never duplicated. This is the 174-EADDRINUSE cure.",
+        "The warm serve is killed by process group (SIGTERM -> SIGKILL), so uvx mcp-server-git children die with it; a boot reaper clears ppid-1 orphans older than 30 minutes.",
+        "Boot-health evidence is written by Electron to ~/.olympus/boot-health.json and read by the API/UI; no secrets, no extra process.",
+        "Regression suite: boot-health (TCP probe, HTTP probe, real process-group kill, reaper bounds, watchdog wiring)."
+      ]
+    },
     {
       "version": "0.0.98-10",
       "date": "2026-11-23",

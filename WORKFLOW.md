@@ -308,6 +308,14 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.98-11 — boot truth
+
+A busy TCP port is attached, never duplicated: the watchdog probes the socket
+first and single-flights its work. The detached `opencode serve` is killed by
+process group, so its MCP children die with it; a boot reaper clears old
+ppid-1 orphans. Electron writes `~/.olympus/boot-health.json`, the API reads
+it with live probes, and the Logs **Boot Health** tab shows the process truth.
+
 ## v0.0.98-10 — verification hops are one class
 
 `qa-*`, `gate-*` and `design-gate` share `isVerificationHop`: QA 16 calls/12

@@ -39,6 +39,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnOpencode, freeTierPreflight, authLaneCensus, resolveWorkspaceLane, ensureOpencodeDbHealthy } from '@/lib/opencode-spawn';
+import { killProcessGroup, listProcesses, reapOrphanProcesses, terminateProcessGroup } from '@/lib/process-group';
 import { loadBenchmarkConfig, appendBenchmarkEntry } from '@/lib/benchmarks';
 import { identityFor, rememberSessionAgent, type AgentScope, type SessionAgent } from '@/lib/benchmark-attribution';
 import { LLM_STRATEGIES } from '@/lib/model-strategies';
@@ -341,6 +342,7 @@ interface ConversationRecord {
 
 let serverPromise: Promise<ServerInfo> | null = null;
 let serverChild: ChildProcess | null = null;
+let orphanReaperRan = false;
 let serverLogFd: number | null = null;
 
 // ---------------------------------------------------------------------------
@@ -890,14 +892,22 @@ export function invalidateServer() {
  * (~5s) against the fresh opencode.json. THE STRATEGY RESPECTS THE CONFIG.
  */
 function performWarmServerKill(reason: string): void {
+  const killTree = (pid: number) => {
+    // The serve is detached: its process group owns the MCP children.
+    // v0.0.98-11 — group SIGTERM, then SIGKILL after 5s; the old single-PID
+    // signal left `uvx mcp-server-git` children alive for 2,600s+.
+    killProcessGroup(pid, 'SIGTERM');
+    const timer = setTimeout(() => killProcessGroup(pid, 'SIGKILL'), 5_000);
+    timer.unref?.();
+  };
   if (serverChild && serverChild.exitCode === null && serverChild.signalCode === null) {
-    try { serverChild.kill('SIGTERM'); } catch { /* already dying */ }
-    console.log(`[opencode-session] ${reason} — warm serve SIGTERM (the next prompt cold-starts on the fresh config)`);
+    killTree(serverChild.pid ?? 0);
+    console.log(`[opencode-session] ${reason} — warm serve process group SIGTERM (the next prompt cold-starts on the fresh config)`);
   } else {
     const pidFile = readPidFile();
     if (pidFile && pidFile.pid !== process.pid && isProcessAlive(pidFile.pid) && isOpencodeProcess(pidFile.pid)) {
-      try { process.kill(pidFile.pid, 'SIGTERM'); } catch { /* already dying */ }
-      console.log(`[opencode-session] ${reason} — adopted serve ${pidFile.pid} SIGTERM`);
+      killTree(pidFile.pid);
+      console.log(`[opencode-session] ${reason} — adopted serve ${pidFile.pid} process group SIGTERM`);
     }
   }
   removePidFile();
@@ -996,19 +1006,11 @@ async function killStaleServe(pid: number, reason: string): Promise<boolean> {
     console.log(`[opencode-session] NOT killing pid ${pid} (${reason}) — not an opencode process`);
     return false;
   }
-  console.log(`[opencode-session] Killing stale opencode serve (pid ${pid}) — ${reason}`);
-  try { process.kill(pid, 'SIGTERM'); } catch { return isProcessAlive(pid) ? false : true; }
-  for (let i = 0; i < 15; i++) {
-    if (!isProcessAlive(pid)) return true;
-    await sleep(200);
-  }
-  try { process.kill(pid, 'SIGKILL'); } catch {}
-  for (let i = 0; i < 10; i++) {
-    if (!isProcessAlive(pid)) return true;
-    await sleep(200);
-  }
-  console.log(`[opencode-session] WARNING: pid ${pid} ignored SIGKILL`);
-  return false;
+  console.log(`[opencode-session] Killing stale opencode serve process group (pid ${pid}) — ${reason}`);
+  // v0.0.98-11 — the group owns the MCP children; terminate both.
+  const gone = await terminateProcessGroup(pid, 4_000);
+  if (!gone) console.log(`[opencode-session] WARNING: process group ${pid} ignored SIGKILL`);
+  return gone;
 }
 
 /**
@@ -1022,6 +1024,15 @@ async function killStaleServe(pid: number, reason: string): Promise<boolean> {
  *   3. Otherwise spawn a fresh server (cold start).
  */
 export async function ensureServer(): Promise<ServerInfo> {
+  // v0.0.98-11 — reclaim MCP children orphaned by a previous serve.
+  if (!orphanReaperRan) {
+    orphanReaperRan = true;
+    try {
+      const reaped = reapOrphanProcesses('uvx mcp-server-git', 1_800);
+      if (reaped.length > 0) console.log(`[opencode-session] reaped ${reaped.length} orphaned MCP child(ren): ${reaped.map((p) => p.pid).join(', ')}`);
+    } catch { /* best effort */ }
+  }
+
   // #176: a deferred strategy kill applies before the next cold start.
   if (pendingStrategyKill && activeRuns.size === 0) applyPendingStrategyKill();
   if (serverPromise) {
@@ -1268,7 +1279,10 @@ export function cleanupServer() {
   pendingStrategyKill = false;
   abortActiveRuns('warm server reset');
   if (serverChild && serverChild.exitCode === null && serverChild.signalCode === null) {
-    try { serverChild.kill('SIGTERM'); } catch {}
+    const pid = serverChild.pid ?? 0;
+    killProcessGroup(pid, 'SIGTERM');
+    const timer = setTimeout(() => killProcessGroup(pid, 'SIGKILL'), 5_000);
+    timer.unref?.();
   }
   removePidFile();
   releaseServerLock();

@@ -63,5 +63,10 @@
     "file": "screenshots/screens/62-blocked-recovery-98-10.png",
     "title": "Blocked & Recovery",
     "note": "the loop guard names the blocked hop, its cause, the evidence and the next action; the header carries v0.0.98-10"
+  },
+  {
+    "file": "screenshots/screens/63-boot-health-98-11.png",
+    "title": "Boot Health",
+    "note": "TCP port ownership, Electron/Next PIDs, watchdog respawns, OpenCode port and live MCP git children; header v0.0.98-11"
   }
 ]

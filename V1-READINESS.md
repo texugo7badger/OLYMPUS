@@ -2,12 +2,12 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.0.98-10 · 2026-11-23 · **GO for a release candidate after two named gates**
+> v0.0.98-11 · 2026-11-23 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
-> this build "certified v1.0" until those gates are green.** v0.0.98-10 is the
-> hygiene/guard-v2 release: the retired 98-9 preview line is out of Releases
-> (tags kept), `v0.0.98` is the base, every verification hop shares one clamp
-> and repair path, and the repo is down to `main`/`dev`. v0.0.98 remains the
+> this build "certified v1.0" until those gates are green.** v0.0.98-11 is the
+> boot-truth release: the socket owns the port, the process group owns the
+> MCP children, and the Boot Health tab exposes the evidence. v0.0.98-10 was
+> the hygiene/guard-v2 release; v0.0.98 remains the
 > quota-wait/blocked-dependency/Logs release; v0.0.97 the GO console anchor;
 > v0.0.96 the hibernation v2 and smart burn; v0.0.95's OpenCode 2.3.2 alignment
 > and patch-notes screen remain. This page is the report; it does not claim what

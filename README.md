@@ -48,23 +48,31 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
+**v0.0.98-11 evidence:** [Boot Health](screenshots/screens/63-boot-health-98-11.png) — TCP port ownership, process PIDs, watchdog respawns, OpenCode port and live MCP git children; header v0.0.98-11.
+
 **v0.0.98-10 evidence:** [Blocked & Recovery](screenshots/screens/62-blocked-recovery-98-10.png) — the loop guard names the blocked hop, its cause, the evidence and the next action; the header carries v0.0.98-10.
 
 **v0.0.98 evidence:** [Logs — the flight recorder](screenshots/screens/54-logs-098.png) · [hop detail](screenshots/screens/56-hop-detail-098.png) · [terminal usage meter](screenshots/screens/55-usage-meter-098.png) · [learning box](screenshots/screens/57-learning-detail-098.png) · [Callimachus brain health](screenshots/screens/58-callimachus-098.png) · [Pattern Studio thought](screenshots/screens/60-thought-detail-098.png) — the full truth: hops, walks, models, economy, learning and the live creative surface.
 
 ## Latest
 
+**v0.0.98-11 — boot truth (98.3).**
+The watchdog now proves port ownership with a TCP connect before spawning and
+is single-flight: a busy 3737 is attached/reused, never duplicated (the 174
+EADDRINUSE lines are the specimen). The warm `opencode serve` is killed by
+process group (SIGTERM → SIGKILL), so `uvx mcp-server-git` children die with
+it; a boot reaper clears ppid-1 orphans older than 30 minutes. The new **Boot
+Health** tab shows app health latency, the port, Electron/Next PIDs, watchdog
+respawns, the OpenCode port and any live MCP git children. The verification
+guard, Blocked & Recovery, narrowed tool-budget retry and log filter from
+0.0.98-10 remain.
+
 **v0.0.98-10 — hygiene + guard v2 (98.2).**
 The retired 98-9 preview line is out of Releases; `v0.0.98` is the base and
 the tags remain for history. Every verification hop — `qa-*`, `gate-*` and
-`design-gate` — now shares one clamp (20/18 min, bounded tools) and one
-repair path: an upstream fix or a deterministic harness, then a judge.
-`gate-back-parity` can no longer burn a night. A blocked hop emits one event
-and one decision per generation; tool-budget gets a narrowed 28-call retry
-focused on the missing artifact, not blind inflation. The error log filters
-the Chromium preload/CSP noise and rotates; the Logs workspace gains the
-**Blocked & Recovery** tab. Five dependency PRs were triaged, the branches
-are down to `main`/`dev`, and the suite manifest covers 180 suites.
+`design-gate` — shares one clamp and one repair path. A blocked hop emits one
+event/decision per generation; tool-budget gets a narrowed 28-call retry.
+The Blocked & Recovery tab and the log noise filter landed here.
 
 **v0.0.98 — the walk that waits, recovers and reports.**
 The GO 5-hour limit is now a **wait**, not an unknown stop: `provider.go-limit`
@@ -358,7 +366,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**48 PASS / 0 FAIL / 0 declared skip** across 48 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
+**49 PASS / 0 FAIL / 0 declared skip** across 49 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache
