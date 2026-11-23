@@ -63,6 +63,8 @@ import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-not
 import { appendGodInbox } from '@/lib/god-inbox';
 import { blockedLoopHops, clearLoopHop, isLoopClass, markLoopNotified, noteLoopFailure } from './loop-guard';
 import { isVerificationHop, verificationDeadlineMs, verificationToolBudget } from './verification-hop';
+import { profilePlanCheck, resolveProfile } from '../delivery-profiles';
+import { resolveLaneProfile } from '../delivery-profile-store';
 
 /** The #106 law: never more than 3 gods riding pools at once. */
 export const MAX_HOP_CONCURRENCY = 4;
@@ -1311,6 +1313,22 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     console.log(`[hop-runtime] DAG balance: ${balanced.changes.map((c) => `${c.hop} ${c.from}->${c.to}`).join(', ')}`);
   }
   const laneRoot = plan.laneRoot;
+  // v0.0.98-15 — THE DELIVERY PROFILE IS A REFUSAL, NOT A WISH. A profile
+  // selected for the lane caps the plan at the boundary; a plan that exceeds
+  // it is refused before a single token is spent.
+  const deliveryProfileId = resolveLaneProfile(laneRoot, plan);
+  const deliveryProfile = deliveryProfileId ? resolveProfile(deliveryProfileId) : null;
+  if (deliveryProfile) {
+    const check = profilePlanCheck(plan, deliveryProfile.id);
+    for (const warning of check.warnings) {
+      console.log(`[delivery] ${deliveryProfile.id}: ${warning}`);
+      opts.onEvent?.({ type: 'log', msg: `Delivery profile ${deliveryProfile.label}: ${warning}` } as any);
+    }
+    if (!check.ok) {
+      throw new Error(`[delivery] ${deliveryProfile.label} refuses this plan:\n  - ${check.violations.join('\n  - ')}\nChoose a larger profile (Logs → Plan) or split the plan.`);
+    }
+    console.log(`[delivery] ${deliveryProfile.label}: ${plan.hops.length}/${deliveryProfile.maxHops} hops, budget ${Math.round(deliveryProfile.budgetMs / 60_000)} min`);
+  }
   const stateDir = opts.stateDir ?? laneRoot;
   // The live snapshot the walk uses. A planner rewrite is staged as
   // `dispatch-plan.next.json`; the generation advances only at a boundary.
@@ -1736,9 +1754,17 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
   // The window is a ceiling, never a floor: a plan with 10 minutes left gets
   // 10 minutes, not a fresh 60. A hibernation marker without a valid plan
   // stops cleanly instead of silently turning into an attended hour.
-  const budgetMs = hibPlan && hibLeft > 0
+  const windowBudgetMs = hibPlan && hibLeft > 0
     ? Math.min(24 * 3600_000, hibLeft)
     : (isHibernating() ? 0 : resolveCampaignBudgetMs());
+  // v0.0.98-15 — the profile is the campaign budget: it can extend the
+  // attended 60-minute default to the profile's window, but a hibernation
+  // plan remains the explicit ceiling. No profile → the old behavior.
+  const budgetMs = deliveryProfile
+    ? (hibPlan && hibLeft > 0
+      ? Math.min(24 * 3600_000, hibLeft, deliveryProfile.budgetMs)
+      : (isHibernating() ? 0 : deliveryProfile.budgetMs))
+    : windowBudgetMs;
   const deadlineAt = Date.now() + budgetMs;
   let budgetTimer: ReturnType<typeof setTimeout> | null = null;
 

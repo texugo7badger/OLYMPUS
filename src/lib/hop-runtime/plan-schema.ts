@@ -78,6 +78,8 @@ export interface DispatchPlan {
   version: 1;
   /** The project lane root — where artifacts + state + telemetry land. */
   laneRoot: string;
+  /** v0.0.98-15 — the selected delivery profile (spike/demo/base/complete). */
+  profile?: 'spike' | 'demo' | 'base' | 'complete';
   /** Optional resume hint: the hop to continue from. */
   resumePoint?: string;
   /** v0.0.88 — the campaign generation. A rewrite is a NEW generation; the
@@ -115,6 +117,9 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
   if (raw.version !== 1) errors.push(`plan.version: expected 1, got ${JSON.stringify(raw.version)}`);
   if (typeof raw.laneRoot !== 'string' || !raw.laneRoot.trim()) {
     errors.push('plan.laneRoot: required non-empty string (the project lane root)');
+  }
+  if (raw.profile !== undefined && !['spike', 'demo', 'base', 'complete'].includes(String(raw.profile))) {
+    errors.push(`plan.profile: 'spike' | 'demo' | 'base' | 'complete' (got ${JSON.stringify(raw.profile)})`);
   }
   if (!Array.isArray(raw.hops) || raw.hops.length === 0) {
     errors.push('plan.hops: required non-empty array of hops');
@@ -276,6 +281,7 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
     plan: {
       version: 1,
       laneRoot: raw.laneRoot as string,
+      ...(raw.profile !== undefined ? { profile: raw.profile as DispatchPlan['profile'] } : {}),
       resumePoint: typeof raw.resumePoint === 'string' ? raw.resumePoint : undefined,
       ...(typeof raw.generation === 'number' && Number.isFinite(raw.generation) && raw.generation > 0
         ? { generation: Math.round(raw.generation) } : {}),

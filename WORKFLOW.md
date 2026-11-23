@@ -308,6 +308,14 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.98-15 — delivery profiles
+
+Spike/Demo/Base/Complete are selectable in the project profile card. Each
+carries a max hop/verification count, budget, design score and DoD. The walker
+reads the lane profile at the boundary and refuses an over-profile plan before
+any token; the profile sets the campaign budget, while a hibernation plan
+remains the explicit ceiling.
+
 ## v0.0.98-14 — Recovery Log + real errors
 
 Logs → Recovery renders every recovery row (lane, hop, class, kind, action,

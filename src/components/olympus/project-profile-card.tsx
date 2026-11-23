@@ -20,7 +20,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Activity, Archive, BookOpen, Brain, Check, ChevronDown, Clock, Code2, Copy, ExternalLink, FileCode,
-  Files, Folder, GitBranch, HardDrive, Layers, ListTree, Loader2, X, Download, Share2,
+  Files, Folder, GitBranch, HardDrive, Layers, ListTree, Loader2, X, Download, Share2, Rocket, Target,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -47,6 +47,17 @@ interface Brief {
   memory: string[];
   scope: { instincts: number; knowledge: number; skills: number };
   updatedAt: string | null;
+}
+
+interface DeliveryProfileState {
+  profiles: Array<{ id: string; label: string; tagline: string; maxHops: number; maxVerificationHops: number; budgetMs: number; designScore: number; doD: string[] }>;
+  current: string | null;
+  source: string | null;
+  planHops: number;
+  check: { ok: boolean; violations: string[]; warnings: string[] } | null;
+  liveWalk: boolean;
+  budgetMinutes: number | null;
+  doD: string[];
 }
 
 interface Profile {
@@ -146,6 +157,9 @@ export default function ProjectProfileCard({ slug, initial, onClose }: { slug: s
   };
   const [mounted, setMounted] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [delivery, setDelivery] = useState<DeliveryProfileState | null>(null);
+  const [deliveryBusy, setDeliveryBusy] = useState<string | null>(null);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -217,7 +231,35 @@ export default function ProjectProfileCard({ slug, initial, onClose }: { slug: s
     }
   };
 
+  const loadDelivery = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/olympus/delivery-profile?slug=${encodeURIComponent(slug)}`, { cache: 'no-store' });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d?.ok !== false) setDelivery(d as DeliveryProfileState);
+    } catch { /* the card still works without the selector */ }
+  }, [slug]);
+  useEffect(() => { void loadDelivery(); }, [loadDelivery]);
+
   if (!mounted) return null;
+
+  const chooseDelivery = async (id: string) => {
+    setDeliveryBusy(id);
+    setDeliveryError(null);
+    try {
+      const r = await fetch('/api/olympus/delivery-profile', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, profile: id }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      setDelivery(d as DeliveryProfileState);
+      toast.success(d.message || 'Delivery profile selected');
+    } catch (e: any) {
+      setDeliveryError(e?.message || String(e));
+    } finally {
+      setDeliveryBusy(null);
+    }
+  };
 
   const isActive = profile?.active ?? activeProject?.slug === slug;
   // v0.0.38 — the folder name, lowercase, is the identity.
@@ -384,6 +426,63 @@ export default function ProjectProfileCard({ slug, initial, onClose }: { slug: s
                     <Brain size={9} className="text-olympus-purple" />
                     <span>{t('projects.scope', language)}: {profile.brief.scope.instincts} {t('projects.instincts', language)} · {profile.brief.scope.knowledge} {t('projects.knowledge', language)} · {profile.brief.scope.skills} {t('projects.skills', language)}</span>
                   </div>
+                </div>
+              )}
+
+              {/* v0.0.98-15 — the delivery profile: the user's size contract. */}
+              {delivery && (
+                <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card/40 p-2.5 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <Rocket size={10} className="text-olympus-gold" />
+                    <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">delivery profile</span>
+                    <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">
+                      {delivery.current ? `${delivery.current} · ${delivery.planHops} hops` : 'not selected'}
+                      {delivery.liveWalk && <span className="ml-1 text-olympus-amber-soft">· walk live</span>}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {delivery.profiles.map((p) => {
+                      const selected = delivery.current === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          disabled={Boolean(deliveryBusy) || delivery.liveWalk}
+                          onClick={() => void chooseDelivery(p.id)}
+                          className={cn('rounded-md border px-2 py-1.5 text-left transition-colors',
+                            selected ? 'border-olympus-gold/50 bg-olympus-gold/10' : 'border-olympus-gold/15 bg-olympus-bg/40 hover:border-olympus-gold/35',
+                            delivery.liveWalk && 'opacity-50 cursor-not-allowed')}
+                          data-tip={delivery.liveWalk ? 'A walk holds this lane — the profile applies at the next walk boundary.' : p.tagline}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-semibold text-olympus-text">{p.label}</span>
+                            {selected && <Check size={9} className="text-olympus-green" />}
+                            {deliveryBusy === p.id && <Loader2 size={9} className="animate-spin text-olympus-gold" />}
+                            <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">{p.maxHops} hops</span>
+                          </div>
+                          <div className="mt-0.5 truncate text-[8px] font-mono text-olympus-text-dim">{p.tagline}</div>
+                          <div className="mt-0.5 text-[8px] font-mono text-olympus-text-dim">{Math.round(p.budgetMs / 60_000)} min · design {p.designScore || '—'} · {p.maxVerificationHops} verify</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {delivery.doD.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {delivery.doD.map((d) => <span key={d} className="rounded bg-olympus-gold/5 px-1.5 py-0.5 text-[8px] font-mono text-olympus-text-dim ring-1 ring-olympus-gold/10"><Target size={7} className="mr-0.5 inline" />{d}</span>)}
+                    </div>
+                  )}
+                  {delivery.check && !delivery.check.ok && (
+                    <div className="rounded border border-olympus-red/20 bg-olympus-red/5 px-1.5 py-1 text-[8px] font-mono text-olympus-red">
+                      {delivery.check.violations.map((v) => <div key={v}>· {v}</div>)}
+                    </div>
+                  )}
+                  {delivery.check && delivery.check.ok && delivery.check.warnings.length > 0 && (
+                    <div className="rounded border border-olympus-amber-soft/20 bg-olympus-amber-soft/5 px-1.5 py-1 text-[8px] font-mono text-olympus-amber-soft">
+                      {delivery.check.warnings.map((w) => <div key={w}>· {w}</div>)}
+                    </div>
+                  )}
+                  {deliveryError && <div className="text-[8px] font-mono text-olympus-red">{deliveryError}</div>}
+                  <p className="text-[8px] font-mono text-olympus-text-dim/80">O perfil é lido no boundary; um walk vivo continua com o perfil que já está em execução.</p>
                 </div>
               )}
 

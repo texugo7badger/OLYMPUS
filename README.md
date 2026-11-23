@@ -48,6 +48,8 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
+**v0.0.98-15 evidence:** [Delivery profiles](screenshots/screens/68-delivery-profiles-98-15.png) — Spike/Demo/Base/Complete selector, DoD and the 26-hop plan; header v0.0.98-15.
+
 **v0.0.98-14 evidence:** [Recovery Log](screenshots/screens/66-recovery-log-98-14.png) · [Real errors only](screenshots/screens/67-real-errors-98-14.png) — the recovery ledger as a timeline, and the error log with Chromium/CSP/GitHub noise filtered; header v0.0.98-14.
 
 **v0.0.98-13 evidence:** [Plan Health](screenshots/screens/65-plan-health-98-13.png) — 25-hop plan flagged oversized; verification, tight budgets and large hops named before the walk; header v0.0.98-13.
@@ -61,6 +63,14 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 **v0.0.98 evidence:** [Logs — the flight recorder](screenshots/screens/54-logs-098.png) · [hop detail](screenshots/screens/56-hop-detail-098.png) · [terminal usage meter](screenshots/screens/55-usage-meter-098.png) · [learning box](screenshots/screens/57-learning-detail-098.png) · [Callimachus brain health](screenshots/screens/58-callimachus-098.png) · [Pattern Studio thought](screenshots/screens/60-thought-detail-098.png) — the full truth: hops, walks, models, economy, learning and the live creative surface.
 
 ## Latest
+
+**v0.0.98-15 — delivery profiles (98.7).**
+Four user-selectable profiles per project: **Spike** (4 hops/30 min), **Demo**
+(6/45, design 7 + smoke QA), **Base** (10/90, design 8 + core E2E/a11y) and
+**Complete** (60/4h, design 9 + full QA/a11y/perf). The project profile card
+has the selector, the DoD and the plan check; the walker refuses an
+over-profile plan at the boundary before any token. The profile sets the
+campaign budget; a hibernation window remains the explicit ceiling.
 
 **v0.0.98-14 — Recovery Log + real errors (98.6).**
 The Logs workspace gains **Recovery**: the recovery ledger as a timeline
@@ -376,7 +386,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**51 PASS / 0 FAIL / 0 declared skip** across 51 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
+**52 PASS / 0 FAIL / 0 declared skip** across 52 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

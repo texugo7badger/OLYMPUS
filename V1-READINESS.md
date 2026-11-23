@@ -2,12 +2,13 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.0.98-14 · 2026-11-23 · **GO for a release candidate after two named gates**
+> v0.0.98-15 · 2026-11-23 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
-> this build "certified v1.0" until those gates are green.** v0.0.98-14 is
-> the Recovery Log + real-errors release: the recovery ledger and the filtered
-> error log are first-class Logs screens. v0.0.98-13 was Plan Health and the
-> Apply boundary; v0.0.98-12 OpenCode 2.4.1 + slow-lane truth.
+> this build "certified v1.0" until those gates are green.** v0.0.98-15 is
+> the delivery-profile release: Spike/Demo/Base/Complete are selectable per
+> project and enforced at the walk boundary. v0.0.98-14 was Recovery Log +
+> real errors; v0.0.98-13 Plan Health; v0.0.98-12 OpenCode 2.4.1 + slow-lane
+> truth.
 > v0.0.98-11 was the boot-truth release; v0.0.98-10 was
 > the hygiene/guard-v2 release; v0.0.98 remains the
 > quota-wait/blocked-dependency/Logs release; v0.0.97 the GO console anchor;

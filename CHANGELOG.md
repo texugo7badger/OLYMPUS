@@ -2,6 +2,27 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98-15] — 2026-11-23
+
+### Delivery profiles — the size contract
+
+- **Spike / Demo / Base / Complete.** Spike 4 hops / 30 min; Demo 6 / 45,
+  design 7 + smoke QA; Base 10 / 90, design 8 + core E2E/a11y; Complete 60 /
+  4h, design 9 + full QA/a11y/perf.
+- **Project selector.** The project profile card shows the four profiles, the
+  DoD, the plan check and the current selection. The choice is stored in the
+  lane (`.olympus-delivery-profile.json`).
+- **Enforced at the boundary.** The walker refuses an over-profile plan before
+  any token; the profile sets the campaign budget while a hibernation window
+  remains the explicit ceiling. A live walk keeps its profile; the next
+  boundary uses the new one.
+- **Tests.** `delivery-profiles.test.mjs`: definitions, refusal rules, store,
+  plan-vs-lane precedence, budget and wiring. Battery: 52/52 hermetic.
+
+**The 132 local suites read the live app/vault and are not re-run while AIME
+walks; the full 180-suite battery at v0.0.98-9.1 was 179/0/1. The 2h drill and
+8h/100-hop remain unclaimed.**
+
 ## [v0.0.98-14] — 2026-11-23
 
 ### Recovery Log + real errors

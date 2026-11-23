@@ -127,6 +127,10 @@
     {
       "suite": "logs-truth.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "delivery-profiles.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     }
   ],
   "local": [
@@ -660,9 +664,9 @@
     }
   ],
   "count": {
-    "total": 183,
+    "total": 184,
     "public": 27,
-    "trackedLocal": 24,
+    "trackedLocal": 25,
     "local": 132
   }
 }

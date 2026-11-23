@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-23",
-  "current": "0.0.98-14",
+  "current": "0.0.98-15",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.1",
@@ -11,6 +11,18 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.1 passed the full gate on 2026-11-23."
   },
   "releases": [
+    {
+      "version": "0.0.98-15",
+      "date": "2026-11-23",
+      "title": "Delivery profiles \u2014 the size contract",
+      "highlights": [
+        "Four user-selectable profiles per project: Spike (4 hops/30 min), Demo (6/45, design 7 + smoke QA), Base (10/90, design 8 + core E2E/a11y), Complete (60/4h, design 9 + full QA/a11y/perf).",
+        "The project profile card has the selector, DoD and plan check; the walker refuses an over-profile plan at the boundary, before any token.",
+        "The profile sets the campaign budget (Complete can extend the attended 60-min default to 4h); a hibernation plan remains the explicit ceiling.",
+        "Profile is stored in the lane (.olympus-delivery-profile.json); a live walk keeps its profile and the next boundary uses the new one.",
+        "Plan Health, Recovery Log, real errors, OpenCode 2.4.1, boot truth and slow-lane truth remain."
+      ]
+    },
     {
       "version": "0.0.98-14",
       "date": "2026-11-23",

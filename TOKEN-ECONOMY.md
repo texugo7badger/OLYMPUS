@@ -268,6 +268,13 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 16. v0.0.98-15 — the profile is the budget
+
+Spike/Demo/Base/Complete turn Plan Health's advisory numbers into a contract:
+the profile caps hops, verification hops and campaign minutes, and the walker
+refuses an over-profile plan before spending a token. Complete can extend the
+attended 60-minute default to 4h; a hibernation window remains the ceiling.
+
 ## 15. v0.0.98-14 — recovery and errors are evidence, not console
 
 The recovery ledger and the filtered error log are now readable in the Logs

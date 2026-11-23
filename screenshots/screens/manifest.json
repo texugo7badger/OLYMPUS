@@ -88,5 +88,10 @@
     "file": "screenshots/screens/67-real-errors-98-14.png",
     "title": "Real errors only",
     "note": "preload/CSP/GitHub-stats noise filtered; two real errors with source/version/stack; header v0.0.98-14"
+  },
+  {
+    "file": "screenshots/screens/68-delivery-profiles-98-15.png",
+    "title": "Delivery profiles",
+    "note": "Spike/Demo/Base/Complete selector, current Complete 60 hops, DoD and the 26-hop plan; header v0.0.98-15"
   }
 ]

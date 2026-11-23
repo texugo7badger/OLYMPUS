@@ -1,8 +1,9 @@
 # OLYMPUS Roadmap
 
-**v0.0.98-14 is the current release** (2026-11-23) — Recovery Log + real
-errors: the recovery ledger and the filtered error log are first-class Logs
-screens. **v0.0.98-13** added Plan Health and the Apply boundary;
+**v0.0.98-15 is the current release** (2026-11-23) — delivery profiles:
+Spike/Demo/Base/Complete are user-selectable per project, with DoD, plan
+check, budget and an enforced hop/verification cap at the walk boundary.
+**v0.0.98-14** added Recovery Log + real errors; **v0.0.98-13** Plan Health;
 **v0.0.98-12** OpenCode 2.4.1 + slow-lane truth; **v0.0.98-11** boot truth;
 **v0.0.98-10** the verification-hop guard; **v0.0.98** is the base.
 v0.0.97 remains the previous release: the GO console anchor, stale-anchor
