@@ -9,8 +9,8 @@
       "skip": 0,
       "suites": 52
     },
-    "releasedAt": "2026-11-23T23:00:08Z",
-    "commit": "pending",
+    "releasedAt": "2026-11-23T23:27:35Z",
+    "commit": "c200619",
     "note": "Hermetic release-branch battery: 52/52 tracked suites. The 132 maintainer-local suites read the live app/vault and are not re-run while AIME walks; the full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip."
   },
   "versions": [
