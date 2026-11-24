@@ -2,11 +2,12 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.98-16 · 2026-11-23 · the current release. Portfolio shows every
-> project in one read (profile, progress, first-green, done time, park rate,
-> tokens); a two-project Spike/Demo drill is the MVP proof. v0.0.98-15 added
-> delivery profiles; v0.0.98-14 Recovery Log + real errors; v0.0.98-13 Plan
-> Health; v0.0.98-12 OpenCode 2.4.1 and slow-lane truth. v0.0.98-11 made the socket the port owner and the
+> v0.0.98-17 · 2026-11-24 · the current release. A staged next generation
+> is applied automatically at the walk boundary; gen 46 → 47 no longer
+> freezes. Portfolio shows each project's generation. v0.0.98-16 added
+> Portfolio; v0.0.98-15 delivery profiles; v0.0.98-14 Recovery Log + real
+> errors; v0.0.98-13 Plan Health; v0.0.98-12 OpenCode 2.4.1 and slow-lane
+> truth. v0.0.98-11 made the socket the port owner and the
 > process group the MCP owner; v0.0.98-10 added the verification-hop guard,
 > the blocked-signal dedupe and the log filter. The 98.x line adds the plan archive,
 > the telemetry definition/tool ledger, the Callimachus status card and the

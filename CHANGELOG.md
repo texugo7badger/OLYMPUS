@@ -2,6 +2,25 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98-17] — 2026-11-24
+
+### Generation boundary — the last 98
+
+- **Automatic boundary apply.** With no live walk, a staged
+  `dispatch-plan.next.json` is applied before the plan is read; gen 46 → 47
+  no longer freezes the night. A live planning turn is allowed to settle
+  first; the UI Apply button remains for an explicit early apply.
+- **Portfolio generation.** Project cards show the generation, so a resumed
+  campaign is visible at a glance.
+- **Tests.** `generation-boundary.test.mjs` — gen46 frozen + gen47 staged →
+  applied, the gen47 hop dispatched and the state saved as generation 47.
+  Battery: 54/54 hermetic.
+
+**This is the last 0.0.98 release. The 2h drill and the 8h/100-hop
+certification remain unclaimed; 0.0.99 is the hygiene release.** The 132
+local suites read the live app/vault and were not re-run while AIME walks; the
+full 180-suite battery at v0.0.98-9.1 was 179/0/1.
+
 ## [v0.0.98-16] — 2026-11-23
 
 ### Portfolio — the multi-project dashboard

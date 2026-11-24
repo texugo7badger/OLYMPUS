@@ -135,6 +135,10 @@
     {
       "suite": "portfolio.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "generation-boundary.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     }
   ],
   "local": [
@@ -668,9 +672,9 @@
     }
   ],
   "count": {
-    "total": 185,
+    "total": 186,
     "public": 27,
-    "trackedLocal": 26,
+    "trackedLocal": 27,
     "local": 132
   }
 }

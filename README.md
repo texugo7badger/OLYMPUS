@@ -48,6 +48,8 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
+**v0.0.98-17 evidence:** [Portfolio — generation boundary](screenshots/screens/70-portfolio-gen-98-17.png) — gen 46/47, both DONE; the boundary continues instead of freezing; header v0.0.98-17.
+
 **v0.0.98-16 evidence:** [Portfolio](screenshots/screens/69-portfolio-98-16.png) — two projects, Spike/Demo profiles, 8/8 hops DONE, first-green and park-rate totals; header v0.0.98-16.
 
 **v0.0.98-15 evidence:** [Delivery profiles](screenshots/screens/68-delivery-profiles-98-15.png) — Spike/Demo/Base/Complete selector, DoD and the 26-hop plan; header v0.0.98-15.
@@ -65,6 +67,13 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 **v0.0.98 evidence:** [Logs — the flight recorder](screenshots/screens/54-logs-098.png) · [hop detail](screenshots/screens/56-hop-detail-098.png) · [terminal usage meter](screenshots/screens/55-usage-meter-098.png) · [learning box](screenshots/screens/57-learning-detail-098.png) · [Callimachus brain health](screenshots/screens/58-callimachus-098.png) · [Pattern Studio thought](screenshots/screens/60-thought-detail-098.png) — the full truth: hops, walks, models, economy, learning and the live creative surface.
 
 ## Latest
+
+**v0.0.98-17 — generation boundary (98.9).**
+A staged next generation is applied **automatically at the walk boundary**,
+before the plan is read: gen 46 → gen 47 no longer freezes the night. A live
+planning turn is allowed to settle first; the UI Apply button remains for an
+explicit early apply. Portfolio now shows each project's generation. This is
+the last 0.0.98 release; 0.0.99 is the hygiene release.
 
 **v0.0.98-16 — Portfolio (98.8).**
 The Logs workspace gains **Portfolio**: every project in one read — profile,
@@ -387,7 +396,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**53 PASS / 0 FAIL / 0 declared skip** across 53 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
+**54 PASS / 0 FAIL / 0 declared skip** across 54 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

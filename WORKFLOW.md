@@ -308,6 +308,14 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.98-17 — the generation boundary is automatic
+
+A staged `dispatch-plan.next.json` is applied at the walk boundary before the
+plan is read, once no live lock exists (and after a live planning turn
+settles). Gen 46 → gen 47 now starts by itself; the UI Apply button remains
+for an explicit early apply. The new plan is frozen, the old state is
+validated by hop hash, and the walk continues on the new generation.
+
 ## v0.0.98-16 — Portfolio
 
 Logs → Portfolio reads every project lane once: profile, status, progress,

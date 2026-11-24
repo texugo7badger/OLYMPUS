@@ -268,6 +268,13 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 18. v0.0.98-17 — a frozen generation is wasted night
+
+A staged next generation is applied at the walk boundary before the plan is
+read, so the night continues on gen 47 instead of parking on gen 46. The
+boundary consumes the staged file once; a live planning turn is allowed to
+settle so the apply never races a write.
+
 ## 17. v0.0.98-16 — the portfolio is a measured comparison
 
 Portfolio reports project-level first-green, done time, hops-to-done, park

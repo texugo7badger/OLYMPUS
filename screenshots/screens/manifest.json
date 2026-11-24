@@ -98,5 +98,10 @@
     "file": "screenshots/screens/69-portfolio-98-16.png",
     "title": "Portfolio",
     "note": "two projects, Spike/Demo profiles, 8/8 hops DONE, first-green and park-rate totals; header v0.0.98-16"
+  },
+  {
+    "file": "screenshots/screens/70-portfolio-gen-98-17.png",
+    "title": "Portfolio \u2014 generation boundary",
+    "note": "two projects at gen 46/47, both DONE; the boundary continues instead of freezing; header v0.0.98-17"
   }
 ]

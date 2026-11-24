@@ -24,7 +24,7 @@ import type { LogHop, LogWalk, LogsPayload } from '@/lib/logs-index';
 type Tab = 'overview' | 'hops' | 'walks' | 'portfolio' | 'blocked' | 'boot' | 'plan' | 'recovery' | 'errors' | 'models' | 'economy';
 
 interface PortfolioProject {
-  slug: string; status: 'RUNNING' | 'PARKED' | 'DONE' | 'IDLE'; completed: number; total: number;
+  slug: string; generation: number; status: 'RUNNING' | 'PARKED' | 'DONE' | 'IDLE'; completed: number; total: number;
   hopsToDonePct: number; parkedHop: string | null; profile: string | null; profileLabel: string | null;
   profileCheck: { ok: boolean; violations: string[] } | null; liveWalk: boolean;
   firstGreenMs: number | null; doneMs: number | null; parkRatePct: number | null; attempts: number;
@@ -460,7 +460,7 @@ export default function LogsDashboard() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-[12px] font-semibold text-olympus-text">{p.slug}</span>
                         <StatusChip status={p.status === 'DONE' ? 'completed' : p.status === 'PARKED' ? 'parked' : p.status === 'RUNNING' ? 'running' : 'idle'} />
-                        <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">{p.profileLabel ?? 'no profile'}</span>
+                        <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">gen {p.generation ?? '—'} · {p.profileLabel ?? 'no profile'}</span>
                       </div>
                       <div className="mt-2 flex items-baseline gap-2">
                         <span className="text-[20px] font-semibold tabular-nums text-olympus-text">{p.completed}/{p.total}</span>

@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-23",
-  "current": "0.0.98-16",
+  "updatedAt": "2026-11-24",
+  "current": "0.0.98-17",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.1",
@@ -11,6 +11,18 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.1 passed the full gate on 2026-11-23."
   },
   "releases": [
+    {
+      "version": "0.0.98-17",
+      "date": "2026-11-24",
+      "title": "Generation boundary \u2014 the last 98",
+      "highlights": [
+        "A staged next generation is now applied automatically at the walk boundary before the plan is read; gen 46 \u2192 gen 47 no longer freezes the night.",
+        "The boundary waits for a live planning turn to settle, then applies; the UI Apply button remains for an explicit early apply.",
+        "Portfolio shows each project's generation, so a resumed campaign is visible at a glance.",
+        "New regression: generation-boundary (gen46 frozen + gen47 staged \u2192 applied, gen47 hop dispatched, state generation 47).",
+        "The complete 0.0.98 line (verification guard, boot truth, slow-lane truth, Plan Health, Recovery Log/real errors, delivery profiles, Portfolio) remains."
+      ]
+    },
     {
       "version": "0.0.98-16",
       "date": "2026-11-23",

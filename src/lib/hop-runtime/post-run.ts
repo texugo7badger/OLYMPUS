@@ -167,7 +167,7 @@ import { planQaRepair } from './qa-repair';
 import { readOptIn } from '@/lib/atlas-warden';
 import { appendGodInbox } from '@/lib/god-inbox';
 import { decideRecovery, applyRecovery, readRecoveries as readRecoveryRows } from './recovery';
-import { stagePlanRewriteIfWalking } from './plan-generation';
+import { applyNextPlan, readNextPlan, stagePlanRewriteIfWalking } from './plan-generation';
 import { publishHopEvent } from './hop-events';
 
 export const DISPATCH_PLAN_FILENAME = 'dispatch-plan.json';
@@ -465,6 +465,35 @@ export async function maybeWalkThePlan(opts: {
         await new Promise((r) => setTimeout(r, 3_000));
       }
     } catch { /* the probe failing = settle now — the walk proceeds */ }
+  }
+
+  // v0.0.98-17 — THE GENERATION BOUNDARY IS AUTOMATIC. The 2026-11-24
+  // specimen: the walk settled on gen 46 with gen 47 staged; nothing applied
+  // it, so the night froze. With no live walk, a staged next generation is
+  // applied HERE, at the boundary, before the plan is read. A planning turn
+  // still alive is allowed to settle first (the wait above), so its write is
+  // not raced. The UI Apply button remains for an explicit early apply.
+  {
+    const next = readNextPlan(opts.laneRoot);
+    if (next.plan) {
+      const applied = applyNextPlan(opts.laneRoot);
+      if (applied.applied) {
+        const from = next.plan.parentGeneration ?? null;
+        const to = applied.generation ?? next.plan.generation ?? null;
+        opts.send?.({
+          type: 'log',
+          msg: `Generation ${from ?? '?'} → ${to ?? '?'} applied at the walk boundary (${next.plan.hops?.length ?? 0} hops). The next generation starts now.`,
+          ts: new Date().toISOString(),
+        });
+        try {
+          appendActivity({
+            god: 'atlas', action: 'milestone', project: opts.slug,
+            msg: `Generation ${from ?? '?'} → ${to ?? '?'} applied at the boundary — the walk continues on the new plan.`,
+            meta: { kind: 'generation-applied', from, to, lane: opts.laneRoot, hops: next.plan.hops?.length ?? 0 },
+          });
+        } catch { /* best effort */ }
+      }
+    }
   }
 
   const planPath = join(opts.laneRoot, DISPATCH_PLAN_FILENAME);
