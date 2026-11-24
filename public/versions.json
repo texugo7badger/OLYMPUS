@@ -9,8 +9,8 @@
       "skip": 0,
       "suites": 54
     },
-    "releasedAt": "2026-11-24T00:00:00.000Z",
-    "commit": "pending",
+    "releasedAt": "2026-11-24T18:42:40Z",
+    "commit": "1eb64c9",
     "note": "Hygiene total: npm run hygiene passes all 6 deterministic gates; the hermetic release battery is 54/54. The 132 local suites are declared; the full 180-suite battery at v0.0.98-9.1 was 179/0/1. Drills not claimed."
   },
   "versions": [
