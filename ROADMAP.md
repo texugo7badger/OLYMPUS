@@ -1,11 +1,11 @@
 # OLYMPUS Roadmap
 
-**v0.0.98-15 is the current release** (2026-11-23) — delivery profiles:
-Spike/Demo/Base/Complete are user-selectable per project, with DoD, plan
-check, budget and an enforced hop/verification cap at the walk boundary.
-**v0.0.98-14** added Recovery Log + real errors; **v0.0.98-13** Plan Health;
-**v0.0.98-12** OpenCode 2.4.1 + slow-lane truth; **v0.0.98-11** boot truth;
-**v0.0.98-10** the verification-hop guard; **v0.0.98** is the base.
+**v0.0.98-16 is the current release** (2026-11-23) — Portfolio:
+the multi-project dashboard (profile, progress, first-green, done time, park
+rate, tokens) plus a two-project Spike/Demo drill. **v0.0.98-15** added the
+delivery profiles; **v0.0.98-14** Recovery Log + real errors; **v0.0.98-13**
+Plan Health; **v0.0.98-12** OpenCode 2.4.1 + slow-lane truth; **v0.0.98-9.x**
+the guard/boot line; **v0.0.98** is the base.
 v0.0.97 remains the previous release: the GO console anchor, stale-anchor
 pause, rolling 65/80/100 and the qwen→DeepSeek guard. v0.0.96: hibernation v2, GO truth and the smart burn: X quits by default while hibernate is explicit; hibernate waits
 for streaming turns, keeps a preview only when a live hop needs it, records and

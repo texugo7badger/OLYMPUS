@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-23",
-  "current": "0.0.98-15",
+  "current": "0.0.98-16",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.1",
@@ -11,6 +11,18 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.1 passed the full gate on 2026-11-23."
   },
   "releases": [
+    {
+      "version": "0.0.98-16",
+      "date": "2026-11-23",
+      "title": "Portfolio \u2014 the multi-project dashboard",
+      "highlights": [
+        "Logs \u2192 Portfolio: every project in one read \u2014 profile, status, progress, first-green (proxy), done time, park rate, tokens, last signal.",
+        "Totals across the portfolio: projects/running/parked/done, hops completed, average first-green and park rate.",
+        "The two-project MVP drill runs a Spike lane (3 script hops) and a Demo lane (6 script hops with design + QA); both reach DONE, the over-profile plan is refused.",
+        "Measured, not inferred: first-green = first completed telemetry row \u2212 plan.createdAt; done = last completed row \u2212 createdAt; park rate = parked rows/rows.",
+        "Delivery profiles, Plan Health, Recovery Log, OpenCode 2.4.1, boot truth and slow-lane truth remain."
+      ]
+    },
     {
       "version": "0.0.98-15",
       "date": "2026-11-23",

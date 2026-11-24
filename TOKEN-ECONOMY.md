@@ -268,6 +268,13 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 17. v0.0.98-16 — the portfolio is a measured comparison
+
+Portfolio reports project-level first-green, done time, hops-to-done, park
+rate and tokens from the lane's own telemetry. The two-project Spike/Demo
+drill is deterministic (script hops), so the MVP confirmation costs no model
+tokens while proving the profile boundary and the dashboard.
+
 ## 16. v0.0.98-15 — the profile is the budget
 
 Spike/Demo/Base/Complete turn Plan Health's advisory numbers into a contract:

@@ -15,13 +15,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ScrollText, RefreshCw, Search, ArrowLeft, Copy, Check,
-  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench, Server, Activity, ListTree, RotateCcw, TriangleAlert,
+  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench, Server, Activity, ListTree, RotateCcw, TriangleAlert, LayoutGrid,
 } from 'lucide-react';
 import { planHealth, estimateHopToolBudget } from '@/lib/plan-health';
 import { cn } from '@/lib/utils';
 import type { LogHop, LogWalk, LogsPayload } from '@/lib/logs-index';
 
-type Tab = 'overview' | 'hops' | 'walks' | 'blocked' | 'boot' | 'plan' | 'recovery' | 'errors' | 'models' | 'economy';
+type Tab = 'overview' | 'hops' | 'walks' | 'portfolio' | 'blocked' | 'boot' | 'plan' | 'recovery' | 'errors' | 'models' | 'economy';
+
+interface PortfolioProject {
+  slug: string; status: 'RUNNING' | 'PARKED' | 'DONE' | 'IDLE'; completed: number; total: number;
+  hopsToDonePct: number; parkedHop: string | null; profile: string | null; profileLabel: string | null;
+  profileCheck: { ok: boolean; violations: string[] } | null; liveWalk: boolean;
+  firstGreenMs: number | null; doneMs: number | null; parkRatePct: number | null; attempts: number;
+  tokensOut: number; lastActivity: string | null;
+}
+interface PortfolioPayload {
+  ok: true; generatedAt: string; projects: PortfolioProject[];
+  totals: { projects: number; running: number; parked: number; done: number; hops: number; completed: number; firstGreenMs: number | null; parkRatePct: number | null };
+}
 
 interface BootHealth {
   app: { version: string; port: number; portAlive: boolean; health: { ok: boolean; status: number | null; ms: number; error: string | null }; mode: string };
@@ -35,6 +47,7 @@ const TABS: Array<{ id: Tab; label: string; icon: any }> = [
   { id: 'overview', label: 'Visão geral', icon: Gauge },
   { id: 'hops', label: 'Hops', icon: Route },
   { id: 'walks', label: 'Walks', icon: Boxes },
+  { id: 'portfolio', label: 'Portfolio', icon: LayoutGrid },
   { id: 'blocked', label: 'Blocked', icon: ShieldAlert },
   { id: 'boot', label: 'Boot', icon: Server },
   { id: 'plan', label: 'Plan', icon: ListTree },
@@ -130,6 +143,7 @@ export default function LogsDashboard() {
   const [selectedHop, setSelectedHop] = useState<LogHop | null>(null);
   const [selectedWalk, setSelectedWalk] = useState<LogWalk | null>(null);
   const [bootHealth, setBootHealth] = useState<BootHealth | null>(null);
+  const [portfolio, setPortfolio] = useState<PortfolioPayload | null>(null);
   const [visible, setVisible] = useState(120);
   const [copied, setCopied] = useState(false);
 
@@ -155,16 +169,26 @@ export default function LogsDashboard() {
     } catch { /* the Boot tab degrades to — */ }
   }, []);
 
+  const loadPortfolio = useCallback(async () => {
+    try {
+      const r = await fetch('/api/olympus/portfolio', { cache: 'no-store' });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d?.ok) setPortfolio(d as PortfolioPayload);
+    } catch { /* the Portfolio tab degrades to — */ }
+  }, []);
+
   useEffect(() => {
     void load();
     void loadBoot();
+    void loadPortfolio();
     const iv = setInterval(() => {
       if (document.visibilityState === 'hidden') return;
       void load();
       void loadBoot();
+      void loadPortfolio();
     }, 15_000);
     return () => clearInterval(iv);
-  }, [load, loadBoot]);
+  }, [load, loadBoot, loadPortfolio]);
 
   const lanes = useMemo(() => {
     const set = new Map<string, string>();
@@ -398,6 +422,71 @@ export default function LogsDashboard() {
               </button>
             ))}
             {!walks.length && <Empty text="Nenhuma campanha com plano." />}
+          </section>
+        )}
+
+        {tab === 'portfolio' && (
+          <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 text-olympus-cyan">
+                  <LayoutGrid size={14} />
+                  <h2 className="text-[13px] font-semibold text-olympus-text">Portfolio</h2>
+                  <span className="rounded bg-olympus-cyan/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-cyan ring-1 ring-olympus-cyan/20">multi-project</span>
+                </div>
+                <p className="mt-1 max-w-[820px] text-[11px] text-olympus-text-dim">
+                  Todos os projetos em uma leitura: perfil, progresso, first-green (proxy do primeiro hop verde), conclusão, park rate e último sinal.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono text-olympus-text-dim">{portfolio?.totals.projects ?? '—'} project(s)</span>
+            </div>
+            {!portfolio ? (
+              <div className="mt-4 text-[11px] font-mono text-olympus-text-dim">lendo o portfólio…</div>
+            ) : portfolio.projects.length === 0 ? (
+              <div className="mt-4 rounded-lg border border-olympus-gold/15 bg-olympus-bg/40 px-3 py-3 text-[11px] font-mono text-olympus-text-dim">Nenhum projeto com plano.</div>
+            ) : (
+              <>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+                  <Card label="projects" value={String(portfolio.totals.projects)} sub={`${portfolio.totals.running} running`} />
+                  <Card label="done" value={String(portfolio.totals.done)} sub={`${portfolio.totals.completed}/${portfolio.totals.hops} hops`} tone="text-olympus-green" />
+                  <Card label="parked" value={String(portfolio.totals.parked)} sub="needs a look" tone={portfolio.totals.parked ? 'text-olympus-red' : 'text-olympus-green'} />
+                  <Card label="first green" value={portfolio.totals.firstGreenMs != null ? fmtDuration(portfolio.totals.firstGreenMs) : '—'} sub="avg · proxy" />
+                  <Card label="park rate" value={portfolio.totals.parkRatePct != null ? `${portfolio.totals.parkRatePct}%` : '—'} sub="avg · rows" />
+                  <Card label="profiles" value={String(portfolio.projects.filter((p) => p.profile).length)} sub="selected" />
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {portfolio.projects.map((p) => (
+                    <div key={p.slug} className="rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-[12px] font-semibold text-olympus-text">{p.slug}</span>
+                        <StatusChip status={p.status === 'DONE' ? 'completed' : p.status === 'PARKED' ? 'parked' : p.status === 'RUNNING' ? 'running' : 'idle'} />
+                        <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">{p.profileLabel ?? 'no profile'}</span>
+                      </div>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-[20px] font-semibold tabular-nums text-olympus-text">{p.completed}/{p.total}</span>
+                        <span className="text-[9px] font-mono text-olympus-text-dim">{p.hopsToDonePct}% · {p.attempts} attempts</span>
+                      </div>
+                      <div className="mt-1 h-1 rounded-full bg-olympus-bg ring-1 ring-olympus-gold/10 overflow-hidden">
+                        <div className={cn('h-full rounded-full', p.status === 'DONE' ? 'bg-olympus-green' : p.status === 'PARKED' ? 'bg-olympus-red' : 'bg-olympus-cyan')} style={{ width: `${Math.min(100, p.hopsToDonePct)}%` }} />
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-1 text-[9px] font-mono text-olympus-text-dim">
+                        <span>first green: <span className="text-olympus-text">{p.firstGreenMs != null ? fmtDuration(p.firstGreenMs) : '—'}</span></span>
+                        <span>done: <span className="text-olympus-text">{p.doneMs != null ? fmtDuration(p.doneMs) : '—'}</span></span>
+                        <span>park rate: <span className={cn(p.parkRatePct ? 'text-olympus-amber-soft' : 'text-olympus-green')}>{p.parkRatePct != null ? `${p.parkRatePct}%` : '—'}</span></span>
+                        <span>tokens out: <span className="text-olympus-text">{fmtTokens(p.tokensOut)}</span></span>
+                      </div>
+                      {p.parkedHop && <div className="mt-1 text-[9px] font-mono text-olympus-red">parked: {p.parkedHop}</div>}
+                      {p.profileCheck && !p.profileCheck.ok && <div className="mt-1 text-[9px] font-mono text-olympus-red">profile check: {p.profileCheck.violations.join('; ')}</div>}
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-[9px] font-mono text-olympus-text-dim">{p.lastActivity ? fmtTime(p.lastActivity) : 'no signal'}</span>
+                        <button onClick={() => { setLane(p.slug); setTab('hops'); }} className="text-[9px] font-mono text-olympus-gold hover:underline">open hops →</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <p className="mt-3 text-[10px] font-mono text-olympus-text-dim/80">first-green = primeiro hop verde desde createdAt do plano (proxy, não é paint do browser). done = último hop verde - createdAt.</p>
           </section>
         )}
 

@@ -308,6 +308,13 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.98-16 — Portfolio
+
+Logs → Portfolio reads every project lane once: profile, status, progress,
+first-green (proxy), done time, park rate, tokens and last signal, plus the
+portfolio totals. The two-project Spike/Demo drill proves the profile
+boundary and the metrics without a model token.
+
 ## v0.0.98-15 — delivery profiles
 
 Spike/Demo/Base/Complete are selectable in the project profile card. Each

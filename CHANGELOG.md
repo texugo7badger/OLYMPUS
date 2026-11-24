@@ -2,6 +2,27 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.98-16] — 2026-11-23
+
+### Portfolio — the multi-project dashboard
+
+- **Logs → Portfolio.** Every project lane in one read: profile, status,
+  progress, first-green (proxy), done time, park rate, tokens and last signal,
+  plus portfolio totals (projects/running/parked/done, hops, average
+  first-green/park rate).
+- **Measured metrics.** first-green = first completed telemetry row −
+  plan.createdAt; done = last completed row − createdAt; park rate = parked
+  rows/rows. The UI labels first-green a proxy, never a browser paint.
+- **Two-project MVP drill.** A Spike lane (3 script hops) and a Demo lane
+  (6 script hops with design + QA) both reach DONE; an over-profile plan is
+  refused before a token.
+- **Tests.** `portfolio.test.mjs` — 13 checks: two profiles, DONE, metrics,
+  totals, over-profile refusal, API/UI wiring. Battery: 53/53 hermetic.
+
+**The 132 local suites read the live app/vault and are not re-run while AIME
+walks; the full 180-suite battery at v0.0.98-9.1 was 179/0/1. The 2h drill and
+8h/100-hop remain unclaimed.**
+
 ## [v0.0.98-15] — 2026-11-23
 
 ### Delivery profiles — the size contract

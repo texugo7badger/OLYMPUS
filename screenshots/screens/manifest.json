@@ -93,5 +93,10 @@
     "file": "screenshots/screens/68-delivery-profiles-98-15.png",
     "title": "Delivery profiles",
     "note": "Spike/Demo/Base/Complete selector, current Complete 60 hops, DoD and the 26-hop plan; header v0.0.98-15"
+  },
+  {
+    "file": "screenshots/screens/69-portfolio-98-16.png",
+    "title": "Portfolio",
+    "note": "two projects, Spike/Demo profiles, 8/8 hops DONE, first-green and park-rate totals; header v0.0.98-16"
   }
 ]
