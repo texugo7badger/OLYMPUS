@@ -2,12 +2,10 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.98-17 · 2026-11-24 · the current release. A staged next generation
-> is applied automatically at the walk boundary; gen 46 → 47 no longer
-> freezes. Portfolio shows each project's generation. v0.0.98-16 added
-> Portfolio; v0.0.98-15 delivery profiles; v0.0.98-14 Recovery Log + real
-> errors; v0.0.98-13 Plan Health; v0.0.98-12 OpenCode 2.4.1 and slow-lane
-> truth. v0.0.98-11 made the socket the port owner and the
+> v0.0.99 · 2026-11-24 · the current release. Hygiene total: `npm run
+> hygiene` passes tsc, lint, docs, privacy, suite manifest and audit-high;
+> the 54 hermetic suites are green. The 0.0.98 line is complete; the
+> generation boundary, Portfolio, delivery profiles and every guard remain. v0.0.98-11 made the socket the port owner and the
 > process group the MCP owner; v0.0.98-10 added the verification-hop guard,
 > the blocked-signal dedupe and the log filter. The 98.x line adds the plan archive,
 > the telemetry definition/tool ledger, the Callimachus status card and the

@@ -48,6 +48,8 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
+**v0.0.99 evidence:** [Hygiene — zero errors](screenshots/screens/71-hygiene-99.png) — 7/7 gates green, 54/54 hermetic battery, zero deterministic errors; header v0.0.99.
+
 **v0.0.98-17 evidence:** [Portfolio — generation boundary](screenshots/screens/70-portfolio-gen-98-17.png) — gen 46/47, both DONE; the boundary continues instead of freezing; header v0.0.98-17.
 
 **v0.0.98-16 evidence:** [Portfolio](screenshots/screens/69-portfolio-98-16.png) — two projects, Spike/Demo profiles, 8/8 hops DONE, first-green and park-rate totals; header v0.0.98-16.
@@ -68,12 +70,16 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
-**v0.0.98-17 — generation boundary (98.9).**
-A staged next generation is applied **automatically at the walk boundary**,
-before the plan is read: gen 46 → gen 47 no longer freezes the night. A live
-planning turn is allowed to settle first; the UI Apply button remains for an
-explicit early apply. Portfolio now shows each project's generation. This is
-the last 0.0.98 release; 0.0.99 is the hygiene release.
+**v0.0.99 — hygiene total (zero errors).**
+`npm run hygiene` is the gate of record: `tsc`, `lint`, `docs:check`,
+`repo:privacy`, the suite manifest and `audit --audit-level=high` all pass;
+`npm run hygiene -- --battery` adds the 54 hermetic suites. [HYGIENE.md](HYGIENE.md)
+declares the zero-error contract and every remaining limit. The 0.0.98
+preview releases are retired from Releases (tags kept); `v0.0.98` is the base
+and `v0.0.99` is the current stable. The complete 0.0.98 line — generation
+boundary, Portfolio, delivery profiles, Plan Health, Recovery Log/real errors,
+OpenCode 2.4.1, boot truth, slow-lane truth and the verification guard —
+remains.
 
 **v0.0.98-16 — Portfolio (98.8).**
 The Logs workspace gains **Portfolio**: every project in one read — profile,

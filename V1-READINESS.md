@@ -2,13 +2,12 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.0.98-17 · 2026-11-24 · **GO for a release candidate after two named gates**
+> v0.0.99 · 2026-11-24 · **GO for a release candidate after two named gates**
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
-> this build "certified v1.0" until those gates are green.** v0.0.98-17 is
-> the generation-boundary release: a staged next generation applies at the
-> walk boundary, so gen 46 → 47 no longer freezes. v0.0.98-16 was Portfolio;
-> v0.0.98-15 delivery profiles; v0.0.98-14 Recovery Log + real errors;
-> v0.0.98-13 Plan Health; v0.0.98-12 OpenCode 2.4.1 + slow-lane truth.
+> this build "certified v1.0" until those gates are green.** v0.0.99 is the
+> hygiene-total release: `npm run hygiene` passes tsc, lint, docs, privacy,
+> suite manifest and audit-high; the 54 hermetic suites are green and
+> HYGIENE.md declares the limits. The 0.0.98 line is complete.
 > v0.0.98-11 was the boot-truth release; v0.0.98-10 was
 > the hygiene/guard-v2 release; v0.0.98 remains the
 > quota-wait/blocked-dependency/Logs release; v0.0.97 the GO console anchor;

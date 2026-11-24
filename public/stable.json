@@ -1,6 +1,6 @@
 {
-  "version": "0.0.98-17",
-  "tag": "v0.0.98-17",
+  "version": "0.0.99",
+  "tag": "v0.0.99",
   "stable": true,
   "tests": {
     "pass": 54,
@@ -8,7 +8,7 @@
     "skip": 0,
     "suites": 54
   },
-  "releasedAt": "2026-11-24T17:13:52Z",
-  "commit": "0b79e0c",
-  "note": "Hermetic release-branch battery: 54/54 tracked suites. The 132 maintainer-local suites read the live app/vault and are not re-run while AIME walks; the full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip."
+  "releasedAt": "2026-11-24T00:00:00.000Z",
+  "commit": "pending",
+  "note": "Hygiene total: npm run hygiene passes all 6 deterministic gates; the hermetic release battery is 54/54. The 132 local suites are declared; the full 180-suite battery at v0.0.98-9.1 was 179/0/1. Drills not claimed."
 }

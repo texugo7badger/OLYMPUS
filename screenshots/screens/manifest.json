@@ -103,5 +103,10 @@
     "file": "screenshots/screens/70-portfolio-gen-98-17.png",
     "title": "Portfolio \u2014 generation boundary",
     "note": "two projects at gen 46/47, both DONE; the boundary continues instead of freezing; header v0.0.98-17"
+  },
+  {
+    "file": "screenshots/screens/71-hygiene-99.png",
+    "title": "Hygiene \u2014 zero errors",
+    "note": "7/7 gates green, 54/54 hermetic battery, zero deterministic errors; header v0.0.99"
   }
 ]

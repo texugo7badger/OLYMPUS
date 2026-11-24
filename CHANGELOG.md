@@ -2,6 +2,27 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.0.99] — 2026-11-24
+
+### Hygiene total — zero errors
+
+- **`npm run hygiene`** runs tsc, lint, docs:check, repo:privacy, the suite
+  manifest and `audit --audit-level=high`; all six pass. `--battery` adds the
+  54 hermetic suites.
+- **HYGIENE.md** is the contract: every gate has a bar; the 23 moderate
+  transitive advisories, the 132 local suites and the unclaimed drills are
+  declared, not hidden.
+- **Retired previews.** The 0.0.98-10…-17 GitHub Releases are removed (tags
+  kept); `v0.0.98` is the base and `v0.0.99` the current stable.
+- **The 0.0.98 line is complete:** generation boundary, Portfolio, delivery
+  profiles, Plan Health, Recovery Log/real errors, OpenCode 2.4.1, boot truth,
+  slow-lane truth and the verification guard.
+- **Tests.** 54/54 hermetic; `generation-boundary` 6/6; `portfolio` 13/13;
+  `delivery-profiles` 17/17; `v092` 37/37.
+
+**The 2h drill and the 8h/100-hop certification remain unclaimed.** The 132
+local suites read the live app/vault and were not re-run while AIME walks.
+
 ## [v0.0.98-17] — 2026-11-24
 
 ### Generation boundary — the last 98

@@ -268,6 +268,13 @@ header's **usage meter** reads only the anchor (5h by default; one button
 cycles weekly/monthly), labels a stale anchor and a quota hit, and never
 fabricates 0%.
 
+## 19. v0.0.99 — hygiene total
+
+The release gate is six deterministic checks (`npm run hygiene`): typescript,
+lint, docs, privacy, suite manifest and audit-high. The hermetic battery is
+54/54. HYGIENE.md declares the remaining limits (23 moderate transitive
+advisories, 132 local suites, drills not claimed) instead of hiding them.
+
 ## 18. v0.0.98-17 — a frozen generation is wasted night
 
 A staged next generation is applied at the walk boundary before the plan is

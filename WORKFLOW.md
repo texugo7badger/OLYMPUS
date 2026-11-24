@@ -308,6 +308,13 @@ The new Logs workspace (left nav) shows hops, walks, models and economy with
 full detail. The terminal header's usage meter shows the 5h window by default;
 the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 
+## v0.0.99 — hygiene total
+
+`npm run hygiene` runs tsc, lint, docs:check, repo:privacy, the suite manifest
+and audit-high; `npm run hygiene -- --battery` adds the 54 hermetic suites.
+HYGIENE.md is the contract: every gate has a measured bar, and every remaining
+limit is named. The 0.0.98 preview releases are retired (tags kept).
+
 ## v0.0.98-17 — the generation boundary is automatic
 
 A staged `dispatch-plan.next.json` is applied at the walk boundary before the

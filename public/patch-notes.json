@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-24",
-  "current": "0.0.98-17",
+  "current": "0.0.99",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.1",
@@ -12,99 +12,15 @@
   },
   "releases": [
     {
-      "version": "0.0.98-17",
+      "version": "0.0.99",
       "date": "2026-11-24",
-      "title": "Generation boundary \u2014 the last 98",
+      "title": "Hygiene total \u2014 zero errors",
       "highlights": [
-        "A staged next generation is now applied automatically at the walk boundary before the plan is read; gen 46 \u2192 gen 47 no longer freezes the night.",
-        "The boundary waits for a live planning turn to settle, then applies; the UI Apply button remains for an explicit early apply.",
-        "Portfolio shows each project's generation, so a resumed campaign is visible at a glance.",
-        "New regression: generation-boundary (gen46 frozen + gen47 staged \u2192 applied, gen47 hop dispatched, state generation 47).",
-        "The complete 0.0.98 line (verification guard, boot truth, slow-lane truth, Plan Health, Recovery Log/real errors, delivery profiles, Portfolio) remains."
-      ]
-    },
-    {
-      "version": "0.0.98-16",
-      "date": "2026-11-23",
-      "title": "Portfolio \u2014 the multi-project dashboard",
-      "highlights": [
-        "Logs \u2192 Portfolio: every project in one read \u2014 profile, status, progress, first-green (proxy), done time, park rate, tokens, last signal.",
-        "Totals across the portfolio: projects/running/parked/done, hops completed, average first-green and park rate.",
-        "The two-project MVP drill runs a Spike lane (3 script hops) and a Demo lane (6 script hops with design + QA); both reach DONE, the over-profile plan is refused.",
-        "Measured, not inferred: first-green = first completed telemetry row \u2212 plan.createdAt; done = last completed row \u2212 createdAt; park rate = parked rows/rows.",
-        "Delivery profiles, Plan Health, Recovery Log, OpenCode 2.4.1, boot truth and slow-lane truth remain."
-      ]
-    },
-    {
-      "version": "0.0.98-15",
-      "date": "2026-11-23",
-      "title": "Delivery profiles \u2014 the size contract",
-      "highlights": [
-        "Four user-selectable profiles per project: Spike (4 hops/30 min), Demo (6/45, design 7 + smoke QA), Base (10/90, design 8 + core E2E/a11y), Complete (60/4h, design 9 + full QA/a11y/perf).",
-        "The project profile card has the selector, DoD and plan check; the walker refuses an over-profile plan at the boundary, before any token.",
-        "The profile sets the campaign budget (Complete can extend the attended 60-min default to 4h); a hibernation plan remains the explicit ceiling.",
-        "Profile is stored in the lane (.olympus-delivery-profile.json); a live walk keeps its profile and the next boundary uses the new one.",
-        "Plan Health, Recovery Log, real errors, OpenCode 2.4.1, boot truth and slow-lane truth remain."
-      ]
-    },
-    {
-      "version": "0.0.98-14",
-      "date": "2026-11-23",
-      "title": "Recovery Log + real errors",
-      "highlights": [
-        "Logs \u2192 Recovery: the recovery ledger as a timeline (lane, hop, class, kind, action, tool budget, next lane, message), newest first.",
-        "Logs \u2192 Errors: only real errors. Chromium preload, CSP, GitHub-stats CORS and ResizeObserver noise are filtered; stack is one click away.",
-        "errors.log rotation/filter from 0.0.98-10 remains; this release reads the same evidence into the UI instead of the console.",
-        "Plan Health, Apply guard, OpenCode 2.4.1, boot truth and slow-lane truth remain."
-      ]
-    },
-    {
-      "version": "0.0.98-13",
-      "date": "2026-11-23",
-      "title": "Plan health \u2014 the plan before the walk",
-      "highlights": [
-        "Logs \u2192 Plan: plan size, pending hops, verification count, tight tool budgets, large prompts/checklists and the profile recommendation before the walk starts.",
-        "Apply plan is disabled while a walk holds the lane (liveWalk); the label says 'walk live' and a 409 is shown inline, not only in the console.",
-        "Advisory plan guardrails: soft cap 20 hops, hard warning 40, >6 verification hops, >6 checks or >6k prompts, and budgets below the declared-work estimate.",
-        "campaign-health now exposes liveWalk; the Apply guard uses the same lock the walker uses.",
-        "OpenCode v2 2.4.1, boot truth and slow-lane truth from 0.0.98-10..12 remain."
-      ]
-    },
-    {
-      "version": "0.0.98-12",
-      "date": "2026-11-23",
-      "title": "OpenCode 2.4.1 + slow-lane truth",
-      "highlights": [
-        "OpenCode v2 2.4.1 is vendored and gate-approved (serve, v2 sessions, prompt/SSE, DB schema, tokens, abort, clean exit).",
-        "A ceiling-kill with recent output is now a SLOW lane, not a dead one: the lane stays available, the UI says slow, and the timeout still fails over to the next lane once.",
-        "The provider panel separates dead lanes from slow lanes; retry still clears a local dead mark, but a slow lane no longer demands it.",
-        "Boot truth from 0.0.98-11 remains: TCP port ownership, single-flight watchdog, process-group MCP shutdown and the Boot Health tab.",
-        "Pinned CLI/plugin 2.4.1; package/lock and patch-notes tested version updated."
-      ]
-    },
-    {
-      "version": "0.0.98-11",
-      "date": "2026-11-23",
-      "title": "Boot truth \u2014 the socket owns the port, the group owns the MCP",
-      "highlights": [
-        "Boot Health tab: app health latency, TCP port ownership, Electron/Next PIDs, watchdog respawns, OpenCode port and live MCP git children.",
-        "The watchdog probes the TCP socket before spawning and is single-flight; a busy 3737 is attached/reused, never duplicated. This is the 174-EADDRINUSE cure.",
-        "The warm serve is killed by process group (SIGTERM -> SIGKILL), so uvx mcp-server-git children die with it; a boot reaper clears ppid-1 orphans older than 30 minutes.",
-        "Boot-health evidence is written by Electron to ~/.olympus/boot-health.json and read by the API/UI; no secrets, no extra process.",
-        "Regression suite: boot-health (TCP probe, HTTP probe, real process-group kill, reaper bounds, watchdog wiring)."
-      ]
-    },
-    {
-      "version": "0.0.98-10",
-      "date": "2026-11-23",
-      "title": "Hygiene + guard v2 \u2014 every verification hop is one class",
-      "highlights": [
-        "The retired 98-9 preview line is out of Releases (tags kept); v0.0.98 is the base and v0.0.98-10 starts the 98.2-98.9 series.",
-        "Every verification hop (qa-*, gate-*, design-gate) shares one definition, one tool/wall clamp and one repair path: upstream fix or deterministic harness + JSON judge, two cycles max.",
-        "A blocked hop emits one event and one decision per plan generation; repeated walks no longer repeat the loop-blocked notification.",
-        "A tool-budget park is a narrowed 28-call retry focused on the missing artifact, not a blind 36-call inflation.",
-        "The Logs workspace gains the Blocked & Recovery tab; the error log filters Chromium preload/CSP noise and rotates at 10 MB.",
-        "Five dependency PRs triaged; branches reduced to main/dev; the suite manifest covers 180 suites."
+        "npm run hygiene is the gate of record: tsc, lint, docs, privacy, suite manifest and audit-high all pass; add --battery for the 54 hermetic suites.",
+        "HYGIENE.md declares the zero-error contract and every remaining limit (23 moderate transitive advisories, local suites, drills not claimed).",
+        "The 0.0.98 preview releases are retired from Releases (tags kept); v0.0.98 is the base and v0.0.99 is the current stable.",
+        "The 0.0.98 line is complete: generation boundary, Portfolio, delivery profiles, Plan Health, Recovery Log/real errors, OpenCode 2.4.1, boot truth, slow-lane truth and the verification guard.",
+        "No external projects were created; AIME remains the active development lane."
       ]
     },
     {

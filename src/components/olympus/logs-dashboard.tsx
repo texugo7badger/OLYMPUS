@@ -15,13 +15,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ScrollText, RefreshCw, Search, ArrowLeft, Copy, Check,
-  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench, Server, Activity, ListTree, RotateCcw, TriangleAlert, LayoutGrid,
+  CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench, Server, Activity, ListTree, RotateCcw, TriangleAlert, LayoutGrid, ShieldCheck,
 } from 'lucide-react';
 import { planHealth, estimateHopToolBudget } from '@/lib/plan-health';
 import { cn } from '@/lib/utils';
 import type { LogHop, LogWalk, LogsPayload } from '@/lib/logs-index';
 
-type Tab = 'overview' | 'hops' | 'walks' | 'portfolio' | 'blocked' | 'boot' | 'plan' | 'recovery' | 'errors' | 'models' | 'economy';
+type Tab = 'overview' | 'hops' | 'walks' | 'portfolio' | 'blocked' | 'boot' | 'plan' | 'recovery' | 'errors' | 'hygiene' | 'models' | 'economy';
+
+interface HygienePayload {
+  version: string; generatedAt: string; ok: boolean;
+  gates: Array<{ name: string; ok: boolean; ms: number }>;
+  battery: { pass: number | null; fail: number | null; suites: number | null } | null;
+}
 
 interface PortfolioProject {
   slug: string; generation: number; status: 'RUNNING' | 'PARKED' | 'DONE' | 'IDLE'; completed: number; total: number;
@@ -53,6 +59,7 @@ const TABS: Array<{ id: Tab; label: string; icon: any }> = [
   { id: 'plan', label: 'Plan', icon: ListTree },
   { id: 'recovery', label: 'Recovery', icon: RotateCcw },
   { id: 'errors', label: 'Errors', icon: TriangleAlert },
+  { id: 'hygiene', label: 'Hygiene', icon: ShieldCheck },
   { id: 'models', label: 'Models', icon: Cpu },
   { id: 'economy', label: 'Economy', icon: Coins },
 ];
@@ -144,6 +151,7 @@ export default function LogsDashboard() {
   const [selectedWalk, setSelectedWalk] = useState<LogWalk | null>(null);
   const [bootHealth, setBootHealth] = useState<BootHealth | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioPayload | null>(null);
+  const [hygiene, setHygiene] = useState<HygienePayload | null>(null);
   const [visible, setVisible] = useState(120);
   const [copied, setCopied] = useState(false);
 
@@ -177,18 +185,28 @@ export default function LogsDashboard() {
     } catch { /* the Portfolio tab degrades to — */ }
   }, []);
 
+  const loadHygiene = useCallback(async () => {
+    try {
+      const r = await fetch('/api/olympus/hygiene', { cache: 'no-store' });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) setHygiene(d as HygienePayload);
+    } catch { /* the Hygiene tab degrades to — */ }
+  }, []);
+
   useEffect(() => {
     void load();
     void loadBoot();
     void loadPortfolio();
+    void loadHygiene();
     const iv = setInterval(() => {
       if (document.visibilityState === 'hidden') return;
       void load();
       void loadBoot();
       void loadPortfolio();
+      void loadHygiene();
     }, 15_000);
     return () => clearInterval(iv);
-  }, [load, loadBoot, loadPortfolio]);
+  }, [load, loadBoot, loadPortfolio, loadHygiene]);
 
   const lanes = useMemo(() => {
     const set = new Map<string, string>();
@@ -743,6 +761,48 @@ export default function LogsDashboard() {
                   </div>
                 ))}
               </div>
+            )}
+          </section>
+        )}
+
+        {tab === 'hygiene' && (
+          <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 text-olympus-green">
+                  <ShieldCheck size={14} />
+                  <h2 className="text-[13px] font-semibold text-olympus-text">Hygiene</h2>
+                  <span className="rounded bg-olympus-green/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-green ring-1 ring-olympus-green/20">zero errors</span>
+                </div>
+                <p className="mt-1 max-w-[820px] text-[11px] text-olympus-text-dim">
+                  O gate de release: tsc, lint, docs, privacy, suite manifest e audit-high. HYGIENE.md declara os limites; o battery hermetic é separado.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono text-olympus-text-dim">{hygiene ? `v${hygiene.version} · ${fmtTime(hygiene.generatedAt)}` : 'sem relatório'}</span>
+            </div>
+            {!hygiene ? (
+              <div className="mt-4 rounded-lg border border-olympus-amber-soft/20 bg-olympus-amber-soft/5 px-3 py-3 text-[11px] font-mono text-olympus-amber-soft">
+                Nenhum relatório ainda. Rode <code>npm run hygiene</code> e recarregue.
+              </div>
+            ) : (
+              <>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <Card label="gate" value={hygiene.ok ? 'GREEN' : 'RED'} sub={`${hygiene.gates.filter((g) => g.ok).length}/${hygiene.gates.length} checks`} tone={hygiene.ok ? 'text-olympus-green' : 'text-olympus-red'} />
+                  <Card label="battery" value={hygiene.battery?.pass != null ? `${hygiene.battery.pass}/${hygiene.battery.suites}` : '—'} sub={hygiene.battery ? 'hermetic' : 'add --battery'} tone={hygiene.battery?.pass != null ? 'text-olympus-green' : 'text-olympus-text-dim'} />
+                  <Card label="errors" value={hygiene.ok ? '0' : String(hygiene.gates.filter((g) => !g.ok).length)} sub="deterministic gates" tone={hygiene.ok ? 'text-olympus-green' : 'text-olympus-red'} />
+                  <Card label="version" value={hygiene.version} sub="release branch" />
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {hygiene.gates.map((g) => (
+                    <div key={g.name} className={cn('flex items-center gap-2 rounded-lg border px-3 py-2', g.ok ? 'border-olympus-green/20 bg-olympus-green/5' : 'border-olympus-red/20 bg-olympus-red/5')}>
+                      {g.ok ? <CircleCheck size={12} className="text-olympus-green" /> : <CircleAlert size={12} className="text-olympus-red" />}
+                      <span className="font-mono text-[11px] text-olympus-text">{g.name}</span>
+                      <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">{Math.round(g.ms / 1000)}s</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-[10px] font-mono text-olympus-text-dim/80">HYGIENE.md: 23 moderate transitive advisories, 132 local suites and the unclaimed drills are declared limits, not hidden errors.</p>
+              </>
             )}
           </section>
         )}

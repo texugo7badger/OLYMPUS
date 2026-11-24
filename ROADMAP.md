@@ -1,12 +1,11 @@
 # OLYMPUS Roadmap
 
-**v0.0.98-17 is the current release** (2026-11-24) — generation boundary:
-a staged next generation is applied automatically at the walk boundary before
-the plan is read; gen 46 → 47 no longer freezes. This is the last 0.0.98
-release. **v0.0.98-16** added Portfolio; **v0.0.98-15** delivery profiles;
-**v0.0.98-14** Recovery Log + real errors; **v0.0.98-13** Plan Health;
-**v0.0.98-12** OpenCode 2.4.1 + slow-lane truth; **v0.0.98-9.x** guard/boot;
-**v0.0.98** is the base.
+**v0.0.99 is the current release** (2026-11-24) — hygiene total:
+`npm run hygiene` passes tsc, lint, docs, privacy, suite manifest and
+audit-high; the 54 hermetic suites are green; HYGIENE.md declares the limits.
+The 0.0.98 line is complete (generation boundary, Portfolio, delivery
+profiles, Plan Health, Recovery Log/real errors, OpenCode 2.4.1, boot truth,
+slow-lane truth and the verification guard); `v0.0.98` is the base.
 v0.0.97 remains the previous release: the GO console anchor, stale-anchor
 pause, rolling 65/80/100 and the qwen→DeepSeek guard. v0.0.96: hibernation v2, GO truth and the smart burn: X quits by default while hibernate is explicit; hibernate waits
 for streaming turns, keeps a preview only when a live hop needs it, records and

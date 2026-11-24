@@ -78,15 +78,29 @@ if (strayCi.length) fail(`core.yml names untracked suites: ${strayCi.join(', ')}
 let prev = null;
 try { prev = JSON.parse(fs.readFileSync(MANIFEST, 'utf-8')); } catch { fail('no manifest — run with --write'); }
 if (prev) {
-  const prevAll = new Set([
-    ...(prev.public ?? []),
-    ...(prev.trackedLocal ?? []).map((l) => l.suite),
-    ...(prev.local ?? []).map((l) => l.suite),
-  ]);
+  const prevPublic = new Set(prev.public ?? []);
+  const prevTracked = new Set((prev.trackedLocal ?? []).map((l) => l.suite));
+  const prevLocal = new Set((prev.local ?? []).map((l) => l.suite));
+  const prevAll = new Set([...prevPublic, ...prevTracked, ...prevLocal]);
   const nowAll = new Set(files);
+  // A LOCAL suite is declared but intentionally absent from a clean clone
+  // (vault/browser/credentials). Only PUBLIC + TRACKED_LOCAL must exist here.
   for (const f of files) if (!prevAll.has(f)) fail(`new suite not in the manifest: ${f}`);
-  for (const f of prevAll) if (!nowAll.has(f)) fail(`manifest names a missing suite: ${f}`);
-  if (JSON.stringify(prev.count) !== JSON.stringify(manifest.count)) fail(`count drift: manifest ${JSON.stringify(prev.count)} vs disk ${JSON.stringify(manifest.count)}`);
+  for (const f of [...prevPublic, ...prevTracked]) if (!nowAll.has(f)) fail(`manifest names a missing tracked suite: ${f}`);
+  const manifestCount = {
+    total: prevAll.size,
+    public: prevPublic.size,
+    trackedLocal: prevTracked.size,
+    local: prevLocal.size,
+  };
+  if (JSON.stringify(prev.count) !== JSON.stringify(manifestCount)) {
+    fail(`manifest count is internally inconsistent: count ${JSON.stringify(prev.count)} vs entries ${JSON.stringify(manifestCount)}`);
+  }
+  // The disk count is informative, never a failure: local suites are absent
+  // in a clean clone by design (v0.0.99 hygiene).
+  if (files.length !== prevAll.size) {
+    console.log(`suites:manifest — ${prevLocal.size} local suite(s) declared but not present in this checkout (allowed); ${files.length} on disk.`);
+  }
 }
 if (failures === 0) console.log(`suites:manifest — ${files.length} suites (${publicSuites.length} public, ${trackedLocal.length} tracked-local, ${localSuites.length} local), manifest current`);
 process.exit(failures === 0 ? 0 : 1);
