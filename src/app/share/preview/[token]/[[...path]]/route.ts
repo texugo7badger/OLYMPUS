@@ -31,6 +31,9 @@ async function proxy(req: NextRequest, token: string, segs: string[]): Promise<N
   const search = req.nextUrl.search || '';
   const target = `http://127.0.0.1:${share.port}/${targetPath}${search}`;
   const prefix = `/share/preview/${token}`;
+  // v0.0.99 — hashed build assets never change: let the browser keep them.
+  // Every other asset stays no-store so a rebuild is visible immediately.
+  const immutable = targetPath.startsWith('_next/static/');
 
   let upstream: Response;
   try {
@@ -74,7 +77,7 @@ async function proxy(req: NextRequest, token: string, segs: string[]): Promise<N
     status: upstream.status,
     headers: {
       'content-type': ct,
-      'cache-control': 'no-store',
+      'cache-control': immutable ? 'public, max-age=31536000, immutable' : 'no-store',
       'x-robots-tag': 'noindex',
     },
   });

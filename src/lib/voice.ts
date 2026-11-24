@@ -53,6 +53,39 @@ export function toSpeech(text: string, max = 360): string {
 
 let currentAudio: HTMLAudioElement | null = null;
 let audioCtx: AudioContext | null = null;
+let voiceUnlocked = false;
+
+/**
+ * v0.0.99 — THE GESTURE PRIMER.
+ *
+ * Mobile browsers only allow audio after a user gesture. The god's answer is
+ * synthesized AFTER a long turn, far outside the activation window, so the
+ * first spoken reply on a freshly opened phone could be silently dropped.
+ * Calling this from pointerdown (the mic, the send button, anywhere on the
+ * surface) creates/resumes the shared AudioContext and plays one silent
+ * sample while the gesture is still live. Subsequent Audio elements and the
+ * analyser are then allowed.
+ */
+export function unlockVoice(): void {
+  if (voiceUnlocked || typeof window === 'undefined') return;
+  voiceUnlocked = true;
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (Ctx) {
+      audioCtx ??= new Ctx();
+      void audioCtx.resume();
+      const src = audioCtx.createBufferSource();
+      src.buffer = audioCtx.createBuffer(1, 1, 22050);
+      src.connect(audioCtx.destination);
+      src.start(0);
+    }
+  } catch { /* the browser voice is still the fallback */ }
+  try {
+    // Some engines lazily populate the voice list; touching it on the gesture
+    // also makes the later SpeechSynthesisUtterance pick a real voice.
+    if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
+  } catch { /* optional */ }
+}
 
 /** Speak as a god. Preferred lane: the free edge-tts neural voice route
  *  (professional, per-god, per-language). Fallback: the browser voice.
@@ -65,6 +98,7 @@ export async function speakAs(
   onLevel?: (level: number) => void,
 ): Promise<void> {
   if (!text || typeof window === 'undefined') return;
+  unlockVoice();
   const spoken = toSpeech(text);
   if (!spoken) return;
   const key = (god || 'apollo').toLowerCase();

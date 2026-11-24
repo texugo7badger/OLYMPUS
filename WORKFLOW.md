@@ -311,9 +311,23 @@ the button cycles weekly/monthly. Both read the console anchor, not the ledger.
 ## v0.0.99 — hygiene total
 
 `npm run hygiene` runs tsc, lint, docs:check, repo:privacy, the suite manifest
-and audit-high; `npm run hygiene -- --battery` adds the 54 hermetic suites.
+and audit-high; `npm run hygiene -- --battery` adds the 55 hermetic suites.
 HYGIENE.md is the contract: every gate has a measured bar, and every remaining
 limit is named. The 0.0.98 preview releases are retired (tags kept).
+
+### Live preview + phone (v0.0.99)
+
+The preview loads the REAL origin (127.0.0.1 or the LAN host) in an Electron
+`<webview>` / browser iframe, so the project's cookies and localStorage are
+shared — the `127.0.0.2` alias is retired. The hop SSE replay is ignored until
+`stream_ready`; a landed part is offered ("part ready · refresh") and
+auto-follow waits 15s of idle. Device presets, fullscreen and a wrapping
+toolbar cover phone/tablet/PC; an HTTPS shell states the mixed-content limit.
+The phone sends `x-olympus-language`, merges the god's `text` parts instead of
+letting a log replace them, streams the reply, stops on demand, primes audio
+on the first gesture, runs performance mode on low-end hardware, shows the
+preview with reload/mark, and its pairing card reads a live heartbeat while a
+server-lifetime supervisor keeps the desired tunnel up.
 
 ## v0.0.98-17 — the generation boundary is automatic
 

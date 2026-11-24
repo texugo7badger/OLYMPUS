@@ -26,8 +26,9 @@ import { normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/them
 import { t, useLanguage } from '@/lib/i18n';
 import { godPersona } from '@/lib/god-personas';
 import { godName } from '@/lib/i18n';
-import { GOD_VOICE, setVoiceEnabled, speakAs, voiceEnabled } from '@/lib/voice';
+import { GOD_VOICE, setVoiceEnabled, speakAs, unlockVoice, voiceEnabled } from '@/lib/voice';
 import { mobileFetch } from '@/lib/mobile-fetch';
+import { createAnswerAccumulator } from '@/lib/stream-answer';
 import { useHoldToTalk } from '@/lib/use-hold-to-talk';
 
 const GOD_IDS = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];
@@ -328,28 +329,20 @@ export default function MobileStudio() {
         body: JSON.stringify({ action: 'prompt', text: prompt, conversationId: activeSlug ? `mobile-${activeSlug}` : 'mobile' }),
       }, 30 * 60_000);
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      // v0.0.99 — merge only `text` parts; a progress log must never replace
+      // the god's answer (the old parser kept whichever frame came last).
+      const acc = createAnswerAccumulator();
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
-      let answer = '';
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const frames = buffer.split('\n\n');
-        buffer = frames.pop() || '';
-        for (const frame of frames) {
-          const line = frame.split('\n').find((l) => l.startsWith('data: '));
-          if (!line) continue;
-          try {
-            const ev = JSON.parse(line.slice(6));
-            const msg = ev?.msg || ev?.text || (ev?.part?.text ? String(ev.part.text) : '');
-            if (msg) answer = String(msg).replace(/\s+/g, ' ').slice(0, 600);
-          } catch { /* keep reading */ }
-        }
+        acc.feed(decoder.decode(value, { stream: true }));
       }
-      setChat((prev) => [...prev, { role: 'god' as const, text: answer || 'Apollo recebeu o pedido.', god: 'apollo' }].slice(-10));
+      const answer = acc.text.trim() || acc.summary?.trim() || t('m.received', language);
+      setChat((prev) => [...prev, { role: 'god' as const, text: answer, god: 'apollo' }].slice(-10));
       if (voice && answer) speak(answer);
+      if (acc.error && !acc.text) setError(acc.error);
     } catch (e: any) {
       setError(e?.message || t('m.connectionFailed', language));
     } finally {
@@ -363,7 +356,7 @@ export default function MobileStudio() {
   const pct = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
 
   return (
-    <main className="relative min-h-dvh bg-olympus-bg text-olympus-text pb-[env(safe-area-inset-bottom)]">
+    <main onPointerDownCapture={unlockVoice} className="relative min-h-dvh bg-olympus-bg text-olympus-text pb-[env(safe-area-inset-bottom)]">
       {/* v0.0.70 — one canvas on a phone: the ring. The ambient field is a
           static gradient here; the full particle field stays on the desktop. */}
       <div className="pointer-events-none fixed inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${palette.gold}14, transparent 62%)` }} aria-hidden="true" />

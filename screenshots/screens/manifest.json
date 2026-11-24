@@ -107,6 +107,31 @@
   {
     "file": "screenshots/screens/71-hygiene-99.png",
     "title": "Hygiene \u2014 zero errors",
-    "note": "7/7 gates green, 54/54 hermetic battery, zero deterministic errors; header v0.0.99"
+    "note": "7/7 gates green, 55/55 hermetic battery, zero deterministic errors; header v0.0.99"
+  },
+  {
+    "file": "screenshots/screens/72-live-preview-99.png",
+    "title": "Live preview \u2014 interactive, real origin",
+    "note": "Electron/browser surface on 127.0.0.1:4013 (cookies preserved); the fixture counter moved 0\u21922, device presets and the interactive footer; header v0.0.99"
+  },
+  {
+    "file": "screenshots/screens/73-mobile-99.png",
+    "title": "Phone \u2014 voice first",
+    "note": "the phone companion: plasma ring, god row, campaign state and the localized prompt surface; header v0.0.99"
+  },
+  {
+    "file": "screenshots/screens/74-mobile-preview-99.png",
+    "title": "Phone preview \u2014 the real app",
+    "note": "the mobile preview sheet loads the fixture from the LAN origin; the counter shows 3 real taps inside the frame; mark affordance and reload; header v0.0.99"
+  },
+  {
+    "file": "screenshots/screens/75-mobile-mark-99.png",
+    "title": "Phone mark \u2014 point + instruction",
+    "note": "mark mode places the crosshair at 195,373 on the phone preview and the instruction sheet is ready for Athena; header v0.0.99"
+  },
+  {
+    "file": "screenshots/screens/76-mobile-pair-99.png",
+    "title": "Pairing \u2014 phone connected",
+    "note": "the pairing card reads the phone heartbeat (connected, last seen 37s ago), shows the LAN QR and the HTTPS tunnel switch; header v0.0.99"
   }
 ]

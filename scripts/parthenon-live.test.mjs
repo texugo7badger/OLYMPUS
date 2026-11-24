@@ -128,8 +128,8 @@ const approveRoute = src('src/app/api/olympus/athena/approve/route.ts');
 const godRun = src('src/lib/god-run.ts');
 const previewWindow = src('src/app/preview-window/page.tsx');
 const chatModal = src('src/components/olympus/god-chat-modal.tsx');
-expect('P-30: the mark sends the PREVIEW IFRAME viewport + preview URL, not the app window',
-  /iframeRef/.test(livePreview) && /iframeRect\?\.width/.test(livePreview) && /previewUrl: previewTarget/.test(livePreview)
+expect('P-30: the mark sends the PREVIEW SURFACE viewport + preview URL, not the app window',
+  /surfaceRef/.test(livePreview) && /surfaceRect\?\.width/.test(livePreview) && /previewUrl: previewTarget/.test(livePreview)
     && /viewport: \{ width: window\.innerWidth/.test(livePreview) === false,
   'the mark still sends the app window viewport');
 expect('P-31: the mark is a PLANNING turn, opens Athena chat and has a real approval route',
@@ -144,7 +144,7 @@ expect('P-32: a GO auth failure retries once on the verified fallback model (Ath
 expect('P-33: the preview opens in its own window with the OLYMPUS loader until the project is live',
   /preview-window\?slug=/.test(livePreview) && fs.existsSync(path.join(ROOT, 'src/app/preview-window/page.tsx'))
     && /OlympusLoader/.test(previewWindow) && /projects\/preview\?slug=/.test(previewWindow)
-    && /hops\/stream/.test(previewWindow) && /iframe/.test(previewWindow),
+    && /useHopParts/.test(previewWindow) && /PreviewSurface/.test(previewWindow) && /partReady/.test(previewWindow),
   'the new preview window has no loader/auto-follow');
 
 fs.rmSync(tmpHome, { recursive: true, force: true });

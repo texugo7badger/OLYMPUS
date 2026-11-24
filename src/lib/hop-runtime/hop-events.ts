@@ -93,24 +93,45 @@ export interface HopEventsPage {
   nextCursor: string | null;
 }
 
+/** v0.0.99 — the SSE lane reads this file every 800ms per connected client
+ *  (desktop, preview window, phone). Parsing 500 lines every tick was pure
+ *  CPU churn on an already-busy host. The cache is keyed on (file, size,
+ *  mtime): unchanged ticks are a stat + filter, and every client shares the
+ *  same parsed array. */
+let cache: { file: string; size: number; mtimeMs: number; events: HopLiveEvent[] } | null = null;
+
 /**
  * Read events, newest last, with a `since` ISO cursor. The file is bounded
  * by rotation; this reads at most the last KEEP_LINES lines for a snapshot.
  */
 export function readHopEvents(opts: { since?: string | null; limit?: number } = {}): HopEventsPage {
   const file = hopEventsPath();
-  let lines: string[] = [];
+  let stat: fs.Stats;
   try {
-    const raw = fs.readFileSync(file, 'utf-8');
-    lines = raw.split('\n').filter(Boolean).slice(-KEEP_LINES);
-  } catch { return { events: [], total: 0, hasMore: false, nextCursor: null }; }
-
-  let events: HopLiveEvent[] = [];
-  for (const line of lines) {
-    try { events.push(JSON.parse(line)); } catch { /* skip */ }
+    stat = fs.statSync(file);
+  } catch {
+    cache = null;
+    return { events: [], total: 0, hasMore: false, nextCursor: null };
   }
-  events.sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
-  const total = events.length;
+
+  if (!cache || cache.file !== file || cache.size !== stat.size || cache.mtimeMs !== stat.mtimeMs) {
+    let lines: string[] = [];
+    try {
+      const raw = fs.readFileSync(file, 'utf-8');
+      lines = raw.split('\n').filter(Boolean).slice(-KEEP_LINES);
+    } catch {
+      return { events: [], total: 0, hasMore: false, nextCursor: null };
+    }
+    const events: HopLiveEvent[] = [];
+    for (const line of lines) {
+      try { events.push(JSON.parse(line)); } catch { /* skip */ }
+    }
+    events.sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
+    cache = { file, size: stat.size, mtimeMs: stat.mtimeMs, events };
+  }
+
+  const all = cache.events;
+  let events: HopLiveEvent[] = all;
   if (opts.since) {
     const since = new Date(opts.since).getTime();
     if (Number.isFinite(since)) events = events.filter((e) => new Date(e.ts).getTime() > since);
@@ -120,7 +141,7 @@ export function readHopEvents(opts: { since?: string | null; limit?: number } = 
   const page = events.slice(-limit);
   return {
     events: page,
-    total,
+    total: all.length,
     hasMore,
     nextCursor: page.length ? page[0].ts : null,
   };

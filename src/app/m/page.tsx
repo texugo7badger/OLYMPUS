@@ -29,12 +29,14 @@ import GoUsageBar from '@/components/olympus/go-usage-bar';
 import GoForecastChart from '@/components/olympus/go-forecast-chart';
 import BurnPanel from '@/components/olympus/burn-panel';
 import MobileParthenon from '@/components/olympus/mobile-parthenon';
+import PreviewSurface from '@/components/olympus/preview-surface';
 import { THEME_PRESETS, applyTheme, normalizeThemeState, resolvePalette, type ThemeState } from '@/lib/theme';
 import { getPerformanceMode, setPerformanceMode } from '@/lib/performance-mode';
 import { LANGUAGES, godName, setLanguage, t, useLanguage, type Language } from '@/lib/i18n';
-import { speakAs } from '@/lib/voice';
+import { speakAs, unlockVoice } from '@/lib/voice';
 import { useHoldToTalk } from '@/lib/use-hold-to-talk';
 import { mobileFetch } from '@/lib/mobile-fetch';
+import { createAnswerAccumulator } from '@/lib/stream-answer';
 import { godTintHex } from '@/lib/god-tint';
 import { useMobilePwa } from '@/lib/use-mobile-pwa';
 import { useCompanionNotifications } from '@/lib/use-companion-notifications';
@@ -100,6 +102,10 @@ export default function MobileCompanion() {
   const [markInstruction, setMarkInstruction] = useState('');
   const [markBusy, setMarkBusy] = useState(false);
   const [markNote, setMarkNote] = useState('');
+  // v0.0.99 — the phone preview owns its own reload/loader state; the frame
+  // is never silently re-keyed under the user's finger.
+  const [previewKey, setPreviewKey] = useState(0);
+  const [previewLoaded, setPreviewLoaded] = useState(false);
   const [theme, setTheme] = useState<ThemeState | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   // v0.0.89 — the phone's Parthenon: Atlas/Apollo command deck + one decision.
@@ -116,6 +122,9 @@ export default function MobileCompanion() {
   const [god, setGod] = useState('apollo');
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  // v0.0.99 — the live answer while a turn streams; the old screen showed
+  // nothing until the (possibly minutes-long) turn finished.
+  const [streamText, setStreamText] = useState('');
   const [speaking, setSpeaking] = useState(false);
   const [level, setLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +137,8 @@ export default function MobileCompanion() {
   const [queueNote, setQueueNote] = useState<string | null>(null);
   const levelGate = useRef(0);
   const themeStampRef = useRef('');
+  // v0.0.99 — the stop button aborts the in-flight turn, not just the UI.
+  const abortRef = useRef<AbortController | null>(null);
   // v0.0.85 — the companion is installable, with the same themed icon as the
   // widget. One worker owns both surfaces; the switcher stays in scope.
   const pwa = useMobilePwa();
@@ -165,15 +176,30 @@ export default function MobileCompanion() {
     fit();
     setSecure(typeof window !== 'undefined' ? window.isSecureContext : true);
     setPerfMode(getPerformanceMode());
+    // v0.0.99 — a low-end phone gets the cheap look automatically (one
+    // switch the user can still flip back in Details). An explicit choice
+    // always wins.
+    try {
+      const lowEnd = (navigator.hardwareConcurrency || 8) <= 4
+        || Number((navigator as unknown as { deviceMemory?: number }).deviceMemory || 8) <= 4
+        || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+      if (lowEnd && !localStorage.getItem('olympus:performance')) {
+        setPerformanceMode(true);
+        setPerfMode(true);
+      }
+    } catch { /* private mode */ }
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
   }, []);
 
   const headers = useMemo<Record<string, string>>(() => {
-    const h: Record<string, string> = { 'Content-Type': 'application/json' };
+    // v0.0.99 — the phone sends the SAME language header the terminal sends.
+    // Without it the action route defaulted to 'en' and a Portuguese user got
+    // English answers (and an English text read by a Portuguese voice).
+    const h: Record<string, string> = { 'Content-Type': 'application/json', 'x-olympus-language': language };
     if (token) h['x-olympus-token'] = token;
     return h;
-  }, [token]);
+  }, [token, language]);
   // v0.0.78 — the phone is a companion, not a second boss: a prompt can be
   // QUEUED for the terminal (source 'phone') and a parked/interrupted walk can
   // be resumed by the detached supervisor — without opening the desktop.
@@ -239,10 +265,17 @@ export default function MobileCompanion() {
       ]);
       if (pRes.ok) {
         const d = await pRes.json();
-        setProjects(Array.isArray(d.projects) ? d.projects : []);
-        setActive(String(d.active?.slug || ''));
+        const nextProjects = Array.isArray(d.projects) ? d.projects : [];
+        const nextActive = String(d.active?.slug || '');
+        // v0.0.99 — the 10s poll must not re-render the whole phone when the
+        // answer is identical (the plasma ring + god row are not free).
+        setProjects((prev) => (JSON.stringify(prev) === JSON.stringify(nextProjects) ? prev : nextProjects));
+        setActive((prev) => (prev === nextActive ? prev : nextActive));
       }
-      if (rRes.ok) setRun(await rRes.json());
+      if (rRes.ok) {
+        const nextRun = await rRes.json();
+        setRun((prev) => (JSON.stringify(prev) === JSON.stringify(nextRun) ? prev : nextRun));
+      }
       setError(null);
     } catch (e: any) {
       setError(e?.message || t('m.connectionFailed', language));
@@ -259,9 +292,27 @@ export default function MobileCompanion() {
     void pullTheme();
     const timer = setInterval(() => {
       if (document.visibilityState !== 'hidden') void load();
-    }, 6000);
+    }, 10_000);
     return () => clearInterval(timer);
   }, [token, load, pullTheme]);
+
+  // v0.0.99 — THE PRESENCE BEACON. The desktop pairing card can now show
+  // "phone connected · last seen 12s ago" instead of leaving the user to
+  // guess whether the companion is still on the same session.
+  useEffect(() => {
+    if (!token) return;
+    const ping = () => {
+      if (document.visibilityState === 'hidden') return;
+      fetch('/api/olympus/mobile/presence', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ page: 'm' }),
+      }).catch(() => { /* offline: the next tick retries */ });
+    };
+    ping();
+    const timer = setInterval(ping, 30_000);
+    return () => clearInterval(timer);
+  }, [token, headers]);
 
   // The god/voice mirror (the creative on the desktop shares this state).
   useEffect(() => {
@@ -279,7 +330,7 @@ export default function MobileCompanion() {
       } catch { /* offline */ }
     };
     void pull();
-    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void pull(); }, 12_000);
+    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void pull(); }, 20_000);
     return () => { live = false; clearInterval(timer); };
   }, [token, headers, studioStamp]);
 
@@ -319,6 +370,8 @@ export default function MobileCompanion() {
     } finally { setPreviewBusy(false); }
   }, [active, previewBusy, headers, language]);
 
+  const markPreviewUrl = preview?.recommendedUrl || null;
+
   const sendMark = useCallback(async () => {
     if (!active || !markPoint || !markInstruction.trim() || markBusy) return;
     setMarkBusy(true);
@@ -333,18 +386,19 @@ export default function MobileCompanion() {
           instruction: markInstruction.trim(),
           projectSlug: active,
           viewport: { width: Math.round(markPoint.w), height: Math.round(markPoint.h), devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1 },
-          route: '/',
+          previewUrl: markPreviewUrl,
+          route: (() => { try { return new URL(markPreviewUrl || 'http://localhost/').pathname || '/'; } catch { return '/'; } })(),
         }),
       });
       const d = await r.json().catch(() => null);
       if (r.ok && d?.ok) {
-        setMarkNote('Athena recebeu o mark — acompanhe no terminal');
+        setMarkNote(t('m.markSent', language));
         setMarkInstruction('');
         setMarkMode(false);
       } else setMarkNote(d?.error || 'mark failed');
     } catch (e: any) { setMarkNote(e?.message || 'mark failed'); }
     finally { setMarkBusy(false); }
-  }, [active, markPoint, markInstruction, markBusy, headers]);
+  }, [active, markPoint, markInstruction, markBusy, headers, language, markPreviewUrl]);
 
   useEffect(() => {
     if (!token || !active) { setPreview(null); return; }
@@ -354,13 +408,17 @@ export default function MobileCompanion() {
         // server down; 20s covers that plus a CPU-throttled host.
         const r = await mobileFetch(`/api/olympus/projects/preview?slug=${encodeURIComponent(active)}`, { cache: 'no-store', headers }, 20_000);
         const d = await r.json().catch(() => null);
-        if (r.ok && d?.ok) setPreview(d);
+        if (r.ok && d?.ok) setPreview((prev) => (JSON.stringify(prev) === JSON.stringify(d) ? prev : d));
       } catch { /* next poll */ }
     };
     void pull();
-    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void pull(); }, 12_000);
+    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') void pull(); }, 20_000);
     return () => clearInterval(timer);
   }, [token, active, headers]);
+
+  // A new preview origin (tunnel start/stop) is a new document: show the
+  // loader until the surface reports it is ready.
+  useEffect(() => { setPreviewLoaded(false); }, [preview?.recommendedUrl]);
 
   useEffect(() => {
     if (!token || !active) { setGit(null); return; }
@@ -413,8 +471,11 @@ export default function MobileCompanion() {
   const askApollo = useCallback(async (text: string) => {
     const prompt = text.trim();
     if (!prompt || busy || !token) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
     setBusy(true);
     setError(null);
+    setStreamText('');
     setLog((l) => [...l.slice(-3), `${t('m.you', language)}: ${prompt}`]);
     try {
       // v0.0.84 edit — after a hibernate/wake the Next server can be
@@ -422,11 +483,13 @@ export default function MobileCompanion() {
       // transient 502/abort into delivery instead of a lost prompt.
       let res: Response | null = null;
       for (let attempt = 0; attempt < 2; attempt += 1) {
+        if (controller.signal.aborted) throw new Error('aborted');
         try {
           res = await mobileFetch('/api/olympus/action', {
             method: 'POST',
             headers,
             body: JSON.stringify({ action: 'prompt', text: prompt, conversationId: active ? `mobile-${active}` : 'mobile' }),
+            signal: controller.signal,
           }, 30 * 60_000);
           if (res.ok && res.body) break;
           if (attempt === 0 && (res.status >= 500 || res.status === 0)) {
@@ -435,6 +498,7 @@ export default function MobileCompanion() {
           }
           break;
         } catch (e) {
+          if (controller.signal.aborted) throw e;
           if (attempt === 0) {
             await new Promise((r) => setTimeout(r, 1500));
             continue;
@@ -443,36 +507,45 @@ export default function MobileCompanion() {
         }
       }
       if (!res || !res.ok || !res.body) throw new Error(`HTTP ${res?.status ?? 'network'}`);
+      // v0.0.99 — the accumulator merges `text` parts and never lets a
+      // progress log or a late error replace the answer. The partial text
+      // renders while the god is still speaking.
+      const acc = createAnswerAccumulator((partial) => setStreamText(partial));
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
-      let answer = '';
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const frames = buffer.split('\n\n');
-        buffer = frames.pop() || '';
-        for (const frame of frames) {
-          const line = frame.split('\n').find((l) => l.startsWith('data: '));
-          if (!line) continue;
-          try {
-            const ev = JSON.parse(line.slice(6));
-            const msg = ev?.msg || ev?.text || (ev?.part?.text ? String(ev.part.text) : '');
-            if (msg) answer = String(msg).replace(/\s+/g, ' ').slice(0, 400);
-          } catch { /* keep reading */ }
-        }
+        acc.feed(decoder.decode(value, { stream: true }));
       }
-      const reply = answer || 'Apollo recebeu o pedido.';
+      const reply = acc.text.trim() || acc.summary?.trim() || t('m.received', language);
       setLog((l) => [...l.slice(-3), reply]);
+      if (acc.error && !acc.text) setError(acc.error);
       speak(reply);
       void load();
     } catch (e: any) {
-      setError(e?.message || t('m.connectionFailed', language));
+      if (controller.signal.aborted) {
+        setLog((l) => [...l.slice(-3), t('m.stopped', language)]);
+      } else {
+        setError(e?.message || t('m.connectionFailed', language));
+      }
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setBusy(false);
+      setStreamText('');
     }
   }, [active, busy, token, headers, language, speak, load]);
+
+  const stopAsk = useCallback(() => {
+    try { abortRef.current?.abort(); } catch { /* already gone */ }
+    abortRef.current = null;
+    setBusy(false);
+    setStreamText('');
+  }, []);
+
+  useEffect(() => () => {
+    try { abortRef.current?.abort(); } catch { /* unmounted */ }
+  }, []);
 
   // v0.0.85 — the companion's zero-token answer. "Resumo", "briefing",
   // "me atualiza" and "o que está sendo desenvolvido" read the project
@@ -545,7 +618,7 @@ export default function MobileCompanion() {
 
   if (!token) {
     return (
-      <main className="relative flex min-h-dvh flex-col items-center justify-center bg-olympus-bg px-6 py-10 text-olympus-text">
+      <main onPointerDownCapture={unlockVoice} className="relative flex min-h-dvh flex-col items-center justify-center bg-olympus-bg px-6 py-10 text-olympus-text">
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-olympus-gold/40 text-xl font-semibold tracking-[0.2em] text-olympus-gold">O</div>
@@ -576,7 +649,7 @@ export default function MobileCompanion() {
   }
 
   return (
-    <main className="relative flex h-dvh w-full flex-col overflow-hidden bg-olympus-bg text-olympus-text">
+    <main onPointerDownCapture={unlockVoice} className="relative flex h-dvh w-full flex-col overflow-hidden bg-olympus-bg text-olympus-text">
       <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(circle at 50% 34%, ${tint}18, transparent 62%)` }} aria-hidden="true" />
 
       <header className="relative z-10 flex items-center gap-2 px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-1">
@@ -730,9 +803,17 @@ export default function MobileCompanion() {
       </section>
 
       <div className="relative z-10 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+        {busy && streamText && (
+          <p className="mx-auto mb-1 max-w-lg line-clamp-3 whitespace-pre-wrap text-center text-[10px] leading-relaxed text-olympus-cyan">{streamText}</p>
+        )}
         {log.slice(-3).map((line, i) => (
-          <p key={i} className="mx-auto mb-1 max-w-lg truncate text-center text-[10px] leading-relaxed text-olympus-text-dim">{line}</p>
+          <p key={i} className="mx-auto mb-1 max-w-lg line-clamp-2 text-center text-[10px] leading-relaxed text-olympus-text-dim">{line}</p>
         ))}
+        {busy && (
+          <button onClick={stopAsk} className="mx-auto mb-1 flex items-center gap-1 rounded-full border border-olympus-red/30 bg-olympus-red/10 px-2.5 py-1 text-[9px] font-mono text-olympus-red">
+            <Square size={9} /> {t('m.stop', language)}
+          </button>
+        )}
         {error && (
           <button onClick={() => setError(null)} className="mx-auto mb-1 block max-w-lg truncate rounded-lg border border-olympus-red/40 bg-olympus-red/10 px-2 py-1 text-[10px] text-olympus-red">
             {error}
@@ -866,7 +947,7 @@ export default function MobileCompanion() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {preview?.running && preview.recommendedUrl && (
                     <>
-                      <button onClick={() => { setPreviewOpen(true); setMarkMode(false); setMarkNote(''); }} className="flex items-center gap-1 rounded-lg bg-olympus-gold px-3 py-2 text-[11px] font-semibold text-olympus-bg"><ExternalLink size={12} /> {t('m.preview', language)}</button>
+                      <button onClick={() => { setPreviewOpen(true); setMarkMode(false); setMarkNote(''); setPreviewLoaded(false); setPreviewKey((k) => k + 1); }} className="flex items-center gap-1 rounded-lg bg-olympus-gold px-3 py-2 text-[11px] font-semibold text-olympus-bg"><ExternalLink size={12} /> {t('m.preview', language)}</button>
                       <a href={preview.recommendedUrl} target="_blank" rel="noreferrer" aria-label="Open preview externally" className="rounded-lg border border-olympus-gold/20 px-2 py-2 text-[10px] text-olympus-text-dim"><ExternalLink size={11} /></a>
                     </>
                   )}
@@ -1024,16 +1105,27 @@ export default function MobileCompanion() {
       {previewOpen && preview?.recommendedUrl && (
         <div className="olympus-preview-in fixed inset-0 z-[320] flex flex-col bg-olympus-bg text-olympus-text">
           <header className="flex items-center gap-2 border-b border-olympus-gold/15 px-3 pt-[calc(env(safe-area-inset-top)+8px)] pb-2">
-            <button onClick={() => { setPreviewOpen(false); setMarkMode(false); }} aria-label="Close preview" className="flex h-10 w-10 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold"><X size={16} /></button>
+            <button onClick={() => { setPreviewOpen(false); setMarkMode(false); setPreviewLoaded(false); }} aria-label="Close preview" className="flex h-10 w-10 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold"><X size={16} /></button>
             <div className="min-w-0 flex-1">
               <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-olympus-gold">preview</div>
               <div className="truncate text-[9px] font-mono text-olympus-text-dim">{active || 'project'} · :{preview.port || '—'} · live app</div>
             </div>
             <button onClick={() => setMarkMode((v) => !v)} aria-pressed={markMode} className={`flex h-10 items-center gap-1 rounded-full border px-3 text-[10px] font-mono ${markMode ? 'border-olympus-red/50 text-olympus-red' : 'border-olympus-cyan/30 text-olympus-cyan'}`}><MousePointerClick size={12} /> mark</button>
+            <button onClick={() => { setPreviewLoaded(false); setPreviewKey((k) => k + 1); setMarkPoint(null); setMarkNote(''); }} aria-label={t('m.reload', language)} className="flex h-10 w-10 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold"><RefreshCw size={14} /></button>
             <a href={preview.recommendedUrl} target="_blank" rel="noreferrer" aria-label="Open externally" className="flex h-10 w-10 items-center justify-center rounded-full border border-olympus-gold/20 text-olympus-gold"><ExternalLink size={14} /></a>
           </header>
           <div className="relative min-h-0 flex-1 bg-black">
-            <iframe src={preview.recommendedUrl} title={`${active || 'project'} preview`} className="h-full w-full border-0" allow="fullscreen; clipboard-write" />
+            <PreviewSurface
+              src={preview.recommendedUrl}
+              title={`${active || 'project'} preview`}
+              reloadKey={previewKey}
+              onLoad={() => setPreviewLoaded(true)}
+            />
+            {!previewLoaded && (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/70">
+                <Loader2 size={26} className="animate-spin text-olympus-gold" />
+              </div>
+            )}
             {markMode && (
               <button
                 aria-label="Place a mark on the preview"
@@ -1053,16 +1145,18 @@ export default function MobileCompanion() {
               <input
                 value={markInstruction}
                 onChange={(e) => setMarkInstruction(e.target.value)}
-                placeholder={markMode ? 'descreva o que marcar…' : 'ative mark e toque no preview'}
-                aria-label="Mark instruction"
-                className="min-w-0 flex-1 rounded-lg border border-olympus-gold/20 bg-olympus-bg px-2.5 py-2 text-[12px] outline-none placeholder:text-olympus-text-dim"
+                onKeyDown={(e) => { if (e.key === 'Enter' && markPoint && markInstruction.trim() && !markBusy) void sendMark(); }}
+                enterKeyHint="send"
+                placeholder={markMode ? t('m.markHint', language) : t('m.markTap', language)}
+                aria-label={t('m.markHint', language)}
+                className="min-w-0 flex-1 rounded-lg border border-olympus-gold/20 bg-olympus-bg px-2.5 py-2.5 text-[13px] outline-none placeholder:text-olympus-text-dim"
               />
-              <button onClick={() => void sendMark()} disabled={!markPoint || !markInstruction.trim() || markBusy} className="rounded-lg bg-olympus-gold/15 px-3 py-2 text-[10px] font-mono text-olympus-gold ring-1 ring-olympus-gold/30 disabled:opacity-40">
-                {markBusy ? <Loader2 size={12} className="animate-spin" /> : 'enviar'}
+              <button onClick={() => void sendMark()} disabled={!markPoint || !markInstruction.trim() || markBusy} className="rounded-lg bg-olympus-gold/15 px-3 py-2.5 text-[10px] font-mono text-olympus-gold ring-1 ring-olympus-gold/30 disabled:opacity-40">
+                {markBusy ? <Loader2 size={12} className="animate-spin" /> : t('m.send', language)}
               </button>
             </div>
             <div className="mt-1 flex items-center gap-2 text-[8px] font-mono text-olympus-text-dim">
-              <span>{markMode ? (markPoint ? `mark em ${Math.round(markPoint.x)},${Math.round(markPoint.y)}` : 'toque no preview') : 'o app é interativo; mark ativa a mira'}</span>
+              <span>{markMode ? (markPoint ? `mark em ${Math.round(markPoint.x)},${Math.round(markPoint.y)}` : t('m.markTap', language)) : t('m.previewInteractive', language)}</span>
               {markNote && <span className="ml-auto text-olympus-cyan">{markNote}</span>}
             </div>
           </div>

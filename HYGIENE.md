@@ -14,11 +14,16 @@
 | `npm run repo:privacy` | no private roots/credentials in tracked files |
 | `node scripts/suites-manifest.mjs` | every suite mapped, PUBLIC/TRACKED_LOCAL present |
 | `npm audit --audit-level=high` | 0 high / 0 critical |
-| `npm run battery` | the hermetic release-branch battery (54/54 at 0.0.99) |
+| `npm run battery` | the hermetic release-branch battery (55/55 at 0.0.99) |
 
 The **132 maintainer-local suites** read the live app, vault, browser or
 OpenCode DB; they are declared in `scripts/local-suites.manifest.json` and
 are not silently skipped. They are not re-run while AIME is walking.
+
+The v0.0.99 preview/mobile contract is covered by
+`scripts/v099-preview-mobile.test.mjs`: the real-origin surface, replay-safe
+hop stream, language header, answer accumulator, abortable prompt, voice
+primer, presence route and the stat-keyed hop-events cache.
 
 ## Declared limits (not errors)
 
@@ -35,5 +40,5 @@ are not silently skipped. They are not re-run while AIME is walking.
 
 ```bash
 npm run hygiene              # tsc, lint, docs, privacy, manifest, audit
-npm run hygiene -- --battery # + the 54 hermetic suites
+npm run hygiene -- --battery # + the 55 hermetic suites
 ```

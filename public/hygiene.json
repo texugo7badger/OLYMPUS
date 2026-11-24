@@ -1,27 +1,27 @@
 {
   "version": "0.0.99",
-  "generatedAt": "2026-11-24T18:26:48.743Z",
+  "generatedAt": "2026-11-24T20:46:46.322Z",
   "ok": true,
   "gates": [
     {
       "name": "typescript",
       "ok": true,
-      "ms": 108901
+      "ms": 11184
     },
     {
       "name": "lint",
       "ok": true,
-      "ms": 157728
+      "ms": 104408
     },
     {
       "name": "docs",
       "ok": true,
-      "ms": 832
+      "ms": 302
     },
     {
       "name": "privacy",
       "ok": true,
-      "ms": 355
+      "ms": 366
     },
     {
       "name": "suite-manifest",
@@ -31,17 +31,17 @@
     {
       "name": "audit-high",
       "ok": true,
-      "ms": 6337
+      "ms": 5229
     },
     {
       "name": "battery",
       "ok": true,
-      "ms": 160418
+      "ms": 121412
     }
   ],
   "battery": {
-    "pass": 54,
+    "pass": 55,
     "fail": 0,
-    "suites": 54
+    "suites": 55
   }
 }

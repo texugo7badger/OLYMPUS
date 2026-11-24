@@ -1,16 +1,15 @@
 /**
- * preview-isolation.ts — v0.0.93: the preview iframe gets its own renderer.
+ * preview-isolation.ts — v0.0.93, RETIRED in v0.0.99.
  *
- * WHY: the live preview is served from 127.0.0.1:<port>, the same site as the
- * OLYMPUS shell (127.0.0.1:3737). With Electron's site isolation, a same-site
- * iframe shares the parent's renderer and main thread; a heavy project preview
- * then drags the whole shell to ~30 FPS. Serving the iframe from 127.0.0.2 is
- * the same loopback server through a different SITE, so Chromium places it in
- * an OOPIF (its own renderer). Measured on the AIME lane: parent 54→60 and
- * iframe 52→60 FPS.
+ * The 127.0.0.2 alias isolated the iframe into its own renderer but lost the
+ * app's SESSION: cookies and localStorage are scoped to the host, so an app
+ * logged in on 127.0.0.1:3038 arrived at 127.0.0.2:3038 logged out — a static
+ * mirror. Electron now uses a <webview> at the REAL origin (its own process
+ * AND the shared session); browsers use an iframe on the real origin.
  *
- * The probe is server-side and cached: a project that binds only 127.0.0.1 is
- * detected honestly and the client falls back to the direct URL.
+ * `inElectron` stays (the surface chooses the runtime). The two alias helpers
+ * remain for the v0.0.92 regression suite and for any old pinned URL that is
+ * repointed on hydration.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
@@ -42,10 +41,8 @@ export async function isolatedPreviewUrl(port: number | null | undefined, timeou
 }
 
 /**
- * v0.0.94 — the isolated origin is an ELECTRON optimization. In Firefox/Chrome
- * the user's AIME session lives on 127.0.0.1; moving the iframe to 127.0.0.2
- * would log the preview out. The browser gets the direct origin; Electron gets
- * the OOPIF origin.
+ * v0.0.99 — the runtime detector stays: Electron renders a <webview> (own
+ * process + shared session), browsers render a same-origin iframe.
  */
 export function inElectron(): boolean {
   try { return typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent); } catch { return false; }

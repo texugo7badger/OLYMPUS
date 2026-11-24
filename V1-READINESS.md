@@ -6,8 +6,11 @@
 > (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
 > this build "certified v1.0" until those gates are green.** v0.0.99 is the
 > hygiene-total release: `npm run hygiene` passes tsc, lint, docs, privacy,
-> suite manifest and audit-high; the 54 hermetic suites are green and
+> suite manifest and audit-high; the 55 hermetic suites are green and
 > HYGIENE.md declares the limits. The 0.0.98 line is complete.
+> v0.0.99 also restores the live preview as an interactive REAL-origin
+> surface (Electron webview, replay-safe hop reloads) and makes the phone a
+> functional prompt/voice lane with a live presence heartbeat.
 > v0.0.98-11 was the boot-truth release; v0.0.98-10 was
 > the hygiene/guard-v2 release; v0.0.98 remains the
 > quota-wait/blocked-dependency/Logs release; v0.0.97 the GO console anchor;

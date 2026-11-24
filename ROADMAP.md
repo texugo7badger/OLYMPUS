@@ -2,7 +2,11 @@
 
 **v0.0.99 is the current release** (2026-11-24) — hygiene total:
 `npm run hygiene` passes tsc, lint, docs, privacy, suite manifest and
-audit-high; the 54 hermetic suites are green; HYGIENE.md declares the limits.
+audit-high; the 55 hermetic suites are green; HYGIENE.md declares the limits.
+v0.0.99 also makes the live preview interactive on the REAL origin (Electron
+webview, replay-safe hop reloads, LAN/device presets) and the phone a
+first-class prompt/voice lane (language header, answer accumulator, stop,
+voice primer, presence heartbeat, supervised tunnel).
 The 0.0.98 line is complete (generation boundary, Portfolio, delivery
 profiles, Plan Health, Recovery Log/real errors, OpenCode 2.4.1, boot truth,
 slow-lane truth and the verification guard); `v0.0.98` is the base.

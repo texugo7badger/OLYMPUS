@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T17:58:30.928Z",
+  "generatedAt": "2026-11-24T20:51:36Z",
   "note": "PUBLIC suites are tracked and run by .github/workflows/core.yml; TRACKED_LOCAL suites are in the repo but need the local OpenCode run state/overlay; LOCAL suites stay on the maintainer machine and declare why. A fresh clone reproduces the public core; the full battery numbers ride public/stable.json.",
   "public": [
     "alignment-preview.test.mjs",
@@ -29,7 +29,8 @@
     "preview-share.test.mjs",
     "sync-map-scope.test.mjs",
     "terminal-paste.test.mjs",
-    "theme-gallery.test.mjs"
+    "theme-gallery.test.mjs",
+    "v099-preview-mobile.test.mjs"
   ],
   "trackedLocal": [
     {
@@ -672,8 +673,8 @@
     }
   ],
   "count": {
-    "total": 186,
-    "public": 27,
+    "total": 187,
+    "public": 28,
     "trackedLocal": 27,
     "local": 132
   }

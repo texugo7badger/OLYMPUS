@@ -373,8 +373,9 @@ export default function OlympusWorkspace() {
     ];
     const data = Promise.allSettled(critical.map((url) => fetch(url, { cache: 'no-store' })));
     const fonts = (document as any).fonts?.ready ?? Promise.resolve();
-    // A hard 5s cap: a dead shell endpoint must not trap the user behind the mark.
-    const cap = new Promise<void>((resolve) => setTimeout(resolve, 5_000));
+    // v0.0.99 — a dead/slow endpoint may not hold the shell behind the mark.
+    // 2.5s is generous for three local reads; the panels load their own data.
+    const cap = new Promise<void>((resolve) => setTimeout(resolve, 2_500));
     Promise.race([Promise.all([data, fonts]).then(() => undefined), cap])
       .then(() => { if (live) setDataReady(true); })
       .catch(() => { if (live) setDataReady(true); });
@@ -402,13 +403,26 @@ export default function OlympusWorkspace() {
     // per-dialog loader stack is gone. The panel chunks fill in after the
     // shell; waiting for every chunk held the mark hostage (30s specimen).
     const ready = windowLoaded && dataReady;
-    const cap = Math.max(0, 8000 - elapsed);
+    // v0.0.99 — the branded loader is a door, not a wait room. 4.5s is the
+    // hard ceiling; the first frames preload below so the ActivityBar is
+    // already in cache when the door opens (the 10.8s cold shell specimen).
+    const cap = Math.max(0, 4500 - elapsed);
     const timer = setTimeout(() => {
       setBootLeaving(true);
       setTimeout(() => setBooting(false), 520);
     }, ready ? minWait : cap);
     return () => clearTimeout(timer);
   }, [booting, windowLoaded, dataReady]);
+
+  // v0.0.99 — warm the first frames while the branded loader is up. The
+  // shell used to open its door and only THEN request the ActivityBar chunk,
+  // which is why a cold browser load showed the loader for ~10s. These two
+  // imports resolve from the same module cache `dynamic()` uses.
+  useEffect(() => {
+    void import('@/components/olympus/activity-bar');
+    void import('@/components/olympus/status-bar');
+  }, []);
+
   const setGraphData = useOlympus(s => s.setGraphData);
   const leftPane = useOlympus(s => s.leftPane);
   // #197: the window-visibility gate for pane polling surfaces.

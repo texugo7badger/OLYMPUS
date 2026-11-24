@@ -208,6 +208,30 @@ export async function registerNode() {
       .catch(() => { /* the supervisor is additive; boot never blocks on it */ });
   }, 20_000).unref?.();
 
+  // v0.0.99 — THE MOBILE DOOR STAYS ON. The user asked for the link to
+  // survive: when a tunnel is `desired` (started once from the pairing card
+  // or the phone), a supervised tick restarts cloudflared after a crash or a
+  // laptop wake instead of leaving the phone on a dead URL until someone
+  // opens the dialog. No desired tunnel = an immediate no-op.
+  {
+    const g = globalThis as any;
+    if (!g.__olympusTunnelSupervisor) {
+      g.__olympusTunnelSupervisor = true;
+      let busy = false;
+      const tick = async () => {
+        if (busy) return;
+        busy = true;
+        try {
+          const { ensureTunnel } = await import('./lib/mobile-tunnel');
+          await ensureTunnel(20_000);
+        } catch { /* the tunnel status route surfaces the real reason */ }
+        finally { busy = false; }
+      };
+      setTimeout(() => void tick(), 8_000).unref?.();
+      setInterval(() => void tick(), 60_000).unref?.();
+    }
+  }
+
   // v0.0.89 — ATLAS STAYS ON. The warden is deterministic (no model, no
   // Apollo prompt): it patrols every lane, keeps opted-in campaigns walking,
   // pins Atlas to HY3 in a drifted lane config and writes ONE decision box

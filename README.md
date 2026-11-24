@@ -48,7 +48,7 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
-**v0.0.99 evidence:** [Hygiene — zero errors](screenshots/screens/71-hygiene-99.png) — 7/7 gates green, 54/54 hermetic battery, zero deterministic errors; header v0.0.99.
+**v0.0.99 evidence:** [Hygiene — zero errors](screenshots/screens/71-hygiene-99.png) — 7/7 gates green, 55/55 hermetic battery, zero deterministic errors; header v0.0.99. [Live preview — interactive, real origin](screenshots/screens/72-live-preview-99.png) · [phone — voice first](screenshots/screens/73-mobile-99.png) · [phone preview](screenshots/screens/74-mobile-preview-99.png) · [phone mark](screenshots/screens/75-mobile-mark-99.png) · [pairing — phone connected](screenshots/screens/76-mobile-pair-99.png).
 
 **v0.0.98-17 evidence:** [Portfolio — generation boundary](screenshots/screens/70-portfolio-gen-98-17.png) — gen 46/47, both DONE; the boundary continues instead of freezing; header v0.0.98-17.
 
@@ -73,13 +73,26 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 **v0.0.99 — hygiene total (zero errors).**
 `npm run hygiene` is the gate of record: `tsc`, `lint`, `docs:check`,
 `repo:privacy`, the suite manifest and `audit --audit-level=high` all pass;
-`npm run hygiene -- --battery` adds the 54 hermetic suites. [HYGIENE.md](HYGIENE.md)
+`npm run hygiene -- --battery` adds the 55 hermetic suites. [HYGIENE.md](HYGIENE.md)
 declares the zero-error contract and every remaining limit. The 0.0.98
 preview releases are retired from Releases (tags kept); `v0.0.98` is the base
 and `v0.0.99` is the current stable. The complete 0.0.98 line — generation
 boundary, Portfolio, delivery profiles, Plan Health, Recovery Log/real errors,
 OpenCode 2.4.1, boot truth, slow-lane truth and the verification guard —
 remains.
+
+**v0.0.99 — the preview and the phone (refined).**
+The live preview is interactive again: Electron renders it in a `<webview>`
+at the REAL origin, so the project's cookies and localStorage survive (the
+`127.0.0.2` alias showed a logged-out mirror). Replayed hop history no longer
+reloads the frame; a landed part is offered and auto-follow waits for 15s of
+idle. The toolbar adapts to phone/tablet/desktop, fullscreen works, and the
+shell opened from another PC gets the LAN origin. The phone now sends
+`x-olympus-language`, merges the god's `text` parts (a log can no longer
+replace the answer), streams the reply, stops on demand, primes audio on the
+first gesture, runs a lighter performance mode on low-end hardware, and the
+pairing card reads a live phone heartbeat while a server-lifetime supervisor
+keeps the `desired` tunnel up.
 
 **v0.0.98-16 — Portfolio (98.8).**
 The Logs workspace gains **Portfolio**: every project in one read — profile,
@@ -402,7 +415,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**54 PASS / 0 FAIL / 0 declared skip** across 54 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
+**55 PASS / 0 FAIL / 0 declared skip** across 55 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

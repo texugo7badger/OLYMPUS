@@ -43,6 +43,8 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [remote, setRemote] = useState<{ running?: boolean; url?: string | null; pid?: number | null; binary?: string | null } | null>(null);
   const [remoteBusy, setRemoteBusy] = useState(false);
+  // v0.0.99 — the phone's heartbeat: connected / last seen.
+  const [phone, setPhone] = useState<{ connected?: boolean; lastSeen?: string | null; tokenMatches?: boolean } | null>(null);
 
   // v0.0.60 — in LAN mode the pair route requires the bearer token. The
   // renderer gets it from the main process over IPC (never over HTTP).
@@ -60,6 +62,20 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
       if (res.ok && d?.ok) setRemote(d);
     } catch { /* no tunnel state */ }
   }, [authHeaders]);
+
+  const loadPresence = useCallback(async () => {
+    try {
+      const res = await fetch('/api/olympus/mobile/presence', { cache: 'no-store', headers: await authHeaders() });
+      const d = await res.json();
+      if (res.ok && d?.ok) setPhone(d);
+    } catch { /* no presence yet */ }
+  }, [authHeaders]);
+
+  useEffect(() => {
+    void loadPresence();
+    const timer = setInterval(() => { void loadPresence(); }, 10_000);
+    return () => clearInterval(timer);
+  }, [loadPresence]);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -128,6 +144,16 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
 
   const token = pair?.token || '';
   const masked = token ? `${token.slice(0, 6)}…${token.slice(-4)}` : '—';
+  const ago = (iso?: string | null): string => {
+    if (!iso) return '—';
+    const at = Date.parse(iso);
+    if (!Number.isFinite(at)) return '—';
+    const s = Math.max(0, Math.round((Date.now() - at) / 1000));
+    if (s < 60) return `${s}s ago`;
+    const m = Math.round(s / 60);
+    if (m < 60) return `${m}m ago`;
+    return `${Math.round(m / 60)}h ago`;
+  };
 
   return (
     <div className="fixed inset-0 z-[420] flex items-center justify-center bg-black/65 p-4" role="dialog" aria-modal="true" aria-label="OLYMPUS app pairing">
@@ -145,6 +171,14 @@ export default function MobilePairDialog({ onClose }: { onClose: () => void }) {
             Um QR, um app: escaneie para abrir o OLYMPUS no celular — campanha, projetos,
             prompt por texto/voz, preview e o widget (pelo cabeçalho do app).
           </p>
+
+          <div className="flex items-center gap-2 rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 px-2.5 py-1.5 text-[9px] font-mono">
+            <span className={cn('inline-flex items-center gap-1', phone?.connected ? 'text-olympus-green' : 'text-olympus-text-dim')}>
+              <span className={cn('h-1.5 w-1.5 rounded-full', phone?.connected ? 'bg-olympus-green' : 'bg-olympus-text-dim/50')} />
+              {phone?.connected ? 'phone connected' : 'waiting for the phone'}
+            </span>
+            <span className="ml-auto text-olympus-text-dim">{phone?.lastSeen ? `last seen ${ago(phone.lastSeen)}` : 'no session yet'}</span>
+          </div>
 
           {error && (
             <div className="rounded-lg border border-olympus-red/40 bg-olympus-red/10 px-2.5 py-2 text-[10px] font-mono text-olympus-red">

@@ -8,7 +8,7 @@ All notable changes to OLYMPUS are documented in this file.
 
 - **`npm run hygiene`** runs tsc, lint, docs:check, repo:privacy, the suite
   manifest and `audit --audit-level=high`; all six pass. `--battery` adds the
-  54 hermetic suites.
+  hermetic suites (55 at 0.0.99).
 - **HYGIENE.md** is the contract: every gate has a bar; the 23 moderate
   transitive advisories, the 132 local suites and the unclaimed drills are
   declared, not hidden.
@@ -17,8 +17,52 @@ All notable changes to OLYMPUS are documented in this file.
 - **The 0.0.98 line is complete:** generation boundary, Portfolio, delivery
   profiles, Plan Health, Recovery Log/real errors, OpenCode 2.4.1, boot truth,
   slow-lane truth and the verification guard.
-- **Tests.** 54/54 hermetic; `generation-boundary` 6/6; `portfolio` 13/13;
-  `delivery-profiles` 17/17; `v092` 37/37.
+
+### Live preview — the app, not a mirror
+
+- **The loopback alias is retired.** `127.0.0.2` isolated the iframe but lost
+  the app's cookies and localStorage (cookies are host-scoped), so a logged-in
+  project arrived logged out — a static mirror. Electron now renders the
+  preview in a `<webview>` at the REAL origin: its own process AND the shared
+  session. Browsers get a same-origin iframe.
+- **The surface is interactive from the first paint.** It is never
+  `display:none` behind the loader; the loader is a translucent,
+  pointer-events-none overlay, so a click can reach the app immediately.
+- **No replay reloads.** The hop SSE replays history on every connect; the
+  preview now ignores everything before `stream_ready`. A landed part is
+  offered ("part ready · refresh"); auto-follow only reloads after 15s of no
+  interaction and never yanks a click. The 3s probe no longer re-renders on
+  latency jitter.
+- **Responsive and multi-device.** Phone/tablet/desktop presets, fullscreen,
+  a wrapping toolbar, and a LAN origin so the shell opened from another PC
+  shows the real preview. An HTTPS shell states the mixed-content limit
+  instead of showing a blank frame.
+- **Share is honest.** The public link is labelled a read-only live view;
+  hashed `_next/static` assets are cached for speed.
+
+### The phone — prompts, voice, language, the door
+
+- **The phone answers in the user's language.** `/m` now sends
+  `x-olympus-language` like the terminal; before it defaulted to English.
+- **The answer is the answer.** A shared SSE accumulator merges `text` parts
+  and never lets a progress log or a late error replace the god's reply (the
+  old parser kept whichever frame came last, truncated to 400 chars). The
+  reply streams into the log while the turn runs, and a Stop button aborts it.
+- **Voice works on the first gesture.** `unlockVoice()` primes the shared
+  AudioContext and the speech engine on pointerdown, so the TTS answer that
+  arrives minutes later is not blocked by autoplay policy.
+- **The preview sheet is a real app surface.** Reload + loader, pointer
+  capture for marks, the URL/preview origin in the mark, localized mark
+  labels, and the same sandboxed surface as the desktop.
+- **The pairing door stays on.** A server-lifetime supervisor restarts the
+  `desired` Cloudflare tunnel after a crash or a wake; the pairing card reads
+  a phone heartbeat (`phone connected · last seen 12s ago`).
+- **Less work on a low-end phone.** 10s/20s polling (down from 6s/12s),
+  state-equality bailouts, automatic performance mode on ≤4 cores/≤4 GB or
+  reduced-motion, and the expensive hop-event parse is cached by file stat.
+
+- **Tests.** 55/55 hermetic; `v099-preview-mobile` 27/27; `generation-boundary`
+  6/6; `portfolio` 13/13; `delivery-profiles` 17/17; `v092` 37/37.
 
 **The 2h drill and the 8h/100-hop certification remain unclaimed.** The 132
 local suites read the live app/vault and were not re-run while AIME walks.

@@ -5,9 +5,9 @@
  * Runs the deterministic checks a release must pass:
  *   tsc · lint · docs:check · repo:privacy · suites:manifest · audit(high)
  *
- * `--battery` adds the full hermetic battery (54 suites). The 132
- * maintainer-local suites need the live app/vault and are declared in
- * scripts/local-suites.manifest.json, not silently skipped.
+ * `--battery` adds the full hermetic battery (`scripts/*.test.mjs`; 55 at
+ * v0.0.99). The 132 maintainer-local suites need the live app/vault and are
+ * declared in scripts/local-suites.manifest.json, not silently skipped.
  *
  * Usage: npm run hygiene [-- --battery]
  * Exit 0 = every gate green.
@@ -19,6 +19,11 @@ import path from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const withBattery = process.argv.includes('--battery');
+// v0.0.99 — the battery runs every `scripts/*.test.mjs` present on disk, so
+// the report counts the real suites instead of a hardcoded number.
+const suiteCount = (() => {
+  try { return fs.readdirSync(path.join(ROOT, 'scripts')).filter((f) => f.endsWith('.test.mjs')).length; } catch { return 0; }
+})();
 const checks = [
   { name: 'typescript', cmd: 'npx', args: ['tsc', '--noEmit'] },
   { name: 'lint', cmd: 'npm', args: ['run', 'lint'] },
@@ -54,7 +59,7 @@ try {
     generatedAt: new Date().toISOString(),
     ok: failed === 0,
     gates: results,
-    battery: withBattery ? { pass: failed === 0 ? 54 : null, fail: failed === 0 ? 0 : null, suites: 54 } : null,
+    battery: withBattery ? { pass: failed === 0 ? suiteCount : null, fail: failed === 0 ? 0 : null, suites: suiteCount } : null,
   }, null, 2) + '\n');
 } catch { /* the report is evidence, never a gate blocker */ }
 console.log('');

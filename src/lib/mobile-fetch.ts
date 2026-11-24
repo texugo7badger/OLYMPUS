@@ -19,9 +19,18 @@ export async function mobileFetch(
 ): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // v0.0.99 — an external signal (the phone's Stop button) must abort the
+  // request too. The internal controller stays the one timeout owns.
+  const external = init.signal;
+  const onAbort = () => controller.abort();
+  if (external) {
+    if (external.aborted) controller.abort();
+    else external.addEventListener('abort', onAbort, { once: true });
+  }
   try {
     return await fetch(input, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timer);
+    try { external?.removeEventListener('abort', onAbort); } catch { /* gone */ }
   }
 }

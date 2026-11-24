@@ -272,8 +272,17 @@ fabricates 0%.
 
 The release gate is six deterministic checks (`npm run hygiene`): typescript,
 lint, docs, privacy, suite manifest and audit-high. The hermetic battery is
-54/54. HYGIENE.md declares the remaining limits (23 moderate transitive
+55/55. HYGIENE.md declares the remaining limits (23 moderate transitive
 advisories, 132 local suites, drills not claimed) instead of hiding them.
+
+v0.0.99 also removes wasted cycles that looked like lag: the hop-event stream
+parses its JSONL once per file-change per process (not once per 800ms per
+client), the preview probe only re-renders when a visible field changes, the
+phone polls at 10s/20s instead of 6s/12s and bails out on identical state, and
+a landed hop offers a refresh instead of force-reloading the preview (no
+wasted paint and no lost interaction). The boot gate caps its data wait at
+2.5s and preloads the first frames, so a cold browser shell is not held behind
+the branded loader.
 
 ## 18. v0.0.98-17 — a frozen generation is wasted night
 

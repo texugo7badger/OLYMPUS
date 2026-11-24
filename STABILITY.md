@@ -4,7 +4,7 @@
 
 > v0.0.99 · 2026-11-24 · the current release. Hygiene total: `npm run
 > hygiene` passes tsc, lint, docs, privacy, suite manifest and audit-high;
-> the 54 hermetic suites are green. The 0.0.98 line is complete; the
+> the 55 hermetic suites are green. The 0.0.98 line is complete; the
 > generation boundary, Portfolio, delivery profiles and every guard remain. v0.0.98-11 made the socket the port owner and the
 > process group the MCP owner; v0.0.98-10 added the verification-hop guard,
 > the blocked-signal dedupe and the log filter. The 98.x line adds the plan archive,
@@ -13,7 +13,11 @@
 > with the console reset; a blocked gate recovers its quarantined
 > dependencies; the report is deterministic and lands in Apollo's chat; the
 > Logs workspace and the terminal 5h/weekly/monthly meter make every hop and
-> cost visible. v0.0.97's exact console anchor, stale-anchor pause, rolling
+> cost visible. v0.0.99 makes the live preview a real interactive surface
+> again (real origin + Electron webview, replay-safe hop reloads, LAN/device
+> presets) and the phone a first-class prompt lane (language header, answer
+> accumulator, streamed reply, stop, voice primer, performance mode, presence
+> heartbeat and a supervised tunnel). v0.0.97's exact console anchor, stale-anchor pause, rolling
 > 65/80/100 and qwen→DeepSeek guard remain. v0.0.96's hibernation v2 remains. The harness is shipped and
 > measured; the 8-hour / 100-hop certification is **not** claimed yet. The
 > hibernation path is a bounded, detached walk with an explicit window, not

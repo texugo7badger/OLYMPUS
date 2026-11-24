@@ -13,19 +13,43 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import OlympusLoader from './olympus-loader';
-import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2, ChevronLeft, ChevronRight, Share2, Copy, X, MonitorUp, Zap } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, MousePointerClick, Send, Loader2, ChevronLeft, ChevronRight, Share2, Copy, X, MonitorUp, Zap, Maximize2, Minimize2, Smartphone, Tablet, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import OlympusTooltip from './olympus-tooltip'; // P9 — replaces native title=
 import { normalizePreviewUrl } from '@/lib/live-preview-url';
-import { iframePreviewUrl, inElectron } from '@/lib/preview-isolation';
 import { useDocVisible } from '@/lib/use-doc-visible';
+import PreviewSurface from './preview-surface';
+import { useHopParts } from '@/lib/hop-stream';
 
 const DEFAULT_PORT = 3000;
 const PROBE_INTERVAL_MS = 3000;
 
-interface ProbeStatus { running: boolean; port: number; url: string; isolatedUrl?: string | null; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; demoLogin?: string | null; manager?: { running: boolean; port: number | null; url: string | null; slug: string; startedAt: string | null; responseTimeMs: number | null; rssMB?: number | null; note: string } | null; }
+interface ProbeStatus { running: boolean; port: number; url: string; lanUrl?: string | null; host?: 'ipv4' | 'ipv6' | null; responseTimeMs: number; path?: string | null; pathSource?: string | null; demoLogin?: string | null; manager?: { running: boolean; port: number | null; url: string | null; slug: string; startedAt: string | null; responseTimeMs: number | null; rssMB?: number | null; note: string } | null; }
+
+/** v0.0.99 — a probe that only changed its latency must not re-render the
+ *  preview tree every 3s (the iframe/webview is heavy). Compare the fields a
+ *  user can actually see. */
+function sameProbe(a: ProbeStatus | null, b: ProbeStatus): boolean {
+  if (!a) return false;
+  return a.running === b.running
+    && a.port === b.port
+    && a.url === b.url
+    && a.lanUrl === b.lanUrl
+    && a.host === b.host
+    && a.path === b.path
+    && a.pathSource === b.pathSource
+    && a.demoLogin === b.demoLogin
+    && a.manager?.running === b.manager?.running
+    && a.manager?.port === b.manager?.port
+    && a.manager?.note === b.manager?.note
+    && Math.round(a.responseTimeMs / 100) === Math.round(b.responseTimeMs / 100);
+}
+
+function isLoopbackHost(host: string): boolean {
+  return host === '127.0.0.1' || host === 'localhost' || host === '::1' || host === '[::1]';
+}
 
 export default function LivePreview() {
   // #231 — the preview probe pauses when the window is hidden.
@@ -56,7 +80,10 @@ export default function LivePreview() {
   const [lastQuickEdit, setLastQuickEdit] = useState<null | { backupRoot: string; files: number; lines: number }>(null);
   const [quickUndoBusy, setQuickUndoBusy] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  // v0.0.99 — the SURFACE wrapper: the iframe/webview fills it and the mark
+  // coordinates come from ITS rect (not the outer container, which may be
+  // wider than a phone/tablet preset).
+  const surfaceRef = useRef<HTMLDivElement>(null);
   // #202: the editable URL bar. `customUrl` is a user-pinned origin/path for
   // debugging another port; null means "follow the probed dev server". The
   // choice persists per project lane.
@@ -65,43 +92,90 @@ export default function LivePreview() {
   const [urlError, setUrlError] = useState<string | null>(null);
   const urlFocusedRef = useRef(false);
   // v0.0.34 — browser-grade history: back/forward through the URLs the user
-  // navigated to, a reload key for the frame, and a visible position.
+  // navigated to, a reload key for the surface, and a visible position.
   const [historyStack, setHistoryStack] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [iframeKey, setIframeKey] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
+  // v0.0.99 — the viewport presets: inspect the phone/tablet layout without
+  // leaving the pane. 'fit' is the normal full-width surface.
+  const [device, setDevice] = useState<'fit' | 'phone' | 'tablet'>('fit');
+  const [fullscreen, setFullscreen] = useState(false);
+  const [surfaceError, setSurfaceError] = useState<string | null>(null);
   // v0.0.38 — PARTS IN THE PREVIEW. Each finished hop is a part of the
-  // project; when it lands the preview follows it (debounced), unless the
-  // user turns the follow off. The footer names the part.
+  // project; a landed part is offered, never forced. Auto-follow only fires
+  // when the user has not touched the preview for a while; otherwise the
+  // footer shows "part ready · refresh".
   const [autoFollow, setAutoFollow] = useState<boolean>(() => {
     try { return window.localStorage.getItem('olympus:preview-follow') !== '0'; } catch { return true; }
   });
   const [lastPart, setLastPart] = useState<string | null>(null);
+  const [partReady, setPartReady] = useState<string | null>(null);
+  const lastInteractionRef = useRef(0);
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     try { window.localStorage.setItem('olympus:preview-follow', autoFollow ? '1' : '0'); } catch { /* private */ }
   }, [autoFollow]);
-  useEffect(() => {
-    if (!autoFollow || !docVisible) return;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let es: EventSource | null = null;
-    try {
-      es = new EventSource('/api/olympus/hops/stream');
-      es.onmessage = (e) => {
-        try {
-          const ev = JSON.parse(e.data);
-          if (ev?.type !== 'hop_done') return;
-          setLastPart(String(ev.hop || 'part'));
-          if (timer) clearTimeout(timer);
-          timer = setTimeout(() => setIframeKey((k) => k + 1), 1500);
-        } catch { /* torn frame */ }
-      };
-    } catch { /* no stream: the preview stays interactive */ }
-    return () => { es?.close(); if (timer) clearTimeout(timer); };
+
+  const noteInteraction = useCallback(() => {
+    lastInteractionRef.current = Date.now();
+    // A pending automatic reload is cancelled the moment the user touches
+    // the preview: their work-in-progress must never be yanked away.
+    if (reloadTimerRef.current) {
+      clearTimeout(reloadTimerRef.current);
+      reloadTimerRef.current = null;
+    }
+  }, []);
+
+  const reloadNow = useCallback((nextPart?: string | null) => {
+    if (reloadTimerRef.current) { clearTimeout(reloadTimerRef.current); reloadTimerRef.current = null; }
+    setIframeLoaded(false);
+    setSurfaceError(null);
+    setReloadKey((k) => k + 1);
+    if (nextPart !== undefined) setPartReady(nextPart);
+  }, []);
+
+  const handleHopDone = useCallback((hop: string) => {
+    setLastPart(hop);
+    const idleFor = Date.now() - lastInteractionRef.current;
+    const canAuto = autoFollow && docVisible && idleFor > 15_000;
+    setPartReady(hop);
+    if (!canAuto) return;
+    if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+    reloadTimerRef.current = setTimeout(() => {
+      reloadTimerRef.current = null;
+      // Re-check idle: the user may have started interacting during the wait.
+      if (Date.now() - lastInteractionRef.current < 15_000) return;
+      setIframeLoaded(false);
+      setSurfaceError(null);
+      setReloadKey((k) => k + 1);
+      setPartReady(null);
+    }, 2500);
   }, [autoFollow, docVisible]);
+
+  useHopParts({ projectSlug: activeProject?.slug || null, enabled: docVisible, onHopDone: handleHopDone });
+
+  useEffect(() => () => {
+    if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    const onChange = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
 
   const port = activeProject?.livePreviewPort || DEFAULT_PORT;
   // #102: the pre-first-probe guess ONLY — once a probe settles, effectiveUrl
   // below is the server-verified REACHABLE url (dual-stack, bracketed for IPv6).
   const previewUrl = `http://127.0.0.1:${port}`;
+  // v0.0.99 — when the OLYMPUS shell is opened from another PC on the LAN, a
+  // 127.0.0.1 preview would point at that PC, not the desktop running the
+  // dev server. The route supplies the LAN origin; the desktop keeps loopback.
+  const shellHost = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
+  const shellLoopback = isLoopbackHost(shellHost);
+  const preferredUrl = shellLoopback
+    ? (status?.url ?? previewUrl)
+    : (status?.lanUrl ?? status?.url ?? previewUrl);
   const projectSlug = activeProject?.slug || null;
   const urlStorageKey = `olympus-live-preview-url:${projectSlug || 'default'}`;
 
@@ -114,24 +188,27 @@ export default function LivePreview() {
       // the panel's real defect; no client-side workaround could fix it.
       const r = await fetch(`/api/olympus/live-preview${params}`);
       const d = await r.json();
-      setStatus({ running: d.running, port: d.port, url: d.url, isolatedUrl: d.isolatedUrl ?? null, host: d.host ?? null, responseTimeMs: d.responseTimeMs, path: d.path ?? null, pathSource: d.pathSource ?? null, demoLogin: d.demoLogin ?? null, manager: d.manager ?? null });
+      const next: ProbeStatus = { running: d.running, port: d.port, url: d.url, lanUrl: d.lanUrl ?? null, host: d.host ?? null, responseTimeMs: d.responseTimeMs, path: d.path ?? null, pathSource: d.pathSource ?? null, demoLogin: d.demoLogin ?? null, manager: d.manager ?? null };
+      // v0.0.99 — latency jitter alone must not re-render the surface tree.
+      setStatus((prev) => (prev && sameProbe(prev, next) ? prev : next));
       setProbing(false);
-    } catch { setStatus({ running: false, port, url: previewUrl, host: null, responseTimeMs: 0 }); setProbing(false); }
+    } catch { setStatus((prev) => prev ?? { running: false, port, url: previewUrl, host: null, responseTimeMs: 0 }); setProbing(false); }
   }, [projectSlug, port, previewUrl]);
 
   useEffect(() => {
     if (!docVisible) return;
-    setIframeLoaded(false); setProbing(true); probe();
+    setIframeLoaded(false); setProbing(true); setSurfaceError(null); probe();
     const iv = setInterval(probe, PROBE_INTERVAL_MS);
     return () => clearInterval(iv);
   }, [probe, docVisible]);
 
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
     if (!markMode) return;
-    // v0.0.90 — the pixel is the PREVIEW IFRAME's CSS pixel, not the app
-    // container's: the iframe can be smaller than the panel. Both the mark
-    // and the viewport Athena receives come from the same rect.
-    const rect = (iframeRef.current ?? containerRef.current)?.getBoundingClientRect();
+    noteInteraction();
+    // v0.0.90 — the pixel is the PREVIEW SURFACE's CSS pixel, not the app
+    // container's: a phone/tablet preset can be narrower than the pane. Both
+    // the mark and the viewport Athena receives come from the same rect.
+    const rect = (surfaceRef.current ?? containerRef.current)?.getBoundingClientRect();
     if (!rect) return;
     setPendingMark({ x: Math.round(e.clientX - rect.left), y: Math.round(e.clientY - rect.top) });
     setMarkMode(false);
@@ -141,13 +218,13 @@ export default function LivePreview() {
     if (!pendingMark || !instruction.trim()) return;
     setSending(true);
     try {
-      const iframeRect = iframeRef.current?.getBoundingClientRect();
+      const surfaceRect = surfaceRef.current?.getBoundingClientRect();
       const viewport = {
-        width: Math.round(iframeRect?.width || containerRef.current?.getBoundingClientRect().width || window.innerWidth),
-        height: Math.round(iframeRect?.height || containerRef.current?.getBoundingClientRect().height || window.innerHeight),
+        width: Math.round(surfaceRect?.width || containerRef.current?.getBoundingClientRect().width || window.innerWidth),
+        height: Math.round(surfaceRect?.height || containerRef.current?.getBoundingClientRect().height || window.innerHeight),
         devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
       };
-      const previewTarget = customUrl ?? status?.url ?? previewUrl;
+      const previewTarget = customUrl ?? preferredUrl;
       const previewPath = (() => { try { return new URL(previewTarget).pathname || '/'; } catch { return '/'; } })();
       // v0.0.94 — EVERY mark is durable before the god turn. A closed panel,
       // a failed turn or a slow preview can no longer erase it.
@@ -207,7 +284,7 @@ export default function LivePreview() {
           files: (data.changedFiles?.length || 0) + (data.addedFiles?.length || 0),
           lines: Number(data.changedLines || 0),
         });
-        setIframeKey((k) => k + 1);
+        reloadNow(null);
         toast.success('Quick edit applied', {
           description: `${data.message || 'The preview hot-reloads.'} Undo is in the backup: ${data.backupRoot || 'n/a'}`,
         });
@@ -245,12 +322,12 @@ export default function LivePreview() {
     }
     setSending(true);
     try {
-      const iframeRect = iframeRef.current?.getBoundingClientRect();
+      const surfaceRect = surfaceRef.current?.getBoundingClientRect();
       const viewport = {
-        width: Math.round(iframeRect?.width || containerRef.current?.getBoundingClientRect().width || window.innerWidth),
-        height: Math.round(iframeRect?.height || containerRef.current?.getBoundingClientRect().height || window.innerHeight),
+        width: Math.round(surfaceRect?.width || containerRef.current?.getBoundingClientRect().width || window.innerWidth),
+        height: Math.round(surfaceRect?.height || containerRef.current?.getBoundingClientRect().height || window.innerHeight),
       };
-      const previewTarget = customUrl ?? status?.url ?? previewUrl;
+      const previewTarget = customUrl ?? preferredUrl;
       const previewPath = (() => { try { return new URL(previewTarget).pathname || '/'; } catch { return '/'; } })();
       const mark = {
         id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -303,7 +380,7 @@ export default function LivePreview() {
       if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
       toast.success('Quick edit reverted', { description: `${d.restored?.length || 0} file(s) restored from the snapshot` });
       setLastQuickEdit(null);
-      setIframeKey((k) => k + 1);
+      reloadNow(null);
     } catch (e: any) {
       toast.error('Quick edit undo failed', { description: e?.message || String(e) });
     } finally {
@@ -317,20 +394,19 @@ export default function LivePreview() {
   const isRunning = Boolean(status?.running || status?.manager?.running);
   // #102: the server-verified REACHABLE url once probing settles; the local
   // guess is only the pre-first-probe fallback.
-  const effectiveUrl = status?.url ?? previewUrl;
+  const effectiveUrl = preferredUrl;
   // #202: a user-pinned URL wins over the probe; the frame follows it even
   // when the default port is down (that is the whole point of the bar).
   const frameUrl = customUrl ?? effectiveUrl;
-  // v0.0.93 — the user-facing URL stays 127.0.0.1; the iframe loads the
-  // 127.0.0.2 loopback SITE so Chromium isolates it into its own renderer.
-  // The server probe supplies the isolated origin; a 127.0.0.1-only project
-  // falls back to the direct URL.
-  const iframeSrc = inElectron()
-    ? (customUrl
-      ? iframePreviewUrl(customUrl)
-      : (status?.isolatedUrl || iframePreviewUrl(effectiveUrl)))
-    : (customUrl ?? effectiveUrl);
-  useEffect(() => { setIframeLoaded(false); }, [iframeSrc]);
+  // v0.0.99 — the surface loads the REAL origin (127.0.0.1 or the LAN host),
+  // never the old loopback alias: cookies and localStorage belong to the
+  // host, so the alias showed a logged-out mirror. Electron's <webview>
+  // supplies the separate renderer the alias stood in for.
+  const frameSrc = frameUrl;
+  useEffect(() => { setIframeLoaded(false); setSurfaceError(null); }, [frameSrc]);
+  const mixedContent = typeof window !== 'undefined'
+    && window.location.protocol === 'https:'
+    && frameSrc.startsWith('http://');
   // #103: the RESOLVED project path (note/lane reconciliation) for the tip —
   // the raw note path only as the pre-first-probe fallback.
   const resolvedPath = status?.path ?? activeProject?.path;
@@ -365,14 +441,30 @@ export default function LivePreview() {
     try { await navigator.clipboard.writeText(shareUrl); setShareCopied(true); } catch { setShareError('Could not copy — select the link.'); }
   }, [shareUrl]);
 
-  const showOverlay = customUrl ? !iframeLoaded : (!isRunning || probing || !iframeLoaded);
+  const showOverlay = Boolean(surfaceError) || (customUrl ? !iframeLoaded : (!isRunning || probing || !iframeLoaded));
+
+  // v0.0.99 — the webview can finish loading BEFORE React attaches its
+  // dom-ready listener (a fast local page), exactly like the preview window.
+  // The load event is the fast path; this fallback guarantees the pane can
+  // never sit on the branded loader forever.
+  useEffect(() => {
+    if (!(isRunning || customUrl) || surfaceError) return;
+    const t = setTimeout(() => setIframeLoaded(true), 3000);
+    return () => clearTimeout(t);
+  }, [isRunning, customUrl, frameSrc, reloadKey, surfaceError]);
 
   // #202: hydrate the pinned URL for this project lane, and keep the draft
   // synced with the probe while the user is not editing it.
   useEffect(() => {
     let stored: string | null = null;
     try { stored = localStorage.getItem(urlStorageKey); } catch { /* storage unavailable */ }
-    const pinned = stored && /^https?:\/\//i.test(stored) ? stored : null;
+    // v0.0.99 — a URL pinned by the previous release may carry the loopback
+    // alias (which loses the session). Repoint it at the real host once.
+    const cleaned = stored ? stored.replace(/\/\/(127\.0\.0\.2|localhost)(?=[:/])/i, '//127.0.0.1') : null;
+    if (cleaned && stored && cleaned !== stored) {
+      try { localStorage.setItem(urlStorageKey, cleaned); } catch { /* storage unavailable */ }
+    }
+    const pinned = cleaned && /^https?:\/\//i.test(cleaned) ? cleaned : null;
     setCustomUrl(pinned);
     setUrlError(null);
     setUrlDraft(pinned ?? previewUrl);
@@ -406,7 +498,7 @@ export default function LivePreview() {
     setHistoryIndex(next);
     setUrlError(null);
     setIframeLoaded(false);
-    setIframeKey((k) => k + 1);
+    reloadNow(null);
     setUrlDraft(url);
     if (url === probed) {
       setCustomUrl(null);
@@ -427,7 +519,7 @@ export default function LivePreview() {
     try { probed = new URL(effectiveUrl).toString(); } catch { /* probe url malformed */ }
     setUrlError(null);
     setIframeLoaded(false);
-    setIframeKey((k) => k + 1);
+    reloadNow(null);
     pushHistory(result.url);
     if (result.url === probed) {
       setCustomUrl(null);
@@ -448,21 +540,52 @@ export default function LivePreview() {
 
   return (
     <div className="w-full h-full flex flex-col bg-olympus-bg">
-      <div className="h-9 shrink-0 flex items-center justify-between px-3 border-b border-olympus-gold/10 bg-olympus-panel">
-        <div className="flex items-center gap-2 text-[11px] font-mono">
-          <Eye size={13} className="text-olympus-gold" />
-          <span className="text-olympus-gold font-semibold">Live Preview</span>
-          {activeProject && <span className="text-olympus-text-dim">· {activeProject.name}</span>}
+      <div className="min-h-9 shrink-0 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-1 border-b border-olympus-gold/10 bg-olympus-panel">
+        <div className="flex items-center gap-2 text-[11px] font-mono min-w-0">
+          <Eye size={13} className="text-olympus-gold shrink-0" />
+          <span className="text-olympus-gold font-semibold shrink-0">Live Preview</span>
+          {activeProject && <span className="hidden md:inline text-olympus-text-dim truncate">· {activeProject.name}</span>}
           <span className="text-olympus-text-dim text-[10px]">:{port}</span>
           {isRunning && !probing && <span className="text-olympus-green text-[10px] flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-olympus-green animate-pulse" /> live</span>}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className="hidden sm:flex items-center gap-0.5 rounded border border-olympus-gold/10 p-0.5" role="group" aria-label="Preview viewport">
+            {([
+              ['fit', Monitor, 'Desktop width'],
+              ['tablet', Tablet, 'Tablet width'],
+              ['phone', Smartphone, 'Phone width'],
+            ] as const).map(([id, Icon, label]) => (
+              <button
+                key={id}
+                onClick={() => setDevice(id)}
+                aria-pressed={device === id}
+                aria-label={label}
+                data-tip={label}
+                className={cn('p-1 rounded transition-colors', device === id ? 'bg-olympus-gold/20 text-olympus-gold' : 'text-olympus-text-dim hover:text-olympus-gold')}
+              >
+                <Icon size={11} />
+              </button>
+            ))}
+          </div>
+          <OlympusTooltip content={fullscreen ? 'Leave fullscreen' : 'Fullscreen preview'} side="bottom">
+            <button
+              onClick={() => {
+                if (typeof document === 'undefined') return;
+                if (document.fullscreenElement) void document.exitFullscreen?.();
+                else void containerRef.current?.requestFullscreen?.();
+              }}
+              aria-label={fullscreen ? 'Leave fullscreen' : 'Fullscreen preview'}
+              className="p-1 rounded text-olympus-text-dim hover:text-olympus-gold transition-colors"
+            >
+              {fullscreen ? <Minimize2 size={11} /> : <Maximize2 size={11} />}
+            </button>
+          </OlympusTooltip>
           {/* #100 (v0.0.6): THE DURABLE HOST CONTROLS — the #86 manager is
               the host (probe-verified truth, deps-first spawn, patience
               windows). Start when nothing runs; stop when the manager owns
               the server (an unmanaged ephemeral server stops with its
               owner — the button honestly hides). */}
-          <DevServerControls status={status} onDone={() => { setIframeLoaded(false); probe(); }} />
+          <DevServerControls status={status} onDone={() => { reloadNow(null); probe(); }} />
           <OlympusTooltip content="Mark an element for editing" side="bottom">
             <button onClick={() => setMarkMode(!markMode)} className={cn('flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono transition-all', markMode ? 'bg-olympus-gold/20 text-olympus-gold ring-1 ring-olympus-gold/40' : 'text-olympus-text-dim hover:text-olympus-gold hover:bg-olympus-gold/10')}>
               <MousePointerClick size={11} /> {markMode ? 'click preview…' : 'Mark'}
@@ -488,7 +611,7 @@ export default function LivePreview() {
                 {!shareUrl && (
                   <>
                     <p className="mb-2 text-[9px] font-mono leading-relaxed text-olympus-text-dim">
-                      A LIVE link to THIS preview: the real animated app through an unguessable tunnel. Expires in 24h, revocable — it never carries your OLYMPUS session or vault.
+                      A READ-ONLY live view of THIS preview through an unguessable tunnel. Expires in 24h, revocable — it never carries your OLYMPUS session or vault. Interactive login/forms stay inside OLYMPUS.
                     </p>
                     <button
                       onClick={() => void createShare()}
@@ -511,7 +634,7 @@ export default function LivePreview() {
                       <button onClick={() => void revokeShare()} className="rounded bg-olympus-red/10 px-1.5 py-1 text-[9px] font-mono text-olympus-red ring-1 ring-olympus-red/25">revoke</button>
                     </div>
                     <p className="text-[8px] font-mono text-olympus-text-dim">
-                      {shareCopied ? 'copied ✓ · ' : ''}{dMode === 'live-tunnel' ? 'live app · ' : 'proxy fallback · '}expires {shareExpires ? new Date(shareExpires).toLocaleString() : '—'}
+                      {shareCopied ? 'copied ✓ · ' : ''}{dMode === 'live-tunnel' ? 'live view · ' : 'proxy fallback · '}expires {shareExpires ? new Date(shareExpires).toLocaleString() : '—'}
                     </p>
                   </>
                 )}
@@ -520,7 +643,7 @@ export default function LivePreview() {
             )}
           </div>
           <OlympusTooltip content="Refresh probe" side="bottom">
-            <button onClick={() => { setIframeLoaded(false); probe(); }} className="text-olympus-text-dim hover:text-olympus-gold transition-colors p-1"><RefreshCw size={11} /></button>
+            <button onClick={() => { reloadNow(null); probe(); }} className="text-olympus-text-dim hover:text-olympus-gold transition-colors p-1"><RefreshCw size={11} /></button>
           </OlympusTooltip>
           <OlympusTooltip content="Open the preview in its own desktop window (OLYMPUS loader until the project is ready)" side="bottom">
             <button
@@ -566,7 +689,7 @@ export default function LivePreview() {
               className="p-1 rounded text-olympus-text-dim hover:text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-30 disabled:hover:bg-transparent"
             ><ChevronRight size={12} /></button>
             <button
-              onClick={() => { setIframeLoaded(false); setIframeKey((k) => k + 1); }}
+              onClick={() => reloadNow(null)}
               aria-label="Reload preview"
               data-tip="Reload"
               className="p-1 rounded text-olympus-text-dim hover:text-olympus-gold hover:bg-olympus-gold/10"
@@ -676,63 +799,105 @@ export default function LivePreview() {
         </div>
       )}
 
-      <div ref={containerRef} className={cn('flex-1 min-h-0 relative', markMode && 'cursor-crosshair')} onClick={handleContainerClick}>
-        {(isRunning || customUrl) && (
-          <iframe ref={iframeRef} key={iframeKey} src={iframeSrc} className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation" allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay" title="Live Preview" data-tip="Live Preview" onLoad={() => setIframeLoaded(true)} style={{ display: showOverlay ? 'none' : 'block' }} />
-        )}
-        {showOverlay && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-olympus-bg">
-            <div className="relative w-24 h-24 mb-6">
-              <div className="absolute inset-0 rounded-full border-2 border-olympus-gold/20 animate-ping" style={{ animationDuration: '2s' }} />
-              <div className="absolute inset-2 rounded-full border-2 border-olympus-gold/30 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.3s' }} />
-              <div className="absolute inset-4 rounded-full border-2 border-olympus-gold/40 animate-ping" style={{ animationDuration: '3s', animationDelay: '0.6s' }} />
-              <div className="absolute inset-0 flex items-center justify-center">{probing ? <Loader2 size={28} className="text-olympus-gold animate-spin" /> : <EyeOff size={28} className="text-olympus-gold/60" />}</div>
-            </div>
-            <h3 className="text-sm font-mono font-semibold text-olympus-gold mb-2">{customUrl ? 'Loading pinned URL…' : probing ? 'Probing dev server…' : 'Code in progress…'}</h3>
-            <p className="text-[11px] font-mono text-olympus-text-dim text-center max-w-xs leading-relaxed mb-4">
-              {customUrl
-                ? `Pinned to ${frameUrl} — the dev-server probe is bypassed.`
-                : activeProject ? `Waiting for ${activeProject.name}'s dev server at :${port}. Start it with \`npm run dev\` in the project folder.` : `No active project. Select one from the Project Switcher, or the preview defaults to :${port}.`}
-            </p>
-            {!customUrl && !probing && !isRunning && (
-              <div className="text-[10px] font-mono text-olympus-text-dim bg-olympus-card px-3 py-1.5 rounded-md border border-olympus-gold/10">
-                <span className="text-olympus-gold">tip:</span> run <code className="text-olympus-green">cd "{resolvedPath ?? '<project>'}" && npm run dev</code>
+      {mixedContent && (
+        <div className="shrink-0 px-3 py-1.5 border-b border-olympus-amber-soft/25 bg-olympus-amber-soft/10 text-[9px] font-mono text-olympus-amber-soft leading-relaxed">
+          This shell is HTTPS, so the browser blocks an HTTP preview. Open the phone preview (it uses its own HTTPS tunnel) or start the project preview tunnel.
+        </div>
+      )}
+
+      <div
+        ref={containerRef}
+        className="flex-1 min-h-0 relative flex justify-center overflow-hidden"
+        onPointerDownCapture={noteInteraction}
+        onKeyDownCapture={noteInteraction}
+        onWheelCapture={noteInteraction}
+      >
+        <div
+          ref={surfaceRef}
+          className={cn('relative h-full', device === 'fit' ? 'w-full' : 'shrink-0 border-x border-olympus-gold/10 shadow-xl')}
+          style={device === 'fit' ? undefined : { width: device === 'phone' ? '390px' : '834px', maxWidth: '100%' }}
+        >
+          {(isRunning || customUrl) && (
+            <PreviewSurface
+              src={frameSrc}
+              title="Live Preview"
+              reloadKey={reloadKey}
+              onLoad={() => { setIframeLoaded(true); setSurfaceError(null); }}
+              onFail={(message) => { setSurfaceError(message); setIframeLoaded(false); }}
+            />
+          )}
+          {showOverlay && (
+            <div className={cn(
+              'absolute inset-0 flex flex-col items-center justify-center px-4 text-center',
+              // v0.0.99 — the app is visible and interactive BEHIND the
+              // loader (a display:none surface could defer its load event
+              // forever and read as a static mirror).
+              !surfaceError && (customUrl || isRunning) ? 'bg-olympus-bg/85 pointer-events-none' : 'bg-olympus-bg',
+            )}>
+              <div className="relative w-24 h-24 mb-6">
+                <div className="absolute inset-0 rounded-full border-2 border-olympus-gold/20 animate-ping" style={{ animationDuration: '2s' }} />
+                <div className="absolute inset-2 rounded-full border-2 border-olympus-gold/30 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.3s' }} />
+                <div className="absolute inset-4 rounded-full border-2 border-olympus-gold/40 animate-ping" style={{ animationDuration: '3s', animationDelay: '0.6s' }} />
+                <div className="absolute inset-0 flex items-center justify-center">{probing ? <Loader2 size={28} className="text-olympus-gold animate-spin" /> : <EyeOff size={28} className="text-olympus-gold/60" />}</div>
               </div>
-            )}
-            {!customUrl && !probing && !isRunning && status?.pathSource === 'note-stale' && (
-              <p className="text-[10px] font-mono text-olympus-text-dim">note path is stale — the project lives at {status?.path}</p>
-            )}
-            {!iframeLoaded && !probing && (customUrl || isRunning) && <p className="text-[10px] font-mono text-olympus-text-dim">{customUrl ? 'Pinned URL' : 'Dev server is up'} — loading preview…</p>}
-          </div>
-        )}
-        {markMode && <div className="absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-olympus-gold/20 text-olympus-gold text-[10px] font-mono ring-1 ring-olympus-gold/30 pointer-events-none">Click anywhere on the preview to mark for editing</div>}
-        {/* v0.0.68 — THE MARK OVERLAY. Clicks inside the iframe never bubble
-            to the parent (a cross-origin dev server), so the mark mode sat
-            there and nothing happened. A transparent overlay above the frame
-            captures the click and the coordinates. */}
-        {markMode && (
-          <div className="absolute inset-0 z-20 cursor-crosshair" onClick={handleContainerClick} aria-label="Mark the preview for editing" role="button" />
-        )}
+              <h3 className="text-sm font-mono font-semibold text-olympus-gold mb-2">{surfaceError ? 'Preview failed to load' : customUrl ? 'Loading pinned URL…' : probing ? 'Probing dev server…' : 'Code in progress…'}</h3>
+              {surfaceError ? (
+                <>
+                  <p className="text-[10px] font-mono text-olympus-red text-center max-w-xs leading-relaxed mb-3 break-words">{surfaceError}</p>
+                  <button onClick={() => reloadNow(null)} className="rounded-lg border border-olympus-gold/30 bg-olympus-gold/10 px-3 py-1.5 text-[10px] font-mono text-olympus-gold">retry</button>
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] font-mono text-olympus-text-dim text-center max-w-xs leading-relaxed mb-4">
+                    {customUrl
+                      ? `Pinned to ${frameUrl} — the dev-server probe is bypassed.`
+                      : activeProject ? `Waiting for ${activeProject.name}'s dev server at :${port}. Start it with \`npm run dev\` in the project folder.` : `No active project. Select one from the Project Switcher, or the preview defaults to :${port}.`}
+                  </p>
+                  {!customUrl && !probing && !isRunning && (
+                    <div className="text-[10px] font-mono text-olympus-text-dim bg-olympus-card px-3 py-1.5 rounded-md border border-olympus-gold/10">
+                      <span className="text-olympus-gold">tip:</span> run <code className="text-olympus-green">cd "{resolvedPath ?? '<project>'}" && npm run dev</code>
+                    </div>
+                  )}
+                  {!customUrl && !probing && !isRunning && status?.pathSource === 'note-stale' && (
+                    <p className="text-[10px] font-mono text-olympus-text-dim">note path is stale — the project lives at {status?.path}</p>
+                  )}
+                  {!iframeLoaded && !probing && (customUrl || isRunning) && <p className="text-[10px] font-mono text-olympus-text-dim">{customUrl ? 'Pinned URL' : 'Dev server is up'} — loading preview…</p>}
+                </>
+              )}
+            </div>
+          )}
+          {markMode && <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full bg-olympus-gold/20 text-olympus-gold text-[10px] font-mono ring-1 ring-olympus-gold/30 pointer-events-none whitespace-nowrap">{device === 'fit' ? 'Click anywhere on the preview to mark for editing' : `Tap the ${device} preview to mark`}</div>}
+          {/* v0.0.68 — THE MARK OVERLAY. Clicks inside a cross-origin surface
+              never bubble to the parent, so a transparent overlay above it
+              captures the click and the coordinates. It exists ONLY in mark
+              mode; everywhere else the app is fully interactive. */}
+          {markMode && (
+            <div className="absolute inset-0 z-20 cursor-crosshair" onClick={handleContainerClick} aria-label="Mark the preview for editing" role="button" />
+          )}
+        </div>
       </div>
 
-      <div className="h-6 shrink-0 flex items-center justify-between px-3 border-t border-olympus-gold/10 bg-olympus-panel text-[9px] font-mono text-olympus-text-dim">
-        <span>
+      <div className="h-6 shrink-0 flex items-center justify-between gap-2 px-3 border-t border-olympus-gold/10 bg-olympus-panel text-[9px] font-mono text-olympus-text-dim overflow-hidden">
+        <span className="truncate">
           {customUrl
             ? `custom · ${frameUrl}`
             : isRunning ? `:${port} · ${status?.responseTimeMs ?? 0}ms` : `:${port} · offline`}
           {status?.manager?.running ? ' · durable host' : ''}
+          {device !== 'fit' ? ` · ${device}` : ''}
         </span>
-        <span className="flex items-center gap-2">
-          {lastPart && <span className="text-olympus-green">part {lastPart} ✓</span>}
+        <span className="flex items-center gap-2 shrink-0">
+          {partReady
+            ? <button onClick={() => reloadNow(null)} className="text-olympus-cyan hover:text-olympus-gold transition-colors">part {partReady} ready · refresh</button>
+            : lastPart ? <span className="text-olympus-green">part {lastPart} ✓</span> : null}
           <button
             onClick={() => setAutoFollow((v) => !v)}
             aria-pressed={autoFollow}
-            data-tip="Reload the preview when a hop delivers a new part"
+            data-tip="Offer the new part after a hop; never reload while you are interacting"
             className={cn('hover:text-olympus-gold transition-colors', autoFollow ? 'text-olympus-cyan' : 'text-olympus-text-dim')}
           >
             {autoFollow ? 'auto-follow parts' : 'manual refresh'}
           </button>
-          <span className="text-olympus-text-dim">· interactive</span>
+          <span className="hidden sm:inline text-olympus-text-dim">· interactive</span>
         </span>
       </div>
     </div>

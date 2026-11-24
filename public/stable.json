@@ -3,12 +3,12 @@
   "tag": "v0.0.99",
   "stable": true,
   "tests": {
-    "pass": 54,
+    "pass": 55,
     "fail": 0,
     "skip": 0,
-    "suites": 54
+    "suites": 55
   },
-  "releasedAt": "2026-11-24T18:42:40Z",
-  "commit": "1eb64c9",
-  "note": "Hygiene total: npm run hygiene passes all 6 deterministic gates; the hermetic release battery is 54/54. The 132 local suites are declared; the full 180-suite battery at v0.0.98-9.1 was 179/0/1. Drills not claimed."
+  "releasedAt": "2026-11-24T20:42:14Z",
+  "commit": "pending",
+  "note": "Hygiene total plus the interactive preview and the phone lane: npm run hygiene passes all 7 gates (battery 55/55). The preview loads the REAL origin (webview/iframe, cookies preserved) with replay-safe hop reloads; the phone sends the language header, merges the god's text, streams and stops, primes voice, shows a live presence heartbeat and keeps the desired tunnel supervised. 132 local suites declared; drills not claimed."
 }

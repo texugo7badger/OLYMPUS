@@ -14,8 +14,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Loader2, RefreshCw, X, MonitorUp, MousePointerClick, Send, Trash2, Copy, Check, ClipboardList, Bot } from 'lucide-react';
 import OlympusLoader from '@/components/olympus/olympus-loader';
+import PreviewSurface from '@/components/olympus/preview-surface';
+import { useHopParts } from '@/lib/hop-stream';
 import { marksMarkdown, type PreviewMark } from '@/lib/marks-format';
-import { inElectron } from '@/lib/preview-isolation';
 
 interface PreviewState {
   ok: boolean;
@@ -24,9 +25,9 @@ interface PreviewState {
   port: number | null;
   running: boolean;
   localUrl: string;
+  lanUrl?: string | null;
+  tunnelUrl?: string | null;
   recommendedUrl: string | null;
-  /** v0.0.93 — 127.0.0.2 loopback alias; the iframe OOPIF origin. */
-  isolatedUrl?: string | null;
   note: string;
   probeMs: number | null;
   error?: string;
@@ -39,7 +40,9 @@ export default function PreviewWindowPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [retry, setRetry] = useState(0);
-  const esRef = useRef<EventSource | null>(null);
+  const [partReady, setPartReady] = useState<string | null>(null);
+  const lastInteractionRef = useRef(0);
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // v0.0.92 — the large window's mark session: capture across pages, keep
   // the queue on disk (not just localStorage), then copy or send the whole
   // batch to Apollo in one planning turn.
@@ -94,41 +97,51 @@ export default function PreviewWindowPage() {
     return () => { cancelled = true; clearInterval(iv); };
   }, [slug, retry]);
 
-  // Follow the campaign: a settled hop is a new part; reload the frame so the
-  // preview keeps up without the user touching it.
-  useEffect(() => {
-    if (!slug) return;
-    try {
-      const es = new EventSource('/api/olympus/hops/stream');
-      esRef.current = es;
-      es.onmessage = (e) => {
-        try {
-          const ev = JSON.parse(e.data);
-          if (ev?.type !== 'hop_done') return;
-          if (ev?.project && ev.project !== slug) return;
-          setLoaded(false);
-          setReloadKey((k) => k + 1);
-        } catch { /* torn frame */ }
-      };
-    } catch { /* no stream: manual reload still works */ }
-    return () => { esRef.current?.close(); esRef.current = null; };
-  }, [slug]);
+  // Follow the campaign: a settled hop is a new part. v0.0.99 — the replay
+  // that every EventSource connection begins with is IGNORED (stream_ready
+  // marks the boundary), and a landed part is offered rather than forced
+  // while the user is interacting.
+  const noteInteraction = () => {
+    lastInteractionRef.current = Date.now();
+    if (reloadTimerRef.current) { clearTimeout(reloadTimerRef.current); reloadTimerRef.current = null; }
+  };
+  useHopParts({
+    projectSlug: slug,
+    enabled: Boolean(slug),
+    onHopDone: (hop) => {
+      setPartReady(hop);
+      const idleFor = Date.now() - lastInteractionRef.current;
+      if (idleFor < 15_000) return;
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+      reloadTimerRef.current = setTimeout(() => {
+        reloadTimerRef.current = null;
+        if (Date.now() - lastInteractionRef.current < 15_000) return;
+        setLoaded(false);
+        setReloadKey((k) => k + 1);
+        setPartReady(null);
+      }, 2500);
+    },
+  });
+  useEffect(() => () => { if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current); }, []);
 
   const url = useMemo(() => {
     if (!state?.running) return '';
+    // v0.0.99 — the REAL origin, chosen for the machine showing the window:
+    // loopback on the desktop, the LAN address from another PC, and the
+    // HTTPS preview tunnel when the shell itself is HTTPS (mixed content).
+    const shellHost = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
+    const loopback = shellHost === '127.0.0.1' || shellHost === 'localhost' || shellHost === '::1' || shellHost === '[::1]';
+    const httpsShell = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    if (httpsShell) return state.recommendedUrl || state.tunnelUrl || '';
+    if (!loopback) return state.lanUrl || state.recommendedUrl || state.localUrl || '';
     return state.localUrl || state.recommendedUrl || '';
-  }, [state?.running, state?.localUrl, state?.recommendedUrl]);
-  // v0.0.93 — the iframe loads the 127.0.0.2 loopback SITE so Electron's
-  // site isolation gives it its own renderer. The visible/open URL stays
-  // 127.0.0.1; the server probe decides whether the alias is reachable.
-  // Browser/Firefox keeps 127.0.0.1 so the AIME session/cookies are shared;
-  // Electron uses the isolated OOPIF origin for 60 FPS.
-  const frameUrl = inElectron() ? (state?.isolatedUrl || url) : url;
+  }, [state?.running, state?.localUrl, state?.lanUrl, state?.recommendedUrl, state?.tunnelUrl]);
+  const frameUrl = url;
 
-  // The frame can finish loading BEFORE React hydrates; in that case the load
-  // event never reaches onLoad and the "Opening…" overlay covers the preview
-  // forever. Keep onLoad as the fast path and clear the overlay on a short
-  // fallback so the window can never sit on a stale loader.
+  // The surface can finish loading BEFORE React hydrates; in that case the
+  // load event never reaches onLoad and the "Opening…" overlay covers the
+  // preview forever. Keep onLoad as the fast path and clear the overlay on a
+  // short fallback so the window can never sit on a stale loader.
   useEffect(() => {
     if (!url) return;
     const t = setTimeout(() => setLoaded(true), 3000);
@@ -373,7 +386,7 @@ export default function PreviewWindowPage() {
           <a href={url} target="_blank" rel="noreferrer" aria-label="Open in browser" className="flex h-8 w-8 items-center justify-center rounded-lg border border-olympus-gold/20 text-olympus-gold hover:bg-olympus-gold/10"><ExternalLink size={13} /></a>
         )}
         <button
-          onClick={() => { setLoaded(false); setReloadKey((k) => k + 1); setRetry((r) => r + 1); }}
+          onClick={() => { setLoaded(false); setReloadKey((k) => k + 1); setRetry((r) => r + 1); setPartReady(null); }}
           aria-label="Reload preview"
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-olympus-gold/20 text-olympus-gold hover:bg-olympus-gold/10"
         ><RefreshCw size={13} /></button>
@@ -492,7 +505,7 @@ export default function PreviewWindowPage() {
         <div className="shrink-0 border-b border-olympus-gold/15 bg-olympus-green/10 px-3 py-1 text-[9px] font-mono text-olympus-green">{sent}</div>
       )}
 
-      <div className="relative min-h-0 flex-1 bg-black">
+      <div className="relative min-h-0 flex-1 bg-black" onPointerDownCapture={noteInteraction} onKeyDownCapture={noteInteraction} onWheelCapture={noteInteraction}>
         {!state && !error && <OlympusLoader label="Resolving the project…" size={150} />}
         {error && !state?.running && (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
@@ -511,18 +524,15 @@ export default function PreviewWindowPage() {
         {url && (
           <>
             {!loaded && (
-              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[#080B12]">
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[#080B12]/80">
                 <OlympusLoader label={`Opening ${title}…`} size={120} />
               </div>
             )}
-            <iframe
-              key={`${frameUrl}-${reloadKey}`}
+            <PreviewSurface
               src={frameUrl}
               title={`${title} live preview`}
+              reloadKey={reloadKey}
               onLoad={() => setLoaded(true)}
-              className="h-full w-full border-0"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals allow-presentation"
-              allow="clipboard-read; clipboard-write; fullscreen; encrypted-media; picture-in-picture; autoplay"
             />
             {draft && (
               <span
@@ -552,7 +562,14 @@ export default function PreviewWindowPage() {
 
       <footer className="flex shrink-0 items-center gap-2 border-t border-olympus-gold/15 bg-[#0B0E13] px-3 py-1 text-[8px] font-mono text-olympus-text-dim">
         <span className="truncate">{state?.note || 'the window follows the project preview'}</span>
-        <span className="ml-auto flex items-center gap-1">{loaded ? <span className="text-olympus-green">live</span> : <><Loader2 size={8} className="animate-spin" /> connecting</>}</span>
+        <span className="ml-auto flex items-center gap-2">
+          {partReady && (
+            <button onClick={() => { setLoaded(false); setReloadKey((k) => k + 1); setPartReady(null); }} className="text-olympus-cyan hover:text-olympus-gold">
+              part {partReady} ready · refresh
+            </button>
+          )}
+          {loaded ? <span className="text-olympus-green">live</span> : <><Loader2 size={8} className="animate-spin" /> connecting</>}
+        </span>
       </footer>
     </main>
   );

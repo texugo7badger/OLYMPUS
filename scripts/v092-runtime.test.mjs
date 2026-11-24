@@ -245,27 +245,34 @@ ok('PF2: the shell isolates the preview and boots progressively', () => {
   const main = src('electron/main.ts');
   const live = src('src/components/olympus/live-preview.tsx');
   const win = src('src/app/preview-window/page.tsx');
+  const surface = src('src/components/olympus/preview-surface.tsx');
   const projectPreview = src('src/app/api/olympus/projects/preview/route.ts');
   const liveRoute = src('src/app/api/olympus/live-preview/route.ts');
   const page = src('src/app/page.tsx');
   assert.match(main, /appendSwitch\('site-per-process'\)/);
-  assert.match(live, /isolatedUrl/);
-  assert.match(live, /iframeSrc/);
-  assert.match(win, /state\?\.isolatedUrl/);
-  assert.match(projectPreview, /isolatedPreviewUrl/);
-  assert.match(liveRoute, /isolatedPreviewUrl/);
+  assert.match(live, /PreviewSurface/);
+  assert.match(win, /PreviewSurface/);
+  assert.match(surface, /createElement\('webview'/);
+  assert.doesNotMatch(projectPreview, /isolatedPreviewUrl/);
+  assert.doesNotMatch(liveRoute, /isolatedPreviewUrl/);
   assert.match(page, /const critical = \[\s*'\/api\/olympus\/health',\s*'\/api\/olympus\/run-state',\s*'\/api\/olympus\/projects',\s*\]/);
   assert.match(page, /const ready = windowLoaded && dataReady/);
   assert.doesNotMatch(page, /const ready = windowLoaded && pendingPanels === 0/);
 });
 
-ok('PF3: Firefox keeps the AIME session; Electron alone gets the OOPIF origin', () => {
+ok('PF3: the preview keeps the REAL origin (cookies), with the webview as the renderer', () => {
   const isolation = src('src/lib/preview-isolation.ts');
+  const surface = src('src/components/olympus/preview-surface.tsx');
   const live = src('src/components/olympus/live-preview.tsx');
   const win = src('src/app/preview-window/page.tsx');
   assert.match(isolation, /export function inElectron/);
-  assert.match(live, /inElectron\(\)/);
-  assert.match(win, /inElectron\(\) /);
+  assert.match(surface, /inElectron\(\)/);
+  assert.match(surface, /webview/);
+  // The 127.0.0.2 alias is the login-losing origin; it must not be the
+  // surface URL anymore.
+  assert.doesNotMatch(live, /iframePreviewUrl/);
+  assert.doesNotMatch(win, /state\?\.isolatedUrl/);
+  assert.doesNotMatch(win, /iframePreviewUrl/);
 });
 
 ok('MK1: Apollo is a durable background plan, not a 300s synchronous turn', () => {
