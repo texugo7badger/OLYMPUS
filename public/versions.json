@@ -9,8 +9,8 @@
       "skip": 0,
       "suites": 55
     },
-    "releasedAt": "2026-11-24T20:42:14Z",
-    "commit": "pending",
+    "releasedAt": "2026-11-24T20:52:04Z",
+    "commit": "07639e9",
     "note": "Hygiene total plus the interactive preview and the phone lane: npm run hygiene passes all 7 gates (battery 55/55). The preview loads the REAL origin (webview/iframe, cookies preserved) with replay-safe hop reloads; the phone sends the language header, merges the god's text, streams and stops, primes voice, shows a live presence heartbeat and keeps the desired tunnel supervised. 132 local suites declared; drills not claimed."
   },
   "versions": [
