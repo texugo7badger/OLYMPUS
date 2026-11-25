@@ -1,162 +1,27 @@
 [
   {
-    "file": "screenshots/screens/01-brain-terminal.png",
-    "title": "Brain + terminal",
-    "note": "the atlas and a clean session"
+    "file": "screenshots/screens/01-pantheon-010.png",
+    "title": "The Pantheon",
+    "note": "the ten gods, the Parthenon command deck and the disk-truth status brief (project, generation, hops, current hop, park, preview, design)"
   },
   {
-    "file": "screenshots/screens/02-creative.png",
-    "title": "Creative mode",
-    "note": "progress, ring, build crystal and queue"
+    "file": "screenshots/screens/02-live-preview-010.png",
+    "title": "Live preview",
+    "note": "a real project inside OLYMPUS: the live surface, the mark toolbar and a same-origin iframe on :4173 (the screenshot fixture)"
   },
   {
-    "file": "screenshots/screens/03-craft-apps.png",
-    "title": "Craft apps",
-    "note": "the vendored creative suite"
+    "file": "screenshots/screens/03-preview-window-010.png",
+    "title": "Preview window",
+    "note": "the dedicated window renders the app in a browser iframe (the Electron popup can no longer render black) with the durable mark queue and the fixture on :4173"
   },
   {
-    "file": "screenshots/screens/04-references.png",
-    "title": "References",
-    "note": "the design reference catalog"
+    "file": "screenshots/screens/04-cost-010.png",
+    "title": "Cost",
+    "note": "the real ledger: GO month/5h/week, Smart Burn, step/list/invoice separation and the honest reconnect/retry state — never an endless loader"
   },
   {
-    "file": "screenshots/screens/05-design.png",
-    "title": "Athena design studio",
-    "note": "style, contract, review and approval — inside her chat"
-  },
-  {
-    "file": "screenshots/screens/06-builds.png",
-    "title": "Build Hub",
-    "note": "the talent builds and their crystals"
-  },
-  {
-    "file": "screenshots/screens/07-settings.png",
-    "title": "Settings",
-    "note": "appearance, themes and performance"
-  },
-  {
-    "file": "screenshots/screens/08-talent.png",
-    "title": "Talent Studio",
-    "note": "the build editor and the crystal picker"
-  },
-  {
-    "file": "screenshots/screens/09-vault.png",
-    "title": "Vault",
-    "note": "instincts, knowledge and skills"
-  },
-  {
-    "file": "screenshots/screens/10-frames.png",
-    "title": "Frames",
-    "note": "the live tool frames"
-  },
-  {
-    "file": "screenshots/screens/11-mobile.png",
-    "title": "Mobile",
-    "note": "one screen: ring, hold-to-talk and the god row"
-  },
-  {
-    "file": "screenshots/screens/12-mobile-studio.png",
-    "title": "Mobile creative",
-    "note": "the same surface in one hand"
-  },
-  {
-    "file": "screenshots/screens/62-blocked-recovery-98-10.png",
-    "title": "Blocked & Recovery",
-    "note": "the loop guard names the blocked hop, its cause, the evidence and the next action; the header carries v0.0.98-10"
-  },
-  {
-    "file": "screenshots/screens/63-boot-health-98-11.png",
-    "title": "Boot Health",
-    "note": "TCP port ownership, Electron/Next PIDs, watchdog respawns, OpenCode port and live MCP git children; header v0.0.98-11"
-  },
-  {
-    "file": "screenshots/screens/64-slow-lane-98-12.png",
-    "title": "Slow lane, not dead",
-    "note": "provider panel: 1 slow (mimo-v2.6-flash, ceiling-kill while producing), no dead lanes; header v0.0.98-12"
-  },
-  {
-    "file": "screenshots/screens/65-plan-health-98-13.png",
-    "title": "Plan Health",
-    "note": "25-hop plan flagged oversized; 7 verification hops, 3 tight budgets, 10 large hops; header v0.0.98-13"
-  },
-  {
-    "file": "screenshots/screens/66-recovery-log-98-14.png",
-    "title": "Recovery Log",
-    "note": "the recovery ledger as a timeline: lane, hop, class, kind, budget, next lane, message; header v0.0.98-14"
-  },
-  {
-    "file": "screenshots/screens/67-real-errors-98-14.png",
-    "title": "Real errors only",
-    "note": "preload/CSP/GitHub-stats noise filtered; two real errors with source/version/stack; header v0.0.98-14"
-  },
-  {
-    "file": "screenshots/screens/68-delivery-profiles-98-15.png",
-    "title": "Delivery profiles",
-    "note": "Spike/Demo/Base/Complete selector, current Complete 60 hops, DoD and the 26-hop plan; header v0.0.98-15"
-  },
-  {
-    "file": "screenshots/screens/69-portfolio-98-16.png",
-    "title": "Portfolio",
-    "note": "two projects, Spike/Demo profiles, 8/8 hops DONE, first-green and park-rate totals; header v0.0.98-16"
-  },
-  {
-    "file": "screenshots/screens/70-portfolio-gen-98-17.png",
-    "title": "Portfolio — generation boundary",
-    "note": "two projects at gen 46/47, both DONE; the boundary continues instead of freezing; header v0.0.98-17"
-  },
-  {
-    "file": "screenshots/screens/71-hygiene-99.png",
-    "title": "Hygiene — zero errors",
-    "note": "all hygiene gates green, 55/55 hermetic battery, zero deterministic errors; header v0.0.99"
-  },
-  {
-    "file": "screenshots/screens/72-live-preview-99.png",
-    "title": "Live preview — interactive, real origin",
-    "note": "Electron/browser surface on 127.0.0.1:4013 (cookies preserved); the fixture counter moved 0→2, device presets and the interactive footer; header v0.0.99"
-  },
-  {
-    "file": "screenshots/screens/73-mobile-99.png",
-    "title": "Phone — voice first",
-    "note": "the phone companion: plasma ring, god row, campaign state and the localized prompt surface; header v0.0.99"
-  },
-  {
-    "file": "screenshots/screens/74-mobile-preview-99.png",
-    "title": "Phone preview — the real app",
-    "note": "the mobile preview sheet loads the fixture from the LAN origin; the counter shows 3 real taps inside the frame; mark affordance and reload; header v0.0.99"
-  },
-  {
-    "file": "screenshots/screens/75-mobile-mark-99.png",
-    "title": "Phone mark — point + instruction",
-    "note": "mark mode places the crosshair at 195,373 on the phone preview and the instruction sheet is ready for Athena; header v0.0.99"
-  },
-  {
-    "file": "screenshots/screens/76-mobile-pair-99.png",
-    "title": "Pairing — phone connected",
-    "note": "the pairing card reads the phone heartbeat (connected, last seen 37s ago), shows the LAN QR and the HTTPS tunnel switch; header v0.0.99"
-  },
-  {
-    "file": "screenshots/screens/77-hygiene-010.png",
-    "title": "Hygiene — v0.1.0",
-    "note": "production boot handshake green (BUILD_ID + Next 16 CSS under static/chunks), header v0.1.0, status brief and Parthenon command deck on the first paint; 57/57 hermetic suites and all hygiene gates green"
-  },
-  {
-    "file": "screenshots/screens/78-status-brief-010.png",
-    "title": "Status brief — where is the project",
-    "note": "project, generation, completed/total, current hop, park and next action read from disk; the expanded card names the lane, preview URL and design provenance"
-  },
-  {
-    "file": "screenshots/screens/79-preview-window-010.png",
-    "title": "Preview window — browser iframe",
-    "note": "AIME live on :3038 inside the dedicated preview window; a real iframe (forceBrowser) instead of the black Electron popup, with the mark toolbar and campaign-following reload"
-  },
-  {
-    "file": "screenshots/screens/80-marks-batch-010.png",
-    "title": "Marks — durable batch to Apollo",
-    "note": "a mark placed on the live app, described, added to the durable queue; the panel offers copy all and one batch to Apollo (the queue is cleared after the evidence run)"
-  },
-  {
-    "file": "screenshots/screens/81-cost-010.png",
-    "title": "Cost — keeps the last good reading",
-    "note": "the Cost pane settles with the cached ledger and a campaign-aware read; a timeout now shows the last value plus retry/degraded instead of an endless loader"
+    "file": "screenshots/screens/06-mobile-010.png",
+    "title": "Phone",
+    "note": "the same campaign in one hand: voice-first prompt, Parthenon, preview and marks"
   }
 ]
