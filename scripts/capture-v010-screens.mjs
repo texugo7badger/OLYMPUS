@@ -59,6 +59,14 @@ function client(wsUrl) {
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
+  // A tiny framing-friendly project for the preview screenshots. AIME sets
+  // frame-ancestors 'none' by design, so it cannot be embedded.
+  const fixtureDir = path.join(os.homedir(), 'OLYMPUS-VAULT', '02_Projects', 'fixture-demo');
+  fs.mkdirSync(fixtureDir, { recursive: true });
+  fs.writeFileSync(path.join(fixtureDir, 'project.md'), `---\nslug: fixture-demo\nname: Fixture Demo\npath: ${fixtureDir}\nstacks: [static]\ncreated: "2026-11-25T00:00:00.000Z"\nlast_active: "2026-11-25T00:00:00.000Z"\ndescription: Framing-friendly page used only for the v0.1.0 screenshots.\nlivePreviewPort: 4173\n---\n# Fixture Demo\n`);
+  fs.writeFileSync(path.join(fixtureDir, 'index.html'), `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Northwind Studio</title><style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0a0d12;color:#efede7;font-family:ui-sans-serif,system-ui,sans-serif;min-height:100vh}.nav{display:flex;justify-content:space-between;padding:24px 6vw;border-bottom:1px solid #d4a5741f}.brand{font:600 15px ui-monospace,monospace;letter-spacing:.18em;color:#d4a574}.nav a{color:#8e8a83;font-size:12px;text-decoration:none;margin-left:22px}.wrap{width:min(1100px,88vw);margin:auto;padding:86px 0}.eyebrow{font:10px ui-monospace,monospace;letter-spacing:.3em;color:#d4a574;text-transform:uppercase}h1{font-size:clamp(44px,6.4vw,86px);line-height:.96;letter-spacing:-.045em;margin:20px 0 24px;max-width:820px}h1 em{font-style:normal;color:#d4a574}p{max-width:560px;color:#a7a49c;font-size:16px;line-height:1.75}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:52px}.card{background:#0e1219;border:1px solid #d4a57422;border-radius:18px;padding:22px;min-height:150px;display:flex;flex-direction:column;justify-content:space-between}.card b{font-size:18px}.card span{font:11px ui-monospace,monospace;color:#8e8a83;letter-spacing:.12em;text-transform:uppercase}.row{display:flex;gap:12px;margin-top:34px}.pill{border:1px solid #d4a57444;border-radius:999px;padding:8px 13px;font:11px ui-monospace,monospace;color:#d4a574}</style></head><body><nav class="nav"><span class="brand">NORTHWIND</span><span><a href="#">Work</a><a href="#">Studio</a><a href="#">Contact</a></span></nav><main class="wrap"><div class="eyebrow">Independent design studio · Oslo</div><h1>Objects for a <em>slower</em> internet.</h1><p>Identity, interfaces and small digital tools. We build fewer things, with more care — for teams who would rather be understood than merely seen.</p><div class="grid"><div class="card"><b>Identity systems</b><span>01</span></div><div class="card"><b>Product interfaces</b><span>02</span></div><div class="card"><b>Objects &amp; print</b><span>03</span></div></div><div class="row"><span class="pill">currently accepting Q1</span><span class="pill">hello@northwind.studio</span></div></main></body></html>`);
+  const fixtureServer = spawn('python3', ['-m', 'http.server', '4173', '--bind', '127.0.0.1'], { cwd: fixtureDir, stdio: 'ignore' });
+  await new Promise((r) => setTimeout(r, 700));
   const chrome = spawn(CHROME, [
     '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
     `--remote-debugging-port=${PORT}`, `--window-size=${W},${H}`, 'about:blank',
@@ -152,6 +160,8 @@ async function main() {
   } finally {
     try { cdp?.close(); } catch { /* gone */ }
     try { chrome.kill('SIGTERM'); } catch { /* gone */ }
+    try { fixtureServer.kill('SIGTERM'); } catch { /* gone */ }
+    try { fs.rmSync(fixtureDir, { recursive: true, force: true }); } catch { /* gone */ }
   }
 }
 
