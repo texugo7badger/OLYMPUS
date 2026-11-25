@@ -55,9 +55,9 @@ Five surfaces, captured from the running **v0.1.0** app. No mockups.
 </div>
 
 A short guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md).
-Every screenshot in this gallery is captured from the running app; the
-preview fixture is a tiny framing-friendly page because AIME sets
-`frame-ancestors 'none'` by design.
+Every screenshot in this gallery is captured from the running app
+(`npm run shots`); the preview fixture is a tiny framing-friendly page because
+AIME sets `frame-ancestors 'none'` by design.
 
 ## What is OLYMPUS?
 
