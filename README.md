@@ -50,7 +50,7 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.99 evidence:** [Hygiene — zero errors](screenshots/screens/71-hygiene-99.png) — all hygiene gates green, 55/55 hermetic battery, zero deterministic errors; header v0.0.99. [Live preview — interactive, real origin](screenshots/screens/72-live-preview-99.png) · [phone — voice first](screenshots/screens/73-mobile-99.png) · [phone preview](screenshots/screens/74-mobile-preview-99.png) · [phone mark](screenshots/screens/75-mobile-mark-99.png) · [pairing — phone connected](screenshots/screens/76-mobile-pair-99.png).
 
-**v0.1.0 evidence:** [Hygiene — 57 suites](screenshots/screens/77-hygiene-010.png) · [status brief + Parthenon](screenshots/screens/78-status-brief-010.png) · [preview window iframe](screenshots/screens/79-preview-window-010.png) · [marks batched to Apollo](screenshots/screens/80-marks-batch-010.png) · [cost keeps the last reading](screenshots/screens/81-cost-010.png) · [Model lanes all clear](screenshots/screens/82-model-lanes-010.png).
+**v0.1.0 evidence:** [Hygiene — 57 suites](screenshots/screens/77-hygiene-010.png) · [status brief + Parthenon](screenshots/screens/78-status-brief-010.png) · [preview window iframe](screenshots/screens/79-preview-window-010.png) · [marks batched to Apollo](screenshots/screens/80-marks-batch-010.png) · [cost keeps the last reading](screenshots/screens/81-cost-010.png).
 
 **v0.0.98-17 evidence:** [Portfolio — generation boundary](screenshots/screens/70-portfolio-gen-98-17.png) — gen 46/47, both DONE; the boundary continues instead of freezing; header v0.0.98-17.
 

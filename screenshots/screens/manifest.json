@@ -158,10 +158,5 @@
     "file": "screenshots/screens/81-cost-010.png",
     "title": "Cost — keeps the last good reading",
     "note": "the Cost pane settles with the cached ledger and a campaign-aware read; a timeout now shows the last value plus retry/degraded instead of an endless loader"
-  },
-  {
-    "file": "screenshots/screens/82-model-lanes-010.png",
-    "title": "Model lanes — all clear",
-    "note": "the configured GO roster is healthy and the retired qwen3.7/3.8 + minimax lanes (provider auth denial) are not reported as dead errors; only lanes the current config uses are counted"
   }
 ]

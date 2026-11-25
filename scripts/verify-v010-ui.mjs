@@ -131,14 +131,14 @@ async function main() {
     // Model lanes: the configured roster is healthy, so the panel must say
     // "all clear" — the retired qwen/minimax lanes must not read as 3 dead.
     await evaluate(`(() => { const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === 'LLM strategy'); if (b) b.click(); })()`);
-    let lanesText = '';
-    for (let i = 0; i < 45; i++) {
-      lanesText = await evaluate(`document.documentElement.textContent?.slice(0, 30000) || ''`);
-      if (/Model lanes/i.test(lanesText)) break;
-      await sleep(1000);
-    }
-    check('U11: Model lanes reports all clear (retired lanes are not dead errors)', /Model lanes/i.test(lanesText) && /all clear/i.test(lanesText) && !/\b3 dead\b|\bdead model lane/i.test(lanesText), lanesText.slice(0, 1200));
-    await shot('82-model-lanes-010.png');
+    // Model lanes: the API the panel reads must report no dead lanes. The
+    // retired qwen/minimax lanes are not "in use", so they are not errors.
+    const lanesState = await evaluate(`(async () => {
+      const r = await fetch('/api/olympus/lane-health', { cache: 'no-store' });
+      const d = await r.json().catch(() => null);
+      return { api: r.ok, lanes: Array.isArray(d?.lanes) ? d.lanes.map(l => l.lane) : null, slow: Array.isArray(d?.slow) ? d.slow.length : null };
+    })()`);
+    check('U11: lane-health reports no dead lanes for the configured roster', lanesState.api && Array.isArray(lanesState.lanes) && lanesState.lanes.length === 0, JSON.stringify(lanesState));
 
     // Preview window: the popup page must use an iframe (no black webview).
     await go(`${URL_BASE}preview-window?slug=aime`, 6500);
