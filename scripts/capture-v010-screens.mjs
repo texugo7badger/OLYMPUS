@@ -143,7 +143,7 @@ async function main() {
     await ev(`(() => { try { localStorage.setItem('olympus:mobile-token', ${JSON.stringify(token)}); localStorage.setItem('olympus:language', 'en'); return true; } catch { return false; } })()`);
     await cdp.send('Page.reload', {});
     await sleep(6500);
-    await shot('06-mobile-010.png');
+    await shot('05-mobile-010.png');
 
     if (originalTheme) await setTheme(originalTheme);
     if (originalLang) await setLang(originalLang);
@@ -153,7 +153,7 @@ async function main() {
       { file: 'screenshots/screens/02-live-preview-010.png', title: 'Live preview', note: 'the real project inside OLYMPUS: the surface, the mark toolbar and a same-origin iframe on :3038' },
       { file: 'screenshots/screens/03-preview-window-010.png', title: 'Preview window', note: 'the dedicated window renders the app in a browser iframe (the Electron popup can no longer render black) with the durable mark queue' },
       { file: 'screenshots/screens/04-cost-010.png', title: 'Cost', note: 'the real ledger: GO month/5h/week, Smart Burn, step/list/invoice separation and the honest reconnect/retry state — never an endless loader' },
-      { file: 'screenshots/screens/06-mobile-010.png', title: 'Phone', note: 'the same campaign in one hand: voice-first prompt, Parthenon, preview and marks' },
+      { file: 'screenshots/screens/05-mobile-010.png', title: 'Phone', note: 'the same campaign in one hand: voice-first prompt, Parthenon, preview and marks' },
     ];
     fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     console.log(`manifest written: ${manifest.length} current screens`);

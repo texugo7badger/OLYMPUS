@@ -46,7 +46,7 @@ loader.
 
 ## 5. Phone
 
-![Phone](screens/06-mobile-010.png)
+![Phone](screens/05-mobile-010.png)
 
 The same campaign in one hand: voice-first prompt, the god row, campaign
 progress, project briefing, preview and marks. The phone pairs with a live
