@@ -22,6 +22,10 @@ import { speakAs } from './voice';
 
 export interface CompanionEvent {
   id: string;
+  /** Semantic dedupe key (type+slug+hop+god+status+title). */
+  key?: string;
+  /** How many identical events were collapsed into this row (last 10 min). */
+  count?: number;
   ts: string;
   type: NotifyType;
   title: string;
@@ -34,6 +38,7 @@ export interface CompanionEvent {
 
 const LAST_NOTIFIED_KEY = 'olympus:companion-notified-at';
 const SEEN_KEY = 'olympus:companion-seen-at';
+const ANNOUNCED_KEY = 'olympus:companion-announced';
 const ENABLED_KEY = 'olympus:companion-native-notify';
 
 export interface CompanionNotificationsState {
@@ -62,6 +67,8 @@ export function useCompanionNotifications(opts: { token: string | null; language
   const [nativeEnabled, setNativeEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const lastNotified = useRef('');
+  /** v0.1.0 — per-key cooldown: the same learning/hop never toasts twice. */
+  const announcedRef = useRef<Record<string, number>>({});
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -69,6 +76,7 @@ export function useCompanionNotifications(opts: { token: string | null; language
       setSupported(typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator);
       setPermission(typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied');
       lastNotified.current = localStorage.getItem(LAST_NOTIFIED_KEY) || '';
+      try { announcedRef.current = JSON.parse(localStorage.getItem(ANNOUNCED_KEY) || '{}') || {}; } catch { announcedRef.current = {}; }
       setNativeEnabled(localStorage.getItem(ENABLED_KEY) === '1');
     } catch { /* private mode */ }
   }, []);
@@ -80,6 +88,20 @@ export function useCompanionNotifications(opts: { token: string | null; language
   }, []);
 
   const announce = useCallback(async (event: CompanionEvent) => {
+    // v0.1.0 — ONE TOAST PER SEMANTIC EVENT PER 10 MINUTES. A replayed feed
+    // or the same hop reported by two sources no longer double-notifies.
+    const key = event.key || event.id;
+    const now = Date.now();
+    const last = announcedRef.current[key] || 0;
+    if (now - last < 10 * 60_000) return;
+    announcedRef.current[key] = now;
+    try {
+      const cutoff = now - 60 * 60_000;
+      for (const [k, ts] of Object.entries(announcedRef.current)) {
+        if (ts < cutoff) delete announcedRef.current[k];
+      }
+      localStorage.setItem(ANNOUNCED_KEY, JSON.stringify(announcedRef.current));
+    } catch { /* private */ }
     // Foreground → the quiet in-app card. Background → the OS notification.
     const canNative = typeof Notification !== 'undefined' && Notification.permission === 'granted';
     if (document.visibilityState === 'hidden' && canNative && 'serviceWorker' in navigator) {
@@ -108,21 +130,42 @@ export function useCompanionNotifications(opts: { token: string | null; language
       }, 15_000);
       if (!response.ok) return;
       const data = await response.json().catch(() => null);
-      const list: CompanionEvent[] = Array.isArray(data?.events)
+      const mapped: CompanionEvent[] = Array.isArray(data?.events)
         ? data.events
           .filter((event: any) => event && typeof event.ts === 'string' && typeof event.type === 'string')
-          .map((event: any, index: number) => ({
-            id: `${event.ts}-${event.type}-${event.hop || index}`,
-            ts: event.ts,
-            type: event.type,
-            title: String(event.title || 'OLYMPUS'),
-            body: String(event.body || ''),
-            ...(typeof event.hop === 'string' ? { hop: event.hop } : {}),
-            ...(typeof event.god === 'string' ? { god: event.god } : {}),
-            ...(typeof event.slug === 'string' ? { slug: event.slug } : {}),
-            ...(typeof event.status === 'string' ? { status: event.status } : {}),
-          }))
+          .map((event: any, index: number) => {
+            const key = `${event.type}|${event.slug || ''}|${event.hop || ''}|${event.god || ''}|${event.status || ''}|${event.title || ''}`;
+            return {
+              id: `${event.ts}-${event.type}-${event.hop || index}`,
+              key,
+              count: 1,
+              ts: event.ts,
+              type: event.type,
+              title: String(event.title || 'OLYMPUS'),
+              body: String(event.body || ''),
+              ...(typeof event.hop === 'string' ? { hop: event.hop } : {}),
+              ...(typeof event.god === 'string' ? { god: event.god } : {}),
+              ...(typeof event.slug === 'string' ? { slug: event.slug } : {}),
+              ...(typeof event.status === 'string' ? { status: event.status } : {}),
+            };
+          })
         : [];
+      // v0.1.0 — collapse identical events inside 10 minutes into one row
+      // with an honest ×N count, newest first.
+      const grouped = new Map<string, CompanionEvent>();
+      for (const event of mapped) {
+        const k = event.key || event.id;
+        const prev = grouped.get(k);
+        if (!prev) { grouped.set(k, event); continue; }
+        const delta = Math.abs(Date.parse(event.ts) - Date.parse(prev.ts));
+        if (Number.isFinite(delta) && delta < 10 * 60_000) {
+          prev.count = (prev.count || 1) + 1;
+          if (event.ts > prev.ts) prev.ts = event.ts;
+        } else {
+          grouped.set(`${k}|${event.ts}`, event);
+        }
+      }
+      const list = [...grouped.values()].sort((a, b) => b.ts.localeCompare(a.ts));
       setEvents(list);
       let seenAt = '';
       try { seenAt = localStorage.getItem(SEEN_KEY) || ''; } catch { /* private */ }

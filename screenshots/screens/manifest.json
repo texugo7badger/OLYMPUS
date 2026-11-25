@@ -22,7 +22,7 @@
   {
     "file": "screenshots/screens/05-design.png",
     "title": "Athena design studio",
-    "note": "style, contract, review and approval \u2014 inside her chat"
+    "note": "style, contract, review and approval — inside her chat"
   },
   {
     "file": "screenshots/screens/06-builds.png",
@@ -101,37 +101,67 @@
   },
   {
     "file": "screenshots/screens/70-portfolio-gen-98-17.png",
-    "title": "Portfolio \u2014 generation boundary",
+    "title": "Portfolio — generation boundary",
     "note": "two projects at gen 46/47, both DONE; the boundary continues instead of freezing; header v0.0.98-17"
   },
   {
     "file": "screenshots/screens/71-hygiene-99.png",
-    "title": "Hygiene \u2014 zero errors",
-    "note": "7/7 gates green, 55/55 hermetic battery, zero deterministic errors; header v0.0.99"
+    "title": "Hygiene — zero errors",
+    "note": "all hygiene gates green, 55/55 hermetic battery, zero deterministic errors; header v0.0.99"
   },
   {
     "file": "screenshots/screens/72-live-preview-99.png",
-    "title": "Live preview \u2014 interactive, real origin",
-    "note": "Electron/browser surface on 127.0.0.1:4013 (cookies preserved); the fixture counter moved 0\u21922, device presets and the interactive footer; header v0.0.99"
+    "title": "Live preview — interactive, real origin",
+    "note": "Electron/browser surface on 127.0.0.1:4013 (cookies preserved); the fixture counter moved 0→2, device presets and the interactive footer; header v0.0.99"
   },
   {
     "file": "screenshots/screens/73-mobile-99.png",
-    "title": "Phone \u2014 voice first",
+    "title": "Phone — voice first",
     "note": "the phone companion: plasma ring, god row, campaign state and the localized prompt surface; header v0.0.99"
   },
   {
     "file": "screenshots/screens/74-mobile-preview-99.png",
-    "title": "Phone preview \u2014 the real app",
+    "title": "Phone preview — the real app",
     "note": "the mobile preview sheet loads the fixture from the LAN origin; the counter shows 3 real taps inside the frame; mark affordance and reload; header v0.0.99"
   },
   {
     "file": "screenshots/screens/75-mobile-mark-99.png",
-    "title": "Phone mark \u2014 point + instruction",
+    "title": "Phone mark — point + instruction",
     "note": "mark mode places the crosshair at 195,373 on the phone preview and the instruction sheet is ready for Athena; header v0.0.99"
   },
   {
     "file": "screenshots/screens/76-mobile-pair-99.png",
-    "title": "Pairing \u2014 phone connected",
+    "title": "Pairing — phone connected",
     "note": "the pairing card reads the phone heartbeat (connected, last seen 37s ago), shows the LAN QR and the HTTPS tunnel switch; header v0.0.99"
+  },
+  {
+    "file": "screenshots/screens/77-hygiene-010.png",
+    "title": "Hygiene — v0.1.0",
+    "note": "production boot handshake green (BUILD_ID + Next 16 CSS under static/chunks), header v0.1.0, status brief and Parthenon command deck on the first paint; 57/57 hermetic suites and all hygiene gates green"
+  },
+  {
+    "file": "screenshots/screens/78-status-brief-010.png",
+    "title": "Status brief — where is the project",
+    "note": "project, generation, completed/total, current hop, park and next action read from disk; the expanded card names the lane, preview URL and design provenance"
+  },
+  {
+    "file": "screenshots/screens/79-preview-window-010.png",
+    "title": "Preview window — browser iframe",
+    "note": "AIME live on :3038 inside the dedicated preview window; a real iframe (forceBrowser) instead of the black Electron popup, with the mark toolbar and campaign-following reload"
+  },
+  {
+    "file": "screenshots/screens/80-marks-batch-010.png",
+    "title": "Marks — durable batch to Apollo",
+    "note": "a mark placed on the live app, described, added to the durable queue; the panel offers copy all and one batch to Apollo (the queue is cleared after the evidence run)"
+  },
+  {
+    "file": "screenshots/screens/81-cost-010.png",
+    "title": "Cost — keeps the last good reading",
+    "note": "the Cost pane settles with the cached ledger and a campaign-aware read; a timeout now shows the last value plus retry/degraded instead of an endless loader"
+  },
+  {
+    "file": "screenshots/screens/82-model-lanes-010.png",
+    "title": "Model lanes — all clear",
+    "note": "the configured GO roster is healthy and the retired qwen3.7/3.8 + minimax lanes (provider auth denial) are not reported as dead errors; only lanes the current config uses are counted"
   }
 ]

@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from 'react';
 import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
 import GodChatModal from './god-chat-modal';
 import ParthenonCommand from './parthenon-command';
+import StatusBriefCard from './status-brief-card';
 import { useLanguage, godName, getLanguage } from '@/lib/i18n';
 import type { DemigodLive } from '@/lib/tasks-sheet';
 import { formatEta } from '@/lib/eta';
@@ -158,6 +159,8 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
     eta50Ms?: number; eta90Ms?: number; etaNextVisibleMs?: number;
     etaConfidence?: string; etaParkRate?: number; etaBasis?: string;
     designScore?: number | null; designSource?: string | null;
+    designFloor?: number | null; designTarget?: number | null;
+    designReviewedAt?: string | null; designPageScore?: number | null;
     estimatedCostUsd?: number; tokensPerCompletedHop?: number; costPerCompletedHop?: number | null;
   }>(null);
   // v0.0.87 — Atlas's deterministic patrol rides the same tasks poll.
@@ -187,7 +190,15 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
         const d = await r.json();
         if (cancelled) return;
         const byGod: Record<string, TaskRecord[]> = {};
-        for (const t of (d?.tasks || []) as TaskRecord[]) {
+        // v0.1.0 — RECENCY IS THE UI. The feed used to show whichever
+        // historical task arrived first; sort newest-first so every god's
+        // card shows the five most recent tasks, not a museum.
+        const recent = ((d?.tasks || []) as TaskRecord[]).slice().sort((a, b) => {
+          const at = Date.parse((a as any).ts || (a as any).startedAt || '') || 0;
+          const bt = Date.parse((b as any).ts || (b as any).startedAt || '') || 0;
+          return bt - at;
+        });
+        for (const t of recent) {
           (byGod[t.god] ||= []).push(t);
         }
         setTasks(byGod);
@@ -241,9 +252,9 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           <span className="ml-auto flex items-center gap-1 shrink-0">
             <button
               type="button"
-              onClick={() => setChatGod(focusedGod ?? ordered[0]?.god ?? 'apollo')}
-              data-tip={`Chat with ${godName(focusedGod ?? ordered[0]?.god ?? 'apollo', language as any)}`}
-              aria-label={`Chat with ${godName(focusedGod ?? ordered[0]?.god ?? 'apollo', language as any)}`}
+              onClick={() => setChatGod('apollo')}
+              data-tip="Chat with Apollo — the only conversational god. Open a god card for its live activity."
+              aria-label="Chat with Apollo"
               className="text-olympus-text-dim hover:text-olympus-gold transition-colors"
             >
               <MessageSquare size={11} />
@@ -311,11 +322,11 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
               <span
                 className={cn(
                   'rounded px-1.5 py-0.5 whitespace-nowrap tabular-nums text-[7px]',
-                  campaignStats.designScore >= 7 ? 'bg-olympus-green/10 text-olympus-green' : 'bg-olympus-red/10 text-olympus-red',
+                  campaignStats.designScore >= (campaignStats.designFloor ?? 7) ? 'bg-olympus-green/10 text-olympus-green' : 'bg-olympus-red/10 text-olympus-red',
                 )}
-                data-tip={`Latest design review: ${campaignStats.designScore.toFixed(1)} (${campaignStats.designSource || 'unknown file'}) — the gate is 7`}
+                data-tip={`Project design ${campaignStats.designScore.toFixed(1)}${campaignStats.designTarget != null ? ` / target ${campaignStats.designTarget}` : ''}${campaignStats.designFloor != null ? ` / floor ${campaignStats.designFloor}` : ''} — ${campaignStats.designSource || 'source unknown'}${campaignStats.designReviewedAt ? ` · ${campaignStats.designReviewedAt}` : ''}${campaignStats.designPageScore != null ? ` · page review ${campaignStats.designPageScore.toFixed(1)} (separate)` : ''}`}
               >
-                design {campaignStats.designScore.toFixed(1)}
+                design {campaignStats.designScore.toFixed(1)}{campaignStats.designTarget != null ? ` / ${campaignStats.designTarget}` : ''}
               </span>
             )}
             {campaignStats.costPerCompletedHop != null && (
@@ -336,6 +347,8 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
         projectSlug={projectSlug}
         onChat={(god) => setChatGod(god)}
       />
+
+      <StatusBriefCard slug={projectSlug} />
 
       {atlasPatrol && (
         <div
@@ -420,10 +433,22 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                 <span
                   role="button"
                   tabIndex={0}
-                  onClick={(e) => { e.stopPropagation(); setChatGod(s.god); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); setChatGod(s.god); } }}
-                  aria-label={`Chat with ${godName(s.god, language)}`}
-                  data-tip={`Open ${godName(s.god, language)}'s terminal — mark, task and hop context`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const latest = tasks[s.god]?.[0];
+                    if (latest) setSheetHop(latest.id);
+                    else setChatGod('apollo');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.stopPropagation(); e.preventDefault();
+                      const latest = tasks[s.god]?.[0];
+                      if (latest) setSheetHop(latest.id);
+                      else setChatGod('apollo');
+                    }
+                  }}
+                  aria-label={`Open ${godName(s.god, language)}'s latest activity`}
+                  data-tip={`Open ${godName(s.god, language)}'s latest task — current hop, artifacts, checks, park`}
                   className="ml-auto shrink-0 rounded p-0.5 text-olympus-text-dim hover:text-olympus-gold"
                 >
                   <MessageSquare size={9} />

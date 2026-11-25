@@ -36,7 +36,7 @@ four-step animated tutorial.
 ### The talent carousel
 
 One sector per screen, swipe or use the arrows. Each slot opens the **whole
-arsenal** (334 skills · 28 MCPs · 132 agents) with search and a custom value;
+arsenal** (332 skills · 28 MCPs · 71 agents) with search and a custom value;
 the caps are 3 skills / 3 MCPs / 5 parallel agents. Saving stores a user build
 the brain learns from.
 
@@ -223,7 +223,7 @@ The measured 40-round run is in [STABILITY.md](../STABILITY.md); the 8-hour /
 The project profile now carries the **brief**: status (running / parked / done
 / idle), completed/total hops, the campaign id, the parked hop with its cause,
 the next parts, the docs, the walk's memory files and the measured brain scope
-(115 instincts · 39 knowledge · 321 skills on this machine). The card's
+(115 instincts · 39 knowledge · 332 skills on this machine). The card's
 labels follow the selected language (English + PT-BR).
 
 ### v0.0.42 — the editor follows the agent

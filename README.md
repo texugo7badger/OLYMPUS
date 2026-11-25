@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.0.74, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.1.0, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -48,7 +48,9 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 **v0.0.97 evidence:** [GO console anchor + quota guard](screenshots/screens/53-go-console-sync-097.png) — the logged-in frame synced 46/100/52 at the limit and 47/1/52 after the rolling reset; the walk parks on a fresh 100% rolling anchor.
 
-**v0.0.99 evidence:** [Hygiene — zero errors](screenshots/screens/71-hygiene-99.png) — 7/7 gates green, 55/55 hermetic battery, zero deterministic errors; header v0.0.99. [Live preview — interactive, real origin](screenshots/screens/72-live-preview-99.png) · [phone — voice first](screenshots/screens/73-mobile-99.png) · [phone preview](screenshots/screens/74-mobile-preview-99.png) · [phone mark](screenshots/screens/75-mobile-mark-99.png) · [pairing — phone connected](screenshots/screens/76-mobile-pair-99.png).
+**v0.0.99 evidence:** [Hygiene — zero errors](screenshots/screens/71-hygiene-99.png) — all hygiene gates green, 55/55 hermetic battery, zero deterministic errors; header v0.0.99. [Live preview — interactive, real origin](screenshots/screens/72-live-preview-99.png) · [phone — voice first](screenshots/screens/73-mobile-99.png) · [phone preview](screenshots/screens/74-mobile-preview-99.png) · [phone mark](screenshots/screens/75-mobile-mark-99.png) · [pairing — phone connected](screenshots/screens/76-mobile-pair-99.png).
+
+**v0.1.0 evidence:** [Hygiene — 57 suites](screenshots/screens/77-hygiene-010.png) · [status brief + Parthenon](screenshots/screens/78-status-brief-010.png) · [preview window iframe](screenshots/screens/79-preview-window-010.png) · [marks batched to Apollo](screenshots/screens/80-marks-batch-010.png) · [cost keeps the last reading](screenshots/screens/81-cost-010.png) · [Model lanes all clear](screenshots/screens/82-model-lanes-010.png).
 
 **v0.0.98-17 evidence:** [Portfolio — generation boundary](screenshots/screens/70-portfolio-gen-98-17.png) — gen 46/47, both DONE; the boundary continues instead of freezing; header v0.0.98-17.
 
@@ -70,13 +72,33 @@ A guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md). Every s
 
 ## Latest
 
+**v0.1.0 — the stable launch.**
+The first version OLYMPUS calls stable. The gaps that made long campaigns lie
+are closed: every GO lane is probed with a real 1-token turn, dead
+qwen3.7/3.8 and minimax lanes are marked `auth` and fail over to verified lanes
+with the provider's own words; a DONE generation applies the staged
+`dispatch-plan.next.json` and keeps walking; every completed hop writes an
+empirical instinct, and the gate short-circuits only when both specific tags
+match. Apollo reads disk before answering (WHERE / WHAT HAPPENED / NEXT / NEED
+YOU / FILES), the God panel has a status brief card, the preview window uses
+the browser iframe, marks queue and batch to Apollo, the boot handshake accepts
+Next 16 CSS under `static/chunks`, Cost/Smart Burn keep the last good reading
+with retry instead of spinning, and notifications collapse identical events
+inside 10 minutes into one row with an honest ×N. Design truth now carries
+provenance: `design-review.json` is the project score, a dated page review is a
+separate fallback number, and the repair loop keeps the project floor.
+`npm run hygiene` is the gate of record; `npm run hygiene -- --battery` runs
+the **57 hermetic suites**. [HYGIENE.md](HYGIENE.md) declares every remaining
+limit and [KNOWN-ISSUES.md](KNOWN-ISSUES.md) lists every declared gap and the
+post-0.1.0 backlog. `v0.0.99` is the previous stable.
+
 **v0.0.99 — hygiene total (zero errors).**
 `npm run hygiene` is the gate of record: `tsc`, `lint`, `docs:check`,
 `repo:privacy`, the suite manifest and `audit --audit-level=high` all pass;
 `npm run hygiene -- --battery` adds the 55 hermetic suites. [HYGIENE.md](HYGIENE.md)
 declares the zero-error contract and every remaining limit. The 0.0.98
 preview releases are retired from Releases (tags kept); `v0.0.98` is the base
-and `v0.0.99` is the current stable. The complete 0.0.98 line — generation
+and `v0.0.99` was the previous stable. The complete 0.0.98 line — generation
 boundary, Portfolio, delivery profiles, Plan Health, Recovery Log/real errors,
 OpenCode 2.4.1, boot truth, slow-lane truth and the verification guard —
 remains.
@@ -415,7 +437,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**55 PASS / 0 FAIL / 0 declared skip** across 55 suites (the hermetic release-branch gate; the 132 maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
+**57 PASS / 0 FAIL / 0 declared skip** across 57 suites (the hermetic release-branch gate; the maintainer-local suites need the live app/vault). The full 180-suite battery at v0.0.98-9.1 was 179 PASS / 0 FAIL / 1 declared skip. A 100-hop
 deterministic certification (100/100, 9.9s); a soak that passed while a
 campaign was walking; a hibernation drill with byte-identical artifacts. The
 campaign's economics are measured by `npm run cost:audit` (tokens/hop, cache

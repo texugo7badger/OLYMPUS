@@ -83,7 +83,7 @@ export const ZEN_PLAN_DOCS_URL = 'https://opencode.ai/docs/zen/';
  *  - budget  : DeepSeek V4 Flash across all gods (effectively unlimited)
  *  - local   : The user's own hardware — local LLM server (Ollama, LM Studio,
  *              vLLM, llama.cpp, or any OpenAI-compatible endpoint). Zero cost,
- *              zero network dependency; runs the full 132-agent arsenal when
+ *              zero network dependency; runs the full 81-agent arsenal when
  *              the machine has ≥32 GB RAM / ≥48 GB VRAM. Always honest about
  *              what's serving (see LOCAL-LLM.md).
  * Custom user-defined strategies use the 'custom' tier.
@@ -144,7 +144,7 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'go-max-quality': {
     label: 'GO Max Quality',
     description:
-      'Best quality within GO caps. Apollo plans on DeepSeek V4.1 Flash (1M ctx / 384k out — the 1017 benchmark leader at $0.15/$0.60), Atlas orchestrates on Hy3, Hephaestus codes on Kimi K2.7 Code (262k out), Athena/Hermes on Qwen3.7 Plus, Artemis on Kimi K3 (security depth), Dionysus/Persephone/Callimachus on DeepSeek V4.1 Flash, Prometheus on MiniMax M3. DeepSeek V4 Pro is retired — V4.1 Flash 1017 beats it while costing a fraction.',
+      'Best quality within GO caps. Apollo plans on DeepSeek V4.1 Flash (1M ctx / 384k out — the 1017 benchmark leader at $0.15/$0.60), Atlas orchestrates on Hy3, Hephaestus on Kimi K2.7 Code (262k out), Athena on DeepSeek V4.1 Flash, Artemis on Kimi K2.7 Code (security depth), Dionysus/Persephone/Callimachus on DeepSeek V4.1 Flash, Hermes/Prometheus on MiMo-V2.6-Flash. Qwen3.7/3.8 and MiniMax M3 are probed at dispatch; this GO account currently answers "requires an API key" for them, so no role is assigned to a lane the provider denies.',
     plan: 'GO',
     tier: 'quality',
     reasoningModel: 'deepseek-v4.1-flash',
@@ -154,12 +154,12 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
       apollo:      'opencode-go/deepseek-v4.1-flash',
       atlas:       'opencode-go/hy3',
       hephaestus:  'opencode-go/kimi-k2.7-code',
-      athena:      'opencode-go/qwen3.7-plus',
-      artemis:     'opencode-go/kimi-k3',
+      athena:      'opencode-go/deepseek-v4.1-flash',
+      artemis:     'opencode-go/kimi-k2.7-code',
       dionysus:    'opencode-go/deepseek-v4.1-flash',
-      hermes:      'opencode-go/qwen3.7-plus',
+      hermes:      'opencode-go/mimo-v2.6-flash',
       persephone:  'opencode-go/deepseek-v4.1-flash',
-      prometheus:  'opencode-go/minimax-m3',
+      prometheus:  'opencode-go/mimo-v2.6-flash',
       callimachus: 'opencode-go/deepseek-v4.1-flash',
     },
     vaultLlm: 'opencode-go/deepseek-v4.1-flash',
@@ -168,7 +168,7 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'go-balanced': {
     label: 'GO Balanced',
     description:
-      'Default — sustainable 8h/day. Apollo plans on DeepSeek V4.1 Flash (1M ctx / 384k out, 173k req/mo — the 1017 benchmark leader), Atlas orchestrates on Hy3 (cheapest per hop), Hephaestus/Artemis/Persephone/Callimachus ride DeepSeek V4.1 Flash, Athena/Dionysus/Hermes ride Qwen3.7 Plus, Prometheus on MiniMax M3. DeepSeek V4 Pro is retired: V4.1 Flash 1017 is better and cheaper.',
+      'Default — sustainable 8h/day. Apollo plans on DeepSeek V4.1 Flash (1M ctx / 384k out, 173k req/mo — the 1017 benchmark leader), Atlas orchestrates on Hy3 (cheapest per hop), Hephaestus/Artemis/Athena/Persephone/Callimachus ride DeepSeek V4.1 Flash, Dionysus/Hermes/Prometheus ride MiMo-V2.6-Flash. Qwen/MiniMax lanes are probed and skipped with the provider cause when denied; the walk never silently leaves the GO plan.',
     plan: 'GO',
     tier: 'balanced',
     reasoningModel: 'deepseek-v4.1-flash',
@@ -178,12 +178,12 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
       apollo:      'opencode-go/deepseek-v4.1-flash',
       atlas:       'opencode-go/hy3',
       hephaestus:  'opencode-go/deepseek-v4.1-flash',
-      athena:      'opencode-go/qwen3.7-plus',
+      athena:      'opencode-go/deepseek-v4.1-flash',
       artemis:     'opencode-go/deepseek-v4.1-flash',
-      dionysus:    'opencode-go/qwen3.7-plus',
-      hermes:      'opencode-go/qwen3.7-plus',
+      dionysus:    'opencode-go/mimo-v2.6-flash',
+      hermes:      'opencode-go/mimo-v2.6-flash',
       persephone:  'opencode-go/deepseek-v4.1-flash',
-      prometheus:  'opencode-go/minimax-m3',
+      prometheus:  'opencode-go/mimo-v2.6-flash',
       callimachus: 'opencode-go/deepseek-v4.1-flash',
     },
     vaultLlm: 'opencode-go/deepseek-v4.1-flash',
@@ -192,7 +192,7 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'go-budget': {
     label: 'GO Budget',
     description:
-      'Lowest cost within GO caps — sustainable 8h/day. Apollo stays on DeepSeek V4.1 Flash (the planner is the quality floor), Atlas on Hy3, Hephaestus/Artemis/Persephone on DeepSeek V4.1 Flash, Athena on Qwen3.8 Flash, and the volume gods on MiMo-V2.6-Flash ($0.14/$0.28, 150k req/mo). DeepSeek V4 Pro is retired.',
+      'Lowest cost within GO caps — sustainable 8h/day. Apollo stays on DeepSeek V4.1 Flash (the planner is the quality floor), Atlas on Hy3, Hephaestus/Artemis/Athena/Persephone on DeepSeek V4.1 Flash, and the volume gods on MiMo-V2.6-Flash ($0.14/$0.28, 150k req/mo). Qwen3.8/MiniMax lanes are probed and skipped with the provider cause when denied.',
     plan: 'GO',
     tier: 'budget',
     reasoningModel: 'deepseek-v4.1-flash',
@@ -202,7 +202,7 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
       apollo:      'opencode-go/deepseek-v4.1-flash',
       atlas:       'opencode-go/hy3',
       hephaestus:  'opencode-go/deepseek-v4.1-flash',
-      athena:      'opencode-go/qwen3.8-flash',
+      athena:      'opencode-go/deepseek-v4.1-flash',
       artemis:     'opencode-go/deepseek-v4.1-flash',
       dionysus:    'opencode-go/mimo-v2.6-flash',
       hermes:      'opencode-go/mimo-v2.6-flash',
@@ -361,7 +361,7 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   'local': {
     label: 'Local',
     description:
-      'OLYMPUS running entirely on YOUR hardware — no cloud keys, no rate limits, no data leaving this machine. A local LLM server (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint) serves all 10 gods + the 122 demigods through the full arsenal. Requires a working local endpoint with a model that supports tool calling and at least 32k context (see LOCAL-LLM.md and run `olympus apply-strategy local` which probes your setup). Always honest: the Settings → Strategy shows which model serves each god, the cost is $0, and the dashboard reports the measured token rate + estimated session time. If no endpoint is found, the apply refuses with the probe result (host/port + why) so nothing is hidden.',
+      'OLYMPUS running entirely on YOUR hardware — no cloud keys, no rate limits, no data leaving this machine. A local LLM server (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint) serves all 10 gods + the 61 demigods through the full arsenal. Requires a working local endpoint with a model that supports tool calling and at least 32k context (see LOCAL-LLM.md and run `olympus apply-strategy local` which probes your setup). Always honest: the Settings → Strategy shows which model serves each god, the cost is $0, and the dashboard reports the measured token rate + estimated session time. If no endpoint is found, the apply refuses with the probe result (host/port + why) so nothing is hidden.',
     plan: 'LOCAL',
     tier: 'local',
     reasoningModel: 'opencode-go/glm-5.3-flash',
@@ -481,10 +481,19 @@ export const FREE_HYBRID_ROSTER: Record<GodId, FreeHybridLane[]> = {
 
 
 /** GO lanes verified on this account; used as the GO/Zen fallback roster. */
+/**
+ * The GO-safe fallback roster, in preference order. Updated 2026-11-25 after
+ * real 1-token probes: qwen3.8-flash and minimax-m3 answer
+ * "OpenCode Go requires an API key" on this account while deepseek-v4.1-flash,
+ * mimo-v2.6-flash, hy3, kimi-k2.7-code and glm-5.3-flash answer normally.
+ * A GO campaign must never fall out of its plan onto a free lane.
+ */
 export const GO_SAFE_FALLBACKS = [
   'opencode-go/deepseek-v4.1-flash',
+  'opencode-go/mimo-v2.6-flash',
   'opencode-go/hy3',
-  'opencode-go/minimax-m3',
+  'opencode-go/kimi-k2.7-code',
+  'opencode-go/glm-5.3-flash',
 ] as const;
 
 export const DEFAULT_LLM_STRATEGY: LLMStrategy = 'go-balanced';

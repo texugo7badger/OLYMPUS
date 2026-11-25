@@ -131,7 +131,7 @@
     "athena": {
       "description": "Frontend Strategist — React/Next.js patterns, design systems, a11y, performance, visual verification.",
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/gods/athena.txt}",
       "tools": {
         "read": true,
@@ -347,7 +347,7 @@
     },
     "a11y-auditor": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/a11y_auditor.txt}"
     },
     "api-designer": {
@@ -382,7 +382,7 @@
     },
     "brand-guardian": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/brand_guardian.txt}"
     },
     "build-resolver": {
@@ -437,7 +437,7 @@
     },
     "frontend-reviewer": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/frontend_reviewer.txt}"
     },
     "homelab-architect": {
@@ -477,7 +477,7 @@
     },
     "mobile-app-builder": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/mobile_app_builder.txt}"
     },
     "multi-agent-architect": {
@@ -507,7 +507,7 @@
     },
     "performance-optimizer": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/performance_optimizer.txt}"
     },
     "planner": {
@@ -532,7 +532,7 @@
     },
     "responsive-tester": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/responsive_tester.txt}"
     },
     "scope-gatekeeper": {
@@ -572,7 +572,7 @@
     },
     "state-architect": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/state_architect.txt}"
     },
     "supply-chain-auditor": {
@@ -602,7 +602,7 @@
     },
     "ui-designer": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/ui_designer.txt}"
     },
     "unit-test-author": {
@@ -612,12 +612,12 @@
     },
     "ux-researcher": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/ux_researcher.txt}"
     },
     "visual-verifier": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/visual_verifier.txt}"
     },
     "voice-ai-engineer": {
@@ -647,7 +647,7 @@
     },
     "2d-asset-designer": {
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/demigods/athena/2d_asset_designer.txt}"
     },
     "apollo-hop": {
@@ -750,7 +750,7 @@
     "athena-hop": {
       "description": "Hop executor for athena (lean toolset: file/shell only; no orchestration tools)",
       "mode": "subagent",
-      "model": "opencode-go/qwen3.8-flash",
+      "model": "opencode-go/deepseek-v4.1-flash",
       "prompt": "{file:.opencode/prompts/agents/gods/athena.txt}",
       "tools": {
         "read": true,

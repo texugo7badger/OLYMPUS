@@ -16,9 +16,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export type NotifyType = 'ready' | 'error' | 'design' | 'walk' | 'compact' | 'curate';
+export type NotifyType = 'ready' | 'error' | 'design' | 'walk' | 'compact' | 'curate' | 'learning';
 
-export const NOTIFY_TYPES: NotifyType[] = ['ready', 'error', 'design', 'walk', 'compact', 'curate'];
+export const NOTIFY_TYPES: NotifyType[] = ['ready', 'error', 'design', 'walk', 'compact', 'curate', 'learning'];
 
 /** The OLYMPUS palette (src/app/globals.css) — no invented colors. */
 export const NOTIFY_COLORS: Record<NotifyType, string> = {
@@ -28,6 +28,7 @@ export const NOTIFY_COLORS: Record<NotifyType, string> = {
   walk: '#6BAEB5',    // olympus-cyan — the walk is (re)starting
   compact: '#C4A265', // olympus-amber-soft — chat/terminal compacting
   curate: '#D4A574',  // olympus-gold — Callimachus curating
+  learning: '#9B7BAE',// olympus-purple — a new proven instinct
 };
 
 /**
@@ -46,6 +47,8 @@ const NOTIFY_TEXT: Record<string, Record<string, string>> = {
     'hop.body': '{slug}: {god} finished {hop} ({duration}).',
     'hopPark.title': 'OLYMPUS — hop parked',
     'hopPark.body': '{slug}: {hop} parked ({reason}). The campaign keeps going.',
+    'learning.title': 'OLYMPUS — new instinct',
+    'learning.body': '{god} learned a reusable pattern for {hop} (confidence {confidence}).',
     'done.title': 'OLYMPUS — campaign finished',
     'done.body': '{slug}: the plan is complete ({completed}/{total} hops).',
     'phone.title': 'OLYMPUS — phone prompt sent',
@@ -66,6 +69,8 @@ const NOTIFY_TEXT: Record<string, Record<string, string>> = {
     'hop.body': '{slug}: {god} concluiu {hop} ({duration}).',
     'hopPark.title': 'OLYMPUS — hop parado',
     'hopPark.body': '{slug}: {hop} parou ({reason}). A campanha continua.',
+    'learning.title': 'OLYMPUS — novo aprendizado',
+    'learning.body': '{god} aprendeu um padrão reutilizável para {hop} (confiança {confidence}).',
     'done.title': 'OLYMPUS — campanha concluída',
     'done.body': '{slug}: o plano terminou ({completed}/{total} hops).',
     'phone.title': 'OLYMPUS — prompt do celular enviado',

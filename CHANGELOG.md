@@ -2,6 +2,50 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.0] — 2026-11-25
+
+### The stable launch — lane truth, the walk continues, Apollo answers where
+
+- **GO lane truth.** Every GO lane was probed with a real 1-token turn:
+  `deepseek-v4.1-flash`, `mimo-v2.6-flash`, `hy3`, `kimi-k2.7-code` and
+  `glm-5.3-flash` answer OK; `qwen3.7-plus`, `qwen3.8-flash` and `minimax-m3`
+  answer "OpenCode Go requires an API key". The dead lanes are marked `auth`,
+  never assigned a role, and a turn/hop fails over to the verified roster
+  with the provider's own words. A raw harness-only refusal no longer aborts
+  a healthy turn; the pre-flight probes the model the turn will use.
+- **The walk continues across a generation boundary.** A DONE generation
+  applies the staged `dispatch-plan.next.json` and the detached walker keeps
+  walking (bounded to 8 generations per process). A park never auto-advances;
+  artifacts already on disk are still adopted at zero tokens.
+- **The brain learns from hops.** Every completed hop writes/updates an
+  empirical instinct (samples + confidence), one quiet "new instinct"
+  notification is emitted per new pattern, and the gate short-circuits only
+  when both specific tags match. 139 empirical instincts were backfilled from
+  AIME telemetry; the short-circuit was proven with a fixture.
+- **Apollo reports where.** The prompt carries a disk-truth brief (project,
+  generation, completed/total, current hop, park, preview, design provenance)
+  and the God panel shows a status brief card. The reply contract is WHERE /
+  WHAT HAPPENED / NEXT / NEED YOU / FILES.
+- **Preview and marks.** The preview window uses the browser iframe (the
+  Electron popup no longer renders black). Marks queue durably and batch to
+  Apollo; the per-card chat is Apollo-only and a card opens the latest
+  activity sheet.
+- **Boot handshake.** Next 16 emits CSS under `static/chunks`; the boot check
+  walks the static tree, so a complete production build no longer shows the
+  repair card or the stacked loaders.
+- **Cost and burn.** The ledger is incrementally cached; the dashboards time
+  out at 20s, keep the last good reading, expose retry, and show a
+  campaign-aware empty state instead of spinning forever.
+- **Design truth.** `design-review.json` is the project score with
+  floor/target/reviewedAt/source; a dated page review is a separate fallback
+  number. The repair loop keeps the project's floor instead of accepting 7.8
+  under an 8 gate. One design gate per generation is the contract.
+- **Notifications.** Identical events inside 10 minutes collapse into one row
+  with an honest ×N on the PC and phone, sharing one palette.
+- **Tests.** 57 hermetic suites green, including the new
+  `learning-loop` and `go-lane-fallback` suites. `npm run hygiene` remains
+  the gate of record; every remaining limit is declared in HYGIENE.md.
+
 ## [v0.0.99] — 2026-11-24
 
 ### Hygiene total — zero errors

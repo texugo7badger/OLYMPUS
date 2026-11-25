@@ -148,7 +148,31 @@ export function parseNote(
   size: number,
   modified: Date,
 ): ParsedNote {
-  const { frontmatter, body, frontmatterRaw } = parseFrontmatter(content);
+  // v0.1.0 — ONE BAD YAML FRONTMATTER MUST NOT KILL THE VAULT INDEX.
+  // A seed instinct with `action: Use OpenSpec: /opsx:...` is invalid YAML
+  // (an unquoted colon); gray-matter threw, the indexer aborted and the whole
+  // vault fell back to no-index. Fall back to a tolerant line parser and keep
+  // the note searchable; the warning names the file.
+  let frontmatter: Record<string, unknown> = {};
+  let body = content;
+  let frontmatterRaw = '';
+  try {
+    const parsed = parseFrontmatter(content);
+    frontmatter = parsed.frontmatter;
+    body = parsed.body;
+    frontmatterRaw = parsed.frontmatterRaw;
+  } catch (e: any) {
+    const fence = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+    if (fence) {
+      frontmatterRaw = fence[1];
+      body = content.slice(fence[0].length);
+      for (const line of fence[1].split(/\r?\n/)) {
+        const m = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
+        if (m) frontmatter[m[1]] = m[2];
+      }
+    }
+    console.warn(`[vault] frontmatter parse failed for ${path} — indexed with a tolerant parser: ${e?.message || e}`);
+  }
   const fallbackTitle = path.split('/').pop()?.replace(/\.md$/i, '') || path;
   const title = extractTitle(body, fallbackTitle);
   const tags = extractTags(body);

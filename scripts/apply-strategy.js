@@ -19,7 +19,7 @@
  *     - All gods + demigods get their strategy-appropriate model
  *
  *   Zen strategies (zen-max-quality, zen-balanced, zen-budget [Zen]):
- *     - Same full shape as GO (132 agents, file-ref prompts, 4 plugins) —
+ *     - Same full shape as GO (81 configured agents, file-ref prompts, 4 plugins) —
  *       Zen is pay-as-you-go with no request caps — but models use the
  *       opencode/<id> prefix (OpenCode Zen) instead of opencode-go/<id>.
  *
@@ -2569,19 +2569,19 @@ Options:
 
 Strategy shapes:
   GO-plan strategies (go-max-quality, go-balanced, go-budget, custom-*):
-    - All 132 agents present (10 gods + 122 demigods)
+    - All 81 configured agents present (10 gods + 61 demigods + 10 hop executors)
     - God prompts use {file:...} references (full prompt fidelity)
     - Plugin array includes all 4 local plugins
     - Empty instructions array
     - small_model = opencode-go/deepseek-v4-flash
 
   Zen strategies (zen-max-quality, zen-balanced, zen-budget [Zen]):
-    - Same full shape as GO (132 agents, file-ref prompts, 4 plugins)
+    - Same full shape as GO (81 configured agents, file-ref prompts, 4 plugins)
     - Models use the opencode/<id> prefix (OpenCode Zen, pay-as-you-go)
     - small_model = opencode/deepseek-v4-flash
 
   Local strategy (local):
-    - Full 132-agent shape (10 gods + 122 demigods, {file:} prompts, 4 plugins)
+    - Full 81-agent shape (10 gods + 61 demigods + 10 hop executors, {file:} prompts, 4 plugins)
     - A local provider block is written from the PROBE result
       (Ollama :11434 / LM Studio :1234 / vLLM :8000 / llama.cpp :8080)
     - Every god pinned to local/<model>; small_model rides the same lane
@@ -2844,7 +2844,7 @@ async function main() {
       console.log('    node scripts/apply-strategy.js --strategy go-balanced');
     } else if (family === 'ZEN') {
       console.log('  Zen config applied (full OLYMPUS shape on OpenCode Zen):');
-      console.log('    - All 132 agents present (10 gods + 122 demigods)');
+      console.log('    - All 81 configured agents present (10 gods + 61 demigods + 10 hop executors)');
       console.log('    - God prompts use {file:...} references');
       console.log('    - All 8 local plugins enabled');
       console.log('    - All gods on Zen models (opencode/<id>)');
@@ -2859,7 +2859,7 @@ async function main() {
       console.log('    node scripts/apply-strategy.js --strategy local');
     } else {
       console.log('  GO-plan config applied:');
-      console.log('    - All 132 agents present (10 gods + 122 demigods)');
+      console.log('    - All 81 configured agents present (10 gods + 61 demigods + 10 hop executors)');
       console.log('    - God prompts use {file:...} references');
       console.log('    - All 8 local plugins enabled');
       console.log('    - All gods on GO-plan models');

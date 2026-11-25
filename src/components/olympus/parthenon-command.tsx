@@ -313,10 +313,10 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
             </button>
           )}
           <button
-            type="button" onClick={() => onChat('atlas')}
+            type="button" onClick={() => onChat('apollo')}
             className="inline-flex min-h-[26px] items-center justify-center gap-1 rounded-md border border-olympus-cyan/30 px-2 text-[8px] text-olympus-cyan hover:bg-olympus-cyan/10"
           >
-            <MessageSquare size={10} /> Ask Atlas
+            <MessageSquare size={10} /> Ask Apollo
           </button>
           {health?.nextPlan && (
             <button

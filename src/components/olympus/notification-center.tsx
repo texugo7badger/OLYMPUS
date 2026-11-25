@@ -36,6 +36,7 @@ const TONE: Record<NotifyType, { dot: string; text: string; pane: 'timeline' | '
   walk: { dot: 'bg-olympus-cyan', text: 'text-olympus-cyan', pane: 'timeline' },
   compact: { dot: 'bg-olympus-amber-soft', text: 'text-olympus-amber-soft', pane: 'cost' },
   curate: { dot: 'bg-olympus-gold', text: 'text-olympus-gold', pane: 'brain' },
+  learning: { dot: 'bg-olympus-purple', text: 'text-olympus-purple', pane: 'brain' },
 };
 
 const SEEN_KEY = 'olympus:notify-seen';

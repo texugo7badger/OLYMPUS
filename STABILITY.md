@@ -2,10 +2,15 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.0.99 · 2026-11-24 · the current release. Hygiene total: `npm run
-> hygiene` passes tsc, lint, docs, privacy, suite manifest and audit-high;
-> the 55 hermetic suites are green. The 0.0.98 line is complete; the
-> generation boundary, Portfolio, delivery profiles and every guard remain. v0.0.98-11 made the socket the port owner and the
+> v0.1.0 · 2026-11-25 · the current stable release. The stable launch closes
+> the long-campaign truth gaps (GO lane probes + fallback, generation boundary,
+> empirical learning, Apollo's disk-truth brief, preview window, batched marks,
+> boot handshake, cost/burn keep-last, design provenance, deduped
+> notifications). `npm run hygiene` passes tsc, lint, docs, privacy, suite
+> manifest and audit-high; the 57 hermetic suites are green. v0.0.99 is the
+> previous stable: hygiene total plus the interactive REAL-origin preview and
+> the phone lane. The 0.0.98 line is complete; the generation boundary,
+> Portfolio, delivery profiles and every guard remain. v0.0.98-11 made the socket the port owner and the
 > process group the MCP owner; v0.0.98-10 added the verification-hop guard,
 > the blocked-signal dedupe and the log filter. The 98.x line adds the plan archive,
 > the telemetry definition/tool ledger, the Callimachus status card and the

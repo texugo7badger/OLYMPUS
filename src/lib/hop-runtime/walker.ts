@@ -44,6 +44,7 @@ import { composeRagContext } from '../rag-inject';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
+import { recordHopLearning } from './learning';
 import { findOlympusRoot } from '@/lib/opencode-spawn';
 import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencode-session';
 import { markLaneAlive, markLaneDead, markLaneSlow, laneChain, isLaneDeadClass, isLaneAvailable, readLaneHealth } from '@/lib/lane-health';
@@ -1741,6 +1742,44 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         meta: { kind: 'campaign-hop', slug, hop: row.hop, god: row.god, status, failureClass: row.errorClass ?? null, preview: `/preview-window?slug=${encodeURIComponent(slug)}` },
       });
     } catch { /* the reporter never blocks a hop */ }
+    // v0.1.0 — CLOSE THE LEARNING LOOP. A completed, verified hop becomes an
+    // empirical instinct (tags + artifacts + samples) so a similar future task
+    // can short-circuit. Deterministic; no model, no extra tokens.
+    if (status === 'completed') {
+      try {
+        const learned = recordHopLearning({
+          slug: basename(stateDir),
+          hop: hop.id,
+          god: hop.god,
+          artifacts: hop.artifacts,
+          checks: (hop.verify as any)?.checks,
+          promptExcerpt: hop.prompt,
+          status,
+          tokensIn: r?.tokensIn,
+          tokensOut: r?.tokensOut,
+          lane: r?.lane,
+          ts: row.ts,
+        });
+        // A NEW pattern (first success) is the learning event; updates are
+        // quiet so the feed never spams the same instinct.
+        if (learned.ok && learned.created) {
+          const lang = readLanguage();
+          appendDesktopNotify({
+            type: 'learning',
+            title: notifyText(lang, 'learning.title'),
+            body: notifyText(lang, 'learning.body', {
+              god: hop.god,
+              hop: hop.id,
+              confidence: Number(learned.confidence ?? 0).toFixed(2),
+            }),
+            hop: hop.id,
+            god: hop.god,
+            slug: basename(stateDir),
+            status: 'completed',
+          });
+        }
+      } catch { /* learning is additive; never blocks a hop */ }
+    }
     rows.push(row);
     return row;
   };

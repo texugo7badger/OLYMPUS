@@ -36,7 +36,7 @@ interface Anchor {
   monthlyPct: number; h5Pct: number; weeklyPct: number; resetAt: string; capUsd: number | null;
   capturedAt: string; source: string;
 }
-interface BurnResponse { ok: boolean; policy: Policy; decision: Decision; account: Account; error?: string }
+interface BurnResponse { ok: boolean; policy: Policy; decision: Decision; account: Account; error?: string; cached?: boolean; degraded?: boolean; decisionAgeMs?: number | null }
 
 const MODES: Array<{ id: Mode; label: string; hint: string }> = [
   { id: 'off', label: 'Off', hint: 'Static strategy; no runtime override' },
@@ -74,12 +74,16 @@ export default function BurnPanel() {
     setLoading(true);
     setError(null);
     try {
+      // v0.1.0 — never let a slow/failed GO console read hide the burn
+      // policy. /burn is the decision of record; the console is additive.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 18_000);
       const [r, a] = await Promise.all([
-        fetch(`/api/olympus/burn${force ? '?force=1' : ''}`, { cache: 'no-store' }),
-        fetch('/api/olympus/go-usage/console', { cache: 'no-store' }),
-      ]);
+        fetch(`/api/olympus/burn${force ? '?force=1' : ''}`, { cache: 'no-store', signal: ctrl.signal }),
+        fetch('/api/olympus/go-usage/console', { cache: 'no-store', signal: ctrl.signal }).catch(() => null),
+      ]).finally(() => clearTimeout(timer));
       const d = await r.json();
-      const ad = await a.json().catch(() => ({}));
+      const ad = a ? await a.json().catch(() => ({})) : {};
       if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
       setData(d);
       if (ad?.anchor) {
@@ -194,6 +198,7 @@ export default function BurnPanel() {
         <span className="text-[9px] font-mono uppercase tracking-[0.16em] text-olympus-gold">Smart burn</span>
         <span className="text-[8px] font-mono text-olympus-text-dim">
           {loading && !data ? 'reading the account…' : (account?.source === 'console' || account?.source === 'mixed') ? `console anchor · ${pct(account.monthlyPct)} account${anchorAgeMin != null ? ` · ${anchorAgeMin}m ago` : ''}` : 'console sync required for exact account %'}
+          {data?.degraded ? ' · cached decision' : ''}
         </span>
         <button
           type="button"

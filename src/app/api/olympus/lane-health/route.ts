@@ -17,7 +17,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireReadAuth } from '@/lib/auth';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
-import { readLaneHealth, blockedLanes, slowLanes, markLaneAlive } from '@/lib/lane-health';
+import { readLaneHealth, slowLanes, markLaneAlive } from '@/lib/lane-health';
+import { blockedLanesInUse } from '@/lib/agent-model';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
   const denied = requireReadAuth(req);
   if (denied) return denied;
   const health = readLaneHealth();
-  const blocked = blockedLanes(health.lanes);
+  const blocked = blockedLanesInUse(health.lanes);
   return NextResponse.json({
     ok: true,
     lanes: blocked.map((l) => ({
@@ -56,11 +57,12 @@ export async function POST(req: NextRequest) {
   if (action !== 'retry') return NextResponse.json({ ok: false, error: `unknown action: ${action}` }, { status: 400 });
   markLaneAlive(lane);
   const health = readLaneHealth();
+  const blocked = blockedLanesInUse(health.lanes);
   return NextResponse.json({
     ok: true,
     lane,
     action,
-    lanes: blockedLanes(health.lanes).map((l) => ({
+    lanes: blocked.map((l) => ({
       lane: l.lane, status: l.status, error: l.error ?? null, retryUntil: l.retryUntil ?? null,
     })),
     slow: slowLanes(health.lanes).map((l) => ({

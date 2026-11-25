@@ -100,7 +100,7 @@ a test attached.
 | `go-balanced` (default) | subscription (invoice unknown) | p50 ≈ 9 min/hop (measured) | daily work |
 | `go-max-quality` | subscription, higher quota burn | slower, better specialists | hard campaigns |
 
-`npm run apply-strategy <name>` rewrites the 132-agent config. Since v0.0.72 a
+`npm run apply-strategy <name>` rewrites the 81-agent config. Since v0.0.72 a
 strategy switch is **refused while a walk is live** — the old behavior could
 break a campaign mid-hop.
 
@@ -273,7 +273,7 @@ fabricates 0%.
 The release gate is six deterministic checks (`npm run hygiene`): typescript,
 lint, docs, privacy, suite manifest and audit-high. The hermetic battery is
 55/55. HYGIENE.md declares the remaining limits (23 moderate transitive
-advisories, 132 local suites, drills not claimed) instead of hiding them.
+advisories, the manifest-declared local suites; the 8-hour soak is not claimed) instead of hiding them.
 
 v0.0.99 also removes wasted cycles that looked like lag: the hop-event stream
 parses its JSONL once per file-change per process (not once per 800ms per

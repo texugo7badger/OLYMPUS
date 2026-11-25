@@ -1,8 +1,8 @@
 # OLYMPUS Architecture
 
-> OLYMPUS v0.0.74 — multi-agent AI operating system on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 122 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
+> OLYMPUS v0.1.0 — multi-agent AI operating system on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 61 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
 >
-> Counts in this document are the v0.0.74 truth: 132 agents (10 gods incl. Atlas + 122 demigods), 334 top-level skills, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
+> Counts in this document are the v0.1.0 truth: 71 agents (10 gods incl. Atlas + 61 demigods), 332 top-level skills, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
 
 ![OLYMPUS architecture](public/diagrams/architecture.svg)
 
@@ -36,11 +36,11 @@ OLYMPUS is a multi-agent AI operating system built on OpenCode. It runs as a sta
 
 ## Agents
 
-**132 agents total: 10 gods + 122 demigods.**
+**71 agents total: 10 gods + 61 demigods.**
 
 - Gods are identified by NAME (the `GOD_NAMES` set), not by prefix.
 - Demigods are unprefixed. A demigod named `build-resolver` lives at `.opencode/prompts/agents/demigods/hephaestus/build_resolver.txt`.
-- Apollo is `mode: "primary"` (talks to the user). The other 9 gods (including Atlas) are `mode: "subagent"` (invoked by Apollo). All 122 demigods are `mode: "subagent"`.
+- Apollo is `mode: "primary"` (talks to the user). The other 9 gods (including Atlas) are `mode: "subagent"` (invoked by Apollo). All 61 demigods are `mode: "subagent"`.
 
 See [AGENTS.md](AGENTS.md) for the full god/demigod roster.
 
@@ -141,7 +141,7 @@ Skills AND MCPs are tiered by relevance to keep the input budget lean:
 |------|------|-------------|-------|
 | **Hot** | Mastered skills (in `mastered-skills/<god>.md`) + always-available MCPs | Always | ~5-10 skills + 1-2 MCPs per god |
 | **Warm** | Stack-relevant skills (tags match active stack) + domain-relevant MCPs | Non-trivial tasks | Up to 20 skills + 2-3 MCPs |
-| **Cold** | All other skills + MCPs requiring explicit equip | Never (lazy via skill index / explicit dispatch) | ~334 skills + 0-1 MCPs |
+| **Cold** | All other skills + MCPs requiring explicit equip | Never (lazy via skill index / explicit dispatch) | ~332 skills + 0-1 MCPs |
 
 The `olympus-dynamic-context` plugin implements skill tiering in the `experimental.chat.messages.transform` hook. MCP tiering is implemented via `mcp-tiers.ts` (single source of truth for per-god MCP tiers) + a tier-aware `permission.ask` hook in `olympus-router`. The `selectMcpsForTask()` function in `mcp-tiers.ts` returns `{ hot, warm, cold }` for a given task classification, and the permission hook allows/denies MCP tool calls based on the tier + explicit equip records.
 
@@ -149,7 +149,7 @@ The `olympus-dynamic-context` plugin implements skill tiering in the `experiment
 
 ## Skill Index
 
-A sqlite-vec database (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) indexes all 334 skills using TF-IDF vectors. The `SkillIndex` class provides sub-millisecond cosine search:
+A sqlite-vec database (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) indexes all 332 skills using TF-IDF vectors. The `SkillIndex` class provides sub-millisecond cosine search:
 
 ```typescript
 const index = getSkillIndex();

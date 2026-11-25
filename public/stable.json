@@ -1,14 +1,14 @@
 {
-  "version": "0.0.99",
-  "tag": "v0.0.99",
+  "version": "0.1.0",
+  "tag": "v0.1.0",
   "stable": true,
   "tests": {
-    "pass": 55,
+    "pass": 57,
     "fail": 0,
     "skip": 0,
-    "suites": 55
+    "suites": 57
   },
-  "releasedAt": "2026-11-24T20:52:04Z",
-  "commit": "07639e9",
-  "note": "Hygiene total plus the interactive preview and the phone lane: npm run hygiene passes all 7 gates (battery 55/55). The preview loads the REAL origin (webview/iframe, cookies preserved) with replay-safe hop reloads; the phone sends the language header, merges the god's text, streams and stops, primes voice, shows a live presence heartbeat and keeps the desired tunnel supervised. 132 local suites declared; drills not claimed."
+  "releasedAt": "2026-11-25T04:00:00Z",
+  "commit": "pending-tag",
+  "note": "The first stable launch: GO lane truth (real 1-token probes; dead qwen/minimax lanes fail over to verified lanes), the walk applies the staged next generation and learns from every completed hop, Apollo reports WHERE/WHAT/NEXT/NEED/FILES from disk, the preview window uses the browser iframe, marks batch to Apollo, the boot handshake accepts Next 16 CSS, cost/burn keep the last good reading, and notifications dedupe with an honest xN. 57 hermetic suites green; limits declared in HYGIENE.md."
 }

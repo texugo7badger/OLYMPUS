@@ -2,13 +2,17 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.0.99 · 2026-11-24 · **GO for a release candidate after two named gates**
-> (the 8-hour/100-hop certification and the AppImage). **NO-GO for calling
-> this build "certified v1.0" until those gates are green.** v0.0.99 is the
-> hygiene-total release: `npm run hygiene` passes tsc, lint, docs, privacy,
-> suite manifest and audit-high; the 55 hermetic suites are green and
-> HYGIENE.md declares the limits. The 0.0.98 line is complete.
-> v0.0.99 also restores the live preview as an interactive REAL-origin
+> v0.1.0 · 2026-11-25 · **STABLE — GO for the 0.1.0 launch.** The 100-hop
+> certification passed (100/100 script hops, evidence linked below); the
+> 8-hour model soak is **NOT claimed** and remains a declared P2 gap. The 57
+> hermetic suites are green, `npm run hygiene` passes tsc, lint, docs, privacy,
+> suite manifest and audit-high, and HYGIENE.md declares every remaining P2
+> limit. [KNOWN-ISSUES.md](KNOWN-ISSUES.md) lists each declared gap and the
+> post-0.1.0 backlog. v0.1.0 closes the long-campaign truth gaps: GO lane probes and
+> fallback, generation boundary, empirical learning, Apollo's disk-truth brief,
+> the preview window, batched marks, the boot handshake, cost/burn keep-last,
+> design provenance and deduped notifications.
+> v0.0.99 restored the live preview as an interactive REAL-origin
 > surface (Electron webview, replay-safe hop reloads) and makes the phone a
 > functional prompt/voice lane with a live presence heartbeat.
 > v0.0.98-11 was the boot-truth release; v0.0.98-10 was

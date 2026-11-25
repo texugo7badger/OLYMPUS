@@ -154,10 +154,15 @@ export interface TasksSheet {
     etaConfidence: EtaConfidence;
     etaParkRate: number;
     etaBasis: string;
-    /** v0.0.91 — the LATEST design review overall (gate 7), when present. */
+    /** v0.1.0 — the PROJECT design review (root file), with provenance. */
     designScore: number | null;
     /** The file the score came from (root vs frontdoor), for the tooltip. */
     designSource: string | null;
+    /** The project review's floor/target/date and the page fallback score. */
+    designFloor: number | null;
+    designTarget: number | null;
+    designReviewedAt: string | null;
+    designPageScore: number | null;
     /** v0.0.91 — cost/quality economics: measured tokens and list value. */
     estimatedCostUsd: number;
     tokensPerCompletedHop: number;
@@ -454,6 +459,7 @@ export function buildTasksSheet(opts: {
       tokensIn: 0, tokensOut: 0, projectedRemainingMs: 0,
       eta50Ms: 0, eta90Ms: 0, etaNextVisibleMs: 0,
       etaConfidence: 'low', etaParkRate: 0, etaBasis: 'no campaign', designScore: null, designSource: null,
+      designFloor: null, designTarget: null, designReviewedAt: null, designPageScore: null,
       estimatedCostUsd: 0, tokensPerCompletedHop: 0, costPerCompletedHop: null,
     },
     atlasPatrol: undefined,
@@ -664,22 +670,26 @@ export function buildTasksSheet(opts: {
   });
   const projectedRemainingMs = eta.eta50Ms;
 
-  // v0.0.91 — quality is a number too, and the LATEST review wins. AIME had
-  // frontdoor 7.8 (yesterday) and pixel 4.9 (today); showing the best of the
-  // two would hide the real gate. Missing evidence is null, never a fake 10.
+  // v0.1.0 — ONE PROJECT SCORE, WITH PROVENANCE. The root design-review.json
+  // is the project/generation contract; evidence/frontdoor/design-review.json
+  // is a PAGE review. The old "latest measuredAt wins" compared a dated page
+  // file (7.8) with an undated project file (8.88) and showed 7.8 — two
+  // numbers, no source. Root wins; the page score is only a fallback.
   const rootReview = safeJson<any>(path.join(lane, 'design-review.json'), null);
   const frontdoorReview = safeJson<any>(path.join(lane, 'evidence/frontdoor/design-review.json'), null);
-  const reviewTs = (r: any): number => {
-    const t = Date.parse(String(r?.measuredAt ?? ''));
-    return Number.isFinite(t) ? t : 0;
-  };
-  const designReview = reviewTs(frontdoorReview) > reviewTs(rootReview) ? frontdoorReview : (rootReview ?? frontdoorReview);
-  const designSource = designReview === frontdoorReview
-    ? 'evidence/frontdoor/design-review.json'
-    : designReview === rootReview
-      ? 'design-review.json'
+  const designReview = rootReview ?? frontdoorReview;
+  const designSource = rootReview
+    ? 'design-review.json'
+    : frontdoorReview
+      ? 'evidence/frontdoor/design-review.json'
       : null;
   const designScore = typeof designReview?.overall === 'number' ? designReview.overall : null;
+  const designTarget = typeof designReview?.target === 'number' ? designReview.target : null;
+  const designFloor = typeof designReview?.floor === 'number' ? designReview.floor : null;
+  const designReviewedAt = typeof designReview?.reviewedAt === 'string'
+    ? designReview.reviewedAt
+    : typeof designReview?.measuredAt === 'string' ? designReview.measuredAt : null;
+  const frontdoorScore = typeof frontdoorReview?.overall === 'number' ? frontdoorReview.overall : null;
 
   const completedCount = tasks.filter(t => t.status === 'completed').length;
   const tokensInTotal = tasks.reduce((n, t) => n + (t.tokensIn ?? 0), 0);
@@ -710,6 +720,10 @@ export function buildTasksSheet(opts: {
     etaBasis: eta.basis,
     designScore,
     designSource,
+    designFloor,
+    designTarget,
+    designReviewedAt,
+    designPageScore: frontdoorScore,
     estimatedCostUsd,
     tokensPerCompletedHop,
     costPerCompletedHop,

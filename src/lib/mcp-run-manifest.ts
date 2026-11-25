@@ -22,7 +22,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-/** The curated baseline every lane keeps (44 tools at the time of v0.0.30). */
+/** The curated baseline every lane keeps (39 tools measured 2026-11-01). */
 export const BASELINE_MCPS = [
   'filesystem',
   'memory',

@@ -847,8 +847,8 @@ async function main() {
   expect('D3: the residue cleanup (runtime config is gitignored, not deleted)',
     /gitignoreEntries/.test(postRunSrc) && /\.gitignore/.test(postRunSrc) && !/runtimeArtifacts/.test(postRunSrc),
     'the cleanup must keep opencode.json/opencode.demigods.json on disk and out of git');
-  expect('D1: the plan template includes the design-review hop instruction',
-    /design-review hop/.test(routeSrc) && /design-score:7/.test(routeSrc),
+  expect('D1: the plan template includes exactly one design-review hop with the profile floor',
+    /EXACTLY ONE design-review hop/.test(routeSrc) && /design-score:8/.test(routeSrc),
     'no design review fires — the machine never critiques its own work');
 }
 

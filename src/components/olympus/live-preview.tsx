@@ -72,6 +72,12 @@ export default function LivePreview() {
   const [dMode, setDMode] = useState<'live-tunnel' | 'proxy' | null>(null);
   const [pendingMark, setPendingMark] = useState<{ x: number; y: number } | null>(null);
   const [instruction, setInstruction] = useState('');
+  // v0.1.0 — THE MARK QUEUE. Marks accumulate (durable on disk) and one
+  // button sends the whole batch to Apollo in a single planning turn.
+  type QueuedMark = { id?: string; x: number; y: number; page: string; instruction: string; viewport?: { width: number; height: number }; url?: string; createdAt?: string };
+  const [queuedMarks, setQueuedMarks] = useState<QueuedMark[]>([]);
+  const [queueBusy, setQueueBusy] = useState(false);
+  const [queueTick, setQueueTick] = useState(0);
   // v0.0.91 — the fast lane: patch directly (<=3 files, <=200 lines) with
   // typecheck/lint and deterministic undo, instead of planning a hop.
   const [quickEdit, setQuickEdit] = useState(false);
@@ -214,8 +220,140 @@ export default function LivePreview() {
     setMarkMode(false);
   }, [markMode]);
 
-  const sendToAthena = async () => {
+  const markTargetUrl = useCallback(() => customUrl ?? preferredUrl, [customUrl, preferredUrl]);
+  const markPage = useCallback(() => {
+    try { return new URL(markTargetUrl()).pathname || '/'; } catch { return '/'; }
+  }, [markTargetUrl]);
+  const markViewport = useCallback(() => {
+    const rect = (surfaceRef.current ?? containerRef.current)?.getBoundingClientRect();
+    return {
+      width: Math.round(rect?.width || (typeof window !== 'undefined' ? window.innerWidth : 1280)),
+      height: Math.round(rect?.height || (typeof window !== 'undefined' ? window.innerHeight : 800)),
+      devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+    };
+  }, []);
+
+  // Load the durable queue for this project; the preview window and the phone
+  // write the same file, so a mark placed anywhere is visible here.
+  useEffect(() => {
+    if (!activeProject?.slug) { setQueuedMarks([]); return; }
+    let live = true;
+    fetch(`/api/olympus/marks?slug=${encodeURIComponent(activeProject.slug)}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => { if (live && d?.ok && Array.isArray(d.marks)) setQueuedMarks(d.marks); })
+      .catch(() => { /* queue is optional until the first mark */ });
+    return () => { live = false; };
+  }, [activeProject?.slug, queueTick]);
+
+  const queuePendingMark = useCallback(async () => {
+    if (!pendingMark || !instruction.trim() || !activeProject?.slug || queueBusy) {
+      toast.error('Open a project and describe the mark first.');
+      return;
+    }
+    setQueueBusy(true);
+    try {
+      const mark: QueuedMark = {
+        id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        x: pendingMark.x, y: pendingMark.y,
+        page: markPage(),
+        instruction: instruction.trim(),
+        viewport: markViewport(),
+        url: markTargetUrl(),
+        createdAt: new Date().toISOString(),
+      };
+      const r = await fetch('/api/olympus/marks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: activeProject.slug, mark }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      setQueuedMarks(Array.isArray(d.marks) ? d.marks : [...queuedMarks, mark]);
+      setPendingMark(null);
+      setInstruction('');
+      setQueueTick((n) => n + 1);
+      toast.success('Mark added to the queue', {
+        description: `${(Array.isArray(d.marks) ? d.marks.length : queuedMarks.length + 1)} mark(s) — send all to Apollo when ready.`,
+      });
+    } catch (e: any) {
+      toast.error('Could not queue the mark', { description: e?.message || String(e) });
+    } finally {
+      setQueueBusy(false);
+    }
+  }, [pendingMark, instruction, activeProject, queueBusy, markPage, markViewport, markTargetUrl, queuedMarks]);
+
+  const clearQueue = useCallback(async () => {
+    if (!activeProject?.slug) return;
+    setQueueBusy(true);
+    try {
+      await fetch(`/api/olympus/marks?slug=${encodeURIComponent(activeProject.slug)}`, { method: 'DELETE' });
+      setQueuedMarks([]);
+      setQueueTick((n) => n + 1);
+    } finally {
+      setQueueBusy(false);
+    }
+  }, [activeProject]);
+
+  const sendQueueToApollo = useCallback(async () => {
+    if (!activeProject?.slug) { toast.error('Open a project first.'); return; }
+    if (queueBusy) return;
+    setQueueBusy(true);
+    try {
+      let all: QueuedMark[] = queuedMarks;
+      // A mark described but not yet added is included in the same batch.
+      if (pendingMark && instruction.trim()) {
+        const mark: QueuedMark = {
+          id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          x: pendingMark.x, y: pendingMark.y,
+          page: markPage(),
+          instruction: instruction.trim(),
+          viewport: markViewport(),
+          url: markTargetUrl(),
+          createdAt: new Date().toISOString(),
+        };
+        const saved = await fetch('/api/olympus/marks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: activeProject.slug, mark }),
+        });
+        const sd = await saved.json().catch(() => ({}));
+        if (!saved.ok || !sd?.ok) throw new Error(sd?.error || `could not save the mark (HTTP ${saved.status})`);
+        all = Array.isArray(sd.marks) ? sd.marks : [...all, mark];
+        setPendingMark(null);
+        setInstruction('');
+      }
+      if (all.length === 0) { toast.error('Add at least one mark first.'); return; }
+      const r = await fetch('/api/olympus/marks/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: activeProject.slug, marks: all, target: 'apollo', previewUrl: markTargetUrl() }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+      // The plan is durable; the queue can be cleared after it is queued.
+      await fetch(`/api/olympus/marks?slug=${encodeURIComponent(activeProject.slug)}`, { method: 'DELETE' }).catch(() => {});
+      setQueuedMarks([]);
+      setQueueTick((n) => n + 1);
+      pushEvent({
+        type: 'live_preview_mark',
+        msg: `${d.count || all.length} mark(s) sent to Apollo — one consolidated plan is running.`,
+        project: activeProject.slug,
+        ts: new Date().toISOString(),
+      });
+      window.dispatchEvent(new CustomEvent('olympus:open-god-chat', { detail: { god: 'apollo' } }));
+      toast.success(`${d.count || all.length} mark(s) sent to Apollo`, {
+        description: 'One consolidated plan is running in the background; it survives a closed panel.',
+      });
+    } catch (e: any) {
+      toast.error('Apollo did not receive the batch', { description: e?.message || String(e) });
+    } finally {
+      setQueueBusy(false);
+    }
+  }, [activeProject, queuedMarks, pendingMark, instruction, queueBusy, markPage, markViewport, markTargetUrl, pushEvent]);
+
+  const sendQuickEdit = async () => {
     if (!pendingMark || !instruction.trim()) return;
+    if (!quickEdit) return;
     setSending(true);
     try {
       const surfaceRect = surfaceRef.current?.getBoundingClientRect();
@@ -248,22 +386,14 @@ export default function LivePreview() {
       if (quickEdit && !activeProject?.slug) {
         throw new Error('Quick edit needs an active project — open the mark from a project lane.');
       }
-      const endpoint = quickEdit ? '/api/olympus/quick-edit' : '/api/olympus/athena/edit';
+      const endpoint = '/api/olympus/quick-edit';
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(quickEdit ? {
+        body: JSON.stringify({
           slug: activeProject?.slug,
           instruction: instruction.trim(),
           mark: { x: pendingMark.x, y: pendingMark.y },
-          viewport,
-          previewUrl: previewTarget,
-          route: previewPath,
-        } : {
-          x: pendingMark.x,
-          y: pendingMark.y,
-          instruction: instruction.trim(),
-          projectSlug: activeProject?.slug || null,
           viewport,
           previewUrl: previewTarget,
           route: previewPath,
@@ -288,80 +418,17 @@ export default function LivePreview() {
         toast.success('Quick edit applied', {
           description: `${data.message || 'The preview hot-reloads.'} Undo is in the backup: ${data.backupRoot || 'n/a'}`,
         });
-      } else {
-        pushEvent({
-          type: 'live_preview_mark',
-          msg: `Athena is planning the mark: "${instruction.trim().slice(0, 80)}" at (${pendingMark.x}, ${pendingMark.y}) in ${viewport.width}x${viewport.height}`,
-          x: pendingMark.x, y: pendingMark.y,
-          project: activeProject?.slug || null,
-          ts: new Date().toISOString(),
-        });
-        // v0.0.90 — the mark lands in HER chat, in front of the user.
-        window.dispatchEvent(new CustomEvent('olympus:open-god-chat', { detail: { god: 'athena' } }));
-        toast.success('Mark sent to Athena', { description: 'She will plan it in her chat; approve to hand Apollo + Atlas the implementation.' });
+        setPendingMark(null);
+        setInstruction('');
       }
-      setPendingMark(null);
-      setInstruction('');
     } catch (err) {
       pushEvent({
         type: 'live_preview_mark',
-        msg: `Athena dispatch failed: ${err instanceof Error ? err.message : 'unknown error'}`,
+        msg: `Quick edit failed: ${err instanceof Error ? err.message : 'unknown error'}`,
         x: pendingMark.x, y: pendingMark.y,
         project: activeProject?.slug || null,
         ts: new Date().toISOString(),
       });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const sendToApollo = async () => {
-    if (!pendingMark || !instruction.trim() || !activeProject?.slug) {
-      toast.error('Open a project mark first — Apollo needs a project lane.');
-      return;
-    }
-    setSending(true);
-    try {
-      const surfaceRect = surfaceRef.current?.getBoundingClientRect();
-      const viewport = {
-        width: Math.round(surfaceRect?.width || containerRef.current?.getBoundingClientRect().width || window.innerWidth),
-        height: Math.round(surfaceRect?.height || containerRef.current?.getBoundingClientRect().height || window.innerHeight),
-      };
-      const previewTarget = customUrl ?? preferredUrl;
-      const previewPath = (() => { try { return new URL(previewTarget).pathname || '/'; } catch { return '/'; } })();
-      const mark = {
-        id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        x: pendingMark.x, y: pendingMark.y, page: previewPath,
-        instruction: instruction.trim(), viewport,
-        url: previewTarget, createdAt: new Date().toISOString(),
-      };
-      const saved = await fetch('/api/olympus/marks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: activeProject.slug, mark }),
-      });
-      if (!saved.ok) throw new Error(`could not save the mark (HTTP ${saved.status})`);
-      const r = await fetch('/api/olympus/marks/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: activeProject.slug, target: 'apollo', marks: [mark], previewUrl: previewTarget }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
-      pushEvent({
-        type: 'live_preview_mark',
-        msg: `Mark saved for Apollo (${d.inboxId || 'queued'}): "${instruction.trim().slice(0, 80)}"`,
-        x: pendingMark.x, y: pendingMark.y,
-        project: activeProject.slug,
-        ts: new Date().toISOString(),
-      });
-      toast.success('Mark saved — Apollo is planning in the background', {
-        description: 'Open the preview window to read the plan. The batch is durable even if you close this panel.',
-      });
-      setPendingMark(null);
-      setInstruction('');
-    } catch (err) {
-      toast.error('Apollo did not receive the mark', { description: err instanceof Error ? err.message : String(err) });
     } finally {
       setSending(false);
     }
@@ -731,7 +798,7 @@ export default function LivePreview() {
       {pendingMark && (
         <div className="shrink-0 flex flex-col gap-1.5 px-3 py-2 bg-olympus-gold/10 border-b border-olympus-gold/20 text-[10px] font-mono">
           <div className="flex items-center justify-between">
-            <span className="text-olympus-gold flex items-center gap-1.5"><MousePointerClick size={11} />Marked ({pendingMark.x}, {pendingMark.y}) — describe the change for Athena or Apollo:</span>
+            <span className="text-olympus-gold flex items-center gap-1.5"><MousePointerClick size={11} />Marked ({pendingMark.x}, {pendingMark.y}) — describe the change for Apollo:</span>
             <span className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -755,29 +822,58 @@ export default function LivePreview() {
               type="text"
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !sending) sendToAthena(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !sending && !queueBusy) { if (quickEdit) void sendQuickEdit(); else void queuePendingMark(); } }}
               placeholder="e.g., make this button bigger and blue"
               className="flex-1 bg-olympus-bg/50 text-olympus-text px-2 py-1 rounded border border-olympus-gold/20 focus:outline-none focus:ring-1 focus:ring-olympus-gold/40 text-[11px]"
               autoFocus
-              disabled={sending}
+              disabled={sending || queueBusy}
             />
             <button
-              onClick={sendToAthena}
-              disabled={sending || !instruction.trim()}
-              className="flex items-center gap-1 px-2 py-1 rounded bg-olympus-gold/20 text-olympus-gold hover:bg-olympus-gold/30 ring-1 ring-olympus-gold/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => void queuePendingMark()}
+              disabled={sending || queueBusy || !instruction.trim()}
+              className="flex items-center gap-1 px-2 py-1 rounded bg-olympus-cyan/15 text-olympus-cyan hover:bg-olympus-cyan/25 ring-1 ring-olympus-cyan/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {sending ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
-              Athena
+              {queueBusy ? <Loader2 size={10} className="animate-spin" /> : <MousePointerClick size={10} />}
+              Add
             </button>
+            {quickEdit && (
+              <button
+                onClick={sendQuickEdit}
+                disabled={sending || !instruction.trim()}
+                className="flex items-center gap-1 px-2 py-1 rounded bg-olympus-cyan/15 text-olympus-cyan hover:bg-olympus-cyan/25 ring-1 ring-olympus-cyan/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {sending ? <Loader2 size={10} className="animate-spin" /> : <Zap size={10} />}
+                Apply edit
+              </button>
+            )}
             <button
-              onClick={sendToApollo}
-              disabled={sending || !instruction.trim()}
+              onClick={() => void sendQueueToApollo()}
+              disabled={sending || queueBusy || (!instruction.trim() && queuedMarks.length === 0)}
               className="flex items-center gap-1 px-2 py-1 rounded bg-olympus-green/15 text-olympus-green hover:bg-olympus-green/25 ring-1 ring-olympus-green/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {sending ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
-              Apollo
+              {queueBusy ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
+              Send all to Apollo
             </button>
           </div>
+        </div>
+      )}
+
+      {queuedMarks.length > 0 && !pendingMark && (
+        <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-olympus-cyan/10 border-b border-olympus-cyan/20 text-[9px] font-mono">
+          <MousePointerClick size={10} className="text-olympus-cyan shrink-0" />
+          <span className="text-olympus-cyan whitespace-nowrap">{queuedMarks.length} mark{queuedMarks.length === 1 ? '' : 's'} queued</span>
+          <span className="hidden sm:inline text-olympus-text-dim truncate">— one consolidated prompt, no need to ask Apollo</span>
+          <span className="ml-auto flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => void sendQueueToApollo()}
+              disabled={queueBusy}
+              className="rounded border border-olympus-green/35 bg-olympus-green/15 px-2 py-0.5 text-olympus-green hover:bg-olympus-green/25 disabled:opacity-40"
+            >
+              {queueBusy ? 'sending…' : 'Send all to Apollo'}
+            </button>
+            <button type="button" onClick={() => void clearQueue()} disabled={queueBusy} className="text-olympus-text-dim hover:text-olympus-red disabled:opacity-40">clear</button>
+          </span>
         </div>
       )}
 

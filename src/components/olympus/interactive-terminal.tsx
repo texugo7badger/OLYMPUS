@@ -2803,7 +2803,7 @@ const MessageRenderer = memo(function MessageRenderer({
             </div>
           )}
           <div className="flex items-start gap-1.5">
-            <span style={{ color: GOD_COLOR }} className="shrink-0">$</span>
+            <span className="shrink-0 text-olympus-cyan">$</span>
             <span className="text-olympus-text wrap-break-word whitespace-pre-wrap flex-1 min-w-0">{message.text}</span>
           </div>
         </div>

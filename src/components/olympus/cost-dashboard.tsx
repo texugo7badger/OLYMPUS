@@ -90,7 +90,7 @@ const GOD_IDS_FULL = [
  'persephone', 'prometheus', 'callimachus',
 ];
 
-function fallbackCostSummary(): CostSummary {
+function fallbackCostSummary(reason = 'Cost telemetry unavailable'): CostSummary {
  return {
  totalSpend: 0, totalReqs: 0, totalInput: 0, totalOutput: 0,
  avgLatency: 0, avgSuccess: 0, cap5h: null, pctOfCap: null,
@@ -104,9 +104,8 @@ function fallbackCostSummary(): CostSummary {
  })),
  provider: {
  name: 'opencode-go', type: 'opencode', isFree: false,
- displayName: 'Reconnecting to OpenCode telemetry…',
- // Actionable reconnect message with retry hint.
- capsDisplay: 'Reconnecting — retry in 10s',
+ displayName: reason,
+ capsDisplay: 'retry',
  cost_per_1m_tokens: { input: 0, output: 0 },
  },
  };
@@ -164,6 +163,8 @@ async function fetchAllDispatchCatalogs(): Promise<Record<string, GodDispatchInf
 /* ------------------------------------------------------------------ */
 export default function CostDashboard({ active = true }: { active?: boolean }) {
  const [data, setData] = useState<CostSummary | null>(null);
+ const [costError, setCostError] = useState<string | null>(null);
+ const [retryTick, setRetryTick] = useState(0);
  const [costWindow, setCostWindow] = useState<'5h' | '24h' | '7d' | '30d' | 'session'>('5h');
  const [dispatch, setDispatch] = useState<Record<string, GodDispatchInfo>>({});
  // W2-C (v0.0.4): live hop counts per god — component-scope state (the
@@ -185,7 +186,9 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  const load = async () => {
  try {
  const ctrl = new AbortController();
- const timeout = setTimeout(() => ctrl.abort(), 5000);
+ // v0.1.0 — the cost ledger can be 25MB; the first scan after a restart
+ // is allowed 20s (the incremental cache makes every later poll cheap).
+ const timeout = setTimeout(() => ctrl.abort(), 20_000);
  // Cache: 'no-store' so the dashboard always reflects
  // the latest cost.jsonl events instead of a stale Next.js fetch cache.
  const r = await fetch(`/api/olympus/costs?window=${costWindow}`, { signal: ctrl.signal, cache: 'no-store' });
@@ -193,6 +196,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  if (!r.ok) throw new Error(`API ${r.status}`);
  const d = await r.json();
  if (cancelled) return;
+ setCostError(null);
  // Detect per-god request count increments and trigger
  // a 500ms gold pulse on each god that dispatched since the last poll.
  const next: Record<string, number> = {};
@@ -210,7 +214,10 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  setData(d);
  } catch {
  if (cancelled) return;
- setData(fallbackCostSummary());
+ // v0.1.0 — never replace a good ledger with zeros on a transient timeout.
+ // Keep the last known data and show an explicit degraded banner + retry.
+ setCostError('Cost telemetry is reconnecting; showing the last known ledger.');
+ setData(prev => prev ?? fallbackCostSummary('Cost telemetry unavailable'));
  }
  };
  load();
@@ -271,7 +278,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
     window.removeEventListener('olympus:strategy-changed', onStrategyChange);
     window.removeEventListener('olympus:demigods-changed', onDemigodsChanged);
   };
- }, [active, costWindow]);
+ }, [active, costWindow, retryTick]);
 
  if (!data) {
  return (
@@ -338,6 +345,14 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
       {/* v0.0.83 — GO Plus limits live in the Cost panel too. */}
       <div className="mb-4 space-y-2"><GoUsageBar /><GoForecastChart /><BurnPanel /></div>
 
+ {costError && (
+ <div className="mb-3 flex items-center gap-2 rounded-lg border border-olympus-amber-soft/30 bg-olympus-amber-soft/10 px-3 py-2 text-[10px] font-mono text-olympus-amber-soft">
+ <Zap size={11} className="shrink-0" />
+ <span className="min-w-0 flex-1">{costError}</span>
+ <button onClick={() => setRetryTick((n) => n + 1)} className="shrink-0 rounded border border-olympus-amber-soft/30 px-2 py-0.5 hover:bg-olympus-amber-soft/10">retry</button>
+ </div>
+ )}
+
  {/* Polished empty-state banner (replaces the old
  "No cost events yet. Costs appear here once the Olympus overlay
  plugin loads…" copy). Educates the user on what to do next
@@ -346,13 +361,12 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  <div className="rounded-lg border border-olympus-gold/20 bg-olympus-card p-3 mb-3 text-[10px] font-mono text-olympus-text leading-relaxed">
  <div className="flex items-center gap-1.5 text-olympus-gold mb-1">
  <Zap size={11} />
- <strong className="uppercase tracking-wide">Awaiting first dispatch</strong>
+ <strong className="uppercase tracking-wide">{Object.values(hopCounts).some((n) => n > 0) ? 'Campaign running — ledger syncing' : 'Awaiting first dispatch'}</strong>
  </div>
  <p>
- The dashboard populates from <code className="text-olympus-cyan">cost.jsonl</code> —
- a per-event ledger written by the Olympus overlay plugin on every tool call.
- Send a prompt to Apollo (e.g. <code className="text-olympus-gold">hi</code>) and the
- per-god rows below will fill in within seconds.
+ {Object.values(hopCounts).some((n) => n > 0)
+   ? 'The campaign is running and the terminal already shows step cost. Per-god rows appear as the next step-finish event lands; the Smart Burn policy below is read from the local decision cache even while the account read is slow.'
+   : <>The dashboard populates from <code className="text-olympus-cyan">cost.jsonl</code> — a per-event ledger written by the Olympus overlay plugin on every tool call. Send a prompt to Apollo (e.g. <code className="text-olympus-gold">hi</code>) and the per-god rows below will fill in within seconds.</>}
  </p>
  </div>
  )}

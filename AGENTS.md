@@ -24,17 +24,17 @@ Gods are `mode: "primary"` or `mode: "subagent"` agents in `opencode.json`. Apol
 | **Apollo** | Planning & architecture | `opencode-go/deepseek-v4.1-flash` | The only god who talks to the user. Plans the task DAG, defines acceptance criteria, hands execution to Atlas. |
 | **Atlas** | Orchestration & execution | `opencode-go/hy3` | The god who executes the plan. Apollo plans, Atlas dispatches. Hy3 is sacred — never downgraded. Excels at agent orchestration with lower token cost. |
 | **Artemis** | Security & auditing | `opencode-go/deepseek-v4.1-flash` | SAST, pentesting, compliance, threat modeling, secrets scanning. |
-| **Athena** | Frontend & design | `opencode-go/qwen3.7-plus` | React/Next.js, accessibility, design systems, UI verification. |
-| **Dionysus** | QA & testing | `opencode-go/qwen3.7-plus` | TDD, E2E, evidence collection, performance testing, mutation testing. |
+| **Athena** | Frontend & design | `opencode-go/deepseek-v4.1-flash` | React/Next.js, accessibility, design systems, UI verification. |
+| **Dionysus** | QA & testing | `opencode-go/mimo-v2.6-flash` | TDD, E2E, evidence collection, performance testing, mutation testing. |
 | **Hephaestus** | Backend code | `opencode-go/deepseek-v4.1-flash` | Multi-language code review, build resolution, API design, refactoring. |
-| **Hermes** | Integrations & MCPs | `opencode-go/qwen3.7-plus` | MCP building, API wiring, LLM architecture, research. |
+| **Hermes** | Integrations & MCPs | `opencode-go/mimo-v2.6-flash` | MCP building, API wiring, LLM architecture, research. |
 | **Persephone** | Database & persistence | `opencode-go/deepseek-v4.1-flash` | Schema design, migrations, data engineering, DBRE. |
-| **Prometheus** | DevOps & CI/CD | `opencode-go/minimax-m3` | Docker, Terraform, SRE, incident response, release engineering. |
+| **Prometheus** | DevOps & CI/CD | `opencode-go/mimo-v2.6-flash` | Docker, Terraform, SRE, incident response, release engineering. |
 | **Callimachus** | Vault curation | `opencode-go/deepseek-v4.1-flash` | Instinct lifecycle, brain backup/restore, docs verification. Runs the 7-stage brain maintenance loop on `session.idle`. |
 
 **Total: 10 gods + 61 demigods = 71 agents.** The v0.0.88 archive moved 61 never-dispatched/never-referenced demigods to `_archive` (manifest + restore); this table below is the historical roster.
 
-**Apollo rides DeepSeek V4.1 Flash** (1M ctx / 384k out, 173k req/mo on GO) in every GO strategy — the 1017 line is the planner floor; the old GLM-5.3 "sacred" rule was retired with DeepSeek V4 Pro in v0.0.23. `go-max-quality` upgrades the specialists (Kimi K2.7 Code, Kimi K3, Qwen3.7 Plus, MiniMax M3), never the planner. **The free-tier clause is RETIRED (v0.0.22)**: the zero-cost path is the `local` strategy (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint), where the probe names the model. Atlas is always on Hy3 in the GO strategies (Zen substitutes GPT 6.1 Sol / GPT 6 Luna because Hy3 is GO-only).
+**Apollo rides DeepSeek V4.1 Flash** (1M ctx / 384k out, 173k req/mo on GO) in every GO strategy — the 1017 line is the planner floor; the old GLM-5.3 "sacred" rule was retired with DeepSeek V4 Pro in v0.0.23. `go-max-quality` upgrades the specialists (Kimi K2.7 Code, MiMo-V2.6-Flash), never the planner. **Lane truth (v0.1.0):** every GO lane is probed with a real 1-token turn; on this account qwen3.7-plus, qwen3.8-flash and minimax-m3 answer "OpenCode Go requires an API key", so they are marked `auth` and never assigned a role. The verified roster is deepseek-v4.1-flash, mimo-v2.6-flash, hy3, kimi-k2.7-code and glm-5.3-flash. **The free-tier clause is RETIRED (v0.0.22)**: the zero-cost path is the `local` strategy (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint), where the probe names the model. Atlas is always on Hy3 in the GO strategies (Zen substitutes GPT 6.1 Sol / GPT 6 Luna because Hy3 is GO-only).
 
 ---
 
@@ -120,7 +120,7 @@ Each god declares mastered skills in `.opencode/vault-brain/mastered-skills/<god
 - **Warm** — stack-relevant skills (loaded for non-trivial tasks, capped at 20)
 - **Cold** — all other skills (not loaded; lazy via skill index search)
 
-The skill index (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) provides sub-millisecond TF-IDF cosine search across all 321 skills. When the instinct gate doesn't short-circuit, the router searches the index for the top-5 relevant skills and surfaces them as hints.
+The skill index (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) provides sub-millisecond TF-IDF cosine search across all 332 skills. When the instinct gate doesn't short-circuit, the router searches the index for the top-5 relevant skills and surfaces them as hints.
 
 ---
 

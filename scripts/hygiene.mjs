@@ -6,7 +6,7 @@
  *   tsc · lint · docs:check · repo:privacy · suites:manifest · audit(high)
  *
  * `--battery` adds the full hermetic battery (`scripts/*.test.mjs`; 55 at
- * v0.0.99). The 132 maintainer-local suites need the live app/vault and are
+ * v0.0.99). The maintainer-local suites need the live app/vault and are
  * declared in scripts/local-suites.manifest.json, not silently skipped.
  *
  * Usage: npm run hygiene [-- --battery]

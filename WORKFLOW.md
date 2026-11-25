@@ -3,7 +3,7 @@
 ![The workflow](public/diagrams/workflow.svg)
 
 
-> OLYMPUS v0.0.91 — how a task flows through the 10 gods, 61 demigods, Symphony, and the VaultBrain. See [AGENTS.md](AGENTS.md) for the full agent roster and [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) for the cost flow. The v0.0.91 design-first, quick-edit and night-shift path is in the section below.
+> OLYMPUS v0.1.0 — how a task flows through the 10 gods, 61 demigods, Symphony, and the VaultBrain. See [AGENTS.md](AGENTS.md) for the full agent roster and [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) for the cost flow. The v0.1.0 status brief, lane fallback and generation-boundary path is in the section below.
 
 ## Task lifecycle
 

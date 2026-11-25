@@ -267,23 +267,31 @@ export class VaultIndex {
    */
   async indexFile(relPath: string): Promise<{ durationMs: number }> {
     const t0 = Date.now();
-    const buf = await this.backend.readIfExists(relPath);
-    if (!buf) {
-      this.removeFile(relPath);
+    try {
+      const buf = await this.backend.readIfExists(relPath);
+      if (!buf) {
+        this.removeFile(relPath);
+        return { durationMs: Date.now() - t0 };
+      }
+      const content = buf.toString('utf-8');
+      const stat = await this.backend.stat(relPath);
+      if (!stat) {
+        return { durationMs: Date.now() - t0 };
+      }
+      const parsed = parseNote(relPath, content, buf.length, stat.modified);
+      this.upsertParsedNote(parsed);
+      // After indexing this file, re-resolve any links from OTHER files that
+      // target this file's basename — they may have been previously broken.
+      this.resolveLinksToNote(relPath);
+      this.stmtLogEvent.run('change', relPath, Date.now(), Date.now() - t0);
+      return { durationMs: Date.now() - t0 };
+    } catch (err: any) {
+      // One unreadable/malformed file must never abort the walk. The tolerant
+      // parser handles bad frontmatter; this is the last-resort guard.
+      try { this.stmtLogEvent.run('error', relPath, Date.now(), Date.now() - t0); } catch { /* log is best-effort */ }
+      console.warn(`[vault-index] skipped ${relPath}: ${err?.message || err}`);
       return { durationMs: Date.now() - t0 };
     }
-    const content = buf.toString('utf-8');
-    const stat = await this.backend.stat(relPath);
-    if (!stat) {
-      return { durationMs: Date.now() - t0 };
-    }
-    const parsed = parseNote(relPath, content, buf.length, stat.modified);
-    this.upsertParsedNote(parsed);
-    // After indexing this file, re-resolve any links from OTHER files that
-    // target this file's basename — they may have been previously broken.
-    this.resolveLinksToNote(relPath);
-    this.stmtLogEvent.run('change', relPath, Date.now(), Date.now() - t0);
-    return { durationMs: Date.now() - t0 };
   }
 
   /**

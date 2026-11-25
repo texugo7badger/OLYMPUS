@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "description": "OLYMPUS demigod registry — 122 demigods across 10 gods",
+    "description": "OLYMPUS demigod registry — 61 live demigods across 10 gods (61 archived with one-command restore)",
     "version": "1.0.0",
     "generated_from": "opencode.test.json",
     "gods": {

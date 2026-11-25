@@ -834,6 +834,21 @@ export async function maybeWalkThePlan(opts: {
     try {
       const review = JSON.parse(readFileSync(reviewPath, 'utf-8'));
       if (Array.isArray(review.fixInstructions) && review.fixInstructions.length > 0 && (review._designIterations || 0) < 2) {
+        // v0.1.0 — THE REPAIR KEEPS THE PROJECT'S OWN GATE. The old repair
+        // re-review hardcoded 7, so an 8-floor project accepted 7.8 on the
+        // second pass (the AIME "7.8 vs 8.88" specimen). Read the parked
+        // gate's threshold; fall back to the review's floor, then 7.
+        let gateThreshold = 7;
+        try {
+          const planOnDisk = JSON.parse(readFileSync(join(opts.laneRoot, DISPATCH_PLAN_FILENAME), 'utf-8'));
+          const parkedHop = (planOnDisk?.hops ?? []).find((h: any) => String(h?.id) === String(parked.hopId));
+          const spec = (parkedHop?.verify?.checks ?? []).find((c: string) => String(c).startsWith('design-score:'));
+          if (spec) {
+            const n = Number.parseFloat(String(spec).slice('design-score:'.length));
+            if (Number.isFinite(n)) gateThreshold = n;
+          }
+        } catch { /* the review floor below is the fallback */ }
+        if (typeof review.floor === 'number' && Number.isFinite(review.floor)) gateThreshold = review.floor;
         const iterations = (review._designIterations || 0) + 1;
         const fixHops = review.fixInstructions.slice(0, 5).map((fix: string, i: number) => ({
           id: `design-fix-${iterations}-${i + 1}`,
@@ -851,9 +866,9 @@ export async function maybeWalkThePlan(opts: {
         planObj.hops.push({
           id: `design-review-${iterations}`,
           god: 'athena',
-          prompt: `DESIGN REVIEW (iteration ${iterations}): Re-read the key components and re-score. Write design-review.json with the SAME structure (scores, overall, issues, fixInstructions). If overall >= 7, the review passes.`,
+          prompt: `DESIGN REVIEW (iteration ${iterations}): Re-read the key components and re-score. Write design-review.json with the SAME structure (scores, overall, issues, fixInstructions) plus floor:${gateThreshold}, target:${gateThreshold + 1}, reviewedAt (ISO date). The gate is ${gateThreshold}; a score below it is a real fail.`,
           artifacts: ['design-review.json'],
-          verify: { review: 'deterministic', checks: ['file-exists:design-review.json', 'design-score:7'] },
+          verify: { review: 'deterministic', checks: ['file-exists:design-review.json', `design-score:${gateThreshold}`] },
           budgetTokens: 4096,
         });
         review._designIterations = iterations;
@@ -866,7 +881,7 @@ export async function maybeWalkThePlan(opts: {
           parked: null,
           updatedAt: new Date().toISOString(),
         });
-        opts.send?.({ type: 'log', msg: `Design review failed (score ${review.overall} < 7) — self-correcting with ${fixHops.length} fix hops (iteration ${iterations} of 2).`, ts: new Date().toISOString() });
+        opts.send?.({ type: 'log', msg: `Design review failed (score ${review.overall} < ${gateThreshold}) — self-correcting with ${fixHops.length} fix hops (iteration ${iterations} of 2, gate ${gateThreshold}).`, ts: new Date().toISOString() });
         // Recurse: walk the fix hops + re-review
         const fixResult = await maybeWalkThePlan({ ...opts, expectPlan: true });
         return fixResult;

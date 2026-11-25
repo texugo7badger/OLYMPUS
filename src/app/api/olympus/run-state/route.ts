@@ -33,7 +33,8 @@ import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 import { readWalkLock } from '@/lib/hop-runtime/walk-lock';
 import { loadHopState, hopStatePath } from '@/lib/hop-runtime/hop-state';
 import { readHopTelemetry } from '@/lib/hop-runtime/walker';
-import { readLaneHealth, blockedLanes } from '@/lib/lane-health';
+import { readLaneHealth } from '@/lib/lane-health';
+import { blockedLanesInUse } from '@/lib/agent-model';
 import { workspaceLaneDir } from '@/lib/opencode-spawn';
 import { getVaultRoot } from '@/lib/vault-root';
 import { getProject } from '@/lib/project-context';
@@ -134,7 +135,9 @@ export async function GET(req: NextRequest) {
   try { telemetry = lane ? (readHopTelemetry(lane) as unknown as Array<Record<string, unknown>>).slice(-10) : []; } catch { /* optional */ }
 
   const health = readLaneHealth();
-  const blocked = blockedLanes(health.lanes);
+  // v0.1.0 — report only lanes the CURRENT config uses. Retired qwen/minimax
+  // lanes that the provider denies must not read as three broken errors.
+  const blocked = blockedLanesInUse(health.lanes);
 
   const campaign = held?.holder
     ? {

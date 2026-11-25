@@ -119,10 +119,10 @@ export async function GET() {
 
   if (goPlan.configured) {
     recommendedStrategy = 'go-balanced';
-    recommendedReason = 'GO plan detected — use go-balanced for the full 132-agent OLYMPUS experience. Switch to go-budget for savings or go-max-quality for best quality.';
+    recommendedReason = 'GO plan detected — use go-balanced for the full 71-agent OLYMPUS experience. Switch to go-budget for savings or go-max-quality for best quality.';
   } else if (zenPlan.configured) {
     recommendedStrategy = 'zen-balanced';
-    recommendedReason = 'OpenCode Zen detected — use zen-balanced for the full 132-agent OLYMPUS experience on pay-as-you-go models (no request caps). Zero-retention, charged per request.';
+    recommendedReason = 'OpenCode Zen detected — use zen-balanced for the full 71-agent OLYMPUS experience on pay-as-you-go models (no request caps). Zero-retention, charged per request.';
   } else {
     recommendedStrategy = 'local';
     recommendedReason = 'No GO or ZEN plan detected. The zero-cost path is the LOCAL lane (your own hardware — Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint). You can also build a custom strategy from any provider registered in OpenCode (free endpoints included, with a speed/limit warning).';

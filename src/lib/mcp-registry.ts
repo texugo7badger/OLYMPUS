@@ -36,7 +36,7 @@ export type { McpCanonicalEntry, McpCanonicalConfig, McpServerRequirement };
 
 /**
  * The curated default (v0.0.24): the measured six that fit the 128-tool
- * provider budget with room to spare (44 tools). "Reset to curated" restores
+ * provider budget with room to spare (39 tools). "Reset to curated" restores
  * exactly this set — the one-click cure for an all-on arsenal.
  */
 export const CURATED_MCP_SERVERS = [

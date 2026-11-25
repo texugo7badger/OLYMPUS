@@ -53,7 +53,7 @@ expect('P-1: the terminal knows all ten gods', godCount === 10, `GOD_NAMES has $
 expect('P-2: a fresh Parthenon starts with every god idle', /function idleGodStates\(\): Map<string, GodState>/.test(terminal) && /Object\.keys\(GOD_NAMES\)\.map/.test(terminal), 'no idle baseline');
 expect('P-3: godStates is seeded from the baseline (not an empty Map)', /useState<Map<string, GodState>>\(\(\) => idleGodStates\(\)\)/.test(terminal) && !/useState<Map<string, GodState>>\(\(\) => new Map\(\)\)/.test(terminal), 'empty Map remains');
 expect('P-4: the task API overlays the live event state', /Object\.entries\(tasks\)/.test(panel) && /status: current \? 'working' : 'blocked'/.test(panel) && /orderGodStates\(\[\.\.\.by\.values\(\)\]\)/.test(panel), 'no task overlay');
-expect('P-5: each card opens that god\'s own chat', /setChatGod\(s\.god\)/.test(panel) && /aria-label=\{`Chat with \$\{godName/.test(panel), 'no per-card chat');
+expect('P-5: cards open the latest activity sheet; chat is Apollo-only', /setSheetHop\(latest\.id\)/.test(panel) && /Chat with Apollo/.test(panel), 'no per-card activity / Apollo-only chat');
 
 // ── P-6..P-9: the durable inbox ──────────────────────────────────────────────
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-inbox-'));
@@ -132,7 +132,7 @@ expect('P-30: the mark sends the PREVIEW SURFACE viewport + preview URL, not the
   /surfaceRef/.test(livePreview) && /surfaceRect\?\.width/.test(livePreview) && /previewUrl: previewTarget/.test(livePreview)
     && /viewport: \{ width: window\.innerWidth/.test(livePreview) === false,
   'the mark still sends the app window viewport');
-expect('P-31: the mark is a PLANNING turn, opens Athena chat and has a real approval route',
+expect('P-31: the mark is a PLANNING turn, opens Apollo chat and has a real approval route',
   /PLANNING turn/.test(markRoute) && /do not edit/i.test(markRoute) && /olympus:open-god-chat/.test(livePreview)
     && /olympus:open-god-chat/.test(panel) && /Approve → Apollo \+ Atlas/.test(chatModal)
     && /writeHopOverride\(/.test(approveRoute) && /loadHopState\(/.test(approveRoute) && !/runGodTurn/.test(approveRoute) && /\.olympus-hop-overrides/.test(approveRoute),

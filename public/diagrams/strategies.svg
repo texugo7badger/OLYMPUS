@@ -24,10 +24,10 @@
   <rect x="800" y="120" width="3" height="170" rx="1.5" fill="#67C9E8"/>
   <text x="816" y="146" fill="#E8E6E1" font-family="'JetBrains Mono',monospace" font-size="13" font-weight="700">ZEN</text>
   <text x="816" y="168" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">pay-as-you-go, no request caps</text>
-  <text x="816" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">same 132 agents, same</text>
+  <text x="816" y="186" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">same 81 configured agents, same</text>
   <text x="816" y="204" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">Symphony protocol</text>
   <text x="816" y="222" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5"></text>
   <text x="816" y="240" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">metered · bursty</text>
-  <text x="40" y="330" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">One command rewrites the 132-agent config:  olympus apply-strategy &lt;local|go-balanced|go-max-quality|zen-balanced&gt;</text>
+  <text x="40" y="330" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">One command rewrites the 81-agent config:  olympus apply-strategy &lt;local|go-balanced|go-max-quality|zen-balanced&gt;</text>
   <text x="40" y="354" fill="#9A968E" font-family="'JetBrains Mono',monospace" font-size="10.5">A strategy switch is refused while a walk is live (v0.0.72) — it happens at the hop boundary, never mid-hop.</text>
 </svg>

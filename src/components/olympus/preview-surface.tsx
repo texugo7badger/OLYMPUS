@@ -31,6 +31,12 @@ export interface PreviewSurfaceProps {
   className?: string;
   /** Hidden while the branded loader owns the pane. */
   hidden?: boolean;
+  /**
+   * v0.1.0 — a popup created by `window.open` does not inherit `webviewTag`;
+   * a <webview> inside it renders black. The dedicated preview window opts
+   * into the browser iframe (same host cookies, interactive, no black).
+   */
+  forceBrowser?: boolean;
   onLoad?: () => void;
   onFail?: (message: string) => void;
 }
@@ -41,10 +47,11 @@ export default function PreviewSurface({
   reloadKey = 0,
   className = 'w-full h-full border-0',
   hidden = false,
+  forceBrowser = false,
   onLoad,
   onFail,
 }: PreviewSurfaceProps) {
-  const electron = inElectron();
+  const electron = !forceBrowser && inElectron();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [browserKey, setBrowserKey] = useState(0);
   const firstReload = useRef(true);

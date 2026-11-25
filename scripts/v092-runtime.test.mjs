@@ -308,7 +308,8 @@ ok('HB3: hibernation stops idle dev servers and prunes the expired window', () =
   assert.match(manager, /security nudge/);
   assert.match(manager, /readPidRssMB/);
   assert.match(hib, /pruneHibernationPlan/);
-  assert.match(live, /sendToApollo/);
+  assert.match(live, /sendQueueToApollo/);
+  assert.match(live, /marks\/send/);
   assert.match(live, /restart/);
 });
 
@@ -421,7 +422,7 @@ ok('PN4: hibernate v2 gates active turns, keeps a live preview, and restores idl
   assert.match(main, /if \(hibernating\) return;\n    app\.quit\(\);/);
   assert.match(main, /postJson\('\/api\/olympus\/chat\/hibernate', \{ waitMs: 60_000, forceFree \}, 70_000\)/);
   const prefs = JSON.parse(src('package.json'));
-  assert.ok(prefs.version.startsWith('0.0.99'));
+  assert.ok(prefs.version.startsWith('0.1.0'));
 });
 
 ok('PN5: the hibernate HUD collapses to a compact strip from a real button', () => {

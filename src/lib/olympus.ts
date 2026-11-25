@@ -16,7 +16,7 @@ import { priceTokens } from './model-pricing';
 const _cwd = process.cwd();
 const OLYMPUS_ROOT = process.env.OLYMPUS_ROOT || _cwd;
 const VAULT = getVaultRoot();
-const METRICS_DIR = path.join(os.homedir(), '.olympus', 'metrics');
+const METRICS_DIR = path.join(process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus'), 'metrics');
 
 export type NodeType =
   | 'god' | 'skill' | 'mcp' | 'instinct' | 'project' | 'knowledge' | 'evolved' | 'subagent';
@@ -1191,28 +1191,75 @@ function isRealCostRow(ev: any): boolean {
 }
 
 /**
+ * v0.1.0 — THE COST LEDGER IS 25 MB AND GROWS FOREVER.
+ *
+ * The dashboard reads cost.jsonl every 10s. Re-reading + parsing 75k rows on
+ * every poll was the reason the Cost panel timed out (5s abort) and fell back
+ * to "0 requests / Reconnecting" while the terminal already showed $0.91.
+ * This cache reads the file ONCE, then only the appended bytes; a 5h/24h/30d
+ * query filters the cached rows. Rotations/truncations reset it.
+ */
+const COST_CACHE_MAX_AGE_MS = 31 * 24 * 3600_000;
+interface CostFileCache { file: string; size: number; rest: string; rows: any[] }
+let costFileCache: CostFileCache | null = null;
+
+function readCostFileRows(file: string): any[] {
+  let st: fs.Stats;
+  try { st = fs.statSync(file); } catch { return []; }
+  if (!costFileCache || costFileCache.file !== file || st.size < costFileCache.size) {
+    costFileCache = { file, size: 0, rest: '', rows: [] };
+  }
+  if (st.size > costFileCache.size) {
+    let text = '';
+    try {
+      const fd = fs.openSync(file, 'r');
+      const len = st.size - costFileCache.size;
+      const buf = Buffer.alloc(len);
+      fs.readSync(fd, buf, 0, len, costFileCache.size);
+      fs.closeSync(fd);
+      text = buf.toString('utf8');
+    } catch {
+      return costFileCache.rows;
+    }
+    const lines = (costFileCache.rest + text).split('\n');
+    costFileCache.rest = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const ev = JSON.parse(line);
+        const ts = new Date(ev.ts).getTime();
+        if (!Number.isFinite(ts)) continue;
+        costFileCache.rows.push(ev);
+      } catch { /* one malformed line never hides the rest */ }
+    }
+    costFileCache.size = st.size;
+    // Bound memory: keep the current 31-day window only.
+    if (costFileCache.rows.length > 120_000) {
+      const cutoff = Date.now() - COST_CACHE_MAX_AGE_MS;
+      costFileCache.rows = costFileCache.rows.filter((r) => {
+        const t = new Date(r?.ts).getTime();
+        return Number.isFinite(t) && t >= cutoff;
+      });
+    }
+  }
+  return costFileCache.rows;
+}
+
+/**
  * Parse the cost.jsonl rows inside the rolling window. Shared by the
  * aggregate (readRealCosts) and the per-god rows (readGodCosts) so one
  * disk read feeds both.
  */
 function readCostRows(windowMs: number = COST_WINDOW_MS): any[] {
   const costFile = path.join(METRICS_DIR, 'cost.jsonl');
+  const cutoff = Date.now() - windowMs;
+  const all = readCostFileRows(costFile);
   const rows: any[] = [];
-  try {
-    if (!fs.existsSync(costFile)) return rows;
-    const raw = fs.readFileSync(costFile, 'utf-8');
-    if (!raw.trim()) return rows;
-    const cutoff = Date.now() - windowMs;
-    for (const line of raw.split('\n')) {
-      if (!line.trim()) continue;
-      try {
-        const ev = JSON.parse(line);
-        const ts = new Date(ev.ts).getTime();
-        if (!Number.isFinite(ts) || ts < cutoff) continue;
-        rows.push(ev);
-      } catch {}
-    }
-  } catch {}
+  for (const ev of all) {
+    const ts = new Date(ev?.ts).getTime();
+    if (!Number.isFinite(ts) || ts < cutoff) continue;
+    rows.push(ev);
+  }
   // v0.0.29 — THE HOPS WERE INVISIBLE. The walk's children are spawn
   // `opencode run` processes: their step-finish events never reached this
   // file (the 2026-10-31 specimen: a 29-minute Athena hop with 5,766 output
@@ -1223,7 +1270,7 @@ function readCostRows(windowMs: number = COST_WINDOW_MS): any[] {
   // (no double count when the child hook does fire).
   try {
     const seenSessions = new Set(rows.map((r) => r?.session_id).filter(Boolean));
-    const activeFile = path.join(os.homedir(), '.olympus', 'active-project.json');
+    const activeFile = path.join(process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus'), 'active-project.json');
     let activeSlug = '';
     try { activeSlug = String(JSON.parse(fs.readFileSync(activeFile, 'utf-8'))?.slug ?? ''); } catch { /* no pointer */ }
     if (activeSlug) {

@@ -23,6 +23,7 @@ import { laneRosterFor } from '@/lib/lane-roster';
 import { reconcileProjectPath, PROJECTS_DIR, setActiveProject, getActiveProjectSlug } from '@/lib/project-context';
 import { composePlannerRag } from '@/lib/rag-inject';
 import { composeKnowledgeBlock } from '@/lib/knowledge-hints';
+import { statusBriefMarker } from '@/lib/status-brief';
 import { uiReferencesMarkerBlock } from '@/lib/ui-references';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 import { isHibernating } from '@/lib/hibernation';
@@ -515,7 +516,7 @@ Spacing: sections get py-20 minimum. Cards get p-6 minimum. Whitespace IS the de
 Components: design with PERSONALITY. Each component must have at least ONE distinctive detail (a gradient, a unique border treatment, a custom hover state, a distinctive shadow). Generic shadcn/card clones are FORBIDDEN.
 Assets: for logos, icons, and illustrations — create a simple inline SVG or CSS-based logo mark. If the project needs a vector logo, include a hop that creates it as an SVG.
 Deliverables: the project root must contain ONLY deliverable files. No planning artifacts (dispatch-plan.json, .olympus-* files, opencode.json, .opencode) inside the project — the machine cleans these after the walk. Add a .gitignore that excludes any worklog/ or .olympus-* files.
-Design review: include a design-review hop as the SECOND-TO-LAST hop (god: athena, artifacts: ["design-review.json"], budgetTokens: 4096). Its prompt must tell the god to: (1) run \`node scripts/extract-page-styles.mjs <preview-url> <project-root>\` to get the REAL visual data (fonts, colors, spacing, slop signals, component quality signals — extracted from the served page, not from source alone). (2) Read the key component files. (3) Rate each dimension 0-10 (typography, color, spacing, components, hierarchy, darkTheme, content, motion). (4) Write design-review.json with {"scores":{...},"overall":N,"issues":[...],"fixInstructions":[...]}. The verify check: design-score:7.
+Design review: include EXACTLY ONE design-review hop, as the SECOND-TO-LAST hop (god: athena, artifacts: ["design-review.json"], budgetTokens: 4096). A generation that already has a passed design gate must not add another unless the UI changed substantially — repeated design hops are waste, not quality. Its prompt must tell the god to: (1) run \`node scripts/extract-page-styles.mjs <preview-url> <project-root>\` to get the REAL visual data (fonts, colors, spacing, slop signals, component quality signals — extracted from the served page, not from source alone). (2) Read the key component files. (3) Rate each dimension 0-10 (typography, color, spacing, components, hierarchy, darkTheme, content, motion). (4) Write design-review.json with {"scores":{...},"overall":N,"floor":8,"target":9,"reviewedAt":"<ISO date>","issues":[...],"fixInstructions":[...]}. Use floor 8 for a Base project and 9 for Complete; target is floor+1, never 10. The verify check: design-score:8 (or the floor the profile declares).
 Interactive design choices: in an INTERACTIVE session (not a hop), Athena must call \`olympus-design-review\` BEFORE implementing visible UI and present 2–6 dynamic options (logo SVGs, palettes, layout references) with a refinement box. In a hop/unattended context she must NOT wait for a user — decide from this contract and record the choice. The choice card is rendered inline in the terminal; there is no Design Studio modal anymore.
 ${uiReferencesBlock}`
       : '';
@@ -540,9 +541,15 @@ ${uiReferencesBlock}`
     const languageMarker = action === 'prompt'
       ? `\n\n[OLYMPUS-LANGUAGE ${uiLanguage}] The interface language is ${languageNames[uiLanguage] ?? 'English'}. ALL user-facing prose in your reply — explanations, plans, questions, summaries, choices and UI copy — must be written in ${languageNames[uiLanguage] ?? 'English'}. Code, identifiers, file paths, commands and upstream component names stay as-is.`
       : '';
+    // v0.1.0 — Apollo always knows WHERE the project is before he answers.
+    // The brief is disk truth (project/generation/hop/park/files/design), so
+    // the reply can start with WHERE/WHAT/NEXT/NEED/FILES instead of a log.
+    const statusMarker = action === 'prompt'
+      ? statusBriefMarker(intentStage?.slug ?? getActiveProjectSlug())
+      : '';
     const runText = unattended
-      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptTextClean + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker + languageMarker
-      : sessionMarker + classificationMarker + addressMarker + promptTextClean + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + plannerMarker + designMarker + languageMarker;
+      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptTextClean + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + statusMarker + plannerMarker + designMarker + languageMarker
+      : sessionMarker + classificationMarker + addressMarker + promptTextClean + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + statusMarker + plannerMarker + designMarker + languageMarker;
 
     return streamWarm(req, {
       conversationId,
@@ -1060,11 +1067,15 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
         });
       }, 45_000);
 
-      // W-N LANE-PROBE: one token asked of the active lane BEFORE the real
-      // turn posts — fire-and-forget (zero latency added to a healthy lane);
-      // a lane that cannot answer "ping" in the probe window gets named in
-      // seconds, not discovered after the ceiling.
-      void probeLane().then((r) => {
+      // W-N LANE-PROBE: one token asked of the lane the TURN will use BEFORE
+      // the real turn posts — fire-and-forget (zero latency added to a healthy
+      // lane); a lane that cannot answer "ping" in the probe window gets
+      // named in seconds, not discovered after the ceiling. v0.1.0: the probe
+      // is ADVISORY. A raw probe refusal never aborts a turn whose guarded
+      // model is a different, live lane (the false "GO auth disconnect").
+      const probeAgent = opts.agent ?? 'apollo';
+      const probeModel = guardedModelForGod(probeAgent, resolveBurnModelForGod(probeAgent)) ?? undefined;
+      void probeLane({ agent: probeAgent, model: probeModel }).then((r) => {
         if (closed || !r) return;
         if (!r.ok) {
           const err = String(r.error ?? 'no response');
@@ -1079,15 +1090,22 @@ function streamWarm(req: NextRequest, opts: WarmStreamOptions) {
           const roster = laneRosterFor('apollo');
           const nextLane = laneChain(r.model, roster).filter((id) => id !== r.model)[0] ?? null;
           const advice = nextLane
-            ? `Next healthy lane: ${nextLane} — resend and the turn will use it.`
+            ? `Next healthy lane: ${nextLane} — this turn already uses the guarded lane when it differs.`
             : 'No healthy fallback in the roster — open Settings → LLM Strategy.';
-          if (cls === 'auth' || cls === 'no-route') {
+          // AUTH/NO-ROUTE: fail fast ONLY when the probe is authoritative.
+          // A harness-only lane (GO/Zen) answers a raw probe with a class
+          // refusal while the CLI serves it; aborting on that was the false
+          // "GO auth disconnect". The turn's model is already the guarded,
+          // healthy lane.
+          if ((cls === 'auth' || cls === 'no-route') && !r.aliveForUs) {
             fail(`⚠ Pre-flight: lane ${r.model} is ${cls} (${err}). It was marked dead for retry. ${advice}`);
             return;
           }
           send({
             type: 'log',
-            msg: `⚠ Pre-flight: lane ${r.model} did not answer a 1-token probe (${err}; ${r.latencyMs}ms). The turn may be slow. ${advice}`,
+            msg: cls === 'auth' || cls === 'no-route'
+              ? `⚠ Pre-flight: lane ${r.model} is ${cls} (${err}). Marked dead; the turn continues on ${probeModel ?? 'the guarded lane'}${r.note ? ` (${r.note})` : ''}. ${advice}`
+              : `⚠ Pre-flight: lane ${r.model} did not answer a 1-token probe (${err}; ${r.latencyMs}ms). The turn may be slow. ${advice}`,
             ts: new Date().toISOString(),
           });
         }

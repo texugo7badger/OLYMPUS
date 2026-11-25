@@ -54,7 +54,20 @@ const BUILTIN_BASE_URLS: Record<string, string> = {
 const HARNESS_ONLY_PROVIDERS = new Set(['opencode-go', 'opencode']);
 
 export function workspaceConfigPath(override?: string): string {
-  return override ?? path.join(os.homedir(), '.local', 'share', 'olympus', 'workspace', 'opencode.json');
+  if (override) return override;
+  // v0.1.0 — the ACTIVE config is the OLYMPUS root's opencode.json, not the
+  // legacy ~/.local/share/olympus/workspace copy. The old path probed a stale
+  // model table, so the pre-flight could abort a healthy turn on a lane the
+  // turn was no longer using.
+  const candidates = [
+    process.env.OLYMPUS_ROOT ? path.join(process.env.OLYMPUS_ROOT, 'opencode.json') : '',
+    path.join(process.cwd(), 'opencode.json'),
+    path.join(os.homedir(), '.local', 'share', 'olympus', 'workspace', 'opencode.json'),
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    try { if (fs.existsSync(candidate)) return candidate; } catch { /* next */ }
+  }
+  return candidates[0];
 }
 
 export function authStorePath(override?: string): string {
@@ -102,13 +115,22 @@ export function laneBaseUrl(
 export async function probeLane(
   opts: {
     agent?: string;
+    /** v0.1.0 — probe the model the TURN will actually use, not a stale
+     *  workspace config. When set, the workspace file is not read. */
+    model?: string | null;
     timeoutMs?: number;
     workspacePath?: string;
     authPath?: string;
   } = {},
 ): Promise<LaneProbeResult | null> {
   const agent = opts.agent ?? 'apollo';
-  const model = activeModelFor(agent, opts);
+  const override = typeof opts.model === 'string' ? opts.model.trim() : '';
+  const model = override.includes('/')
+    ? (() => {
+        const idx = override.indexOf('/');
+        return { providerId: override.slice(0, idx), modelId: override.slice(idx + 1), full: override };
+      })()
+    : activeModelFor(agent, opts);
   if (!model) return null;
   const base = laneBaseUrl(model.providerId, opts);
   if (!base) return null;
@@ -199,6 +221,18 @@ export async function probeLane(
           apiModel: model.modelId, latencyMs, httpStatus: r.status,
           aliveForUs: true,
           note: 'unverifiable raw — opencode owns auth (the auth-store key is stale)',
+        };
+      }
+      // v0.1.0 — a raw GO/Zen auth refusal is NEVER authoritative. The CLI
+      // answered "OK" on deepseek/mimo/hy3/kimi/glm with the same account
+      // while a bare HTTP call answered "OpenCode Go requires an API key";
+      // failing a turn on that false signal was the "GO auth disconnect".
+      if (r.status === 401 || r.status === 403) {
+        return {
+          ok: true, model: model.full, provider: model.providerId,
+          apiModel: model.modelId, latencyMs, httpStatus: r.status,
+          aliveForUs: true,
+          note: 'harness-only lane — raw auth refusal is not authoritative; opencode is the verifier',
         };
       }
     }

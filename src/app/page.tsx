@@ -300,6 +300,9 @@ export default function OlympusWorkspace() {
   // a bare spinner list; HMR reloads stay quiet.
   const [booting, setBooting] = useState(true);
   const [bootLeaving, setBootLeaving] = useState(false);
+  // v0.1.0 — the build handshake: if the running server has no BUILD_ID/CSS,
+  // the shell must never render the stacked PanelLoading list. One repair card.
+  const [bootError, setBootError] = useState<string | null>(null);
   const [pendingPanels, setPendingPanels] = useState(() => getPanelLoadingCount());
   const [windowLoaded, setWindowLoaded] = useState(false);
   // v0.0.60 — ONE loader until EVERYTHING is ready. The old gate waited only
@@ -698,6 +701,62 @@ export default function OlympusWorkspace() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // v0.1.0 — verify the BUILD_ID + CSS the running server is actually
+  // serving. A stale/partial Next server used to reveal the shell and stack
+  // every dynamic panel's loader; now it gets ONE honest repair card.
+  useEffect(() => {
+    let live = true;
+    let tries = 0;
+    const check = async () => {
+      try {
+        const r = await fetch('/api/olympus/boot-check', { cache: 'no-store' });
+        const d = await r.json().catch(() => null);
+        if (!live) return;
+        if (!r.ok || !d?.ok) throw new Error(d?.error || `boot check HTTP ${r.status}`);
+      } catch (e: any) {
+        if (!live) return;
+        if (tries++ < 1) {
+          setTimeout(() => { if (live) void check(); }, 1200);
+          return;
+        }
+        setBootError(e?.message || 'the running build did not pass the boot check');
+      }
+    };
+    void check();
+    return () => { live = false; };
+  }, []);
+
+  if (bootError) {
+    return (
+      <div
+        role="alert"
+        data-testid="boot-repair"
+        style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0B0C10', color: '#E8E6E1', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', padding: 24 }}
+      >
+        <div style={{ width: 'min(560px,100%)', border: '1px solid rgba(212,165,116,.35)', borderRadius: 16, padding: 24, background: '#12141A' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#D4A574', fontSize: 12, letterSpacing: '.2em', textTransform: 'uppercase' }}>
+            <span style={{ width: 8, height: 8, borderRadius: 99, background: '#D4A574', display: 'inline-block' }} />
+            OLYMPUS · build check
+          </div>
+          <h1 style={{ margin: '16px 0 8px', fontSize: 22, lineHeight: 1.25, color: '#E8E6E1' }}>Build incomplete — the shell did not open.</h1>
+          <p style={{ margin: '0 0 10px', fontSize: 12, lineHeight: 1.7, color: '#9A968E' }}>{bootError}</p>
+          <p style={{ margin: '0 0 16px', fontSize: 11, lineHeight: 1.7, color: '#9A968E' }}>
+            The campaign state is safe on disk. Rebuild/restart the app:
+            <code style={{ display: 'block', marginTop: 6, color: '#67C9E8' }}>npm run build:app</code>
+            Then close and reopen OLYMPUS. A stale server on port 3737 must be stopped first.
+          </p>
+          <button
+            type="button"
+            onClick={() => { try { window.location.reload(); } catch { /* ignore */ } }}
+            style={{ border: '1px solid rgba(212,165,116,.45)', background: 'rgba(212,165,116,.12)', color: '#D4A574', borderRadius: 10, padding: '9px 14px', fontSize: 11, cursor: 'pointer' }}
+          >
+            Retry boot
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ChunkErrorBoundary>

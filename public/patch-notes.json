@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-24",
-  "current": "0.0.99",
+  "updatedAt": "2026-11-25",
+  "current": "0.1.0",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.1",
@@ -11,6 +11,23 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.1 passed the full gate on 2026-11-23."
   },
   "releases": [
+    {
+      "version": "0.1.0",
+      "date": "2026-11-25",
+      "title": "The stable launch — lane truth, the walk continues, Apollo answers where",
+      "highlights": [
+        "GO lane truth: every lane was probed with a real 1-token turn. deepseek-v4.1-flash, mimo-v2.6-flash, hy3, kimi-k2.7-code and glm-5.3-flash answer OK; qwen3.7-plus, qwen3.8-flash and minimax-m3 answer 'OpenCode Go requires an API key' and are marked auth (never silently retried). A dead lane fails over to the verified GO roster with the cause; raw harness-only refusals can no longer abort a healthy turn.",
+        "The walk continues: on a DONE generation the detached walker applies the staged dispatch-plan.next.json and keeps walking (bounded to 8 generations per process). A park never auto-advances. Preflight still adopts artifacts already on disk at zero tokens.",
+        "Learning closes the loop: every completed hop writes/updates an empirical instinct (samples + confidence), the gate short-circuits only when both specific tags match, and one quiet 'new instinct' notification is emitted per new pattern. 139 empirical instincts were backfilled from the AIME telemetry.",
+        "Apollo reports WHERE / WHAT HAPPENED / NEXT / NEED YOU / FILES from disk before answering; the God panel carries a compact status brief card (project, generation, hops, current hop, park, preview, design provenance).",
+        "Preview window uses the browser iframe (the Electron popup no longer renders black). Marks queue durably and batch to Apollo; the per-card chat is Apollo-only and the card opens the latest activity sheet.",
+        "Boot handshake accepts Next 16 CSS under static/chunks, so a complete production build no longer shows the repair card or the stacked loaders.",
+        "Cost and Smart Burn never spin forever: the ledger is incrementally cached, the dashboards time out at 20s, keep the last good reading, and expose retry + a campaign-aware empty state.",
+        "Design truth: the project design-review.json is the score; a dated page review is a separate fallback number with its source. The repair loop keeps the project's floor instead of accepting 7.8 under an 8 gate.",
+        "Notifications collapse identical events inside 10 minutes into one row with an honest ×N; the phone sheet and PC center share the same dedupe and palette.",
+        "57 hermetic suites green (including the new learning-loop and go-lane-fallback suites). Hygiene: tsc, lint, docs, privacy and audit. Limits are declared in HYGIENE.md, never hidden."
+      ]
+    },
     {
       "version": "0.0.99",
       "date": "2026-11-24",

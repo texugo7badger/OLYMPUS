@@ -1,15 +1,20 @@
 # OLYMPUS Roadmap
 
-**v0.0.99 is the current release** (2026-11-24) — hygiene total:
-`npm run hygiene` passes tsc, lint, docs, privacy, suite manifest and
-audit-high; the 55 hermetic suites are green; HYGIENE.md declares the limits.
-v0.0.99 also makes the live preview interactive on the REAL origin (Electron
-webview, replay-safe hop reloads, LAN/device presets) and the phone a
-first-class prompt/voice lane (language header, answer accumulator, stop,
-voice primer, presence heartbeat, supervised tunnel).
-The 0.0.98 line is complete (generation boundary, Portfolio, delivery
-profiles, Plan Health, Recovery Log/real errors, OpenCode 2.4.1, boot truth,
-slow-lane truth and the verification guard); `v0.0.98` is the base.
+**v0.1.0 is the current stable release** (2026-11-25) — the stable launch:
+GO lane truth (real 1-token probes; dead qwen/minimax lanes fail over to
+verified lanes), the generation boundary applies the staged next plan, every
+completed hop writes an empirical instinct, Apollo reports WHERE / WHAT / NEXT /
+NEED YOU / FILES from disk, the preview window uses the browser iframe, marks
+batch to Apollo, the boot handshake accepts Next 16 CSS, cost/burn keep the
+last good reading, design truth carries provenance, and notifications dedupe
+with an honest ×N. `npm run hygiene` passes tsc, lint, docs, privacy, suite
+manifest and audit-high; the 57 hermetic suites are green; HYGIENE.md declares
+the limits. v0.0.99 is the previous stable: hygiene total plus the interactive
+REAL-origin preview (Electron webview, replay-safe hop reloads) and the phone as
+a first-class prompt/voice lane. The 0.0.98 line is complete (generation
+boundary, Portfolio, delivery profiles, Plan Health, Recovery Log/real errors,
+OpenCode 2.4.1, boot truth, slow-lane truth and the verification guard);
+`v0.0.98` is the base.
 v0.0.97 remains the previous release: the GO console anchor, stale-anchor
 pause, rolling 65/80/100 and the qwen→DeepSeek guard. v0.0.96: hibernation v2, GO truth and the smart burn: X quits by default while hibernate is explicit; hibernate waits
 for streaming turns, keeps a preview only when a live hop needs it, records and

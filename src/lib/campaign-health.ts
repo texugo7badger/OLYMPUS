@@ -21,7 +21,7 @@ import { loadHopState } from './hop-runtime/hop-state';
 import { readPlanFile, planPath, readFrozenPlan, readNextPlan, computeHopHashes } from './hop-runtime/plan-generation';
 import { patrolLane } from './atlas-patrol';
 import { readRecoveries } from './hop-runtime/recovery';
-import { blockedLanes } from './lane-health';
+import { blockedLanesInUse } from './agent-model';
 import { formatEta, type EtaConfidence } from './eta';
 
 export type CampaignVerdict = 'HEALTHY' | 'DEGRADED' | 'BLOCKED' | 'NEEDS-YOU' | 'PAUSED' | 'DONE';
@@ -67,7 +67,7 @@ export function buildCampaignHealth(laneRoot: string, opts: {
   try {
     const plan = readFrozenPlan(laneRoot) ?? readPlanFile(planPath(laneRoot));
     if (!plan || !Array.isArray(plan.hops)) {
-      return { verdict: 'PAUSED', line: 'No plan on this lane.', generation: 0, completed: 0, total: 0, lifetimeCompleted: 0, running: 0, liveWalk: false, parked: null, parks: 0, lanesDead: blockedLanes().length, nextPlan: null, lastRecovery: null, etaMs: null, eta50Ms: null, eta90Ms: null, etaConfidence: null, parkRate: null, reasons: ['no-plan'] };
+      return { verdict: 'PAUSED', line: 'No plan on this lane.', generation: 0, completed: 0, total: 0, lifetimeCompleted: 0, running: 0, liveWalk: false, parked: null, parks: 0, lanesDead: blockedLanesInUse().length, nextPlan: null, lastRecovery: null, etaMs: null, eta50Ms: null, eta90Ms: null, etaConfidence: null, parkRate: null, reasons: ['no-plan'] };
     }
     const lock = readWalkLock(laneRoot);
     const state = loadHopState(laneRoot);
@@ -84,7 +84,7 @@ export function buildCampaignHealth(laneRoot: string, opts: {
     const activePark = stalePark ? null : parked;
     const patrol = (() => { try { return patrolLane(laneRoot); } catch { return null; } })();
     const finding = patrol?.parked[0] ?? patrol?.stuck[0] ?? null;
-    const lanesDead = blockedLanes().length;
+    const lanesDead = blockedLanesInUse().length;
     const next = readNextPlan(laneRoot);
     const recs = readRecoveries(laneRoot);
     const lastRecovery = recs.length ? `${recs[recs.length - 1].hopId}: ${recs[recs.length - 1].kind}` : null;

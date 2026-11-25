@@ -26,6 +26,7 @@ function typeColor(type: string, palette: OlympusPalette): string {
     case 'walk': return palette.cyan;
     case 'compact': return palette.amberSoft;
     case 'curate': return palette.gold;
+    case 'learning': return palette.purple;
     default: return palette.gold;
   }
 }
@@ -107,6 +108,7 @@ export function CompanionNotificationsSheet({ open, onClose, state, language, pa
                       <p className="mt-0.5 text-[9px] leading-relaxed" style={dim}>{event.body}</p>
                       <div className="mt-1 flex items-center gap-1.5 text-[8px] font-mono" style={dim}>
                         <span>{relativeTime(event.ts, language)}</span>
+                        {event.count && event.count > 1 && <span className="rounded-full px-1.5 py-0.5" style={{ background: `${color}18`, color }}>×{event.count}</span>}
                         {event.hop && <span className="rounded-full px-1.5 py-0.5" style={{ background: `${color}18`, color }}>{event.hop}</span>}
                         {event.god && <span>{event.god}</span>}
                       </div>

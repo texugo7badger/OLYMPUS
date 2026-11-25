@@ -532,6 +532,7 @@ export default function PreviewWindowPage() {
               src={frameUrl}
               title={`${title} live preview`}
               reloadKey={reloadKey}
+              forceBrowser
               onLoad={() => setLoaded(true)}
             />
             {draft && (
