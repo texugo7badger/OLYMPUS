@@ -132,12 +132,12 @@ async function main() {
     // "all clear" — the retired qwen/minimax lanes must not read as 3 dead.
     await evaluate(`(() => { const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === 'LLM strategy'); if (b) b.click(); })()`);
     let lanesText = '';
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 45; i++) {
       lanesText = await evaluate(`document.documentElement.textContent?.slice(0, 30000) || ''`);
       if (/Model lanes/i.test(lanesText)) break;
       await sleep(1000);
     }
-    check('U11: Model lanes reports all clear (retired lanes are not dead errors)', /all clear/i.test(lanesText) && !/\b3 dead\b|\bdead model lane/i.test(lanesText), lanesText.slice(0, 1200));
+    check('U11: Model lanes reports all clear (retired lanes are not dead errors)', /Model lanes/i.test(lanesText) && /all clear/i.test(lanesText) && !/\b3 dead\b|\bdead model lane/i.test(lanesText), lanesText.slice(0, 1200));
     await shot('82-model-lanes-010.png');
 
     // Preview window: the popup page must use an iframe (no black webview).

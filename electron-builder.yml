@@ -135,8 +135,8 @@ linux:
   synopsis: Multi-agent AI operating system desktop app
   description: |
     OLYMPUS is a standalone desktop application that wraps a multi-agent
-    AI operating system built on OpenCode. 10 gods, 118 demigods, 330
-    skills, cascading token compression (5 layers incl. Symphony v1.0),
+    AI operating system built on OpenCode. 10 gods, 61 demigods, 332
+    skills, 28 MCP servers, cascading token compression (5 layers incl. Symphony v1.0),
     self-curating brain. Built with Electron + Next.js.
     Low-cost. Excellent quality. Always free.
   target:
