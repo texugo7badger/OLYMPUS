@@ -391,19 +391,19 @@ ok('PN3: the burn policy upgrades a behind-pace month and respects model ceiling
   const decision = burn.chooseBurnRoster({
     policy: { mode: 'burn', targetPct: 95, modelCeilingPct: 85 },
     accountPct: 25, dailyPct: 1.7, daysLeft: 15, h5Pct: 3, weeklyPct: 8,
-    models: [{ model: 'kimi-k3', pctMonth: 2, limitUsd: null }],
+    models: [{ model: 'kimi-k2.7-code', pctMonth: 2, limitUsd: null }],
     enabledModels: [],
   });
   assert.equal(decision.blocked, null);
   assert.equal(decision.step, 1);
-  assert.equal(decision.roster.apollo, 'opencode-go/kimi-k3');
+  assert.equal(decision.roster.apollo, 'opencode-go/kimi-k2.7-code');
   const capped = burn.chooseBurnRoster({
     policy: { mode: 'burn', targetPct: 95, modelCeilingPct: 85 },
     accountPct: 25, dailyPct: 1.7, daysLeft: 15, h5Pct: 3, weeklyPct: 8,
-    models: [{ model: 'kimi-k3', pctMonth: 90, limitUsd: 60 }],
+    models: [{ model: 'kimi-k2.7-code', pctMonth: 90, limitUsd: 60 }],
     enabledModels: [],
   });
-  assert.notEqual(capped.roster.apollo, 'opencode-go/kimi-k3');
+  assert.notEqual(capped.roster.apollo, 'opencode-go/kimi-k2.7-code');
   assert.equal(burn.chooseBurnRoster({
     policy: { mode: 'off', targetPct: 95, modelCeilingPct: 85 },
     accountPct: 25, dailyPct: 1.7, daysLeft: 15, h5Pct: 3, weeklyPct: 8, models: [],

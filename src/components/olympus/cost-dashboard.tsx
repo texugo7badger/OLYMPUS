@@ -181,7 +181,10 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
   // #197: hidden panes must not poll — when inactive (focus mode hides
   // the left dashboard, or the window is hidden) nothing runs here, and
   // re-activating restarts every loader + interval.
-  if (!active) return;
+  // v0.1.0 — EXCEPT the FIRST load. A hidden/background window used to
+  // leave `data` null and the pane showed "loading costs" forever; one
+  // initial read is cheap and gives the pane a real state to paint.
+  if (!active && data) return;
   let cancelled = false;
  const load = async () => {
  try {
@@ -221,7 +224,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  }
  };
  load();
- const iv = setInterval(load, 10000);
+ const iv = active ? setInterval(load, 10000) : null;
 
  // Fetch the active strategy once on mount. The strategy
  // only changes when the user explicitly switches via Settings → LLM
@@ -272,7 +275,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
 
   return () => {
     cancelled = true;
-    clearInterval(iv);
+    if (iv) clearInterval(iv);
     clearInterval(ivDispatch);
     clearInterval(ivHops);
     window.removeEventListener('olympus:strategy-changed', onStrategyChange);

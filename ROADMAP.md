@@ -7,7 +7,7 @@ completed hop writes an empirical instinct, Apollo reports WHERE / WHAT / NEXT /
 NEED YOU / FILES from disk, the preview window uses the browser iframe, marks
 batch to Apollo, the boot handshake accepts Next 16 CSS, cost/burn keep the
 last good reading, design truth carries provenance, and notifications dedupe
-with an honest ×N. `npm run hygiene` passes tsc, lint, docs, privacy, suite
+with an honest ×N. `npm run hygiene` passes tsc, lint, docs, strategy sync, privacy, suite
 manifest and audit-high; the 57 hermetic suites are green; HYGIENE.md declares
 the limits. v0.0.99 is the previous stable: hygiene total plus the interactive
 REAL-origin preview (Electron webview, replay-safe hop reloads) and the phone as

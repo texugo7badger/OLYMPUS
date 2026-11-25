@@ -6,7 +6,7 @@
 > the long-campaign truth gaps (GO lane probes + fallback, generation boundary,
 > empirical learning, Apollo's disk-truth brief, preview window, batched marks,
 > boot handshake, cost/burn keep-last, design provenance, deduped
-> notifications). `npm run hygiene` passes tsc, lint, docs, privacy, suite
+> notifications). `npm run hygiene` passes tsc, lint, docs, strategy sync, privacy, suite
 > manifest and audit-high; the 57 hermetic suites are green. v0.0.99 is the
 > previous stable: hygiene total plus the interactive REAL-origin preview and
 > the phone lane. The 0.0.98 line is complete; the generation boundary,

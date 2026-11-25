@@ -28,6 +28,7 @@ const checks = [
   { name: 'typescript', cmd: 'npx', args: ['tsc', '--noEmit'] },
   { name: 'lint', cmd: 'npm', args: ['run', 'lint'] },
   { name: 'docs', cmd: 'npm', args: ['run', 'docs:check'] },
+  { name: 'strategy-sync', cmd: 'node', args: ['scripts/check-strategy-sync.js'] },
   { name: 'privacy', cmd: 'npm', args: ['run', 'repo:privacy'] },
   { name: 'suite-manifest', cmd: 'node', args: ['scripts/suites-manifest.mjs'] },
   { name: 'audit-high', cmd: 'npm', args: ['audit', '--audit-level=high'] },

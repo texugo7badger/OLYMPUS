@@ -86,6 +86,10 @@ async function main() {
   const walker = src('src/lib/hop-runtime/walker.ts');
   expect('G18: a completed hop writes an empirical instinct and announces it once', /recordHopLearning\(/.test(walker) && /type: 'learning'/.test(walker), 'the brain still learns nothing from hops');
 
+  const page = src('src/app/page.tsx');
+  expect('G19: cold boot cannot stack panel loaders (overlays are null-loading)', /SettingsDialog = dynamic\([^\n]*loading: \(\) => null/.test(page) && /SSEStreamPanel = dynamic\([^\n]*loading: \(\) => null/.test(page) && /StatusBar = dynamic\([^\n]*<div className="h-8/.test(page), 'an overlay still renders a full PanelLoading');
+  expect('G20: the terminal chunk is preloaded during the boot door', /import\('@\/components\/olympus\/interactive-terminal'\)/.test(page), 'the status brief can be blank on a cold load');
+
   console.log(failures === 0 ? '\ngo-lane-fallback: PASS' : `\ngo-lane-fallback: ${failures} FAIL`);
   process.exit(failures === 0 ? 0 : 1);
 }

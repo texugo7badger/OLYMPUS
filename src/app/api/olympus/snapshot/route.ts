@@ -22,12 +22,12 @@ const GOD_META: Record<string, { icon: string; domain: string; model: string; ca
   apollo:      { icon: 'apollo',     domain: 'Planner — Architecture, Spec',       model: 'opencode-go/glm-5.2',         caveman: 'never', army: 8 },
   atlas:       { icon: 'git-fork',   domain: 'Orchestrator — Dispatch, Execution', model: 'opencode-go/hy3',              caveman: 'never', army: 6 },
   hephaestus:  { icon: 'hephaestus', domain: 'Backend / Infrastructure',           model: 'opencode-go/deepseek-v4-pro', caveman: 'full',  army: 30 },
-  athena:      { icon: 'athena',     domain: 'Frontend / UX-UI / Design',          model: 'opencode-go/qwen3.7-plus',    caveman: 'never', army: 7 },
-  hermes:      { icon: 'hermes',     domain: 'Integrations / APIs / MCPs',         model: 'opencode-go/qwen3.7-plus',    caveman: 'full',  army: 2 },
-  artemis:     { icon: 'artemis',    domain: 'Security / Auditing',                model: 'opencode-go/qwen3.7-plus',    caveman: 'lite',  army: 3 },
+  athena:      { icon: 'athena',     domain: 'Frontend / UX-UI / Design',          model: 'opencode-go/deepseek-v4.1-flash',    caveman: 'never', army: 7 },
+  hermes:      { icon: 'hermes',     domain: 'Integrations / APIs / MCPs',         model: 'opencode-go/mimo-v2.6-flash',    caveman: 'full',  army: 2 },
+  artemis:     { icon: 'artemis',    domain: 'Security / Auditing',                model: 'opencode-go/deepseek-v4.1-flash',    caveman: 'lite',  army: 3 },
   dionysus:    { icon: 'dionysus',   domain: 'QA / Testing / Edge Cases',          model: 'opencode-go/deepseek-v4-pro', caveman: 'full',  army: 6 },
   persephone:  { icon: 'persephone', domain: 'Database / Persistence',             model: 'opencode-go/deepseek-v4-pro', caveman: 'full',  army: 2 },
-  prometheus:  { icon: 'prometheus', domain: 'DevOps / CI-CD / Deploy',            model: 'opencode-go/qwen3.7-plus',    caveman: 'full',  army: 6 },
+  prometheus:  { icon: 'prometheus', domain: 'DevOps / CI-CD / Deploy',            model: 'opencode-go/mimo-v2.6-flash',    caveman: 'full',  army: 6 },
   callimachus: { icon: 'callimachus', domain: 'Vault curator — Instincts, Compaction', model: 'opencode-go/deepseek-v4-flash', caveman: 'full', army: 0 },
 };
 

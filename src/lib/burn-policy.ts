@@ -32,16 +32,16 @@ export const BURN_LADDERS: Record<GodId, BurnLadder> = {
   // is the coding daily driver; DeepSeek V4.1 Flash 1017 is the value leader;
   // Qwen3.7 Plus covers frontend/integrations; Hy3 stays Atlas; MiniMax M3
   // covers DevOps. Claude Haiku 5.5 is the cheap reserve.
-  apollo: { top: 'opencode-go/kimi-k3', daily: 'opencode-go/deepseek-v4.1-flash', reserve: 'opencode-go/glm-5.3-flash' },
+  apollo: { top: 'opencode-go/kimi-k2.7-code', daily: 'opencode-go/deepseek-v4.1-flash', reserve: 'opencode-go/glm-5.3-flash' },
   atlas: { top: 'opencode-go/hy3', daily: 'opencode-go/hy3', reserve: 'opencode-go/hy3' },
-  hephaestus: { top: 'opencode-go/kimi-k3', daily: 'opencode-go/kimi-k2.7-code', reserve: 'opencode-go/deepseek-v4.1-flash' },
-  athena: { top: 'opencode-go/qwen3.7-plus', daily: 'opencode-go/qwen3.8-flash', reserve: 'opencode-go/qwen3.8-flash' },
-  artemis: { top: 'opencode-go/kimi-k3', daily: 'opencode-go/deepseek-v4.1-flash', reserve: 'opencode-go/glm-5.3-flash' },
-  dionysus: { top: 'opencode-go/gpt-6-luna', daily: 'opencode-go/deepseek-v4.1-flash', reserve: 'opencode-go/glm-5.3-flash' },
-  hermes: { top: 'opencode-go/qwen3.7-plus', daily: 'opencode-go/qwen3.7-plus', reserve: 'opencode-go/qwen3.8-flash' },
+  hephaestus: { top: 'opencode-go/kimi-k2.7-code', daily: 'opencode-go/kimi-k2.7-code', reserve: 'opencode-go/deepseek-v4.1-flash' },
+  athena: { top: 'opencode-go/deepseek-v4.1-flash', daily: 'opencode-go/deepseek-v4.1-flash', reserve: 'opencode-go/glm-5.3-flash' },
+  artemis: { top: 'opencode-go/kimi-k2.7-code', daily: 'opencode-go/deepseek-v4.1-flash', reserve: 'opencode-go/glm-5.3-flash' },
+  dionysus: { top: 'opencode-go/deepseek-v4.1-flash', daily: 'opencode-go/deepseek-v4.1-flash', reserve: 'opencode-go/glm-5.3-flash' },
+  hermes: { top: 'opencode-go/mimo-v2.6-flash', daily: 'opencode-go/mimo-v2.6-flash', reserve: 'opencode-go/deepseek-v4.1-flash' },
   persephone: { top: 'opencode-go/deepseek-v4.1-flash', daily: 'opencode-go/deepseek-v4.1-flash', reserve: 'opencode-go/glm-5.3-flash' },
-  prometheus: { top: 'opencode-go/minimax-m3', daily: 'opencode-go/minimax-m3', reserve: 'opencode-go/deepseek-v4.1-flash' },
-  callimachus: { top: 'opencode-go/deepseek-v4.1-flash', daily: 'opencode-go/glm-5.3-flash', reserve: 'opencode-go/claude-haiku-5-5' },
+  prometheus: { top: 'opencode-go/mimo-v2.6-flash', daily: 'opencode-go/mimo-v2.6-flash', reserve: 'opencode-go/deepseek-v4.1-flash' },
+  callimachus: { top: 'opencode-go/deepseek-v4.1-flash', daily: 'opencode-go/deepseek-v4.1-flash', reserve: 'opencode-go/glm-5.3-flash' },
 };
 
 export const BURN_GODS: GodId[] = ['apollo', 'atlas', 'artemis', 'athena', 'dionysus', 'hephaestus', 'hermes', 'persephone', 'prometheus', 'callimachus'];

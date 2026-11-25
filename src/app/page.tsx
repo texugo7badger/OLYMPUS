@@ -175,9 +175,9 @@ function PanelLoading({ label }: { label: string }) {
   );
 }
 
-const ActivityBar = dynamic(() => import('@/components/olympus/activity-bar'), { ssr: false, loading: () => <PanelLoading label="ActivityBar" /> });
-const StatusBar = dynamic(() => import('@/components/olympus/status-bar'), { ssr: false, loading: () => <PanelLoading label="StatusBar" /> });
-const FilterSidebar = dynamic(() => import('@/components/olympus/filter-sidebar'), { ssr: false, loading: () => <PanelLoading label="FilterSidebar" /> });
+const ActivityBar = dynamic(() => import('@/components/olympus/activity-bar'), { ssr: false, loading: () => <div className="w-12 shrink-0 border-r border-olympus-gold/10 bg-olympus-panel" aria-hidden /> });
+const StatusBar = dynamic(() => import('@/components/olympus/status-bar'), { ssr: false, loading: () => <div className="h-8 shrink-0 border-b border-olympus-gold/10 bg-olympus-panel" aria-hidden /> });
+const FilterSidebar = dynamic(() => import('@/components/olympus/filter-sidebar'), { ssr: false, loading: () => null });
 const BrainGraph3D = dynamic(() => import('@/components/olympus/brain-atlas-3d'), { ssr: false, loading: () => <PanelLoading label="BrainGraph3D" /> });
 // GodIntelligenceDashboard is the unified view (absorbs BrainHealthDashboard).
 const GodIntelligenceDashboard = dynamic(() => import('@/components/olympus/god-intelligence-dashboard'), { ssr: false, loading: () => <PanelLoading label="GodIntelligenceDashboard" /> });
@@ -194,22 +194,22 @@ const VaultSummary = dynamic(() => import('@/components/olympus/vault-summary'),
 // IDE extension install commands for the user's preferred editor.
 const EditorBridgePanel = dynamic(() => import('@/components/olympus/editor-bridge-panel'), { ssr: false, loading: () => <PanelLoading label="EditorBridgePanel" /> });
 // Onboarding wizard (first-run experience).
-const OnboardingWizard = dynamic(() => import('@/components/olympus/onboarding-wizard'), { ssr: false, loading: () => <PanelLoading label="OnboardingWizard" /> });
+const OnboardingWizard = dynamic(() => import('@/components/olympus/onboarding-wizard'), { ssr: false, loading: () => null });
 // HITL DAG gate toast (approval prompts).
-const HitlGateToast = dynamic(() => import('@/components/olympus/hitl-gate-toast'), { ssr: false, loading: () => <PanelLoading label="HitlGateToast" /> });
+const HitlGateToast = dynamic(() => import('@/components/olympus/hitl-gate-toast'), { ssr: false, loading: () => null });
 // Quick Open fuzzy file finder (Cmd/Ctrl+P).
-const QuickOpen = dynamic(() => import('@/components/olympus/quick-open'), { ssr: false, loading: () => <PanelLoading label="QuickOpen" /> });
+const QuickOpen = dynamic(() => import('@/components/olympus/quick-open'), { ssr: false, loading: () => null });
 const InteractiveTerminal = dynamic(() => import('@/components/olympus/interactive-terminal'), { ssr: false, loading: () => <PanelLoading label="InteractiveTerminal" /> });
 const LivePreview = dynamic(() => import('@/components/olympus/live-preview'), { ssr: false, loading: () => <PanelLoading label="LivePreview" /> });
 const CustomFrames = dynamic(() => import('@/components/olympus/custom-frames'), { ssr: false, loading: () => <PanelLoading label="CustomFrames" /> });
 const LogsDashboard = dynamic(() => import('@/components/olympus/logs-dashboard'), { ssr: false, loading: () => <PanelLoading label="Logs" /> });
-const SSEStreamPanel = dynamic(() => import('@/components/olympus/sse-stream-panel'), { ssr: false, loading: () => <PanelLoading label="SSEStreamPanel" /> });
-const ShortcutsOverlay = dynamic(() => import('@/components/olympus/shortcuts-overlay'), { ssr: false, loading: () => <PanelLoading label="ShortcutsOverlay" /> });
-const TimeSlider = dynamic(() => import('@/components/olympus/time-slider'), { ssr: false, loading: () => <PanelLoading label="TimeSlider" /> });
+const SSEStreamPanel = dynamic(() => import('@/components/olympus/sse-stream-panel'), { ssr: false, loading: () => null });
+const ShortcutsOverlay = dynamic(() => import('@/components/olympus/shortcuts-overlay'), { ssr: false, loading: () => null });
+const TimeSlider = dynamic(() => import('@/components/olympus/time-slider'), { ssr: false, loading: () => null });
 const ProviderSettings = dynamic(() => import('@/components/olympus/provider-settings'), { ssr: false, loading: () => <PanelLoading label="ProviderSettings" /> });
 const MCPConfigPanel = dynamic(() => import('@/components/olympus/mcp-config-panel'), { ssr: false, loading: () => <PanelLoading label="MCPConfigPanel" /> });
-const SettingsDialog = dynamic(() => import('@/components/olympus/settings-dialog'), { ssr: false, loading: () => <PanelLoading label="SettingsDialog" /> });
-const NewProjectDialog = dynamic(() => import('@/components/olympus/new-project-dialog'), { ssr: false, loading: () => <PanelLoading label="NewProjectDialog" /> });
+const SettingsDialog = dynamic(() => import('@/components/olympus/settings-dialog'), { ssr: false, loading: () => null });
+const NewProjectDialog = dynamic(() => import('@/components/olympus/new-project-dialog'), { ssr: false, loading: () => null });
 // Symphony visual overlay container REMOVED — the brain stays minimalist.
 // Symphony remains as the always-on background communication protocol
 // (see src/lib/symphony/), but the canvas ring overlay is no longer rendered.
@@ -424,6 +424,17 @@ export default function OlympusWorkspace() {
   useEffect(() => {
     void import('@/components/olympus/activity-bar');
     void import('@/components/olympus/status-bar');
+    // The terminal owns the status brief and the Parthenon; preloading it
+    // during the 4.5s boot door avoids a blank right pane (and the old
+    // panel-loader stack) on a cold first load.
+    void import('@/components/olympus/interactive-terminal');
+    // v0.1.0 — the panes the user opens first must not show a cold spinner.
+    // Warm the Cost and LLM Strategy chunks after the shell is up; a click is
+    // then a render, not a network wait.
+    setTimeout(() => {
+      void import('@/components/olympus/cost-dashboard').catch(() => null);
+      void import('@/components/olympus/provider-settings').catch(() => null);
+    }, 1200);
   }, []);
 
   const setGraphData = useOlympus(s => s.setGraphData);

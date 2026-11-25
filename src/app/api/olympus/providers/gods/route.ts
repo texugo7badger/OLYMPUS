@@ -58,12 +58,12 @@ const GOD_META: Record<string, { icon: string; default_class: string }> = {
   apollo: { icon: 'apollo', default_class: 'opencode-go/deepseek-v4.1-flash' },
   atlas: { icon: 'git-fork', default_class: 'opencode-go/hy3' },
   hephaestus: { icon: 'hephaestus', default_class: 'opencode-go/deepseek-v4.1-flash' },
-  athena: { icon: 'athena', default_class: 'opencode-go/qwen3.7-plus' },
-  hermes: { icon: 'hermes', default_class: 'opencode-go/qwen3.7-plus' },
+  athena: { icon: 'athena', default_class: 'opencode-go/deepseek-v4.1-flash' },
+  hermes: { icon: 'hermes', default_class: 'opencode-go/mimo-v2.6-flash' },
   artemis: { icon: 'artemis', default_class: 'opencode-go/deepseek-v4.1-flash' },
-  dionysus: { icon: 'dionysus', default_class: 'opencode-go/qwen3.7-plus' },
+  dionysus: { icon: 'dionysus', default_class: 'opencode-go/mimo-v2.6-flash' },
   persephone: { icon: 'persephone', default_class: 'opencode-go/deepseek-v4.1-flash' },
-  prometheus: { icon: 'prometheus', default_class: 'opencode-go/minimax-m3' },
+  prometheus: { icon: 'prometheus', default_class: 'opencode-go/mimo-v2.6-flash' },
   callimachus: { icon: 'callimachus', default_class: 'opencode-go/deepseek-v4.1-flash' },
 };
 

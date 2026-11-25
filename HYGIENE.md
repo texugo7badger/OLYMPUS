@@ -11,6 +11,7 @@
 | `npx tsc --noEmit` | 0 diagnostics |
 | `npm run lint` | 0 errors, 0 warnings from the project config |
 | `npm run docs:check` | current version/docs consistent |
+| `node scripts/check-strategy-sync.js` | the strategy tables and every UI mirror agree |
 | `npm run repo:privacy` | no private roots/credentials in tracked files |
 | `node scripts/suites-manifest.mjs` | every suite mapped, PUBLIC/TRACKED_LOCAL present |
 | `npm audit --audit-level=high` | 0 high / 0 critical |
@@ -51,6 +52,6 @@ Cost settles, Model lanes all clear, preview iframe, mark queue).
 ## Run it
 
 ```bash
-npm run hygiene              # tsc, lint, docs, privacy, manifest, audit
+npm run hygiene              # tsc, lint, docs, strategy sync, privacy, manifest, audit
 npm run hygiene -- --battery # + the 57 hermetic suites
 ```

@@ -5,7 +5,7 @@
 > v0.1.0 · 2026-11-25 · **STABLE — GO for the 0.1.0 launch.** The 100-hop
 > certification passed (100/100 script hops, evidence linked below); the
 > 8-hour model soak is **NOT claimed** and remains a declared P2 gap. The 57
-> hermetic suites are green, `npm run hygiene` passes tsc, lint, docs, privacy,
+> hermetic suites are green, `npm run hygiene` passes tsc, lint, docs, strategy sync, privacy,
 > suite manifest and audit-high, and HYGIENE.md declares every remaining P2
 > limit. [KNOWN-ISSUES.md](KNOWN-ISSUES.md) lists each declared gap and the
 > post-0.1.0 backlog. v0.1.0 closes the long-campaign truth gaps: GO lane probes and

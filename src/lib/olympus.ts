@@ -142,12 +142,12 @@ const GOD_META: Record<string, { icon: string; domain: string; model: string; ca
   apollo: { icon: 'apollo', domain: 'Planner — Architecture, Spec', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'never', army: 8 },
   atlas: { icon: 'git-fork', domain: 'Orchestrator — Dispatch, Execution', model: 'opencode-go/hy3', caveman: 'never', army: 6 },
   hephaestus: { icon: 'hephaestus', domain: 'Backend / Infrastructure', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full', army: 20 },
-  athena: { icon: 'athena', domain: 'Frontend / UX-UI / Design', model: 'opencode-go/qwen3.7-plus', caveman: 'never', army: 14 },
-  hermes: { icon: 'hermes', domain: 'Integrations / APIs / MCPs', model: 'opencode-go/qwen3.7-plus', caveman: 'full', army: 16 },
+  athena: { icon: 'athena', domain: 'Frontend / UX-UI / Design', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'never', army: 14 },
+  hermes: { icon: 'hermes', domain: 'Integrations / APIs / MCPs', model: 'opencode-go/mimo-v2.6-flash', caveman: 'full', army: 16 },
   artemis: { icon: 'artemis', domain: 'Security / Auditing', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'lite', army: 12 },
-  dionysus: { icon: 'dionysus', domain: 'QA / Testing / Edge Cases', model: 'opencode-go/qwen3.7-plus', caveman: 'full', army: 13 },
+  dionysus: { icon: 'dionysus', domain: 'QA / Testing / Edge Cases', model: 'opencode-go/mimo-v2.6-flash', caveman: 'full', army: 13 },
   persephone: { icon: 'persephone', domain: 'Database / Persistence', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full', army: 11 },
-  prometheus: { icon: 'prometheus', domain: 'DevOps / CI-CD / Deploy', model: 'opencode-go/minimax-m3', caveman: 'full', army: 13 },
+  prometheus: { icon: 'prometheus', domain: 'DevOps / CI-CD / Deploy', model: 'opencode-go/mimo-v2.6-flash', caveman: 'full', army: 13 },
   callimachus: { icon: 'callimachus', domain: 'Vault curator — Instincts, Compaction', model: 'opencode-go/deepseek-v4.1-flash', caveman: 'full', army: 9 },
 };
 
@@ -1142,12 +1142,12 @@ function getGodModelClasses(): Record<string, string> {
     apollo:      'opencode-go/glm-5.3-flash',
     atlas:       'opencode-go/hy3',
     hephaestus:  'opencode-go/kimi-k2.7-code',
-    athena:      'opencode-go/qwen3.7-plus',
-    hermes:      'opencode-go/kimi-k2.7-code',
+    athena:      'opencode-go/deepseek-v4.1-flash',
+    hermes:      'opencode-go/mimo-v2.6-flash',
     artemis:     'opencode-go/glm-5.3-flash',
     dionysus:    'opencode-go/glm-5.3-flash',
-    persephone:  'opencode-go/qwen3.7-plus',
-    prometheus:  'opencode-go/minimax-m3',
+    persephone:  'opencode-go/deepseek-v4.1-flash',
+    prometheus:  'opencode-go/mimo-v2.6-flash',
     callimachus: 'opencode-go/glm-5.3-flash',
   };
 
