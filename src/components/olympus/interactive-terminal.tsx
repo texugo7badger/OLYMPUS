@@ -1483,8 +1483,28 @@ export default function InteractiveTerminal() {
         .catch(() => { /* offline */ });
     };
     pull();
-    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') pull(); }, 10_000);
+    const timer = setInterval(() => { if (document.visibilityState !== 'hidden') pull(); }, 3_000);
     return () => { live = false; clearInterval(timer); };
+  }, [activeProject?.slug]);
+
+  // v0.1.1 — a mark batch (or any high-priority item) lands NOW, not on the
+  // next poll. The composer stays the only conversation surface.
+  useEffect(() => {
+    const onQueued = () => {
+      const slug = activeProject?.slug;
+      if (!slug) return;
+      fetch(`/api/olympus/prompt-queue?project=${encodeURIComponent(slug)}`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d?.ok) setCreativeQueue((Array.isArray(d.items) ? d.items : []).filter((i: any) => i.status === 'queued')); })
+        .catch(() => { /* the poll retries */ });
+    };
+    const onFocus = () => { try { inputRef.current?.focus(); } catch { /* not mounted */ } };
+    window.addEventListener('olympus:prompt-queued', onQueued);
+    window.addEventListener('olympus:focus-terminal', onFocus);
+    return () => {
+      window.removeEventListener('olympus:prompt-queued', onQueued);
+      window.removeEventListener('olympus:focus-terminal', onFocus);
+    };
   }, [activeProject?.slug]);
 
   const drainCreative = useCallback(async (item: { id: string; text: string }) => {

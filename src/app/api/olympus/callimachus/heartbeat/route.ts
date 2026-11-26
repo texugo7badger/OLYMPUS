@@ -19,6 +19,13 @@ export const dynamic = 'force-dynamic';
 
 const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
 const CALLIMACHUS_LOCK = path.join(OLYMPUS_HOME, 'callimachus.lock');
+const CALLIMACHUS_LAST = path.join(OLYMPUS_HOME, 'callimachus-last-run.json');
+
+function recordLastRun(code: number, deep: boolean): void {
+  try {
+    fs.writeFileSync(CALLIMACHUS_LAST, JSON.stringify({ at: new Date().toISOString(), code, deep }, null, 2) + '\n', { mode: 0o600 });
+  } catch { /* evidence is best-effort */ }
+}
 
 /**
  * POST /api/olympus/callimachus/heartbeat
@@ -176,6 +183,7 @@ export async function POST(req: NextRequest) {
 
         child.on('close', (code) => {
           if (lineBuf.length) onLine(lineBuf.shift()!);
+          recordLastRun(code ?? 0, deep);
           send({ type: 'exit', code, ts: new Date().toISOString() });
 
           // Release the lock
@@ -185,6 +193,7 @@ export async function POST(req: NextRequest) {
         });
 
         child.on('error', (err: any) => {
+          recordLastRun(1, deep);
           send({ type: 'error', msg: err.message });
           try { fs.unlinkSync(CALLIMACHUS_LOCK); } catch {}
           try { controller.close(); } catch {}

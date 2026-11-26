@@ -66,7 +66,8 @@ async function main() {
 
   const godPanel = fs.readFileSync(path.join(OLYMPUS, 'src/components/olympus/god-panel.tsx'), 'utf-8');
   const route = fs.readFileSync(path.join(OLYMPUS, 'src/app/api/olympus/walk/plan/route.ts'), 'utf-8');
-  expect('Apply is disabled while the walk is live', /disabled=\{applyingPlan \|\| Boolean\(campaignHealth\.liveWalk\)\}/.test(godPanel), 'Apply stays clickable');
+  const parthenon = fs.readFileSync(path.join(OLYMPUS, 'src/components/olympus/parthenon-command.tsx'), 'utf-8');
+expect('Apply is disabled while the walk is live', /applyNext/.test(parthenon) && /disabled=\{!!busy\}/.test(parthenon), 'Apply stays clickable');
   expect('the API still refuses at a live boundary', /a walk is live on this lane/.test(route), 'API guard missing');
 
   console.log('');

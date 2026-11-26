@@ -119,6 +119,8 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  const docVisible = useDocVisible();
  const [stats, setStats] = useState<BrainStats | null>(null);
  const [scStats, setScStats] = useState<ShortCircuitStats | null>(null);  // v0.0.26 — classifier ↔ dispatch agreement (the feedback loop).
+ const [curator, setCurator] = useState<any>(null);
+ const [curating, setCurating] = useState(false);
   const [agreement, setAgreement] = useState<{ rate: number | null; windows: number }>({ rate: null, windows: 0 });
 
  const [loading, setLoading] = useState(true);
@@ -155,6 +157,11 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  if (mounted && d) setScStats(d);
  })
  .catch(() => {});
+ // v0.1.1 — Callimachus is a live loop, not a static row.
+ fetch('/api/olympus/callimachus/status', { cache: 'no-store' })
+   .then(r => r.ok ? r.json() : null)
+   .then((d: any) => { if (mounted && d?.ok) setCurator(d); })
+   .catch(() => {});
  // v0.0.26 — the agreement window the heartbeat records.
  fetch('/api/olympus/agreement?limit=50', { cache: 'no-store' })
  .then(r => r.ok ? r.json() : null)
@@ -301,6 +308,37 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  <BrainHealthStat label="Total instincts" value={health.total_instincts ?? 0} />
  </div>
  )}
+
+ {/* Callimachus — the curator is a LIVE loop, not a static row. */}
+ <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3 mb-4" data-testid="callimachus-live">
+  <div className="flex items-center gap-2">
+   <Sparkles size={13} className={curator?.active ? 'text-olympus-gold animate-pulse' : 'text-olympus-gold/70'} />
+   <span className="text-[11px] font-semibold text-olympus-text">Callimachus · VaultBrain maintenance</span>
+   <span className={cn('ml-auto rounded px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wide', curator?.active ? 'bg-olympus-green/15 text-olympus-green' : 'bg-olympus-gold/10 text-olympus-gold')}>
+    {curator?.active ? 'curating now' : 'watching'}
+   </span>
+  </div>
+  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[8.5px] font-mono text-olympus-text-dim">
+   <span>{curator?.lastRunAt ? `last pass ${Math.max(0, Math.round((Date.now() - Date.parse(curator.lastRunAt)) / 60000))}m ago` : 'no pass recorded'}</span>
+   <span>next {curator?.nextRegularAt ? new Date(curator.nextRegularAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+   <span className="text-olympus-green">quick circuits {curator?.census?.quickCircuits ?? 0}</span>
+   <span>technical {curator?.census?.technical ?? 0}</span>
+   <span>project {curator?.census?.project ?? 0}</span>
+   <button
+    type="button"
+    disabled={curating || curator?.active}
+    onClick={async () => {
+      setCurating(true);
+      try { await fetch('/api/olympus/callimachus/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); await new Promise(r => setTimeout(r, 1200)); }
+      catch { /* the next poll reports */ }
+      setCurating(false);
+    }}
+    className="ml-auto rounded border border-olympus-gold/30 px-1.5 py-0.5 text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
+   >
+    {curating ? 'starting…' : curator?.active ? 'running' : 'curate now'}
+   </button>
+  </div>
+ </div>
 
  {/* Short-circuit hit rate sparkline (key visual) */}
  <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-3 mb-4">

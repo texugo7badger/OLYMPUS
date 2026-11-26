@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-25T03:39:01.662Z",
+  "generatedAt": "2026-11-26T17:43:19.129Z",
   "note": "PUBLIC suites are tracked and run by .github/workflows/core.yml; TRACKED_LOCAL suites are in the repo but need the local OpenCode run state/overlay; LOCAL suites stay on the maintainer machine and declare why. A fresh clone reproduces the public core; the full battery numbers ride public/stable.json.",
   "public": [
     "alignment-preview.test.mjs",
@@ -20,7 +20,6 @@
     "cost-window.test.mjs",
     "demigod-archive.test.mjs",
     "docs-check.test.mjs",
-    "god-chat.test.mjs",
     "hop-failure-class.test.mjs",
     "i18n-audit.test.mjs",
     "mobile-companion.test.mjs",
@@ -70,6 +69,10 @@
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
     {
+      "suite": "go-lane-fallback.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
       "suite": "handoff-continuity.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
@@ -87,6 +90,10 @@
     },
     {
       "suite": "lane-config-sync.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
+      "suite": "learning-loop.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
     {
@@ -144,18 +151,14 @@
   ],
   "local": [
     {
-      "suite": "go-lane-fallback.test.mjs",
-      "reason": "reads local credentials/auth state"
-    },
-    {
-      "suite": "learning-loop.test.mjs",
+      "suite": "replan-continue.test.mjs",
       "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
     }
   ],
   "count": {
     "total": 57,
-    "public": 28,
-    "trackedLocal": 27,
-    "local": 2
+    "public": 27,
+    "trackedLocal": 29,
+    "local": 1
   }
 }

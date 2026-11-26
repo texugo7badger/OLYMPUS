@@ -34,10 +34,9 @@ const src = (p) => fs.readFileSync(path.join(ROOT, p), 'utf-8');
 const terminal = src('src/components/olympus/interactive-terminal.tsx');
 const walkerSrc = src('src/lib/hop-runtime/walker.ts');
 const panel = src('src/components/olympus/god-panel.tsx');
-const modal = src('src/components/olympus/god-chat-modal.tsx');
-const chat = src('src/app/api/olympus/god/chat/route.ts');
 const inboxRoute = src('src/app/api/olympus/god/inbox/route.ts');
-const mark = src('src/app/api/olympus/athena/edit/route.ts');
+const mark = src('src/app/api/olympus/marks/send/route.ts');
+const terminalSrc = src('src/components/olympus/interactive-terminal.tsx');
 const action = src('src/app/api/olympus/action/route.ts');
 const session = src('src/lib/opencode-session.ts');
 const hopProgress = src('src/lib/hop-runtime/progress.ts');
@@ -66,10 +65,9 @@ const read = inbox.readGodInbox('athena', 10);
 expect('P-6: the inbox round-trips a mark and its reply', read.length === 2 && read[0].id === a.id && read[1].replyTo === a.id && read[1].text.includes('Applied'), read);
 inbox.appendGodInbox('athena', { role: 'you', text: 'pending mark', source: 'mark', status: 'pending' });
 expect('P-7: a pending mark is countable (the badge source)', inbox.pendingGodInboxCount('athena') === 1, inbox.pendingGodInboxCount('athena'));
-expect('P-8: the chat route writes both sides of the turn', /appendGodInbox\(god, \{[\s\S]*?role: 'you'/.test(chat) && /appendGodInbox\(god, \{[\s\S]*?role: 'god'/.test(chat) && /replyTo: userEntry\.id/.test(chat), 'chat is memory-only');
-expect('P-9: a mark becomes an inbox row, runs in the background and settles', /appendGodInbox\('athena', \{[\s\S]*?source: 'mark'[\s\S]*?status: 'pending'/.test(mark) && /runGodTurn\('athena'/.test(mark) && /updateGodInbox\('athena', inboxEntry\.id, \{ status: 'running' \}\)/.test(mark) && /status: 'done'/.test(mark) && !/detached: true/.test(mark), 'mark still detached/stdio-ignored');
+expect('P-9: marks enter the ONE Apollo terminal queue (no background god turn)', /enqueuePrompt\(/.test(mark) && /source: 'markview'/.test(mark) && /priority: 'high'/.test(mark) && !/runGodTurn/.test(mark) && !/appendGodInbox/.test(mark) && /olympus:prompt-queued/.test(terminalSrc), 'mark still uses a parallel chat');
 expect('P-10: the inbox route serves one god\'s thread', /readGodInbox\(god, limit\)/.test(inboxRoute) && /pendingGodInboxCount\(god\)/.test(inboxRoute), 'no inbox route');
-expect('P-11: the god chat renders the inbox and mark entries', /\/api\/olympus\/god\/inbox\?god=/.test(modal) && /m\.source === 'mark'/.test(modal) && /is applying this mark/.test(modal), 'modal not wired to inbox');
+expect('P-11: the terminal drains high-priority mark items and focuses on demand', /priority !== 'high'/.test(terminalSrc) && /drainCreative/.test(terminalSrc) && /olympus:focus-terminal/.test(terminalSrc), 'terminal queue not wired');
 
 // ── P-12..P-14: runtime ceilings and reasoning ───────────────────────────────
 expect('P-12: the action turn ceiling defaults to 30 min (was 15)', /n > 0 \? n : 30 \* 60_000/.test(action) && /OLYMPUS_MAX_RUNTIME_MS/.test(action), 'action default unchanged');
@@ -123,20 +121,19 @@ expect('P-29: the animated Nakkas SVG and its static twin are shipped and stable
 
 // ── P-30..P-33: v0.0.90 — the magic wand + the approval gate + preview window ──
 const livePreview = src('src/components/olympus/live-preview.tsx');
-const markRoute = src('src/app/api/olympus/athena/edit/route.ts');
-const approveRoute = src('src/app/api/olympus/athena/approve/route.ts');
+const markRoute = src('src/app/api/olympus/marks/send/route.ts');
+const marksFormat = src('src/lib/marks-format.ts');
 const godRun = src('src/lib/god-run.ts');
 const previewWindow = src('src/app/preview-window/page.tsx');
-const chatModal = src('src/components/olympus/god-chat-modal.tsx');
 expect('P-30: the mark sends the PREVIEW SURFACE viewport + preview URL, not the app window',
   /surfaceRef/.test(livePreview) && /surfaceRect\?\.width/.test(livePreview) && /previewUrl: previewTarget/.test(livePreview)
     && /viewport: \{ width: window\.innerWidth/.test(livePreview) === false,
   'the mark still sends the app window viewport');
-expect('P-31: the mark is a PLANNING turn, opens Apollo chat and has a real approval route',
-  /PLANNING turn/.test(markRoute) && /do not edit/i.test(markRoute) && /olympus:open-god-chat/.test(livePreview)
-    && /olympus:open-god-chat/.test(panel) && /Approve → Apollo \+ Atlas/.test(chatModal)
-    && /writeHopOverride\(/.test(approveRoute) && /loadHopState\(/.test(approveRoute) && !/runGodTurn/.test(approveRoute) && /\.olympus-hop-overrides/.test(approveRoute),
-  'the mark has no plan → approve → Apollo/Atlas handoff');
+expect('P-31: the mark is a PLANNING turn in the ONE Apollo terminal', 
+  /PLANNING turn/.test(marksFormat) && /do not edit/i.test(marksFormat)
+    && /olympus:prompt-queued/.test(livePreview) && /olympus:focus-terminal/.test(livePreview)
+    && /focusApollo/.test(panel) && /priority: 'high'/.test(markRoute),
+  'the mark has no terminal queue handoff');
 expect('P-32: a GO auth failure retries once on the verified fallback model (Athena unblocked)',
   /GO_FALLBACK_MODEL = 'opencode-go\/deepseek-v4\.1-flash'/.test(godRun) && /isAuthFailure/.test(godRun)
     && /fallbackModel/.test(godRun) && /--model/.test(godRun),

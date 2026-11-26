@@ -111,7 +111,7 @@ async function main() {
     await go(URL_BASE, 9000);
     await waitFor(`document.querySelector('[data-testid="status-brief"]')`, 45_000);
     await sleep(1500);
-    await shot('01-pantheon-010.png');
+    await shot('01-pantheon-011.png');
 
     // 2 — the live preview (a framing-friendly fixture project; AIME sets
     // frame-ancestors 'none', so it cannot be embedded by design).
@@ -120,13 +120,13 @@ async function main() {
     await click(`[...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === 'Live preview')`);
     await waitFor(`document.querySelector('iframe, webview')`, 30_000);
     await sleep(5000);
-    await shot('02-live-preview-010.png');
+    await shot('02-live-preview-011.png');
 
     // 3 — the dedicated preview window (browser iframe, no black popup).
     await go(`${URL_BASE}preview-window?slug=fixture-demo`, 6000);
     await waitFor(`document.querySelector('iframe')`, 45_000);
     await sleep(4000);
-    await shot('03-preview-window-010.png');
+    await shot('03-preview-window-011.png');
     await ev(`fetch('/api/olympus/projects/active', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: 'aime' }) }).catch(() => null)`);
 
     // 4 — Cost with the real ledger and the honest degraded/retry state.
@@ -135,25 +135,43 @@ async function main() {
     const costReady = await waitFor(`document.body.innerText.includes('GO plan') || document.body.innerText.includes('Cost telemetry') || document.body.innerText.includes('GO Plus')`, 60_000);
     if (!costReady) throw new Error('Cost pane did not settle — refusing to capture a loader as evidence');
     await sleep(1500);
-    await shot('04-cost-010.png');
+    await shot('04-cost-011.png');
 
-    // 5 — phone: the same campaign, one hand.
+    // 5 — Marks: the durable batch that goes to Apollo in the terminal.
+    await ev(`(async () => {
+      await fetch('/api/olympus/marks?slug=fixture-demo', { method: 'DELETE' }).catch(() => null);
+      const now = new Date().toISOString();
+      for (const [i, instruction] of ['Make the hero heading one step larger', 'Keep the accent color on the primary button'].entries()) {
+        await fetch('/api/olympus/marks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: 'fixture-demo', mark: { id: 'shot-mark-' + i, x: 240 + i * 120, y: 180, page: '/', instruction, viewport: { width: 1600, height: 1000 }, url: 'http://127.0.0.1:4173', createdAt: now } }) });
+      }
+      return true;
+    })()`);
+    await go(`${URL_BASE}preview-window?slug=fixture-demo`, 6000);
+    await waitFor(`document.querySelector('iframe')`, 45_000);
+    await sleep(2500);
+    await ev(`(() => { const b = [...document.querySelectorAll('button')].find(x => /mark/i.test(x.textContent || '') && x.hasAttribute('aria-expanded')); if (b && b.getAttribute('aria-expanded') === 'false') b.click(); return Boolean(b); })()`);
+    await sleep(700);
+    await shot('05-marks-011.png');
+    await ev(`fetch('/api/olympus/marks?slug=fixture-demo', { method: 'DELETE' }).catch(() => null)`);
+
+    // 6 — phone: the same campaign, one hand.    // 6 — phone: the same campaign, one hand.
     await viewport(390, 844);
     await go(`${URL_BASE}m`, 3500);
     await ev(`(() => { try { localStorage.setItem('olympus:mobile-token', ${JSON.stringify(token)}); localStorage.setItem('olympus:language', 'en'); return true; } catch { return false; } })()`);
     await cdp.send('Page.reload', {});
     await sleep(6500);
-    await shot('05-mobile-010.png');
+    await shot('06-mobile-011.png');
 
     if (originalTheme) await setTheme(originalTheme);
     if (originalLang) await setLang(originalLang);
 
     const manifest = [
-      { file: 'screenshots/screens/01-pantheon-010.png', title: 'The Pantheon', note: 'the ten gods, the Parthenon command deck and the disk-truth status brief (project, generation, hops, current hop, park, preview, design)' },
-      { file: 'screenshots/screens/02-live-preview-010.png', title: 'Live preview', note: 'the real project inside OLYMPUS: the surface, the mark toolbar and a same-origin iframe on :3038' },
-      { file: 'screenshots/screens/03-preview-window-010.png', title: 'Preview window', note: 'the dedicated window renders the app in a browser iframe (the Electron popup can no longer render black) with the durable mark queue' },
-      { file: 'screenshots/screens/04-cost-010.png', title: 'Cost', note: 'the real ledger: GO month/5h/week, Smart Burn, step/list/invoice separation and the honest reconnect/retry state — never an endless loader' },
-      { file: 'screenshots/screens/05-mobile-010.png', title: 'Phone', note: 'the same campaign in one hand: voice-first prompt, Parthenon, preview and marks' },
+      { file: 'screenshots/screens/01-pantheon-011.png', title: 'The Pantheon', note: 'the ten gods, the Parthenon command deck and the disk-truth status brief (project, generation, hops, current hop, park, preview, design)' },
+      { file: 'screenshots/screens/02-live-preview-011.png', title: 'Live preview', note: 'the real project inside OLYMPUS: the surface, the mark toolbar and a same-origin iframe on :3038' },
+      { file: 'screenshots/screens/03-preview-window-011.png', title: 'Preview window', note: 'the dedicated window renders the app in a browser iframe (the Electron popup can no longer render black) with the durable mark queue' },
+      { file: 'screenshots/screens/04-cost-011.png', title: 'Cost', note: 'the real ledger: GO month/5h/week, Smart Burn, step/list/invoice separation and the honest reconnect/retry state — never an endless loader' },
+      { file: 'screenshots/screens/05-marks-011.png', title: 'Marks', note: 'a durable multi-mark batch in the preview window; one consolidated prompt goes to Apollo in the terminal, where he asks with options if needed' },
+      { file: 'screenshots/screens/06-mobile-011.png', title: 'Phone', note: 'the same campaign in one hand: voice-first prompt, Parthenon, preview and marks' },
     ];
     fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     console.log(`manifest written: ${manifest.length} current screens`);

@@ -1,7 +1,7 @@
 {
   "stable": {
-    "version": "0.1.0",
-    "tag": "v0.1.0",
+    "version": "0.1.1",
+    "tag": "v0.1.1",
     "stable": true,
     "tests": {
       "pass": 57,
@@ -9,11 +9,16 @@
       "skip": 0,
       "suites": 57
     },
-    "releasedAt": "2026-11-25T04:00:00Z",
-    "commit": "v0.1.0",
-    "note": "The first stable launch: GO lane truth (real 1-token probes; dead qwen/minimax lanes fail over to verified lanes), the walk applies the staged next generation and learns from every completed hop, Apollo reports WHERE/WHAT/NEXT/NEED/FILES from disk, the preview window uses the browser iframe, marks batch to Apollo, the boot handshake accepts Next 16 CSS, cost/burn keep the last good reading, and notifications dedupe with an honest xN. 57 hermetic suites green; limits declared in HYGIENE.md."
+    "releasedAt": "2026-11-26T18:00:00Z",
+    "commit": "v0.1.1",
+    "note": "Fluidity: one Apollo terminal (parallel god chats deleted), clean Parthenon, loop-blocked Continue asks Apollo with Atlas evidence, hibernate keeps a live campaign server, six current screens, brain capped at 120 quick circuits, learning notifications in seven languages, OpenCode 2.4.2 gate-approved. 8 hygiene gates, 57 suites."
   },
   "versions": [
+    {
+      "version": "0.1.0",
+      "tag": "v0.1.0",
+      "stable": false
+    },
     {
       "version": "0.0.99",
       "tag": "v0.0.99",

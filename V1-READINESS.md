@@ -2,13 +2,13 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.1.0 · 2026-11-25 · **STABLE — GO for the 0.1.0 launch.** The 100-hop
+> v0.1.1 · 2026-11-26 · **STABLE — v0.1.1 fluidity.** The 100-hop
 > certification passed (100/100 script hops, evidence linked below); the
 > 8-hour model soak is **NOT claimed** and remains a declared P2 gap. The 57
 > hermetic suites are green, `npm run hygiene` passes tsc, lint, docs, strategy sync, privacy,
 > suite manifest and audit-high, and HYGIENE.md declares every remaining P2
 > limit. [KNOWN-ISSUES.md](KNOWN-ISSUES.md) lists each declared gap and the
-> post-0.1.0 backlog. v0.1.0 closes the long-campaign truth gaps: GO lane probes and
+> post-0.1.0 backlog. v0.1.1 centralizes every mark in Apollo's terminal, removes the parallel chats, makes Continue on a loop-blocked hop ask Apollo with Atlas evidence, keeps a live campaign alive through hibernate, caps the brain at 120 quick circuits, and vendors OpenCode 2.4.2. v0.1.0 closed the long-campaign truth gaps: GO lane probes and
 > fallback, generation boundary, empirical learning, Apollo's disk-truth brief,
 > the preview window, batched marks, the boot handshake, cost/burn keep-last,
 > design provenance and deduped notifications.

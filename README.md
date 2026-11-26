@@ -42,15 +42,15 @@ llama.cpp or any OpenAI-compatible endpoint ([LOCAL-LLM.md](LOCAL-LLM.md)).
 
 ## Screens
 
-Five surfaces, captured from the running **v0.1.0** app. No mockups.
+Six surfaces, captured from the running **v0.1.1** app. No mockups.
 
 <div align="center">
 
 | | |
 |---|---|
-| <a href="screenshots/screens/01-pantheon-010.png"><img src="screenshots/screens/01-pantheon-010.png" width="520" alt="The Pantheon — ten gods, the Parthenon and the status brief" /></a><br><sub><b>The Pantheon</b> · ten gods, the Parthenon command deck and the disk-truth status brief</sub> | <a href="screenshots/screens/02-live-preview-010.png"><img src="screenshots/screens/02-live-preview-010.png" width="520" alt="Live preview — a real project inside OLYMPUS" /></a><br><sub><b>Live preview</b> · a real project inside OLYMPUS, same-origin, ready for marks</sub> |
-| <a href="screenshots/screens/03-preview-window-010.png"><img src="screenshots/screens/03-preview-window-010.png" width="520" alt="Preview window — browser iframe and the durable mark queue" /></a><br><sub><b>Preview window</b> · the app in a browser iframe, with the durable mark queue</sub> | <a href="screenshots/screens/04-cost-010.png"><img src="screenshots/screens/04-cost-010.png" width="520" alt="Cost — the real ledger and the honest reconnect state" /></a><br><sub><b>Cost</b> · the real ledger, Smart Burn and an honest reconnect/retry — never an endless loader</sub> |
-| <a href="screenshots/screens/05-mobile-010.png"><img src="screenshots/screens/05-mobile-010.png" width="240" alt="Phone — the same campaign in one hand" /></a><br><sub><b>Phone</b> · the same campaign in one hand: voice-first prompt, Parthenon, preview and marks</sub> | |
+| <a href="screenshots/screens/01-pantheon-011.png"><img src="screenshots/screens/01-pantheon-011.png" width="520" alt="The Pantheon — ten gods and the clean Parthenon" /></a><br><sub><b>The Pantheon</b> · ten gods and the Parthenon command deck</sub> | <a href="screenshots/screens/02-live-preview-011.png"><img src="screenshots/screens/02-live-preview-011.png" width="520" alt="Live preview — a real project inside OLYMPUS" /></a><br><sub><b>Live preview</b> · a real project inside OLYMPUS, same-origin, ready for marks</sub> |
+| <a href="screenshots/screens/03-preview-window-011.png"><img src="screenshots/screens/03-preview-window-011.png" width="520" alt="Preview window — browser iframe and the durable mark queue" /></a><br><sub><b>Preview window</b> · the app in a browser iframe, with the durable mark queue</sub> | <a href="screenshots/screens/04-cost-011.png"><img src="screenshots/screens/04-cost-011.png" width="520" alt="Cost — the real ledger and the honest reconnect state" /></a><br><sub><b>Cost</b> · the real ledger, Smart Burn and an honest reconnect/retry — never an endless loader</sub> |
+| <a href="screenshots/screens/05-marks-011.png"><img src="screenshots/screens/05-marks-011.png" width="520" alt="Marks — a durable batch that becomes one Apollo terminal prompt" /></a><br><sub><b>Marks</b> · a durable batch that becomes one Apollo terminal prompt</sub> | <a href="screenshots/screens/06-mobile-011.png"><img src="screenshots/screens/06-mobile-011.png" width="240" alt="Phone — the same campaign in one hand" /></a><br><sub><b>Phone</b> · the same campaign in one hand: voice-first prompt, Parthenon, preview and marks</sub> |
 
 </div>
 
@@ -76,22 +76,22 @@ the limits are in [HYGIENE.md](HYGIENE.md) and
 
 ## Latest
 
-**v0.1.0 — the stable launch.** Every GO lane is probed with a real 1-token
-turn; dead qwen3.7/3.8 and minimax lanes are marked `auth`, never assigned a
-role, and fail over to the verified roster with the provider's own words. A
-DONE generation applies the staged `dispatch-plan.next.json` and keeps walking;
-every completed hop writes an empirical instinct. Apollo reads disk before
-answering (WHERE / WHAT HAPPENED / NEXT / NEED YOU / FILES), the God panel
-carries a status brief, the preview window uses the browser iframe, marks queue
-and batch to Apollo, the boot handshake accepts Next 16 CSS, Cost and Smart
-Burn keep the last good reading with retry, design truth carries provenance,
-and notifications collapse identical events inside 10 minutes with an honest
-×N.
+**v0.1.1 — fluidity.** Marks now go to ONE Apollo terminal: the parallel god
+chats, the inbox modal and the background mark plan are deleted; a batch is
+formatted once and drained as a visible HIGH queue item. The Parthenon is
+clean — no status-brief card, no duplicated stats or Atlas strips, one Ask
+Apollo. A loop-blocked Continue opens Apollo with Atlas evidence and asks for a
+new generation instead of retrying the same hop. A live campaign keeps its
+OpenCode/MCP server and preview through hibernate. The 5s Parthenon tick is
+gone, the brain shows at most 120 high-confidence quick circuits (archived
+hidden), and hardware acceleration is retried. OpenCode v2 **2.4.2** is
+vendored and gate-approved; learning notifications are translated in all seven
+languages.
 
 `npm run hygiene -- --battery` runs **8 gates and 57 hermetic suites**; the
-live UI gate is `node scripts/verify-v010-ui.mjs` (11/11). The 100-hop
-certification passed; the 8-hour soak is **not claimed**. The previous stable
-is `v0.0.99`; the full history lives in [CHANGELOG.md](CHANGELOG.md).
+live UI gate is `node scripts/verify-v011-ui.mjs`. The 100-hop certification
+passed; the 8-hour soak is **not claimed**. The previous stable is **v0.1.0**;
+the full history lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Architecture at a glance
 

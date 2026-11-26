@@ -137,9 +137,18 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
         setDecision(null);
         setNewProjectDialogOpen(true);
       } else if (action === 'continue') {
-        toast.success(projectSlug ? `Atlas will keep ${projectSlug} walking` : 'Walk resumed', {
-          description: 'Auto-resume is on; the warden will recover the next park without prompting Apollo.',
-        });
+        if (d?.replan) {
+          window.dispatchEvent(new CustomEvent('olympus:prompt-queued'));
+          window.dispatchEvent(new Event('olympus:focus-terminal'));
+          onChat('apollo');
+          toast.success('Apollo is planning a new generation', {
+            description: `The loop guard blocked ${d.hopId || 'the hop'}; Atlas evidence is in the terminal. Apollo will ask if it needs a decision.`,
+          });
+        } else {
+          toast.success(projectSlug ? `Atlas will keep ${projectSlug} walking` : 'Walk resumed', {
+            description: 'Auto-resume is on; the warden will recover the next park without prompting Apollo.',
+          });
+        }
       }
       await load();
       onChanged?.();
@@ -227,7 +236,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
               onClick={() => void post('continue')}
               className="inline-flex min-h-[26px] items-center gap-1 rounded-md border border-olympus-green/40 bg-olympus-green/15 px-2 text-[8px] font-semibold text-olympus-green hover:bg-olympus-green/25 disabled:opacity-40"
             >
-              <CirclePlay size={10} /> {busy === 'continue' ? 'resuming…' : `Continue ${decision.slug}`}
+              <CirclePlay size={10} /> {busy === 'continue' ? 'opening Apollo…' : decision.reason === 'loop-blocked' ? 'Ask Apollo to replan' : `Continue ${decision.slug}`}
             </button>
             <button
               type="button" disabled={!!busy}
@@ -312,12 +321,6 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
               <CirclePlay size={10} /> {busy === 'continue' ? 'resuming…' : 'Resume'}
             </button>
           )}
-          <button
-            type="button" onClick={() => onChat('apollo')}
-            className="inline-flex min-h-[26px] items-center justify-center gap-1 rounded-md border border-olympus-cyan/30 px-2 text-[8px] text-olympus-cyan hover:bg-olympus-cyan/10"
-          >
-            <MessageSquare size={10} /> Ask Apollo
-          </button>
           {health?.nextPlan && (
             <button
               type="button" disabled={!!busy} onClick={() => void applyNext()}

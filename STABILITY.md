@@ -2,7 +2,7 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.1.0 · 2026-11-25 · the current stable release. The stable launch closes
+> v0.1.1 · 2026-11-26 · the current stable release. Fluidity: one Apollo terminal (parallel god chats deleted), a clean Parthenon, loop-blocked Continue → Apollo replan with Atlas evidence, hibernate keeps a live campaign server, the brain shows ≤120 high-confidence quick circuits, and OpenCode 2.4.2 is gate-approved. v0.1.0 closed
 > the long-campaign truth gaps (GO lane probes + fallback, generation boundary,
 > empirical learning, Apollo's disk-truth brief, preview window, batched marks,
 > boot handshake, cost/burn keep-last, design provenance, deduped
@@ -110,7 +110,7 @@ said "1 dead"; retry only cleared a local mark.
   producing") from a pure hang. A slow lane still triggers one alternate-lane
   try, and if that fails the original timeout result is returned — never
   "all lanes dead" for a lane that was working.
-- OpenCode **2.4.1** is vendored and gate-approved (serve, v2 sessions,
+- OpenCode **2.4.2** is vendored and gate-approved (serve, v2 sessions,
   prompt/SSE, DB schema, tokens, abort, clean exit).
 
 ## Plan health and the Apply guard (v0.0.98-13)

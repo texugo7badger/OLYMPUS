@@ -326,7 +326,7 @@ export default function LivePreview() {
       const r = await fetch('/api/olympus/marks/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: activeProject.slug, marks: all, target: 'apollo', previewUrl: markTargetUrl() }),
+        body: JSON.stringify({ slug: activeProject.slug, marks: all, previewUrl: markTargetUrl() }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
@@ -336,13 +336,15 @@ export default function LivePreview() {
       setQueueTick((n) => n + 1);
       pushEvent({
         type: 'live_preview_mark',
-        msg: `${d.count || all.length} mark(s) sent to Apollo — one consolidated plan is running.`,
+        msg: `${d.count || all.length} mark(s) sent to Apollo in the terminal — one consolidated batch.`,
         project: activeProject.slug,
         ts: new Date().toISOString(),
       });
-      window.dispatchEvent(new CustomEvent('olympus:open-god-chat', { detail: { god: 'apollo' } }));
+      useOlympus.getState().setRightTab('terminal');
+      window.dispatchEvent(new CustomEvent('olympus:prompt-queued'));
+      window.dispatchEvent(new CustomEvent('olympus:focus-terminal'));
       toast.success(`${d.count || all.length} mark(s) sent to Apollo`, {
-        description: 'One consolidated plan is running in the background; it survives a closed panel.',
+        description: 'One consolidated batch is in the terminal; Apollo asks if anything is ambiguous.',
       });
     } catch (e: any) {
       toast.error('Apollo did not receive the batch', { description: e?.message || String(e) });

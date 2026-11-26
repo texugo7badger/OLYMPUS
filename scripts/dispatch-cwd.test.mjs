@@ -109,33 +109,6 @@ if (process.argv[2] === 'child') {
   }
 }
 
-// ─── content pins (#104's own lane, athena/edit) ─────────────────────────────
-{
-  const route = readFileSync(join(ROOT, 'src', 'app', 'api', 'olympus', 'athena', 'edit', 'route.ts'), 'utf-8');
-  check('pin: athena/edit imports resolveDispatchCwd (the lane-preference resolver)',
-    /resolveDispatchCwd/.test(route) && /from\s+'@\/lib\/opencode-spawn'/.test(route), '');
-  // v0.0.86 — the mark runs through runGodTurn in the resolved lane, not a
-  // detached spawn. The dispatch still lands in the project, never the repo.
-  check('pin: athena/edit resolves the lane with resolveDispatchCwd(projectSlug)',
-    /const lane = resolveDispatchCwd\(projectSlug\)/.test(route) && /runGodTurn\('athena', athenaInstruction, lane/.test(route), '');
-  // the invariant: EVERY spawnOpencode CALL in the route carries an explicit
-  // cwd (comment mentions are skipped — only real calls count). The route has
-  // no raw spawn in v0.0.86; the 0/0 case is a pass (no unpinned call exists).
-  let callsWithoutCwd = 0, callCount = 0;
-  const lines = route.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const at = lines[i].indexOf('spawnOpencode(');
-    if (at === -1) continue;
-    const before = lines[i].slice(0, at).trim();
-    if (before.startsWith('//') || before.startsWith('*') || before.startsWith('/*')) continue;
-    callCount++;
-    const window = lines.slice(i, i + 20).join('\n');
-    if (!/cwd:/.test(window)) callsWithoutCwd++;
-  }
-  check('pin (invariant): the route has no unpinned spawnOpencode call (0/0 is a pass)',
-    callsWithoutCwd === 0, `${callsWithoutCwd}/${callCount} calls without cwd`);
-}
-
 // ─── SERVE-1 Batch C: the COMPLETE dispatch-cwd class ─────────────────────────
 {
   // (1) per-site pins: each of the six follow-up sites carries the

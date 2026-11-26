@@ -82,9 +82,9 @@ ok('M4: the routes expose the durable queue and the Apollo send', () => {
   const send = src('src/app/api/olympus/marks/send/route.ts');
   assert.match(route, /writeMarks/);
   assert.match(route, /requireAuth/);
-  assert.match(send, /startMarkPlan/);
+  assert.match(send, /enqueuePrompt\(/);
   assert.match(send, /queued: true/);
-  assert.match(send, /target/);
+  assert.match(send, /target: 'apollo'/);
 });
 
 ok('H1: the hop prompt carries the exact checks and the ## Result law', () => {
@@ -275,24 +275,16 @@ ok('PF3: the preview keeps the REAL origin (cookies), with the webview as the re
   assert.doesNotMatch(win, /iframePreviewUrl/);
 });
 
-ok('MK1: Apollo is a durable background plan, not a 300s synchronous turn', () => {
+ok('MK1: marks become ONE durable Apollo terminal queue item (no parallel plan)', () => {
   const send = src('src/app/api/olympus/marks/send/route.ts');
-  const run = src('src/lib/marks-run.ts');
-  const plan = src('src/lib/marks-plan.ts');
-  assert.match(send, /queued: true/);
-  assert.match(send, /startMarkPlan/);
-  assert.doesNotMatch(send, /await runGodTurn/);
-  assert.match(run, /1_200_000/);
-  assert.match(run, /previewHealthNote/);
-  assert.match(plan, /MARK_TURN_TIMEOUT_MS/);
-  assert.match(plan, /MARK_BOOT_ID/);
-  assert.ok(fs.existsSync(path.join(ROOT, 'src/app/api/olympus/marks/plan/route.ts')));
-  assert.ok(fs.existsSync(path.join(ROOT, 'src/app/api/olympus/marks/latest/route.ts')));
-  assert.ok(fs.existsSync(path.join(ROOT, 'src/app/api/olympus/marks/retry/route.ts')));
-  const win = src('src/app/preview-window/page.tsx');
-  assert.match(win, /pollPlan/);
-  assert.match(win, /retryPlan/);
-  assert.match(win, /marks\/latest/);
+  const terminal = src('src/components/olympus/interactive-terminal.tsx');
+  assert.match(send, /enqueuePrompt\(/);
+  assert.match(send, /priority: 'high'/);
+  assert.match(send, /source: 'markview'/);
+  assert.doesNotMatch(send, /startMarkPlan|runGodTurn|appendGodInbox/);
+  assert.match(terminal, /priority !== 'high'/);
+  assert.ok(!fs.existsSync(path.join(ROOT, 'src/app/api/olympus/marks/plan/route.ts')));
+  assert.ok(!fs.existsSync(path.join(ROOT, 'src/components/olympus/god-chat-modal.tsx')));
 });
 
 ok('HB3: hibernation stops idle dev servers and prunes the expired window', () => {
@@ -346,10 +338,10 @@ await okAsync('P1: a preflight-completed hop cannot leave a phantom park', async
   assert.ok(!state.quarantined.includes('a'));
 });
 
-ok('PN1: OpenCode 2.3.2 is pinned and the patch-notes surface is wired', () => {
+ok('PN1: OpenCode 2.4.2 is pinned and the patch-notes surface is wired', () => {
   const pkg = JSON.parse(src('package.json'));
-  assert.equal(pkg.dependencies['@opencode/cli'], '2.4.1');
-  assert.equal(pkg.dependencies['@opencode/plugin'], '2.4.1');
+  assert.equal(pkg.dependencies['@opencode/cli'], '2.4.2');
+  assert.equal(pkg.dependencies['@opencode/plugin'], '2.4.2');
   const notes = JSON.parse(src('public/patch-notes.json'));
   assert.equal(notes.current, pkg.version);
   assert.equal(notes.opencode.tested, pkg.dependencies['@opencode/cli']);
@@ -422,7 +414,7 @@ ok('PN4: hibernate v2 gates active turns, keeps a live preview, and restores idl
   assert.match(main, /if \(hibernating\) return;\n    app\.quit\(\);/);
   assert.match(main, /postJson\('\/api\/olympus\/chat\/hibernate', \{ waitMs: 60_000, forceFree \}, 70_000\)/);
   const prefs = JSON.parse(src('package.json'));
-  assert.ok(prefs.version.startsWith('0.1.0'));
+  assert.ok(prefs.version.startsWith('0.1.1'));
 });
 
 ok('PN5: the hibernate HUD collapses to a compact strip from a real button', () => {

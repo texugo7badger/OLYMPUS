@@ -1,20 +1,21 @@
 /**
- * /api/olympus/marks/send — v0.0.94: durable background plan.
+ * /api/olympus/marks/send — v0.1.1: marks go to Apollo's ONE terminal.
  *
- * POST { slug, marks?, target?, previewUrl? } → { ok, queued, inboxId, count }
- * The batch is written to the god's inbox immediately; the turn runs in the
- * background. Poll /api/olympus/marks/plan?inboxId=… for the plan. A closed
- * window no longer loses the batch or the plan.
+ * The v0.0.94 route wrote a god inbox and ran a detached background turn —
+ * a parallel chat that split the conversation. v0.1.1 formats the batch once,
+ * enqueues it in the shared prompt queue as a HIGH Apollo item, and the
+ * terminal drains it (visible in the queue, one consolidated prompt). No
+ * inbox, no modal, no second planning lane.
  *
+ * POST { slug, marks?, previewUrl? } -> { ok, queued, queueId, count }
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { markUserActivity } from '@/lib/user-activity';
-import { appendGodInbox, updateGodInbox } from '@/lib/god-inbox';
 import { readMarks } from '@/lib/marks-store';
-import { MARK_BOOT_ID, startMarkPlan, type MarkTarget } from '@/lib/marks-run';
-import type { PreviewMark } from '@/lib/marks-format';
+import { enqueuePrompt } from '@/lib/prompt-queue';
+import { marksPrompt, type PreviewMark } from '@/lib/marks-format';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,6 @@ export async function POST(req: NextRequest) {
 
   const slug = String(body?.slug ?? '').trim();
   if (!slug) return NextResponse.json({ ok: false, error: 'slug is required' }, { status: 400 });
-  const target: MarkTarget = body?.target === 'athena' ? 'athena' : 'apollo';
   const previewUrl = body?.previewUrl ? String(body.previewUrl).slice(0, 1000) : undefined;
 
   const incoming: PreviewMark[] = Array.isArray(body?.marks) ? body.marks : readMarks(slug);
@@ -41,35 +41,22 @@ export async function POST(req: NextRequest) {
   }
 
   markUserActivity(120_000);
-  const dispatchId = `marks-${target}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const inboxEntry = appendGodInbox(target, {
-    role: 'you',
-    text: `${marks.length} mark(s) — ${marks[0].instruction.slice(0, 300)}`,
-    source: 'mark',
-    status: 'pending',
-    meta: {
-      dispatchId,
-      slug,
-      target,
-      batch: true,
-      count: marks.length,
-      previewUrl: previewUrl || null,
-      startedAt: new Date().toISOString(),
-      bootId: MARK_BOOT_ID,
-      marks: marks.map((m) => ({ x: m.x, y: m.y, page: m.page, instruction: m.instruction, viewport: m.viewport ?? null })),
-    },
+  const prompt = marksPrompt(slug, marks, previewUrl, 'apollo');
+  const item = enqueuePrompt(slug, prompt, Date.now(), {
+    source: 'markview',
+    priority: 'high',
+    god: 'apollo',
   });
-
-  updateGodInbox(target, inboxEntry.id, { status: 'running' });
-  startMarkPlan({ target, slug, marks, previewUrl, inboxId: inboxEntry.id, dispatchId });
+  if (!item) {
+    return NextResponse.json({ ok: true, queued: false, duplicate: true, count: marks.length, message: 'This mark batch is already queued for Apollo.' });
+  }
 
   return NextResponse.json({
     ok: true,
     queued: true,
-    target,
+    target: 'apollo',
     count: marks.length,
-    inboxId: inboxEntry.id,
-    dispatchId,
-    message: `${marks.length} mark${marks.length === 1 ? '' : 's'} queued for ${target}; the plan survives a closed window.`,
+    queueId: item.id,
+    message: `${marks.length} mark${marks.length === 1 ? '' : 's'} sent to Apollo in the terminal — one consolidated batch.`,
   });
 }
