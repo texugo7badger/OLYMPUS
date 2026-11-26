@@ -35,18 +35,18 @@ export const dynamic = 'force-dynamic';
 const HOME = () => process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
 const DEVSERVERS_FILE = () => path.join(HOME(), 'hibernation-devservers.json');
 
-function liveHopNeedsPreview(): { keep: boolean; slug: string | null; detail: string } {
+function liveHopNeedsPreview(): { keep: boolean; campaignLive: boolean; slug: string | null; detail: string } {
   const slug = getActiveProjectSlug();
-  if (!slug) return { keep: false, slug: null, detail: 'no active project' };
+  if (!slug) return { keep: false, campaignLive: false, slug: null, detail: 'no active project' };
   const lane = path.join(getVaultRoot(), '02_Projects', slug);
   try {
     const lock = readWalkLock(lane);
-    if (!lock.alive) return { keep: false, slug, detail: 'no live campaign' };
+    if (!lock.alive) return { keep: false, campaignLive: false, slug, detail: 'no live campaign' };
     const state = loadHopState(lane);
     const inFlight = state?.inFlight?.length ?? 0;
-    return { keep: inFlight > 0, slug, detail: inFlight > 0 ? `${inFlight} in-flight hop(s) keep the preview` : 'campaign is idle between hops' };
+    return { keep: inFlight > 0, campaignLive: true, slug, detail: inFlight > 0 ? `${inFlight} in-flight hop(s) keep the preview` : 'campaign is live between hops' };
   } catch {
-    return { keep: false, slug, detail: 'campaign state unreadable' };
+    return { keep: false, campaignLive: false, slug, detail: 'campaign state unreadable' };
   }
 }
 
@@ -74,13 +74,16 @@ export async function POST(req: NextRequest) {
     // wake restore.
     const hop = liveHopNeedsPreview();
     const forceFree = body?.forceFree === true;
-    const keepPreview = forceFree ? false : (body?.keepPreview === true || hop.keep);
+    const keepPreview = forceFree ? false : (body?.keepPreview === true || hop.keep || hop.campaignLive);
+    // v0.1.1 — a live campaign owns the OpenCode/MCP server. Stopping it here
+    // cut the hop's transport and turned every hibernate into a park.
+    const keepChat = forceFree ? false : hop.campaignLive;
     const stopped: string[] = [];
     const kept: string[] = [];
     try {
       for (const server of await list()) {
         if (!(server.state === 'running' || server.state === 'starting' || server.running)) continue;
-        if (keepPreview) { kept.push(server.slug); continue; }
+        if (keepPreview || hop.campaignLive) { kept.push(server.slug); continue; }
         try {
           const result = await stop(server.slug);
           if (result.ok) stopped.push(server.slug);
@@ -99,8 +102,9 @@ export async function POST(req: NextRequest) {
       }, null, 2) + '\n', { mode: 0o600 });
     } catch { /* the restore list is best-effort; never block hibernate */ }
 
-    // 3) The chat/MCP fleet is idle now. Stop it. The next prompt recreates it.
-    cleanupServer();
+    // 3) The chat/MCP fleet is idle now. Stop it — unless a live campaign
+    // needs the same server for its next hop.
+    if (!keepChat) cleanupServer();
     return NextResponse.json({
       ok: true,
       stopped: true,
@@ -109,8 +113,9 @@ export async function POST(req: NextRequest) {
       kept,
       keepPreview,
       hop,
+      keptChat: keepChat,
       note: keepPreview
-        ? 'Chat/MCP stopped; the preview stays because a live hop is in flight.'
+        ? (keepChat ? 'The live campaign keeps chat/MCP and the preview; the window sleeps without parking the walk.' : 'Chat/MCP stopped; the preview stays because a live hop is in flight.')
         : 'Chat/MCP and idle preview servers stopped; they restart on demand/wake.',
     });
   } catch (e: any) {

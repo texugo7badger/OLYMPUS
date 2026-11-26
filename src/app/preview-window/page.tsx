@@ -55,11 +55,6 @@ export default function PreviewWindowPage() {
   const [marksOpen, setMarksOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
-  const [plan, setPlan] = useState<string | null>(null);
-  const [planTarget, setPlanTarget] = useState<'apollo' | 'athena' | null>(null);
-  const [planStatus, setPlanStatus] = useState<string | null>(null);
-  const [planError, setPlanError] = useState<string | null>(null);
-  const [planInbox, setPlanInbox] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
   // Resolve the slug from the query; fall back to the active project.
@@ -254,95 +249,23 @@ export default function PreviewWindowPage() {
     void copyText(marksMarkdown(slug, marks, url), 'marks');
   };
 
-  const pollPlan = async (inboxId: string, target: 'apollo' | 'athena') => {
-    // The background turn has a 20-minute budget; poll past it so the UI
-    // never gives up one tick before the plan lands.
-    for (let i = 0; i < 750; i++) {
-      try {
-        const r = await fetch(`/api/olympus/marks/plan?inboxId=${encodeURIComponent(inboxId)}&target=${target}`, { cache: 'no-store' });
-        const d = await r.json().catch(() => ({}));
-        if (d?.ok) {
-          setPlanStatus(d.status || null);
-          if (d.plan) setPlan(d.plan);
-          if (d.error) setPlanError(d.error);
-          if (d.status === 'done' || d.status === 'failed') {
-            setSending(false);
-            return;
-          }
-        }
-      } catch { /* transient; keep polling */ }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    }
-    setSending(false);
-  };
-
-  // Restore the latest Apollo batch on open; a failed five-mark batch from a
-  // previous session is visible and retryable, not lost with the old window.
-  useEffect(() => {
-    if (!slug) return;
-    let cancelled = false;
-    void fetch(`/api/olympus/marks/latest?slug=${encodeURIComponent(slug)}&target=apollo`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (cancelled || !d?.ok || !d.batch) return;
-        const b = d.batch;
-        setPlanInbox(b.inboxId);
-        setPlanTarget(b.target === 'athena' ? 'athena' : 'apollo');
-        setPlanStatus(b.status || null);
-        setPlan(b.plan || null);
-        setPlanError(b.error || null);
-        if (b.status === 'running' || b.status === 'pending') void pollPlan(b.inboxId, b.target === 'athena' ? 'athena' : 'apollo');
-      })
-      .catch(() => { /* no batch */ });
-    return () => { cancelled = true; };
-  }, [slug]);
-
-  const retryPlan = async () => {
-    if (!slug || !planInbox) return;
-    setSending(true);
-    setPlanError(null);
-    setPlanStatus('running');
-    try {
-      const r = await fetch('/api/olympus/marks/retry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inboxId: planInbox, slug, target: planTarget || 'apollo' }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
-      setSent(`${d.count || 'The'} mark batch re-queued for ${d.target || planTarget || 'apollo'}; the plan is durable.`);
-      setMarksOpen(true);
-      void pollPlan(planInbox, (d.target || planTarget || 'apollo') as 'apollo' | 'athena');
-    } catch (e: any) {
-      setPlanError(e?.message || String(e));
-      setSending(false);
-    }
-  };
-
-  const sendMarks = async (target: 'apollo' | 'athena') => {
+  const sendMarks = async () => {
     if (!slug || marks.length === 0) return;
     setSending(true);
     setSent(null);
-    setPlan(null);
-    setPlanError(null);
-    setPlanStatus('running');
-    setPlanTarget(target);
     try {
       const r = await fetch('/api/olympus/marks/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, marks, target, previewUrl: url }),
+        body: JSON.stringify({ slug, marks, previewUrl: url }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
-      setPlanInbox(d.inboxId || null);
-      setSent(`${d.count} mark${d.count === 1 ? '' : 's'} queued for ${target} — the plan is saved even if you close this window.`);
+      setSent(`${d.count} mark${d.count === 1 ? '' : 's'} sent to Apollo in the terminal${d.duplicate ? ' (already queued)' : ''}.`);
       setMarksOpen(true);
-      if (d.queued && d.inboxId) void pollPlan(d.inboxId, target);
-      else { setSending(false); if (d.plan) setPlan(d.plan); }
     } catch (e: any) {
       setSent(`failed: ${e?.message || String(e)}`);
-      setPlanStatus('failed');
+    } finally {
       setSending(false);
     }
   };
@@ -433,19 +356,11 @@ export default function PreviewWindowPage() {
             </button>
             <button
               type="button"
-              onClick={() => void sendMarks('apollo')}
+              onClick={() => void sendMarks()}
               disabled={marks.length === 0 || sending}
               className="flex items-center gap-1 rounded border border-olympus-gold/40 bg-olympus-gold/15 px-2 py-1 text-olympus-gold hover:bg-olympus-gold/25 disabled:opacity-40"
             >
-              <Bot size={10} /> {sending ? 'planning…' : 'send to Apollo'}
-            </button>
-            <button
-              type="button"
-              onClick={() => void sendMarks('athena')}
-              disabled={marks.length === 0 || sending}
-              className="rounded border border-olympus-gold/20 px-2 py-1 text-olympus-text-dim hover:text-olympus-gold disabled:opacity-40"
-            >
-              Athena
+              <Bot size={10} /> {sending ? 'sending…' : 'send to Apollo'}
             </button>
             <button type="button" onClick={() => setMarks([])} disabled={marks.length === 0} className="px-1 text-olympus-text-dim hover:text-olympus-red disabled:opacity-40">clear</button>
             <button type="button" onClick={() => setMarksOpen(false)} aria-label="Close marks panel" className="px-1 text-olympus-text-dim hover:text-olympus-text"><X size={11} /></button>
@@ -472,30 +387,6 @@ export default function PreviewWindowPage() {
                   </li>
                 ))}
               </ul>
-            )}
-            {(plan || planError || planStatus === 'running') && (
-              <div className={`mt-2 rounded border ${planError ? 'border-olympus-red/30 bg-olympus-red/5' : 'border-olympus-green/25 bg-olympus-green/5'}`}>
-                <div className={`flex items-center gap-2 border-b px-2 py-1 text-[9px] font-mono ${planError ? 'border-olympus-red/20 text-olympus-red' : 'border-olympus-green/15 text-olympus-green'}`}>
-                  <span>{planTarget === 'athena' ? 'Athena' : 'Apollo'} · {planStatus === 'running' || planStatus === 'pending' ? 'planning in background…' : planError ? 'failed' : 'plan'}</span>
-                  {plan && (
-                    <button type="button" onClick={() => void copyText(plan, 'plan')} className="ml-auto flex items-center gap-1 opacity-80 hover:opacity-100">
-                      {copied === 'plan' ? <Check size={10} /> : <Copy size={10} />} {copied === 'plan' ? 'copied' : 'copy plan'}
-                    </button>
-                  )}
-                  {planInbox && (planError || planStatus === 'failed') && (
-                    <button type="button" onClick={() => void retryPlan()} disabled={sending} className="flex items-center gap-1 rounded border border-olympus-gold/30 px-1.5 py-0.5 text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40">
-                      <RefreshCw size={9} /> retry
-                    </button>
-                  )}
-                </div>
-                {(planStatus === 'running' || planStatus === 'pending') && !plan && (
-                  <p className="px-2 py-2 text-[10px] leading-relaxed text-olympus-text-dim">
-                    The plan is durable: you can close this window and reopen it; the batch is in Apollo&apos;s inbox.
-                  </p>
-                )}
-                {planError && <pre className="max-h-32 overflow-auto whitespace-pre-wrap px-2 py-2 text-[10px] leading-relaxed text-olympus-red">{planError}</pre>}
-                {plan && <pre className="max-h-64 overflow-auto whitespace-pre-wrap px-2 py-2 text-[10px] leading-relaxed text-olympus-text">{plan}</pre>}
-              </div>
             )}
           </div>
         </section>

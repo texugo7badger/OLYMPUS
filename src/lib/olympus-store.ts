@@ -317,7 +317,7 @@ export const useOlympus = create<OlympusStore>((set, get) => ({
     // but are always false — the Brain renderer hard-excludes those types.
     god: true, instinct: true, knowledge: true,
     skill: false, evolved: false, project: false,
-    minConfidence: 0.5,
+    minConfidence: 0.65,
     scopeGlobal: true, scopeStack: true, scopeProject: true,
     showCrossStack: false,
   },

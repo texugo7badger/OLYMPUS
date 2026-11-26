@@ -74,7 +74,7 @@ async function main() {
   expect('G12: marks batch to Apollo (no Athena chat path)', /sendQueueToApollo/.test(preview) && /marks\/send/.test(preview) && !/olympus:open-god-chat.*athena/.test(preview), 'the mark path still opens Athena');
   expect('G13: the preview window uses the browser iframe (no black webview)', /forceBrowser/.test(src('src/app/preview-window/page.tsx')), 'the popup still uses webview');
 
-  expect('G14: the status brief API + card + prompt marker exist', fs.existsSync(path.join(ROOT, 'src/lib/status-brief.ts')) && fs.existsSync(path.join(ROOT, 'src/app/api/olympus/status-brief/route.ts')) && /statusBriefMarker/.test(action), 'no where-is-my-project surface');
+  expect('G14: the status brief stays in the Apollo prompt (no Parthenon card)', fs.existsSync(path.join(ROOT, 'src/lib/status-brief.ts')) && fs.existsSync(path.join(ROOT, 'src/app/api/olympus/status-brief/route.ts')) && /statusBriefMarker/.test(action) && !fs.existsSync(path.join(ROOT, 'src/components/olympus/status-brief-card.tsx')), 'status brief surface drift');
 
   const tasks = src('src/lib/tasks-sheet.ts');
   expect('G15: the project design score has provenance, root wins over a page review', /const designReview = rootReview \?\? frontdoorReview/.test(tasks) && /designSource/.test(tasks), 'two scores with no source');

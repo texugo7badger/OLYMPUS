@@ -2,6 +2,33 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.1] — 2026-11-26
+
+### Fluidity — one Apollo terminal, clean Parthenon, quick circuits
+
+- **One conversation surface.** Marks no longer create a god inbox or a
+  background `runGodTurn`; the batch is formatted once and enqueued as a HIGH
+  item in Apollo's terminal. The parallel chat modal/route and the mark plan
+  routes are deleted. Apollo asks up to three questions with 2–4 concrete
+  options when intent is ambiguous.
+- **Clean Parthenon.** Removed the “where is the project” card, the duplicated
+  campaign/Atlas strips and the second Ask Apollo. The loop-blocked Continue
+  now opens Apollo with Atlas evidence and asks for a new generation instead
+  of retrying the blocked hop.
+- **Fluidity.** Removed the 5s Parthenon re-render tick, reduced inactive-pane
+  polls, capped the brain at 120 high-confidence instincts (archived hidden),
+  and cleared the GPU fallback so hardware acceleration is retried.
+- **Hibernate.** A live campaign keeps its OpenCode/MCP server and preview;
+  the window sleeps without parking the walk. Window controls show whenever
+  the preload window API exists.
+- **Instincts.** Completed hops write a global technical/quick-circuit pattern
+  (project provenance retained); project facts stay scoped. The brain shows
+  quick circuits, not the whole archive.
+- **OpenCode 2.4.2** is vendored and gate-approved (the first run hit a
+  transient `v2-session-list` 503; the clean retry passed every check).
+- **i18n.** Learning notifications translated in all seven languages.
+- **Screens/release.** Six current screens; README and UX-TOUR trimmed.
+
 ## [v0.1.0] — 2026-11-25
 
 ### The stable launch — lane truth, the walk continues, Apollo answers where

@@ -35,6 +35,8 @@ import { startDetachedWalk, readSupervisor } from './hop-runtime/supervisor';
 import { appendActivity } from './activity-feed';
 import { readHibernationPlan } from './hibernation';
 import { blockedLoopHops, seedLoopGuardFromTelemetry } from './hop-runtime/loop-guard';
+import { buildReplanRequest } from './replan-prompt';
+import { enqueuePrompt } from './prompt-queue';
 
 export const ATLAS_MODEL = 'opencode-go/hy3';
 export const ATLAS_DECISION_FILE = 'atlas-decision.json';
@@ -524,7 +526,7 @@ export function resolveDecision(
   action: 'continue' | 'new-project' | 'dismiss',
   slugOverride?: string,
   opts: { start?: WardenTickOptions['start'] } = {},
-): { ok: boolean; slug?: string; pid?: number; openNewProject?: boolean; error?: string } {
+): { ok: boolean; slug?: string; pid?: number; openNewProject?: boolean; replan?: boolean; queued?: boolean; hopId?: string; error?: string } {
   const decision = readDecision();
   const slug = slugOverride || decision?.slug;
   if (!slug) return { ok: false, error: 'no decision and no slug' };
@@ -536,6 +538,22 @@ export function resolveDecision(
   if (action === 'dismiss') {
     clearDecision(slug);
     return { ok: true, slug };
+  }
+  // v0.1.1 — a LOOP-BLOCKED hop is never retried unchanged. Continue sends
+  // the deterministic Atlas evidence to Apollo in the terminal and stops
+  // here; the user gets a replan, not a dead button.
+  const replan = buildReplanRequest(slug, laneRoot);
+  if (replan) {
+    const item = enqueuePrompt(slug, replan.prompt, Date.now(), { source: 'terminal', priority: 'high', god: 'apollo' });
+    clearDecision(slug);
+    try {
+      appendActivity({
+        god: 'atlas', action: 'milestone', project: slug,
+        msg: `Loop guard blocked ${replan.hopId}; Apollo was asked to replan with Atlas evidence in the terminal.`,
+        meta: { kind: 'replan', lane: laneRoot, hopId: replan.hopId, queueId: item?.id ?? null },
+      });
+    } catch { /* best effort */ }
+    return { ok: true, slug, replan: true, queued: true, hopId: replan.hopId };
   }
   writeOptIn(slug, true);
   clearDecision(slug);

@@ -16,17 +16,14 @@
 'use client';
 
 import { ChevronsLeft, ChevronsRight, Sparkles, MessageSquare, type LucideIcon } from 'lucide-react';
-import { GOD_ICONS } from '@/lib/olympus-store';
+import { GOD_ICONS, useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
 import { useDocVisible } from '@/lib/use-doc-visible';
 import { useEffect, useMemo, useState } from 'react';
 import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
-import GodChatModal from './god-chat-modal';
 import ParthenonCommand from './parthenon-command';
-import StatusBriefCard from './status-brief-card';
 import { useLanguage, godName, getLanguage } from '@/lib/i18n';
 import type { DemigodLive } from '@/lib/tasks-sheet';
-import { formatEta } from '@/lib/eta';
 
 /** Coarse status bucket. Finer wire phases collapse into these. */
 export type ParthenonStatus = 'idle' | 'working' | 'blocked' | 'done';
@@ -138,31 +135,12 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   }, [states, tasks]);
   const active = ordered.filter(s => s.status === 'working').length;
 
-  // v0.0.76 — the Parthenon chat: ask the focused god directly.
-  const [chatGod, setChatGod] = useState<string | null>(null);
-  // v0.0.90 — a live-preview mark opens Athena's chat: the user must SEE the
-  // planning turn (the old route wrote the inbox silently and the mark looked
-  // lost). Any surface can request a god's chat with this event.
-  useEffect(() => {
-    const open = (e: Event) => {
-      const god = String((e as CustomEvent<{ god?: string }>)?.detail?.god || 'athena');
-      setChatGod(god);
-    };
-    window.addEventListener('olympus:open-god-chat', open);
-    return () => window.removeEventListener('olympus:open-god-chat', open);
-  }, []);
+  // v0.1.1 — ONE conversation surface: Apollo's terminal. No per-god modal.
+  const focusApollo = () => {
+    useOlympus.getState().setRightTab('terminal');
+    window.dispatchEvent(new Event('olympus:focus-terminal'));
+  };
 
-  // W-D3: the campaign stats — the header's N/M progress + the projected
-  // time-to-finish (the user's headline ask).
-  const [campaignStats, setCampaignStats] = useState<null | {
-    total: number; completed: number; parked: number; projectedRemainingMs: number;
-    eta50Ms?: number; eta90Ms?: number; etaNextVisibleMs?: number;
-    etaConfidence?: string; etaParkRate?: number; etaBasis?: string;
-    designScore?: number | null; designSource?: string | null;
-    designFloor?: number | null; designTarget?: number | null;
-    designReviewedAt?: string | null; designPageScore?: number | null;
-    estimatedCostUsd?: number; tokensPerCompletedHop?: number; costPerCompletedHop?: number | null;
-  }>(null);
   // v0.0.87 — Atlas's deterministic patrol rides the same tasks poll.
   const [atlasPatrol, setAtlasPatrol] = useState<null | { summary: string; parked: number; stuck: number; verdict: string | null; hopId: string | null; nextLane: string | null }>(null);
   const [campaignHealth, setCampaignHealth] = useState<null | {
@@ -180,7 +158,6 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
   const language = useLanguage();
   const [demigods, setDemigods] = useState<Record<string, DemigodLive[]>>({});
   const [sheetHop, setSheetHop] = useState<string | null>(null);
-  const [, setTick] = useState(0);
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -202,7 +179,6 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           (byGod[t.god] ||= []).push(t);
         }
         setTasks(byGod);
-        if (d?.stats) setCampaignStats(d.stats);
         setAtlasPatrol(d?.atlasPatrol ?? null);
         setCampaignHealth(d?.campaignHealth ?? null);
         setProjectSlug(d?.project ?? null);
@@ -215,11 +191,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
     if (!docVisible) return;
     load();
     const iv = setInterval(load, 15_000);
-    // W1-1: the live second tick — running durations count up in real time.
-    // #195: slowed 1s -> 5s (the tick re-rendered every god card each
-    // second; running durations tolerate a 5s grain).
-    const tk = setInterval(() => setTick(n => n + 1), 5_000);
-    return () => { cancelled = true; clearInterval(iv); clearInterval(tk); };
+    return () => { cancelled = true; clearInterval(iv); };
   }, [docVisible]);
 
   return (
@@ -252,7 +224,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
           <span className="ml-auto flex items-center gap-1 shrink-0">
             <button
               type="button"
-              onClick={() => setChatGod('apollo')}
+              onClick={focusApollo}
               data-tip="Chat with Apollo — the only conversational god. Open a god card for its live activity."
               aria-label="Chat with Apollo"
               className="text-olympus-text-dim hover:text-olympus-gold transition-colors"
@@ -272,130 +244,15 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
             )}
           </span>
         </div>
-
-        {/* v0.0.91 — metrics on their own wrapped row. The old single row
-            clipped at narrow rail widths; every value now lives in a pill
-            with whitespace-nowrap, and the band replaces the lone "~40m". */}
-        {campaignStats && campaignStats.total > 0 && (
-          <div className="px-2 pb-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[8px] font-mono">
-            <span className="rounded bg-olympus-cyan/10 px-1.5 py-0.5 text-olympus-cyan whitespace-nowrap tabular-nums">
-              {campaignStats.completed}/{campaignStats.total} hops
-            </span>
-            {campaignStats.parked > 0 && (
-              <span className="rounded bg-olympus-red/10 px-1.5 py-0.5 text-olympus-red whitespace-nowrap tabular-nums">
-                {campaignStats.parked} parked
-              </span>
-            )}
-            {(campaignStats.eta50Ms || campaignStats.projectedRemainingMs) > 0 && (
-              <span
-                className="rounded bg-olympus-gold/10 px-1.5 py-0.5 text-olympus-gold whitespace-nowrap tabular-nums"
-                data-tip={campaignStats.etaBasis || 'critical-path estimate'}
-              >
-                {formatEta(campaignStats.eta50Ms || campaignStats.projectedRemainingMs)}
-                {campaignStats.eta90Ms && campaignStats.eta90Ms > (campaignStats.eta50Ms || campaignStats.projectedRemainingMs)
-                  ? ` · p90 ${formatEta(campaignStats.eta90Ms)}`
-                  : ''}
-              </span>
-            )}
-            {campaignStats.etaNextVisibleMs && campaignStats.etaNextVisibleMs > 0 && (
-              <span className="rounded bg-olympus-card/60 px-1.5 py-0.5 text-olympus-text-dim whitespace-nowrap tabular-nums" data-tip="Time until the next hop settles">
-                next {formatEta(campaignStats.etaNextVisibleMs)}
-              </span>
-            )}
-            {campaignHealth?.generation ? (
-              <span className="text-olympus-text-dim whitespace-nowrap">gen {campaignHealth.generation}</span>
-            ) : null}
-            {campaignStats.etaConfidence && (
-              <span
-                className={cn(
-                  'rounded px-1.5 py-0.5 whitespace-nowrap uppercase tracking-wide text-[7px]',
-                  campaignStats.etaConfidence === 'high' ? 'bg-olympus-green/10 text-olympus-green'
-                    : campaignStats.etaConfidence === 'medium' ? 'bg-olympus-gold/10 text-olympus-gold'
-                    : 'bg-olympus-red/10 text-olympus-red',
-                )}
-                data-tip={`ETA confidence: ${campaignStats.etaConfidence}${campaignStats.etaParkRate != null ? ` · ${Math.round(campaignStats.etaParkRate * 100)}% park` : ''}`}
-              >
-                {campaignStats.etaConfidence}
-              </span>
-            )}
-            {campaignStats.designScore != null && (
-              <span
-                className={cn(
-                  'rounded px-1.5 py-0.5 whitespace-nowrap tabular-nums text-[7px]',
-                  campaignStats.designScore >= (campaignStats.designFloor ?? 7) ? 'bg-olympus-green/10 text-olympus-green' : 'bg-olympus-red/10 text-olympus-red',
-                )}
-                data-tip={`Project design ${campaignStats.designScore.toFixed(1)}${campaignStats.designTarget != null ? ` / target ${campaignStats.designTarget}` : ''}${campaignStats.designFloor != null ? ` / floor ${campaignStats.designFloor}` : ''} — ${campaignStats.designSource || 'source unknown'}${campaignStats.designReviewedAt ? ` · ${campaignStats.designReviewedAt}` : ''}${campaignStats.designPageScore != null ? ` · page review ${campaignStats.designPageScore.toFixed(1)} (separate)` : ''}`}
-              >
-                design {campaignStats.designScore.toFixed(1)}{campaignStats.designTarget != null ? ` / ${campaignStats.designTarget}` : ''}
-              </span>
-            )}
-            {campaignStats.costPerCompletedHop != null && (
-              <span
-                className="rounded bg-olympus-gold/10 px-1.5 py-0.5 whitespace-nowrap tabular-nums text-[7px] text-olympus-gold"
-                data-tip={`${(campaignStats.tokensPerCompletedHop || 0).toLocaleString()} tokens/completed hop · $${campaignStats.costPerCompletedHop.toFixed(4)}/hop · $${(campaignStats.estimatedCostUsd || 0).toFixed(2)} list value — invoice unknown`}
-              >
-                ${(campaignStats.estimatedCostUsd || 0).toFixed(2)}
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       <ParthenonCommand
         health={campaignHealth}
         patrol={atlasPatrol}
         projectSlug={projectSlug}
-        onChat={(god) => setChatGod(god)}
+        onChat={focusApollo}
       />
 
-      <StatusBriefCard slug={projectSlug} />
-
-      {atlasPatrol && (
-        <div
-          className="px-2 py-1 text-[8px] font-mono text-olympus-gold/90 bg-olympus-gold/5 border-b border-olympus-gold/10 flex items-center gap-1.5"
-          data-tip={atlasPatrol.summary}
-        >
-          <span className="uppercase tracking-wide text-olympus-text-dim">Atlas patrol</span>
-          <span>{atlasPatrol.parked} parked · {atlasPatrol.stuck} stuck</span>
-          {atlasPatrol.verdict && <span className="text-olympus-cyan">· {atlasPatrol.verdict}</span>}
-          {atlasPatrol.nextLane && <span className="truncate">→ {atlasPatrol.nextLane}</span>}
-          {campaignHealth?.nextPlan && projectSlug && (
-            <button
-              type="button"
-              disabled={applyingPlan || Boolean(campaignHealth.liveWalk)}
-              onClick={async () => {
-                setApplyingPlan(true);
-                setApplyPlanError(null);
-                try {
-                  const r = await fetch('/api/olympus/walk/plan', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ slug: projectSlug, action: 'apply' }),
-                  });
-                  const d = await r.json().catch(() => ({}));
-                  if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
-                  window.location.reload();
-                } catch (e: any) { setApplyPlanError(e?.message || String(e)); }
-                setApplyingPlan(false);
-              }}
-              className="shrink-0 rounded border border-olympus-gold/30 px-1 py-0.5 text-[7px] text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
-              data-tip={campaignHealth.liveWalk ? 'A walk holds this lane. Apply waits for a hop boundary.' : `Staged next generation: +${campaignHealth.nextPlan.added} / -${campaignHealth.nextPlan.removed} / ~${campaignHealth.nextPlan.changed}. Applies only at a hop boundary.`}
-            >
-              {campaignHealth.liveWalk ? 'walk live' : applyingPlan ? 'applying…' : `apply +${campaignHealth.nextPlan.added}`}
-            </button>
-          )}
-          {applyPlanError && (
-            <span className="truncate text-[7px] text-olympus-red" data-tip={applyPlanError}>apply refused</span>
-          )}
-          <button
-            type="button"
-            onClick={() => setChatGod('atlas')}
-            className="ml-auto shrink-0 rounded border border-olympus-gold/25 px-1 py-0.5 text-[7px] hover:bg-olympus-gold/10"
-            data-tip="Open Atlas's terminal and ask for the full analysis/replan"
-          >
-            ask Atlas
-          </button>
-        </div>
-      )}
 
       <div className="py-1">
         {ordered.map(s => {
@@ -437,14 +294,14 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
                     e.stopPropagation();
                     const latest = tasks[s.god]?.[0];
                     if (latest) setSheetHop(latest.id);
-                    else setChatGod('apollo');
+                    else focusApollo();
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.stopPropagation(); e.preventDefault();
                       const latest = tasks[s.god]?.[0];
                       if (latest) setSheetHop(latest.id);
-                      else setChatGod('apollo');
+                      else focusApollo();
                     }
                   }}
                   aria-label={`Open ${godName(s.god, language)}'s latest activity`}
@@ -581,7 +438,6 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
       </div>
       {children}
       {sheetHop && <TaskSheetModal hopId={sheetHop} onClose={() => setSheetHop(null)} />}
-      {chatGod && <GodChatModal godId={chatGod} onClose={() => setChatGod(null)} />}
     </>
   );
 }

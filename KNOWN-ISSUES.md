@@ -26,6 +26,15 @@
 - **#318** full decision ledger + cognitive protocol (partial in 0.1.0).
 - **#269** invoice reconciliation + per-model caps (partial in 0.1.0).
 
+## v0.1.2 backlog (new on 2026-11-26)
+
+- **#378** Sync Map is not live — remove or repair.
+- **#379** Cost dashboard takes too long to connect to the real GO limit.
+- **#380** Craft becomes a native-app hub (Blender/Godot/video editors), not only ArtCraft.
+- **#381** Reference “Use” opens an editable terminal prompt; add new free/open-source sources.
+- **#382** Callimachus continuous economical heartbeat that curates quick circuits.
+- **#383** Split Craft (app hub) and References into distinct menus.
+
 The per-god-chat epics (#274, #304) and the magic-wand epics (#273, #303) are
 closed as **superseded by the 0.1.0 Apollo-only + Activity Inspector + mark
 batch design**, not as delivered features.

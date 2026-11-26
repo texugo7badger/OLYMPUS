@@ -377,18 +377,20 @@ export default function MobileCompanion() {
     setMarkBusy(true);
     setMarkNote('');
     try {
-      const r = await fetch('/api/olympus/athena/edit', {
+      const mark = {
+        id: `mark-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        x: Math.round(markPoint.x),
+        y: Math.round(markPoint.y),
+        page: (() => { try { return new URL(markPreviewUrl || 'http://localhost/').pathname || '/'; } catch { return '/'; } })(),
+        instruction: markInstruction.trim(),
+        viewport: { width: Math.round(markPoint.w), height: Math.round(markPoint.h) },
+        url: markPreviewUrl || undefined,
+        createdAt: new Date().toISOString(),
+      };
+      const r = await fetch('/api/olympus/marks/send', {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          x: Math.round(markPoint.x),
-          y: Math.round(markPoint.y),
-          instruction: markInstruction.trim(),
-          projectSlug: active,
-          viewport: { width: Math.round(markPoint.w), height: Math.round(markPoint.h), devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1 },
-          previewUrl: markPreviewUrl,
-          route: (() => { try { return new URL(markPreviewUrl || 'http://localhost/').pathname || '/'; } catch { return '/'; } })(),
-        }),
+        body: JSON.stringify({ slug: active, marks: [mark], previewUrl: markPreviewUrl }),
       });
       const d = await r.json().catch(() => null);
       if (r.ok && d?.ok) {

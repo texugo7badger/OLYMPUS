@@ -1,26 +1,31 @@
 [
   {
-    "file": "screenshots/screens/01-pantheon-010.png",
+    "file": "screenshots/screens/01-pantheon-011.png",
     "title": "The Pantheon",
-    "note": "the ten gods, the Parthenon command deck and the disk-truth status brief (project, generation, hops, current hop, park, preview, design)"
+    "note": "the ten gods and the clean Parthenon command deck (project, generation, hops, park, actions)"
   },
   {
-    "file": "screenshots/screens/02-live-preview-010.png",
+    "file": "screenshots/screens/02-live-preview-011.png",
     "title": "Live preview",
-    "note": "a real project inside OLYMPUS: the live surface, the mark toolbar and a same-origin iframe on :4173 (the screenshot fixture)"
+    "note": "a real project inside OLYMPUS: the live surface and mark toolbar on the framing-friendly fixture (:4173)"
   },
   {
-    "file": "screenshots/screens/03-preview-window-010.png",
+    "file": "screenshots/screens/03-preview-window-011.png",
     "title": "Preview window",
-    "note": "the dedicated window renders the app in a browser iframe (the Electron popup can no longer render black) with the durable mark queue and the fixture on :4173"
+    "note": "the dedicated window renders the project in a browser iframe (no black Electron popup) with the durable mark queue"
   },
   {
-    "file": "screenshots/screens/04-cost-010.png",
+    "file": "screenshots/screens/04-cost-011.png",
     "title": "Cost",
     "note": "the real ledger: GO month/5h/week, Smart Burn, step/list/invoice separation and the honest reconnect/retry state — never an endless loader"
   },
   {
-    "file": "screenshots/screens/05-mobile-010.png",
+    "file": "screenshots/screens/05-marks-011.png",
+    "title": "Marks",
+    "note": "a durable multi-mark batch in the preview window; one consolidated prompt goes to Apollo in the terminal, where he asks with options if needed"
+  },
+  {
+    "file": "screenshots/screens/06-mobile-011.png",
     "title": "Phone",
     "note": "the same campaign in one hand: voice-first prompt, Parthenon, preview and marks"
   }

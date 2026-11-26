@@ -267,6 +267,7 @@ function loadAllInstincts(): any[] {
     }
 
     for (const { tier, file, full } of collected) {
+      if (tier === '_archive') continue; // archived instincts are memory, not UI nodes
       const fm = parseFrontmatter(full);
       if (typeof fm.confidence !== 'number') continue;
 
@@ -297,6 +298,8 @@ function loadAllInstincts(): any[] {
         path: full,
         name: baseName.replace(/-/g, ' '),
         tier,
+        kind: typeof fm.kind === 'string' ? fm.kind : (scope === 'project' ? 'project' : 'technical'),
+        quick_circuit: fm.quick_circuit === true,
       });
     }
   }
@@ -369,6 +372,19 @@ function applyScopeFilter(instincts: any[], activeProject: ActiveProjectContext 
     } else { stats.hidden++; }
   }
 
+  // v0.1.1 — performance + signal: the brain shows the best 120 visible
+  // instincts (confidence first, then recency). Archived are never nodes.
+  filtered.sort((a, b) => {
+    const dc = (b.effectiveConfidence ?? 0) - (a.effectiveConfidence ?? 0);
+    if (dc) return dc;
+    return String(b.last_used ?? '').localeCompare(String(a.last_used ?? ''));
+  });
+  const MAX_VISIBLE = 120;
+  if (filtered.length > MAX_VISIBLE) {
+    stats.hidden += filtered.length - MAX_VISIBLE;
+    filtered.length = MAX_VISIBLE;
+    stats.visible = filtered.length;
+  }
   return { filtered, stats };
 }
 

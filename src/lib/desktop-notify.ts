@@ -99,6 +99,8 @@ const NOTIFY_TEXT: Record<string, Record<string, string>> = {
     'phoneDone.body': '{answer}',
     'phoneFail.title': 'OLYMPUS — el prompt del móvil falló',
     'phoneFail.body': '{reason}',
+    'learning.title': 'OLYMPUS — nuevo instinto',
+    'learning.body': '{god} aprendió un patrón reutilizable para {hop} (confianza {confidence}).',
   },
   fr: {
     'walk.title': 'OLYMPUS — la marche commence',
@@ -119,6 +121,8 @@ const NOTIFY_TEXT: Record<string, Record<string, string>> = {
     'phoneDone.body': '{answer}',
     'phoneFail.title': 'OLYMPUS — le prompt mobile a échoué',
     'phoneFail.body': '{reason}',
+    'learning.title': 'OLYMPUS — nouvel instinct',
+    'learning.body': '{god} a appris un motif réutilisable pour {hop} (confiance {confidence}).',
   },
   de: {
     'walk.title': 'OLYMPUS — Lauf startet',
@@ -139,6 +143,8 @@ const NOTIFY_TEXT: Record<string, Record<string, string>> = {
     'phoneDone.body': '{answer}',
     'phoneFail.title': 'OLYMPUS — Handy-Prompt fehlgeschlagen',
     'phoneFail.body': '{reason}',
+    'learning.title': 'OLYMPUS — neuer Instinkt',
+    'learning.body': '{god} hat ein wiederverwendbares Muster für {hop} gelernt (Konfidenz {confidence}).',
   },
   ja: {
     'walk.title': 'OLYMPUS — ウォーク開始',
@@ -159,6 +165,8 @@ const NOTIFY_TEXT: Record<string, Record<string, string>> = {
     'phoneDone.body': '{answer}',
     'phoneFail.title': 'OLYMPUS — スマホのプロンプトが失敗',
     'phoneFail.body': '{reason}',
+    'learning.title': 'OLYMPUS — 新しいインスティンクト',
+    'learning.body': '{god} が {hop} の再利用可能なパターンを学習しました（信頼度 {confidence}）。',
   },
   zh: {
     'walk.title': 'OLYMPUS — 开始执行',
@@ -179,6 +187,8 @@ const NOTIFY_TEXT: Record<string, Record<string, string>> = {
     'phoneDone.body': '{answer}',
     'phoneFail.title': 'OLYMPUS — 手机提示失败',
     'phoneFail.body': '{reason}',
+    'learning.title': 'OLYMPUS — 新直觉',
+    'learning.body': '{god} 学会了 {hop} 的可复用模式（置信度 {confidence}）。',
   },
 };
 

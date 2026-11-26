@@ -61,7 +61,9 @@ export function recordHopLearning(input: HopLearningInput): HopLearningResult {
     if (artifacts.length === 0) return { ok: false, error: 'no artifacts to prove the pattern' };
 
     const base = path.join(getVaultRoot(), '05_Auto_Learning', 'instincts', god, 'empirical');
-    const id = `${safeId(slug)}-${safeId(hop)}`;
+    // v0.1.1 — a technical pattern is shared across projects; the slug stays
+    // as provenance, not as the identity.
+    const id = `${safeId(hop)}-${safeId(god)}`;
     const file = path.join(base, `${id}.md`);
     let samples = 1;
     let confidence = 0.86;
@@ -94,7 +96,7 @@ export function recordHopLearning(input: HopLearningInput): HopLearningResult {
       '',
       `**Confidence:** ${confidence.toFixed(2)} (empirical, ${samples} successful sample${samples === 1 ? '' : 's'})`,
       '',
-      `**Scope:** project (${slug}) · god ${god}`,
+      `**Scope:** technical/global (proven on ${slug}) · god ${god}`,
       '',
       `**Evidence:** ${artifacts.join(', ')}`,
       '',
@@ -106,9 +108,11 @@ export function recordHopLearning(input: HopLearningInput): HopLearningResult {
       '---',
       `god: ${yamlString(god)}`,
       `confidence: ${confidence.toFixed(2)}`,
-      'scope: project',
+      'scope: global',
+      'kind: technical',
       `projects: [${yamlString(slug)}]`,
       'stacks: []',
+      `quick_circuit: ${confidence >= 0.85 ? 'true' : 'false'}`,
       `last_used: ${yamlString(ts)}`,
       `samples: ${samples}`,
       'source: empirical',

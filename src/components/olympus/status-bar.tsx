@@ -45,7 +45,9 @@ interface ProviderInfo {
 
 function shouldShowCustomWindowControls(): boolean {
  	if (typeof window === 'undefined') return false;
- 	if (!window.olympus?.isElectron?.()) return false;
+ 	// v0.1.1 — the window API is the truth. The old `isElectron()` gate hid
+ 	// the controls when the preload handshake raced the first render.
+ 	if (!window.olympus?.window) return false;
  	// process.platform is not available in sandboxed Electron renderer.
  	// Use preload-provided getOsInfo() instead, with try/catch for safety.
  	try {
@@ -184,7 +186,7 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.1.0'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.1.1'}
    </span>
 )}
    <button

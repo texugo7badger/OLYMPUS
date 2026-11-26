@@ -1,6 +1,8 @@
 # OLYMPUS Roadmap
 
-**v0.1.0 is the current stable release** (2026-11-25) — the stable launch:
+**v0.1.1 is the current stable release** (2026-11-26) — fluidity: one Apollo terminal (parallel god chats deleted), a clean Parthenon, loop-blocked Continue asks Apollo to replan with Atlas evidence, hibernate keeps a live campaign server, the brain shows at most 120 high-confidence quick circuits, and OpenCode 2.4.2 is vendored and gate-approved. `npm run hygiene -- --battery` runs 8 gates and 57 hermetic suites.
+
+**v0.1.0 was the stable launch** (2026-11-25) —
 GO lane truth (real 1-token probes; dead qwen/minimax lanes fail over to
 verified lanes), the generation boundary applies the staged next plan, every
 completed hop writes an empirical instinct, Apollo reports WHERE / WHAT / NEXT /
