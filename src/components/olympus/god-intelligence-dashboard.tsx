@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import OlympusLoader from './olympus-loader';
-import { BrainCog, Zap, Activity, ArrowUp, ArrowDown, Minus, BrainCircuit, Sparkles, Coins } from 'lucide-react';
+import { BrainCog, Zap, Activity, ArrowUp, ArrowDown, Minus, BrainCircuit, Sparkles, Coins, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AnimatedNumber from './animated-number';
 import { GOD_ICONS } from '@/lib/olympus-store';
@@ -121,6 +121,7 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  const [stats, setStats] = useState<BrainStats | null>(null);
  const [scStats, setScStats] = useState<ShortCircuitStats | null>(null);  // v0.0.26 — classifier ↔ dispatch agreement (the feedback loop).
  const [curator, setCurator] = useState<any>(null);
+ const [retrieval, setRetrieval] = useState<any>(null);
  const [curating, setCurating] = useState(false);
   const [agreement, setAgreement] = useState<{ rate: number | null; windows: number }>({ rate: null, windows: 0 });
 
@@ -162,6 +163,11 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  fetch('/api/olympus/callimachus/status', { cache: 'no-store' })
    .then(r => r.ok ? r.json() : null)
    .then((d: any) => { if (mounted && d?.ok) setCurator(d); })
+   .catch(() => {});
+ // v0.1.3 — the local hybrid index's real state: docs, vectors, model.
+ fetch('/api/olympus/retrieval/reindex', { cache: 'no-store' })
+   .then(r => r.ok ? r.json() : null)
+   .then((d: any) => { if (mounted && d?.ok) setRetrieval(d); })
    .catch(() => {});
  // v0.0.26 — the agreement window the heartbeat records.
  fetch('/api/olympus/agreement?limit=50', { cache: 'no-store' })
@@ -371,6 +377,24 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
     No global shortcut has passed cross-project proof yet. Project memory stays scoped — that is the guard against a generalized hallucination.
    </div>
   )}
+ </div>
+
+ {/* v0.1.3 — the retrieval brain: FTS5 + 768d dense + RRF. */}
+ <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3 mb-4" data-testid="retrieval-status">
+  <div className="flex items-center gap-2">
+   <Search size={13} className="text-olympus-cyan" />
+   <span className="text-[11px] font-semibold text-olympus-text">Retrieval · local hybrid</span>
+   <span className={cn('ml-auto rounded px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wide', retrieval?.runtime?.paused ? 'bg-olympus-gold/10 text-olympus-gold' : 'bg-olympus-green/15 text-olympus-green')}>
+    {retrieval?.runtime?.paused ? 'paused' : retrieval?.ollama ? 'ready' : 'fts only'}
+   </span>
+  </div>
+  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[8.5px] font-mono text-olympus-text-dim">
+   <span>{retrieval?.docs ?? '—'} docs</span>
+   <span>{retrieval?.embedded ?? '—'} vectors</span>
+   <span>{retrieval?.embedding?.model ?? 'nomic-embed-text:v1.5'} · {retrieval?.embedding?.dimensions ?? 768}d</span>
+   <span>FTS5 + RRF</span>
+   <span>{retrieval?.lastIndexedAt ? `indexed ${Math.max(0, Math.round((Date.now() - Date.parse(retrieval.lastIndexedAt)) / 60000))}m ago` : 'not indexed yet'}</span>
+  </div>
  </div>
 
  {/* Short-circuit hit rate sparkline (key visual) */}

@@ -1,0 +1,53 @@
+{
+  "environment": {
+    "model": "nomic-embed-text:v1.5",
+    "dimensions": 768,
+    "url": "http://127.0.0.1:11434",
+    "batch": 16,
+    "ollama": true,
+    "node": "v22.23.1",
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "index": {
+    "docs": 1032,
+    "embedded": 1032,
+    "byKind": {
+      "instinct": 271,
+      "knowledge": 41,
+      "skill": 720
+    },
+    "dbPath": "/home/texugo/.olympus/retrieval.db",
+    "lastIndexedAt": "2026-11-27T03:34:57.237Z",
+    "model": "nomic-embed-text:v1.5",
+    "dbBytes": 14950400,
+    "dbMB": 14.3
+  },
+  "latencyMs": {
+    "fts": {
+      "p50": 1,
+      "p95": 5
+    },
+    "hybrid": {
+      "p50": 205,
+      "p95": 286
+    }
+  },
+  "sample": [
+    {
+      "kind": "skill",
+      "title": "redesign-existing-projects",
+      "score": 0.0323
+    },
+    {
+      "kind": "knowledge",
+      "title": "Accessibility (WCAG 2.2 AA)",
+      "score": 0.0161
+    },
+    {
+      "kind": "skill",
+      "title": "accessibility",
+      "score": 0.0156
+    }
+  ]
+}

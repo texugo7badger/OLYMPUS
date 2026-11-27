@@ -269,8 +269,10 @@ const insertMany = db.transaction((docs) => {
     const doc = docs[i];
     const vector = tfidfVector(doc.text, vocab, df, documents.length, vocabSize);
     const buf = Buffer.from(vector.buffer);
-    insertVec.run(buf);
-    insertMeta.run(i, doc.skill_id, doc.skill_alias ?? doc.skill_id.split('/').pop(), doc.god_scope, doc.kind, doc.title, doc.description, doc.body, doc.source_path);
+    const info = insertVec.run(buf);
+    // v0.1.3 — use the vector's REAL rowid. The old 0-based `i` shifted
+    // every metadata lookup by one, so every query returned the next skill.
+    insertMeta.run(Number(info.lastInsertRowid), doc.skill_id, doc.skill_alias ?? doc.skill_id.split('/').pop(), doc.god_scope, doc.kind, doc.title, doc.description, doc.body, doc.source_path);
   }
 });
 insertMany(documents);

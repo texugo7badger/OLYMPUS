@@ -21,6 +21,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { curateInstincts, type CurationResult } from './instinct-curation';
 import { getVaultRoot } from './vault-root';
+import { recalibrateFromOutcomes, type RecalibrateResult } from './learning/recalibrate';
 
 export const CURATION_INTERVAL_MS = 15 * 60_000;
 export const MODEL_PASS_INTERVAL_MS = 60 * 60_000;
@@ -42,6 +43,7 @@ export interface CurationState {
   at: string;
   result: CurationResult;
   census: Census;
+  recalibration?: RecalibrateResult;
 }
 
 export interface BudgetState {
@@ -174,11 +176,14 @@ export function recordModelPass(): BudgetState {
 
 /** Run the deterministic pass and persist its state. Zero model tokens. */
 export function runCurationPass(apply = true): CurationState {
+  // Outcomes first: the confidence the curator reads must be the measured one.
+  const recalibration = recalibrateFromOutcomes();
   const result = curateInstincts({ apply });
   const state: CurationState = {
     at: new Date().toISOString(),
     result,
     census: censusInstincts(),
+    recalibration,
   };
   writeJson(CURATION_STATE(), state);
   return state;

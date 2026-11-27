@@ -58,14 +58,19 @@ async function main() {
   expect('L4: a repeated hop raises samples/confidence', second.ok && second.samples === 2 && second.confidence > first.confidence, JSON.stringify(second));
 
   const gate = await import(OLYMPUS + '/.opencode/src/olympus-router/src/instinct-gate.ts');
-  const hit = gate.queryInstincts('god', 'hermes', 'sakuga-sourcing sakuga-candidates');
+  const hit = gate.queryInstincts('god', 'hermes', 'sakuga-sourcing sakuga-candidates', 3, { project: 'fixture', stacks: [] });
   expect('L5: unproven project memory does NOT short-circuit', hit.short_circuit === false, JSON.stringify({ confidence: hit.confidence }));
-  // v0.1.2 — Callimachus promotion is the only door: flip the proof bit. 
-  const promoted = fs.readFileSync(first.path, 'utf-8').replace('quick_circuit: false', 'quick_circuit: true');
+  // v0.1.3 — a quick circuit needs ECC proof: many successes and 0.85+.
+  const promoted = fs.readFileSync(first.path, 'utf-8')
+    .replace(/^samples:.*$/m, 'samples: 40')
+    .replace(/^successes:.*$/m, 'successes: 40')
+    .replace(/^failures:.*$/m, 'failures: 0')
+    .replace(/^confidence:.*$/m, 'confidence: 0.863')
+    .replace('quick_circuit: false', 'quick_circuit: true');
   fs.writeFileSync(first.path, promoted);
-  const proven = gate.queryInstincts('god', 'hermes', 'sakuga-sourcing sakuga-candidates');
+  const proven = gate.queryInstincts('god', 'hermes', 'sakuga-sourcing sakuga-candidates', 3, { project: 'fixture', stacks: [] });
   expect('L5b: a promoted quick circuit short-circuits', proven.short_circuit === true && proven.matching_instinct?.id === first.path.split('/').pop()?.replace(/\.md$/, ''), JSON.stringify({ confidence: proven.confidence, file: fs.readFileSync(first.path, 'utf-8').slice(0, 450) }));
-  const miss = gate.queryInstincts('god', 'hermes', 'sakuga-sourcing only');
+  const miss = gate.queryInstincts('god', 'hermes', 'sakuga-sourcing only', 3, { project: 'fixture', stacks: [] });
   expect('L6: one tag is not enough — no false short-circuit', miss.short_circuit === false, JSON.stringify({ confidence: miss.confidence }));
 
   const vaultParse = await import(OLYMPUS + '/src/lib/vault/parse.ts');

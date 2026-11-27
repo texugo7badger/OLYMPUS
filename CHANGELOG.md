@@ -2,6 +2,33 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.3-dev] — 2026-11-27
+
+### Retrieval & Learning Foundation (development branch)
+
+- **Local hybrid retrieval.** FTS5/BM25 + 768d `nomic-embed-text:v1.5`
+  (local Ollama) + RRF, with project/stack/kind/expiry filters. 644 docs /
+  1,032 chunks / 14.3 MB. Eval: P@5 **100% vs 73% FTS-only**, MRR **0.933 vs
+  0.733**; hybrid p50/p95 **184–205 / 235–286 ms**. Full contract in
+  [RETRIEVAL.md](RETRIEVAL.md).
+- **ECC learning corrected.** Outcomes are normalized (`completed` without
+  verify is not success); confidence uses the ECC formula; `successes` /
+  `failures` are recorded; project-scoped instincts no longer leak into other
+  projects; quick circuit is a hint, short-circuit only at 0.85 + proof;
+  1-in-10 verification is real; dispatch outcomes recalibrate deterministically.
+- **Skill index repaired.** Metadata rowid alignment and L2→cosine conversion
+  fixed; relevant top-5 queries now return positive similarities; the index is
+  injected as compact `[SKILL HINTS]` and exposed via `olympus-skill-search` /
+  `olympus-retrieval-search`.
+- **Context7 becomes memory.** Tool results are cached with library/version/
+  query/answer/TTL and indexed as cited docs.
+- **Hibernate-safe indexing.** File-backed pause, content-hash idempotence,
+  no partial docs; resume skips unchanged chunks. Tests cover pause/resume.
+- **AIME instincts are not deleted.** `npm run migrate:instincts` is dry-run
+  by default; cleanup/revalidation is a v0.1.4 decision after AIME finishes.
+- **Battery:** 61/61 suites green. **Does not include RLM/resonance**
+  (v0.1.4) or the v0.1.5 repository cleanup.
+
 ## [v0.1.2] — 2026-11-26
 
 ### Performance and truth — 60 FPS, separate Craft/References, honest quick circuits

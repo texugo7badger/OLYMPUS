@@ -31,6 +31,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 import { getVaultRoot } from "../../../src/lib/vault-root.js";
+import { normalizeOutcome } from "../../../src/lib/learning/outcome.js";
 
 const VAULT_ROOT = getVaultRoot(); // D21: the single canonical resolver
 const ACTIVITY_FEED = path.join(VAULT_ROOT, "06_Activity_Feed", "live.jsonl");
@@ -203,7 +204,7 @@ const patternDetectorTool: ToolDefinition = tool({
       for (const r of records) {
         godSet.add(r.god);
         demigodSet.add(r.demigod);
-        if (r.outcome === "success") successes++;
+        if (normalizeOutcome(r.outcome).outcome === "success") successes++;
         if (r.outcome !== "unknown") outcomeCount++;
         totalDuration += r.duration_ms;
       }

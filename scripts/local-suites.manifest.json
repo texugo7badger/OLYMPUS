@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-26T19:42:14.182Z",
+  "generatedAt": "2026-11-27T03:17:27.656Z",
   "note": "PUBLIC suites are tracked and run by .github/workflows/core.yml; TRACKED_LOCAL suites are in the repo but need the local OpenCode run state/overlay; LOCAL suites stay on the maintainer machine and declare why. A fresh clone reproduces the public core; the full battery numbers ride public/stable.json.",
   "public": [
     "alignment-preview.test.mjs",
@@ -23,10 +23,13 @@
     "hop-failure-class.test.mjs",
     "i18n-audit.test.mjs",
     "instinct-curation.test.mjs",
+    "learning-core.test.mjs",
     "mobile-companion.test.mjs",
     "parthenon-live.test.mjs",
     "plan-recovery.test.mjs",
     "preview-share.test.mjs",
+    "retrieval-bus.test.mjs",
+    "retrieval-hibernate.test.mjs",
     "terminal-paste.test.mjs",
     "theme-gallery.test.mjs",
     "v099-preview-mobile.test.mjs"
@@ -149,15 +152,19 @@
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
     {
+      "suite": "skill-index.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
       "suite": "v092-runtime.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     }
   ],
   "local": [],
   "count": {
-    "total": 57,
-    "public": 27,
-    "trackedLocal": 30,
+    "total": 61,
+    "public": 30,
+    "trackedLocal": 31,
     "local": 0
   }
 }

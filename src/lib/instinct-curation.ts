@@ -16,6 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getVaultRoot } from './vault-root';
+import { computeInstinctConfidence } from './learning/confidence';
 
 export interface CurationResult {
   scanned: number;
@@ -62,8 +63,17 @@ export function curateInstincts(opts: { apply?: boolean } = {}): CurationResult 
       result.scanned++;
       const trigger = field(text, 'trigger');
       const projects = field(text, 'projects');
-      const confidence = Number(field(text, 'confidence') || 0);
-      const samples = Number(field(text, 'samples') || 0);
+      const legacyConfidence = Number(field(text, 'confidence') || 0);
+      const successes = field(text, 'successes');
+      const failures = field(text, 'failures');
+      const samples = field(text, 'samples');
+      const counts = computeInstinctConfidence({
+        successes: successes ? Number(successes) : undefined,
+        failures: failures ? Number(failures) : undefined,
+        samples: samples ? Number(samples) : undefined,
+        legacyConfidence,
+      });
+      const confidence = counts.confidence || legacyConfidence;
       const quick = field(text, 'quick_circuit') === 'true';
       const synthetic = SYNTHETIC.test(`${trigger} ${projects} ${file}`);
       if (synthetic) {
@@ -83,11 +93,15 @@ export function curateInstincts(opts: { apply?: boolean } = {}): CurationResult 
       // another project is exactly the cross-project evidence we want.
       const aimeOnly = projectList.length > 0 && projectList.every((p) => p.toLowerCase() === 'aime');
       const projectSpecific = aimeOnly || (PROJECT_SPECIFIC.test(trigger) && distinctProjects < 2);
-      const proven = samples >= 2 && confidence >= 0.9 && distinctProjects >= 2;
-      // A candidate is evidence a model pass can actually judge: real use in
-      // two projects, repeated enough to be more than one lucky hop. A global
-      // instinct with no project provenance is NOT a candidate — it is a wish.
-      const candidate = !projectSpecific && !proven && distinctProjects >= 2 && samples >= 3 && confidence >= 0.85;
+      // Global quick circuits must clear the ECC bar: 20+ samples, 90%+
+      // success, and two distinct projects. A candidate is weaker evidence a
+      // model pass may judge; it is never a shortcut.
+      const proven = counts.samples >= 20 && counts.successRate >= 0.9 && confidence >= 0.82 && distinctProjects >= 2;
+      // A project-scoped quick circuit is a hint, not a short-circuit. It
+      // needs 5+ samples, 80%+ success and the ECC confidence floor.
+      const projectQuick = projectSpecific && counts.samples >= 5 && counts.successRate >= 0.8 && confidence >= 0.72;
+      const shouldQuick = proven || projectQuick;
+      const candidate = !projectSpecific && !proven && distinctProjects >= 2 && counts.samples >= 3 && confidence >= 0.5;
       if (projectSpecific && (field(text, 'scope') !== 'project' || field(text, 'kind') !== 'project')) {
         text = setField(text, 'scope', 'project');
         text = setField(text, 'kind', 'project');
@@ -95,16 +109,16 @@ export function curateInstincts(opts: { apply?: boolean } = {}): CurationResult 
         result.changed++;
         if (apply) fs.writeFileSync(abs, text);
       }
-      if (quick && !proven) {
+      if (quick && !shouldQuick) {
         result.demoted++;
         result.changed++;
         if (apply) fs.writeFileSync(abs, setField(text, 'quick_circuit', 'false'));
-      } else if (!quick && proven) {
+      } else if (!quick && shouldQuick) {
         result.promoted++;
         result.changed++;
         if (apply) fs.writeFileSync(abs, setField(text, 'quick_circuit', 'true'));
       }
-      if (proven) result.quickCircuits++;
+      if (shouldQuick) result.quickCircuits++;
       else if (candidate) result.candidates++;
     }
   }

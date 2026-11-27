@@ -1,23 +1,28 @@
 /**
- * instinct-rag.ts — #84 (HIGIENIA-2 H3b / F1): the instinct RAG — proven
- * instincts as SHORT prior-context blocks in dispatches.
+ * instinct-rag.ts — the instinct prior-context lane, now scope-aware (v0.1.3).
  *
- * The D16-compliant form (short blocks, never prompt essays): when a
- * dispatch is composed, the composer god's PROVEN instincts (confidence ≥
- * the threshold, a real token match against the task) ride into the
- * payload as a compact "trust but verify" block. No match — no block (the
- * honest skip; the dispatch stays lean).
+ * The old implementation token-matched every empirical instinct for a god,
+ * with no project/stack filter. A generic Athena task in any project could
+ * receive an AIME instruction to write `evidence/clips/...`. This version
+ * reuses the canonical `filterInstinct()` rules:
  *
- * The scoring is deliberately naive and cheap: token overlap between the
- * task text and the instinct's trigger (lowercased, alphanumeric tokens,
- * a small stoplist). The instinct pools are small (a handful per god);
- * a vector store would be ceremony here.
+ *   - project instincts are visible only in that project;
+ *   - stack instincts only when the active stack intersects;
+ *   - global/stack-tagged instincts follow the cross-stack rule;
+ *   - seed instincts are always visible.
+ *
+ * Retrieval stays deliberately cheap: token overlap over the trigger, with a
+ * small stoplist. Vectors are for the Retrieval Bus; this lane is the fast
+ * prior-context fallback.
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getVaultRoot } from './vault-root.js';
+import { getVaultRoot } from './vault-root';
+import { filterInstinct, type ActiveProject, type InstinctScope } from './instinct-scope';
+import { getActiveContext, activeProjectForScope } from './learning/active-context';
+import { computeInstinctConfidence } from './learning/confidence';
 
 const STOPWORDS = new Set([
   'the', 'a', 'an', 'and', 'or', 'to', 'of', 'in', 'on', 'for', 'with', 'is', 'are',
@@ -34,8 +39,29 @@ function tokenize(text: string): Set<string> {
   );
 }
 
-/** Parse an instinct file's frontmatter (the vault's seed/empirical shape). */
-function parseInstinctFile(filePath: string): { confidence: number; trigger: string; action: string; source: string } | null {
+interface ParsedInstinct {
+  confidence: number;
+  trigger: string;
+  action: string;
+  source: string;
+  scope: InstinctScope;
+  stacks: string[];
+  projects: string[];
+  quickCircuit: boolean;
+  samples: number;
+  successes: number;
+  failures: number;
+}
+
+function parseList(value: string): string[] {
+  return value
+    .replace(/^\[|\]$/g, '')
+    .split(',')
+    .map((s) => s.trim().replace(/^["']|["']$/g, ''))
+    .filter(Boolean);
+}
+
+function parseInstinctFile(filePath: string): ParsedInstinct | null {
   try {
     const raw = readFileSync(filePath, 'utf-8');
     const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
@@ -45,27 +71,54 @@ function parseInstinctFile(filePath: string): { confidence: number; trigger: str
       const kv = line.match(/^([a-zA-Z_]+):\s*(.*)$/);
       if (kv) fm[kv[1]] = kv[2].trim();
     }
-    const confidence = Number.parseFloat(fm.confidence ?? '');
-    if (!Number.isFinite(confidence)) return null;
+    const legacyConfidence = Number.parseFloat(fm.confidence ?? '');
+    if (!Number.isFinite(legacyConfidence)) return null;
+    const counts = computeInstinctConfidence({
+      successes: fm.successes ? Number(fm.successes) : undefined,
+      failures: fm.failures ? Number(fm.failures) : undefined,
+      samples: fm.samples ? Number(fm.samples) : undefined,
+      legacyConfidence,
+    });
+    const scope = (['global', 'stack', 'project'].includes(fm.scope) ? fm.scope : 'global') as InstinctScope;
     return {
-      confidence,
+      confidence: counts.confidence || legacyConfidence,
       trigger: String(fm.trigger ?? ''),
       action: String(fm.action ?? ''),
       source: String(fm.source ?? 'unknown'),
+      scope,
+      stacks: parseList(String(fm.stacks ?? '')),
+      projects: parseList(String(fm.projects ?? '')),
+      quickCircuit: fm.quick_circuit === 'true',
+      samples: counts.samples,
+      successes: counts.successes,
+      failures: counts.failures,
     };
   } catch { return null; }
 }
 
+function thresholdFor(scope: InstinctScope): number {
+  // Prior context is cheaper than a short-circuit: project memory is useful
+  // before it has enough samples to skip deliberation.
+  if (scope === 'project') return 0.45;
+  if (scope === 'stack') return 0.6;
+  return 0.75;
+}
+
 export interface InstinctPriorContextOptions {
   vaultRoot?: string;
-  minConfidence?: number;
   maxBlocks?: number;
+  /** Explicit project; defaults to the active project file. */
+  project?: string | null;
+  /** Explicit stacks; defaults to the active project note. */
+  stacks?: string[] | null;
+  /** Override the visibility filter (tests only). */
+  activeProject?: ActiveProject | null;
 }
 
 /**
  * Compose the prior-context block for a dispatch: the composer's proven
- * instincts matching the task text. Returns null when nothing qualifies —
- * the dispatch must stay lean, never padded.
+ * instincts matching the task text AND the active scope. Returns null when
+ * nothing qualifies — the dispatch stays lean, never padded.
  */
 export function instinctPriorContext(
   godId: string,
@@ -74,35 +127,70 @@ export function instinctPriorContext(
 ): string | null {
   let vaultRoot = opts.vaultRoot ?? null;
   if (!vaultRoot) {
-    // The canonical resolver (env → vault-root.txt → ~/OLYMPUS-VAULT) — the
-    // same truth every vault consumer uses. Never a hand-rolled default.
     try { vaultRoot = getVaultRoot(); } catch { return null; }
   }
   if (!vaultRoot || !godId) return null;
-  const minConfidence = opts.minConfidence ?? 0.8;
   const maxBlocks = opts.maxBlocks ?? 2;
   const taskTokens = tokenize(taskText);
   if (taskTokens.size === 0) return null;
 
-  const candidates: Array<{ trigger: string; action: string; confidence: number; overlap: number; source: string }> = [];
+  const ctx = opts.project !== undefined || opts.stacks !== undefined
+    ? { slug: opts.project ?? null, stacks: opts.stacks ?? [] }
+    : getActiveContext();
+  const activeProject = opts.activeProject !== undefined
+    ? opts.activeProject
+    : activeProjectForScope(ctx);
+
+  const candidates: Array<{
+    trigger: string;
+    action: string;
+    confidence: number;
+    overlap: number;
+    source: string;
+    scope: InstinctScope;
+    quick: boolean;
+  }> = [];
+
   for (const pool of ['seed', 'empirical']) {
     const dir = join(vaultRoot, '05_Auto_Learning', 'instincts', godId, pool);
     if (!existsSync(dir)) continue;
     for (const f of readdirSync(dir)) {
       if (!f.endsWith('.md')) continue;
       const inst = parseInstinctFile(join(dir, f));
-      if (!inst || inst.confidence < minConfidence || !inst.action) continue;
+      if (!inst || !inst.action) continue;
+      if (inst.confidence < thresholdFor(inst.scope)) continue;
+      const visibility = filterInstinct({
+        id: f.replace(/\.md$/, ''),
+        god: godId,
+        confidence: inst.confidence,
+        scope: inst.scope,
+        stacks: inst.stacks,
+        projects: inst.projects,
+        samples: inst.samples,
+        path: join(dir, f),
+      }, activeProject);
+      if (!visibility.visible) continue;
       const triggerTokens = tokenize(inst.trigger);
       let overlap = 0;
       for (const t of triggerTokens) if (taskTokens.has(t)) overlap++;
-      if (overlap >= 1) candidates.push({ trigger: inst.trigger, action: inst.action, confidence: inst.confidence, overlap, source: inst.source });
+      if (overlap >= 1) {
+        candidates.push({
+          trigger: inst.trigger,
+          action: inst.action,
+          confidence: inst.confidence,
+          overlap,
+          source: inst.source,
+          scope: inst.scope,
+          quick: inst.quickCircuit,
+        });
+      }
     }
   }
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => (b.overlap - a.overlap) || (b.confidence - a.confidence));
   const blocks = candidates.slice(0, maxBlocks);
   return [
-    '[PRIOR CONTEXT — proven instincts for this god, matching this task. Trust but verify.]',
-    ...blocks.map((c) => `- trigger: ${c.trigger || '(general)'} → ${c.action} (confidence ${c.confidence.toFixed(2)}, ${c.source})`),
+    '[PRIOR CONTEXT — proven instincts for this god and this scope. Trust but verify.]',
+    ...blocks.map((c) => `- [${c.scope}${c.quick ? ' · quick' : ''}] ${c.trigger || '(general)'} → ${c.action} (confidence ${c.confidence.toFixed(2)}, ${c.source})`),
   ].join('\n');
 }

@@ -1,9 +1,9 @@
 # OLYMPUS — Known issues and post-0.1.0 backlog
 
-> v0.1.0 · 2026-11-25 · **Nothing here is hidden.** These are the limits the
-> release does not claim, with the reason and the next step. The deterministic
-> gates are green; the battery is 57/57; the live UI gate is
-> `node scripts/verify-v010-ui.mjs`.
+> v0.1.3-dev · 2026-11-27 · **Nothing here is hidden.** These are the limits
+> the development branch does not claim, with the reason and the next step.
+> The deterministic gates are green; the battery is 61 suites; the v0.1.2 live
+> UI gate remains `node scripts/verify-v012-ui.mjs` until the v0.1.3 release.
 
 ## Declared limits (not errors)
 
@@ -18,6 +18,11 @@
 | Magic-wand DOM/component picker | **Superseded** | The durable mark queue (preview window + live preview), batch-to-Apollo and Quick Edit cover the outcome without a second planning lane. |
 | 23 moderate transitive advisories | Declared | 0 high / 0 critical; `npm audit --audit-level=high` is the gate. The dependency lane is tracked separately. |
 | AIME campaign still walking | Active lane | The campaign is the launch evidence and remains user-owned; it is not a release blocker. |
+| Initial retrieval index build | **Heavy on this host** | 644 docs / 1,032 chunks / 14.3 MB took 955 s. Run `npm run retrieval:index` once before a campaign; incremental is 1 s. Hibernate pauses the worker safely. |
+| Hybrid query latency | **Model-bound** | Warm `nomic-embed-text:v1.5` query ~150 ms; hybrid p95 235 ms. FTS-only fallback is 2 ms. |
+| Retrieval eval set | **Small (15 queries)** | In-repo regression set, P@5 100% vs 73% FTS. Grow it from real project tasks before claiming universal gains. |
+| AIME instinct cleanup | **Deferred to v0.1.4** | v0.1.3 does not delete AIME instincts; `npm run migrate:instincts` is dry-run by default. Revalidate/clean after AIME finishes on v0.1.2. |
+| RLM context envelope | **Not in v0.1.3** | Recursive decomposition and the Symphony Resonance Index are v0.1.4, behind flags. |
 
 ## Post-0.1.0 backlog (GitHub issues closed as deferred)
 
@@ -26,7 +31,13 @@
 - **#318** full decision ledger + cognitive protocol (partial in 0.1.0).
 - **#269** invoice reconciliation + per-model caps (partial in 0.1.0).
 
-## v0.1.2 backlog (new on 2026-11-26)
+## v0.1.3 backlog (new on 2026-11-27)
+
+- **Local hybrid retrieval** (FTS5 + 768d + RRF) and Context7 cache — implemented in this branch.
+- **ECC learning** confidence/scope/1-in-10 — implemented in this branch.
+- **AIME instinct revalidation/cleanup** — deferred to v0.1.4.
+
+## v0.1.2 backlog (shipped on 2026-11-26)
 
 - **#378** Sync Map is not live — remove or repair.
 - **#379** Cost dashboard takes too long to connect to the real GO limit.

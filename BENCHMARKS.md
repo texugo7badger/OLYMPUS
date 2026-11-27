@@ -3,6 +3,30 @@
 ![Benchmarks](public/diagrams/benchmarks.svg)
 
 
+## Local retrieval — v0.1.3, 2026-11-27 [MEASURED]
+
+Corpus: 644 documents from the OLYMPUS repo + `~/OLYMPUS-VAULT` (AIME notes included); 1,032 chunks. Embedding: `nomic-embed-text:v1.5`, 768d, local Ollama. DB: `~/.olympus/retrieval.db`.
+
+| Metric | Result |
+|---|---:|
+| Index size | 14.3 MB |
+| Embedded chunks | 1,032 / 1,032 |
+| Initial build | 955 s |
+| Incremental build (no changes) | 1 s |
+| FTS-only p50 / p95 | 1 ms / 2 ms |
+| Hybrid p50 / p95 | 205 ms / 286 ms (range 184–205 / 235–286) |
+| Warm embedding | 142–157 ms |
+| Cold embedding (load) | ~1.8 s |
+
+Eval: 15 human-labeled queries (in-repo regression set, not a universal benchmark).
+
+| Metric | FTS5 | Hybrid |
+|---|---:|---:|
+| P@5 | 73% | **100%** |
+| MRR@5 | 0.733 | **0.933** |
+
+Instrument: `npm run retrieval:eval` and `npm run retrieval:bench`. The dense lane recovers lexical misses (e.g. OWASP/session-cookie → OWASP Top 10 + Authentication Patterns). Honest limits: initial build is heavy on this host; query latency is model-bound; the eval set is small and must grow from real project tasks.
+
 ## Real Electron FPS — v0.1.2, 2026-11-26 [MEASURED]
 
 Instrument: `scripts/fps-probe-electron.mjs` (CDP against the real Electron

@@ -41,10 +41,13 @@ import { hardCeilingMs } from './progress';
 import { isHibernating, readHibernationPlan } from '@/lib/hibernation';
 import { readSessionTotals } from './warm-server';
 import { composeRagContext } from '../rag-inject';
+import { composeRetrievalBlock } from '../retrieval/bus';
+import { getActiveContext } from '../learning/active-context';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
 import { recordHopLearning } from './learning';
+import { normalizeOutcome } from '@/lib/learning/outcome';
 import { findOlympusRoot } from '@/lib/opencode-spawn';
 import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencode-session';
 import { markLaneAlive, markLaneDead, markLaneSlow, laneChain, isLaneDeadClass, isLaneAvailable, readLaneHealth } from '@/lib/lane-health';
@@ -422,13 +425,23 @@ export async function composeHopPromptWithRag(
   if (!query) return base;
   try {
     const rag = await composeRagContext(query);
+    const ctx = getActiveContext();
+    const retrieval = await composeRetrievalBlock({
+      query,
+      kinds: ['skill', 'knowledge', 'pattern'],
+      god: hop.god,
+      project: ctx.slug,
+      stacks: ctx.stacks,
+      limit: 4,
+      budgetChars: 1_600,
+    }).catch(() => '');
     let instinct: string | null = null;
     try {
       const { instinctPriorContext } = await import('../instinct-rag');
-      instinct = instinctPriorContext(hop.god, query);
+      instinct = instinctPriorContext(hop.god, query, { project: ctx.slug, stacks: ctx.stacks });
     } catch { /* the instinct lane never breaks the hop */ }
-    if (!rag && !instinct) return base;
-    const blocks = [rag, instinct].filter(Boolean).join('\n\n');
+    if (!rag && !instinct && !retrieval) return base;
+    const blocks = [retrieval, rag, instinct].filter(Boolean).join('\n\n');
     return `${base}\n\n${blocks}`;
   } catch {
     return base; // the RAG never breaks the hop
@@ -1691,7 +1704,8 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         skill: hop.skills?.[0] ?? hop.skill ?? null,
         mcp: hop.mcps?.[0] ?? hop.mcp ?? null,
         demigod: hop.demigods?.[0] ?? hop.demigod ?? null,
-        outcome: status,
+        outcome: normalizeOutcome(status, { verified: status === 'completed' }).outcome,
+        hop_status: status,
         durationMs: row.durationMs,
         tokensIn: row.tokensIn,
         tokensOut: row.tokensOut,

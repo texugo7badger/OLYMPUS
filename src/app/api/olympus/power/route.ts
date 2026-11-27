@@ -19,6 +19,7 @@ import { isRecentlyResumed, markResume, markSuspend, readSuspendState } from '@/
 import { appendActivity } from '@/lib/activity-feed';
 import { getActiveProject, getActiveProjectSlug } from '@/lib/project-context';
 import { loadHopState } from '@/lib/hop-runtime/hop-state';
+import { pauseRetrievalIndexing, resumeRetrievalIndexing } from '@/lib/retrieval/runtime';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const action = String(body?.action || '');
   if (action === 'suspend') {
+    pauseRetrievalIndexing('os-suspend');
     const state = markSuspend();
     try {
       appendActivity({
@@ -76,6 +78,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, state, campaign: campaignSummary() }, { headers: NO_CACHE_HEADERS });
   }
   if (action === 'resume') {
+    resumeRetrievalIndexing();
     const state = markResume();
     const campaign = campaignSummary();
     try {

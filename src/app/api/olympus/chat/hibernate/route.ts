@@ -28,6 +28,7 @@ import { getActiveProjectSlug } from '@/lib/project-context';
 import { getVaultRoot } from '@/lib/vault-root';
 import { loadHopState } from '@/lib/hop-runtime/hop-state';
 import { readWalkLock } from '@/lib/hop-runtime/walk-lock';
+import { pauseRetrievalIndexing } from '@/lib/retrieval/runtime';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -102,7 +103,11 @@ export async function POST(req: NextRequest) {
       }, null, 2) + '\n', { mode: 0o600 });
     } catch { /* the restore list is best-effort; never block hibernate */ }
 
-    // 3) The chat/MCP fleet is idle now. Stop it — unless a live campaign
+    // 3) Retrieval indexing is pause-safe: the worker stops between batches,
+    // the WAL is checkpointed and the local embedding model is unloaded.
+    pauseRetrievalIndexing('hibernate');
+
+    // 4) The chat/MCP fleet is idle now. Stop it — unless a live campaign
     // needs the same server for its next hop.
     if (!keepChat) cleanupServer();
     return NextResponse.json({

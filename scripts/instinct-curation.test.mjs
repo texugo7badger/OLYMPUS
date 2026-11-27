@@ -64,12 +64,12 @@ async function main() {
     trigger: '"Hop email-transactional in aime: transactional email"', tags: '["email", "transactional"]',
   }));
   fs.writeFileSync(path.join(empirical('hermes'), 'proven.md'), note({
-    god: '"hermes"', confidence: 0.95, samples: 2, scope: 'global', kind: 'technical',
+    god: '"hermes"', confidence: 0.95, samples: 25, successes: 25, failures: 0, scope: 'global', kind: 'technical',
     projects: '["aime", "olympus"]', quick_circuit: 'false',
     trigger: '"Hop webhook-retry: verify the HMAC before replay"', tags: '["webhook", "hmac"]',
   }));
   fs.writeFileSync(path.join(empirical('athena'), 'candidate.md'), note({
-    god: '"athena"', confidence: 0.86, samples: 3, scope: 'global', kind: 'technical',
+    god: '"athena"', confidence: 0.86, samples: 3, successes: 3, failures: 0, scope: 'global', kind: 'technical',
     projects: '["aime", "olympus"]', quick_circuit: 'false',
     trigger: '"Hop focus-ring: inset focus ring on dark cards"', tags: '["focus-ring", "cards"]',
   }));
@@ -97,7 +97,7 @@ async function main() {
   expect('C6: census counts only validated shortcuts', census.quickCircuits === 1 && census.project >= 2 && census.technical >= 2, JSON.stringify(census));
 
   const list = loop.listQuickCircuits();
-  expect('C7: the validated shortcut names its evidence', list.length === 1 && list[0].file === 'proven.md' && list[0].samples === 2, JSON.stringify(list));
+  expect('C7: the validated shortcut names its evidence', list.length === 1 && list[0].file === 'proven.md' && list[0].samples === 25, JSON.stringify(list));
 
   const state = loop.runCurationPass(true);
   const noBudget = loop.decideModelPass(state, false);

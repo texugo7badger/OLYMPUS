@@ -196,7 +196,8 @@ function buildDynamicPreamble(
       }
       lines.push('');
     }
-    lines.push(`## Cold Tier — ${allSkillDirs.length - hotSkills.length - warmSkills.length} skills NOT loaded (lazy via skill index)`);
+    lines.push(`## Cold Tier — ${allSkillDirs.length - hotSkills.length - warmSkills.length} skills NOT loaded (lazy via olympus-retrieval-search)`);
+    lines.push('Use `olympus-retrieval-search` for cold skills/knowledge: it is local hybrid (FTS5 + 768d dense + RRF), returns citations, and never calls a cloud service.');
     lines.push('');
   } else {
     lines.push(`## Warm/Cold tiers skipped (trivial task — hot tier only)`);

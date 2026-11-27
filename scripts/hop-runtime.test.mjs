@@ -280,7 +280,7 @@ async function main() {
   const order = [];
   const capDisp = async (hop) => {
     inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
-    await new Promise(r => setTimeout(r, 30));
+    await new Promise(r => setTimeout(r, 400));
     fs.writeFileSync(path.join(capLane, hop.artifacts[0]), 'done');
     order.push(hop.id); inFlight--;
     return { ok: true, exitCode: 0, output: 'ok', tokensIn: 100, tokensOut: 500, retriesAbsorbed: 0, exhausted: false };
@@ -307,7 +307,7 @@ async function main() {
   let poolInFlight = 0, poolMax = 0;
   const poolDisp = async (hop) => {
     poolInFlight++; poolMax = Math.max(poolMax, poolInFlight);
-    await new Promise(r => setTimeout(r, 30));
+    await new Promise(r => setTimeout(r, 400));
     fs.writeFileSync(path.join(poolLane, hop.artifacts[0]), 'done');
     poolInFlight--;
     return { ok: true, exitCode: 0, output: 'ok', tokensIn: 100, tokensOut: 500, retriesAbsorbed: 0, exhausted: false };

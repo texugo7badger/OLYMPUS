@@ -23,6 +23,8 @@ import { laneRosterFor } from '@/lib/lane-roster';
 import { reconcileProjectPath, PROJECTS_DIR, setActiveProject, getActiveProjectSlug } from '@/lib/project-context';
 import { composePlannerRag } from '@/lib/rag-inject';
 import { composeKnowledgeBlock } from '@/lib/knowledge-hints';
+import { composeRetrievalBlock } from '@/lib/retrieval/bus';
+import { getActiveContext } from '@/lib/learning/active-context';
 import { statusBriefMarker } from '@/lib/status-brief';
 import { uiReferencesMarkerBlock } from '@/lib/ui-references';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
@@ -493,6 +495,18 @@ export async function POST(req: NextRequest) {
     const plannerRagBlock = action === 'prompt' && classification.needsPlanning
       ? await composePlannerRag(promptTextClean).catch(() => '')
       : '';
+    const activeCtx = getActiveContext();
+    const retrievalBlock = action === 'prompt'
+      ? await composeRetrievalBlock({
+          query: promptTextClean,
+          kinds: ['skill', 'knowledge', 'pattern'],
+          god: classification.routeTo,
+          project: activeCtx.slug,
+          stacks: activeCtx.stacks,
+          limit: 4,
+          budgetChars: 1_600,
+        }).catch(() => '')
+      : '';
     const plannerMarker = action === 'prompt' && classification.needsPlanning
       ? `[OLYMPUS-PLANNER] This task is architectural/complex. Your deliverable for this turn is THE PLAN, not monolithic code: write dispatch-plan.json${intentLaneRoot ? ` to THIS ABSOLUTE PATH: ${intentLaneRoot}/dispatch-plan.json — at that exact path, NEVER the session cwd or any workspace lane` : ' to the project lane root'} — a DAG of small hops. NEVER write code files yourself — the plan IS your deliverable. The HOP RUNTIME is the ONLY execution engine: it dispatches each hop to the hop's god on the god's model lane. If the walk is parked, the user's next prompt resumes it in the post-run — you do NOT need to (and MUST NOT) execute hops, write component code, or dispatch the plan to Atlas. THE CONTRACT IS INLINE (a minimal canonical plan — do NOT open any source to learn it): {"version":1,"laneRoot":"${intentLaneRoot ?? '<the ABSOLUTE path of this project lane root>'}","hops":[{"id":"shell","god":"hephaestus","prompt":"<the spec SLICE + the DESIGN DIRECTIVES slice for this hop>","artifacts":["app/layout.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/layout.tsx"]},"budgetTokens":8192},{"id":"landing","god":"athena","prompt":"<its own slice + the design tokens>","artifacts":["app/page.tsx"],"verify":{"review":"deterministic","checks":["file-exists:app/page.tsx"]},"budgetTokens":8192,"after":["shell"]}]} — the hard rules: version is exactly 1; hop ids unique; one god per hop; artifacts are real deliverable paths relative to the laneRoot; after-edges must stay acyclic; budgetTokens at most 16384 (8192 is the sane default); verify.review is "deterministic" with checks like file-exists:<path>. The hop runtime walks the plan: per-hop dispatch on the god\'s own model lane (concurrency at most 3), deterministic verify (0 tokens), park-on-exhaustion with resume. Sessions are lanes; the disk carries the campaign. HARD RULE: hop prompts must NEVER instruct deletion or cleanup of the lane's runtime files (.opencode, opencode.json, opencode.demigods.json, dispatch-plan.json, .olympus-*, project.md, _handoff.md, _delegations) — residue cleanup is the runtime's post-campaign job (the 10:16 specimen: a build-fix god deleted the machinery mid-walk and killed the campaign). STRICT JSON: the file must parse with JSON.parse on the first try — inside string values NEVER write raw line breaks or control characters (escape them as \\n); a 'Bad control character' parse error refuses the whole walk (the 23:32 specimen). USE THE WRITE TOOL to create the file — a chat-text plan is NOT a delivery: the post-run reads the FILE (it may HARVEST your narrated text as a fallback, but the write tool is the contract). YOUR FILE TOOLS ARE DIRECT: write/read/bash/edit are direct tools in your toolset — they are NEVER in the Code Mode catalog, and the catalog search will NOT find them; that is expected, not a gap. When you need to write dispatch-plan.json, call the write tool DIRECTLY — never report yourself blocked over file creation. `
       : '';
@@ -548,8 +562,8 @@ ${uiReferencesBlock}`
       ? statusBriefMarker(intentStage?.slug ?? getActiveProjectSlug())
       : '';
     const runText = unattended
-      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptTextClean + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + statusMarker + plannerMarker + designMarker + languageMarker
-      : sessionMarker + classificationMarker + addressMarker + promptTextClean + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + statusMarker + plannerMarker + designMarker + languageMarker;
+      ? UNATTENDED_DIRECTIVE + sessionMarker + classificationMarker + addressMarker + promptTextClean + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (retrievalBlock ? `\n\n${retrievalBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + statusMarker + plannerMarker + designMarker + languageMarker
+      : sessionMarker + classificationMarker + addressMarker + promptTextClean + (plannerRagBlock ? `\n\n${plannerRagBlock}` : '') + (retrievalBlock ? `\n\n${retrievalBlock}` : '') + (knowledgeBlock ? `\n\n${knowledgeBlock}` : '') + statusMarker + plannerMarker + designMarker + languageMarker;
 
     return streamWarm(req, {
       conversationId,

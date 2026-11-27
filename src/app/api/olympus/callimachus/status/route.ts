@@ -89,6 +89,7 @@ export async function GET(req: NextRequest) {
       census: censusInstincts(),
       quickCircuitList: listQuickCircuits(8),
       curation: curation?.result ?? null,
+      recalibration: curation?.recalibration ?? null,
       budget,
       loop: {
         enabled: process.env.OLYMPUS_CALLIMACHUS_LOOP !== '0',

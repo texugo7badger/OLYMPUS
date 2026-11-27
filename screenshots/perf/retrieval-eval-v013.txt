@@ -1,0 +1,21 @@
+retrieval-eval — FTS5 vs hybrid (768d + RRF)
+query                                            fts hyb top hybrid
+accessible focus ring keyboard navigation          —   2 skill:redesign-existing-projects
+postgres explain analyze index scan                1   1 knowledge:Query Performance
+OWASP authentication session cookie                —   1 knowledge:OWASP Top 10 (Universal)
+react render waterfall useMemo performance         —   1 skill:react-performance
+MCP server typescript zod tool                     1   1 skill:mcp-server-patterns
+database migration zero downtime                   1   1 skill:database-migrations
+Playwright flaky e2e test                          1   1 knowledge:E2E Testing Patterns (Universal)
+GLSL shader ray marching                           1   1 skill:shader-dev
+context7 library documentation lookup              1   1 skill:documentation-lookup
+tailwind design system tokens                      1   1 skill:design-system
+stripe webhook idempotency                         —   2 skill:production-audit
+docker compose healthcheck                         1   1 skill:docker-patterns
+kubernetes readiness probe                         1   1 skill:kubernetes-patterns
+rust borrow checker build error                    1   1 instinct:Rust build error involving borrow checker o
+prisma transaction timeout                         1   1 skill:prisma-patterns
+
+P@5   FTS 73%  hybrid 100%
+MRR@5 FTS 0.733  hybrid 0.933
+latency (median) FTS 6ms  hybrid 221ms

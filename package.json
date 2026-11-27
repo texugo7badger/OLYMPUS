@@ -114,7 +114,11 @@
     "shots:electron": "electron scripts/capture-ui.cjs --no-sandbox",
     "shots:menus": "node scripts/capture-v012-screens.mjs",
     "fps:electron": "node scripts/fps-probe-electron.mjs",
-    "verify:ui": "node scripts/verify-v012-ui.mjs"
+    "verify:ui": "node scripts/verify-v012-ui.mjs",
+    "retrieval:index": "tsx scripts/retrieval-index.mjs",
+    "retrieval:eval": "tsx scripts/retrieval-eval.mjs",
+    "retrieval:bench": "tsx scripts/retrieval-bench.mjs",
+    "migrate:instincts": "tsx scripts/migrate-instincts-v013.mjs"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",

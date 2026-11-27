@@ -13,12 +13,14 @@ import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
 import * as fs from "fs";
 import * as path from "path";
 import { getVaultRoot } from "../../../src/lib/vault-root.js";
+import { computeInstinctConfidence } from "../../../src/lib/learning/confidence.js";
 
 const VAULT_ROOT = getVaultRoot(); // D21: the single canonical resolver
 
 interface InstinctFrontmatter {
   god?: string;
   confidence: number;
+  quick_circuit?: boolean;
   scope?: "global" | "stack" | "project";
   stacks?: string[];
   projects?: string[];
@@ -70,7 +72,13 @@ function parseInstinctFrontmatter(raw: string, filePath: string): InstinctFrontm
 
   return {
     god: typeof fm.god === "string" ? fm.god : undefined,
-    confidence: fm.confidence,
+    confidence: computeInstinctConfidence({
+      successes: typeof fm.successes === "number" ? fm.successes : undefined,
+      failures: typeof fm.failures === "number" ? fm.failures : undefined,
+      samples: typeof fm.samples === "number" ? fm.samples : undefined,
+      legacyConfidence: fm.confidence,
+    }).confidence || fm.confidence,
+    quick_circuit: fm.quick_circuit === true,
     scope: (["global", "stack", "project"].includes(fm.scope) ? fm.scope : "global") as InstinctFrontmatter["scope"],
     stacks: Array.isArray(fm.stacks) ? fm.stacks : [],
     projects: Array.isArray(fm.projects) ? fm.projects : [],
@@ -233,7 +241,7 @@ const instinctQueryTool: ToolDefinition = tool({
 
     // Check for short-circuit candidates (empirical, confidence >= 0.85, has demigod)
     const shortCircuitCandidates = sorted.filter(
-      i => i.source === "empirical" && applyTimeDecay(i) >= 0.85 && (i.demigod || i.demigod),
+      i => i.source === "empirical" && i.quick_circuit === true && applyTimeDecay(i) >= 0.85 && (i.demigod || i.demigod),
     );
 
     const shouldShortCircuit = shortCircuitCandidates.length > 0;

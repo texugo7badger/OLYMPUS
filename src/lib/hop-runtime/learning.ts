@@ -17,6 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getVaultRoot } from '@/lib/vault-root';
+import { computeInstinctConfidence } from '@/lib/learning/confidence';
 
 export interface HopLearningInput {
   slug: string;
@@ -65,19 +66,25 @@ export function recordHopLearning(input: HopLearningInput): HopLearningResult {
     // across projects. Never auto-promote a single project's convention.
     const id = `${safeId(slug)}-${safeId(hop)}-${safeId(god)}`;
     const file = path.join(base, `${id}.md`);
-    let samples = 1;
-    let confidence = 0.86;
+    let successes = 1;
+    let failures = 0;
     let created = true;
     try {
       const existing = fs.readFileSync(file, 'utf-8');
       const oldSamples = Number(/^samples:\s*(\d+)/m.exec(existing)?.[1] || 0);
-      const oldConfidence = Number(/^confidence:\s*([0-9.]+)/m.exec(existing)?.[1] || 0);
+      const oldSuccesses = Number(/^successes:\s*(\d+)/m.exec(existing)?.[1] || 0);
+      const oldFailures = Number(/^failures:\s*(\d+)/m.exec(existing)?.[1] || 0);
       if (oldSamples > 0) {
-        samples = oldSamples + 1;
-        confidence = Math.min(0.95, Math.max(oldConfidence, 0.84 + samples * 0.03));
+        // v0.1.3 migration: the old writer only recorded successes, so
+        // samples == successes when the explicit counter is absent.
+        successes = (oldSuccesses || oldSamples) + 1;
+        failures = oldFailures;
         created = false;
       }
     } catch { /* first success */ }
+    const counts = computeInstinctConfidence({ successes, failures });
+    const samples = counts.samples;
+    const confidence = counts.confidence;
 
     const artifactTags = artifacts.map((a) => safeId(path.basename(a).replace(/\.[^.]+$/, '')));
     // v0.1.0 — TWO specific tags, both required by the gate (hits >= 2).
@@ -94,7 +101,7 @@ export function recordHopLearning(input: HopLearningInput): HopLearningResult {
       '',
       `**Action:** ${action}`,
       '',
-      `**Confidence:** ${confidence.toFixed(2)} (empirical, ${samples} successful sample${samples === 1 ? '' : 's'})`,
+      `**Confidence:** ${confidence.toFixed(2)} (empirical, ${counts.successes}/${samples} success${samples === 1 ? '' : 'es'})`,
       '',
       `**Scope:** project (${slug}) · god ${god} — candidate for a quick circuit after cross-project proof`,
       '',
@@ -115,6 +122,8 @@ export function recordHopLearning(input: HopLearningInput): HopLearningResult {
       'quick_circuit: false',
       `last_used: ${yamlString(ts)}`,
       `samples: ${samples}`,
+      `successes: ${counts.successes}`,
+      `failures: ${counts.failures}`,
       'source: empirical',
       `tags: [${tags.map(yamlString).join(', ')}]`,
       `trigger: ${yamlString(trigger)}`,

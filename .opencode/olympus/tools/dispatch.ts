@@ -556,7 +556,9 @@ const dispatchTool: ToolDefinition = tool({
     let ragPriorContext: string | null = null;
     try {
       const { instinctPriorContext } = await import("../../../src/lib/instinct-rag.js");
-      ragPriorContext = instinctPriorContext(String(args.godId || "apollo"), String(args.task || ""));
+      const p = args.project || process.env.OLYMPUS_ACTIVE_PROJECT || null;
+      const st = String(args.stack || process.env.OLYMPUS_ACTIVE_STACK || '').split(',').map((x) => x.trim()).filter(Boolean);
+      ragPriorContext = instinctPriorContext(String(args.godId || "apollo"), String(args.task || ""), { project: p, stacks: st });
     } catch { /* the RAG never breaks the dispatch */ }
     // W-A RAG-CERT A6: the Arsenal Resolver quick-circuit layer — the recon
     // queries the resonance log (the dispatch-tracker's feedback loop) for

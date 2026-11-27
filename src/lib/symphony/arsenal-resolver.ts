@@ -38,6 +38,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { getVaultRoot } from '../vault-root.js';
+import { normalizeOutcome } from '../learning/outcome';
 
 const VAULT_ROOT = getVaultRoot();
 const ARSENAL_LOG = path.join(VAULT_ROOT, '03_Index', 'arsenal-resonance.jsonl');
@@ -66,7 +67,7 @@ interface ArsenalLogEntry {
   skill: string | null;
   mcp: string | null;
   demigod: string | null;
-  outcome: 'success' | 'failure' | 'unknown';
+  outcome: string;
 }
 
 /**
@@ -145,19 +146,19 @@ export function arsenalRecon(task: string, god: string): ArsenalReconResult {
     if (e.skill) {
       const s = skillStats.get(e.skill) || { successes: 0, total: 0 };
       s.total++;
-      if (e.outcome === 'success') s.successes++;
+      if (normalizeOutcome(e.outcome).outcome === 'success') s.successes++;
       skillStats.set(e.skill, s);
     }
     if (e.mcp) {
       const s = mcpStats.get(e.mcp) || { successes: 0, total: 0 };
       s.total++;
-      if (e.outcome === 'success') s.successes++;
+      if (normalizeOutcome(e.outcome).outcome === 'success') s.successes++;
       mcpStats.set(e.mcp, s);
     }
     if (e.demigod) {
       const s = demigodStats.get(e.demigod) || { successes: 0, total: 0 };
       s.total++;
-      if (e.outcome === 'success') s.successes++;
+      if (normalizeOutcome(e.outcome).outcome === 'success') s.successes++;
       demigodStats.set(e.demigod, s);
     }
   }
@@ -227,7 +228,7 @@ export function arsenalResonanceByGod(god: string) {
       if (!name) continue;
       const s = stats.get(name) || { successes: 0, total: 0 };
       s.total++;
-      if (e.outcome === 'success') s.successes++;
+      if (normalizeOutcome(e.outcome).outcome === 'success') s.successes++;
       stats.set(name, s);
     }
     return [...stats.entries()]
@@ -257,7 +258,7 @@ export function logArsenalOutcome(input: {
   skill: string | null;
   mcp: string | null;
   demigod: string | null;
-  outcome: 'success' | 'failure' | 'unknown';
+  outcome: string;
 }): void {
   try {
     const dir = path.dirname(ARSENAL_LOG);

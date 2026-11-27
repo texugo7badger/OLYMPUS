@@ -42,6 +42,7 @@ import {
 // instincts matching the payload ride as SHORT prior-context blocks (the
 // D16 shape: trust but verify, never prompt essays).
 import { instinctPriorContext } from "../../../../src/lib/instinct-rag.js";
+import { getActiveContext } from "../../../../src/lib/learning/active-context.js";
 
 const symphonyResonateTool: ToolDefinition = tool({
   description:
@@ -110,7 +111,8 @@ const symphonyResonateTool: ToolDefinition = tool({
       // #84: the RAG block composes INTO the dispatched payload — what the
       // demigod actually receives (the registry records the dispatched
       // payload; the sync-map entry above keeps the user's original task).
-      const priorContext84 = instinctPriorContext(String(args.composer || "apollo"), String(args.payload || ""));
+      const activeCtx = getActiveContext();
+      const priorContext84 = instinctPriorContext(String(args.composer || "apollo"), String(args.payload || ""), { project: activeCtx.slug, stacks: activeCtx.stacks });
       const effectivePayload84 = priorContext84 ? `${args.payload}\n\n${priorContext84}` : args.payload;
       const signature = composeSignature({
         composer: args.composer,

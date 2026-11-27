@@ -74,6 +74,13 @@ erase the work.
 
 The brain learns from completed hops: empirical instincts grow samples and
 confidence, and the gate short-circuits only when both specific tags match.
+
+**v0.1.3 development — local retrieval.** The foundation branch adds one
+local hybrid index: FTS5/BM25 + **768d `nomic-embed-text:v1.5`** + Reciprocal
+Rank Fusion, with project/stack scoping and Context7 answers cached as cited
+knowledge. On this host: 644 documents / 1,032 chunks / 14.3 MB; hybrid
+P@5 **100% vs 73% FTS-only**, MRR **0.933 vs 0.733**, hybrid p95 **235–286 ms**.
+The contract, commands and limits are in [RETRIEVAL.md](RETRIEVAL.md).
 Every claim in this README carries a test, a probe or a measured artifact;
 the limits are in [HYGIENE.md](HYGIENE.md) and
 [KNOWN-ISSUES.md](KNOWN-ISSUES.md).

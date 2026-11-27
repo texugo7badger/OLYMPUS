@@ -149,7 +149,7 @@ The `olympus-dynamic-context` plugin implements skill tiering in the `experiment
 
 ## Skill Index
 
-A sqlite-vec database (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) indexes all 332 skills using TF-IDF vectors. The `SkillIndex` class provides sub-millisecond cosine search:
+A sqlite-vec database (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) indexes the skills using TF-IDF vectors. v0.1.3 fixed the metadata rowid alignment and the L2→cosine conversion; the `SkillIndex` class now returns positive, relevant similarities:
 
 ```typescript
 const index = getSkillIndex();
@@ -157,9 +157,22 @@ const hits = index.search("react performance optimization", "athena", 5);
 // → [{ skill_id: "react-performance", similarity: 0.82 }, ...]
 ```
 
-The router's `chat.params` hook calls the skill index when the instinct gate doesn't short-circuit, surfacing the top-5 relevant skills as `olympus_skill_search` hints.
+The router's `chat.params` hook calls the skill index when the instinct gate doesn't short-circuit; the top-3 hits are also injected as a compact `[SKILL HINTS]` block, and the `olympus-skill-search` / `olympus-retrieval-search` tools expose the index on demand.
 
 Build the index: `node scripts/build-skill-index.js`
+
+---
+
+## Retrieval Bus (v0.1.3)
+
+The foundation release adds a local hybrid index at `~/.olympus/retrieval.db`:
+
+- **FTS5/BM25** for exact terms, IDs, error codes and versions;
+- **768d dense** (`nomic-embed-text:v1.5` via local Ollama) for semantic neighbours;
+- **RRF (k=60)** for rank fusion, with hard project/stack/kind/expiry filters;
+- **Context7 cache** so library docs become cited knowledge with a TTL.
+
+The index covers skills, knowledge notes, instincts, patterns and cached docs. It is content-hash incremental and hibernate-safe. Hop prompts receive a bounded `[OLYMPUS-RETRIEVAL]` block; the planner receives the same. Measured on this host: 1,032 chunks / 14.3 MB, P@5 100% vs 73% FTS-only, hybrid p95 235–286 ms. Full contract: [RETRIEVAL.md](RETRIEVAL.md).
 
 ---
 

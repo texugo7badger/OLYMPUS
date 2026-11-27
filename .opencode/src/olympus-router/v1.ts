@@ -27,6 +27,7 @@ let promptDefenseBaseline: string | null = null;
 // options object. chat.params stores the hit for the session; the system
 // transform injects the proven action before the model call.
 const pendingInstinctHits = new Map<string, { id: string; body: string; confidence: number }>();
+const pendingSkillHits = new Map<string, Array<{ skill_id: string; title: string; description: string | null; similarity: number }>>();
 
 function getPromptDefenseBaseline(pluginDir: string): string | null {
   if (promptDefenseBaseline !== null) return promptDefenseBaseline;
@@ -249,6 +250,15 @@ const plugin: Plugin = async (input, options) => {
             console.error(`[olympus-router] instinct short-circuit injected for ${hookInput.sessionID}: ${hit.id}`);
           }
         }
+        const skills = hookInput.sessionID ? pendingSkillHits.get(hookInput.sessionID) : undefined;
+        if (skills && skills.length > 0 && output.system) {
+          const block = [
+            '[SKILL HINTS — the local index found these cold skills; hints, not mandates.]',
+            ...skills.slice(0, 3).map((sk) => `- ${sk.skill_id} (${Math.round(sk.similarity * 100)}%)${sk.description ? ` — ${sk.description.slice(0, 120)}` : ''}`),
+          ].join('\n');
+          output.system.push(block);
+          pendingSkillHits.delete(hookInput.sessionID!);
+        }
 
         const baseline = getPromptDefenseBaseline(pluginDir);
         if (baseline && output.system && output.system.length > 0) {
@@ -330,6 +340,7 @@ const plugin: Plugin = async (input, options) => {
         output.options.olympus_instinct_gate = {
           confidence: result.confidence,
           short_circuit: result.short_circuit,
+          verification_sample: (result as any).verification_sample === true,
           matching_instinct: result.matching_instinct
             ? {
                 id: result.matching_instinct.id,
@@ -358,6 +369,7 @@ const plugin: Plugin = async (input, options) => {
             if (skillIndex) {
               const skillHits: SkillHit[] = skillIndex.search(messageText, agent, 5);
               if (skillHits.length > 0) {
+                pendingSkillHits.set(hookInput.sessionID, skillHits.map((h) => ({ skill_id: h.skill_id, title: h.title, description: h.description, similarity: h.similarity })));
                 output.options.olympus_skill_search = skillHits.map(h => ({
                   skill_id: h.skill_id,
                   title: h.title,

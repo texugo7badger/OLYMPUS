@@ -137,7 +137,10 @@ export class SkillIndex {
         description: meta.description,
         body: meta.body,
         source_path: meta.source_path,
-        similarity: 1 - row.distance, // cosine distance → similarity
+        // v0.1.3 — sqlite-vec's default metric is L2. The TF-IDF vectors are
+        // L2-normalized, so cosine = 1 - d²/2 (the old 1-d produced negative
+        // "similarities" for ordinary matches).
+        similarity: Math.max(-1, Math.min(1, 1 - (row.distance * row.distance) / 2)),
       });
       if (hits.length >= k) break;
     }

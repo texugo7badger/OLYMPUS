@@ -8,7 +8,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 
-import { readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -114,6 +114,13 @@ export interface Instinct {
   id: string;
   agent: string;
   scope: "god" | "sub-agent";
+  visibility: "global" | "stack" | "project";
+  projects: string[];
+  stacks: string[];
+  quickCircuit: boolean;
+  samples: number;
+  successes: number;
+  failures: number;
   tags: string[];
   confidence: number;
   dispatch_count: number;
@@ -130,6 +137,8 @@ export interface InstinctQueryResult {
   scope: "god" | "sub-agent";
   agent_name: string;
   short_circuit: boolean;
+  verification_sample?: boolean;
+  visibility?: "global" | "stack" | "project" | "seed" | "hidden";
 }
 
 function parseFrontmatter(content: string): { frontmatter: Record<string, unknown>; body: string } {
@@ -175,20 +184,48 @@ function loadInstincts(scope: "god" | "sub-agent", agentName: string): Instinct[
       try {
         const content = readFileSync(filePath, "utf8");
         const { frontmatter, body } = parseFrontmatter(content);
-        // v0.1.2 — THEORY GUARD: an empirical instinct only short-circuits
-        // after Callimachus proved it as a quick circuit. Unvalidated
-        // project experience stays memory, never a dispatch shortcut.
-        if (kind === "empirical" && frontmatter.quick_circuit !== true) continue;
+        // v0.1.3 — load ALL empirical memory; visibility is decided by the
+        // scope filter in queryInstincts. `quick_circuit` gates the
+        // short-circuit, not whether the instinct can be a prior.
+        const rawConfidence = Number(frontmatter.confidence ?? 1.0);
+        const successes = Number(frontmatter.successes ?? NaN);
+        const failures = Number(frontmatter.failures ?? NaN);
+        const samples = Number(frontmatter.samples ?? NaN);
+        const ecc = Number.isFinite(successes) || Number.isFinite(failures)
+          ? (() => {
+              const succ = Number.isFinite(successes) ? successes : 0;
+              const fail = Number.isFinite(failures) ? failures : 0;
+              const n = succ + fail;
+              if (n <= 0) return rawConfidence;
+              const rate = succ / n;
+              return Math.max(0, Math.min(0.95, rate * Math.sqrt(n) / (1 + Math.sqrt(n))));
+            })()
+          : (Number.isFinite(samples) && samples > 0
+              ? (() => {
+                  const n = samples;
+                  return Math.max(0, Math.min(0.95, Math.sqrt(n) / (1 + Math.sqrt(n))));
+                })()
+              : rawConfidence);
+        const visibility = (["global", "stack", "project"].includes(String(frontmatter.scope))
+          ? String(frontmatter.scope)
+          : "global") as "global" | "stack" | "project";
         instincts.push({
           id: String(frontmatter.id ?? file.replace(/\.md$/, "")),
           agent: String(frontmatter.agent ?? agentName),
           scope: (frontmatter.scope as "god" | "sub-agent") ?? scope,
+          visibility,
+          projects: Array.isArray(frontmatter.projects) ? frontmatter.projects as string[] : [],
+          stacks: Array.isArray(frontmatter.stacks) ? frontmatter.stacks as string[] : [],
+          quickCircuit: frontmatter.quick_circuit === true,
+          samples: Number.isFinite(samples) ? samples : 0,
+          successes: Number.isFinite(successes) ? successes : 0,
+          failures: Number.isFinite(failures) ? failures : 0,
           // God instincts carry `trigger`, not `tags`; the old reader left
           // every god's tags empty, so every score was 0 by construction.
           tags: (Array.isArray(frontmatter.tags) && (frontmatter.tags as string[]).length > 0)
             ? (frontmatter.tags as string[])
             : extractTags(`${String(frontmatter.trigger ?? '')} ${String(frontmatter.id ?? file.replace(/\.md$/, ''))}`),
-          confidence: Number(frontmatter.confidence ?? 1.0),
+          confidence: ecc,
           dispatch_count: Number(frontmatter.dispatch_count ?? 0),
           last_invoked_at: (frontmatter.last_invoked_at as string) ?? null,
           type: (frontmatter.type as "seed" | "empirical") ?? kind,
@@ -228,13 +265,51 @@ function extractTags(query: string): string[] {
   return [...new Set(words)];
 }
 
+function activeContext(): { slug: string | null; stacks: string[] } {
+  const envSlug = String(process.env.OLYMPUS_ACTIVE_PROJECT || "").trim();
+  const envStacks = String(process.env.OLYMPUS_ACTIVE_STACK || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const home = process.env.OLYMPUS_HOME || join(homedir(), ".olympus");
+  let slug = envSlug || null;
+  if (!slug) {
+    try {
+      const raw = JSON.parse(readFileSync(join(home, "active-project.json"), "utf8"));
+      if (typeof raw?.slug === "string" && raw.slug) slug = raw.slug;
+    } catch { /* no active project */ }
+  }
+  let stacks = envStacks;
+  if (slug && stacks.length === 0) {
+    try {
+      const note = readFileSync(join(VAULT_ROOT, "02_Projects", slug, "project.md"), "utf8");
+      const m = note.match(/^stacks:\s*\[([^\]]*)\]/m);
+      if (m) stacks = m[1].split(",").map((s) => s.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+    } catch { /* no note yet */ }
+  }
+  return { slug, stacks };
+}
+
+function visibleInContext(instinct: Instinct, ctx: { slug: string | null; stacks: string[] }): boolean {
+  if (instinct.type === "seed") return true;
+  if (instinct.visibility === "project") return Boolean(ctx.slug && instinct.projects.includes(ctx.slug));
+  if (instinct.visibility === "stack") {
+    if (ctx.stacks.length === 0) return false;
+    return instinct.stacks.some((s) => ctx.stacks.includes(s));
+  }
+  if (instinct.stacks.length === 0) return true;
+  if (ctx.stacks.some((s) => instinct.stacks.includes(s))) return true;
+  return instinct.confidence >= 0.85; // cross-stack promotion rule
+}
+
 export function queryInstincts(
   scope: "god" | "sub-agent",
   agentName: string,
   query: string,
   topK = 3,
+  context?: { project?: string | null; stacks?: string[] | null },
 ): InstinctQueryResult {
-  const instincts = loadInstincts(scope, agentName);
+  const ctx = context
+    ? { slug: context.project ?? null, stacks: context.stacks ?? [] }
+    : activeContext();
+  const instincts = loadInstincts(scope, agentName).filter((i) => visibleInContext(i, ctx));
   // The hop prompt marks its task explicitly; a chat has no marker, so take
   // the tail (the user's ask) rather than the strategy/arsenal preamble.
   const marker = /\[OLYMPUS-TASK\]([\s\S]*?)\[\/OLYMPUS-TASK\]/i.exec(query);
@@ -252,13 +327,39 @@ export function queryInstincts(
   const matching = top && top.sim > 0 ? top.instinct : null;
   const confidence = matching ? top!.score : 0;
   const alternatives = scored.slice(1, 1 + topK).filter((s) => s.sim > 0).map((s) => s.instinct);
+  // ECC contract: a short-circuit needs a proven quick circuit, high
+  // instinct confidence AND a task/trigger match. The product score remains
+  // the ranking signal; it is not the short-circuit gate by itself.
+  let qualifies = Boolean(
+    matching
+    && top!.sim >= 0.6
+    && matching.quickCircuit
+    && matching.confidence >= 0.85,
+  );
+  // ECC v3.0 anti-addiction: 1-in-10 would-be short-circuits is forced to
+  // deliberate again. The counter is persistent so restarts cannot reset it.
+  let verificationSample = false;
+  if (qualifies) {
+    try {
+      const home = process.env.OLYMPUS_HOME || join(homedir(), ".olympus");
+      const file = join(home, "shortcircuit-counter.json");
+      let count = 0;
+      try { count = Number(JSON.parse(readFileSync(file, "utf8"))?.count || 0); } catch { /* first */ }
+      count += 1;
+      mkdirSync(home, { recursive: true });
+      writeFileSync(file, JSON.stringify({ count, updatedAt: new Date().toISOString() }) + "\n", { mode: 0o600 });
+      if (count % 10 === 0) { qualifies = false; verificationSample = true; }
+    } catch { /* the counter is best-effort; never break the turn */ }
+  }
   return {
     confidence,
     matching_instinct: matching,
     alternatives,
     scope,
     agent_name: agentName,
-    short_circuit: confidence >= CONFIDENCE_THRESHOLD,
+    short_circuit: qualifies,
+    verification_sample: verificationSample,
+    visibility: matching ? (matching.type === "seed" ? "seed" : matching.visibility) : "hidden",
   };
 }
 

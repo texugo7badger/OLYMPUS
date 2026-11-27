@@ -40,7 +40,7 @@ expect('X-6: a plan may declare build instead of buildId', aliased.ok && aliased
 const walker = src('src/lib/hop-runtime/walker.ts');
 expect('X-7: the hop prompt carries the build loadout', /buildPrompt\(mergeBuildStats\(\[build\], \[\]\)\[0\]\)/.test(walker), 'buildPrompt never injected');
 expect('X-8: the telemetry row records the build', /build: hopBuild\?\.id \?\? null/.test(walker) && /build\?: string \| null/.test(walker), 'build not in the row');
-expect('X-9: every settle writes arsenal-resonance.jsonl', /arsenal-resonance\.jsonl/.test(walker) && /outcome: status/.test(walker) && /build: hopBuild\?\.id \?\? null/.test(walker), 'no write-back');
+expect('X-9: every settle writes normalized arsenal-resonance.jsonl', /arsenal-resonance\.jsonl/.test(walker) && /outcome: normalizeOutcome\(status/.test(walker) && /build: hopBuild\?\.id \?\? null/.test(walker), 'no write-back');
 expect('X-10: a resonance write failure never blocks the walk', /resonance is evidence, never a walk blocker/.test(walker), 'unguarded append');
 
 console.log(failures === 0 ? '\nbuild-execution: all green.' : `\nbuild-execution: ${failures} failure(s).`);

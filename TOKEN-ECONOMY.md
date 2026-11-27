@@ -10,6 +10,25 @@
 >
 > The rule of this file: a number without a source is not a number.
 
+## 0. v0.1.3 retrieval budget
+
+The local hybrid index is **input-bounded and local**:
+
+| Surface | Budget |
+|---|---|
+| Hop retrieval block | top 4 hits, ≤1,600 chars (~400 tokens) |
+| Planner retrieval block | top 4 hits, ≤1,600 chars |
+| Media RAG (existing) | ≤4 assets, ≤600 chars |
+| Instinct prior context | ≤2 blocks |
+| Context7 cache doc | ≤12,000 chars stored; retrieval snippet ≤420 chars |
+| Hybrid query | 1 local embedding (~150 ms warm) + FTS5; no model call |
+| Full index | 1,032 chunks / 14.3 MB; content-hash incremental |
+
+The index itself costs **0 provider tokens**; it runs on local Ollama. The
+only model cost is unchanged: the god's turn. If retrieval adds tokens
+without a measured outcome gain, revert to FTS-only (`dense:false` or the
+`OLYMPUS_RETRIEVAL` flag).
+
 ## 1. What is measured (v0.0.72)
 
 ### The AIME campaign (read-only, the user's exam)

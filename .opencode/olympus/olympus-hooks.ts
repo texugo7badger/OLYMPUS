@@ -98,6 +98,8 @@ import subAgentInstinctQueryTool from "./tools/sub-agent-instinct-query.js";
 import shortcircuitTool from "./tools/shortcircuit.js";
 import dispatchTool from "./tools/dispatch.js";
 import patternsTool from "./tools/patterns.js";
+import skillSearchTool from "./tools/skill-search.js";
+import retrievalSearchTool from "./tools/retrieval-search.js";
 // human-in-the-loop review tools.
 // Imported and registered here — design-review (Athena), deploy-review
 // (Prometheus), integration-review (Hermes). The interactive-terminal.tsx +
@@ -118,6 +120,7 @@ import imageGenerateTool from "./tools/image-generate.js";
 // Composer/Orchestra/Choir endpoints reachable by the gods.
 import { SYMPHONY_TOOLS } from "./symphony/symphony-hooks.js";
 import { getVaultRoot } from "../../src/lib/vault-root.js";
+import { recordContext7Result } from "../../src/lib/retrieval/context7-cache.js";
 
 // ─── Paths ────────────────────────────────────────────────────────────────
 const VAULT_ROOT = getVaultRoot(); // D21: the single canonical resolver
@@ -674,6 +677,8 @@ const OLYMPUS_TOOLS = {
   "olympus-shortcircuit": shortcircuitTool,
   "olympus-dispatch": dispatchTool,
   "olympus-patterns": patternsTool,
+  "olympus-skill-search": skillSearchTool,
+  "olympus-retrieval-search": retrievalSearchTool,
   "sub-agent-instinct-query": subAgentInstinctQueryTool,
   // human-in-the-loop review tools.
   // olympus-design-review (Athena), olympus-deploy-review (Prometheus),
@@ -1132,6 +1137,12 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
     "tool.execute.after": async (input: ToolInput, output: unknown) => {
       const state = getActiveAgent();
       const isError = isToolOutputError(input.tool, output);
+      // v0.1.3 — Context7 docs become durable local knowledge instead of
+      // disappearing with the turn. The indexer picks the cache up on its
+      // next incremental pass.
+      if (String(input.tool || "").toLowerCase().includes("context7")) {
+        recordContext7Result(input.tool, input.args, output);
+      }
       const tokens = estimateTokens(input.tool, input, output);
 
       // Issue #25: attribute to the agent that made THIS call. input.agent is
