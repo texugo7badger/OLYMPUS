@@ -38,7 +38,7 @@ export function openRetrievalStore(dbPath = RETRIEVAL_DB()): RetrievalStore {
     // createRequire. The package name is split so no bundler traces it.
     let req: NodeRequire | null = null;
     try { const r = eval('require'); if (typeof r === 'function') req = r; } catch { /* ESM */ }
-    if (!req) req = createRequire(import.meta.url);
+    if (!req) req = createRequire(path.join(process.cwd(), 'package.json'));
     const sqliteVec = req(['sqlite', 'vec'].join('-'));
     sqliteVec.load(db);
   } catch {

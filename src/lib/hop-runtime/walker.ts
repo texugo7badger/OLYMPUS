@@ -43,7 +43,6 @@ import { readSessionTotals } from './warm-server';
 import { composeRagContext } from '../rag-inject';
 import { composeRetrievalBlock } from '../retrieval/bus';
 import { getActiveContext } from '../learning/active-context';
-import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
 import { recordHopLearning } from './learning';
@@ -271,11 +270,10 @@ export type HopDispatcher = (hop: PlanHop, ctx: {
 /** The repo root for the arsenal loader — the hop-runtime module's own
  *  tree (.opencode/prompts/agents/demigods lives there), NOT the lane. */
 function resolveHopRepoRoot(): string {
-  try {
-    return join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
-  } catch {
-    return process.cwd();
-  }
+  // v0.1.5 — webpack bundles this module as CJS; `import.meta.url` is not
+  // valid there. OLYMPUS_ROOT is set by Electron and the Next server; cwd is
+  // the repo root for the overlay.
+  return process.env.OLYMPUS_ROOT || process.cwd();
 }
 
 /**

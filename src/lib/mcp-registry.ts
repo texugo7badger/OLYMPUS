@@ -20,7 +20,6 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { fileURLToPath } from 'node:url';
 import { findMcpRequirement, getMcpEnvVarKeys, findMcpServerRequirement } from './mcp-api-requirements';
 import { findOlympusRoot } from './opencode-spawn';
 import {
@@ -68,7 +67,7 @@ function olympusRoot(): string {
     if (hasConfig(found)) return found;
   } catch { /* fall through */ }
   try {
-    const rel = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+    const rel = process.env.OLYMPUS_ROOT || process.cwd();
     if (hasConfig(rel)) return rel;
   } catch { /* fall through */ }
   return process.cwd();

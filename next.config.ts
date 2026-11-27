@@ -94,6 +94,18 @@ const nextConfig = {
   async rewrites() {
     return [];
   },
+  // v0.1.5 — the overlay is NodeNext and imports source modules with the
+  // explicit `.js` extension. Webpack must resolve that specifier to the .ts
+  // source (the CI packaging gate builds with --webpack). Turbopack handles
+  // the TS extension natively; this alias is the webpack twin.
+  webpack: (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.extensionAlias = {
+      ...(config.resolve.extensionAlias || {}),
+      '.js': ['.ts', '.tsx', '.js'],
+    };
+    return config;
+  },
   // Turbopack is the default in Next.js 16. The old webpack override
   // (fallback for fs/path on server) is no longer needed — Turbopack
   // handles this natively.
