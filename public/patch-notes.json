@@ -16,7 +16,7 @@
       "date": "2026-11-27",
       "title": "Cleanup and truth",
       "highlights": [
-        "Dead surfaces removed: the legacy build-talent editor, design-studio modal, MCP detail panel, plasma orb and sync-map scope module. The sync-map left-pane union, perf-route probe and stale suite list are gone with them.",
+        "Dead surfaces removed: the legacy build-talent editor, design-studio modal, MCP detail panel and plasma orb. The sync-map panel/left-pane, perf-route probe and stale suite entry are gone with them; the prompt-scope helper stays for the overlay.",
         "Dependency pruning: nine unused devDependencies (CodeMirror, xterm, Radix tooltip) removed; npm pruned 34 packages. The runtime and build remain unchanged.",
         "Documentation truth pass: README go-balanced roster corrected (Athena/Hermes/Dionysus/Prometheus), AGENTS.md now says v0.1.5 with 10 gods + 61 live demigods, 39 tools, 1,032 retrieval chunks and 609 resonance signatures, and the strategy comments no longer claim GLM-5.3 is Apollo.",
         "Front pass: the brain keeps its full cloud during drag and auto-rotates in Smooth/Balanced, the Y/Z compass is gone, the status bar drops the brain: prefix, and the shell (activity bar, status bar, Compact Brain, notifications, Logs header/overview, right-pane tabs) follows the language selector in seven languages. Minimize keeps the window; closing hibernates by default.",

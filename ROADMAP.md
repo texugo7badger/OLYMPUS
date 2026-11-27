@@ -1,6 +1,6 @@
 # OLYMPUS Roadmap
 
-**v0.1.5 is the current stable release** (2026-11-27) — cleanup and truth: dead editor/terminal/sync-map/plasma surfaces removed, nine unused devDependencies pruned, README/AGENTS/TESTING corrected to the v0.1.5 counts, and the 66-suite/8-gate battery green. **v0.1.2 is the previous stable.**
+**v0.1.5 is the current stable release** (2026-11-27) — cleanup and truth: dead editor/terminal/plasma surfaces removed, the sync-map panel retired, nine unused devDependencies pruned, README/AGENTS/TESTING corrected to the v0.1.5 counts, and the 66-suite/8-gate battery green. **v0.1.2 is the previous stable.**
 
 **v0.1.3 was the retrieval and learning foundation** (2026-11-27) — local hybrid retrieval, ECC confidence/scope/1-in-10, skill index repair and the Context7 cache; folded into v0.1.4.
 

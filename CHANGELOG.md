@@ -7,9 +7,10 @@ All notable changes to OLYMPUS are documented in this file.
 ### Cleanup and truth (stable release)
 
 - **Dead surfaces removed.** The legacy `build-talent-editor`, the
-  `design-studio-modal`, the `mcp-detail-panel`, the `plasma-orb` and the
-  `sync-map-scope` module are gone. The `sync-map` left-pane union, the
-  perf-route probe and the stale `sync-map-scope` suite entry went with them.
+  `design-studio-modal`, the `mcp-detail-panel` and the `plasma-orb` are gone.
+  The `sync-map` panel/left-pane, the perf-route probe and the stale
+  `sync-map-scope` suite entry went with them. The prompt-scope helper stays:
+  the overlay still classifies app turns even though the panel is retired.
 - **Dependencies pruned.** Nine unused devDependencies removed: CodeMirror
   (4), xterm (3), `@uiw/react-codemirror` and `@radix-ui/react-tooltip`.
   `npm` pruned 34 packages; the runtime and build are unchanged.
