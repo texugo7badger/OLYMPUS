@@ -1,52 +1,52 @@
 {
-  "version": "0.1.2",
-  "generatedAt": "2026-11-27T03:57:54.833Z",
-  "ok": true,
+  "version": "0.1.4",
+  "generatedAt": "2026-11-27T06:18:17.095Z",
+  "ok": false,
   "gates": [
     {
       "name": "typescript",
       "ok": true,
-      "ms": 11626
+      "ms": 7221
     },
     {
       "name": "lint",
       "ok": true,
-      "ms": 102976
+      "ms": 77528
     },
     {
       "name": "docs",
       "ok": true,
-      "ms": 288
+      "ms": 273
     },
     {
       "name": "strategy-sync",
       "ok": true,
-      "ms": 80
+      "ms": 66
     },
     {
       "name": "privacy",
       "ok": true,
-      "ms": 299
+      "ms": 282
     },
     {
       "name": "suite-manifest",
       "ok": true,
-      "ms": 71
+      "ms": 74
     },
     {
       "name": "audit-high",
       "ok": true,
-      "ms": 5528
+      "ms": 6352
     },
     {
       "name": "battery",
-      "ok": true,
-      "ms": 143197
+      "ok": false,
+      "ms": 134064
     }
   ],
   "battery": {
-    "pass": 61,
-    "fail": 0,
-    "suites": 61
+    "pass": null,
+    "fail": null,
+    "suites": 66
   }
 }

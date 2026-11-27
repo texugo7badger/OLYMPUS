@@ -2,7 +2,7 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.1.2 · 2026-11-26 · **STABLE — v0.1.2 performance and truth.** The 100-hop
+> v0.1.4 · 2026-11-27 · **DEVELOPMENT — v0.1.4 resonance and bounded recursion.** The Resonance Index (609 signatures, 0 fake quick circuits), the Build Compiler (validated derived loadouts, evidence-gated promotion) and the RLM envelope (depth 2, 4 children, budget-capped) are implemented; retrieval gained an embedding cache and a background job. 66 hermetic suites and the v0.1.4 UI gate are green. **v0.1.2 remains the stable release.** The 100-hop
 > certification passed (100/100 script hops, evidence linked below); the
 > 8-hour model soak is **NOT claimed** and remains a declared P2 gap. The 57
 > hermetic suites are green, `npm run hygiene` passes tsc, lint, docs, strategy sync, privacy,

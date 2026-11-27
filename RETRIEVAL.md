@@ -54,6 +54,26 @@ The dense lane is what recovers the queries whose words do not match the source 
 
 **Honest limits:** the initial build is heavy on this machine; run it once before a campaign and keep hibernate pauses on. Query latency is dominated by the local embedding model (~150 ms warm). The eval set is small; grow it from real project tasks before making broader claims.
 
+
+## v0.1.4 — first-run and the dynamic edge
+
+- **Embedding cache.** `~/.olympus/embedding-cache.db` stores
+  `sha256(model + text) → 768d vector`. `npm run retrieval:index -- --force`
+  rebuilds the index without re-embedding unchanged chunks. The cache is
+  content-addressed, model-scoped and additive.
+- **Background job.** `POST /api/olympus/retrieval/reindex` returns a job id
+  immediately; `GET` reports `job.phase` (`core` then `all`), `done/total`,
+  `embedded` and `cacheHits`. The God Intelligence card polls at 2s while the
+  job runs and shows the progress bar. Hibernate pauses between batches; the
+  next start resumes from the content hashes.
+- **Priority pass.** `core` indexes skills + knowledge first (the useful
+  retrieval surface), then `all` fills instincts, patterns and cached docs.
+- **Build context.** A hop that matches no curated build now receives a
+  validated *derived* loadout (see [ARCHITECTURE.md](ARCHITECTURE.md)); the
+  retrieval block remains additive and bounded.
+- **Honest limit unchanged.** The first full build is still local-work heavy
+  (~16 min on this host); the cache and the background job remove the rebuild
+  and request-timeout failures, not the one-time embedding cost.
 ## Context7 cache
 
 When a `context7` tool call returns a usable answer, the overlay appends a local cache entry to `~/.olympus/context7-cache.jsonl`:

@@ -17,6 +17,8 @@
  *  enforce it at the model lane; the schema enforces it at plan time. */
 export const MAX_HOP_BUDGET_TOKENS = 16_384;
 
+import { normalizeRlmConfig, validateRlmTree, type RlmPlanConfig } from '../rlm/envelope';
+
 export type HopReview = 'deterministic' | 'llm';
 
 export interface PlanHop {
@@ -66,6 +68,10 @@ export interface PlanHop {
   /** The verify policy. Deterministic-first (0 tokens); 'llm' is the opt-in
    *  reviewer on a different pool — default OFF, not wired tonight. */
   verify?: { review?: HopReview; checks?: string[] };
+  /** v0.1.4 — the recursive-envelope edge (depth 1..2). A depth-1 hop has
+   *  no parent; a depth-2 hop names its depth-1 parent. */
+  rlmParent?: string;
+  rlmDepth?: number;
   /** Output budget. Defaults to MAX_HOP_BUDGET_TOKENS; never above it. */
   budgetTokens?: number;
   /** v0.0.88 — per-hop tool-call budget (1..40). The walker falls back to
@@ -90,6 +96,8 @@ export interface DispatchPlan {
   createdAt?: string;
   /** v0.0.88 — the generation this plan was derived from. */
   parentGeneration?: number;
+  /** v0.1.4 — the bounded recursive context envelope (OLYMPUS_RLM). */
+  rlm?: RlmPlanConfig;
   /** v0.0.88 — sha256 (24 chars) of every hop definition. A completed id
    *  survives a generation change only when its hash is identical. */
   hopHashes?: Record<string, string>;
@@ -225,6 +233,10 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
       ...(skills.length ? { skills } : {}),
       ...(mcps.length ? { mcps } : {}),
       ...(demigods.length ? { demigods } : {}),
+      ...(typeof h.rlmParent === 'string' && h.rlmParent.trim() ? { rlmParent: h.rlmParent.trim() } : {}),
+      ...(typeof h.rlmDepth === 'number' && Number.isFinite(h.rlmDepth)
+        ? { rlmDepth: Math.max(1, Math.min(2, Math.round(h.rlmDepth))) }
+        : {}),
       ...(typeof h.toolBudget === 'number' && Number.isFinite(h.toolBudget) && h.toolBudget > 0
         ? { toolBudget: Math.max(1, Math.min(40, Math.round(h.toolBudget))) }
         : {}),
@@ -261,6 +273,20 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
     }
   }
 
+  // v0.1.4 — the RLM envelope is validated at plan time. A declared tree
+  // that exceeds depth 2, 4 children, or the budget dies here, not mid-walk.
+  let rlm: RlmPlanConfig | undefined;
+  if (raw.rlm !== undefined) {
+    const normalizedRlm = normalizeRlmConfig(raw.rlm);
+    if (!normalizedRlm) {
+      errors.push('plan.rlm: requires { goal: string, budgetTokens: >=4096, maxDepth?: 1..2 }');
+    } else {
+      rlm = normalizedRlm;
+      const tree = validateRlmTree(hops, normalizedRlm);
+      errors.push(...tree.errors);
+    }
+  }
+
   if (errors.length > 0) return { ok: false, errors };
 
   // v0.0.66 — #306: A SOURCE HOP WITHOUT A GATE IS A CLAIM, NOT A PROOF.
@@ -289,6 +315,7 @@ export function validateDispatchPlan(raw: unknown): PlanValidation {
       ...(typeof raw.parentGeneration === 'number' && Number.isFinite(raw.parentGeneration) && raw.parentGeneration > 0
         ? { parentGeneration: Math.round(raw.parentGeneration) } : {}),
       ...(isObj(raw.hopHashes) ? { hopHashes: raw.hopHashes as Record<string, string> } : {}),
+      ...(rlm ? { rlm } : {}),
       hops,
     },
   };

@@ -46,12 +46,16 @@ export interface DesignBuild {
   verify: string[];
   /** Seed tier before evidence; the matcher may promote/demote. */
   tier: BuildTier;
-  source: 'seed' | 'user';
+  /** v0.1.4 — a derived build is compiled at dispatch time from the hop's
+   *  declared arsenal. It is never written to the catalog automatically. */
+  source: 'seed' | 'user' | 'derived';
   /** v0.0.32 — the sharing base: a user build may be published later. */
   shared?: boolean;
   /** v0.0.86 — a matrix entry synthesized on demand, never part of the
    *  default catalog. The hub labels it 'generated fallback'. */
   generated?: boolean;
+  /** v0.1.4 — provenance for a derived build (the hop that compiled it). */
+  derivedFrom?: { hopId: string; ts: string; retrieval?: string[]; rejected?: string[] };
   note?: string;
 }
 
@@ -411,6 +415,7 @@ export function buildPrompt(build: DesignBuildWithStats): string {
     build.params ? `profile: temperature ${build.params.temperature} · ${build.params.speed} · ${build.params.budgetTokens} output tokens · quality ${build.params.quality}` : '',
     `verify: ${build.verify.join(', ') || 'deterministic'}`,
     `tier: ${build.stats.tier} (${build.stats.samples} sample(s), ${(build.stats.rate * 100).toFixed(0)}% smoothed success)`,
+    build.source === 'derived' ? 'provenance: DERIVED loadout — compiled from the declared arsenal, no evidence yet. Promote only after verified outcomes.' : '',
     '',
     build.note ? `Why: ${build.note}` : '',
     'Equip this loadout for the task; if a tool in it is unavailable, say which and why before substituting.',

@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useOlympus, GOD_ICONS, GOD_IDS } from '@/lib/olympus-store';
+import { useOlympus, GOD_ICONS, GOD_IDS, GOD_DOMAINS } from '@/lib/olympus-store';
 import { BarChart3, Brain, BrainCog, DollarSign, Eye, History, Palette, Plug, Settings, SlidersHorizontal, Boxes, ScrollText, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -79,7 +79,7 @@ export default function ActivityBar() {
               key={id}
               aria-label={id}
               aria-pressed={isSelected}
-              data-tip={`${id.charAt(0).toUpperCase() + id.slice(1)} — ${isSelected ? 'selected (click to clear)' : 'select + open god detail'}`}
+              data-tip={`${id.charAt(0).toUpperCase() + id.slice(1)} — ${GOD_DOMAINS[id] ?? 'god'}${isSelected ? ' · selected (click to clear)' : ' · click to open god detail'}`}
               onClick={() => {
                 // W-D1: the click WRITES the selection (toggle — the
                 // Parthenon's own god-panel precedent), then drills down.
@@ -111,7 +111,8 @@ export default function ActivityBar() {
               )}
               {/* God name on hover — Olympus-styled, capitalized */}
               <span className="absolute left-11 top-1/2 -translate-y-1/2 text-[10px] bg-olympus-card border border-olympus-gold/20 text-olympus-gold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 font-mono shadow-md">
-                {id.charAt(0).toUpperCase() + id.slice(1)}
+                <span className="block">{id.charAt(0).toUpperCase() + id.slice(1)}</span>
+                <span className="block text-[8px] text-olympus-text-dim">{GOD_DOMAINS[id] ?? 'god'}</span>
               </span>
             </button>
           );

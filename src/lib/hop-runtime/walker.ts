@@ -48,6 +48,7 @@ import { dirname } from 'node:path';
 import { verifyHopDeterministic, type HopVerifyResult } from './verify';
 import { recordHopLearning } from './learning';
 import { normalizeOutcome } from '@/lib/learning/outcome';
+import { getActiveProjectSlug } from '@/lib/project-context';
 import { findOlympusRoot } from '@/lib/opencode-spawn';
 import { classifyRetry, resolveRetryPlan, applyRetryJitter } from '@/lib/opencode-session';
 import { markLaneAlive, markLaneDead, markLaneSlow, laneChain, isLaneDeadClass, isLaneAvailable, readLaneHealth } from '@/lib/lane-health';
@@ -55,13 +56,16 @@ import { laneRosterFor } from '@/lib/lane-roster';
 import { backupBeforeDestructiveHop } from '@/lib/destructive-guard';
 import { applyRunManifestFile, buildHopMcpManifest, buildRunMcpManifest, getRunMcpManifest, setRunMcpManifest } from '@/lib/mcp-run-manifest';
 import { checkCostCaps } from '@/lib/cost-caps';
-import { SEED_DESIGN_BUILDS, buildPrompt, mergeBuildStats, type DesignBuild } from '@/lib/design-builds';
+import { SEED_DESIGN_BUILDS, buildPrompt, mergeBuildStats, tierFor, type DesignBuild, type DesignBuildStats } from '@/lib/design-builds';
+import { compileDerivedBuild, recordDerivedBuild } from '@/lib/build-compiler';
+import { queryResonance } from '@/lib/symphony/resonance-index';
+import { composeRlmBlock, rlmEnabled } from '@/lib/rlm/envelope';
 import { getVaultRoot } from '@/lib/vault-root';
 import { classifyDispatchFailure, classifyParkReason } from './failure-class';
 import { readContract } from '../design-contract';
 import { readApproval, readLatestReview, validateApproval } from '../design-approval';
 import { patrolFinding, recordPatrol } from '@/lib/atlas-patrol';
-import { ensurePlanGeneration, freezePlan, validCompletedForPlan, computeHopHashes, frozenPlanPath } from './plan-generation';
+import { ensurePlanGeneration, freezePlan, validCompletedForPlan, computeHopHashes, frozenPlanPath, readPlanFile, planPath } from './plan-generation';
 import { readHopOverride } from './hop-overrides';
 import { appendDesktopNotify, notifyText, readLanguage } from '@/lib/desktop-notify';
 import { appendGodInbox } from '@/lib/god-inbox';
@@ -378,11 +382,19 @@ function readUserBuilds(): DesignBuild[] {
   } catch { return []; }
 }
 
-export function resolveHopBuild(hop: PlanHop): DesignBuild | null {
+export function resolveHopBuild(hop: PlanHop, opts: { derive?: boolean } = {}): DesignBuild | null {
   const all = [...SEED_DESIGN_BUILDS, ...readUserBuilds()];
   const declared = String(hop.buildId ?? '').trim();
   if (declared) {
-    return all.find((b) => b.id === declared || b.name === declared) ?? null;
+    const found = all.find((b) => b.id === declared || b.name === declared);
+    if (found) return found;
+    // v0.1.4 — a typo used to equip NOTHING silently. A derived build is
+    // still validated against the registry; if the hop declared a real
+    // arsenal, the walk gets a provisional loadout instead of a mystery.
+    if (!opts.derive) return null;
+    const derived = compileDerivedBuild(hop);
+    if (derived) recordDerivedBuild(derived);
+    return derived;
   }
   const lower = (xs: Array<string | undefined>) => new Set(xs.filter(Boolean).map((x) => String(x).toLowerCase()));
   const skills = lower([...(hop.skills ?? []), hop.skill]);
@@ -400,7 +412,26 @@ export function resolveHopBuild(hop: PlanHop): DesignBuild | null {
   }
   // A single coincidental skill is not a loadout; require a real fit
   // (skill + MCP, two skills, or skill + demigod).
-  return bestScore >= 3 ? best : null;
+  if (bestScore >= 3) return best;
+  if (!opts.derive) return null;
+  const derived = compileDerivedBuild(hop);
+  if (derived) recordDerivedBuild(derived);
+  return derived;
+}
+
+/** The prompt carries the build's REAL tier, not a synthetic zero-sample view. */
+function buildStatsForPrompt(build: DesignBuild): DesignBuildStats {
+  const base = mergeBuildStats([build], [])[0].stats;
+  const match = queryResonance({ task: build.signature, god: build.god });
+  if (!match) return base;
+  const rate = (match.successes + 1) / (match.samples + 2);
+  return {
+    samples: match.samples,
+    successes: match.successes,
+    rate: Math.round(rate * 1000) / 1000,
+    tier: tierFor(rate, match.samples),
+    lastUsed: match.lastTs,
+  };
 }
 
 export async function composeHopPromptWithRag(
@@ -408,7 +439,7 @@ export async function composeHopPromptWithRag(
   laneRoot: string,
   campaignQuery?: string,
 ): Promise<string> {
-  const build = resolveHopBuild(hop);
+  const build = resolveHopBuild(hop, { derive: true });
   const override = readHopOverride(laneRoot, hop.id);
   const recovery = override?.promptAppend
     ? `\n\n## RECOVERY DIRECTIVE (attempt ${override.attempts ?? 1})\n${override.promptAppend}\n`
@@ -417,12 +448,26 @@ export async function composeHopPromptWithRag(
     ? `\n\n## VERIFICATION BASELINE (v0.0.98-10)\nThis is a verification hop, not an implementation hop. The repository-wide lint may be red on files this hop did not change: run \`npx tsc --noEmit\` once and lint ONLY the files you touched (or compare the baseline); never fail this gate on pre-existing repo-wide lint errors. Measure, judge, write the declared evidence artifact; do not read component sources or add scope.`
     : '';
   const base = (build
-    ? `${composeHopPrompt(hop, laneRoot)}\n\n${buildPrompt(mergeBuildStats([build], [])[0])}${recovery}`
+    ? `${composeHopPrompt(hop, laneRoot)}\n\n${buildPrompt({ ...mergeBuildStats([build], [])[0], stats: buildStatsForPrompt(build) })}${recovery}`
     : `${composeHopPrompt(hop, laneRoot)}${recovery}`) + verificationBaseline;
+
+  // v0.1.4 — the RLM envelope is injected only when the flag is on AND this
+  // hop declares a depth. Off = byte-identical behavior to v0.1.3.
+  let promptBase = base;
+  if (rlmEnabled() && hop.rlmDepth) {
+    try {
+      const plan = readPlanFile(planPath(laneRoot));
+      if (plan?.rlm) {
+        const parent = hop.rlmParent ? plan.hops.find((h) => h.id === hop.rlmParent) ?? null : null;
+        promptBase = `${base}\n\n${composeRlmBlock({ config: plan.rlm, hop, parent })}`;
+      }
+    } catch { /* the envelope never breaks the hop */ }
+  }
+
   // The hop's own slice is the query; campaignQuery is only the fallback
   // for the degenerate empty-slice shape (never the shared-mush primary).
   const query = String(hop.prompt ?? '').slice(0, 400) || campaignQuery || '';
-  if (!query) return base;
+  if (!query) return promptBase;
   try {
     const rag = await composeRagContext(query);
     const ctx = getActiveContext();
@@ -440,11 +485,11 @@ export async function composeHopPromptWithRag(
       const { instinctPriorContext } = await import('../instinct-rag');
       instinct = instinctPriorContext(hop.god, query, { project: ctx.slug, stacks: ctx.stacks });
     } catch { /* the instinct lane never breaks the hop */ }
-    if (!rag && !instinct && !retrieval) return base;
+    if (!rag && !instinct && !retrieval) return promptBase;
     const blocks = [retrieval, rag, instinct].filter(Boolean).join('\n\n');
-    return `${base}\n\n${blocks}`;
+    return `${promptBase}\n\n${blocks}`;
   } catch {
-    return base; // the RAG never breaks the hop
+    return promptBase; // the RAG never breaks the hop
   }
 }
 
@@ -1654,7 +1699,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
     // hop state; writing it here made the telemetry's lane column useless for
     // the one question it exists to answer ("which pool served this hop?").
     // When the failover moved the hop, the dispatch result names the real lane.
-    const hopBuild = resolveHopBuild(hop);
+    const hopBuild = resolveHopBuild(hop, { derive: true });
     const row: HopTelemetryRow = {
       ts: new Date().toISOString(),
       hop: hop.id,
@@ -1700,6 +1745,7 @@ export async function walkPlan(opts: WalkOptions): Promise<WalkResult> {
         task_signature: String(hop.prompt ?? '').slice(0, 200),
         god: hop.god,
         hop: hop.id,
+        project: getActiveProjectSlug(),
         build: hopBuild?.id ?? null,
         skill: hop.skills?.[0] ?? hop.skill ?? null,
         mcp: hop.mcps?.[0] ?? hop.mcp ?? null,

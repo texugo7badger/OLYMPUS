@@ -27,6 +27,38 @@ Eval: 15 human-labeled queries (in-repo regression set, not a universal benchmar
 
 Instrument: `npm run retrieval:eval` and `npm run retrieval:bench`. The dense lane recovers lexical misses (e.g. OWASP/session-cookie → OWASP Top 10 + Authentication Patterns). Honest limits: initial build is heavy on this host; query latency is model-bound; the eval set is small and must grow from real project tasks.
 
+## Symphony Resonance Index — v0.1.4, 2026-11-27 [MEASURED]
+
+The vault's `arsenal-resonance.jsonl` holds 8,235 outcome rows. The index
+pre-aggregates them into **609 task signatures** in **0.2 s** (`npm run
+resonance:index`, `~/.olympus/resonance.db`).
+
+| Metric | Result |
+|---|---:|
+| Outcome rows | 8,235 |
+| Aggregated signatures | 609 |
+| Real quick circuits | **0** |
+| Fake quick circuits rejected | 31 (hop ids) + 3 (fixtures) |
+| Rebuild time | 0.2 s |
+| Query | Jaccard ≥ 0.4 over indexed tokens |
+
+The first pass reported 31 "quick circuits" built from hop ids (`root`, `h0`,
+`h7`). They are not task classes; the vocabulary rejects them, and the
+certification fixtures are indexed as hints but never gate a dispatch. A
+synthetic 12-success/1-failure task class correctly fires at 0.867 Laplace
+coherence (`scripts/resonance-index.test.mjs`). **0 is the honest current
+count** — the new writer logs the hop prompt, so a repeated real task class
+will earn the first one.
+
+## Embedding cache — v0.1.4, 2026-11-27 [MEASURED]
+
+The cache is keyed by `sha256(model + text)`, so a `--force` rebuild or a
+chunker change never re-embeds unchanged text. The cache round-trips 768d
+vectors byte-for-byte (`scripts/embedding-cache.test.mjs`); its size grows with
+the corpus (one row per unique chunk). The index build is now a background job
+with a `core` phase (skills + knowledge) followed by `all`; hibernate pauses
+between batches.
+
 ## Real Electron FPS — v0.1.2, 2026-11-26 [MEASURED]
 
 Instrument: `scripts/fps-probe-electron.mjs` (CDP against the real Electron

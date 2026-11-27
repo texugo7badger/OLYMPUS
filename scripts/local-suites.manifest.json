@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-27T03:17:27.656Z",
+  "generatedAt": "2026-11-27T05:50:19.676Z",
   "note": "PUBLIC suites are tracked and run by .github/workflows/core.yml; TRACKED_LOCAL suites are in the repo but need the local OpenCode run state/overlay; LOCAL suites stay on the maintainer machine and declare why. A fresh clone reproduces the public core; the full battery numbers ride public/stable.json.",
   "public": [
     "alignment-preview.test.mjs",
@@ -8,6 +8,7 @@
     "atlas-patrol.test.mjs",
     "bench-hops.test.mjs",
     "brain-live.test.mjs",
+    "build-compiler.test.mjs",
     "build-execution.test.mjs",
     "build-packs.test.mjs",
     "builds-check.test.mjs",
@@ -20,16 +21,20 @@
     "cost-window.test.mjs",
     "demigod-archive.test.mjs",
     "docs-check.test.mjs",
+    "embedding-cache.test.mjs",
     "hop-failure-class.test.mjs",
     "i18n-audit.test.mjs",
     "instinct-curation.test.mjs",
+    "instinct-quarantine.test.mjs",
     "learning-core.test.mjs",
     "mobile-companion.test.mjs",
     "parthenon-live.test.mjs",
     "plan-recovery.test.mjs",
     "preview-share.test.mjs",
+    "resonance-index.test.mjs",
     "retrieval-bus.test.mjs",
     "retrieval-hibernate.test.mjs",
+    "rlm-envelope.test.mjs",
     "terminal-paste.test.mjs",
     "theme-gallery.test.mjs",
     "v099-preview-mobile.test.mjs"
@@ -162,8 +167,8 @@
   ],
   "local": [],
   "count": {
-    "total": 61,
-    "public": 30,
+    "total": 66,
+    "public": 35,
     "trackedLocal": 31,
     "local": 0
   }

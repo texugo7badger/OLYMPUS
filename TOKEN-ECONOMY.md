@@ -29,6 +29,22 @@ only model cost is unchanged: the god's turn. If retrieval adds tokens
 without a measured outcome gain, revert to FTS-only (`dense:false` or the
 `OLYMPUS_RETRIEVAL` flag).
 
+
+## 0.1 v0.1.4 recursive and resonance budgets
+
+| Surface | Budget |
+|---|---|
+| RLM envelope | depth ≤ 2 · ≤ 4 children per parent · child budgets ≤ parent · `OLYMPUS_RLM=1` |
+| RLM prompt block | goal + parent artifacts + slice, ≤ ~600 chars |
+| Resonance query | 0 model tokens; 609 signatures in a local SQLite file |
+| Resonance quick circuit | 3+ samples and 0.85+ Laplace coherence; fixtures never gate |
+| Derived build | validated locally; no model call; promotion needs 5 samples at 80%+ |
+| Embedding cache | 0 provider tokens; local SQLite; rebuild skips unchanged text |
+
+The resonance layer is a **retrieval shortcut**, not a new model call: when it
+fires, the god skips deliberation for a proven task class. When it does not,
+the turn is unchanged.
+
 ## 1. What is measured (v0.0.72)
 
 ### The AIME campaign (read-only, the user's exam)

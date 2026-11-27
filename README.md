@@ -87,36 +87,35 @@ the limits are in [HYGIENE.md](HYGIENE.md) and
 
 ## Latest
 
-**v0.1.2 — performance and truth.** The atlas now renders on demand: after
-2.2s without interaction the frame loop pauses, and the next pointer, wheel,
-resize or graph event wakes it. The Pantheon measures **60 FPS p50/p95 with no
-long tasks** in the real Electron software window (the GPU process segfaults
-on this host, so software is the stable lane — declared, not hidden). If a
-host cannot hold ~50 FPS, automatic lean mode drops the expensive passes and
-caps DPR once per session.
+**v0.1.4 — resonance, derived builds and a bounded RLM.** The Symphony
+Resonance Index pre-aggregates **8,235 historical outcomes into 609 task
+signatures** and earns a quick circuit only with **3+ samples and 0.85+
+Laplace coherence**. The first backfill exposed 31 fake shortcuts made of hop
+ids (`root`, `h0`); they are rejected, so the honest count remains **0 real
+quick circuits** until a task class repeats. Hops that match no curated build
+now receive a **derived loadout** validated against the on-disk skill/MCP/
+demigod registry; it is cold, recorded, and promotion needs 5+ samples at 80%+
+coherence plus a human click. A recursive **RLM envelope** (depth ≤2, ≤4
+children, budget-capped) rides the existing hop DAG behind `OLYMPUS_RLM=1`.
 
-**Craft and References are separate menus.** Craft is the app hub: ArtCraft
-stays on, the 13 vendored apps remain, and Blender, Godot, OBS, Inkscape,
-Krita, DaVinci Resolve and Shotcut are detected and launched in the active
-project with fixed args. References is its own library; **Use** stages an
-editable Apollo prompt that asks how you want to use it, never sending
-automatically. New sources: ReactBits (MIT + Commons Clause), Motion
-Primitives (MIT) and Kokonut UI (MIT).
+**Retrieval is local and cheap.** FTS5/BM25 + 768d `nomic-embed-text:v1.5` +
+RRF: **P@5 100% vs 73% FTS-only**, MRR **0.933 vs 0.733**, hybrid p95
+**235–286 ms**. A content-addressed embedding cache makes a `--force` rebuild
+skip unchanged text; the index build is a background job with real progress,
+and hibernate pauses between batches. The AIME instinct audit is read-only:
+190 empirical instincts, **187 AIME project-scoped**, 38 duplicates and 1
+fixture flagged for reversible quarantine — nothing moved before the AIME test.
 
-**Callimachus is deterministic first.** A 15-minute pass archives synthetic
-smoke patterns, scopes project memory and promotes a quick circuit only with
-≥2 distinct projects, samples ≥2 and confidence ≥0.90. A model pass is capped
-at 1/hour and only runs for cross-project candidates. The old heuristic's
-**33 quick circuits were fake**; the honest census is **0 validated / 187
-project / 55 technical**. God Intelligence shows last/next pass and the budget.
-Sync Map was removed; Cost paints the last measured reading before the console
-sync. OLYMPUS describes itself as a **multi-agent AI workspace**, not an
-operating system.
+**v0.1.2 remains the stable release.** The atlas still pauses when idle and the
+Pantheon still holds 60 FPS in the software window; v0.1.4 removed the silent
+auto-lean that erased the brain's outline — the user's preset is the only
+quality switch. Craft and References remain separate menus.
 
-`npm run hygiene -- --battery` runs **8 gates and 57 hermetic suites**; the
-live UI gate is `node scripts/verify-v012-ui.mjs`. The 100-hop certification
-passed; the 8-hour soak is **not claimed**. The previous stable is **v0.1.1**;
-the full history lives in [CHANGELOG.md](CHANGELOG.md).
+`npm run hygiene -- --battery` runs **8 gates and 66 hermetic suites**; the
+v0.1.4 UI gate is `node scripts/verify-v014-ui.mjs`, and the stable v0.1.2 gate
+remains `node scripts/verify-v012-ui.mjs`. The 100-hop certification passed;
+the 8-hour soak is **not claimed**. The full history lives in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Architecture at a glance
 
@@ -147,8 +146,9 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**57 PASS / 0 FAIL / 0 declared skip** across 57 suites (the hermetic
-release-branch gate; the maintainer-local suites need the live app/vault).
+**57 PASS / 0 FAIL / 0 declared skip** across 57 suites is the stable v0.1.2
+gate; the v0.1.4 development battery is **66 PASS / 0 FAIL / 0 declared skip**
+across 66 suites (the maintainer-local suites need the live app/vault).
 `npm run hygiene -- --battery` runs all eight gates. The 100-hop deterministic
 certification passed (100/100, p50/p95 189/225 ms); the 8-hour model soak is
 **not claimed**. The campaign's economics are measured by `npm run cost:audit`

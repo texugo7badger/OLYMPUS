@@ -12,13 +12,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getVaultRoot } from '../vault-root';
 import { chunkDocument } from './chunker';
-import { embedDocuments, ollamaAvailable, EMBED_MODEL } from './embedding';
+import { embedDocumentsWithStats, ollamaAvailable, EMBED_MODEL } from './embedding';
 import {
   getRetrievalStore,
   hasChunkWithHash,
   upsertChunk,
   setMeta,
   storeStats,
+  getMeta,
   type RetrievalStore,
 } from './store';
 import { isRetrievalPaused } from './runtime';
@@ -195,14 +196,19 @@ export interface IndexResult {
   embedded: number;
   skipped: number;
   errors: number;
+  cacheHits: number;
   dense: boolean;
   paused: boolean;
+  scope: 'all' | 'core';
   stats: ReturnType<typeof storeStats>;
 }
 
 export async function indexRetrieval(opts: {
   force?: boolean;
   limit?: number;
+  /** 'core' indexes skills + knowledge only (the first useful surface);
+   *  'all' (default) then fills instincts/patterns/docs incrementally. */
+  scope?: 'all' | 'core';
   signal?: AbortSignal;
   onProgress?: (p: IndexProgress) => void;
 } = {}): Promise<IndexResult> {
@@ -210,10 +216,13 @@ export async function indexRetrieval(opts: {
   try {
     if (opts.force) clearIndex(store);
     const dense = await ollamaAvailable();
-    const docs = collectRetrievalDocuments().slice(0, opts.limit && opts.limit > 0 ? opts.limit : undefined);
+    const scope = opts.scope === 'core' ? 'core' : 'all';
+    let docs = collectRetrievalDocuments();
+    if (scope === 'core') docs = docs.filter((d) => d.kind === 'skill' || d.kind === 'knowledge');
+    docs = docs.slice(0, opts.limit && opts.limit > 0 ? opts.limit : undefined);
     const progress: IndexProgress = {
       total: docs.length, done: 0, embedded: 0, skipped: 0, errors: 0,
-      current: '', paused: false,
+      current: '', paused: false, cacheHits: 0, scope,
     };
 
     // Build the pending chunk list first so one batch failure loses little.
@@ -240,7 +249,9 @@ export async function indexRetrieval(opts: {
         break;
       }
       const batch = pending.slice(i, i + 32);
-      const vectors = dense ? await embedDocuments(batch.map((c) => c.text)) : null;
+      const emb = dense ? await embedDocumentsWithStats(batch.map((c) => c.text)) : null;
+      const vectors = emb?.vectors ?? null;
+      progress.cacheHits += emb?.hits ?? 0;
       if (dense && !vectors) {
         // Embedding failed mid-run: keep the lexical rows so the bus works,
         // but do not mark them embedded. A later run fills them.
@@ -258,9 +269,23 @@ export async function indexRetrieval(opts: {
       opts.onProgress?.({ ...progress });
     }
 
+    // v0.1.4 — a lexical-only run must not erase the model truth of an index
+    // that still holds vectors. `dense` means THIS run embedded; `model` names
+    // what the vectors in the store came from.
+    const finalStats = storeStats(store);
+    const hasVectors = finalStats.embedded > 0;
+    const previousModel = getMeta(store, 'model');
+    const previousDense = getMeta(store, 'dense');
     setMeta(store, 'lastIndexedAt', new Date().toISOString());
-    setMeta(store, 'model', dense ? EMBED_MODEL : 'fts5-only');
-    setMeta(store, 'dense', dense ? '1' : '0');
+    const vectorModel = previousModel && previousModel !== 'fts5-only' ? previousModel : EMBED_MODEL;
+    setMeta(store, 'model', dense ? EMBED_MODEL : (hasVectors ? vectorModel : 'fts5-only'));
+    // `dense` describes the STORE (does it hold vectors), not this run; the
+    // run itself is recorded by lastRunDense.
+    setMeta(store, 'dense', hasVectors || dense ? '1' : '0');
+    setMeta(store, 'lastScope', scope);
+    setMeta(store, 'lastRunDense', dense ? '1' : '0');
+    if (dense) setMeta(store, 'lastDenseRunAt', new Date().toISOString());
+    else setMeta(store, 'lastLexicalRunAt', new Date().toISOString());
     return {
       ok: true,
       documents: docs.length,
@@ -268,8 +293,10 @@ export async function indexRetrieval(opts: {
       embedded: progress.embedded,
       skipped: progress.skipped,
       errors: progress.errors,
+      cacheHits: progress.cacheHits,
       dense,
       paused: progress.paused,
+      scope,
       stats: storeStats(store),
     };
   } finally {

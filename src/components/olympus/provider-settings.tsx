@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { useOlympus, type LLMStrategy } from '@/lib/olympus-store';
 import { SlidersHorizontal, AlertCircle, Terminal, Zap, Loader2, Check, ArrowRight, ExternalLink, Lock, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { strategyApiRequirement } from '@/lib/model-strategies';
+import { strategyApiRequirement, strategyEntries, GO_PLAN_LAST_VERIFIED, ZEN_PLAN_LAST_VERIFIED } from '@/lib/model-strategies';
 
 interface AuthStatus {
   configured: boolean;
@@ -78,24 +78,16 @@ interface ProviderSettingsData {
 function fallbackData(): ProviderSettingsData {
   return {
     strategy: 'go-balanced',
-    availableStrategies: [
-	      { id: 'go-max-quality',  label: 'GO Max Quality',  description: 'Best quality (2026-10-16 upgrade). Apollo+Dionysus+Persephone: GLM-5.3. Athena: GLM-5.3. Artemis: Kimi K3. Hephaestus+Hermes: K2.7 Code. Atlas: Hy3. Prometheus: MiniMax M3. Vault: Flash — switch to go-balanced when the GLM-5.3 cap blows.', plan: 'GO',  tier: 'quality',  terminalModel: 'glm-5.3',           estCostPerDay: 'higher' },
-	      { id: 'go-balanced',     label: 'GO Balanced',     description: 'Sustainable 8h/day. Apollo: GLM-5.3 (4,300/mo). Specialists: Qwen3.7 Plus (21,600/mo) + DeepSeek V4 Pro (17,150/mo).',     plan: 'GO',  tier: 'balanced', terminalModel: 'glm-5.3',           estCostPerDay: 'moderate' },
-	      { id: 'go-budget',       label: 'GO Budget',       description: 'Apollo: GLM-5.3. Atlas: Hy3. All others: DeepSeek V4 Flash.',                                        plan: 'GO',  tier: 'budget',   terminalModel: 'hy3',              estCostPerDay: 'low' },
-      { id: 'zen-max-quality', label: 'ZEN Max Quality', description: 'Frontier quality on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. Athena+Hephaestus: Claude Sonnet 5. Others: GPT-5.4. Vault: Gemini 3.5 Flash.', plan: 'ZEN', tier: 'quality', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'higher' },
-      { id: 'zen-balanced',    label: 'ZEN Balanced', description: 'Full OLYMPUS on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. Athena+Hephaestus: Claude Sonnet 5. Specialists: Kimi K2.7 Code. Vault: MiniMax M2.7.', plan: 'ZEN', tier: 'balanced', terminalModel: 'opencode/glm-5.3',  estCostPerDay: 'moderate' },
-      { id: 'zen-budget',      label: 'ZEN Budget',   description: 'Lowest cost on OpenCode Zen (pay-as-you-go, no request caps) — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. All others: MiniMax M2.7.', plan: 'ZEN', tier: 'budget', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'low' },
-      { id: 'local', label: 'Local', description: 'Your own hardware — zero cost, zero data leaving this machine. Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint serves the full arsenal. The apply probes your setup and refuses with the exact reason if nothing answers (docs/LOCAL-LLM.md).', plan: 'LOCAL', tier: 'local', terminalModel: 'local/<model>', estCostPerDay: 'free' },
-    ],
+    availableStrategies: strategyEntries(),
     customStrategies: [],
     availableProviders: [
       { id: 'opencode-go', displayName: 'OpenCode GO', isFree: false, description: 'Paid subscription — see docs for current pricing' },
       { id: 'opencode', displayName: 'OpenCode ZEN', isFree: false, description: 'Pay-as-you-go — see docs for current pricing' },
     ],
     default_provider: 'opencode-go',
-    go_plan_last_verified: '2026-07-29',
+    go_plan_last_verified: GO_PLAN_LAST_VERIFIED,
     go_plan_docs_url: 'https://opencode.ai/docs/go/',
-    zen_plan_last_verified: '2026-07-31',
+    zen_plan_last_verified: ZEN_PLAN_LAST_VERIFIED,
     zen_plan_docs_url: 'https://opencode.ai/docs/zen/',
   };
 }

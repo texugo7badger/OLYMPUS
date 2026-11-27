@@ -24,6 +24,7 @@ import {
 } from '@/lib/design-builds';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 import { getMcpEnvVarKeys } from '@/lib/mcp-api-requirements';
+import { listDerivedBuilds, promoteDerivedBuild } from '@/lib/build-compiler';
 import { loadIntegrationEnv } from '@/lib/integration-env';
 
 export const runtime = 'nodejs';
@@ -86,9 +87,13 @@ export async function GET(req: NextRequest) {
         .map((key) => ({ mcp, key })));
     return needsKeys.length ? { ...b, needsKeys } : b;
   });
+  // v0.1.4 — the derived shelf is separate from the curated catalog: a
+  // provisional loadout must never look like a proven build.
+  const derived = listDerivedBuilds(50);
   return NextResponse.json({
     ok: true,
     builds: withKeys,
+    derived,
     resonanceRows: readResonance().length,
     matrix: matrix.length,
     curated: seeds.length + user.length,
@@ -99,6 +104,12 @@ export async function POST(req: NextRequest) {
   let body: any;
   try { body = await req.json(); } catch {
     return NextResponse.json({ ok: false, error: 'invalid JSON' }, { status: 400 });
+  }
+  if (body?.action === 'promote') {
+    const id = String(body?.id || '').trim();
+    if (!id) return NextResponse.json({ ok: false, error: 'id is required' }, { status: 400 });
+    const result = promoteDerivedBuild(id);
+    return NextResponse.json(result, { status: result.ok ? 200 : 409, headers: NO_CACHE_HEADERS });
   }
   const build = normalizeUserBuild(body?.build ?? body);
   if (!build) {

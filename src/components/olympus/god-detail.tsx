@@ -72,7 +72,11 @@ export default function GodDetail() {
   // #231 — the 10s poll pauses in a hidden tab.
   const docVisible = useDocVisible();
  const node = useOlympus(s => s.selectedNode);
- const god = node?.god;
+ // v0.1.4 — never open an empty god panel. The graph selection is primary;
+ // the persistent god selection and the live god are the honest fallbacks.
+ const selectedGod = useOlympus(s => s.selectedGod);
+ const activeGod = useOlympus(s => s.activeGod);
+ const god = node?.god ?? selectedGod ?? activeGod ?? null;
  const GodIcon = god ? GOD_ICONS[god] : null;
  const domain = god ? GOD_DOMAINS[god] : null;
  const [dispatch, setDispatch] = useState<DispatchInfo | null>(null);

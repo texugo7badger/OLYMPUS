@@ -122,6 +122,8 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  const [scStats, setScStats] = useState<ShortCircuitStats | null>(null);  // v0.0.26 — classifier ↔ dispatch agreement (the feedback loop).
  const [curator, setCurator] = useState<any>(null);
  const [retrieval, setRetrieval] = useState<any>(null);
+ const [retrievalJob, setRetrievalJob] = useState<any>(null);
+ const [retrievalBusy, setRetrievalBusy] = useState(false);
  const [curating, setCurating] = useState(false);
   const [agreement, setAgreement] = useState<{ rate: number | null; windows: number }>({ rate: null, windows: 0 });
 
@@ -185,6 +187,49 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  clearInterval(iv);
  };
  }, [docVisible]);
+
+ // v0.1.4 — retrieval status + background job progress. Polls at 2s only
+ // while a build is running; 30s otherwise; never in a hidden tab.
+ useEffect(() => {
+  let mounted = true;
+  const loadRetrieval = () => {
+   fetch('/api/olympus/retrieval/reindex', { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : null)
+    .then((d: any) => {
+     if (!mounted || !d?.ok) return;
+     setRetrieval(d);
+     setRetrievalJob(d.job ?? null);
+    })
+    .catch(() => {});
+  };
+  loadRetrieval();
+  if (!docVisible) return () => { mounted = false; };
+  const running = retrievalJob?.status === 'running' || retrievalJob?.status === 'queued';
+  const iv = setInterval(loadRetrieval, running ? 2000 : 30000);
+  return () => { mounted = false; clearInterval(iv); };
+ }, [docVisible, retrievalJob?.status]);
+
+ const startRetrieval = async (force = false) => {
+  if (retrievalBusy) return;
+  setRetrievalBusy(true);
+  try {
+   const r = await fetch('/api/olympus/retrieval/reindex', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ force }),
+   });
+   const d = await r.json();
+   if (!d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+   setRetrievalJob(d.job ?? null);
+   const s = await fetch('/api/olympus/retrieval/reindex', { cache: 'no-store' }).then(x => x.ok ? x.json() : null);
+   if (s?.ok) { setRetrieval(s); setRetrievalJob(s.job ?? null); }
+  } catch (e: any) {
+   setError(e?.message || 'index start failed');
+  } finally {
+   setRetrievalBusy(false);
+  }
+ };
+
 
  if (loading) {
  return (
@@ -380,22 +425,59 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  </div>
 
  {/* v0.1.3 — the retrieval brain: FTS5 + 768d dense + RRF. */}
- <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3 mb-4" data-testid="retrieval-status">
-  <div className="flex items-center gap-2">
-   <Search size={13} className="text-olympus-cyan" />
-   <span className="text-[11px] font-semibold text-olympus-text">Retrieval · local hybrid</span>
-   <span className={cn('ml-auto rounded px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wide', retrieval?.runtime?.paused ? 'bg-olympus-gold/10 text-olympus-gold' : 'bg-olympus-green/15 text-olympus-green')}>
-    {retrieval?.runtime?.paused ? 'paused' : retrieval?.ollama ? 'ready' : 'fts only'}
-   </span>
-  </div>
-  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[8.5px] font-mono text-olympus-text-dim">
-   <span>{retrieval?.docs ?? '—'} docs</span>
-   <span>{retrieval?.embedded ?? '—'} vectors</span>
-   <span>{retrieval?.embedding?.model ?? 'nomic-embed-text:v1.5'} · {retrieval?.embedding?.dimensions ?? 768}d</span>
-   <span>FTS5 + RRF</span>
-   <span>{retrieval?.lastIndexedAt ? `indexed ${Math.max(0, Math.round((Date.now() - Date.parse(retrieval.lastIndexedAt)) / 60000))}m ago` : 'not indexed yet'}</span>
-  </div>
- </div>
+ {(() => {
+  const job = retrievalJob;
+  const running = job?.status === 'running' || job?.status === 'queued';
+  const paused = retrieval?.runtime?.paused || job?.status === 'paused';
+  const p = job?.progress;
+  const pct = p && p.total > 0 ? Math.min(100, Math.round((p.done / p.total) * 100)) : 0;
+  const statusLabel = running ? `indexing · ${job?.phase ?? 'core'}` : paused ? 'paused' : retrieval?.ollama ? 'ready' : 'fts only';
+  return (
+   <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3 mb-4" data-testid="retrieval-status">
+    <div className="flex items-center gap-2">
+     <Search size={13} className="text-olympus-cyan" />
+     <span className="text-[11px] font-semibold text-olympus-text">Retrieval · local hybrid</span>
+     <span className={cn('ml-auto rounded px-1.5 py-0.5 text-[8px] font-mono uppercase tracking-wide', running ? 'bg-olympus-cyan/15 text-olympus-cyan' : paused ? 'bg-olympus-gold/10 text-olympus-gold' : 'bg-olympus-green/15 text-olympus-green')}>
+      {statusLabel}
+     </span>
+     <button
+      type="button"
+      onClick={() => void startRetrieval(false)}
+      disabled={retrievalBusy || running}
+      data-testid="retrieval-index-button"
+      data-tip="Builds the local hybrid index in the background: skills + knowledge first, then instincts and patterns. Content-hash incremental; hibernate pauses safely."
+      className="rounded border border-olympus-gold/25 px-1.5 py-0.5 text-[8px] font-mono text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
+     >
+      {retrievalBusy ? 'starting…' : running ? 'indexing…' : retrieval?.docs ? 'refresh' : 'build index'}
+     </button>
+    </div>
+    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[8.5px] font-mono text-olympus-text-dim">
+     <span>{retrieval?.docs ?? '—'} chunks</span>
+     <span>{retrieval?.embedded ?? '—'} vectors</span>
+     <span>{retrieval?.cache?.entries ?? 0} cached</span>
+     <span>{retrieval?.embedding?.model ?? 'nomic-embed-text:v1.5'} · {retrieval?.embedding?.dimensions ?? 768}d</span>
+     <span>FTS5 + RRF</span>
+     <span>{retrieval?.lastIndexedAt ? `indexed ${Math.max(0, Math.round((Date.now() - Date.parse(retrieval.lastIndexedAt)) / 60000))}m ago` : 'not indexed yet'}</span>
+    </div>
+    {running && (
+     <div className="mt-2" data-testid="retrieval-progress">
+      <div className="h-1 w-full overflow-hidden rounded-full bg-olympus-text-dim/15">
+       <div className="h-full rounded-full bg-olympus-cyan transition-[width] duration-500" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="mt-0.5 flex items-center gap-x-3 text-[8px] font-mono text-olympus-text-dim">
+       <span>{p?.done ?? 0}/{p?.total ?? 0} docs · {pct}%</span>
+       <span>{p?.embedded ?? 0} embedded</span>
+       <span>{p?.cacheHits ?? 0} from cache</span>
+       <span className="truncate">{p?.current ?? ''}</span>
+      </div>
+     </div>
+    )}
+    {paused && !running && (
+     <p className="mt-1 text-[8px] font-mono text-olympus-gold/80">Indexing is paused by hibernate. Resume from the same hashes — no re-embedding.</p>
+    )}
+   </div>
+  );
+ })()}
 
  {/* Short-circuit hit rate sparkline (key visual) */}
  <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-3 mb-4">

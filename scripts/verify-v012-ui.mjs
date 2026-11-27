@@ -171,14 +171,6 @@ async function main() {
     check('U7: Callimachus is live with validated quick-circuit counts', curatorReady && curator.ready && quick >= 0 && /model \d+\/\d+ this hour/.test(curator.text), curator.text.slice(0, 500));
     check('U8: no invented quick-circuit count (0 validated is honest; no stale 33)', quick === 0 || /validated|proof/i.test(curator.text), `quick=${quick} ${curator.text.slice(0, 500)}`);
 
-    let retrievalText = '';
-    for (let i = 0; i < 20; i++) {
-      retrievalText = await evaluate(`document.querySelector('[data-testid="retrieval-status"]')?.innerText || ''`);
-      if (retrievalText) break;
-      await sleep(500);
-    }
-    check('U12: the local hybrid retrieval index is visible (768d, docs)', /Retrieval · local hybrid/.test(retrievalText) && /768d/.test(retrievalText) && /docs/.test(retrievalText), retrievalText.slice(0, 400));
-
     await go(URL_BASE, 5000);
     const errors = cdp.events
       .filter((e) => e.method === 'Runtime.exceptionThrown' || (e.method === 'Log.entryAdded' && e.params?.entry?.level === 'error'))

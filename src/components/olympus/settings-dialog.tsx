@@ -24,7 +24,7 @@ import { getPerformanceMode, setPerformanceMode } from '@/lib/performance-mode';
 import { useLanguage, setLanguage, t, LANGUAGES } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { strategyApiRequirement, modelClassesForStrategy } from '@/lib/model-strategies';
+import { strategyApiRequirement, modelClassesForStrategy, strategyEntries, GO_PLAN_LAST_VERIFIED } from '@/lib/model-strategies';
 import StrategyBuilder from './strategy-builder';
 import ResourceGovernorCard from './resource-governor-card';
 import AutonomyCard from './autonomy-card';
@@ -390,21 +390,8 @@ function fallbackData(): SettingsData {
     strategy: 'go-balanced',
     // Offline fallback — auth unknown, so the activation gate never blocks.
     auth: null,
-    availableStrategies: [
-      // shortened descriptions to prevent text overflow.
-      // The old descriptions were too long for the 3-column card layout.
-	      { id: 'go-max-quality',  label: 'GO Max Quality',  description: 'Best quality (2026-10-16 upgrade). Apollo+Dionysus+Persephone: GLM-5.3. Athena: GLM-5.3. Artemis: Kimi K3. Hephaestus+Hermes: K2.7 Code. Atlas: Hy3. Prometheus: MiniMax M3. Vault: Flash — switch to go-balanced when the GLM-5.3 cap blows.', plan: 'GO', tier: 'quality',  terminalModel: 'glm-5.3',           estCostPerDay: 'higher' },
-	      { id: 'go-balanced',     label: 'GO Balanced',     description: 'Default. Apollo: GLM-5.3. Specialists: DeepSeek V4 Pro / Qwen3.7 Plus.',     plan: 'GO', tier: 'balanced', terminalModel: 'glm-5.3',           estCostPerDay: 'moderate' },
-	      { id: 'go-budget',       label: 'GO Budget',       description: 'Lowest cost. Apollo: GLM-5.3. Atlas: Hy3 (orchestration). All others: DeepSeek V4 Flash.',       plan: 'GO',  tier: 'budget',   terminalModel: 'hy3',            estCostPerDay: 'low' },
-      // Zen — full 128-agent OLYMPUS on OpenCode Zen (pay-as-you-go).
-      { id: 'zen-max-quality', label: 'ZEN Max Quality', description: 'Best quality on OpenCode Zen — proprietary APIs. Apollo: GLM-5.3. Athena+Hephaestus: Claude Sonnet 5. Others: GPT-5.4.', plan: 'ZEN', tier: 'quality', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'higher' },
-      { id: 'zen-balanced',    label: 'ZEN Balanced', description: 'Full OLYMPUS on OpenCode Zen — pay-as-you-go, no request caps. Apollo: GLM-5.3. Athena+Hephaestus: Claude Sonnet 5. Specialists: Kimi K2.7 Code.', plan: 'ZEN', tier: 'balanced', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'moderate' },
-      { id: 'zen-budget',      label: 'ZEN Budget',   description: 'Lowest cost on OpenCode Zen — proprietary APIs. Apollo: GLM-5.3. Atlas: Gemini 3.5 Flash. All others: MiniMax M2.7.', plan: 'ZEN', tier: 'budget', terminalModel: 'opencode/glm-5.3', estCostPerDay: 'low' },
-      // Free — ONE strategy over every free source registered (GO/Zen free,
-      // OpenRouter free, NVIDIA Build free). More APIs = a stronger free.
-      { id: 'local', label: 'Local', description: 'Your own hardware — zero cost, zero data leaving this machine. A local LLM server (Ollama / LM Studio / vLLM / llama.cpp / any OpenAI-compatible endpoint) serves the full 10-god + 122-demigod arsenal. The apply probes your endpoints and refuses with the exact reason if nothing answers (LOCAL-LLM.md).', plan: 'LOCAL', tier: 'local', terminalModel: 'local/<model>', estCostPerDay: 'free' },
-    ],
-    go_plan_last_verified: '2026-07-29',
+    availableStrategies: strategyEntries(),
+    go_plan_last_verified: GO_PLAN_LAST_VERIFIED,
     go_plan_docs_url: 'https://opencode.ai/docs/go/',
   };
 }

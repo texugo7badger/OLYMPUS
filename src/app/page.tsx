@@ -175,13 +175,41 @@ function PanelLoading({ label }: { label: string }) {
   );
 }
 
+/* v0.1.4 — the Cost pane used to mount the full branded loader while its
+   chunk arrived, which read as "the whole app is loading". The pane now paints
+   its own skeleton: the header is immediate, the cards fill when the chunk and
+   the ledger arrive. */
+function CostPaneSkeleton() {
+  return (
+    <div className="h-full w-full overflow-hidden bg-olympus-bg p-4" role="status" aria-label="Loading Cost">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="h-4 w-4 rounded bg-olympus-gold/20" />
+        <div className="h-3 w-16 rounded bg-olympus-text-dim/10 animate-pulse" />
+        <div className="ml-auto h-2 w-24 rounded bg-olympus-text-dim/10 animate-pulse" />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-3">
+            <div className="h-2 w-16 rounded bg-olympus-text-dim/10 animate-pulse" />
+            <div className="mt-2 h-5 w-24 rounded bg-olympus-text-dim/10 animate-pulse" />
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-3 mb-3">
+        <div className="h-2 w-28 rounded bg-olympus-text-dim/10 animate-pulse" />
+        <div className="mt-3 h-24 rounded bg-olympus-text-dim/5 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 const ActivityBar = dynamic(() => import('@/components/olympus/activity-bar'), { ssr: false, loading: () => <div className="w-12 shrink-0 border-r border-olympus-gold/10 bg-olympus-panel" aria-hidden /> });
 const StatusBar = dynamic(() => import('@/components/olympus/status-bar'), { ssr: false, loading: () => <div className="h-8 shrink-0 border-b border-olympus-gold/10 bg-olympus-panel" aria-hidden /> });
 const FilterSidebar = dynamic(() => import('@/components/olympus/filter-sidebar'), { ssr: false, loading: () => null });
 const BrainGraph3D = dynamic(() => import('@/components/olympus/brain-atlas-3d'), { ssr: false, loading: () => <PanelLoading label="BrainGraph3D" /> });
 // GodIntelligenceDashboard is the unified view (absorbs BrainHealthDashboard).
 const GodIntelligenceDashboard = dynamic(() => import('@/components/olympus/god-intelligence-dashboard'), { ssr: false, loading: () => <PanelLoading label="GodIntelligenceDashboard" /> });
-const CostDashboard = dynamic(() => import('@/components/olympus/cost-dashboard'), { ssr: false, loading: () => <PanelLoading label="CostDashboard" /> });
+const CostDashboard = dynamic(() => import('@/components/olympus/cost-dashboard'), { ssr: false, loading: () => <CostPaneSkeleton /> });
 // Read-only panel showing real-world benchmark totals. Recording is opt-in
 // via Settings → Benchmark Recording.
 const BenchmarksPanel = dynamic(() => import('@/components/olympus/benchmarks-panel'), { ssr: false, loading: () => <PanelLoading label="BenchmarksPanel" /> });

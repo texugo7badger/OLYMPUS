@@ -2,6 +2,47 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.4] — 2026-11-27
+
+### Resonance, derived builds, bounded RLM (development release)
+
+- **Symphony Resonance Index.** 8,235 historical outcomes pre-aggregated into
+  **609 task signatures**; coherence is Laplace-smoothed and a quick circuit
+  needs **3+ samples and 0.85+**. The first backfill's 31 "quick circuits" were
+  hop ids (`root`, `h0`) and certification fixtures; the vocabulary rejects
+  them, so the honest real count is **0** until a task class repeats. The index
+  answers `olympus-resonance` and `/api/olympus/resonance`; `npm run
+  resonance:index` rebuilds it in 0.2s.
+- **Build Compiler.** A hop that matches no curated build gets a **derived**
+  loadout, validated against real skills, registered MCPs and god-owned
+  demigods (3/3/5 limits, executable gate). Derived builds are cold, recorded
+  in `derived-builds.jsonl`, never written to the catalog. Promotion requires
+  **5+ samples at 80%+ coherence plus a human click**; the Build Hub shows a
+  Derive shelf. The hop prompt now carries the build's real tier instead of a
+  synthetic zero-sample view.
+- **RLM Context Envelope.** Recursion rides the hop DAG: depth ≤2, ≤4 children
+  per parent, child budgets ≤ parent, cycles rejected at plan time. The child
+  prompt carries the goal, parent artifacts and its slice — never the whole
+  campaign. `OLYMPUS_RLM=1` enables it; off is byte-identical.
+- **Retrieval first-run.** Content-addressed embedding cache (a `--force`
+  rebuild skips unchanged text), background index job with real progress
+  (`core` skills+knowledge, then `all`), and a Cost-style pane skeleton. The
+  index card now shows chunks, vectors, cache entries and a Build/Refresh
+  button.
+- **AIME instinct audit.** Read-only scan: 190 empirical instincts, **187 AIME
+  project-scoped**, 1 fixture, 38 duplicates, 0 stale/global-AIME. Quarantine
+  and restore tools move files to `_archive` with a sha256 manifest and bring
+  them back byte-for-byte. **Nothing was moved**; the apply waits for the AIME
+  v0.1.3 test.
+- **v0.1.2 regressions fixed.** The atlas no longer auto-drops haze/cloud/
+  signals (the brain's outline is back; the user's preset is the only quality
+  switch); the LLM Strategy offline fallback comes from the canonical strategy
+  table (no more Apollo GLM-5.3); the Cost pane paints its own skeleton instead
+  of the full-surface loader; god-detail never opens empty.
+- **Gates.** 8/8 hygiene, **66/66 suites**, v0.1.4 UI gate, `build:app`.
+- **Not in this release:** v0.1.5 repository cleanup and docs rewrite. The
+  AIME quarantine apply, if approved, is a post-test action.
+
 ## [v0.1.3-dev] — 2026-11-27
 
 ### Retrieval & Learning Foundation (development branch)

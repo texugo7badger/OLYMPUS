@@ -100,6 +100,7 @@ import dispatchTool from "./tools/dispatch.js";
 import patternsTool from "./tools/patterns.js";
 import skillSearchTool from "./tools/skill-search.js";
 import retrievalSearchTool from "./tools/retrieval-search.js";
+import resonanceTool from "./tools/resonance-search.js";
 // human-in-the-loop review tools.
 // Imported and registered here — design-review (Athena), deploy-review
 // (Prometheus), integration-review (Hermes). The interactive-terminal.tsx +
@@ -679,6 +680,7 @@ const OLYMPUS_TOOLS = {
   "olympus-patterns": patternsTool,
   "olympus-skill-search": skillSearchTool,
   "olympus-retrieval-search": retrievalSearchTool,
+  "olympus-resonance": resonanceTool,
   "sub-agent-instinct-query": subAgentInstinctQueryTool,
   // human-in-the-loop review tools.
   // olympus-design-review (Athena), olympus-deploy-review (Prometheus),

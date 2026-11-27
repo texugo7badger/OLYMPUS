@@ -1,9 +1,10 @@
 # OLYMPUS — Known issues and post-0.1.0 backlog
 
-> v0.1.3-dev · 2026-11-27 · **Nothing here is hidden.** These are the limits
+> v0.1.4-dev · 2026-11-27 · **Nothing here is hidden.** These are the limits
 > the development branch does not claim, with the reason and the next step.
-> The deterministic gates are green; the battery is 61 suites; the v0.1.2 live
-> UI gate remains `node scripts/verify-v012-ui.mjs` until the v0.1.3 release.
+> The deterministic gates are green; the battery is 66 suites; the v0.1.4 live
+> UI gate is `node scripts/verify-v014-ui.mjs` (the stable v0.1.2 gate remains
+> `verify-v012-ui.mjs`).
 
 ## Declared limits (not errors)
 
@@ -19,10 +20,13 @@
 | 23 moderate transitive advisories | Declared | 0 high / 0 critical; `npm audit --audit-level=high` is the gate. The dependency lane is tracked separately. |
 | AIME campaign still walking | Active lane | The campaign is the launch evidence and remains user-owned; it is not a release blocker. |
 | Initial retrieval index build | **Heavy on this host** | 644 docs / 1,032 chunks / 14.3 MB took 955 s. Run `npm run retrieval:index` once before a campaign; incremental is 1 s. Hibernate pauses the worker safely. |
-| Hybrid query latency | **Model-bound** | Warm `nomic-embed-text:v1.5` query ~150 ms; hybrid p95 235 ms. FTS-only fallback is 2 ms. |
+| Hybrid query latency | **Model-bound** | Warm `nomic-embed-text:v1.5` query ~150 ms; hybrid p95 **235–286 ms**. FTS-only fallback is 2 ms. |
 | Retrieval eval set | **Small (15 queries)** | In-repo regression set, P@5 100% vs 73% FTS. Grow it from real project tasks before claiming universal gains. |
-| AIME instinct cleanup | **Deferred to v0.1.4** | v0.1.3 does not delete AIME instincts; `npm run migrate:instincts` is dry-run by default. Revalidate/clean after AIME finishes on v0.1.2. |
-| RLM context envelope | **Not in v0.1.3** | Recursive decomposition and the Symphony Resonance Index are v0.1.4, behind flags. |
+| AIME instinct cleanup | **Audit done, apply pending** | 190 empirical: 187 AIME project-scoped, 1 fixture, 38 duplicates, 0 stale/global-AIME. `npm run instincts:audit` is read-only; quarantine/restore are byte-verified. Nothing moved before the AIME v0.1.3 test. |
+| Resonance quick circuits | **0 real today** | 8,235 rows → 609 signatures. The first backfill's 31 hits were hop ids, and 3 were fixtures; the vocabulary rejects both. The mechanism is tested (12/13 = 0.867 fires); the new writer logs the hop prompt, so real repeats will earn the first one. |
+| Derived build promotion | **Evidence-gated, manual** | Derived loadouts are validated and cold; promotion needs 5+ samples at 80%+ coherence plus a human click. No automatic promotion. |
+| RLM context envelope | **Behind `OLYMPUS_RLM=1`** | Depth ≤2, ≤4 children, budget-capped; off is byte-identical to v0.1.3. Enable by default only after a real campaign eval in v0.1.5. |
+| Embedding cache | **Rebuilds cheap, first build heavy** | The cache skips unchanged text and the job no longer dies at the request timeout. The one-time local embedding cost (~16 min here) remains; it is 0 provider tokens. |
 
 ## Post-0.1.0 backlog (GitHub issues closed as deferred)
 
@@ -30,6 +34,15 @@
 - **#332** native Android/iOS home-screen widgets.
 - **#318** full decision ledger + cognitive protocol (partial in 0.1.0).
 - **#269** invoice reconciliation + per-model caps (partial in 0.1.0).
+
+## v0.1.4 backlog (new on 2026-11-27)
+
+- **Symphony Resonance Index** — implemented; 0 real quick circuits in the historical log.
+- **Build Compiler** — implemented; derived shelf + evidence-gated promotion.
+- **RLM envelope** — implemented behind `OLYMPUS_RLM=1`.
+- **Retrieval first-run** — embedding cache + background job + progress UI.
+- **AIME audit** — read-only done; quarantine apply after the AIME test.
+- **v0.1.2 regressions** — brain outline, strategy fallback, cost loader, god-detail guard.
 
 ## v0.1.3 backlog (new on 2026-11-27)
 

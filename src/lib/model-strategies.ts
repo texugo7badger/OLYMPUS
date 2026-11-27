@@ -235,9 +235,9 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
       'Frontier private models on OpenCode Zen (pay-as-you-go, no request caps). Apollo/Atlas/Dionysus on GPT 6.1 Sol, Hephaestus/Hermes/Artemis on Claude Sonnet 5.5 and Opus 5.5 (security), Athena on GPT 6 Sol, Persephone on Gemini 3.1 Pro, Prometheus on Grok 4.7, Callimachus on Claude Haiku 5.5.',
     plan: 'ZEN',
     tier: 'quality',
-    reasoningModel: 'glm-5.3',
+    reasoningModel: 'gpt-6.1-sol',
     codeModel: 'claude-sonnet-5',
-    terminalModel: 'opencode/glm-5.3',
+    terminalModel: 'opencode/gpt-6.1-sol',
     gods: {
       apollo:      'opencode/gpt-6.1-sol',
       atlas:       'opencode/gpt-6.1-sol',
@@ -281,9 +281,9 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
       'Full OLYMPUS on OpenCode Zen without runaway cost. Apollo on GPT 6.1 Sol, Atlas/Athena/Hermes on GPT 6 Luna, Hephaestus/Artemis on Claude Sonnet 5.5, Dionysus/Callimachus on Claude Haiku 5.5, Persephone on DeepSeek V4.1 Flash, Prometheus on Grok Build 0.1.',
     plan: 'ZEN',
     tier: 'balanced',
-    reasoningModel: 'glm-5.3',
+    reasoningModel: 'gpt-6.1-sol',
     codeModel: 'claude-sonnet-5',
-    terminalModel: 'opencode/glm-5.3',
+    terminalModel: 'opencode/gpt-6.1-sol',
     gods: {
       apollo:      'opencode/gpt-6.1-sol',
       atlas:       'opencode/gpt-6-luna',
@@ -312,9 +312,9 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
       'Lowest cost on OpenCode Zen. Apollo/Atlas on GPT 6 Luna, the volume gods on DeepSeek V4.1 Flash and GLM-5.3-Flash, Callimachus on Claude Haiku 5.5.',
     plan: 'ZEN',
     tier: 'budget',
-    reasoningModel: 'glm-5.3',
+    reasoningModel: 'gpt-6-luna',
     codeModel: 'glm-5.3-flash',
-    terminalModel: 'opencode/glm-5.3',
+    terminalModel: 'opencode/gpt-6-luna',
     gods: {
       apollo:      'opencode/gpt-6-luna',
       atlas:       'opencode/gpt-6-luna',
@@ -387,6 +387,35 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   // Paid plans: `go-*`, `zen-*`. Any other provider: custom-* via the Strategy Builder.
 
 };
+
+/** The UI shape for one strategy card — ONE source of truth for the panel's
+ *  fallback and the API. Never hand-write a strategy description in a
+ *  component: the offline card must say exactly what the canonical config
+ *  says (the v0.1.2 GLM-5.3 fallback bug). */
+export interface StrategyEntry {
+  id: string;
+  label: string;
+  description: string;
+  plan: LLMStrategyConfig['plan'];
+  tier: LLMStrategyTier;
+  terminalModel: string;
+  estCostPerDay: LLMStrategyConfig['estCostPerDay'];
+}
+
+export function strategyEntries(): StrategyEntry[] {
+  return (Object.keys(LLM_STRATEGIES) as Array<keyof typeof LLM_STRATEGIES>).map((id) => {
+    const cfg = LLM_STRATEGIES[id];
+    return {
+      id,
+      label: cfg.label,
+      description: cfg.description,
+      plan: cfg.plan,
+      tier: cfg.tier,
+      terminalModel: cfg.terminalModel,
+      estCostPerDay: cfg.estCostPerDay,
+    };
+  });
+}
 
 /**
  * The Free Hybrid sources, strongest first. A source is available when the

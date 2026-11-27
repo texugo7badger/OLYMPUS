@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Check, ChevronLeft, Flame, Gem, Loader2, Lock, Search, Share2, Snowflake, Sparkles, Sun, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { buildPrompt, buildReadiness, describeBuild, type DesignBuildWithStats } from '@/lib/design-builds';
+import { buildPrompt, buildReadiness, describeBuild, type DesignBuild, type DesignBuildWithStats } from '@/lib/design-builds';
 import { BUILD_CATEGORIES } from '@/lib/build-categories';
 import BuildTalentPage from './build-talent-page';
 import BuildCrystal from './build-crystal';
@@ -50,6 +50,11 @@ const TUTORIAL_STEPS = [
 
 export default function DesignBuildsPanel() {
   const [builds, setBuilds] = useState<DesignBuildWithStats[]>([]);
+  // v0.1.4 — provisional loadouts compiled at dispatch. They are NOT part of
+  // the curated catalog until a human promotes them with evidence.
+  const [derived, setDerived] = useState<DesignBuild[]>([]);
+  const [promoting, setPromoting] = useState<string | null>(null);
+  const [promoteNote, setPromoteNote] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -68,7 +73,7 @@ export default function DesignBuildsPanel() {
     try {
       const r = await fetch(`/api/olympus/design-builds${matrix ? '?matrix=1' : ''}`, { cache: 'no-store' });
       const d = await r.json();
-      if (d?.ok) { setBuilds(d.builds ?? []); setError(null); }
+      if (d?.ok) { setBuilds(d.builds ?? []); setDerived(Array.isArray(d.derived) ? d.derived : []); setError(null); }
       else setError(d?.error ?? 'failed to load builds');
     } catch (e: any) { setError(e?.message || 'failed to load builds'); }
     finally { setLoading(false); }
@@ -120,6 +125,25 @@ export default function DesignBuildsPanel() {
     warm: builds.filter((b) => b.stats.tier === 'warm').length,
     cold: builds.filter((b) => b.stats.tier === 'cold').length,
   }), [builds]);
+
+  const promoteDerived = useCallback(async (id: string) => {
+    setPromoting(id);
+    setPromoteNote(null);
+    try {
+      const r = await fetch('/api/olympus/design-builds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'promote', id }),
+      });
+      const d = await r.json();
+      setPromoteNote(d?.ok ? `promoted ${d.build?.name ?? id}` : (d?.reason || d?.error || 'promotion refused'));
+      if (d?.ok) await load();
+    } catch (e: any) {
+      setPromoteNote(e?.message || 'promotion failed');
+    } finally {
+      setPromoting(null);
+    }
+  }, [load]);
 
   const share = useCallback(async (build: DesignBuildWithStats) => {
     try {
@@ -179,6 +203,44 @@ export default function DesignBuildsPanel() {
       </div>
 
       {error && <p className="text-[9px] font-mono text-olympus-red mb-2">{error}</p>}
+
+      {/* v0.1.4 — the dynamic edge. Every reference was validated at compile
+          time; promotion needs resonance evidence and a human click. */}
+      {derived.length > 0 && (
+        <section className="mb-3 rounded-lg border border-olympus-purple/25 bg-olympus-purple/5 p-2" data-testid="derived-builds">
+          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+            <span className="text-[9px] font-mono uppercase tracking-wide text-olympus-purple">derived</span>
+            <span className="text-[8px] font-mono text-olympus-text-dim">{derived.length} provisional</span>
+            <span className="ml-auto text-[8px] font-mono text-olympus-text-dim" data-tip="Compiled from the hop's declared arsenal and validated against the on-disk registry. No evidence yet — promotion requires 5+ verified samples and 80%+ coherence.">validated at dispatch · no evidence yet</span>
+          </div>
+          <div className="grid gap-1.5 md:grid-cols-2 xl:grid-cols-3">
+            {derived.slice(0, 9).map((d) => (
+              <div key={d.id} className="rounded border border-olympus-purple/20 bg-olympus-panel/60 p-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-[10px] font-mono font-semibold text-olympus-text truncate">{d.name}</span>
+                  <span className="ml-auto shrink-0 rounded border border-olympus-purple/30 px-1 py-0.5 text-[7px] font-mono uppercase text-olympus-purple">derived</span>
+                </div>
+                <div className="mt-0.5 text-[8px] font-mono text-olympus-text-dim">
+                  {d.god} · {d.skills.length} skill{d.skills.length === 1 ? '' : 's'} · {d.mcps.length} MCP{d.mcps.length === 1 ? '' : 's'} · {d.demigods.length} agent{d.demigods.length === 1 ? '' : 's'}
+                </div>
+                <div className="text-[8px] font-mono text-olympus-text-dim/85 truncate" data-tip={d.verify.join('\n')}>checks: {d.verify.join(', ')}</div>
+                {!!d.derivedFrom?.rejected?.length && (
+                  <div className="text-[8px] font-mono text-olympus-gold/80" data-tip={d.derivedFrom.rejected.join('\n')}>{d.derivedFrom.rejected.length} reference(s) dropped</div>
+                )}
+                <button
+                  type="button"
+                  disabled={promoting === d.id}
+                  onClick={() => void promoteDerived(d.id)}
+                  className="mt-1 w-full rounded border border-olympus-purple/30 bg-olympus-purple/10 px-1.5 py-0.5 text-[8px] font-mono text-olympus-purple hover:bg-olympus-purple/20 disabled:opacity-40"
+                >
+                  {promoting === d.id ? 'checking evidence…' : 'promote with evidence'}
+                </button>
+              </div>
+            ))}
+          </div>
+          {promoteNote && <p className="mt-1.5 text-[8px] font-mono text-olympus-text-dim">{promoteNote}</p>}
+        </section>
+      )}
 
       <div className="space-y-3">
         {grouped.map(([category, list]) => (

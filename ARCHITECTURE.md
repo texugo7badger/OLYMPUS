@@ -163,6 +163,46 @@ Build the index: `node scripts/build-skill-index.js`
 
 ---
 
+
+## Resonance Index (v0.1.4)
+
+`src/lib/symphony/resonance-index.ts` pre-aggregates the append-only
+`03_Index/arsenal-resonance.jsonl` into `~/.olympus/resonance.db`. Each row is
+a `(god, task signature)` with successes, failures, Laplace coherence and the
+proven arsenal. A query computes the task signature, compares it with Jaccard
+similarity (≥ 0.4) and returns hints; a quick circuit fires only with 3+
+samples and 0.85+ coherence. Hop ids and certification fixtures are rejected
+by the signature vocabulary, so the index cannot invent a shortcut. The
+`arsenalResonanceByGod` aggregate remains the God Detail read side.
+
+## Build Compiler (v0.1.4)
+
+`src/lib/build-compiler.ts` is the dynamic edge of the curated Build Hub. A
+hop that matches no seed/user build gets a **derived** loadout: skills resolve
+against `.opencode/skills`, MCPs against `opencode.json`, demigods against the
+leading god's prompt tree; limits are 3/3/5 and one executable gate is
+required. Derived builds are cold, recorded in `derived-builds.jsonl`, and
+shown in a separate Build Hub shelf. Promotion to the user catalog requires 5+
+samples at 0.80+ resonance coherence plus a human click. The hop prompt now
+carries the build's real tier, not a zero-sample placeholder.
+
+## RLM envelope (v0.1.4)
+
+`src/lib/rlm/envelope.ts` maps recursive context to the existing hop DAG:
+depth ≤ 2, ≤ 4 children per parent, child budgets ≤ parent, cycles rejected at
+plan time. `DispatchPlan.rlm` carries the goal and budget; `PlanHop.rlmParent`
+and `rlmDepth` place a hop in the tree. With `OLYMPUS_RLM=1`, the child prompt
+receives the goal, its parent's artifact paths and its slice — never the whole
+campaign. Off is byte-identical to v0.1.3.
+
+## Retrieval jobs (v0.1.4)
+
+`src/lib/retrieval/jobs.ts` runs the index build outside the request: a `core`
+pass (skills + knowledge), then `all` (instincts, patterns, cached docs).
+`GET /api/olympus/retrieval/reindex` exposes phase/progress/cache hits; a
+content-addressed embedding cache makes rebuilds cheap. See
+[RETRIEVAL.md](RETRIEVAL.md).
+
 ## Retrieval Bus (v0.1.3)
 
 The foundation release adds a local hybrid index at `~/.olympus/retrieval.db`:

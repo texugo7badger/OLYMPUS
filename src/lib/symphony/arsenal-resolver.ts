@@ -39,6 +39,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getVaultRoot } from '../vault-root.js';
 import { normalizeOutcome } from '../learning/outcome';
+import { computeTaskSignature } from './resonance-signature';
+import { queryResonance } from './resonance-index';
+
+export { computeTaskSignature } from './resonance-signature';
 
 const VAULT_ROOT = getVaultRoot();
 const ARSENAL_LOG = path.join(VAULT_ROOT, '03_Index', 'arsenal-resonance.jsonl');
@@ -68,20 +72,6 @@ interface ArsenalLogEntry {
   mcp: string | null;
   demigod: string | null;
   outcome: string;
-}
-
-/**
- * Compute a task signature — a normalized key for matching past dispatches.
- * Lowercases, strips non-alphanumeric, takes first 64 chars.
- */
-export function computeTaskSignature(task: string): string {
-  return task.toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 12) // first 12 words
-    .join(' ')
-    .slice(0, 64);
 }
 
 /**
@@ -128,6 +118,21 @@ function jaccardSimilarity(a: string, b: string): number {
  */
 export function arsenalRecon(task: string, god: string): ArsenalReconResult {
   const taskSig = computeTaskSignature(task);
+  // v0.1.4 — the pre-aggregated index is the fast path. It returns null when
+  // the DB is absent/empty or no signature clears the 0.4 Jaccard floor, so
+  // the log scan below remains the honest fallback.
+  const indexed = queryResonance({ task, god });
+  if (indexed) {
+    return {
+      taskSignature: taskSig,
+      god,
+      suggestedSkills: indexed.suggestedSkills,
+      suggestedMcps: indexed.suggestedMcps,
+      suggestedDemigods: indexed.suggestedDemigods,
+      quickCircuit: indexed.quickCircuit,
+      coherence: indexed.coherence,
+    };
+  }
   const log = readArsenalLog();
 
   // Filter to entries for this god (or 'all') with similarity >= 0.4

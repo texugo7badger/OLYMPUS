@@ -69,4 +69,8 @@ export interface IndexProgress {
   errors: number;
   current: string;
   paused: boolean;
+  /** v0.1.4 — embeddings served from the content-addressed cache. */
+  cacheHits: number;
+  /** v0.1.4 — 'core' = skills + knowledge first; 'all' = the full corpus. */
+  scope: 'all' | 'core';
 }
