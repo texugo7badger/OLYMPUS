@@ -23,8 +23,9 @@ All notable changes to OLYMPUS are documented in this file.
   the patch notes move to 0.1.5. `public/stable.json` stays at 0.1.2 until the
   AIME test and the explicit stable promotion.
 - **Gates.** 8/8 hygiene, 66/66 suites, v0.1.5 UI gate, `build:app`.
-- **Not published as stable.** v0.1.4 is the test candidate; v0.1.5 waits for
-  the AIME test and the user's approval.
+- **Not published as stable.** v0.1.5 is the dev test candidate; v0.1.4
+  remains a prerelease. Stable promotion waits for the AIME test and the
+  user's approval.
 
 ## [v0.1.4] — 2026-11-27
 

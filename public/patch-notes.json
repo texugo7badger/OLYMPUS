@@ -20,7 +20,7 @@
         "Dependency pruning: nine unused devDependencies (CodeMirror, xterm, Radix tooltip) removed; npm pruned 34 packages. The runtime and build remain unchanged.",
         "Documentation truth pass: README go-balanced roster corrected (Athena/Hermes/Dionysus/Prometheus), AGENTS.md now says v0.1.5 with 10 gods + 61 live demigods, 39 tools, 1,032 retrieval chunks and 609 resonance signatures, and the strategy comments no longer claim GLM-5.3 is Apollo.",
         "Testing page corrected: 35 public suites and 66 total, including the v0.1.4 resonance, derived-build, RLM, embedding-cache and instinct-quarantine suites.",
-        "Gates: 8/8 hygiene, 66/66 suites, v0.1.5 UI gate, build:app. v0.1.2 remains the stable release; v0.1.4 is the test candidate."
+        "Gates: 8/8 hygiene, 66/66 suites, v0.1.5 UI gate, build:app. v0.1.2 remains the stable release; v0.1.5 is the dev test candidate (v0.1.4 remains a prerelease)."
       ]
     },
     {

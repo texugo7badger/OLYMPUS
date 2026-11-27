@@ -98,7 +98,7 @@ truth (10 gods + 61 live demigods, 39 tools, 1,032 retrieval chunks, 609
 resonance signatures) and the strategy comments no longer claim GLM-5.3 is
 Apollo.
 
-**v0.1.4 is the test candidate.** It delivered the Symphony Resonance Index
+**v0.1.4 remains the previous prerelease.** It delivered the Symphony Resonance Index
 (8,235 outcomes → 609 signatures; the honest real quick-circuit count is 0
 because hop ids and fixtures are rejected), validated **derived builds** with
 evidence-gated promotion, a depth-2 **RLM envelope** behind `OLYMPUS_RLM=1`,
