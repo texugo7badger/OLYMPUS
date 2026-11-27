@@ -432,13 +432,18 @@ export default function BrainAtlas3D() {
     if (!r || !startedRef.current) return;
     try {
       if (dragging) {
-        // A drag must feel direct. Text labels and particles are the first
-        // things to go; the geometry and the edges stay.
-        r.setEnabledPassesForTest(new Set(['background', 'edges', 'nodes']));
+        // v0.1.5 — a drag keeps the brain readable: cloud, edges, nodes and
+        // labels stay; only the ambient haze/signals go. The old drag set
+        // dropped the cloud too, so the brain "disappeared" on interaction.
+        r.setEnabledPassesForTest(new Set(['background', 'cloud', 'edges', 'nodes', 'labels']));
       } else if (preset === 'smooth') {
-        r.setEnabledPassesForTest(new Set(['background', 'haze', 'cloud', 'edges', 'nodes', 'signals', 'labels']));
+        r.setEnabledPassesForTest(new Set(['background', 'haze', 'cloud', 'edges', 'nodes', 'signals', 'labels', 'compass']));
+      } else if (preset === 'balanced') {
+        // Balanced keeps the full silhouette; signals are the only pass lost.
+        r.setEnabledPassesForTest(new Set(['background', 'haze', 'cloud', 'edges', 'nodes', 'labels', 'compass']));
       } else {
-        r.setEnabledPassesForTest(new Set(['background', 'edges', 'nodes']));
+        // Battery saver / mobile: the cloud + geometry stay; haze/signals go.
+        r.setEnabledPassesForTest(new Set(['background', 'cloud', 'edges', 'nodes']));
       }
     } catch { /* a renderer without the seam keeps all passes */ }
     try {
@@ -702,12 +707,18 @@ export default function BrainAtlas3D() {
       applyQuality(perfPreset, false);
     };
     canvas.addEventListener('pointerdown', down);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
+    // CAPTURE phase: the GL renderer calls stopPropagation() on the canvas
+    // pointerup, so a bubble listener on window never ran — the drag-lean
+    // state (no cloud) stuck after every interaction. Capture runs before the
+    // target's bubble handler. blur is the safety net if the pointer leaves.
+    window.addEventListener('pointerup', up, true);
+    window.addEventListener('pointercancel', up, true);
+    window.addEventListener('blur', up);
     return () => {
       canvas.removeEventListener('pointerdown', down);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('pointerup', up, true);
+      window.removeEventListener('pointercancel', up, true);
+      window.removeEventListener('blur', up);
     };
   }, [perfPreset]);
 
