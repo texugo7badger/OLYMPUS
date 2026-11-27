@@ -162,7 +162,10 @@ async function main() {
 
     // Callimachus: live card, honest census, budget line.
     await clickLabel('God intelligence');
-    const curatorReady = await waitFor(`document.body.innerText.includes('Callimachus · VaultBrain maintenance') || Boolean(document.querySelector('[data-testid="callimachus-live"]'))`, 45_000);
+    // Wait for the pane's main return first (the retrieval card), then the
+    // curator card. A cold brain-stats read can exceed the old 45s window.
+    await waitFor(`Boolean(document.querySelector('[data-testid="retrieval-status"]'))`, 60_000);
+    const curatorReady = await waitFor(`document.body.innerText.includes('Callimachus · VaultBrain maintenance') || Boolean(document.querySelector('[data-testid="callimachus-live"]'))`, 60_000);
     const curator = await evaluate(`(() => {
       const card = document.querySelector('[data-testid="callimachus-live"]');
       return { ready: Boolean(card), text: card ? card.innerText : '' };
