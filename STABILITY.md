@@ -2,7 +2,7 @@
 
 ![Stability](public/diagrams/stability.svg)
 
-> v0.1.1 · 2026-11-26 · the current stable release. Fluidity: one Apollo terminal (parallel god chats deleted), a clean Parthenon, loop-blocked Continue → Apollo replan with Atlas evidence, hibernate keeps a live campaign server, the brain shows ≤120 high-confidence quick circuits, and OpenCode 2.4.2 is gate-approved. v0.1.0 closed
+> v0.1.2 · 2026-11-26 · the current stable release. Performance and truth: the atlas pauses when idle (render on demand), lean mode keeps the 60 FPS target by dropping expensive passes, the Pantheon measures 60 FPS p50/p95 in the software window, Craft and References are separate menus, native tools are detected, and Callimachus only promotes cross-project evidence (0 invented quick circuits). v0.1.1 was fluidity: one Apollo terminal, a clean Parthenon, Continue → Apollo replan with Atlas evidence, hibernate keeping a live campaign. v0.1.0 closed
 > the long-campaign truth gaps (GO lane probes + fallback, generation boundary,
 > empirical learning, Apollo's disk-truth brief, preview window, batched marks,
 > boot handshake, cost/burn keep-last, design provenance, deduped

@@ -1,0 +1,171 @@
+{
+  "label": "v012-final-attach2",
+  "measuredAt": "2026-11-26T21:13:56.189Z",
+  "environment": {
+    "kind": "electron-gpu-window",
+    "url": "http://127.0.0.1:3737/",
+    "platform": "linux",
+    "arch": "x64",
+    "display": ":0",
+    "wayland": "wayland-0"
+  },
+  "results": [
+    {
+      "surface": "pantheon (brain + terminal)",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 13,
+        "totalMB": 19
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "pantheon (atlas drag)",
+      "samples": [
+        32,
+        33,
+        30
+      ],
+      "p50": 32,
+      "p95": 33,
+      "avg": 32,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "gpu": "drag",
+      "hardware": null
+    },
+    {
+      "surface": "god intelligence",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 28,
+        "totalMB": 42
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "cost",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 16,
+        "totalMB": 39
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "craft",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 13,
+        "totalMB": 18
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "references",
+      "samples": [
+        60,
+        60,
+        59,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 13,
+        "totalMB": 19
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "preview",
+      "samples": [
+        46,
+        46,
+        59
+      ],
+      "p50": 46,
+      "p95": 59,
+      "avg": 50,
+      "longTasks": [
+        130,
+        60
+      ],
+      "longestTaskMs": 130,
+      "memory": {
+        "usedMB": 21,
+        "totalMB": 39
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "logs",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 17,
+        "totalMB": 26
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    }
+  ]
+}

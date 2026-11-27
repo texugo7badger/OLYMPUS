@@ -1,6 +1,6 @@
 # OLYMPUS Architecture
 
-> OLYMPUS v0.1.0 — multi-agent AI operating system on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 61 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
+> OLYMPUS v0.1.2 — multi-agent AI workspace on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 61 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
 >
 > Counts in this document are the v0.1.0 truth: 71 agents (10 gods incl. Atlas + 61 demigods), 332 top-level skills, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
 
@@ -8,7 +8,7 @@
 
 ## Overview
 
-OLYMPUS is a multi-agent AI operating system built on OpenCode. It runs as a standalone Electron desktop app with a built-in terminal (shared live with your IDE via the Terminal Bridge), an Editor Bridge launchpad (replaces the built-in Monaco editor — see [EDITORS.md](EDITORS.md)), and a 3D brain atlas that visualizes the entire agent fleet.
+OLYMPUS is a multi-agent AI workspace built on OpenCode. It runs as a standalone Electron desktop app with a built-in terminal (shared live with your IDE via the Terminal Bridge), an Editor Bridge launchpad (replaces the built-in Monaco editor — see [EDITORS.md](EDITORS.md)), and a 3D brain atlas that visualizes the entire agent fleet.
 
 ```
 ┌─────────────────────────────────────────────────────────┐

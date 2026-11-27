@@ -15,6 +15,13 @@ import { requireReadAuth } from '@/lib/auth';
 import { NO_CACHE_HEADERS } from '@/app/api/olympus/_lib/no-cache';
 import { getVaultRoot } from '@/lib/vault-root';
 import { withTtl } from '@/lib/ttl-cache';
+import {
+  censusInstincts,
+  listQuickCircuits,
+  readCurationState,
+  readBudgetState,
+  CURATION_INTERVAL_MS,
+} from '@/lib/callimachus-loop';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,30 +44,9 @@ function instinctCounts(god: string): { seed: number; empirical: number; archive
   return { seed, empirical, archived, total: seed + empirical + archived };
 }
 
-/** v0.1.1 — the live census the God Intelligence card reads. */
-function instinctCensus() {
-  const root = path.join(getVaultRoot(), '05_Auto_Learning', 'instincts');
-  const out = { quickCircuits: 0, technical: 0, project: 0, total: 0 };
-  let gods: fs.Dirent[] = [];
-  try { gods = fs.readdirSync(root, { withFileTypes: true }); } catch { return out; }
-  for (const god of gods) {
-    if (!god.isDirectory()) continue;
-    for (const tier of ['seed', 'empirical']) {
-      const dir = path.join(root, god.name, tier);
-      let files: string[] = [];
-      try { files = fs.readdirSync(dir).filter((f) => f.endsWith('.md')); } catch { continue; }
-      for (const file of files) {
-        let text = '';
-        try { text = fs.readFileSync(path.join(dir, file), 'utf-8').slice(0, 2000); } catch { continue; }
-        out.total++;
-        if (/^quick_circuit:\s*true\s*$/m.test(text) || (/^confidence:\s*0\.8[5-9]/m.test(text) && /^samples:\s*[2-9]/m.test(text))) out.quickCircuits++;
-        if (/^kind:\s*project\s*$/m.test(text) || /^scope:\s*project\s*$/m.test(text)) out.project++;
-        else out.technical++;
-      }
-    }
-  }
-  return out;
-}
+/* The census lives in callimachus-loop.ts so every surface reads the SAME
+ * definition: a quick circuit is `quick_circuit: true`, never a confidence
+ * heuristic (v0.1.2 removed the 33 synthetic "quick circuits"). */
 
 export async function GET(req: NextRequest) {
   const denied = requireReadAuth(req);
@@ -79,23 +65,39 @@ export async function GET(req: NextRequest) {
         if (typeof last?.at === 'string') lastRunAt = last.at;
       } catch { /* never run in this home */ }
     }
-    const last = lastRunAt ? Date.parse(lastRunAt) : null;
-    const nextRegularAt = last ? new Date(last + 5 * 60_000).toISOString() : null;
+    const curation = readCurationState();
+    const budget = readBudgetState();
+    const anchor = curation?.at ?? lastRunAt;
+    const last = anchor ? Date.parse(anchor) : null;
+    const nextRegularAt = last ? new Date(last + CURATION_INTERVAL_MS).toISOString() : null;
     const nextDeepAt = last ? new Date(last + 24 * 3600_000).toISOString() : null;
     const knowledge = countMd(path.join(getVaultRoot(), '04_Knowledge', 'references', 'vault'))
       + countMd(path.join(getVaultRoot(), '04_Knowledge', 'references', 'brain'));
     return {
       ok: true,
       lastRunAt,
+      lastCurationAt: curation?.at ?? null,
       lockAgeMs,
       nextRegularAt,
       nextDeepAt,
-      regularCooldownMs: 5 * 60_000,
+      regularCooldownMs: CURATION_INTERVAL_MS,
       deepCooldownMs: 24 * 3600_000,
+      cadenceMs: CURATION_INTERVAL_MS,
       instincts: instinctCounts('callimachus'),
       knowledgeDocs: knowledge,
       active: lockAgeMs != null && lockAgeMs < 5 * 60_000,
-      census: instinctCensus(),
+      census: censusInstincts(),
+      quickCircuitList: listQuickCircuits(8),
+      curation: curation?.result ?? null,
+      budget,
+      loop: {
+        enabled: process.env.OLYMPUS_CALLIMACHUS_LOOP !== '0',
+        deterministicEveryMs: CURATION_INTERVAL_MS,
+        modelMaxPerHour: budget.maxPerHour,
+        modelTokenTarget: budget.tokenTarget,
+        modelPassesLastHour: budget.modelPasses.length,
+        nextModelAt: budget.nextModelPassAt,
+      },
     };
   }, { ttlMs: 10_000 });
   return NextResponse.json(body, { headers: NO_CACHE_HEADERS });

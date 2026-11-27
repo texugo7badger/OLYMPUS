@@ -48,9 +48,12 @@ export default function ReferencePreview({
       setActive(true);
       return;
     }
+    // v0.1.2 — 200px, not 600px: a 2-column card grid could mount ~20
+    // canvases at once, and the references pane fell to p50 54 FPS. The
+    // preview still starts just before the card scrolls in.
     const io = new IntersectionObserver((entries) => {
       setActive(entries.some((e) => e.isIntersecting));
-    }, { rootMargin: '600px' });
+    }, { rootMargin: '200px' });
     io.observe(el);
     return () => io.disconnect();
   }, []);

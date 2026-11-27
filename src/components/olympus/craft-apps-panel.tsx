@@ -85,7 +85,7 @@ type PaneTab = 'apps' | 'references';
 interface UiRef {
   id: string;
   name: string;
-  library: 'originkit' | 'skiper' | 'magicui';
+  library: 'originkit' | 'skiper' | 'magicui' | 'aceternity' | 'reactbits' | 'motionprimitives' | 'kokonut';
   category: string;
   what: string;
   demoUrl: string;
@@ -94,7 +94,7 @@ interface UiRef {
   probe: { ok: boolean; frameable: boolean; inconclusive?: boolean; httpStatus: number | null };
 }
 
-export default function CraftAppsPanel({ initialApp }: { initialApp?: string | null }) {
+export default function CraftAppsPanel({ initialApp, initialTab }: { initialApp?: string | null; initialTab?: PaneTab }) {
   const language = useLanguage();
   const [apps, setApps] = useState<CraftApp[]>([]);
   const [studio, setStudio] = useState<CraftApp | null>(null);
@@ -102,7 +102,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   const [vendor, setVendor] = useState<Record<string, VendorStatus>>({});
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>({ kind: 'grid' });
-  const [tab, setTab] = useState<PaneTab>('apps');
+  const [tab, setTab] = useState<PaneTab>(initialTab ?? 'apps');
   const [jobs, setJobs] = useState<Record<string, VendorJob>>({});
   const [uiRefs, setUiRefs] = useState<UiRef[]>([]);
   const [refSearch, setRefSearch] = useState('');
@@ -121,6 +121,8 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   // v0.0.43 — DESIGN MEMORY: named references the user chose to keep.
   const activeProject = useOlympus((s) => s.activeProject);
   const projectSlug = activeProject?.slug ?? 'project';
+  const [nativeTools, setNativeTools] = useState<Array<{ id: string; name: string; installed: boolean; kind: string; note: string }>>([]);
+  const [nativeBusy, setNativeBusy] = useState<string | null>(null);
   const [memory, setMemory] = useState<Array<{ id: string; name: string; library: string; note: string; savedAt: string }>>([]);
   const [memoryOnly, setMemoryOnly] = useState(false);
   const memoryIds = new Set(memory.map((m) => m.id));
@@ -144,6 +146,16 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // v0.1.2 — detect the external tools once per project; no install side effects.
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/olympus/native-tools?slug=${encodeURIComponent(projectSlug)}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (live && d?.ok) setNativeTools(Array.isArray(d.tools) ? d.tools : []); })
+      .catch(() => { /* the hub still works without native tools */ });
+    return () => { live = false; };
+  }, [projectSlug]);
 
   // W-J: the references loader (the tab's first paint + the search debounces).
   const loadRefs = useCallback(async (q: string) => {
@@ -392,7 +404,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
     // reference into the prompt input, where the user can edit and send.
     try {
       window.dispatchEvent(new CustomEvent('olympus:reference-use', { detail: reference }));
-      toast.success('reference staged in the prompt');
+      toast.success('reference staged — tell Apollo how you want to use it');
     } catch { /* clipboard/composer best effort */ }
   };
   const queueReference = useCallback(async (r: UiRef) => {
@@ -445,13 +457,15 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
     <div className="w-full h-full flex flex-col bg-olympus-bg">
       {/* Header */}
       <div className="h-9 shrink-0 flex items-center gap-2 px-3 border-b border-olympus-gold/10 bg-olympus-panel">
-        <Boxes size={13} className="text-olympus-gold" />
-        <span className="text-[11px] font-mono font-semibold text-olympus-gold">Craft</span>
-        {/* W-J: the tab bar — Apps | References */}
+        {tab === 'references' ? <Lightbulb size={13} className="text-olympus-gold" /> : <Boxes size={13} className="text-olympus-gold" />}
+        <span className="text-[11px] font-mono font-semibold text-olympus-gold">{tab === 'references' ? 'References' : 'Craft'}</span>
+        {/* W-J: the tab bar — hidden when the pane is dedicated to one surface. */}
+        {!initialTab && (
         <div className="flex items-center gap-0.5">
           <button onClick={() => { setTab('apps'); setRefView(null); }} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'apps' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><LayoutGrid size={10} /> apps</button>
           <button onClick={() => setTab('references')} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'references' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><Lightbulb size={10} /> references</button>
         </div>
+        )}
         <div className="ml-auto flex items-center gap-1.5">
           {view.kind !== 'grid' && (
             <button onClick={() => setView({ kind: 'grid' })} className="flex items-center gap-1 text-[10px] font-mono text-olympus-text-dim hover:text-olympus-gold px-1.5 py-1 rounded hover:bg-olympus-gold/10">
@@ -463,6 +477,33 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
           </button>
         </div>
       </div>
+
+      {tab === 'apps' && nativeTools.length > 0 && (
+        <div className="shrink-0 flex items-center gap-1.5 overflow-x-auto border-b border-olympus-gold/10 bg-olympus-panel/50 px-3 py-1 text-[8px] font-mono">
+          <span className="shrink-0 uppercase tracking-wide text-olympus-text-dim">native</span>
+          {nativeTools.map((tool) => (
+            <button
+              key={tool.id}
+              type="button"
+              disabled={!tool.installed || nativeBusy === tool.id}
+              data-tip={tool.installed ? `Open ${tool.name} in the project folder — ${tool.note}` : `${tool.name} is not installed`}
+              onClick={async () => {
+                setNativeBusy(tool.id);
+                try {
+                  const r = await fetch('/api/olympus/native-tools', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: tool.id, slug: projectSlug }) });
+                  const d = await r.json().catch(() => ({}));
+                  if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
+                  toast.success(`${tool.name} opened`, { description: `cwd: ${activeProject?.path || 'project'}` });
+                } catch (e: any) { toast.error(`${tool.name} did not open`, { description: e?.message || String(e) }); }
+                setNativeBusy(null);
+              }}
+              className={cn('shrink-0 rounded border px-1.5 py-0.5', tool.installed ? 'border-olympus-cyan/30 text-olympus-cyan hover:bg-olympus-cyan/10' : 'border-olympus-gold/10 text-olympus-text-dim/50')}
+            >
+              {tool.name}{tool.installed ? ' ↗' : ' —'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Body */}
       <div className="flex-1 min-h-0 relative">
@@ -516,7 +557,7 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   ))}
                   <span className="text-[8px] font-mono text-olympus-text-dim hidden md:inline">· interactive — move the pointer</span>
                   <button onClick={() => void critiqueReference(refView)} className="ml-auto flex items-center gap-1 text-[9px] font-mono px-2 py-1 rounded bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20"><MessageSquare size={9} /> {t('references.critique', language)}</button>
-                  <button onClick={() => applyReference(refView)} data-tip="Stage this reference in the terminal/creative prompt" className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
+                  <button onClick={() => applyReference(refView)} data-action="reference-use" data-tip="Stage this reference in the terminal/creative prompt" className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
                   <button onClick={() => void queueReference(refView)} data-tip="Queue for the terminal · ⌘/Ctrl+Enter" className="text-[9px] font-mono px-2.5 py-1 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">{t('common.queue', language)}</button>
                 </div>
               </div>
@@ -531,13 +572,13 @@ export default function CraftAppsPanel({ initialApp }: { initialApp?: string | n
                   />
                   <div className="flex items-center gap-1 mt-1.5">
                     <span className="text-[8px] font-mono uppercase tracking-wide text-olympus-text-dim">library</span>
-                    {['all', 'originkit', 'skiper', 'magicui', 'aceternity'].map((lib) => (
+                    {['all', 'originkit', 'skiper', 'magicui', 'aceternity', 'reactbits', 'motionprimitives', 'kokonut'].map((lib) => (
                       <button
                         key={lib}
                         onClick={() => setRefLib(lib)}
                         className={cn('text-[8px] font-mono px-1.5 py-0.5 rounded-full border uppercase tracking-wide transition-colors', refLib === lib ? 'border-olympus-cyan/50 bg-olympus-cyan/10 text-olympus-cyan' : 'border-olympus-gold/10 text-olympus-text-dim hover:text-olympus-text')}
                       >
-                        {lib === 'all' ? 'all' : lib === 'originkit' ? 'OriginKit' : lib === 'skiper' ? 'Skiper' : lib === 'magicui' ? 'Magic UI' : 'Aceternity'}
+                        {lib === 'all' ? 'all' : lib === 'originkit' ? 'OriginKit' : lib === 'skiper' ? 'Skiper' : lib === 'magicui' ? 'Magic UI' : lib === 'aceternity' ? 'Aceternity' : lib === 'reactbits' ? 'ReactBits' : lib === 'motionprimitives' ? 'Motion Primitives' : 'Kokonut'}
                       </button>
                     ))}
                     <button
@@ -906,7 +947,7 @@ function ReferenceCard({
         ))}
       </div>
       <div className="flex items-center gap-1 px-3 pb-2 pt-1.5">
-        <button onClick={onUse} className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
+        <button onClick={onUse} data-action="reference-use" className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25">{t('common.use', language)}</button>
         <button onClick={onQueue} data-tip="Queue for the terminal" className="flex items-center gap-1 text-[10px] font-mono px-3 py-1.5 rounded bg-olympus-cyan/10 text-olympus-cyan ring-1 ring-olympus-cyan/25 hover:bg-olympus-cyan/20">{t('common.queue', language)}</button>
         <button onClick={onOpen} data-tip="Open the component details" aria-label={`Open ${reference.name} details`} className="ml-auto text-olympus-text-dim hover:text-olympus-gold p-1.5 rounded hover:bg-olympus-gold/10"><Maximize2 size={12} /></button>
       </div>

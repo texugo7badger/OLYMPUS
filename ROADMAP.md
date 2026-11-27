@@ -1,6 +1,8 @@
 # OLYMPUS Roadmap
 
-**v0.1.1 is the current stable release** (2026-11-26) — fluidity: one Apollo terminal (parallel god chats deleted), a clean Parthenon, loop-blocked Continue asks Apollo to replan with Atlas evidence, hibernate keeps a live campaign server, the brain shows at most 120 high-confidence quick circuits, and OpenCode 2.4.2 is vendored and gate-approved. `npm run hygiene -- --battery` runs 8 gates and 57 hermetic suites.
+**v0.1.2 is the current stable release** (2026-11-26) — performance and truth: the idle atlas pauses its frame loop (render on demand), lean mode drops the expensive passes, the Pantheon measures 60 FPS p50/p95 in the software window (no long tasks), Craft and References are separate menus, native tools are detected, References Use stages an editable question, and Callimachus runs a deterministic 15-minute pass with a 1/hour model budget that only spends on cross-project evidence. The fake 33 quick circuits are gone: 0 validated, 187 project-scoped, 55 technical. `npm run hygiene -- --battery` runs 8 gates and 57 hermetic suites.
+
+**v0.1.1 was fluidity** — one Apollo terminal, a clean Parthenon, loop-blocked Continue asks Apollo with Atlas evidence, hibernate keeps a live campaign server, and OpenCode 2.4.2 is gate-approved.
 
 **v0.1.0 was the stable launch** (2026-11-25) —
 GO lane truth (real 1-token probes; dead qwen/minimax lanes fail over to

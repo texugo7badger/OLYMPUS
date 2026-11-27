@@ -64,7 +64,7 @@ const THEME_BOOT_SCRIPT = `(function(){try{
 export const metadata: Metadata = {
   title: "OLYMPUS",
   description:
-    "10-god multi-agent operating system built on OpenCode. Cascading token compression, self-curating brain, 3D brain atlas, click-to-element bridge, unified workspace.",
+    "10-god multi-agent AI workspace built on OpenCode. Cascading token compression, self-curating brain, 3D brain atlas, click-to-element bridge, unified workspace.",
   keywords: [
     "OLYMPUS",
     "multi-agent",

@@ -308,14 +308,19 @@ export class BrainRenderer extends RenderCore {
     if (lightBg) alpha = Math.min(1, alpha * 1.55 + 0.22);
     if (alpha < 0.05) return;
 
-    const haloRadius = radius * (working ? 5.4 : 3.6) * graph.CHAOS.halo;
-    const halo = ctx.createRadialGradient(projected.sx, projected.sy, 0, projected.sx, projected.sy, haloRadius);
-    halo.addColorStop(0, hexA(workingColor, (working ? 0.6 : 0.32) * alpha * graph.CHAOS.bloom));
-    halo.addColorStop(1, hexA(workingColor, 0));
-    ctx.fillStyle = halo;
-    ctx.beginPath();
-    ctx.arc(projected.sx, projected.sy, haloRadius, 0, Math.PI * 2);
-    ctx.fill();
+    // v0.1.2 — a radial gradient per node per frame is the Canvas2D drag
+    // bottleneck (159 gradients × 60 FPS). While dragging, draw the core
+    // only; the halo returns on release.
+    if (!this.options.dragLean) {
+      const haloRadius = radius * (working ? 5.4 : 3.6) * graph.CHAOS.halo;
+      const halo = ctx.createRadialGradient(projected.sx, projected.sy, 0, projected.sx, projected.sy, haloRadius);
+      halo.addColorStop(0, hexA(workingColor, (working ? 0.6 : 0.32) * alpha * graph.CHAOS.bloom));
+      halo.addColorStop(1, hexA(workingColor, 0));
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(projected.sx, projected.sy, haloRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.fillStyle = hexA(node.color, Math.min(1, alpha * 0.93));
     ctx.beginPath();

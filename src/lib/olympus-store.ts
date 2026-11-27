@@ -207,7 +207,7 @@ interface OlympusStore {
   leftPane:
     | 'brain' | 'god-intelligence' | 'cost' | 'timeline' | 'provider-settings'
     | 'god-detail' | 'live-preview' | 'mcp-config' | 'benchmarks' | 'atelier'
-    | 'sync-map' | 'craft-apps' | 'logs';
+    | 'sync-map' | 'craft-apps' | 'references' | 'logs';
   setLeftPane: (p: OlympusStore['leftPane']) => void;
   /**
    * rightTab now includes 'ide' (Monaco editor + file explorer + terminal)

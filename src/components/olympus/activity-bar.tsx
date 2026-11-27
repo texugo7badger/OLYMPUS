@@ -5,7 +5,7 @@
 'use client';
 
 import { useOlympus, GOD_ICONS, GOD_IDS } from '@/lib/olympus-store';
-import { BarChart3, Brain, BrainCog, DollarSign, Eye, History, Network, Palette, Plug, Settings, SlidersHorizontal, Boxes, ScrollText } from 'lucide-react';
+import { BarChart3, Brain, BrainCog, DollarSign, Eye, History, Palette, Plug, Settings, SlidersHorizontal, Boxes, ScrollText, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /* ------------------------------------------------------------------ */
@@ -55,8 +55,8 @@ export default function ActivityBar() {
       <ActBtn icon={ScrollText} label="Logs" active={leftPane === 'logs'} onClick={() => setLeftPane('logs')} accent />
       <ActBtn icon={DollarSign} label="Cost" active={leftPane === 'cost'} onClick={() => setLeftPane('cost')} />
       <ActBtn icon={BarChart3} label="Benchmarks" active={leftPane === 'benchmarks'} onClick={() => setLeftPane('benchmarks')} />
-      <ActBtn icon={Network} label="Sync map" active={leftPane === 'sync-map'} onClick={() => setLeftPane('sync-map')} />
-      <ActBtn icon={Boxes} label="Craft apps" active={leftPane === 'craft-apps'} onClick={() => setLeftPane('craft-apps')} accent />
+      <ActBtn icon={Boxes} label="Craft" active={leftPane === 'craft-apps'} onClick={() => setLeftPane('craft-apps')} accent />
+      <ActBtn icon={Lightbulb} label="References" active={leftPane === 'references'} onClick={() => setLeftPane('references')} accent />
       <ActBtn icon={SlidersHorizontal} label="LLM strategy" active={leftPane === 'provider-settings'} onClick={() => setLeftPane('provider-settings')} />
 
       <div className="my-1 w-6 h-px bg-linear-to-r from-transparent via-olympus-gold/25 to-transparent" />

@@ -61,9 +61,9 @@ export function recordHopLearning(input: HopLearningInput): HopLearningResult {
     if (artifacts.length === 0) return { ok: false, error: 'no artifacts to prove the pattern' };
 
     const base = path.join(getVaultRoot(), '05_Auto_Learning', 'instincts', god, 'empirical');
-    // v0.1.1 — a technical pattern is shared across projects; the slug stays
-    // as provenance, not as the identity.
-    const id = `${safeId(hop)}-${safeId(god)}`;
+    // v0.1.2 — experience is PROJECT memory until Callimachus proves it
+    // across projects. Never auto-promote a single project's convention.
+    const id = `${safeId(slug)}-${safeId(hop)}-${safeId(god)}`;
     const file = path.join(base, `${id}.md`);
     let samples = 1;
     let confidence = 0.86;
@@ -96,7 +96,7 @@ export function recordHopLearning(input: HopLearningInput): HopLearningResult {
       '',
       `**Confidence:** ${confidence.toFixed(2)} (empirical, ${samples} successful sample${samples === 1 ? '' : 's'})`,
       '',
-      `**Scope:** technical/global (proven on ${slug}) · god ${god}`,
+      `**Scope:** project (${slug}) · god ${god} — candidate for a quick circuit after cross-project proof`,
       '',
       `**Evidence:** ${artifacts.join(', ')}`,
       '',
@@ -108,11 +108,11 @@ export function recordHopLearning(input: HopLearningInput): HopLearningResult {
       '---',
       `god: ${yamlString(god)}`,
       `confidence: ${confidence.toFixed(2)}`,
-      'scope: global',
+      'scope: project',
       'kind: technical',
       `projects: [${yamlString(slug)}]`,
       'stacks: []',
-      `quick_circuit: ${confidence >= 0.85 ? 'true' : 'false'}`,
+      'quick_circuit: false',
       `last_used: ${yamlString(ts)}`,
       `samples: ${samples}`,
       'source: empirical',

@@ -1,0 +1,139 @@
+{
+  "label": "v012-software",
+  "measuredAt": "2026-11-26T20:58:34.092Z",
+  "environment": {
+    "kind": "electron-gpu-window",
+    "url": "http://127.0.0.1:3737/",
+    "platform": "linux",
+    "arch": "x64",
+    "display": ":0",
+    "wayland": "wayland-0"
+  },
+  "results": [
+    {
+      "surface": "pantheon (brain + terminal)",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 14,
+        "totalMB": 34
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "god intelligence",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 13,
+        "totalMB": 20
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "cost",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 14,
+        "totalMB": 25
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "craft",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 13,
+        "totalMB": 20
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "references",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 13,
+        "totalMB": 19
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "preview",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 13,
+        "totalMB": 21
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "logs",
+      "skipped": true,
+      "reason": "surface button not found"
+    }
+  ]
+}

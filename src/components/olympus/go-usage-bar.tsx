@@ -92,6 +92,15 @@ export default function GoUsageBar({ token }: { token?: string | null }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // v0.1.2 — cached-first: paint the last console/ledger reading before the
+  // network. A cold GO sync can take seconds; the limit never opens blank.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('olympus:go-usage-cache');
+      if (raw) { const cached = JSON.parse(raw); if (cached && typeof cached === 'object') setData(cached); }
+    } catch { /* private */ }
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const mobileToken = token || (() => { try { return localStorage.getItem('olympus:mobile-token'); } catch { return null; } })();
@@ -106,6 +115,7 @@ export default function GoUsageBar({ token }: { token?: string | null }) {
       if (!r.ok || !d?.ok) throw new Error(d?.error || `HTTP ${r.status}`);
       setData(d as Usage);
       setError(null);
+      try { localStorage.setItem('olympus:go-usage-cache', JSON.stringify(d)); } catch { /* private */ }
     } catch (e: any) {
       setError(e?.message || 'usage unavailable');
     }

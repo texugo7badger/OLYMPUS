@@ -2,6 +2,47 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.2] — 2026-11-26
+
+### Performance and truth — 60 FPS, separate Craft/References, honest quick circuits
+
+- **The atlas renders on demand.** After 2.2s without interaction the brain
+  stops scheduling frames; pointer, wheel, resize, graph and option changes
+  wake it in one event. A working god keeps the signals alive. The Pantheon
+  measures **60 FPS p50/p95 with no long tasks** in the real Electron software
+  window (the GPU process segfaults on this host; that is declared, not hidden).
+- **Automatic lean mode.** If the measured frame time cannot hold ~50 FPS, the
+  atlas drops haze/cloud/signals/labels passes and caps DPR at 1.25, once per
+  session. Smooth keeps every pass at DPR ≤ 1.5. `stable` motion still works.
+- **Craft and References are separate menus.** Craft is the app hub: ArtCraft
+  stays on, the 13 vendored apps remain, and a native-tool registry detects
+  Blender, Godot, OBS, Inkscape, Krita, DaVinci Resolve and Shotcut and launches
+  one in the active project — fixed args, no shell string, no bundling.
+- **References is its own library.** Search, collections, live studies,
+  Use/Queue. **Use** stages an editable Apollo prompt that asks how the user
+  wants the reference used (page/section, keep/adapt/recreate, constraints); it
+  never sends automatically. New free/open-source sources: ReactBits (MIT +
+  Commons Clause), Motion Primitives (MIT) and Kokonut UI (MIT).
+- **Callimachus: deterministic first, model only on evidence.** A 15-minute
+  deterministic pass archives synthetic smoke patterns, scopes project memory,
+  and promotes a quick circuit only with ≥2 distinct projects, samples ≥2 and
+  confidence ≥0.90. A model pass is capped at 1/hour and runs only for
+  cross-project candidates. The old confidence heuristic invented **33 quick
+  circuits**; the honest census is **0 validated / 187 project / 55 technical**.
+  God Intelligence shows last/next pass, validated circuits, technical vs
+  project counts and the hourly model budget.
+- **Cost cache-first.** GO usage and the forecast paint the last measured
+  reading before the console sync; the chart never opens as a skeleton. The
+  hourly chart always reports its real bucket count and the empty state is
+  explicit.
+- **Sync Map removed.** The stale 32-entry/662-total screen had no unique
+  purpose; its route, panel and CI suite are gone.
+- **Description truth.** OLYMPUS calls itself a **multi-agent AI workspace**,
+  not an "operating system" — in the app metadata, package, installer,
+  README and architecture docs.
+- **Screens.** One clean screen per menu (14 total), including a fully loaded
+  Cost chart; README and UX-TOUR updated.
+
 ## [v0.1.1] — 2026-11-26
 
 ### Fluidity — one Apollo terminal, clean Parthenon, quick circuits

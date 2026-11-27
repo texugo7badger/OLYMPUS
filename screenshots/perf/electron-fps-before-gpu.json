@@ -1,0 +1,187 @@
+{
+  "label": "before-gpu",
+  "measuredAt": "2026-11-26T19:37:50.529Z",
+  "environment": {
+    "kind": "electron-gpu-window",
+    "url": "http://127.0.0.1:3737/",
+    "platform": "linux",
+    "arch": "x64",
+    "display": ":0",
+    "wayland": "wayland-0"
+  },
+  "results": [
+    {
+      "surface": "pantheon (brain + terminal)",
+      "samples": [
+        26,
+        28,
+        34
+      ],
+      "p50": 28,
+      "p95": 34,
+      "avg": 29,
+      "longTasks": [
+        235,
+        149,
+        85,
+        73,
+        81,
+        71,
+        70,
+        58,
+        58,
+        58,
+        57,
+        58,
+        60,
+        57,
+        61,
+        55,
+        59,
+        80,
+        71,
+        70,
+        62,
+        54,
+        57,
+        56,
+        54,
+        53,
+        60,
+        56,
+        74,
+        56,
+        53,
+        51,
+        54,
+        52,
+        53,
+        53,
+        53,
+        55,
+        54,
+        56,
+        54,
+        54,
+        55,
+        60,
+        53,
+        50,
+        53,
+        55,
+        52,
+        53
+      ],
+      "longestTaskMs": 235,
+      "memory": {
+        "usedMB": 26,
+        "totalMB": 43
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "god intelligence",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 26,
+        "totalMB": 45
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "cost",
+      "samples": [
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 17,
+        "totalMB": 40
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "craft",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 19,
+        "totalMB": 40
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "references",
+      "skipped": true,
+      "reason": "surface button not found"
+    },
+    {
+      "surface": "preview",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 13,
+        "totalMB": 17
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "logs",
+      "samples": [
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 13,
+        "totalMB": 17
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    }
+  ]
+}

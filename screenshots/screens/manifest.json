@@ -1,31 +1,71 @@
 [
   {
-    "file": "screenshots/screens/01-pantheon-011.png",
+    "file": "screenshots/screens/01-pantheon-012.png",
     "title": "The Pantheon",
-    "note": "the ten gods and the clean Parthenon command deck (project, generation, hops, park, actions)"
+    "note": "ten gods, the Parthenon command deck and the disk-truth status brief"
   },
   {
-    "file": "screenshots/screens/02-live-preview-011.png",
+    "file": "screenshots/screens/02-live-preview-012.png",
     "title": "Live preview",
-    "note": "a real project inside OLYMPUS: the live surface and mark toolbar on the framing-friendly fixture (:4173)"
+    "note": "a real project inside OLYMPUS: same-origin surface, mark toolbar, no mockup"
   },
   {
-    "file": "screenshots/screens/03-preview-window-011.png",
-    "title": "Preview window",
-    "note": "the dedicated window renders the project in a browser iframe (no black Electron popup) with the durable mark queue"
+    "file": "screenshots/screens/03-god-intelligence-012.png",
+    "title": "God Intelligence",
+    "note": "per-god stats and the live Callimachus card: last/next pass, validated quick circuits, technical vs project memory and the hourly model budget"
   },
   {
-    "file": "screenshots/screens/04-cost-011.png",
+    "file": "screenshots/screens/04-recent-activity-012.png",
+    "title": "Recent activity",
+    "note": "the live event feed: dispatches, hops, approvals and curator passes"
+  },
+  {
+    "file": "screenshots/screens/05-logs-012.png",
+    "title": "Logs",
+    "note": "the workspace log stream, with the real severity and source of each line"
+  },
+  {
+    "file": "screenshots/screens/06-cost-012.png",
     "title": "Cost",
-    "note": "the real ledger: GO month/5h/week, Smart Burn, step/list/invoice separation and the honest reconnect/retry state — never an endless loader"
+    "note": "the real ledger: GO usage, hourly token chart, Smart Burn and step/list/invoice separation — chart fully loaded"
   },
   {
-    "file": "screenshots/screens/05-marks-011.png",
-    "title": "Marks",
-    "note": "a durable multi-mark batch in the preview window; one consolidated prompt goes to Apollo in the terminal, where he asks with options if needed"
+    "file": "screenshots/screens/07-benchmarks-012.png",
+    "title": "Benchmarks",
+    "note": "the measured performance and lane benchmarks, with the environment named"
   },
   {
-    "file": "screenshots/screens/06-mobile-011.png",
+    "file": "screenshots/screens/08-craft-012.png",
+    "title": "Craft",
+    "note": "the app hub: ArtCraft stays on, the 13 vendored apps and the detected native tools (Blender, Godot, OBS, Inkscape, Krita…)"
+  },
+  {
+    "file": "screenshots/screens/09-references-012.png",
+    "title": "References",
+    "note": "the creative library as its own surface: search, collections, live studies, Use/Queue and the new free/open-source sources"
+  },
+  {
+    "file": "screenshots/screens/10-llm-strategy-012.png",
+    "title": "LLM strategy",
+    "note": "the lane roster and the strategy builder — every model is a lane, context rides Symphony"
+  },
+  {
+    "file": "screenshots/screens/11-mcp-configuration-012.png",
+    "title": "MCP configuration",
+    "note": "the curated MCP surface: health classified before probe, 128-tool budget, per-server control"
+  },
+  {
+    "file": "screenshots/screens/12-god-detail-012.png",
+    "title": "God detail",
+    "note": "one god in depth: model, skills, instincts, dispatches and recent activity"
+  },
+  {
+    "file": "screenshots/screens/13-preview-window-012.png",
+    "title": "Preview window",
+    "note": "the dedicated preview window with the durable mark queue that becomes one Apollo terminal prompt"
+  },
+  {
+    "file": "screenshots/screens/14-phone-012.png",
     "title": "Phone",
     "note": "the same campaign in one hand: voice-first prompt, Parthenon, preview and marks"
   }

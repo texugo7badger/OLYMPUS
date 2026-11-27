@@ -49,13 +49,30 @@ export default function GoForecastChart() {
 
   useEffect(() => {
     let cancelled = false;
+    // v0.1.2 — cached-first: the last measured forecast paints before the
+    // console read. A cold GO sync must never leave the chart as a skeleton
+    // (the cost screen's "chart did not finish loading" specimen).
+    try {
+      const raw = localStorage.getItem('olympus:go-usage-cache');
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (cached && typeof cached === 'object') setData(cached);
+      }
+    } catch { /* private mode */ }
     const load = async () => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12_000);
       try {
-        const r = await fetch('/api/olympus/go-usage', { cache: 'no-store' });
+        const r = await fetch('/api/olympus/go-usage', { cache: 'no-store', signal: ctrl.signal });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const d = await r.json();
-        if (!cancelled) { setData(d); setError(false); }
+        if (!cancelled) {
+          setData(d);
+          setError(false);
+          try { localStorage.setItem('olympus:go-usage-cache', JSON.stringify(d)); } catch { /* private */ }
+        }
       } catch { if (!cancelled) setError(true); }
+      finally { clearTimeout(timer); }
     };
     void load();
     const iv = setInterval(() => { void load(); }, 60_000);

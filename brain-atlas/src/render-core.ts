@@ -53,6 +53,13 @@ export type DragState = RotateDragState | NodeDragState;
 
 export interface BrainRendererOptions {
   idleAutoRotate: boolean;
+  /** v0.1.2 — stop scheduling frames after the user has been idle. Pointer,
+   *  wheel, graph and option updates call requestImmediateFrame(), so the
+   *  atlas wakes on demand instead of burning a core at 60 FPS while nobody
+   *  is looking. */
+  pauseWhenIdle?: boolean;
+  /** v0.1.2 — while dragging, skip the per-node Canvas2D halo gradients. */
+  dragLean?: boolean;
   showLobeLabels: boolean;
   enabledLobes: LobeVisibility;
   performancePreset: PerformancePreset;
@@ -199,6 +206,13 @@ export abstract class RenderCore {
     this.projCache = Object.fromEntries(nodeProjs.map((node) => [node.node.id, node]));
 
     this.drawScene(now);
+
+    // v0.1.2 — idle pause: after 2.2s without interaction, stop the frame
+    // loop. Any pointer/wheel/resize/graph/option change calls
+    // requestImmediateFrame(), so the next frame is always one event away.
+    // A working god keeps the signals alive (the atlas is doing its job).
+    const idle = !this.drag && now - this.lastUserAt > 2200;
+    if (this.options.pauseWhenIdle && idle && !this.workingGods?.size) return;
 
     this.scheduleNextFrame(this.nextFrameDelay(now));
   };

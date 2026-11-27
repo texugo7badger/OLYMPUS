@@ -208,6 +208,20 @@ export async function registerNode() {
       .catch(() => { /* the supervisor is additive; boot never blocks on it */ });
   }, 20_000).unref?.();
 
+  // v0.1.2 — CALLIMACHUS HEARTBEAT. A deterministic curation pass every
+  // 15 minutes (zero model tokens); the heartbeat route spends a model pass
+  // at most once per hour and only for cross-project evidence. The loop
+  // never spawns a model itself — it calls the route, which owns the lock
+  // and the budget.
+  setTimeout(() => {
+    void import('./lib/callimachus-loop')
+      .then(({ startCallimachusLoop }) => {
+        const r = startCallimachusLoop();
+        if (!r.started) console.log(`[callimachus-loop] ${r.reason}`);
+      })
+      .catch(() => { /* the loop is additive; boot never blocks on it */ });
+  }, 25_000).unref?.();
+
   // v0.0.99 — THE MOBILE DOOR STAYS ON. The user asked for the link to
   // survive: when a tunnel is `desired` (started once from the pairing card
   // or the phone), a supervised tick restarts cloudflared after a crash or a

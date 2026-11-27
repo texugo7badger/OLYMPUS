@@ -1,0 +1,178 @@
+{
+  "label": "v012-final",
+  "measuredAt": "2026-11-26T22:17:51.085Z",
+  "environment": {
+    "kind": "electron-window",
+    "renderer": "Canvas2D (software fallback)",
+    "softwareFallback": true,
+    "url": "http://127.0.0.1:3737/",
+    "platform": "linux",
+    "arch": "x64",
+    "display": ":0",
+    "wayland": "wayland-0",
+    "note": "The GPU process segfaults on this host (exit 139), so the stable lane is Electron software rendering (Canvas2D brain). No claim of GPU acceleration is made."
+  },
+  "results": [
+    {
+      "surface": "pantheon (brain + terminal)",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 14,
+        "totalMB": 32
+      },
+      "gpu": "no-webgl",
+      "hardware": 8
+    },
+    {
+      "surface": "pantheon (atlas drag)",
+      "samples": [
+        60,
+        60,
+        60,
+        59
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "gpu": null,
+      "hardware": null
+    },
+    {
+      "surface": "god intelligence",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 17,
+        "totalMB": 48
+      },
+      "gpu": "no-webgl",
+      "hardware": 8,
+      "smooth": true
+    },
+    {
+      "surface": "cost",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 15,
+        "totalMB": 20
+      },
+      "gpu": "no-webgl",
+      "hardware": 8,
+      "smooth": true
+    },
+    {
+      "surface": "craft",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 16,
+        "totalMB": 21
+      },
+      "gpu": "no-webgl",
+      "hardware": 8,
+      "smooth": true
+    },
+    {
+      "surface": "references",
+      "samples": [
+        60,
+        56,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 59,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 27,
+        "totalMB": 48
+      },
+      "gpu": "no-webgl",
+      "hardware": 8,
+      "smooth": true
+    },
+    {
+      "surface": "logs",
+      "samples": [
+        60,
+        59,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 17,
+        "totalMB": 42
+      },
+      "gpu": "no-webgl",
+      "hardware": 8,
+      "smooth": true
+    },
+    {
+      "surface": "preview",
+      "samples": [
+        60,
+        60,
+        60,
+        60
+      ],
+      "p50": 60,
+      "p95": 60,
+      "avg": 60,
+      "longTasks": [],
+      "longestTaskMs": 0,
+      "memory": {
+        "usedMB": 15,
+        "totalMB": 17
+      },
+      "gpu": "no-webgl",
+      "hardware": 8,
+      "smooth": true
+    }
+  ]
+}

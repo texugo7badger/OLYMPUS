@@ -436,7 +436,7 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  <BarChart3 size={12} className="text-olympus-cyan" />
  <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">Usage · {costWindow}</span>
  <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">
- {fmt(data.hourly.reduce((n, h) => n + h.input + h.output, 0))} tokens · {data.hourly.reduce((n, h) => n + h.requests, 0)} step(s)
+ {fmt(data.hourly.reduce((n, h) => n + h.input + h.output, 0))} tokens · {data.hourly.reduce((n, h) => n + h.requests, 0)} step(s){data.hourly.length < 4 ? ' · sparse window — fills as the ledger grows' : ''}
  </span>
  </div>
  {(() => {
@@ -462,6 +462,19 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  <span>{new Date(data.hourly[0].ts).toLocaleTimeString([], { hour: '2-digit' })}</span>
  <span>now</span>
  </div>
+ </div>
+ )}
+
+ {data && (!data.hourly || data.hourly.length === 0) && (
+ <div className="rounded-lg border border-olympus-gold/15 bg-olympus-card p-3 mb-3">
+  <div className="flex items-center gap-2 mb-2">
+   <BarChart3 size={12} className="text-olympus-cyan" />
+   <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">Usage · {costWindow}</span>
+   <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">no ledger rows in this window yet</span>
+  </div>
+  <div className="flex h-16 items-center justify-center rounded border border-dashed border-olympus-gold/15 text-[9px] font-mono text-olympus-text-dim">
+   The chart fills as requests settle — cost telemetry is connected.
+  </div>
  </div>
  )}
 

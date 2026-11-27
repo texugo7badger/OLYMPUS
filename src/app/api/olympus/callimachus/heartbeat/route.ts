@@ -13,6 +13,7 @@ import { spawnOpencode, resolveDispatchCwd } from '@/lib/opencode-spawn';
 // Run vault prune as part of the heartbeat.
 import { runVaultPrune, loadVaultPolicy } from '@/lib/vault-policy';
 import { appendDesktopNotify } from '@/lib/desktop-notify';
+import { runCurationPass, decideModelPass, recordModelPass } from '@/lib/callimachus-loop';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,9 +22,9 @@ const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
 const CALLIMACHUS_LOCK = path.join(OLYMPUS_HOME, 'callimachus.lock');
 const CALLIMACHUS_LAST = path.join(OLYMPUS_HOME, 'callimachus-last-run.json');
 
-function recordLastRun(code: number, deep: boolean): void {
+function recordLastRun(code: number, deep: boolean, extra: Record<string, unknown> = {}): void {
   try {
-    fs.writeFileSync(CALLIMACHUS_LAST, JSON.stringify({ at: new Date().toISOString(), code, deep }, null, 2) + '\n', { mode: 0o600 });
+    fs.writeFileSync(CALLIMACHUS_LAST, JSON.stringify({ at: new Date().toISOString(), code, deep, ...extra }, null, 2) + '\n', { mode: 0o600 });
   } catch { /* evidence is best-effort */ }
 }
 
@@ -46,14 +47,10 @@ function recordLastRun(code: number, deep: boolean): void {
  * The cooldown is enforced via the lockfile's mtime.
  */
 export async function POST(req: NextRequest) {
-  appendDesktopNotify({
-    type: 'curate',
-    title: 'OLYMPUS — Callimachus curating',
-    body: 'The brain maintenance loop is running (instincts, knowledge, vault).',
-  });
   try {
     const body = await req.json().catch(() => ({}));
     const deep = body.deep === true;
+    const force = body.force === true;
 
     // ─── Check lockfile ────────────────────────────────────────────────
     if (fs.existsSync(CALLIMACHUS_LOCK)) {
@@ -87,6 +84,44 @@ export async function POST(req: NextRequest) {
       ts: new Date().toISOString(),
       deep,
     }), 'utf-8');
+
+    // ─── Deterministic pass first (zero model tokens) ──────────────────
+    // This is what makes the quick-circuit theory safe: synthetic patterns
+    // are archived, project conventions stay project-scoped, and a global
+    // shortcut needs cross-project proof. The model runs only when this
+    // pass surfaced evidence a model can actually judge.
+    const curation = runCurationPass(true);
+    const decision = decideModelPass(curation, deep || force);
+    if (!decision.allowed) {
+      try { fs.unlinkSync(CALLIMACHUS_LOCK); } catch {}
+      recordLastRun(0, deep, {
+        skipped: true,
+        reason: decision.reason,
+        curation: curation.result,
+        census: curation.census,
+      });
+      return NextResponse.json({
+        ok: true,
+        skipped: true,
+        reason: decision.reason,
+        curation: curation.result,
+        census: curation.census,
+        budget: {
+          passesLastHour: decision.passesLastHour,
+          maxPerHour: 1,
+          nextAllowedAt: decision.nextAllowedAt,
+        },
+      }, { headers: { 'Cache-Control': 'no-store' } });
+    }
+
+    // A model pass was approved — record it BEFORE spawning so a crash or a
+    // hung child cannot be used to bypass the hourly budget.
+    const budget = recordModelPass();
+    appendDesktopNotify({
+      type: 'curate',
+      title: 'OLYMPUS — Callimachus curating',
+      body: `The brain maintenance loop is running (${decision.reason}).`,
+    });
 
     // Run vault prune before spawning Callimachus.
     // The prune respects the policy in ~/.olympus/vault-policy.json (dry-run
@@ -133,7 +168,11 @@ export async function POST(req: NextRequest) {
       // #104 (the complete class, SERVE-1 Batch C): one-shot dispatches run
       // in the lane — never the repo root (the default cwd findOlympusRoot()).
       cwd: resolveDispatchCwd(),
-      extraEnv: { OLYMPUS_CALLIMACHUS_DEEP: deep ? 'true' : 'false' },
+      extraEnv: {
+        OLYMPUS_CALLIMACHUS_DEEP: deep ? 'true' : 'false',
+        OLYMPUS_CALLIMACHUS_CANDIDATES: String(decision.candidates),
+        OLYMPUS_CALLIMACHUS_CURATION: JSON.stringify(curation.result),
+      },
     });
 
     const encoder = new TextEncoder();
@@ -145,7 +184,14 @@ export async function POST(req: NextRequest) {
           try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`)); } catch { closed = true; }
         };
 
-        send({ type: 'start', deep, ts: new Date().toISOString() });
+        send({
+          type: 'start',
+          deep,
+          ts: new Date().toISOString(),
+          curation: curation.result,
+          census: curation.census,
+          budget,
+        });
 
         // Emit the prune result so the UI can show
         // what was (or would be) pruned.
@@ -183,7 +229,7 @@ export async function POST(req: NextRequest) {
 
         child.on('close', (code) => {
           if (lineBuf.length) onLine(lineBuf.shift()!);
-          recordLastRun(code ?? 0, deep);
+          recordLastRun(code ?? 0, deep, { curation: curation.result, census: curation.census });
           send({ type: 'exit', code, ts: new Date().toISOString() });
 
           // Release the lock
@@ -193,7 +239,7 @@ export async function POST(req: NextRequest) {
         });
 
         child.on('error', (err: any) => {
-          recordLastRun(1, deep);
+          recordLastRun(1, deep, { curation: curation.result, census: curation.census });
           send({ type: 'error', msg: err.message });
           try { fs.unlinkSync(CALLIMACHUS_LOCK); } catch {}
           try { controller.close(); } catch {}

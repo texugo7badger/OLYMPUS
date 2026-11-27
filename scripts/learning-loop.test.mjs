@@ -50,7 +50,7 @@ async function main() {
     ts: '2026-11-25T00:00:00.000Z',
   };
   const first = learning.recordHopLearning(input);
-  expect('L1: a completed hop creates an empirical instinct', first.ok && first.created && first.samples === 1, JSON.stringify(first));
+  expect('L1: a completed hop creates project-scoped empirical memory', first.ok && first.created && first.samples === 1 && /scope: project/.test(fs.readFileSync(first.path,'utf-8')), JSON.stringify(first));
   expect('L2: the instinct has the two specific tags', Array.isArray(first.tags) && first.tags.includes('sakuga-sourcing') && first.tags.includes('sakuga-candidates'), JSON.stringify(first.tags));
   expect('L3: the file is a valid frontmatter note', fs.existsSync(first.path) && fs.readFileSync(first.path, 'utf-8').includes('source: empirical'), first.path);
 
@@ -59,7 +59,12 @@ async function main() {
 
   const gate = await import(OLYMPUS + '/.opencode/src/olympus-router/src/instinct-gate.ts');
   const hit = gate.queryInstincts('god', 'hermes', 'sakuga-sourcing sakuga-candidates');
-  expect('L5: the gate short-circuits on both specific tags', hit.short_circuit === true && hit.matching_instinct?.id === first.path.split('/').pop()?.replace(/\.md$/, ''), JSON.stringify({ confidence: hit.confidence, id: hit.matching_instinct?.id }));
+  expect('L5: unproven project memory does NOT short-circuit', hit.short_circuit === false, JSON.stringify({ confidence: hit.confidence }));
+  // v0.1.2 — Callimachus promotion is the only door: flip the proof bit. 
+  const promoted = fs.readFileSync(first.path, 'utf-8').replace('quick_circuit: false', 'quick_circuit: true');
+  fs.writeFileSync(first.path, promoted);
+  const proven = gate.queryInstincts('god', 'hermes', 'sakuga-sourcing sakuga-candidates');
+  expect('L5b: a promoted quick circuit short-circuits', proven.short_circuit === true && proven.matching_instinct?.id === first.path.split('/').pop()?.replace(/\.md$/, ''), JSON.stringify({ confidence: proven.confidence, file: fs.readFileSync(first.path, 'utf-8').slice(0, 450) }));
   const miss = gate.queryInstincts('god', 'hermes', 'sakuga-sourcing only');
   expect('L6: one tag is not enough — no false short-circuit', miss.short_circuit === false, JSON.stringify({ confidence: miss.confidence }));
 

@@ -47,6 +47,7 @@ export class PreviewEngine {
   private t0 = 0;
   private last = 0;
   private raf = 0;
+  private lastDraw = 0;
   private visible = false;
   private disposed = false;
   private io: IntersectionObserver | null = null;
@@ -157,7 +158,9 @@ export class PreviewEngine {
     const rect = this.canvas.getBoundingClientRect();
     const nextW = Math.max(1, Math.round(rect.width));
     const nextH = Math.max(1, Math.round(rect.height));
-    const nextDpr = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+    // A grid of studies is a scan surface, not a retina showcase: 1.5 is
+    // enough and cuts the fill cost by ~44% vs DPR 2.
+    const nextDpr = Math.min(1.5, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
     if (nextW === this.w && nextH === this.h && nextDpr === this.dpr && this.canvas.width) return;
     this.w = nextW;
     this.h = nextH;
@@ -175,8 +178,13 @@ export class PreviewEngine {
     if (this.disposed) return;
     this.raf = requestAnimationFrame(this.loop);
     if (typeof document !== 'undefined' && document.hidden) return;
+    // v0.1.2 — the reference grid can show ~6 studies at once. Six independent
+    // 60 FPS canvas loops dragged the page to 48 FPS in software; 30 FPS per
+    // study is still alive to the eye and leaves the shell at 60.
+    if (now - this.lastDraw < 33) return;
     const dt = Math.min(48, Math.max(1, now - this.last));
     this.last = now;
+    this.lastDraw = now;
     this.drawFrame(now - this.t0, dt);
   };
 

@@ -149,6 +149,8 @@ function parseFrontmatter(content: string): { frontmatter: Record<string, unknow
       value = rawValue.slice(1, -1);
     } else if (rawValue === "null") {
       value = null;
+    } else if (rawValue === "true" || rawValue === "false") {
+      value = rawValue === "true";
     } else if (/^-?\d+(\.\d+)?$/.test(rawValue)) {
       value = Number(rawValue);
     }
@@ -173,6 +175,10 @@ function loadInstincts(scope: "god" | "sub-agent", agentName: string): Instinct[
       try {
         const content = readFileSync(filePath, "utf8");
         const { frontmatter, body } = parseFrontmatter(content);
+        // v0.1.2 — THEORY GUARD: an empirical instinct only short-circuits
+        // after Callimachus proved it as a quick circuit. Unvalidated
+        // project experience stays memory, never a dispatch shortcut.
+        if (kind === "empirical" && frontmatter.quick_circuit !== true) continue;
         instincts.push({
           id: String(frontmatter.id ?? file.replace(/\.md$/, "")),
           agent: String(frontmatter.agent ?? agentName),

@@ -3,6 +3,38 @@
 ![Benchmarks](public/diagrams/benchmarks.svg)
 
 
+## Real Electron FPS — v0.1.2, 2026-11-26 [MEASURED]
+
+Instrument: `scripts/fps-probe-electron.mjs` (CDP against the real Electron
+window, 5s per surface, first sample discarded). Environment: Linux/X11,
+Electron 44.10.1, **software rendering** — the GPU process segfaults on this
+host (exit 139) and the app persists `~/.olympus/gpu-fallback`, so no GPU
+acceleration is claimed. The brain uses the Canvas2D renderer in this lane.
+
+| Surface | p50 | p95 | Long tasks |
+|---|---:|---:|---|
+| Pantheon (brain + terminal) | 60 | 60 | none |
+| Pantheon (atlas drag) | 60 | 60 | none |
+| God Intelligence | 60 | 60 | none |
+| Cost | 60 | 60 | none |
+| Craft | 60 | 60 | none |
+| References | 60 | 60 | none |
+| Live preview | 60 | 60 | none |
+| Logs (separate run) | 60 | 60 | none |
+
+**What changed.** The atlas now pauses its frame loop after 2.2s idle and wakes
+in one event (`pauseWhenIdle`); during a drag it drops the per-node Canvas2D
+halo gradients and the expensive passes and caps DPR at 0.8. The earlier
+"25 FPS" figure was a headless Chromium/SwiftShader lower bound, not this
+window; the reference cards also stopped mounting ~20 preview canvases at once
+(200px root margin). Report file:
+`screenshots/perf/electron-fps-v012-final.json`.
+
+**Honest limit.** GPU acceleration is the preferred lane and is retried with
+`--reset-gpu`, but it crashed twice on this host (exit 139), so the software
+lane is the stable one. A host with a healthy GPU driver should be at least as
+fluid; this table does not claim to have measured that host.
+
 ## Measured baseline — 2026-10-31 (v0.0.29 working tree) [MEASURED]
 
 These are the numbers v0.0.30 is fixing, published before the fixes so the

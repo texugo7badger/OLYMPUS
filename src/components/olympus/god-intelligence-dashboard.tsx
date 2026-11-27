@@ -12,6 +12,7 @@ import AnimatedNumber from './animated-number';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import { useDocVisible } from '@/lib/use-doc-visible';
 import { useHopLive } from '@/hooks/use-hop-live';
+import { toast } from 'sonner';
 
 // Short-circuit telemetry — live stats from the instinct gate.
 interface ShortCircuitStats {
@@ -319,25 +320,57 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
    </span>
   </div>
   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[8.5px] font-mono text-olympus-text-dim">
-   <span>{curator?.lastRunAt ? `last pass ${Math.max(0, Math.round((Date.now() - Date.parse(curator.lastRunAt)) / 60000))}m ago` : 'no pass recorded'}</span>
+   <span>{curator?.lastCurationAt ? `last pass ${Math.max(0, Math.round((Date.now() - Date.parse(curator.lastCurationAt)) / 60000))}m ago` : 'no pass recorded'}</span>
    <span>next {curator?.nextRegularAt ? new Date(curator.nextRegularAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
-   <span className="text-olympus-green">quick circuits {curator?.census?.quickCircuits ?? 0}</span>
+   <span className={curator?.census?.quickCircuits > 0 ? 'text-olympus-green' : 'text-olympus-gold/80'}>
+    quick circuits {curator?.census?.quickCircuits ?? 0}
+   </span>
    <span>technical {curator?.census?.technical ?? 0}</span>
    <span>project {curator?.census?.project ?? 0}</span>
+   <span data-tip={`A model pass is capped at ${curator?.loop?.modelMaxPerHour ?? 1}/hour and only runs for cross-project evidence (target ≤${Math.round((curator?.loop?.modelTokenTarget ?? 10000) / 1000)}k tokens/pass).`}>
+    model {curator?.loop?.modelPassesLastHour ?? 0}/{curator?.loop?.modelMaxPerHour ?? 1} this hour
+   </span>
    <button
     type="button"
     disabled={curating || curator?.active}
+    data-tip="Runs the deterministic pass now. The model only starts if cross-project evidence exists (or after the hourly budget resets)."
     onClick={async () => {
       setCurating(true);
-      try { await fetch('/api/olympus/callimachus/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); await new Promise(r => setTimeout(r, 1200)); }
-      catch { /* the next poll reports */ }
+      try {
+        const r = await fetch('/api/olympus/callimachus/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const d = await r.json().catch(() => ({}));
+        if (d?.skipped) toast.message('Deterministic pass complete', { description: d.reason });
+        else toast.success('Callimachus model pass started');
+        await new Promise(res => setTimeout(res, 1200));
+      } catch { /* the next poll reports */ }
       setCurating(false);
     }}
     className="ml-auto rounded border border-olympus-gold/30 px-1.5 py-0.5 text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
    >
-    {curating ? 'starting…' : curator?.active ? 'running' : 'curate now'}
+    {curating ? 'curating…' : curator?.active ? 'running' : 'curate now'}
    </button>
   </div>
+  {curator?.curation && (
+   <div className="mt-1 text-[8px] font-mono text-olympus-text-dim">
+    last deterministic pass: archived {curator.curation.archived ?? 0} · project-scoped {curator.curation.projectScoped ?? curator.curation.demoted ?? 0} · promoted {curator.curation.promoted ?? 0} · candidates {curator.curation.candidates ?? 0}
+   </div>
+  )}
+  {Array.isArray(curator?.quickCircuitList) && curator.quickCircuitList.length > 0 ? (
+   <div className="mt-1.5 space-y-0.5">
+    {curator.quickCircuitList.slice(0, 3).map((q: any) => (
+     <div key={`${q.god}-${q.file}`} className="flex items-center gap-2 text-[8px] font-mono text-olympus-text-dim">
+      <span className="text-olympus-green">●</span>
+      <span className="text-olympus-text">{q.god}</span>
+      <span className="truncate">{q.trigger || q.file}</span>
+      <span className="ml-auto shrink-0">{q.samples}× · {(q.confidence * 100).toFixed(0)}%</span>
+     </div>
+    ))}
+   </div>
+  ) : (
+   <div className="mt-1 text-[8px] font-mono text-olympus-gold/70">
+    No global shortcut has passed cross-project proof yet. Project memory stays scoped — that is the guard against a generalized hallucination.
+   </div>
+  )}
  </div>
 
  {/* Short-circuit hit rate sparkline (key visual) */}

@@ -23,7 +23,7 @@
 import { readOriginkitBudget, formatOriginkitReset } from '@/lib/originkit-budget';
 import { EXPANDED_REFERENCE_ROWS } from '@/lib/ui-references-expanded';
 
-export type UiRefLibrary = 'originkit' | 'skiper' | 'magicui' | 'aceternity';
+export type UiRefLibrary = 'originkit' | 'skiper' | 'magicui' | 'aceternity' | 'reactbits' | 'motionprimitives' | 'kokonut';
 
 export interface UiReference {
   /** kebab id (the upstream component name). */
@@ -73,6 +73,12 @@ const CURATED_REFERENCES: UiReference[] = [
   { id: 'skiper-vercel-tooltip', name: 'Vercel Tooltip', library: 'skiper', category: 'Feedback & microcopy', what: 'The Vercel-grade tooltip choreography — microcopy that lands precisely.', demoUrl: 'https://skiper-ui.com/v1/skiper43', fetchLane: 'npx shadcn add @skiper-ui/skiper43 (PREMIUM — paid upstream)', free: false },
   { id: 'skiper-token-swap', name: 'Aave Token Swap', library: 'skiper', category: 'Finance & data', what: 'The DeFi-grade swap interaction — dense data, zero friction.', demoUrl: 'https://skiper-ui.com/v1/skiper22', fetchLane: 'npx shadcn add @skiper-ui/skiper22 (PREMIUM — paid upstream)', free: false },
   { id: 'skiper-cursor-trail', name: 'Image Cursor Trail', library: 'skiper', category: 'Motion & reveal', what: 'The cursor drags a trail of images — the gallery you can feel.', demoUrl: 'https://skiper-ui.com/v1/skiper18', fetchLane: 'npx shadcn add @skiper-ui/skiper18 (PREMIUM — paid upstream)', free: false },
+  // ── v0.1.2 — new free/open-source sources (verified licenses) ─────────
+  { id: 'reactbits-split-text', name: 'Split Text', library: 'reactbits', category: 'Text', what: 'Per-character and per-word reveal — the headline arrives in beats, not a block.', demoUrl: 'https://www.reactbits.dev/text-animations/split-text', fetchLane: 'copy from reactbits.dev (MIT + Commons Clause: free in products, no resale/redistribution of the component; adapt to project tokens)', free: true },
+  { id: 'motion-primitives-text-shimmer', name: 'Text Shimmer', library: 'motionprimitives', category: 'Text', what: 'A calm shimmer across a live label — the “working” state with taste.', demoUrl: 'https://motion-primitives.com/docs/text-shimmer', fetchLane: 'copy from motion-primitives.com (MIT; keep the notice)', free: true },
+  { id: 'motion-primitives-dock', name: 'Dock', library: 'motionprimitives', category: 'Navigation', what: 'A macOS-style dock that magnifies under the cursor — navigation with weight.', demoUrl: 'https://motion-primitives.com/docs/dock', fetchLane: 'copy from motion-primitives.com (MIT; keep the notice)', free: true },
+  { id: 'kokonut-action-search', name: 'Action Search', library: 'kokonut', category: 'Adaptive UI', what: 'A command palette that feels like a native launcher — keyboard-first discovery.', demoUrl: 'https://kokonutui.com/docs/components/action-search-bar', fetchLane: 'copy from kokonutui.com (MIT; keep the notice)', free: true },
+  { id: 'kokonut-ai-input-search', name: 'AI Input Search', library: 'kokonut', category: 'AI interface', what: 'One input that routes a prompt to a tool — the shape of a useful agent box.', demoUrl: 'https://kokonutui.com/docs/components/ai-input-search', fetchLane: 'copy from kokonutui.com (MIT; keep the notice)', free: true },
 ];
 
 /**

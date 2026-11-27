@@ -42,26 +42,30 @@ llama.cpp or any OpenAI-compatible endpoint ([LOCAL-LLM.md](LOCAL-LLM.md)).
 
 ## Screens
 
-Six surfaces, captured from the running **v0.1.1** app. No mockups.
+One clean screen per menu, captured from the running **v0.1.2** app. No
+mockups. The full **14-menu gallery** is in
+[`screenshots/screens/manifest.json`](screenshots/screens/manifest.json); eight
+surfaces are shown here.
 
 <div align="center">
 
 | | |
 |---|---|
-| <a href="screenshots/screens/01-pantheon-011.png"><img src="screenshots/screens/01-pantheon-011.png" width="520" alt="The Pantheon — ten gods and the clean Parthenon" /></a><br><sub><b>The Pantheon</b> · ten gods and the Parthenon command deck</sub> | <a href="screenshots/screens/02-live-preview-011.png"><img src="screenshots/screens/02-live-preview-011.png" width="520" alt="Live preview — a real project inside OLYMPUS" /></a><br><sub><b>Live preview</b> · a real project inside OLYMPUS, same-origin, ready for marks</sub> |
-| <a href="screenshots/screens/03-preview-window-011.png"><img src="screenshots/screens/03-preview-window-011.png" width="520" alt="Preview window — browser iframe and the durable mark queue" /></a><br><sub><b>Preview window</b> · the app in a browser iframe, with the durable mark queue</sub> | <a href="screenshots/screens/04-cost-011.png"><img src="screenshots/screens/04-cost-011.png" width="520" alt="Cost — the real ledger and the honest reconnect state" /></a><br><sub><b>Cost</b> · the real ledger, Smart Burn and an honest reconnect/retry — never an endless loader</sub> |
-| <a href="screenshots/screens/05-marks-011.png"><img src="screenshots/screens/05-marks-011.png" width="520" alt="Marks — a durable batch that becomes one Apollo terminal prompt" /></a><br><sub><b>Marks</b> · a durable batch that becomes one Apollo terminal prompt</sub> | <a href="screenshots/screens/06-mobile-011.png"><img src="screenshots/screens/06-mobile-011.png" width="240" alt="Phone — the same campaign in one hand" /></a><br><sub><b>Phone</b> · the same campaign in one hand: voice-first prompt, Parthenon, preview and marks</sub> |
+| <a href="screenshots/screens/01-pantheon-012.png"><img src="screenshots/screens/01-pantheon-012.png" width="520" alt="The Pantheon — ten gods and the Parthenon command deck" /></a><br><sub><b>The Pantheon</b> · ten gods, the 3D atlas and the Parthenon command deck</sub> | <a href="screenshots/screens/03-god-intelligence-012.png"><img src="screenshots/screens/03-god-intelligence-012.png" width="520" alt="God Intelligence — live Callimachus and validated quick circuits" /></a><br><sub><b>God Intelligence</b> · live Callimachus: 0 invented quick circuits, 187 project, 55 technical, 1/hour budget</sub> |
+| <a href="screenshots/screens/06-cost-012.png"><img src="screenshots/screens/06-cost-012.png" width="520" alt="Cost — the real ledger with the fully loaded hourly chart" /></a><br><sub><b>Cost</b> · the real ledger, the fully loaded hourly chart, Smart Burn and step/list/invoice separation</sub> | <a href="screenshots/screens/08-craft-012.png"><img src="screenshots/screens/08-craft-012.png" width="520" alt="Craft — ArtCraft and the native tool registry" /></a><br><sub><b>Craft</b> · ArtCraft stays on, the 13 vendored apps and the detected native tools</sub> |
+| <a href="screenshots/screens/09-references-012.png"><img src="screenshots/screens/09-references-012.png" width="520" alt="References — the creative library with Use/Queue and new sources" /></a><br><sub><b>References</b> · search, collections, live studies, Use/Queue and the new free/open-source sources</sub> | <a href="screenshots/screens/02-live-preview-012.png"><img src="screenshots/screens/02-live-preview-012.png" width="520" alt="Live preview — a real project inside OLYMPUS" /></a><br><sub><b>Live preview</b> · a real project inside OLYMPUS, same-origin, ready for marks</sub> |
+| <a href="screenshots/screens/13-preview-window-012.png"><img src="screenshots/screens/13-preview-window-012.png" width="520" alt="Preview window — browser iframe and the durable mark queue" /></a><br><sub><b>Preview window</b> · the app in a browser iframe, with the durable mark queue</sub> | <a href="screenshots/screens/14-phone-012.png"><img src="screenshots/screens/14-phone-012.png" width="240" alt="Phone — the same campaign in one hand" /></a><br><sub><b>Phone</b> · the same campaign in one hand: voice-first prompt, Parthenon, preview and marks</sub> |
 
 </div>
 
 A short guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md).
-Every screenshot in this gallery is captured from the running app
-(`npm run shots`); the preview fixture is a tiny framing-friendly page because
-AIME sets `frame-ancestors 'none'` by design.
+Every screenshot is captured from the running app (`npm run shots`); the
+preview fixture is a tiny framing-friendly page because AIME sets
+`frame-ancestors 'none'` by design.
 
 ## What is OLYMPUS?
 
-OLYMPUS is a multi-agent AI operating system built on OpenCode, packaged as a
+OLYMPUS is a multi-agent AI workspace built on OpenCode, packaged as a
 standalone Electron desktop app. **Apollo** is the only god who talks to you;
 he plans the DAG and hands execution to **Atlas** and the specialist gods. The
 campaign runs as small hops on disk — sessions are lanes, the disk carries the
@@ -76,21 +80,35 @@ the limits are in [HYGIENE.md](HYGIENE.md) and
 
 ## Latest
 
-**v0.1.1 — fluidity.** Marks now go to ONE Apollo terminal: the parallel god
-chats, the inbox modal and the background mark plan are deleted; a batch is
-formatted once and drained as a visible HIGH queue item. The Parthenon is
-clean — no status-brief card, no duplicated stats or Atlas strips, one Ask
-Apollo. A loop-blocked Continue opens Apollo with Atlas evidence and asks for a
-new generation instead of retrying the same hop. A live campaign keeps its
-OpenCode/MCP server and preview through hibernate. The 5s Parthenon tick is
-gone, the brain shows at most 120 high-confidence quick circuits (archived
-hidden), and hardware acceleration is retried. OpenCode v2 **2.4.2** is
-vendored and gate-approved; learning notifications are translated in all seven
-languages.
+**v0.1.2 — performance and truth.** The atlas now renders on demand: after
+2.2s without interaction the frame loop pauses, and the next pointer, wheel,
+resize or graph event wakes it. The Pantheon measures **60 FPS p50/p95 with no
+long tasks** in the real Electron software window (the GPU process segfaults
+on this host, so software is the stable lane — declared, not hidden). If a
+host cannot hold ~50 FPS, automatic lean mode drops the expensive passes and
+caps DPR once per session.
+
+**Craft and References are separate menus.** Craft is the app hub: ArtCraft
+stays on, the 13 vendored apps remain, and Blender, Godot, OBS, Inkscape,
+Krita, DaVinci Resolve and Shotcut are detected and launched in the active
+project with fixed args. References is its own library; **Use** stages an
+editable Apollo prompt that asks how you want to use it, never sending
+automatically. New sources: ReactBits (MIT + Commons Clause), Motion
+Primitives (MIT) and Kokonut UI (MIT).
+
+**Callimachus is deterministic first.** A 15-minute pass archives synthetic
+smoke patterns, scopes project memory and promotes a quick circuit only with
+≥2 distinct projects, samples ≥2 and confidence ≥0.90. A model pass is capped
+at 1/hour and only runs for cross-project candidates. The old heuristic's
+**33 quick circuits were fake**; the honest census is **0 validated / 187
+project / 55 technical**. God Intelligence shows last/next pass and the budget.
+Sync Map was removed; Cost paints the last measured reading before the console
+sync. OLYMPUS describes itself as a **multi-agent AI workspace**, not an
+operating system.
 
 `npm run hygiene -- --battery` runs **8 gates and 57 hermetic suites**; the
-live UI gate is `node scripts/verify-v011-ui.mjs`. The 100-hop certification
-passed; the 8-hour soak is **not claimed**. The previous stable is **v0.1.0**;
+live UI gate is `node scripts/verify-v012-ui.mjs`. The 100-hop certification
+passed; the 8-hour soak is **not claimed**. The previous stable is **v0.1.1**;
 the full history lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Architecture at a glance

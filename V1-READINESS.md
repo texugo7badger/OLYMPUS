@@ -2,13 +2,13 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.1.1 · 2026-11-26 · **STABLE — v0.1.1 fluidity.** The 100-hop
+> v0.1.2 · 2026-11-26 · **STABLE — v0.1.2 performance and truth.** The 100-hop
 > certification passed (100/100 script hops, evidence linked below); the
 > 8-hour model soak is **NOT claimed** and remains a declared P2 gap. The 57
 > hermetic suites are green, `npm run hygiene` passes tsc, lint, docs, strategy sync, privacy,
 > suite manifest and audit-high, and HYGIENE.md declares every remaining P2
 > limit. [KNOWN-ISSUES.md](KNOWN-ISSUES.md) lists each declared gap and the
-> post-0.1.0 backlog. v0.1.1 centralizes every mark in Apollo's terminal, removes the parallel chats, makes Continue on a loop-blocked hop ask Apollo with Atlas evidence, keeps a live campaign alive through hibernate, caps the brain at 120 quick circuits, and vendors OpenCode 2.4.2. v0.1.0 closed the long-campaign truth gaps: GO lane probes and
+> post-0.1.0 backlog. v0.1.2 pauses the atlas when idle, adds an automatic lean mode, separates Craft from References, detects native tools, stages an editable Reference-Use prompt, and replaces the quick-circuit heuristic with a deterministic cross-project proof plus a 1/hour model budget. The Pantheon measures 60 FPS p50/p95 in the software Electron window with no long tasks; 0 quick circuits are validated (187 project-scoped, 55 technical). v0.1.1 centralized every mark in Apollo's terminal and made Continue ask Apollo with Atlas evidence. v0.1.0 closed the long-campaign truth gaps: GO lane probes and
 > fallback, generation boundary, empirical learning, Apollo's disk-truth brief,
 > the preview window, batched marks, the boot handshake, cost/burn keep-last,
 > design provenance and deduped notifications.

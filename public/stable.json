@@ -1,6 +1,6 @@
 {
-  "version": "0.1.1",
-  "tag": "v0.1.1",
+  "version": "0.1.2",
+  "tag": "v0.1.2",
   "stable": true,
   "tests": {
     "pass": 57,
@@ -8,7 +8,7 @@
     "skip": 0,
     "suites": 57
   },
-  "releasedAt": "2026-11-26T18:00:00Z",
-  "commit": "v0.1.1",
-  "note": "Fluidity: one Apollo terminal (parallel god chats deleted), clean Parthenon, loop-blocked Continue asks Apollo with Atlas evidence, hibernate keeps a live campaign server, six current screens, brain capped at 120 quick circuits, learning notifications in seven languages, OpenCode 2.4.2 gate-approved. 8 hygiene gates, 57 suites."
+  "releasedAt": "2026-11-26T20:04:57Z",
+  "commit": "v0.1.2",
+  "note": "Performance and truth: the atlas pauses when idle (render on demand) and the Pantheon measures 60 FPS p50/p95 with no long tasks in the software Electron window; automatic lean mode; Craft and References are separate menus; native tools detected; Reference Use stages an editable question; 0 invented quick circuits (187 project, 55 technical) and a 15-minute deterministic Callimachus pass with a 1/hour model budget; Cost cache-first; Sync Map removed; OLYMPUS is a multi-agent AI workspace, not an operating system. 8 hygiene gates, 57 suites."
 }

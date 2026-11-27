@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-26T17:43:19.129Z",
+  "generatedAt": "2026-11-26T19:42:14.182Z",
   "note": "PUBLIC suites are tracked and run by .github/workflows/core.yml; TRACKED_LOCAL suites are in the repo but need the local OpenCode run state/overlay; LOCAL suites stay on the maintainer machine and declare why. A fresh clone reproduces the public core; the full battery numbers ride public/stable.json.",
   "public": [
     "alignment-preview.test.mjs",
@@ -22,11 +22,11 @@
     "docs-check.test.mjs",
     "hop-failure-class.test.mjs",
     "i18n-audit.test.mjs",
+    "instinct-curation.test.mjs",
     "mobile-companion.test.mjs",
     "parthenon-live.test.mjs",
     "plan-recovery.test.mjs",
     "preview-share.test.mjs",
-    "sync-map-scope.test.mjs",
     "terminal-paste.test.mjs",
     "theme-gallery.test.mjs",
     "v099-preview-mobile.test.mjs"
@@ -141,6 +141,10 @@
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
     {
+      "suite": "replan-continue.test.mjs",
+      "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
+    },
+    {
       "suite": "skill-index-refresh.test.mjs",
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     },
@@ -149,16 +153,11 @@
       "reason": "tracked, but needs the local OpenCode run state/overlay (or a live lane); core CI runs only the hermetic set"
     }
   ],
-  "local": [
-    {
-      "suite": "replan-continue.test.mjs",
-      "reason": "reads the maintainer vault/lanes (OLYMPUS-VAULT)"
-    }
-  ],
+  "local": [],
   "count": {
     "total": 57,
     "public": 27,
-    "trackedLocal": 29,
-    "local": 1
+    "trackedLocal": 30,
+    "local": 0
   }
 }

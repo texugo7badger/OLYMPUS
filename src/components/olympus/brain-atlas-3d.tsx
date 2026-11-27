@@ -167,6 +167,12 @@ export default function BrainAtlas3D() {
   const [highlightLobe, setHighlightLobe] = useState<LobeName | null>(null);
   const [hoveredLobe, setHoveredLobe] = useState<LobeName | null>(null);
   const [perfPreset, setPerfPreset] = useState<PerformancePreset>(() => (typeof document !== 'undefined' && document.documentElement.dataset.performance === 'low') ? 'batterySaver' : 'smooth');
+  // v0.1.2 — automatic lean mode: keep the 60 FPS target, drop the expensive
+  // passes (haze/cloud/signals) and cap DPR when the measured frame time says
+  // the GPU cannot hold it. One-way per session; no flapping, no fake number.
+  const [autoLean, setAutoLean] = useState(false);
+  const autoLeanRef = useRef(false);
+  const draggingRef = useRef(false);
   const [showPerfMenu, setShowPerfMenu] = useState(false);
   const [lobeStats, setLobeStats] = useState<Record<LobeName, number>>({
     frontal: 0, parietal: 0, temporal: 0, occipital: 0, cerebellum: 0, stem: 0,
@@ -416,6 +422,37 @@ export default function BrainAtlas3D() {
   /* Reads option state from optsRef so the initial-start closure     */
   /* (used by the mount effect) always sees the latest values.        */
   /* ---------------------------------------------------------------- */
+  /**
+   * v0.1.2 — the quality lever. Smooth keeps every pass at DPR <= 1.5; lean
+   * keeps only the geometry that carries meaning (background, edges, nodes,
+   * labels) at DPR <= 1.25. The brain stays readable; the GPU stops paying for
+   * haze, cloud and particles it cannot show at 60 FPS.
+   */
+  function applyQuality(preset: PerformancePreset, lean: boolean, dragging = false) {
+    const r = rendererRef.current;
+    if (!r || !startedRef.current) return;
+    try {
+      if (dragging) {
+        // A drag must feel direct. Text labels and particles are the first
+        // things to go; the geometry and the edges stay.
+        r.setEnabledPassesForTest(new Set(['background', 'nodes']));
+      } else if (preset === 'smooth' && !lean) {
+        r.setEnabledPassesForTest(new Set(['background', 'haze', 'cloud', 'edges', 'nodes', 'signals', 'labels']));
+      } else {
+        // Lean keeps the geometry that carries meaning; labels return with
+        // the node-detail panel, not as a per-frame text pass.
+        r.setEnabledPassesForTest(new Set(['background', 'edges', 'nodes']));
+      }
+    } catch { /* a renderer without the seam keeps all passes */ }
+    try {
+      const dpr = Math.min(
+        typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+        dragging ? 0.8 : preset === 'smooth' && !lean ? 1.5 : 1.25,
+      );
+      r.setView({ dpr });
+    } catch { /* Canvas2D fallback ignores dpr */ }
+  }
+
   function startRenderer() {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -431,7 +468,11 @@ export default function BrainAtlas3D() {
     const opts = optsRef.current;
 
     const options: BrainRendererOptions = {
-      idleAutoRotate: true,
+      // Battery saver is a static atlas: no continuous GPU work when the user
+      // is not interacting. Smooth keeps the slow self-evolution, and every
+      // preset pauses the frame loop after 2.2s idle (render on demand).
+      idleAutoRotate: opts.perfPreset !== 'batterySaver',
+      pauseWhenIdle: true,
       showLobeLabels: opts.showLobeLabels,
       enabledLobes: opts.enabledLobes,
       performancePreset: opts.perfPreset,
@@ -589,6 +630,11 @@ export default function BrainAtlas3D() {
       }
     }
 
+    // v0.1.2 — apply the quality lever after the surface exists. The compass
+    // seam above already selected the production pass set; this call narrows
+    // it when the measured frame time is poor.
+    applyQuality(opts.perfPreset, autoLeanRef.current, false);
+
     // Recompute lobe stats after start.
     if (rendererRef.current) {
       setLobeStats(rendererRef.current.getLobeStats());
@@ -636,8 +682,82 @@ export default function BrainAtlas3D() {
       showLobeLabels,
       enabledLobes,
       performancePreset: perfPreset,
+      idleAutoRotate: perfPreset !== 'batterySaver' && !autoLean,
     });
-  }, [showLobeLabels, enabledLobes, perfPreset]);
+    applyQuality(perfPreset, autoLean, draggingRef.current);
+  }, [showLobeLabels, enabledLobes, perfPreset, autoLean]);
+
+  /* ---------------------------------------------------------------- */
+  /* v0.1.2 — auto lean: measure real frame time, drop expensive       */
+  /* passes once if the GPU cannot hold ~50 FPS. One-way.              */
+  /* ---------------------------------------------------------------- */
+  useEffect(() => {
+    if (typeof window === 'undefined' || perfPreset !== 'smooth' || autoLean) return;
+    if (document.documentElement.dataset.performance === 'low') {
+      autoLeanRef.current = true;
+      setAutoLean(true);
+      return;
+    }
+    let raf = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const samples: number[] = [];
+    let first = 0;
+    let last = 0;
+    const tick = (t: number) => {
+      if (!first) { first = t; last = t; }
+      const dt = t - last;
+      last = t;
+      if (dt > 0 && dt < 120) samples.push(dt);
+      if (samples.length < 90) { raf = window.requestAnimationFrame(tick); return; }
+      const sorted = [...samples].sort((a, b) => a - b);
+      const p95 = sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)];
+      if (p95 > 20) {
+        autoLeanRef.current = true;
+        setAutoLean(true);
+      }
+    };
+    timer = setTimeout(() => {
+      if (document.visibilityState === 'visible') raf = window.requestAnimationFrame(tick);
+    }, 3000);
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (raf) window.cancelAnimationFrame(raf);
+    };
+  }, [perfPreset, autoLean]);
+
+  /* Drag quality: text/particles off, DPR 1 while the pointer is down;
+     restore the chosen quality on release. */
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const down = () => {
+      if (draggingRef.current) return;
+      draggingRef.current = true;
+      try { rendererRef.current?.setOptions({ dragLean: true }); } catch { /* optional */ }
+      applyQuality(perfPreset, autoLean, true);
+    };
+    const up = () => {
+      if (!draggingRef.current) return;
+      draggingRef.current = false;
+      try { rendererRef.current?.setOptions({ dragLean: false }); } catch { /* optional */ }
+      applyQuality(perfPreset, autoLean, false);
+    };
+    canvas.addEventListener('pointerdown', down);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    return () => {
+      canvas.removeEventListener('pointerdown', down);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+  }, [perfPreset, autoLean]);
+
+  /* Graph updates must paint even when idle rotation is off. */
+  useEffect(() => {
+    const r = rendererRef.current;
+    if (!r || !startedRef.current) return;
+    r.setOptions({});
+  }, [brainGraph]);
 
   /* ---------------------------------------------------------------- */
   /* Highlight lobe — push to renderer.                               */
@@ -923,7 +1043,7 @@ export default function BrainAtlas3D() {
             className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded border border-olympus-gold/15 bg-olympus-card/85 text-olympus-text-dim hover:text-olympus-text transition-colors"
           >
             <Gauge size={11} />
-            <span className="hidden sm:inline">{PERFORMANCE_PRESETS.find(p => p.id === perfPreset)?.label ?? 'Smooth'}</span>
+            <span className="hidden sm:inline">{autoLean ? 'Auto · lean' : PERFORMANCE_PRESETS.find(p => p.id === perfPreset)?.label ?? 'Smooth'}</span>
           </button>
           {/* v0.0.2 — Smooth menu open/close.
               The dropdown now fades + scales in (origin: top-right) over

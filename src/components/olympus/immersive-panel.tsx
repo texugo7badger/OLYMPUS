@@ -92,7 +92,7 @@ export default function ImmersivePanel({ onClose }: { onClose: () => void }) {
     const onUse = (e: Event) => {
       const d = (e as CustomEvent).detail || {};
       if (!d?.name) return;
-      const text = `Use the "${d.name}" reference${d.library ? ` (${d.library}${d.category ? ` · ${d.category}` : ''})` : ''}.${d.what ? ` ${d.what}` : ''}${d.demoUrl ? ` Reference: ${d.demoUrl}` : ''}`;
+      const text = `Reference: "${d.name}"${d.library ? ` (${d.library}${d.category ? ` · ${d.category}` : ''})` : ''}.\n${d.what ? `${d.what}\n` : ''}${d.demoUrl ? `Link: ${d.demoUrl}\n` : ''}\nHow do you want to use it? Tell me the page/section, the effect (keep, adapt or recreate) and any constraint. I will plan it before editing.`;
       setChatInput(text);
     };
     window.addEventListener('olympus:reference-use', onUse);

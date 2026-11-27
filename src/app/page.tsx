@@ -508,7 +508,6 @@ export default function OlympusWorkspace() {
       void import('@/components/olympus/vault-summary');
       void import('@/components/olympus/editor-bridge-panel');
       void import('@/components/olympus/craft-apps-panel');
-      void import('@/components/olympus/sync-map-panel');
       void import('@/components/olympus/god-intelligence-dashboard');
     };
     const ric = (window as any).requestIdleCallback as ((cb: () => void, opts?: { timeout: number }) => number) | undefined;
@@ -833,8 +832,8 @@ export default function OlympusWorkspace() {
                     visibility. Inactive = no cost/dispatch/hop polling. */}
                 {leftPane === 'cost' && <ChunkErrorBoundary><CostDashboard active={!focusMode && docVisible} /></ChunkErrorBoundary>}
                 {leftPane === 'atelier' && <ChunkErrorBoundary><AtelierPanel /></ChunkErrorBoundary>}
-                {leftPane === 'sync-map' && <ChunkErrorBoundary><SyncMapPanel /></ChunkErrorBoundary>}
-                {leftPane === 'craft-apps' && <ChunkErrorBoundary><CraftAppsPanel initialApp={craftAppFocus} /></ChunkErrorBoundary>}
+                {leftPane === 'craft-apps' && <ChunkErrorBoundary><CraftAppsPanel key="craft-surface" initialApp={craftAppFocus} initialTab="apps" /></ChunkErrorBoundary>}
+                {leftPane === 'references' && <ChunkErrorBoundary><CraftAppsPanel key="references-surface" initialTab="references" /></ChunkErrorBoundary>}
                 {leftPane === 'benchmarks' && <ChunkErrorBoundary><BenchmarksPanel /></ChunkErrorBoundary>}
                 {leftPane === 'timeline' && <ChunkErrorBoundary><ActivityTimeline /></ChunkErrorBoundary>}
                 {leftPane === 'logs' && <ChunkErrorBoundary><LogsDashboard /></ChunkErrorBoundary>}
@@ -921,5 +920,4 @@ export default function OlympusWorkspace() {
   );
 }
 const AtelierPanel = dynamic(() => import('@/components/olympus/atelier-panel'), { ssr: false, loading: () => <PanelLoading label="AtelierPanel" /> });
-const SyncMapPanel = dynamic(() => import('@/components/olympus/sync-map-panel'), { ssr: false, loading: () => <PanelLoading label="SyncMapPanel" /> });
 const CraftAppsPanel = dynamic(() => import('@/components/olympus/craft-apps-panel'), { ssr: false, loading: () => <PanelLoading label="CraftAppsPanel" /> });
