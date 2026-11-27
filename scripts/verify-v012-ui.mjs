@@ -80,7 +80,7 @@ async function main() {
   const chrome = spawn(CHROME, [
     '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
     `--remote-debugging-port=${PORT}`, `--window-size=${W},${H}`, 'about:blank',
-  ], { stdio: 'ignore' });
+  ], { stdio: 'ignore', detached: true });
   let cdp;
   try {
     cdp = client(await waitForCdp());
@@ -179,11 +179,11 @@ async function main() {
     check('U11: no uncaught app exception in the real page', errors.length === 0, errors.slice(0, 3).join(' | '));
 
     console.log(failures === 0 ? '\nverify-v012-ui: PASS' : `\nverify-v012-ui: ${failures} FAIL`);
-    process.exit(failures === 0 ? 0 : 1);
+    process.exitCode = failures === 0 ? 0 : 1;
   } finally {
     try { cdp?.close(); } catch { /* gone */ }
-    try { chrome.kill('SIGTERM'); } catch { /* gone */ }
+    try { process.kill(-chrome.pid, 'SIGKILL'); } catch { try { chrome.kill('SIGKILL'); } catch { /* gone */ } }
   }
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => { console.error(e); process.exitCode = 1; });
