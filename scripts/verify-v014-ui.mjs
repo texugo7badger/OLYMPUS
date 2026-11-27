@@ -191,6 +191,9 @@ async function main() {
     check('U13: LLM Strategy shows the canonical GO Balanced roster (no stale Apollo GLM)', /GO Balanced/.test(strategyText) && /DeepSeek V4\.1 Flash/.test(strategyText) && !/Apollo: GLM-5\.3/.test(strategyText) && !/Specialists: Qwen3\.7 Plus/.test(strategyText), strategyText.slice(0, 700));
 
     await go(URL_BASE, 5000);
+    // The boot overlay is a full-screen click blocker until it fades. Wait for
+    // the door to actually open before the pane clicks (the 5s race).
+    await waitFor(`!document.querySelector('[aria-label="OLYMPUS is loading"]')`, 15_000);
     const errors = cdp.events
       .filter((e) => e.method === 'Runtime.exceptionThrown' || (e.method === 'Log.entryAdded' && e.params?.entry?.level === 'error'))
       .map((e) => e.params?.exceptionDetails?.text || e.params?.entry?.text || '')

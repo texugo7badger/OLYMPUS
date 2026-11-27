@@ -195,10 +195,6 @@ export function buildStylePrompt(opts: {
 }
 
 /** The DESIGN.md contract (tokens JSON is emitted alongside by the API). */
-export function buildDesignMd(opts: { project: string; tokens: StyleTokens; references?: StyleReference[] }): string {
-  return `${buildStylePrompt(opts)}\n\n## Tokens JSON\n\n\`\`\`json\n${JSON.stringify(normalizeStyleTokens(opts.tokens), null, 2)}\n\`\`\`\n`;
-}
-
 export interface ArtcraftQueueItem {
   id: string;
   ts: string;

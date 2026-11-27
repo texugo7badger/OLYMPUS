@@ -2,7 +2,7 @@
 
 > OLYMPUS v0.1.2 — multi-agent AI workspace on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 61 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
 >
-> Counts in this document are the v0.1.0 truth: 71 agents (10 gods incl. Atlas + 61 demigods), 332 top-level skills, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
+> Counts in this document are the v0.1.5 truth: 71 agents (10 gods incl. Atlas + 61 demigods), 378 indexed skills, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
 
 ![OLYMPUS architecture](public/diagrams/architecture.svg)
 
@@ -141,7 +141,7 @@ Skills AND MCPs are tiered by relevance to keep the input budget lean:
 |------|------|-------------|-------|
 | **Hot** | Mastered skills (in `mastered-skills/<god>.md`) + always-available MCPs | Always | ~5-10 skills + 1-2 MCPs per god |
 | **Warm** | Stack-relevant skills (tags match active stack) + domain-relevant MCPs | Non-trivial tasks | Up to 20 skills + 2-3 MCPs |
-| **Cold** | All other skills + MCPs requiring explicit equip | Never (lazy via skill index / explicit dispatch) | ~332 skills + 0-1 MCPs |
+| **Cold** | All other skills + MCPs requiring explicit equip | Never (lazy via skill index / explicit dispatch) | ~378 skills + 0-1 MCPs |
 
 The `olympus-dynamic-context` plugin implements skill tiering in the `experimental.chat.messages.transform` hook. MCP tiering is implemented via `mcp-tiers.ts` (single source of truth for per-god MCP tiers) + a tier-aware `permission.ask` hook in `olympus-router`. The `selectMcpsForTask()` function in `mcp-tiers.ts` returns `{ hot, warm, cold }` for a given task classification, and the permission hook allows/denies MCP tool calls based on the tier + explicit equip records.
 
@@ -258,7 +258,7 @@ plugins were retired in #188/#189 — v2 covers them natively):
 | Plugins | 4 v2 plugins |
 | Commands | 16 |
 | Review tools | 3 (design-review, integration-review, deploy-review) |
-| Hooks | 21 |
+| Hooks | 13 in the Olympus overlay (+ router/dynamic-context hooks) |
 | LLM strategies | 7 built-in (go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget, local) + custom-* (the free tier is retired) |
 | LLM providers | 4 registered (OpenCode GO, OpenCode Zen, OpenRouter free, NVIDIA Build free; the free tier is retired as a strategy) — see [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) |
 | Supported external editors | 4 (Zed, VSCode, VSCodium, Cursor) — see [EDITORS.md](EDITORS.md) |

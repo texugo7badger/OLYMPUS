@@ -3,7 +3,20 @@
 ![The workflow](public/diagrams/workflow.svg)
 
 
-> OLYMPUS v0.1.0 — how a task flows through the 10 gods, 61 demigods, Symphony, and the VaultBrain. See [AGENTS.md](AGENTS.md) for the full agent roster and [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) for the cost flow. The v0.1.0 status brief, lane fallback and generation-boundary path is in the section below.
+> OLYMPUS v0.1.5 — how a task flows through the 10 gods, 61 demigods, Symphony, the Resonance Index, local retrieval and the VaultBrain. See [AGENTS.md](AGENTS.md) for the full agent roster and [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) for the cost flow. The v0.1.0 status brief, lane fallback and generation-boundary path is in the section below.
+
+## First run (v0.1.5)
+
+```bash
+npm run retrieval:index     # build/refresh the local hybrid index (once)
+npm run resonance:index     # rebuild the Symphony Resonance Index (0.2 s)
+npm run instincts:audit     # read-only instinct census; quarantine is explicit
+```
+
+The retrieval build runs as a background job (`core` skills+knowledge, then
+`all`); hibernate pauses between batches. A derived build is compiled only when
+no curated build matches, and it never enters the catalog without evidence.
+`OLYMPUS_RLM=1` enables the depth-2 recursive envelope (off by default).
 
 ## Task lifecycle
 
@@ -33,12 +46,13 @@ olympus-dynamic-context plugin
     │
     ▼
 olympus-router chat.params hook
-    │  1. Instinct gate — query god's instincts
-    │     confidence ≥ 0.85? → SHORT-CIRCUIT (skip deliberation)
-    │  2. Skill index search (if no short-circuit)
-    │     top-5 relevant skills surfaced as hints
-    │  3. Arsenal recon (Symphony quick-circuit)
-    │     coherence ≥ 0.85? → quick-circuit fires
+    │  1. Instinct gate — scope-aware; a quick circuit is a HINT, a
+    │     SHORT-CIRCUIT needs proof + confidence ≥ 0.85 + the right scope.
+    │     One in ten would-be short-circuits is forced to deliberate again.
+    │  2. Skill index search — top-3 cold-skill hints (TF-IDF).
+    │  3. Resonance Index — Jaccard ≥ 0.4 over 609 task signatures;
+    │     a quick circuit needs 3+ samples and 0.85+ Laplace coherence.
+    │  4. Retrieval Bus — top-4 cited local context (FTS5 + 768d + RRF).
     │
     ▼
 Apollo deliberates (or short-circuits)

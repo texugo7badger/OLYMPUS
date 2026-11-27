@@ -125,7 +125,7 @@ Each god declares mastered skills in `.opencode/vault-brain/mastered-skills/<god
 - **Warm** — stack-relevant skills (loaded for non-trivial tasks, capped at 20)
 - **Cold** — all other skills (not loaded; lazy via skill index search)
 
-The skill index (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) provides sub-millisecond TF-IDF cosine search across all 332 skills. When the instinct gate doesn't short-circuit, the router searches the index for the top-5 relevant skills and surfaces them as hints.
+The skill index (`~/OLYMPUS-VAULT/03_Index/skill-vec.db`) provides sub-millisecond TF-IDF cosine search across all 378 indexed skills. When the instinct gate doesn't short-circuit, the router searches the index for the top-3 relevant skills and injects them as compact hints.
 
 ---
 
