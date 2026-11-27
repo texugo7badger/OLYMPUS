@@ -15,9 +15,10 @@
  *   - 9 built-in strategies: 3 GO-plan + 3 Zen (pay-as-you-go) + 3 free
  *     (free-openrouter, free-big-pickle, free-nvidia-build). Groq's free tier
  *     was removed — its 12K TPM window cannot serve the OLYMPUS system prompt.
- *   - GLM-5.3 reserved for Apollo + Artemis in go-max-quality only; the
- *     daily strategies (go-balanced/go-budget) keep Apollo on GLM-5.3-Flash
- *     (cap-aware — the $3/5h rolling cap would blow in a week at 5h/day).
+ *   - Apollo rides DeepSeek V4.1 Flash in every GO strategy (the 1017
+ *     planner floor; the old GLM-5.3 sacred rule was retired in v0.0.23).
+ *     Atlas stays on Hy3; specialists use DeepSeek/MiMo/Kimi per the verified
+ *     roster. A dead lane fails over to the GO-safe set, never to a free lane.
  *   - Kimi K3 (in go-max-quality for top specialists) joins Kimi K2.7 Code,
  *     DeepSeek V4 Pro/Flash, Qwen3.7 Plus, MiMo V2.5, Grok 4.5, MiniMax M3/M2.7.
  *   - Callimachus always uses DeepSeek V4 Flash (background vault curation).
@@ -75,12 +76,11 @@ export const ZEN_PLAN_DOCS_URL = 'https://opencode.ai/docs/zen/';
 /**
  * Strategy tier — every strategy exposes a quality/balance/budget tier so
  * users can reason about quality vs cost.
- *  - quality : best GO has to offer; GLM-5.3 for Apollo + Artemis, Kimi K2.7
- *              Code / GLM-5.3-Flash / MiniMax M3 for specialists
- *  - balanced: GLM-5.3-Flash for Apollo + mid-tier (Kimi K2.7 Code / Qwen3.7
- *              Plus / GLM-5.3-Flash / MiniMax M3)
- *              for specialists
- *  - budget  : DeepSeek V4 Flash across all gods (effectively unlimited)
+ *  - quality : Apollo DeepSeek V4.1 Flash, Atlas Hy3, Kimi K2.7 Code for the
+ *              deep code/security roles, MiMo-V2.6-Flash for volume gods
+ *  - balanced: Apollo DeepSeek V4.1 Flash, Atlas Hy3, DeepSeek/MiMo for the
+ *              specialists (the default)
+ *  - budget  : Apollo DeepSeek V4.1 Flash, Atlas Hy3, MiMo-V2.6-Flash volume
  *  - local   : The user's own hardware — local LLM server (Ollama, LM Studio,
  *              vLLM, llama.cpp, or any OpenAI-compatible endpoint). Zero cost,
  *              zero network dependency; runs the full 81-agent arsenal when
@@ -216,8 +216,8 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   /**
    * "ZEN Max Quality" — the frontier tier on OpenCode Zen (pay-as-you-go,
    * no request caps), built around PROPRIETARY APIs — the whole point of
-   * Zen vs the GO plan (which runs the open-weight line). Apollo stays on
-   * GLM-5.3 (sacred). Atlas uses GPT 6 Sol for orchestration — Hy3 is
+   * Zen vs the GO plan (which runs the open-weight line). Apollo uses
+   * GPT 6.1 Sol on this Zen tier. Atlas uses GPT 6.1 Sol — Hy3 is
    * GO-only, so the ZEN sacred-orchestration substitute is the strongest
    * Zen reasoning model. Hephaestus + Artemis + Hermes get Claude Sonnet 5
    * (best-in-class coding); Athena GPT 5.6 Terra (frontend); Dionysus
@@ -265,8 +265,8 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
    * gods + 118 demigods) load, with full {file:...} prompt references and
    * all 8 plugins — the same config shape as the GO strategies.
    *
-   * Apollo stays on GLM-5.3 (sacred, $1.40/$4.40 per 1M).
-   * Atlas uses GPT 6 Sol for orchestration (Hy3 is GO-only).
+   * Apollo uses GPT 6.1 Sol on this Zen tier.
+   * Atlas uses GPT 6 Luna for orchestration (Hy3 is GO-only).
    * Hephaestus + Artemis get Claude Sonnet 5 (best-in-class coding);
    * Athena GPT 5.6 Terra (frontend); Dionysus GPT 5.6 Luna (QA);
    * Hermes GPT 5.4 Mini; Persephone Gemini 3.1 Pro; Prometheus Grok Build
@@ -301,8 +301,8 @@ export const LLM_STRATEGIES: Record<Exclude<LLMStrategy, `custom-${string}`>, LL
   },
   /**
    * "ZEN Budget" — the lowest-cost tier on OpenCode Zen, still on
-   * proprietary APIs: Apollo stays on GLM-5.3 (sacred), Atlas uses GPT 6
-   * Luna for orchestration, every other god drops to GLM-5.3-Flash
+   * proprietary APIs: Apollo uses GPT 6 Luna, Atlas uses GPT 6 Luna,
+   * every other god drops to DeepSeek V4.1 Flash / GLM-5.3-Flash
    * ($0.15/$0.50 per 1M — the cheapest workhorse class on Zen), and
    * Callimachus uses Claude Haiku 4.5. Verified 2026-09-28.
    */
@@ -548,8 +548,9 @@ export function isBuiltinStrategy(id: string): id is Exclude<LLMStrategy, `custo
 
 /**
  * Vault LLM — used in ALL strategies for vault documentation (session logs,
- * instincts, plans, delegations, dashboards). Always DeepSeek V4 Flash on GO
- * (effectively unlimited for background vault writes on the GO plan).
+ * instincts, plans, delegations, dashboards). The constant below is the
+ * legacy GO default; each strategy carries its own `vaultLlm` (DeepSeek V4.1
+ * Flash on GO, GLM-5.3-Flash on Zen).
  *
  * v0.0.1: switched from opencode/mimo-v2.5-free (ZEN free-tier model, which
  * may retain data for training) to opencode-go/deepseek-v4-flash (GO plan,

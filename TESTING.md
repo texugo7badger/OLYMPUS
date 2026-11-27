@@ -15,23 +15,26 @@
 | **Live drill** | 100 hops, hibernation, soak, a real campaign | local, against the running app |
 | **Campaign** | real gods, real artifacts, p50/p90, parks | AIME lane |
 
-## The public core (v0.0.90)
+## The public core (v0.1.5)
 
-Twenty-seven hermetic suites are published — no vault, no credentials — and a clean clone
-runs them:
+Thirty-five hermetic suites are published — no vault, no credentials — and a
+clean clone runs them:
 
 ```
-cost-caps · docs-check · terminal-paste · preview-share · alignment-preview
-i18n-audit · theme-gallery · god-chat · brain-live · cost-window
-context-handoff · plan-recovery · atlas-patrol · cost-speed · apollo-narrative
-parthenon-live · hop-failure-class · builds-check · build-execution · bench-hops
-mobile-companion · companion-apps · campaign-smoke
-concurrency · build-packs · demigod-archive
+alignment-preview · apollo-narrative · atlas-patrol · bench-hops · brain-live
+build-compiler · build-execution · build-packs · builds-check · campaign-smoke
+companion-apps · concurrency · context-handoff · cost-caps · cost-speed
+cost-window · demigod-archive · docs-check · embedding-cache · hop-failure-class
+i18n-audit · instinct-curation · instinct-quarantine · learning-core
+mobile-companion · parthenon-live · plan-recovery · preview-share
+resonance-index · retrieval-bus · retrieval-hibernate · rlm-envelope
+terminal-paste · theme-gallery · v099-preview-mobile
 ```
 
-`.github/workflows/core.yml` runs `tsc` + lint + the 27 public suites. The
-`campaign-smoke` suite is the acceptance: 10 hops, one tool-budget park, Atlas
-recovery, resumed walk **10/10 with no human**.
+`.github/workflows/core.yml` runs `tsc` + lint + the 35 public suites. The
+full battery is **66/66** (31 tracked-local suites need the live app/vault).
+The `campaign-smoke` suite is the acceptance: 10 hops, one tool-budget park,
+Atlas recovery, resumed walk **10/10 with no human**.
 
 `npm run suites:manifest` (v0.0.89, #330) is the checked-in map: every one of
 the 171 suites is PUBLIC (tracked + CI), TRACKED_LOCAL (in the repo but needs

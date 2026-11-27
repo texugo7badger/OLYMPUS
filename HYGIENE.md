@@ -1,6 +1,6 @@
-# OLYMPUS — hygiene total (v0.1.4-dev)
+# OLYMPUS — hygiene total (v0.1.5)
 
-> The 0.1.4-dev contract: **zero known errors in the deterministic gates**, and
+> The 0.1.5 contract: **zero known errors in the deterministic gates**, and
 > every remaining limit declared. `npm run hygiene` is the gate of record;
 > `npm run hygiene -- --battery` adds the hermetic suite sweep.
 
@@ -15,7 +15,7 @@
 | `npm run repo:privacy` | no private roots/credentials in tracked files |
 | `node scripts/suites-manifest.mjs` | every suite mapped, PUBLIC/TRACKED_LOCAL present |
 | `npm audit --audit-level=high` | 0 high / 0 critical |
-| `npm run battery` | the hermetic release-branch battery (66/66 at 0.1.4-dev; 57/57 at the v0.1.2 stable) |
+| `npm run battery` | the hermetic release-branch battery (66/66 at 0.1.5; 57/57 at the v0.1.2 stable) |
 
 The **manifest-declared local suites** read the live app, vault, browser or
 OpenCode DB; they are declared in `scripts/local-suites.manifest.json` and

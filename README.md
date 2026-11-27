@@ -87,36 +87,31 @@ the limits are in [HYGIENE.md](HYGIENE.md) and
 
 ## Latest
 
-**v0.1.4 — resonance, derived builds and a bounded RLM.** The Symphony
-Resonance Index pre-aggregates **8,235 historical outcomes into 609 task
-signatures** and earns a quick circuit only with **3+ samples and 0.85+
-Laplace coherence**. The first backfill exposed 31 fake shortcuts made of hop
-ids (`root`, `h0`); they are rejected, so the honest count remains **0 real
-quick circuits** until a task class repeats. Hops that match no curated build
-now receive a **derived loadout** validated against the on-disk skill/MCP/
-demigod registry; it is cold, recorded, and promotion needs 5+ samples at 80%+
-coherence plus a human click. A recursive **RLM envelope** (depth ≤2, ≤4
-children, budget-capped) rides the existing hop DAG behind `OLYMPUS_RLM=1`.
+**v0.1.5 — cleanup and truth.** The repository lost its dead surfaces: the
+legacy build-talent editor, the design-studio modal, the MCP detail panel, the
+plasma orb and the sync-map scope module are gone, together with their
+left-pane union, perf-route probe and stale suite entry. Nine unused
+devDependencies (CodeMirror, xterm, Radix tooltip) were removed and npm pruned
+34 packages. The docs now match the code: the README go-balanced roster is
+corrected (Athena/Hermes/Dionysus/Prometheus), AGENTS.md states the v0.1.5
+truth (10 gods + 61 live demigods, 39 tools, 1,032 retrieval chunks, 609
+resonance signatures) and the strategy comments no longer claim GLM-5.3 is
+Apollo.
 
-**Retrieval is local and cheap.** FTS5/BM25 + 768d `nomic-embed-text:v1.5` +
-RRF: **P@5 100% vs 73% FTS-only**, MRR **0.933 vs 0.733**, hybrid p95
-**235–286 ms**. A content-addressed embedding cache makes a `--force` rebuild
-skip unchanged text; the index build is a background job with real progress,
-and hibernate pauses between batches. The AIME instinct audit is read-only:
-190 empirical instincts, **187 AIME project-scoped**, 1 fixture and **0 true
-duplicates** (38 trigger-similarity candidates were reviewed and rejected).
-Nothing moved before the AIME test.
+**v0.1.4 is the test candidate.** It delivered the Symphony Resonance Index
+(8,235 outcomes → 609 signatures; the honest real quick-circuit count is 0
+because hop ids and fixtures are rejected), validated **derived builds** with
+evidence-gated promotion, a depth-2 **RLM envelope** behind `OLYMPUS_RLM=1`,
+the content-addressed embedding cache and the background index job, and fixed
+the v0.1.2 brain/strategy/cost regressions. **v0.1.2 remains the stable
+release.**
 
-**v0.1.2 remains the stable release.** The atlas still pauses when idle and the
-Pantheon still holds 60 FPS in the software window; v0.1.4 removed the silent
-auto-lean that erased the brain's outline — the user's preset is the only
-quality switch. Craft and References remain separate menus.
-
-`npm run hygiene -- --battery` runs **8 gates and 66 hermetic suites**; the
-v0.1.4 UI gate is `node scripts/verify-v014-ui.mjs`, and the stable v0.1.2 gate
-remains `node scripts/verify-v012-ui.mjs`. The 100-hop certification passed;
-the 8-hour soak is **not claimed**. The full history lives in
-[CHANGELOG.md](CHANGELOG.md).
+`npm run hygiene -- --battery` runs **8 gates and 66 hermetic suites** (35 are
+public in a clean clone); the v0.1.5 UI gate is
+`node scripts/verify-v015-ui.mjs`, the v0.1.4 gate remains
+`verify-v014-ui.mjs`, and the stable v0.1.2 gate is `verify-v012-ui.mjs`. The
+100-hop certification passed; the 8-hour soak is **not claimed**. The full
+history lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Architecture at a glance
 
@@ -148,8 +143,9 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 ![Evidence](public/diagrams/testing.svg)
 
 **57 PASS / 0 FAIL / 0 declared skip** across 57 suites is the stable v0.1.2
-gate; the v0.1.4 development battery is **66 PASS / 0 FAIL / 0 declared skip**
-across 66 suites (the maintainer-local suites need the live app/vault).
+gate; the v0.1.5 development battery is **66 PASS / 0 FAIL / 0 declared skip**
+across 66 suites (35 public in a clean clone; the tracked-local suites need the
+live app/vault).
 `npm run hygiene -- --battery` runs all eight gates. The 100-hop deterministic
 certification passed (100/100, p50/p95 189/225 ms); the 8-hour model soak is
 **not claimed**. The campaign's economics are measured by `npm run cost:audit`
@@ -315,15 +311,15 @@ and `ffmpeg` on PATH. The first transcription downloads the Whisper base model
 | **Apollo** | Planning & architecture | DeepSeek V4.1 Flash (1M ctx / 384k out) |
 | **Atlas** | Orchestration & execution | Hy3 |
 | **Artemis** | Security / auditing | DeepSeek V4.1 Flash |
-| **Athena** | Frontend / design | Qwen3.7 Plus |
-| **Dionysus** | QA / testing | Qwen3.7 Plus |
+| **Athena** | Frontend / design | DeepSeek V4.1 Flash |
+| **Dionysus** | QA / testing | MiMo-V2.6-Flash |
 | **Hephaestus** | Backend / infrastructure | DeepSeek V4.1 Flash |
-| **Hermes** | Integrations / APIs / MCPs | Qwen3.7 Plus |
+| **Hermes** | Integrations / APIs / MCPs | MiMo-V2.6-Flash |
 | **Persephone** | Database / persistence | DeepSeek V4.1 Flash |
-| **Prometheus** | DevOps / CI-CD / deploy | MiniMax M3 |
+| **Prometheus** | DevOps / CI-CD / deploy | MiMo-V2.6-Flash |
 | **Callimachus** | Background vault curator | DeepSeek V4.1 Flash |
 
-The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash (the 1017 line) is the preferred lane across the GO strategies; DeepSeek V4 Pro is retired; The planner rides DeepSeek V4.1 Flash in every GO strategy; the old GLM-5.3 planner rule is retired.
+The table above is the **go-balanced** roster (the default). DeepSeek V4.1 Flash (the 1017 line) is the preferred lane across the GO strategies; DeepSeek V4 Pro is retired; the planner rides DeepSeek V4.1 Flash in every GO strategy; the old GLM-5.3 planner rule is retired.
 
 ## Architecture (brief)
 

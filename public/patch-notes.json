@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-27",
-  "current": "0.1.4",
+  "current": "0.1.5",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.2",
@@ -11,6 +11,18 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.2 passed the full gate on 2026-11-26 (the first run hit a transient v2-session-list 503; the clean retry passed all checks)."
   },
   "releases": [
+    {
+      "version": "0.1.5",
+      "date": "2026-11-27",
+      "title": "Cleanup and truth",
+      "highlights": [
+        "Dead surfaces removed: the legacy build-talent editor, design-studio modal, MCP detail panel, plasma orb and sync-map scope module. The sync-map left-pane union, perf-route probe and stale suite list are gone with them.",
+        "Dependency pruning: nine unused devDependencies (CodeMirror, xterm, Radix tooltip) removed; npm pruned 34 packages. The runtime and build remain unchanged.",
+        "Documentation truth pass: README go-balanced roster corrected (Athena/Hermes/Dionysus/Prometheus), AGENTS.md now says v0.1.5 with 10 gods + 61 live demigods, 39 tools, 1,032 retrieval chunks and 609 resonance signatures, and the strategy comments no longer claim GLM-5.3 is Apollo.",
+        "Testing page corrected: 35 public suites and 66 total, including the v0.1.4 resonance, derived-build, RLM, embedding-cache and instinct-quarantine suites.",
+        "Gates: 8/8 hygiene, 66/66 suites, v0.1.5 UI gate, build:app. v0.1.2 remains the stable release; v0.1.4 is the test candidate."
+      ]
+    },
     {
       "version": "0.1.4",
       "date": "2026-11-27",

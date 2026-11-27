@@ -2,6 +2,30 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.5] — 2026-11-27
+
+### Cleanup and truth (release candidate)
+
+- **Dead surfaces removed.** The legacy `build-talent-editor`, the
+  `design-studio-modal`, the `mcp-detail-panel`, the `plasma-orb` and the
+  `sync-map-scope` module are gone. The `sync-map` left-pane union, the
+  perf-route probe and the stale `sync-map-scope` suite entry went with them.
+- **Dependencies pruned.** Nine unused devDependencies removed: CodeMirror
+  (4), xterm (3), `@uiw/react-codemirror` and `@radix-ui/react-tooltip`.
+  `npm` pruned 34 packages; the runtime and build are unchanged.
+- **Docs truth pass.** README's go-balanced roster corrected (Athena,
+  Dionysus, Hermes and Prometheus no longer show Qwen3.7 Plus / MiniMax M3).
+  AGENTS.md now states the v0.1.5 truth: 10 gods + 61 live demigods, 39 tools,
+  1,032 retrieval chunks, 609 resonance signatures, 8/8 gates and 66/66
+  suites. The model-strategy comments no longer claim GLM-5.3 is Apollo.
+  TESTING.md lists the 35 public suites and the 66-suite total.
+- **Version truth.** `VERSION`, `package.json`, the status-bar fallback and
+  the patch notes move to 0.1.5. `public/stable.json` stays at 0.1.2 until the
+  AIME test and the explicit stable promotion.
+- **Gates.** 8/8 hygiene, 66/66 suites, v0.1.5 UI gate, `build:app`.
+- **Not published as stable.** v0.1.4 is the test candidate; v0.1.5 waits for
+  the AIME test and the user's approval.
+
 ## [v0.1.4] — 2026-11-27
 
 ### Resonance, derived builds, bounded RLM (development release)

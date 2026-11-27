@@ -203,6 +203,15 @@ pass (skills + knowledge), then `all` (instincts, patterns, cached docs).
 content-addressed embedding cache makes rebuilds cheap. See
 [RETRIEVAL.md](RETRIEVAL.md).
 
+## Cleanup (v0.1.5)
+
+The cleanup removed surfaces that no runtime path imported: the legacy
+`build-talent-editor`, `design-studio-modal`, `mcp-detail-panel`,
+`plasma-orb` and `sync-map-scope`. The `sync-map` left-pane union, the
+perf-route probe and the stale suite entry were removed with them. Nine unused
+devDependencies (CodeMirror, xterm, Radix tooltip) were pruned, along with 34
+transitive packages. No behavior changed; the 66-suite battery stays green.
+
 ## Retrieval Bus (v0.1.3)
 
 The foundation release adds a local hybrid index at `~/.olympus/retrieval.db`:
@@ -242,17 +251,17 @@ plugins were retired in #188/#189 — v2 covers them natively):
 | Component | Count |
 |-----------|-------|
 | Gods | 10 |
-| Demigods | 118 |
-| Total agents | 128 |
-| Skills | 330 |
-| MCPs | 19 |
-| Plugins | 10 |
+| Demigods | 61 live (+61 archived with one-command restore) |
+| Total agents | 71 |
+| Skills | 378 |
+| MCPs | 28 unique registry servers · 39 curated tools (measured 2026-11-01) |
+| Plugins | 4 v2 plugins |
 | Commands | 16 |
 | Review tools | 3 (design-review, integration-review, deploy-review) |
 | Hooks | 21 |
-| LLM strategies | 9 built-in (go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget [Zen], free-openrouter, free-big-pickle [Free Big Pickle], free-nvidia-build [Free Nvidia Build]) + custom-* |
-| LLM providers | 4 (OpenCode GO, OpenCode Zen, OpenRouter free, NVIDIA Build free) — see [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) |
+| LLM strategies | 7 built-in (go-max-quality, go-balanced, go-budget, zen-max-quality, zen-balanced, zen-budget, local) + custom-* (the free tier is retired) |
+| LLM providers | 4 registered (OpenCode GO, OpenCode Zen, OpenRouter free, NVIDIA Build free; the free tier is retired as a strategy) — see [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) |
 | Supported external editors | 4 (Zed, VSCode, VSCodium, Cursor) — see [EDITORS.md](EDITORS.md) |
 | Terminal Bridge port | 3740 (token-gated, 127.0.0.1 only) |
-| Eval golden tasks | 5 (see [BENCHMARKS.md](BENCHMARKS.md)) |
+| Eval | 15 retrieval queries + 5 golden tasks (see [BENCHMARKS.md](BENCHMARKS.md)) |
 | Telemetry logs | 3 (activity feed, short-circuit log, benchmark log) |

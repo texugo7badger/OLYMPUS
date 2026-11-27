@@ -1,10 +1,10 @@
 # OLYMPUS — Known issues and post-0.1.0 backlog
 
-> v0.1.4-dev · 2026-11-27 · **Nothing here is hidden.** These are the limits
-> the development branch does not claim, with the reason and the next step.
-> The deterministic gates are green; the battery is 66 suites; the v0.1.4 live
-> UI gate is `node scripts/verify-v014-ui.mjs` (the stable v0.1.2 gate remains
-> `verify-v012-ui.mjs`).
+> v0.1.5 · 2026-11-27 · **Nothing here is hidden.** These are the limits the
+> release candidate does not claim, with the reason and the next step. The
+> deterministic gates are green; the battery is 66 suites; the v0.1.5 live UI
+> gate is `node scripts/verify-v015-ui.mjs` (the v0.1.4 test gate remains
+> `verify-v014-ui.mjs`; the stable v0.1.2 gate remains `verify-v012-ui.mjs`).
 
 ## Declared limits (not errors)
 
@@ -34,6 +34,12 @@
 - **#332** native Android/iOS home-screen widgets.
 - **#318** full decision ledger + cognitive protocol (partial in 0.1.0).
 - **#269** invoice reconciliation + per-model caps (partial in 0.1.0).
+
+## v0.1.5 backlog (new on 2026-11-27)
+
+- **Cleanup** — dead editor/terminal/sync-map/plasma surfaces removed; nine unused devDependencies pruned.
+- **Docs truth** — README/AGENTS/TESTING and the strategy comments corrected.
+- **Stable promotion** — waits for the AIME test on v0.1.4 and the user's explicit approval.
 
 ## v0.1.4 backlog (new on 2026-11-27)
 
