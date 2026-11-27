@@ -42,7 +42,6 @@ const ENDPOINTS = [
   ['/api/olympus/episodes?limit=60', 'activity feed'],
   ['/api/olympus/costs', 'status bar (costs)'],
   ['/api/olympus/craft-apps', 'craft apps'],
-  ['/api/olympus/sync-map?limit=50', 'sync map'],
   ['/api/olympus/models', 'strategy builder'],
 ];
 

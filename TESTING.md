@@ -25,7 +25,7 @@ cost-caps · docs-check · terminal-paste · preview-share · alignment-preview
 i18n-audit · theme-gallery · god-chat · brain-live · cost-window
 context-handoff · plan-recovery · atlas-patrol · cost-speed · apollo-narrative
 parthenon-live · hop-failure-class · builds-check · build-execution · bench-hops
-sync-map-scope · mobile-companion · companion-apps · campaign-smoke
+mobile-companion · companion-apps · campaign-smoke
 concurrency · build-packs · demigod-archive
 ```
 
