@@ -186,7 +186,10 @@ async function main() {
     // v0.1.4 — the offline fallback must say the SAME thing as the canonical
     // strategy table. The v0.1.2 fallback still assigned GLM-5.3 to Apollo.
     await clickLabel('LLM strategy');
-    await sleep(1800);
+    // The strategy pane is a dynamic chunk; wait for its canonical text, not
+    // a fixed 1.8s that can race a cold chunk.
+    await waitFor(`/GO Balanced/.test(document.body.innerText) && /DeepSeek V4\\.1 Flash/.test(document.body.innerText)`, 20_000);
+    await sleep(300);
     const strategyText = await evaluate(`document.body.innerText.slice(0, 6000)`);
     check('U13: LLM Strategy shows the canonical GO Balanced roster (no stale Apollo GLM)', /GO Balanced/.test(strategyText) && /DeepSeek V4\.1 Flash/.test(strategyText) && !/Apollo: GLM-5\.3/.test(strategyText) && !/Specialists: Qwen3\.7 Plus/.test(strategyText), strategyText.slice(0, 700));
 
