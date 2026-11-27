@@ -103,8 +103,9 @@ RRF: **P@5 100% vs 73% FTS-only**, MRR **0.933 vs 0.733**, hybrid p95
 **235–286 ms**. A content-addressed embedding cache makes a `--force` rebuild
 skip unchanged text; the index build is a background job with real progress,
 and hibernate pauses between batches. The AIME instinct audit is read-only:
-190 empirical instincts, **187 AIME project-scoped**, 38 duplicates and 1
-fixture flagged for reversible quarantine — nothing moved before the AIME test.
+190 empirical instincts, **187 AIME project-scoped**, 1 fixture and **0 true
+duplicates** (38 trigger-similarity candidates were reviewed and rejected).
+Nothing moved before the AIME test.
 
 **v0.1.2 remains the stable release.** The atlas still pauses when idle and the
 Pantheon still holds 60 FPS in the software window; v0.1.4 removed the silent

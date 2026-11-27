@@ -89,12 +89,17 @@ for (const god of fs.existsSync(ROOT) ? fs.readdirSync(ROOT) : []) {
   }
 }
 
-// Duplicates: same god, trigger Jaccard >= 0.8. Keep the higher-sample row.
+// Duplicates: same god AND the same normalized trigger AND action. The first
+// v0.1.4 audit used trigger Jaccard >= 0.8 and chained distinct AIME tasks
+// (audio-50 vs ambient-mount) into one "duplicate" — a cleanup that would
+// have destroyed real memory. Similarity alone is not identity.
+const norm = (text) => [...tokens(text)].sort().join(' ');
 const duplicates = new Set();
 for (let i = 0; i < rows.length; i++) {
   for (let j = i + 1; j < rows.length; j++) {
     if (rows[i].god !== rows[j].god) continue;
-    if (jaccard(tokens(rows[i].trigger), tokens(rows[j].trigger)) < 0.8) continue;
+    if (norm(rows[i].trigger) !== norm(rows[j].trigger)) continue;
+    if (norm(rows[i].action) !== norm(rows[j].action)) continue;
     const keep = rows[i].samples >= rows[j].samples ? i : j;
     const drop = keep === i ? j : i;
     rows[drop].flags.duplicateOf = rows[keep].file;

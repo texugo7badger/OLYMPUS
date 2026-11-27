@@ -30,10 +30,11 @@ All notable changes to OLYMPUS are documented in this file.
   index card now shows chunks, vectors, cache entries and a Build/Refresh
   button.
 - **AIME instinct audit.** Read-only scan: 190 empirical instincts, **187 AIME
-  project-scoped**, 1 fixture, 38 duplicates, 0 stale/global-AIME. Quarantine
-  and restore tools move files to `_archive` with a sha256 manifest and bring
-  them back byte-for-byte. **Nothing was moved**; the apply waits for the AIME
-  v0.1.3 test.
+  project-scoped**, 1 fixture, **0 true duplicates** (38 trigger-similarity
+  candidates were reviewed and rejected as false positives), 0 stale/global-
+  AIME. Quarantine and restore tools move files to `_archive` with a sha256
+  manifest and bring them back byte-for-byte. **Nothing was moved**; the apply
+  waits for the AIME test.
 - **v0.1.2 regressions fixed.** The atlas no longer auto-drops haze/cloud/
   signals (the brain's outline is back; the user's preset is the only quality
   switch); the LLM Strategy offline fallback comes from the canonical strategy
