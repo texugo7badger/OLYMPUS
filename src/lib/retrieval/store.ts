@@ -16,8 +16,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import Database from 'better-sqlite3';
-import type { RetrievalChunk, RetrievalDocument, RetrievalHit, RetrievalKind } from './types.js';
-import { EMBED_DIM } from './embedding.js';
+import type { RetrievalChunk, RetrievalDocument, RetrievalHit, RetrievalKind } from './types';
+import { EMBED_DIM } from './embedding';
 
 const HOME = () => process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
 export const RETRIEVAL_DB = () => process.env.OLYMPUS_RETRIEVAL_DB || path.join(HOME(), 'retrieval.db');

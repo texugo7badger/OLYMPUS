@@ -19,10 +19,10 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { getVaultRoot } from './vault-root.js';
-import { filterInstinct, type ActiveProject, type InstinctScope } from './instinct-scope.js';
-import { getActiveContext, activeProjectForScope } from './learning/active-context.js';
-import { computeInstinctConfidence } from './learning/confidence.js';
+import { getVaultRoot } from './vault-root';
+import { filterInstinct, type ActiveProject, type InstinctScope } from './instinct-scope';
+import { getActiveContext, activeProjectForScope } from './learning/active-context';
+import { computeInstinctConfidence } from './learning/confidence';
 
 const STOPWORDS = new Set([
   'the', 'a', 'an', 'and', 'or', 'to', 'of', 'in', 'on', 'for', 'with', 'is', 'are',

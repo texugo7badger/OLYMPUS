@@ -88,9 +88,10 @@ the limits are in [HYGIENE.md](HYGIENE.md) and
 ## Latest
 
 **v0.1.5 — cleanup and truth.** The repository lost its dead surfaces: the
-legacy build-talent editor, the design-studio modal, the MCP detail panel, the
-plasma orb and the sync-map scope module are gone, together with their
-left-pane union, perf-route probe and stale suite entry. Nine unused
+legacy build-talent editor, the design-studio modal, the MCP detail panel and
+the plasma orb are gone, together with the sync-map panel/left-pane union, the
+perf-route probe and the stale suite entry. The prompt-scope helper stays: the
+overlay still classifies app turns even though the panel is retired. Nine unused
 devDependencies (CodeMirror, xterm, Radix tooltip) were removed and npm pruned
 34 packages. The docs now match the code: the README go-balanced roster is
 corrected (Athena/Hermes/Dionysus/Prometheus), AGENTS.md states the v0.1.5
@@ -109,7 +110,8 @@ Logs header and right-pane tabs; seven languages), the atlas keeps its full
 cloud during drag and auto-rotates in Smooth/Balanced, and closing the window
 hibernates while minimize keeps it open. **v0.1.3 was the retrieval and
 learning foundation** (local hybrid retrieval, ECC confidence/scope, skill
-index repair), folded into v0.1.4. **v0.1.2 remains the stable release.**
+index repair), folded into v0.1.4. **v0.1.5 is the stable release; v0.1.2 is the
+previous stable.**
 
 `npm run hygiene -- --battery` runs **8 gates and 66 hermetic suites** (35 are
 public in a clean clone); the v0.1.5 UI gate is
@@ -147,10 +149,9 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**57 PASS / 0 FAIL / 0 declared skip** across 57 suites is the stable v0.1.2
-gate; the v0.1.5 development battery is **66 PASS / 0 FAIL / 0 declared skip**
-across 66 suites (35 public in a clean clone; the tracked-local suites need the
-live app/vault).
+**66 PASS / 0 FAIL / 0 declared skip** across 66 suites is the v0.1.5 stable
+gate (35 public in a clean clone; the tracked-local suites need the live
+app/vault). The previous v0.1.2 gate was 57/57.
 `npm run hygiene -- --battery` runs all eight gates. The 100-hop deterministic
 certification passed (100/100, p50/p95 189/225 ms); the 8-hour model soak is
 **not claimed**. The campaign's economics are measured by `npm run cost:audit`

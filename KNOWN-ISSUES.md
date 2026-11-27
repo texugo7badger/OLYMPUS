@@ -1,7 +1,7 @@
 # OLYMPUS — Known issues and post-0.1.0 backlog
 
 > v0.1.5 · 2026-11-27 · **Nothing here is hidden.** These are the limits the
-> release candidate does not claim, with the reason and the next step. The
+> release does not claim, with the reason and the next step. The
 > deterministic gates are green; the battery is 66 suites; the v0.1.5 live UI
 > gate is `node scripts/verify-v015-ui.mjs` (the v0.1.4 test gate remains
 > `verify-v014-ui.mjs`; the stable v0.1.2 gate remains `verify-v012-ui.mjs`).
@@ -37,7 +37,7 @@
 
 ## v0.1.5 backlog (new on 2026-11-27)
 
-- **Cleanup** — dead editor/terminal/sync-map/plasma surfaces removed; nine unused devDependencies pruned.
+- **Cleanup** — dead editor/terminal/plasma surfaces removed; the sync-map panel/left-pane retired while the prompt-scope helper stays for the overlay; nine unused devDependencies pruned.
 - **Docs truth** — README/AGENTS/TESTING and the strategy comments corrected.
 - **Stable promotion** — waits for the AIME test on v0.1.4 and the user's explicit approval.
 

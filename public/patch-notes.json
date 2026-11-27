@@ -21,7 +21,7 @@
         "Documentation truth pass: README go-balanced roster corrected (Athena/Hermes/Dionysus/Prometheus), AGENTS.md now says v0.1.5 with 10 gods + 61 live demigods, 39 tools, 1,032 retrieval chunks and 609 resonance signatures, and the strategy comments no longer claim GLM-5.3 is Apollo.",
         "Front pass: the brain keeps its full cloud during drag and auto-rotates in Smooth/Balanced, the Y/Z compass is gone, the status bar drops the brain: prefix, and the shell (activity bar, status bar, Compact Brain, notifications, Logs header/overview, right-pane tabs) follows the language selector in seven languages. Minimize keeps the window; closing hibernates by default.",
         "Testing page corrected: 35 public suites and 66 total, including the v0.1.4 resonance, derived-build, RLM, embedding-cache and instinct-quarantine suites.",
-        "Gates: 8/8 hygiene, 66/66 suites, v0.1.5 UI gate, build:app. v0.1.2 remains the stable release; v0.1.5 is the dev test candidate (v0.1.4 remains a prerelease)."
+        "Gates: 8/8 hygiene, 66/66 suites, v0.1.5 UI gate, build:app. v0.1.5 is the stable release; v0.1.2 is the previous stable (v0.1.4 remains a prerelease)."
       ]
     },
     {
@@ -35,7 +35,7 @@
         "Retrieval first-run: content-addressed embedding cache (a --force rebuild skips unchanged text), a background index job with core/all phases and real progress, and a Cost-style skeleton instead of a full-surface loader.",
         "v0.1.2 regressions fixed: the brain no longer auto-drops haze/cloud/signals (its outline is back); LLM Strategy offline fallbacks come from the canonical table (no Apollo GLM-5.3); god-detail never opens empty.",
         "AIME instinct audit: 190 empirical, 187 project-scoped, 1 fixture and 0 true duplicates (38 similarity candidates rejected); quarantine/restore are byte-verified and nothing was moved before the AIME test.",
-        "Gates: 8/8 hygiene, 66/66 suites, v0.1.4 UI gate, build:app. v0.1.2 remains the stable release."
+        "Gates: 8/8 hygiene, 66/66 suites, v0.1.4 UI gate, build:app. v0.1.2 was the stable release at the time; v0.1.5 supersedes it."
       ]
     },
     {

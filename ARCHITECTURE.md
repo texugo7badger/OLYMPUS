@@ -222,9 +222,10 @@ to quit). This is the contract behind "minimize stays open; close hibernates".
 ## Cleanup (v0.1.5)
 
 The cleanup removed surfaces that no runtime path imported: the legacy
-`build-talent-editor`, `design-studio-modal`, `mcp-detail-panel`,
-`plasma-orb` and `sync-map-scope`. The `sync-map` left-pane union, the
-perf-route probe and the stale suite entry were removed with them. Nine unused
+`build-talent-editor`, `design-studio-modal`, `mcp-detail-panel` and
+`plasma-orb`. The `sync-map` panel/left-pane, the perf-route probe and the
+stale suite entry are gone; the prompt-scope helper stays because the overlay
+still classifies app turns. Nine unused
 devDependencies (CodeMirror, xterm, Radix tooltip) were pruned, along with 34
 transitive packages. No behavior changed; the 66-suite battery stays green.
 

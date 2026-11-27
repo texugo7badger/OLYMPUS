@@ -4,7 +4,7 @@ All notable changes to OLYMPUS are documented in this file.
 
 ## [v0.1.5] — 2026-11-27
 
-### Cleanup and truth (release candidate)
+### Cleanup and truth (stable release)
 
 - **Dead surfaces removed.** The legacy `build-talent-editor`, the
   `design-studio-modal`, the `mcp-detail-panel`, the `plasma-orb` and the
@@ -33,9 +33,8 @@ All notable changes to OLYMPUS are documented in this file.
   captures (including a pt-BR proof); the header/badge SVGs and ARCHITECTURE
   header carry v0.1.5.
 - **Gates.** 8/8 hygiene, 66/66 suites, v0.1.5 UI gate, `build:app`.
-- **Not published as stable.** v0.1.5 is the dev test candidate; v0.1.4
-  remains a prerelease. Stable promotion waits for the AIME test and the
-  user's approval.
+- **Released stable.** v0.1.5 is the current stable; v0.1.4 remains a
+  prerelease. The full battery was green (66/66) before the tag.
 
 ## [v0.1.4] — 2026-11-27
 

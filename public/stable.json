@@ -1,14 +1,14 @@
 {
-  "version": "0.1.2",
-  "tag": "v0.1.2",
+  "version": "0.1.5",
+  "tag": "v0.1.5",
   "stable": true,
   "tests": {
-    "pass": 57,
+    "pass": 66,
     "fail": 0,
     "skip": 0,
-    "suites": 57
+    "suites": 66
   },
-  "releasedAt": "2026-11-26T20:04:57Z",
-  "commit": "v0.1.2",
-  "note": "Performance and truth: the atlas pauses when idle (render on demand) and the Pantheon measures 60 FPS p50/p95 with no long tasks in the software Electron window; automatic lean mode; Craft and References are separate menus; native tools detected; Reference Use stages an editable question; 0 invented quick circuits (187 project, 55 technical) and a 15-minute deterministic Callimachus pass with a 1/hour model budget; Cost cache-first; Sync Map removed; OLYMPUS is a multi-agent AI workspace, not an operating system. 8 hygiene gates, 57 suites."
+  "releasedAt": "2026-11-27T21:18:02.431Z",
+  "commit": "3be1149",
+  "note": "Stable means: the full battery ran with 0 FAIL and the declared skips are explicit. The console/GO limits are unrelated and may change."
 }

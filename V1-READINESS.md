@@ -2,7 +2,7 @@
 
 ![Readiness](public/diagrams/readiness.svg)
 
-> v0.1.5 · 2026-11-27 · **RELEASE CANDIDATE — v0.1.5 cleanup and truth.** Dead surfaces and nine unused devDependencies are removed; README/AGENTS/TESTING carry the v0.1.5 counts; 66 hermetic suites, 8/8 hygiene and the v0.1.5 UI gate are green. v0.1.4 delivered the Resonance Index (609 signatures, 0 fake quick circuits), the Build Compiler (validated derived loadouts, evidence-gated promotion), the RLM envelope (depth 2, 4 children, budget-capped), the embedding cache and the background index job. **v0.1.2 remains the stable release.** The 100-hop
+> v0.1.5 · 2026-11-27 · **STABLE — v0.1.5 cleanup and truth.** Dead surfaces and nine unused devDependencies are removed; README/AGENTS/TESTING carry the v0.1.5 counts; 66 hermetic suites, 8/8 hygiene and the v0.1.5 UI gate are green. v0.1.4 delivered the Resonance Index (609 signatures, 0 fake quick circuits), the Build Compiler (validated derived loadouts, evidence-gated promotion), the RLM envelope (depth 2, 4 children, budget-capped), the embedding cache and the background index job. **v0.1.2 is the previous stable.** The 100-hop
 > certification passed (100/100 script hops, evidence linked below); the
 > 8-hour model soak is **NOT claimed** and remains a declared P2 gap. The 57
 > hermetic suites are green, `npm run hygiene` passes tsc, lint, docs, strategy sync, privacy,

@@ -38,11 +38,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { getVaultRoot } from '../vault-root.js';
-import { normalizeOutcome } from '../learning/outcome.js';
-import { computeTaskSignature } from './resonance-signature.js';
-import { queryResonance } from './resonance-index.js';
+import { normalizeOutcome } from '../learning/outcome';
+import { computeTaskSignature } from './resonance-signature';
+import { queryResonance } from './resonance-index';
 
-export { computeTaskSignature } from './resonance-signature.js';
+export { computeTaskSignature } from './resonance-signature';
 
 const VAULT_ROOT = getVaultRoot();
 const ARSENAL_LOG = path.join(VAULT_ROOT, '03_Index', 'arsenal-resonance.jsonl');

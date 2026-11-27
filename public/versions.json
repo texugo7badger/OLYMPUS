@@ -1,23 +1,23 @@
 {
   "stable": {
-    "version": "0.1.2",
-    "tag": "v0.1.2",
+    "version": "0.1.5",
+    "tag": "v0.1.5",
     "stable": true,
     "tests": {
-      "pass": 57,
+      "pass": 66,
       "fail": 0,
       "skip": 0,
-      "suites": 57
+      "suites": 66
     },
-    "releasedAt": "2026-11-26T20:04:57Z",
-    "commit": "v0.1.2",
-    "note": "Performance and truth: the atlas pauses when idle (render on demand) and the Pantheon measures 60 FPS p50/p95 with no long tasks in the software Electron window; automatic lean mode; Craft and References are separate menus; native tools detected; Reference Use stages an editable question; 0 invented quick circuits (187 project, 55 technical) and a 15-minute deterministic Callimachus pass with a 1/hour model budget; Cost cache-first; Sync Map removed; OLYMPUS is a multi-agent AI workspace, not an operating system. 8 hygiene gates, 57 suites."
+    "releasedAt": "2026-11-27T21:18:02.431Z",
+    "commit": "3be1149",
+    "note": "Stable means: the full battery ran with 0 FAIL and the declared skips are explicit. The console/GO limits are unrelated and may change."
   },
   "versions": [
     {
       "version": "0.1.5",
       "tag": "v0.1.5",
-      "stable": false
+      "stable": true
     },
     {
       "version": "0.1.4",
@@ -32,7 +32,12 @@
     {
       "version": "0.1.2",
       "tag": "v0.1.2",
-      "stable": true
+      "stable": false
+    },
+    {
+      "version": "0.1.1",
+      "tag": "v0.1.1",
+      "stable": false
     },
     {
       "version": "0.1.0",
@@ -42,6 +47,56 @@
     {
       "version": "0.0.99",
       "tag": "v0.0.99",
+      "stable": false
+    },
+    {
+      "version": "0.0.98-17",
+      "tag": "v0.0.98-17",
+      "stable": false
+    },
+    {
+      "version": "0.0.98-16",
+      "tag": "v0.0.98-16",
+      "stable": false
+    },
+    {
+      "version": "0.0.98-15",
+      "tag": "v0.0.98-15",
+      "stable": false
+    },
+    {
+      "version": "0.0.98-14",
+      "tag": "v0.0.98-14",
+      "stable": false
+    },
+    {
+      "version": "0.0.98-13",
+      "tag": "v0.0.98-13",
+      "stable": false
+    },
+    {
+      "version": "0.0.98-12",
+      "tag": "v0.0.98-12",
+      "stable": false
+    },
+    {
+      "version": "0.0.98-11",
+      "tag": "v0.0.98-11",
+      "stable": false
+    },
+    {
+      "version": "0.0.98-10",
+      "tag": "v0.0.98-10",
+      "stable": false
+    },
+    {
+      "version": "0.0.98-9.1",
+      "tag": "v0.0.98-9.1",
+      "stable": false
+    },
+    {
+      "version": "0.0.98-9",
+      "tag": "v0.0.98-9",
       "stable": false
     },
     {
@@ -107,91 +162,6 @@
     {
       "version": "0.0.86",
       "tag": "v0.0.86",
-      "stable": false
-    },
-    {
-      "version": "0.0.85",
-      "tag": "v0.0.85",
-      "stable": false
-    },
-    {
-      "version": "0.0.84",
-      "tag": "v0.0.84",
-      "stable": false
-    },
-    {
-      "version": "0.0.83",
-      "tag": "v0.0.83",
-      "stable": false
-    },
-    {
-      "version": "0.0.82",
-      "tag": "v0.0.82",
-      "stable": false
-    },
-    {
-      "version": "0.0.81",
-      "tag": "v0.0.81",
-      "stable": false
-    },
-    {
-      "version": "0.0.80",
-      "tag": "v0.0.80",
-      "stable": false
-    },
-    {
-      "version": "0.0.79",
-      "tag": "v0.0.79",
-      "stable": false
-    },
-    {
-      "version": "0.0.78",
-      "tag": "v0.0.78",
-      "stable": false
-    },
-    {
-      "version": "0.0.77",
-      "tag": "v0.0.77",
-      "stable": false
-    },
-    {
-      "version": "0.0.76",
-      "tag": "v0.0.76",
-      "stable": false
-    },
-    {
-      "version": "0.0.75",
-      "tag": "v0.0.75",
-      "stable": false
-    },
-    {
-      "version": "0.0.74",
-      "tag": "v0.0.74",
-      "stable": false
-    },
-    {
-      "version": "0.0.73",
-      "tag": "v0.0.73",
-      "stable": false
-    },
-    {
-      "version": "0.0.72",
-      "tag": "v0.0.72",
-      "stable": false
-    },
-    {
-      "version": "0.0.71",
-      "tag": "v0.0.71",
-      "stable": false
-    },
-    {
-      "version": "0.0.70",
-      "tag": "v0.0.70",
-      "stable": false
-    },
-    {
-      "version": "0.0.69",
-      "tag": "v0.0.69",
       "stable": false
     }
   ]
