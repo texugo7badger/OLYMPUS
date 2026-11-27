@@ -2,7 +2,7 @@
 
 > OLYMPUS v0.1.2 — multi-agent AI workspace on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 61 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
 >
-> Counts in this document are the v0.1.5 truth: 71 agents (10 gods incl. Atlas + 61 demigods), 378 indexed skills, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
+> Counts in this document are the v0.1.5 truth: 71 agents (10 gods incl. Atlas + 61 demigods), 332 top-level skills / 378 indexed skill docs, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
 
 ![OLYMPUS architecture](public/diagrams/architecture.svg)
 
@@ -253,7 +253,7 @@ plugins were retired in #188/#189 — v2 covers them natively):
 | Gods | 10 |
 | Demigods | 61 live (+61 archived with one-command restore) |
 | Total agents | 71 |
-| Skills | 378 |
+| Skills | 332 top-level · 378 indexed docs |
 | MCPs | 28 unique registry servers · 39 curated tools (measured 2026-11-01) |
 | Plugins | 4 v2 plugins |
 | Commands | 16 |

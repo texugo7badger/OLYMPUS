@@ -555,4 +555,14 @@ ok('PN12: a blocked gate recovers its quarantined dependencies, not the gate', (
   assert.match(red, /recoverBlockedDependencies/);
 });
 
+ok('PN13: the brain keeps its full cloud (no silent auto-lean regression)', () => {
+  const brain = src('src/components/olympus/brain-atlas-3d.tsx');
+  assert.doesNotMatch(brain, /autoLean/);
+  assert.match(brain, /'background', 'haze', 'cloud', 'edges', 'nodes', 'signals', 'labels'/);
+  assert.match(brain, /idleAutoRotate: opts\.perfPreset !== 'batterySaver'/);
+  // The stale v0.1.4 local build carried the old autoLean chunk; the source
+  // guard is the contract a future build must satisfy.
+  assert.doesNotMatch(brain, /Auto · lean/);
+});
+
 console.log(`\nv092-runtime: ${passed} passed${process.exitCode ? ', failures' : ', all green'}.`);
