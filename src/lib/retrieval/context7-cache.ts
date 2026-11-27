@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import type { RetrievalDocument } from './types';
+import type { RetrievalDocument } from './types.js';
 
 const HOME = () => process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
 const CACHE = () => path.join(HOME(), 'context7-cache.jsonl');

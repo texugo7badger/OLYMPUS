@@ -24,9 +24,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { getVaultRoot } from '../vault-root';
-import { normalizeOutcome } from '../learning/outcome';
-import { computeTaskSignature, signatureTokens, signatureSimilarity, isUsefulSignature, isFixtureSignature } from './resonance-signature';
+import { getVaultRoot } from '../vault-root.js';
+import { normalizeOutcome } from '../learning/outcome.js';
+import { computeTaskSignature, signatureTokens, signatureSimilarity, isUsefulSignature, isFixtureSignature } from './resonance-signature.js';
 
 export interface ResonanceArsenal {
   skills: Record<string, { successes: number; total: number }>;

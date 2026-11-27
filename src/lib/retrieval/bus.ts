@@ -9,7 +9,7 @@
  *
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
-import { embedQuery } from './embedding';
+import { embedQuery } from './embedding.js';
 import {
   getRetrievalStore,
   searchFts,
@@ -17,8 +17,8 @@ import {
   getDocsByIds,
   filterHit,
   toHit,
-} from './store';
-import type { RetrievalHit, RetrievalKind, RetrievalQuery } from './types';
+} from './store.js';
+import type { RetrievalHit, RetrievalKind, RetrievalQuery } from './types.js';
 
 export const RRF_K = 60;
 

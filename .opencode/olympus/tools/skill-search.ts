@@ -10,7 +10,7 @@
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */
 import { tool, type ToolDefinition } from "@opencode-ai/plugin/tool";
-import { getSkillIndex } from "../src/olympus-router/src/skill-index.js";
+import { getSkillIndex } from "../../src/olympus-router/src/skill-index.js";
 
 const skillSearchTool: ToolDefinition = tool({
   description:
