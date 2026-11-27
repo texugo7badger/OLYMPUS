@@ -1557,10 +1557,9 @@ function createWindow() {
   // hibernating app keeps the window hidden on close; otherwise X quits.
   mainWindow.on('close', (event) => {
     if (app.isQuitting) return;
-    // v0.0.96 — X means QUIT by default. Hibernate is explicit (tray,
-    // notification, lock-screen, or the closeToHibernate preference). The
-    // old handler turned every X into a background hibernate, which is how a
-    // "closed" app kept a preview + walk + MCP fleet in its cgroup.
+    // v0.1.5 — X means HIBERNATE by default: the campaign stays alive and
+    // the tray Quit is the explicit exit. The closeToHibernate preference is
+    // still honoured for users who prefer a hard quit.
     if (readCloseToHibernate()) {
       event.preventDefault();
       void hibernateNow();

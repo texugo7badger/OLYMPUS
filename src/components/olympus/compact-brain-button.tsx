@@ -6,6 +6,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useOlympus } from '@/lib/olympus-store';
+import { useLanguage, t } from '@/lib/i18n';
 import { Brain, Loader2, Undo2, Check, AlertTriangle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +35,7 @@ const WARN_PREF_KEY = 'olympus.compactBrain.warningDismissed';
  * idle -> in-progress -> undo-window -> cooldown -> idle
  */
 export default function CompactBrainButton() {
+ const language = useLanguage();
  const compactState = useOlympus(s => s.compactState);
  const setCompactState = useOlympus(s => s.setCompactState);
  const phases = useOlympus(s => s.compactPhases);
@@ -246,7 +248,7 @@ export default function CompactBrainButton() {
  <button
  onClick={handleCompactClick}
  disabled={compactState === 'cooldown' || compactState === 'in-progress' || midTaskBlocked || undoInProgress}
- aria-label="Compact Brain"
+ aria-label={t('status.compact', language)}
  className={cn(
  'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all',
  compactState === 'idle' && !midTaskBlocked && 'bg-olympus-gold/15 text-olympus-gold hover:bg-olympus-gold/25 ring-1 ring-olympus-gold/30',
@@ -257,10 +259,10 @@ export default function CompactBrainButton() {
  )}
  >
  {compactState === 'in-progress' ? <Loader2 size={12} className="animate-spin" /> : <Brain size={12} />}
- {compactState === 'idle' && (midTaskBlocked ? 'Compact (busy)' : 'Compact Brain')}
- {compactState === 'cooldown' && <>Compact Brain ({cooldownRemaining}s)</>}
- {compactState === 'in-progress' && 'Compacting…'}
- {compactState === 'undo-window' && (undoInProgress ? <><Loader2 size={12} className="animate-spin" /> Undoing…</> : <><Undo2 size={12} /> Undo ({undoRemaining}s)</>)}
+ {compactState === 'idle' && (midTaskBlocked ? t('status.compactBusy', language) : t('status.compact', language))}
+ {compactState === 'cooldown' && <>{t('status.compactCooldown', language, { s: cooldownRemaining })}</>}
+ {compactState === 'in-progress' && t('status.compactRunning', language)}
+ {compactState === 'undo-window' && (undoInProgress ? <><Loader2 size={12} className="animate-spin" /> {t('status.undoing', language)}</> : <><Undo2 size={12} /> {t('status.compactUndo', language, { s: undoRemaining })}</>)}
  </button>
 
  {/* Click-triggered warning dialog — replaces the giant hover tooltip. */}
@@ -276,7 +278,7 @@ export default function CompactBrainButton() {
  <div className="absolute top-full right-0 mt-2 w-72 bg-olympus-card border border-olympus-gold/25 rounded-lg p-3 z-50">
  <div className="flex items-center gap-2 mb-2.5">
  <Brain size={14} className="text-olympus-gold" />
- <span className="text-[11px] font-semibold text-olympus-gold">Brain Compaction — 5 phases</span>
+ <span className="text-[11px] font-semibold text-olympus-gold">{t('brain.compaction', language)}</span>
  </div>
  <div className="flex flex-col gap-1.5">
  {phases.map(p => (
@@ -302,7 +304,7 @@ export default function CompactBrainButton() {
  ))}
  </div>
  <div className="mt-2.5 pt-2 border-t border-olympus-gold/10 text-[9px] text-olympus-text-dim font-mono">
- soft-delete · 5-min undo window · 60s cooldown · mid-task guarded
+ {t('brain.compactionNote', language)}
  </div>
  </div>
  )}
@@ -320,6 +322,7 @@ function WarningDialog({
  onConfirm: (dontShowAgain: boolean) => void;
  onCancel: (dontShowAgain: boolean) => void;
 }) {
+ const language = useLanguage();
  const [dontShow, setDontShow] = useState(false);
 
  return (
@@ -335,7 +338,7 @@ function WarningDialog({
  <div className="flex items-center justify-between px-4 py-3 border-b border-olympus-gold/10">
  <div className="flex items-center gap-2 text-olympus-gold">
  <AlertTriangle size={14} />
- <span className="text-[11px] font-mono font-semibold uppercase tracking-wide">Before you compact</span>
+ <span className="text-[11px] font-mono font-semibold uppercase tracking-wide">{t('brain.warningTitle', language)}</span>
  </div>
  <button
  onClick={() => onCancel(dontShow)}
@@ -349,12 +352,10 @@ function WarningDialog({
  {/* Body — distilled to 2 short paragraphs */}
  <div className="px-4 py-3 text-[11px] font-mono text-olympus-text leading-relaxed space-y-2">
  <p>
- Compact Brain runs Callimachus deep maintenance — alias merge, duplicate merge, dead-link fix,
- orphan link, empty-page expand.
+ {t('brain.warningBody', language)}
  </p>
  <p className="text-olympus-text-dim">
- Overuse erases recent learning. Recommended cadence: ≤1×/week, never mid-task, never below 50 notes.
- Check <code className="text-olympus-gold">/instinct-status</code> first.
+ {t('brain.warningBody2', language)}
  </p>
  </div>
 
@@ -375,13 +376,13 @@ function WarningDialog({
  onClick={() => onCancel(dontShow)}
  className="px-3 py-1.5 rounded-md text-[11px] font-mono text-olympus-text-dim hover:bg-olympus-gold/5"
  >
- Keep editing
+ {t('brain.warningKeep', language)}
  </button>
  <button
  onClick={() => onConfirm(dontShow)}
  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30 hover:bg-olympus-gold/25"
  >
- <Brain size={11} /> Run compaction
+ <Brain size={11} /> {t('brain.warningRun', language)}
  </button>
  </div>
  </div>

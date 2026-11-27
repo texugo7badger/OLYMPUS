@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.1.0, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.1.5, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -42,19 +42,19 @@ llama.cpp or any OpenAI-compatible endpoint ([LOCAL-LLM.md](LOCAL-LLM.md)).
 
 ## Screens
 
-One clean screen per menu, captured from the running **v0.1.2** app. No
-mockups. The full **14-menu gallery** is in
+One clean screen per surface, captured from the running **v0.1.5** app. No
+mockups. The v0.1.5 gallery is in
 [`screenshots/screens/manifest.json`](screenshots/screens/manifest.json); eight
-surfaces are shown here.
+surfaces are shown here, including a Portuguese proof of the shell i18n.
 
 <div align="center">
 
 | | |
 |---|---|
-| <a href="screenshots/screens/01-pantheon-012.png"><img src="screenshots/screens/01-pantheon-012.png" width="520" alt="The Pantheon — ten gods and the Parthenon command deck" /></a><br><sub><b>The Pantheon</b> · ten gods, the 3D atlas and the Parthenon command deck</sub> | <a href="screenshots/screens/03-god-intelligence-012.png"><img src="screenshots/screens/03-god-intelligence-012.png" width="520" alt="God Intelligence — live Callimachus and validated quick circuits" /></a><br><sub><b>God Intelligence</b> · live Callimachus: 0 invented quick circuits, 187 project, 55 technical, 1/hour budget</sub> |
-| <a href="screenshots/screens/06-cost-012.png"><img src="screenshots/screens/06-cost-012.png" width="520" alt="Cost — the real ledger with the fully loaded hourly chart" /></a><br><sub><b>Cost</b> · the real ledger, the fully loaded hourly chart, Smart Burn and step/list/invoice separation</sub> | <a href="screenshots/screens/08-craft-012.png"><img src="screenshots/screens/08-craft-012.png" width="520" alt="Craft — ArtCraft and the native tool registry" /></a><br><sub><b>Craft</b> · ArtCraft stays on, the 13 vendored apps and the detected native tools</sub> |
-| <a href="screenshots/screens/09-references-012.png"><img src="screenshots/screens/09-references-012.png" width="520" alt="References — the creative library with Use/Queue and new sources" /></a><br><sub><b>References</b> · search, collections, live studies, Use/Queue and the new free/open-source sources</sub> | <a href="screenshots/screens/02-live-preview-012.png"><img src="screenshots/screens/02-live-preview-012.png" width="520" alt="Live preview — a real project inside OLYMPUS" /></a><br><sub><b>Live preview</b> · a real project inside OLYMPUS, same-origin, ready for marks</sub> |
-| <a href="screenshots/screens/13-preview-window-012.png"><img src="screenshots/screens/13-preview-window-012.png" width="520" alt="Preview window — browser iframe and the durable mark queue" /></a><br><sub><b>Preview window</b> · the app in a browser iframe, with the durable mark queue</sub> | <a href="screenshots/screens/14-phone-012.png"><img src="screenshots/screens/14-phone-012.png" width="240" alt="Phone — the same campaign in one hand" /></a><br><sub><b>Phone</b> · the same campaign in one hand: voice-first prompt, Parthenon, preview and marks</sub> |
+| <a href="screenshots/screens/01-pantheon-015.png"><img src="screenshots/screens/01-pantheon-015.png" width="520" alt="The Pantheon — ten gods and the Parthenon command deck" /></a><br><sub><b>The Pantheon</b> · ten gods, the 3D atlas with its full cloud and the Parthenon deck</sub> | <a href="screenshots/screens/03-god-intelligence-015.png"><img src="screenshots/screens/03-god-intelligence-015.png" width="520" alt="God Intelligence — live Callimachus and validated quick circuits" /></a><br><sub><b>God Intelligence</b> · live Callimachus: 0 fake quick circuits, 187 project, 55 technical, 1/hour budget</sub> |
+| <a href="screenshots/screens/06-cost-015.png"><img src="screenshots/screens/06-cost-015.png" width="520" alt="Cost — the real ledger with the fully loaded hourly chart" /></a><br><sub><b>Cost</b> · the real ledger, the fully loaded hourly chart and step/list/invoice separation</sub> | <a href="screenshots/screens/10-llm-strategy-015.png"><img src="screenshots/screens/10-llm-strategy-015.png" width="520" alt="LLM Strategy — the canonical GO/Zen rosters" /></a><br><sub><b>LLM Strategy</b> · canonical GO rosters: DeepSeek V4.1 Flash on Apollo, Hy3 on Atlas</sub> |
+| <a href="screenshots/screens/11-logs-015.png"><img src="screenshots/screens/11-logs-015.png" width="520" alt="Logs — the flight recorder" /></a><br><sub><b>Logs</b> · every hop, token, park and model — the walk truth, now with the shell dictionary</sub> |
+| <a href="screenshots/screens/12-god-detail-015.png"><img src="screenshots/screens/12-god-detail-015.png" width="520" alt="God detail — dispatches, demigods, skills and references" /></a><br><sub><b>God detail</b> · dispatches, demigods, skills, proven arsenal and references</sub> | <a href="screenshots/screens/13-logs-ptbr-015.png"><img src="screenshots/screens/13-logs-ptbr-015.png" width="520" alt="Logs em português — a prova da i18n do shell" /></a><br><sub><b>Português</b> · the shell follows the selected language: notify → notificar, Logs → Registros</sub> |
 
 </div>
 
@@ -103,7 +103,11 @@ Apollo.
 because hop ids and fixtures are rejected), validated **derived builds** with
 evidence-gated promotion, a depth-2 **RLM envelope** behind `OLYMPUS_RLM=1`,
 the content-addressed embedding cache and the background index job, and fixed
-the v0.1.2 brain/strategy/cost regressions. **v0.1.3 was the retrieval and
+the v0.1.2 brain/strategy/cost regressions. The v0.1.5 shell now follows the
+selected language (activity bar, status bar, Compact Brain, notifications,
+Logs header and right-pane tabs; seven languages), the atlas keeps its full
+cloud during drag and auto-rotates in Smooth/Balanced, and closing the window
+hibernates while minimize keeps it open. **v0.1.3 was the retrieval and
 learning foundation** (local hybrid retrieval, ECC confidence/scope, skill
 index repair), folded into v0.1.4. **v0.1.2 remains the stable release.**
 

@@ -15,11 +15,12 @@ import path from 'node:path';
 export interface PowerPrefs {
   /** Hibernate the window when the OS locks/logs out; the campaign stays. */
   autoHibernateOnLock: boolean;
-  /** v0.0.96 — X hibernates instead of quitting. Default OFF: X quits. */
+  /** v0.1.5 — X hibernates instead of quitting. Default ON: closing the
+   *  window keeps the campaign alive; the tray Quit is the explicit exit. */
   closeToHibernate: boolean;
 }
 
-export const DEFAULT_POWER_PREFS: PowerPrefs = { autoHibernateOnLock: true, closeToHibernate: false };
+export const DEFAULT_POWER_PREFS: PowerPrefs = { autoHibernateOnLock: true, closeToHibernate: true };
 
 export function powerPrefsPath(home = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus')): string {
   return path.join(home, 'power-prefs.json');

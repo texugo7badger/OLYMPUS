@@ -13,6 +13,7 @@ import OlympusLoader from '@/components/olympus/olympus-loader';
 import { PatchNotesOverlay } from '@/components/olympus/patch-notes';
 import NotificationToast from '@/components/olympus/notification-toast';
 import { getPanelLoadingCount, panelLoadingBump, subscribePanelLoading } from '@/lib/panel-loading-bus';
+import { useLanguage, t } from '@/lib/i18n';
 import { initTheme } from '@/lib/theme-store';
 import { bootPerformanceMode } from '@/lib/performance-mode';
 
@@ -264,6 +265,7 @@ function useDocVisible(): boolean {
 /* pane tree (killing terminal PTYs, losing Monaco state, etc.).       */
 /* ------------------------------------------------------------------ */
 function RightPane({ rightTab, setRightTab }: { rightTab: string; setRightTab: (t: any) => void }) {
+  const language = useLanguage();
   // #197: hidden panes keep xterm dimensions but must not poll — each
   // pane gets `active` (its tab is showing AND the window is visible)
   // and skips/clears its fetch intervals while inactive.
@@ -271,10 +273,10 @@ function RightPane({ rightTab, setRightTab }: { rightTab: string; setRightTab: (
   return (
     <div className="h-full flex flex-col bg-olympus-bg">
       <div className="h-9 shrink-0 flex items-center border-b border-olympus-gold/10 bg-olympus-panel px-1">
-        <Tab id="terminal" icon={TerminalIcon} label="Terminal" active={rightTab === 'terminal'} onClick={() => setRightTab('terminal')} />
-        <Tab id="ide" icon={Code2} label="Editor" active={rightTab === 'ide'} onClick={() => setRightTab('ide')} />
-        <Tab id="editor" icon={Library} label="Vault" active={rightTab === 'editor'} onClick={() => setRightTab('editor')} />
-        <Tab id="frames" icon={LayoutGrid} label="Frames" active={rightTab === 'frames'} onClick={() => setRightTab('frames')} />
+        <Tab id="terminal" icon={TerminalIcon} label={t('terminal.tab.terminal', language)} active={rightTab === 'terminal'} onClick={() => setRightTab('terminal')} />
+        <Tab id="ide" icon={Code2} label={t('terminal.tab.editor', language)} active={rightTab === 'ide'} onClick={() => setRightTab('ide')} />
+        <Tab id="editor" icon={Library} label={t('terminal.tab.vault', language)} active={rightTab === 'editor'} onClick={() => setRightTab('editor')} />
+        <Tab id="frames" icon={LayoutGrid} label={t('terminal.tab.frames', language)} active={rightTab === 'frames'} onClick={() => setRightTab('frames')} />
         <div className="flex-1" />
       </div>
       <div className="flex-1 min-h-0 relative overflow-hidden">

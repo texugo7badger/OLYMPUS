@@ -4,7 +4,8 @@
 
 'use client';
 
-import { useOlympus, GOD_ICONS, GOD_IDS, GOD_DOMAINS } from '@/lib/olympus-store';
+import { useOlympus, GOD_ICONS, GOD_IDS } from '@/lib/olympus-store';
+import { useLanguage, t, godDomain } from '@/lib/i18n';
 import { BarChart3, Brain, BrainCog, DollarSign, Eye, History, Palette, Plug, Settings, SlidersHorizontal, Boxes, ScrollText, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +33,7 @@ import { cn } from '@/lib/utils';
 const DISPATCHABLE_GOD_IDS = GOD_IDS;
 
 export default function ActivityBar() {
+  const language = useLanguage();
   const leftPane = useOlympus(s => s.leftPane);
   const setLeftPane = useOlympus(s => s.setLeftPane);
   const setSettingsOpen = useOlympus(s => s.setSettingsOpen);
@@ -48,16 +50,16 @@ export default function ActivityBar() {
     <div className="w-12 shrink-0 bg-linear-to-b from-olympus-panel to-olympus-bg border-r border-olympus-gold/10 flex flex-col items-center py-2 gap-1 relative">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-px bg-linear-to-r from-transparent via-olympus-gold/40 to-transparent" />
 
-      <ActBtn icon={Brain} label="Brain graph" active={leftPane === 'brain' || leftPane === 'god-detail'} onClick={() => setLeftPane('brain')} accent />
-      <ActBtn icon={Eye} label="Live preview" active={leftPane === 'live-preview'} onClick={() => setLeftPane('live-preview')} />
-      <ActBtn icon={BrainCog} label="God intelligence" active={leftPane === 'god-intelligence'} onClick={() => setLeftPane('god-intelligence')} accent />
-      <ActBtn icon={History} label="Recent activity" active={leftPane === 'timeline'} onClick={() => setLeftPane('timeline')} />
-      <ActBtn icon={ScrollText} label="Logs" active={leftPane === 'logs'} onClick={() => setLeftPane('logs')} accent />
-      <ActBtn icon={DollarSign} label="Cost" active={leftPane === 'cost'} onClick={() => setLeftPane('cost')} />
-      <ActBtn icon={BarChart3} label="Benchmarks" active={leftPane === 'benchmarks'} onClick={() => setLeftPane('benchmarks')} />
-      <ActBtn icon={Boxes} label="Craft" active={leftPane === 'craft-apps'} onClick={() => setLeftPane('craft-apps')} accent />
-      <ActBtn icon={Lightbulb} label="References" active={leftPane === 'references'} onClick={() => setLeftPane('references')} accent />
-      <ActBtn icon={SlidersHorizontal} label="LLM strategy" active={leftPane === 'provider-settings'} onClick={() => setLeftPane('provider-settings')} />
+      <ActBtn icon={Brain} label={t('nav.brain', language)} active={leftPane === 'brain' || leftPane === 'god-detail'} onClick={() => setLeftPane('brain')} accent />
+      <ActBtn icon={Eye} label={t('nav.preview', language)} active={leftPane === 'live-preview'} onClick={() => setLeftPane('live-preview')} />
+      <ActBtn icon={BrainCog} label={t('nav.intelligence', language)} active={leftPane === 'god-intelligence'} onClick={() => setLeftPane('god-intelligence')} accent />
+      <ActBtn icon={History} label={t('nav.activity', language)} active={leftPane === 'timeline'} onClick={() => setLeftPane('timeline')} />
+      <ActBtn icon={ScrollText} label={t('nav.logs', language)} active={leftPane === 'logs'} onClick={() => setLeftPane('logs')} accent />
+      <ActBtn icon={DollarSign} label={t('nav.cost', language)} active={leftPane === 'cost'} onClick={() => setLeftPane('cost')} />
+      <ActBtn icon={BarChart3} label={t('nav.benchmarks', language)} active={leftPane === 'benchmarks'} onClick={() => setLeftPane('benchmarks')} />
+      <ActBtn icon={Boxes} label={t('nav.craft', language)} active={leftPane === 'craft-apps'} onClick={() => setLeftPane('craft-apps')} accent />
+      <ActBtn icon={Lightbulb} label={t('nav.references', language)} active={leftPane === 'references'} onClick={() => setLeftPane('references')} accent />
+      <ActBtn icon={SlidersHorizontal} label={t('nav.strategy', language)} active={leftPane === 'provider-settings'} onClick={() => setLeftPane('provider-settings')} />
 
       <div className="my-1 w-6 h-px bg-linear-to-r from-transparent via-olympus-gold/25 to-transparent" />
 
@@ -66,7 +68,7 @@ export default function ActivityBar() {
           Atlas is right after Apollo — the orchestrator who executes the plan.
           Clicking any god opens the god-detail panel showing its activity. */}
       <div className="flex flex-col items-center gap-0.5">
-        <div className="text-[8px] font-mono text-olympus-text-dim uppercase tracking-wider mb-0.5">gods</div>
+        <div className="text-[8px] font-mono text-olympus-text-dim uppercase tracking-wider mb-0.5">{t('nav.gods', language)}</div>
         {DISPATCHABLE_GOD_IDS.map(id => {
           const Icon = GOD_ICONS[id];
           // W-D1: the highlight SPLITS — the gold ring is the user's
@@ -79,7 +81,7 @@ export default function ActivityBar() {
               key={id}
               aria-label={id}
               aria-pressed={isSelected}
-              data-tip={`${id.charAt(0).toUpperCase() + id.slice(1)} — ${GOD_DOMAINS[id] ?? 'god'}${isSelected ? ' · selected (click to clear)' : ' · click to open god detail'}`}
+              data-tip={`${id.charAt(0).toUpperCase() + id.slice(1)} — ${godDomain(id, language) || 'god'}${isSelected ? ' · selected (click to clear)' : ' · click to open god detail'}`}
               onClick={() => {
                 // W-D1: the click WRITES the selection (toggle — the
                 // Parthenon's own god-panel precedent), then drills down.
@@ -112,7 +114,7 @@ export default function ActivityBar() {
               {/* God name on hover — Olympus-styled, capitalized */}
               <span className="absolute left-11 top-1/2 -translate-y-1/2 text-[10px] bg-olympus-card border border-olympus-gold/20 text-olympus-gold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 font-mono shadow-md">
                 <span className="block">{id.charAt(0).toUpperCase() + id.slice(1)}</span>
-                <span className="block text-[8px] text-olympus-text-dim">{GOD_DOMAINS[id] ?? 'god'}</span>
+                <span className="block text-[8px] text-olympus-text-dim">{godDomain(id, language) || 'god'}</span>
               </span>
             </button>
           );

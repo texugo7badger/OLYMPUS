@@ -1,72 +1,37 @@
 [
   {
-    "file": "screenshots/screens/01-pantheon-012.png",
+    "file": "screenshots/screens/01-pantheon-015.png",
     "title": "The Pantheon",
-    "note": "ten gods, the Parthenon command deck and the disk-truth status brief"
+    "note": "ten gods, the full-cloud auto-rotating atlas and the Parthenon command deck"
   },
   {
-    "file": "screenshots/screens/02-live-preview-012.png",
-    "title": "Live preview",
-    "note": "a real project inside OLYMPUS: same-origin surface, mark toolbar, no mockup"
-  },
-  {
-    "file": "screenshots/screens/03-god-intelligence-012.png",
+    "file": "screenshots/screens/03-god-intelligence-015.png",
     "title": "God Intelligence",
-    "note": "per-god stats and the live Callimachus card: last/next pass, validated quick circuits, technical vs project memory and the hourly model budget"
+    "note": "per-god stats, the live Callimachus card, the local retrieval index and the honest quick-circuit count"
   },
   {
-    "file": "screenshots/screens/04-recent-activity-012.png",
-    "title": "Recent activity",
-    "note": "the live event feed: dispatches, hops, approvals and curator passes"
-  },
-  {
-    "file": "screenshots/screens/05-logs-012.png",
-    "title": "Logs",
-    "note": "the workspace log stream, with the real severity and source of each line"
-  },
-  {
-    "file": "screenshots/screens/06-cost-012.png",
+    "file": "screenshots/screens/06-cost-015.png",
     "title": "Cost",
-    "note": "the real ledger: GO usage, hourly token chart, Smart Burn and step/list/invoice separation — chart fully loaded"
+    "note": "the real ledger, the fully loaded hourly chart and step/list/invoice separation"
   },
   {
-    "file": "screenshots/screens/07-benchmarks-012.png",
-    "title": "Benchmarks",
-    "note": "the measured performance and lane benchmarks, with the environment named"
+    "file": "screenshots/screens/10-llm-strategy-015.png",
+    "title": "LLM Strategy",
+    "note": "the canonical GO/Zen/Local rosters and the verified lane truth"
   },
   {
-    "file": "screenshots/screens/08-craft-012.png",
-    "title": "Craft",
-    "note": "the app hub: ArtCraft stays on, the 13 vendored apps and the detected native tools (Blender, Godot, OBS, Inkscape, Krita…)"
+    "file": "screenshots/screens/11-logs-015.png",
+    "title": "Logs",
+    "note": "the flight recorder: hops, walks, models, economy, parks and the window meter"
   },
   {
-    "file": "screenshots/screens/09-references-012.png",
-    "title": "References",
-    "note": "the creative library as its own surface: search, collections, live studies, Use/Queue and the new free/open-source sources"
-  },
-  {
-    "file": "screenshots/screens/10-llm-strategy-012.png",
-    "title": "LLM strategy",
-    "note": "the lane roster and the strategy builder — every model is a lane, context rides Symphony"
-  },
-  {
-    "file": "screenshots/screens/11-mcp-configuration-012.png",
-    "title": "MCP configuration",
-    "note": "the curated MCP surface: health classified before probe, 128-tool budget, per-server control"
-  },
-  {
-    "file": "screenshots/screens/12-god-detail-012.png",
+    "file": "screenshots/screens/12-god-detail-015.png",
     "title": "God detail",
-    "note": "one god in depth: model, skills, instincts, dispatches and recent activity"
+    "note": "dispatches, demigods, skills, proven arsenal and references"
   },
   {
-    "file": "screenshots/screens/13-preview-window-012.png",
-    "title": "Preview window",
-    "note": "the dedicated preview window with the durable mark queue that becomes one Apollo terminal prompt"
-  },
-  {
-    "file": "screenshots/screens/14-phone-012.png",
-    "title": "Phone",
-    "note": "the same campaign in one hand: voice-first prompt, Parthenon, preview and marks"
+    "file": "screenshots/screens/13-logs-ptbr-015.png",
+    "title": "Portugu\u00eas \u2014 i18n proof",
+    "note": "the shell follows the selected language: notify \u2192 notificar, Logs \u2192 Registros, Compact Brain \u2192 Compactar c\u00e9rebro"
   }
 ]

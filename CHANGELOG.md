@@ -22,6 +22,16 @@ All notable changes to OLYMPUS are documented in this file.
 - **Version truth.** `VERSION`, `package.json`, the status-bar fallback and
   the patch notes move to 0.1.5. `public/stable.json` stays at 0.1.2 until the
   AIME test and the explicit stable promotion.
+- **Front pass.** The brain keeps its full cloud in Smooth/Balanced/Battery
+  saver, keeps it during drag (capture-phase pointerup restore), auto-rotates in
+  Smooth/Balanced and no longer renders the Y/Z compass. The status bar drops
+  the `brain:` prefix. The shell follows the language selector (activity bar,
+  status bar, Compact Brain, notifications, Logs header/overview and right-pane
+  tabs; seven languages). Minimize keeps the window; closing hibernates by
+  default; the tray Quit is the explicit exit.
+- **Screens and banner.** The README gallery, UX tour and manifest are v0.1.5
+  captures (including a pt-BR proof); the header/badge SVGs and ARCHITECTURE
+  header carry v0.1.5.
 - **Gates.** 8/8 hygiene, 66/66 suites, v0.1.5 UI gate, `build:app`.
 - **Not published as stable.** v0.1.5 is the dev test candidate; v0.1.4
   remains a prerelease. Stable promotion waits for the AIME test and the

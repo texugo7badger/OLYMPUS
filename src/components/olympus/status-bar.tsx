@@ -235,7 +235,7 @@ export default function StatusBar({
 		     campaign, projects, prompt and voice from the phone. */}
 		 <button
 		   onClick={() => setMobilePair(true)}
-		   aria-label="Mobile companion pairing"
+		   aria-label={t('status.mobilePair', language)}
 		   data-tip="Pair the mobile companion (QR)"
 		   className="flex items-center justify-center h-5 w-6 rounded text-olympus-text-dim hover:text-olympus-gold hover:bg-olympus-gold/10 transition-colors shrink-0"
 		 >
@@ -250,7 +250,7 @@ export default function StatusBar({
 		   className="flex items-center gap-1 h-5 px-1.5 rounded-full shrink-0 text-olympus-gold/80 ring-1 ring-olympus-gold/20 hover:bg-olympus-gold/10 hover:text-olympus-gold transition-colors"
 		 >
 		   <Gem size={10} />
-		   <span className="text-[9px] font-mono font-semibold">talent</span>
+		   <span className="text-[9px] font-mono font-semibold">{t('status.talent', language)}</span>
 		 </button>
 
 		 {/* Compact Brain button — to the RIGHT of Focus Mode. */}
@@ -301,7 +301,7 @@ export default function StatusBar({
  ) : ActiveGodIcon ? (
  <ActiveGodIcon size={12} className="text-olympus-text-dim" />
  ) : (
- <span className="text-olympus-text-dim text-[10px] font-mono">idle</span>
+ <span className="text-olympus-text-dim text-[10px] font-mono">{t('status.idle', language)}</span>
  )}
  </div>
  {!hideProject && (
@@ -313,30 +313,29 @@ export default function StatusBar({
  <div className="w-px h-3 bg-olympus-gold/15 shrink-0" />
 	 {/* Brain metrics with icons + text labels. Text collapses in
 	 compact mode (<1200px) but icons remain for identification. */}
- <div className="flex items-center gap-1.5 shrink-0" aria-label="Brain metrics">
- <span className="text-olympus-text-dim">{compact ? '' : 'brain:'}</span>
+ <div className="flex items-center gap-1.5 shrink-0" aria-label={t('status.brainMetrics', language)}>
  <span className="flex items-center gap-1 text-olympus-green" data-tip="Total instinct files in the brain">
  <Lightbulb size={11} />
  <span>{health?.total_instincts ?? 0}</span>
- {!compact && <span className="text-olympus-text-dim text-[10px]">instincts</span>}
+ {!compact && <span className="text-olympus-text-dim text-[10px]">{t('status.instincts', language)}</span>}
  </span>
  <span className="text-olympus-text-dim">·</span>
  <span className="flex items-center gap-1 text-olympus-green" data-tip="Average instinct confidence (0.00 – 1.00)">
  <Gauge size={11} />
  <span>{(health?.avg_confidence ?? 0).toFixed(2)}</span>
- {!compact && <span className="text-olympus-text-dim text-[10px]">conf</span>}
+ {!compact && <span className="text-olympus-text-dim text-[10px]">{t('status.conf', language)}</span>}
  </span>
  <span className="text-olympus-text-dim">·</span>
  <span className="flex items-center gap-1 text-olympus-cyan" data-tip="Total installed skills">
  <Layers size={11} />
  <span>{health?.total_skills ?? 0}</span>
- {!compact && <span className="text-olympus-text-dim text-[10px]">skills</span>}
+ {!compact && <span className="text-olympus-text-dim text-[10px]">{t('status.skills', language)}</span>}
  </span>
  <span className="text-olympus-text-dim">·</span>
  <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-olympus-purple" data-tip={`${health?.total_agents ?? 0} gods + demigods`}>
  <Users size={11} />
  <span className="tabular-nums">{health?.total_agents ?? 0}</span>
- {!compact && <span className="text-olympus-text-dim text-[10px] whitespace-nowrap">agents</span>}
+ {!compact && <span className="text-olympus-text-dim text-[10px] whitespace-nowrap">{t('status.agents', language)}</span>}
  </span>
  </div>
  </div>
@@ -372,7 +371,7 @@ export default function StatusBar({
  ? <Wifi size={12} className="text-olympus-green" />
  : <WifiOff size={12} className="text-olympus-text-dim" />}
  <span className={sseConnected ? 'text-olympus-green' : 'text-olympus-text-dim'}>
- {compact ? 'SSE' : `SSE ${sseConnected ? 'live' : 'offline'}`} · {eventsCount}
+ {compact ? 'SSE' : t(sseConnected ? 'status.sseLive' : 'status.sseOffline', language)} · {eventsCount}
  </span>
  </div>
  <div className="w-px h-3 bg-olympus-gold/15" />
@@ -383,7 +382,7 @@ export default function StatusBar({
  >
  <Key size={11} className={apiConfigsCount > 0 ? 'text-olympus-green' : 'text-olympus-gold'} />
  <span className={cn('text-[10px]', apiConfigsCount > 0 ? 'text-olympus-green' : 'text-olympus-gold')}>
- {iconOnly ? '' : `${apiConfigsCount} APIs`}
+ {iconOnly ? '' : `${apiConfigsCount} ${t('status.apis', language)}`}
  </span>
  </button>
  <ApiConfigDialog open={apiConfigOpen} onClose={() => setApiConfigOpen(false)} />
@@ -397,21 +396,21 @@ export default function StatusBar({
  <div className="flex items-center gap-0.5 shrink-0">
  <button
  onClick={() => window.olympus?.window?.minimize()}
- aria-label="Minimize"
+ aria-label={t('window.minimize', language)}
  className="w-6 h-5 flex items-center justify-center text-olympus-text-dim hover:bg-olympus-gold/15 hover:text-olympus-gold transition-colors rounded"
  >
  <Minus size={12} strokeWidth={1.75} />
  </button>
  <button
  onClick={async () => { await window.olympus?.window?.maximizeToggle(); }}
- aria-label={isMaximized ? 'Restore' : 'Maximize'}
+ aria-label={t(isMaximized ? 'window.restore' : 'window.maximize', language)}
  className="w-6 h-5 flex items-center justify-center text-olympus-text-dim hover:bg-olympus-gold/15 hover:text-olympus-gold transition-colors rounded"
  >
  {isMaximized ? <Copy size={10} strokeWidth={1.75} /> : <Square size={10} strokeWidth={1.75} />}
  </button>
  <button
  onClick={() => window.olympus?.window?.close()}
- aria-label="Close"
+ aria-label={t('window.close', language)}
  className="w-6 h-5 flex items-center justify-center text-olympus-text-dim hover:bg-olympus-red/30 hover:text-olympus-red transition-colors rounded"
  >
  <X size={12} strokeWidth={1.75} />

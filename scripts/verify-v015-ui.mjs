@@ -193,6 +193,17 @@ async function main() {
     const strategyText = await evaluate(`document.body.innerText.slice(0, 6000)`);
     check('U13: LLM Strategy shows the canonical GO Balanced roster (no stale Apollo GLM)', /GO Balanced/.test(strategyText) && /DeepSeek V4\.1 Flash/.test(strategyText) && !/Apollo: GLM-5\.3/.test(strategyText) && !/Specialists: Qwen3\.7 Plus/.test(strategyText), strategyText.slice(0, 700));
 
+    // v0.1.5 — the shell must follow the language selector. Switch to pt-BR,
+    // reload, assert the activity bar/status/notification labels, then reset.
+    await evaluate(`(async()=>{try{localStorage.setItem('olympus:language','pt-BR');localStorage.setItem('olympus:language-updated-at',new Date().toISOString());await fetch('/api/olympus/language',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({language:'pt-BR'})});}catch{}setTimeout(()=>location.reload(),50);return true;})()`);
+    await waitFor(`!document.querySelector('[aria-label="OLYMPUS is loading"]')`, 20_000);
+    await sleep(1200);
+    const ptText = await evaluate(`document.body.innerText`);
+    check('U14: the shell follows the language (notificar/Custo)', /notificar|notificações/i.test(ptText) && /Custo/.test(ptText), ptText.slice(0, 700));
+    await evaluate(`(async()=>{try{localStorage.setItem('olympus:language','en');localStorage.setItem('olympus:language-updated-at',new Date().toISOString());await fetch('/api/olympus/language',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({language:'en'})});}catch{}setTimeout(()=>location.reload(),50);return true;})()`);
+    await waitFor(`!document.querySelector('[aria-label="OLYMPUS is loading"]')`, 20_000);
+    await sleep(800);
+
     await go(URL_BASE, 5000);
     // The boot overlay is a full-screen click blocker until it fades. Wait for
     // the door to actually open before the pane clicks (the 5s race).

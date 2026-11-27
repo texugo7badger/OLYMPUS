@@ -357,6 +357,13 @@ export function t(key: string, lang: Language = getLanguage(), vars?: Record<str
 import { EXTRA_DICTS } from './i18n-extra';
 for (const [lang, dict] of Object.entries(EXTRA_DICTS)) DICTS[lang as Language] = dict;
 
+// v0.1.5 — the app chrome dictionary (activity bar, status bar, Compact
+// Brain, notifications, Logs header, right-pane tabs, brain toolbar).
+import { SHELL_DICTS } from './i18n-shell';
+for (const [lang, dict] of Object.entries(SHELL_DICTS)) {
+  DICTS[lang as Language] = { ...(DICTS[lang as Language] ?? en), ...dict };
+}
+
 import { UI_DICTS } from './i18n-ui';
 import { STUDIO_DICTS } from './i18n-studio';
 import { PROJECT_DICTS } from './i18n-projects';

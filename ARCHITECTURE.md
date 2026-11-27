@@ -1,6 +1,6 @@
 # OLYMPUS Architecture
 
-> OLYMPUS v0.1.2 — multi-agent AI workspace on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 61 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
+> OLYMPUS v0.1.5 — multi-agent AI workspace on OpenCode, packaged as a standalone Electron desktop app. 10 gods · 61 demigods · Symphony v1.0 · VaultBrain v3.0 · AGPL-3.0-or-later.
 >
 > Counts in this document are the v0.1.5 truth: 71 agents (10 gods incl. Atlas + 61 demigods), 332 top-level skills / 378 indexed skill docs, 28 MCP servers, 6 curated / 39 tools by default. The context indicator reads OpenCode's `session_v2` SQLite tables.
 
@@ -202,6 +202,22 @@ pass (skills + knowledge), then `all` (instincts, patterns, cached docs).
 `GET /api/olympus/retrieval/reindex` exposes phase/progress/cache hits; a
 content-addressed embedding cache makes rebuilds cheap. See
 [RETRIEVAL.md](RETRIEVAL.md).
+
+## Shell i18n (v0.1.5)
+
+`src/lib/i18n-shell.ts` is the app-chrome dictionary: activity bar, status bar,
+Compact Brain, notification panel, Logs header/tabs/overview and the right-pane
+tabs, in English, Português, Español, Français, Deutsch, 日本語 and 中文. A
+missing key falls back to English, never a blank string. The UI gate switches
+the language to pt-BR and asserts the shell (notificar/Custo) before resetting.
+
+## Window lifecycle (v0.1.5)
+
+Minimize calls `mainWindow.minimize()` and keeps the window in the taskbar.
+Closing the window (X) hibernates by default: the campaign, preview and MCP
+fleet stay alive, and the notification panel also offers hibernate now. A hard
+exit is the tray **Quit** (or `closeToHibernate:false` for users who prefer X
+to quit). This is the contract behind "minimize stays open; close hibernates".
 
 ## Cleanup (v0.1.5)
 

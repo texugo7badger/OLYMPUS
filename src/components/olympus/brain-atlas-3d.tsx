@@ -77,6 +77,7 @@ import { OLYMPUS_PALETTE, LOBE_TINTS, hexA, themedOlympusPalette, themedGodSigna
 import { resolvePalette } from '@/lib/theme';
 import { useTheme } from '@/lib/theme-store';
 import { useOlympus } from '@/lib/olympus-store';
+import { useLanguage, t } from '@/lib/i18n';
 import { useWorkingGods } from '@/lib/use-working-gods';
 import { useDispatchDna } from '@/lib/use-dispatch-dna';
 import type { GraphNode, GraphLink } from '@/lib/olympus';
@@ -152,6 +153,7 @@ const PERFORMANCE_PRESETS: { id: PerformancePreset; label: string }[] = [
 /* Main component.                                                     */
 /* ------------------------------------------------------------------ */
 export default function BrainAtlas3D() {
+  const language = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<RenderCore | null>(null);
@@ -437,10 +439,10 @@ export default function BrainAtlas3D() {
         // dropped the cloud too, so the brain "disappeared" on interaction.
         r.setEnabledPassesForTest(new Set(['background', 'cloud', 'edges', 'nodes', 'labels']));
       } else if (preset === 'smooth') {
-        r.setEnabledPassesForTest(new Set(['background', 'haze', 'cloud', 'edges', 'nodes', 'signals', 'labels', 'compass']));
+        r.setEnabledPassesForTest(new Set(['background', 'haze', 'cloud', 'edges', 'nodes', 'signals', 'labels']));
       } else if (preset === 'balanced') {
         // Balanced keeps the full silhouette; signals are the only pass lost.
-        r.setEnabledPassesForTest(new Set(['background', 'haze', 'cloud', 'edges', 'nodes', 'labels', 'compass']));
+        r.setEnabledPassesForTest(new Set(['background', 'haze', 'cloud', 'edges', 'nodes', 'labels']));
       } else {
         // Battery saver / mobile: the cloud + geometry stay; haze/signals go.
         r.setEnabledPassesForTest(new Set(['background', 'cloud', 'edges', 'nodes']));
@@ -474,7 +476,7 @@ export default function BrainAtlas3D() {
       // is not interacting. Smooth keeps the slow self-evolution, and every
       // preset pauses the frame loop after 2.2s idle (render on demand).
       idleAutoRotate: opts.perfPreset !== 'batterySaver',
-      pauseWhenIdle: true,
+      pauseWhenIdle: opts.perfPreset === 'batterySaver',
       showLobeLabels: opts.showLobeLabels,
       enabledLobes: opts.enabledLobes,
       performancePreset: opts.perfPreset,
@@ -685,6 +687,7 @@ export default function BrainAtlas3D() {
       enabledLobes,
       performancePreset: perfPreset,
       idleAutoRotate: perfPreset !== 'batterySaver',
+      pauseWhenIdle: perfPreset === 'batterySaver',
     });
     applyQuality(perfPreset, draggingRef.current);
   }, [showLobeLabels, enabledLobes, perfPreset]);
@@ -1002,7 +1005,7 @@ export default function BrainAtlas3D() {
           }`}
         >
           {showLobeLabels ? <Eye size={11} /> : <EyeOff size={11} />}
-          <span className="hidden sm:inline">Labels</span>
+          <span className="hidden sm:inline">{t('brain.labels', language)}</span>
         </button>
 
         <div className="relative">
@@ -1013,7 +1016,7 @@ export default function BrainAtlas3D() {
             className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded border border-olympus-gold/15 bg-olympus-card/85 text-olympus-text-dim hover:text-olympus-text transition-colors"
           >
             <Gauge size={11} />
-            <span className="hidden sm:inline">{PERFORMANCE_PRESETS.find(p => p.id === perfPreset)?.label ?? 'Smooth'}</span>
+            <span className="hidden sm:inline">{t('brain.preset.' + (perfPreset === 'batterySaver' ? 'battery' : perfPreset), language)}</span>
           </button>
           {/* v0.0.2 — Smooth menu open/close.
               The dropdown now fades + scales in (origin: top-right) over
@@ -1034,7 +1037,7 @@ export default function BrainAtlas3D() {
                   }`}
                   role="menuitem"
                 >
-                  {p.label}
+                  {t('brain.preset.' + (p.id === 'batterySaver' ? 'battery' : p.id), language)}
                 </button>
               ))}
             </div>
@@ -1050,11 +1053,11 @@ export default function BrainAtlas3D() {
           <button
             onClick={() => toggleAllLobes(true)}
             className="px-1.5 py-0.5 rounded border border-olympus-gold/15 bg-olympus-card/85 text-olympus-text-dim hover:text-olympus-text transition-colors"
-          >All</button>
+          >{t('brain.all', language)}</button>
           <button
             onClick={() => toggleAllLobes(false)}
             className="px-1.5 py-0.5 rounded border border-olympus-gold/15 bg-olympus-card/85 text-olympus-text-dim hover:text-olympus-text transition-colors"
-          >None</button>
+          >{t('brain.none', language)}</button>
         </div>
         <div className="flex flex-wrap items-end justify-end gap-1 max-w-[120px] sm:max-w-[180px]">
           {(Object.keys(LOBE_CENTERS) as LobeName[]).map(lobe => {

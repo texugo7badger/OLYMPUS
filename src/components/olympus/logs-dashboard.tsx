@@ -18,6 +18,7 @@ import {
   CircleCheck, CircleAlert, Clock3, Coins, Cpu, Route, Boxes, Gauge, ShieldAlert, Wrench, Server, Activity, ListTree, RotateCcw, TriangleAlert, LayoutGrid, ShieldCheck,
 } from 'lucide-react';
 import { planHealth, estimateHopToolBudget } from '@/lib/plan-health';
+import { useLanguage, t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { LogHop, LogWalk, LogsPayload } from '@/lib/logs-index';
 
@@ -49,19 +50,19 @@ interface BootHealth {
   errorLog: { bytes: number; rotated: boolean; lastErrorAt: string | null };
 }
 
-const TABS: Array<{ id: Tab; label: string; icon: any }> = [
-  { id: 'overview', label: 'Visão geral', icon: Gauge },
-  { id: 'hops', label: 'Hops', icon: Route },
-  { id: 'walks', label: 'Walks', icon: Boxes },
-  { id: 'portfolio', label: 'Portfolio', icon: LayoutGrid },
-  { id: 'blocked', label: 'Blocked', icon: ShieldAlert },
-  { id: 'boot', label: 'Boot', icon: Server },
-  { id: 'plan', label: 'Plan', icon: ListTree },
-  { id: 'recovery', label: 'Recovery', icon: RotateCcw },
-  { id: 'errors', label: 'Errors', icon: TriangleAlert },
-  { id: 'hygiene', label: 'Hygiene', icon: ShieldCheck },
-  { id: 'models', label: 'Models', icon: Cpu },
-  { id: 'economy', label: 'Economy', icon: Coins },
+const TABS: Array<{ id: Tab; labelKey: string; icon: any }> = [
+  { id: 'overview', labelKey: 'logs.tab.overview', icon: Gauge },
+  { id: 'hops', labelKey: 'logs.tab.hops', icon: Route },
+  { id: 'walks', labelKey: 'logs.tab.walks', icon: Boxes },
+  { id: 'portfolio', labelKey: 'logs.tab.portfolio', icon: LayoutGrid },
+  { id: 'blocked', labelKey: 'logs.tab.blocked', icon: ShieldAlert },
+  { id: 'boot', labelKey: 'logs.tab.boot', icon: Server },
+  { id: 'plan', labelKey: 'logs.tab.plan', icon: ListTree },
+  { id: 'recovery', labelKey: 'logs.tab.recovery', icon: RotateCcw },
+  { id: 'errors', labelKey: 'logs.tab.errors', icon: TriangleAlert },
+  { id: 'hygiene', labelKey: 'logs.tab.hygiene', icon: ShieldCheck },
+  { id: 'models', labelKey: 'logs.tab.models', icon: Cpu },
+  { id: 'economy', labelKey: 'logs.tab.economy', icon: Coins },
 ];
 
 function fmtDuration(ms: number): string {
@@ -141,6 +142,7 @@ function Card({ label, value, sub, tone }: { label: string; value: string; sub?:
 }
 
 export default function LogsDashboard() {
+  const language = useLanguage();
   const [data, setData] = useState<LogsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -290,12 +292,12 @@ export default function LogsDashboard() {
           <div>
             <div className="flex items-center gap-2 text-olympus-gold">
               <ScrollText size={16} />
-              <h1 className="text-[18px] font-semibold tracking-tight">Logs</h1>
-              <span className="rounded bg-olympus-gold/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-gold ring-1 ring-olympus-gold/20">flight recorder</span>
+              <h1 className="text-[18px] font-semibold tracking-tight">{t('logs.title', language)}</h1>
+              <span className="rounded bg-olympus-gold/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-gold ring-1 ring-olympus-gold/20">{t('logs.tagline', language)}</span>
             </div>
             <p className="mt-1 text-[12px] text-olympus-text-dim">
-              Cada hop, token, park e modelo — a verdade do walk, não uma estimativa.
-              {data?.generatedAt && <span className="ml-1 text-olympus-text-dim/70">· atualizado {fmtTime(data.generatedAt)}</span>}
+              {t('logs.description', language)}
+              {data?.generatedAt && <span className="ml-1 text-olympus-text-dim/70">· {t('logs.updated', language)} {fmtTime(data.generatedAt)}</span>}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -304,7 +306,7 @@ export default function LogsDashboard() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="hop, god, modelo, erro…"
+                placeholder={t('logs.search', language)}
                 className="h-8 w-56 rounded-md border border-olympus-gold/15 bg-olympus-panel pl-7 pr-2 text-[11px] font-mono text-olympus-text placeholder:text-olympus-text-dim/60 focus:outline-none focus:ring-1 focus:ring-olympus-gold/40"
               />
             </div>
@@ -314,65 +316,65 @@ export default function LogsDashboard() {
               className="h-8 rounded-md border border-olympus-gold/15 bg-olympus-panel px-2 text-[11px] font-mono text-olympus-text-dim focus:outline-none focus:ring-1 focus:ring-olympus-gold/40"
               aria-label="Project lane"
             >
-              <option value="">todas as lanes</option>
+              <option value="">{t('logs.allLanes', language)}</option>
               {lanes.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
             <button onClick={() => void load()} className="flex h-8 items-center gap-1.5 rounded-md border border-olympus-gold/15 px-2 text-[11px] font-mono text-olympus-text-dim hover:text-olympus-gold" aria-label="Refresh logs">
-              <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> refresh
+              <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> {t('logs.refresh', language)}
             </button>
           </div>
         </header>
 
         {error && (
           <div className="mt-3 rounded-lg border border-olympus-red/30 bg-olympus-red/5 px-3 py-2 text-[11px] font-mono text-olympus-red">
-            Logs indisponível: {error}
+            {t('logs.unavailable', language)}: {error}
           </div>
         )}
 
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-          <Card label="hops" value={summary ? String(summary.hops) : '—'} sub={summary ? `${summary.completed} green · ${summary.parked} parked` : 'lendo…'} />
-          <Card label="tokens out" value={summary ? fmtTokens(summary.tokensOut) : '—'} sub={summary ? `${fmtTokens(summary.tokensIn)} in` : ''} />
-          <Card label="custo (step)" value={summary ? fmtCost(summary.costUsd) : '—'} sub="invoice unknown" tone="text-olympus-gold" />
-          <Card label="park attempts" value={summary ? String(summary.parked) : '—'} sub={summary?.parksByClass?.[0] ? `${summary.parksByClass[0].klass} ×${summary.parksByClass[0].count}` : 'nenhum'} tone={summary?.parked ? 'text-olympus-red' : 'text-olympus-green'} />
-          <Card label="walks" value={walks.length ? String(walks.length) : '—'} sub={walks[0] ? `${walks[0].slug} · ${walks[0].status}` : 'sem campanha'} />
-          <Card label="window" value={economy?.windows?.h5 != null ? `${Math.round(economy.windows.h5)}%` : '—'} sub="5h rolling" tone={economy?.windows?.h5 != null && economy.windows.h5 >= 80 ? 'text-olympus-red' : 'text-olympus-green'} />
+          <Card label={t('logs.card.hops', language)} value={summary ? String(summary.hops) : '—'} sub={summary ? `${t('logs.green', language, { n: summary.completed })} · ${t('logs.parked', language, { n: summary.parked })}` : t('logs.reading', language)} />
+          <Card label={t('logs.card.tokensOut', language)} value={summary ? fmtTokens(summary.tokensOut) : '—'} sub={summary ? `${fmtTokens(summary.tokensIn)} in` : ''} />
+          <Card label={t('logs.card.costStep', language)} value={summary ? fmtCost(summary.costUsd) : '—'} sub={t('logs.invoiceUnknown', language)} tone="text-olympus-gold" />
+          <Card label={t('logs.card.parkAttempts', language)} value={summary ? String(summary.parked) : '—'} sub={summary?.parksByClass?.[0] ? `${summary.parksByClass[0].klass} ×${summary.parksByClass[0].count}` : t('logs.none', language)} tone={summary?.parked ? 'text-olympus-red' : 'text-olympus-green'} />
+          <Card label={t('logs.card.walks', language)} value={walks.length ? String(walks.length) : '—'} sub={walks[0] ? `${walks[0].slug} · ${walks[0].status}` : t('logs.noCampaign', language)} />
+          <Card label={t('logs.card.window', language)} value={economy?.windows?.h5 != null ? `${Math.round(economy.windows.h5)}%` : '—'} sub={t('logs.rolling5h', language)} tone={economy?.windows?.h5 != null && economy.windows.h5 >= 80 ? 'text-olympus-red' : 'text-olympus-green'} />
         </div>
 
         <nav className="mt-4 flex flex-wrap items-center gap-1 border-b border-olympus-gold/10 pb-1" aria-label="Logs sections">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const active = tab === t.id;
-            const count = t.id === 'hops' ? hops.length : t.id === 'walks' ? walks.length : t.id === 'blocked' ? blocked.length : t.id === 'recovery' ? recoveries.length : t.id === 'errors' ? realErrors.length : null;
+          {TABS.map((tabDef) => {
+            const Icon = tabDef.icon;
+            const active = tab === tabDef.id;
+            const count = tabDef.id === 'hops' ? hops.length : tabDef.id === 'walks' ? walks.length : tabDef.id === 'blocked' ? blocked.length : tabDef.id === 'recovery' ? recoveries.length : tabDef.id === 'errors' ? realErrors.length : null;
             return (
               <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
+                key={tabDef.id}
+                onClick={() => setTab(tabDef.id)}
                 className={cn('flex h-8 items-center gap-1.5 rounded-t px-3 text-[11px] font-mono transition-colors',
                   active ? 'bg-olympus-gold/10 text-olympus-gold ring-1 ring-olympus-gold/20' : 'text-olympus-text-dim hover:text-olympus-text')}
                 aria-current={active ? 'page' : undefined}
               >
-                <Icon size={11} /> {t.label}
+                <Icon size={11} /> {t(tabDef.labelKey, language)}
                 {count != null && <span className="rounded bg-olympus-text-dim/10 px-1 text-[9px] tabular-nums">{count}</span>}
               </button>
             );
           })}
           <div className="flex-1" />
-          <button onClick={exportHops} disabled={!hops.length} className="mb-1 rounded border border-olympus-gold/15 px-2 py-1 text-[10px] font-mono text-olympus-text-dim hover:text-olympus-gold disabled:opacity-30">export json</button>
+          <button onClick={exportHops} disabled={!hops.length} className="mb-1 rounded border border-olympus-gold/15 px-2 py-1 text-[10px] font-mono text-olympus-text-dim hover:text-olympus-gold disabled:opacity-30">{t('logs.export', language)}</button>
         </nav>
 
         {tab === 'overview' && (
           <div className="mt-4 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
             <section className="rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-[13px] font-semibold text-olympus-text">Últimos hops</h2>
-                <button onClick={() => setTab('hops')} className="text-[10px] font-mono text-olympus-gold hover:underline">ver todos →</button>
+                <h2 className="text-[13px] font-semibold text-olympus-text">{t('logs.latestHops', language)}</h2>
+                <button onClick={() => setTab('hops')} className="text-[10px] font-mono text-olympus-gold hover:underline">{t('logs.viewAll', language)}</button>
               </div>
               <HopsTable rows={hops.slice(0, 8)} onPick={setSelectedHop} compact />
-              {!hops.length && <Empty text="Nenhum hop no recorte. Rode um walk ou amplie a lane." />}
+              {!hops.length && <Empty text={t('logs.noHops', language)} />}
             </section>
             <div className="flex flex-col gap-3">
               <section className="rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
-                <h2 className="mb-2 text-[13px] font-semibold text-olympus-text">Parks por classe</h2>
+                <h2 className="mb-2 text-[13px] font-semibold text-olympus-text">{t('logs.parksByClass', language)}</h2>
                 {summary?.parksByClass?.length ? (
                   <div className="flex flex-wrap gap-1.5">
                     {summary.parksByClass.map((p) => (
@@ -381,10 +383,10 @@ export default function LogsDashboard() {
                       </span>
                     ))}
                   </div>
-                ) : <Empty text="Nenhum park no recorte. Bom sinal." />}
+                ) : <Empty text={t('logs.noParks', language)} />}
               </section>
               <section className="rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
-                <h2 className="mb-2 text-[13px] font-semibold text-olympus-text">Campanhas</h2>
+                <h2 className="mb-2 text-[13px] font-semibold text-olympus-text">{t('logs.campaigns', language)}</h2>
                 <div className="space-y-1.5">
                   {walks.slice(0, 5).map((w) => (
                     <button key={w.slug} onClick={() => setSelectedWalk(w)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-olympus-gold/5">
@@ -394,7 +396,7 @@ export default function LogsDashboard() {
                       <span className="text-[10px] font-mono tabular-nums text-olympus-text-dim">{w.completed}/{w.total}</span>
                     </button>
                   ))}
-                  {!walks.length && <Empty text="Nenhuma campanha com plano." />}
+                  {!walks.length && <Empty text={t('logs.noCampaign', language)} />}
                 </div>
               </section>
             </div>
@@ -405,15 +407,15 @@ export default function LogsDashboard() {
           <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-[13px] font-semibold text-olympus-text">Hops <span className="text-olympus-text-dim">({hops.length})</span></h2>
-              <span className="text-[10px] font-mono text-olympus-text-dim">clique para abrir o detalhe</span>
+              <span className="text-[10px] font-mono text-olympus-text-dim">{t('logs.clickDetail', language)}</span>
             </div>
             <HopsTable rows={hops.slice(0, visible)} onPick={setSelectedHop} />
             {hops.length > visible && (
               <button onClick={() => setVisible((n) => n + 120)} className="mt-3 w-full rounded-md border border-olympus-gold/15 py-2 text-[11px] font-mono text-olympus-text-dim hover:text-olympus-gold">
-                mostrar mais ({hops.length - visible} restantes)
+                {t('logs.showMore', language, { n: hops.length - visible })}
               </button>
             )}
-            {!hops.length && <Empty text="Nenhum hop encontrado." />}
+            {!hops.length && <Empty text={t('logs.noneFound', language)} />}
           </section>
         )}
 
@@ -439,7 +441,7 @@ export default function LogsDashboard() {
                 {w.quarantined.length > 0 && <div className="mt-1 truncate text-[10px] font-mono text-olympus-amber-soft">quarantine: {w.quarantined.join(', ')}</div>}
               </button>
             ))}
-            {!walks.length && <Empty text="Nenhuma campanha com plano." />}
+            {!walks.length && <Empty text={t('logs.noCampaign', language)} />}
           </section>
         )}
 
@@ -895,12 +897,13 @@ export default function LogsDashboard() {
 }
 
 function HopsTable({ rows, onPick, compact }: { rows: LogHop[]; onPick: (h: LogHop) => void; compact?: boolean }) {
+  const language = useLanguage();
   return (
     <div>
       <div className="flex items-center gap-3 border-b border-olympus-gold/10 px-2 pb-1 text-[9px] font-mono uppercase tracking-wider text-olympus-text-dim">
-        <span className="w-12 shrink-0">hora</span>
-        <span className="flex-1">hop · god · modelo</span>
-        <span className="w-[260px] shrink-0 text-right">status · tempo · custo</span>
+        <span className="w-12 shrink-0">{t('logs.table.time', language)}</span>
+        <span className="flex-1">{t('logs.table.hopGodModel', language)}</span>
+        <span className="w-[260px] shrink-0 text-right">{t('logs.table.statusTimeCost', language)}</span>
       </div>
       <div className="divide-y divide-olympus-gold/5">
         {rows.map((h) => (
@@ -936,10 +939,11 @@ function HopsTable({ rows, onPick, compact }: { rows: LogHop[]; onPick: (h: LogH
 }
 
 function HopDetail({ hop, onBack, onCopy, copied }: { hop: LogHop; onBack: () => void; onCopy: (v: unknown) => void; copied: boolean }) {
+  const language = useLanguage();
   return (
     <div className="w-full h-full bg-olympus-bg overflow-y-auto">
       <div className="mx-auto max-w-[1200px] px-4 py-4">
-        <button onClick={onBack} className="mb-3 flex items-center gap-1.5 text-[11px] font-mono text-olympus-text-dim hover:text-olympus-gold"><ArrowLeft size={12} /> voltar para Hops</button>
+        <button onClick={onBack} className="mb-3 flex items-center gap-1.5 text-[11px] font-mono text-olympus-text-dim hover:text-olympus-gold"><ArrowLeft size={12} /> {t('logs.backHops', language)}</button>
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -1024,10 +1028,11 @@ function HopDetail({ hop, onBack, onCopy, copied }: { hop: LogHop; onBack: () =>
 }
 
 function WalkDetail({ walk, onBack, onHop }: { walk: LogWalk; onBack: () => void; onHop: (h: { id: string }) => void }) {
+  const language = useLanguage();
   return (
     <div className="w-full h-full bg-olympus-bg overflow-y-auto">
       <div className="mx-auto max-w-[1200px] px-4 py-4">
-        <button onClick={onBack} className="mb-3 flex items-center gap-1.5 text-[11px] font-mono text-olympus-text-dim hover:text-olympus-gold"><ArrowLeft size={12} /> voltar para Walks</button>
+        <button onClick={onBack} className="mb-3 flex items-center gap-1.5 text-[11px] font-mono text-olympus-text-dim hover:text-olympus-gold"><ArrowLeft size={12} /> {t('logs.backWalks', language)}</button>
         <header className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex items-center gap-2">

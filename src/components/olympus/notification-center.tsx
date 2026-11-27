@@ -63,7 +63,7 @@ export default function NotificationCenter() {
     try { return localStorage.getItem(SEEN_KEY) || ''; } catch { return ''; }
   });
   const [autoHibernate, setAutoHibernate] = useState(true);
-  const [closeToHibernate, setCloseToHibernate] = useState(false);
+  const [closeToHibernate, setCloseToHibernate] = useState(true);
   const [busy, setBusy] = useState(false);
   const [hibOpen, setHibOpen] = useState(false);
   const [hibHours, setHibHours] = useState(8);
@@ -222,7 +222,7 @@ export default function NotificationCenter() {
         aria-expanded={open}
       >
         <Bell size={11} />
-        <span className="text-[9px] font-mono hidden sm:inline">notify</span>
+        <span className="text-[9px] font-mono hidden sm:inline">{t('status.notify', language)}</span>
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-3 h-3 px-0.5 rounded-full bg-olympus-red text-[7px] font-mono text-white flex items-center justify-center">
             {unread > 9 ? '9+' : unread}
@@ -234,10 +234,10 @@ export default function NotificationCenter() {
         <div ref={panelRef} className="fixed w-80 max-w-[calc(100vw-1rem)] max-h-[420px] overflow-hidden rounded-lg border border-olympus-gold/25 bg-olympus-panel shadow-2xl z-[220] flex flex-col" style={{ top: panelPos.top, left: panelPos.left }}>
           <header className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-olympus-gold/10">
             <Bell size={10} className="text-olympus-gold" />
-            <span className="text-[9px] font-mono font-semibold uppercase tracking-wide text-olympus-gold">notifications</span>
-            <button onClick={markSeen} className="ml-auto text-[8px] font-mono text-olympus-text-dim hover:text-olympus-text">mark read</button>
-            <button onClick={() => void clearAll()} className="text-[8px] font-mono text-olympus-text-dim hover:text-olympus-red" aria-label="Clear notifications">clear</button>
-            <button onClick={() => setOpen(false)} aria-label="Close notifications" className="text-olympus-text-dim hover:text-olympus-red"><X size={11} /></button>
+            <span className="text-[9px] font-mono font-semibold uppercase tracking-wide text-olympus-gold">{t('status.notifications', language)}</span>
+            <button onClick={markSeen} className="ml-auto text-[8px] font-mono text-olympus-text-dim hover:text-olympus-text">{t('status.markRead', language)}</button>
+            <button onClick={() => void clearAll()} className="text-[8px] font-mono text-olympus-text-dim hover:text-olympus-red" aria-label={t('status.clear', language)}>{t('status.clear', language)}</button>
+            <button onClick={() => setOpen(false)} aria-label={t('status.close', language)} className="text-olympus-text-dim hover:text-olympus-red"><X size={11} /></button>
           </header>
 
           <div className="flex-1 min-h-0 overflow-auto custom-scroll">
