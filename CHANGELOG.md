@@ -68,9 +68,11 @@ All notable changes to OLYMPUS are documented in this file.
 - **Not in this release:** v0.1.5 repository cleanup and docs rewrite. The
   AIME quarantine apply, if approved, is a post-test action.
 
-## [v0.1.3-dev] — 2026-11-27
+## [v0.1.3] — 2026-11-27
 
-### Retrieval & Learning Foundation (development branch)
+### Retrieval & Learning Foundation
+
+> Released retroactively as a prerelease; the foundation is folded into v0.1.4.
 
 - **Local hybrid retrieval.** FTS5/BM25 + 768d `nomic-embed-text:v1.5`
   (local Ollama) + RRF, with project/stack/kind/expiry filters. 644 docs /

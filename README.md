@@ -103,8 +103,9 @@ Apollo.
 because hop ids and fixtures are rejected), validated **derived builds** with
 evidence-gated promotion, a depth-2 **RLM envelope** behind `OLYMPUS_RLM=1`,
 the content-addressed embedding cache and the background index job, and fixed
-the v0.1.2 brain/strategy/cost regressions. **v0.1.2 remains the stable
-release.**
+the v0.1.2 brain/strategy/cost regressions. **v0.1.3 was the retrieval and
+learning foundation** (local hybrid retrieval, ECC confidence/scope, skill
+index repair), folded into v0.1.4. **v0.1.2 remains the stable release.**
 
 `npm run hygiene -- --battery` runs **8 gates and 66 hermetic suites** (35 are
 public in a clean clone); the v0.1.5 UI gate is
