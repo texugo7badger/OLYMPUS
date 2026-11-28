@@ -40,7 +40,8 @@
  *   dispatch       (v3.0)    — a god dispatched to an demigod (rich event)
  *   dispatch_outcome (v3.0)  — the dispatch finished with outcome + duration + tokens
  *   shortcircuit    (v3.0)   — a god short-circuited based on an instinct
- *   strategy_recommendation (v3.0) — Apollo suggests a strategy change based on brain maturity
+ *   strategy_recommendation (retired v0.1.6) — the brain-maturity card was
+ *   removed; strategy stays a user choice until real hop evidence exists.
  *   classification    (v3.0) — task classification emitted at run start (prompt/new-session)
  * License: AGPL-3.0-or-later (original OLYMPUS code).
  */

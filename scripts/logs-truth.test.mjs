@@ -9,7 +9,8 @@
  *      action, budget, message) sorted newest-first;
  *   2. the Errors slice filters the known benign console noise and keeps the
  *      real error;
- *   3. the Logs UI exposes the Recovery and Errors tabs.
+ *   3. the Logs UI merges Blocked + Recovery + Errors into one Issues tab and
+ *      keeps Boot/Hygiene out of the runtime flight recorder.
  *
  * Run: npx tsx scripts/logs-truth.test.mjs   (exit 0 = pass)
  * License: AGPL-3.0-or-later (original OLYMPUS code).
@@ -75,8 +76,8 @@ async function main() {
 
   const ui = fs.readFileSync(path.join(OLYMPUS, 'src/components/olympus/logs-dashboard.tsx'), 'utf-8');
   const index = fs.readFileSync(path.join(OLYMPUS, 'src/lib/logs-index.ts'), 'utf-8');
-  expect('the Recovery tab exists', /id: 'recovery'/.test(ui) && /Recovery Log/.test(ui));
-  expect('the Errors tab exists', /id: 'errors'/.test(ui) && /real only/.test(ui));
+  expect('the Issues tab exists', /id: 'issues'/.test(ui) && /logs\.tab\.issues/.test(ui));
+  expect('Boot and Hygiene are not Logs tabs', !/id: 'boot'/.test(ui) && !/id: 'hygiene'/.test(ui));
   expect('the payload exposes recoveries + errors', /recoveries: LogRecovery\[\]/.test(index) && /errors: LogError\[\]/.test(index));
 
   console.log('');

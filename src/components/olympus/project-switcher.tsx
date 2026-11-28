@@ -37,6 +37,8 @@ export default function ProjectSwitcher() {
   const language = useLanguage();
   const projects = useOlympus((s) => s.availableProjects);
   const activeProject = useOlympus((s) => s.activeProject);
+  const lastProject = useOlympus((s) => s.lastProject);
+  const setActiveProject = useOlympus((s) => s.setActiveProject);
   const refreshProjects = useOlympus((s) => s.refreshProjects);
   const setNewProjectDialogOpen = useOlympus((s) => s.setNewProjectDialogOpen);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -126,6 +128,19 @@ export default function ProjectSwitcher() {
           </div>
 
           <div className="max-h-[22rem] overflow-y-auto custom-scroll">
+            {!activeProject && lastProject && (
+              <button
+                onClick={() => { setActiveProject(lastProject); setDropdownOpen(false); }}
+                className="w-full text-left px-3 py-2 transition-colors border-b border-olympus-gold/10 bg-olympus-gold/5 hover:bg-olympus-gold/10"
+              >
+                <div className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">Continue</div>
+                <div className="flex items-center gap-1.5 mt-0.5 text-[11px] font-mono text-olympus-gold">
+                  <Folder size={11} />
+                  <span className="truncate">{displayName(lastProject)}</span>
+                  <span className="ml-auto text-[9px] text-olympus-text-dim">last project</span>
+                </div>
+              </button>
+            )}
             {projects.length === 0 ? (
               <div className="px-3 py-6 text-center text-[11px] font-mono text-olympus-text-dim">
                 {t('projects.noProjects', language)}<br />{t('projects.noProjectsHint', language)}

@@ -1,7 +1,7 @@
 {
   "stable": {
-    "version": "0.1.5",
-    "tag": "v0.1.5",
+    "version": "0.1.6",
+    "tag": "v0.1.6",
     "stable": true,
     "tests": {
       "pass": 66,
@@ -9,15 +9,20 @@
       "skip": 0,
       "suites": 66
     },
-    "releasedAt": "2026-11-27T21:44:38.604Z",
-    "commit": "f7b397c",
+    "releasedAt": "2026-11-28T00:22:49.188Z",
+    "commit": "v0.1.6",
     "note": "Stable means: the full battery ran with 0 FAIL and the declared skips are explicit. The console/GO limits are unrelated and may change."
   },
   "versions": [
     {
+      "version": "0.1.6",
+      "tag": "v0.1.6",
+      "stable": true
+    },
+    {
       "version": "0.1.5",
       "tag": "v0.1.5",
-      "stable": true
+      "stable": false
     },
     {
       "version": "0.1.4",

@@ -519,8 +519,8 @@ export default function MCPConfigPanel() {
 
         {/* MCP list */}
         {loading && servers.length === 0 ? (
-          <div className="text-[10px] font-mono text-olympus-text-dim text-center py-8">
-            Loading MCPs…
+          <div className="py-6">
+            <OlympusLoader size={72} label="loading MCPs" />
           </div>
         ) : (
           servers.map((s) => {

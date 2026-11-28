@@ -994,7 +994,7 @@ async function hibernateNow(forceFree = false): Promise<void> {
   startHibernationWatch();
   // The HUD IS the notification: themed, live, and it does not wake the app.
   setTimeout(() => {
-    try { showHud(); } catch { /* fallback below */ }
+    try { showHud(true); } catch { /* fallback below */ }
     if (!hudWindow) {
       notifyDesktop('walk', 'OLYMPUS hibernating', 'The window is closed; the campaign keeps running and you will be notified on done/park.');
     }
@@ -1010,9 +1010,13 @@ async function hibernateNow(forceFree = false): Promise<void> {
  * session token, so the user can see progress, spend and hops on the PC
  * without waking the app. The same `/m` is reachable from the phone.
  */
-function showHud(): void {
+function showHud(hibernateMode = false): void {
   if (hudWindow && !hudWindow.isDestroyed()) {
-    try { hudWindow.showInactive(); } catch { /* gone */ }
+    try {
+      hudWindow.setAlwaysOnTop(!hibernateMode, hibernateMode ? 'normal' : 'floating');
+      hudWindow.setTitle(hibernateMode ? 'OLYMPUS — hibernating' : 'OLYMPUS — live status');
+      hudWindow.showInactive();
+    } catch { /* gone */ }
     return;
   }
   let token = '';
@@ -1029,13 +1033,13 @@ function showHud(): void {
     y = area.y + area.height - height - 12;
   } catch { /* screen before ready — Electron centres it */ }
   hudWindow = new BrowserWindow({
-    width, height, x, y,
+    width, height: hibernateMode ? Math.min(440, height) : height, x, y,
     frame: false,
     resizable: true,
-    alwaysOnTop: true,
+    alwaysOnTop: !hibernateMode,
     skipTaskbar: false,
     backgroundColor: '#0A0E16',
-    title: 'OLYMPUS — live status',
+    title: hibernateMode ? 'OLYMPUS — hibernating' : 'OLYMPUS — live status',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -1043,7 +1047,7 @@ function showHud(): void {
       preload: join(__dirname, 'hud-preload.js'),
     },
   });
-  try { hudWindow.setAlwaysOnTop(true, 'floating'); } catch { /* platform */ }
+  try { hudWindow.setAlwaysOnTop(!hibernateMode, hibernateMode ? 'normal' : 'floating'); } catch { /* platform */ }
   const url = token ? `${BASE_URL}/m/widget#t=${encodeURIComponent(token)}&hud=1` : `${BASE_URL}/m/widget#hud=1`;
   const load = () => { try { void hudWindow?.loadURL(url).catch(() => { /* retry below */ }); } catch { /* gone */ } };
   load();
@@ -1612,6 +1616,16 @@ ipcMain.handle('olympus:is-dev-async', () => isDev);
 ipcMain.handle('olympus:app-version-async', () => readAppVersion());
 
 // ─── Window control handlers (frameless window) ───────────────────────────
+
+ipcMain.on('olympus:restore-from-hud', () => {
+  closeHud();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+  } else {
+    createWindow();
+  }
+});
 
 ipcMain.on('olympus:window-minimize', () => {
   mainWindow?.minimize();

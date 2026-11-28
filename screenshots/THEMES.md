@@ -24,10 +24,3 @@ Settings → Appearance → **palette lab**: pick a hue, a harmony (analogous,
 complementary, triadic, split, mono) and a mode; shuffle until it feels right;
 **apply + make default** persists the family. Contrast is enforced by
 construction and pinned by `scripts/palette-lab.test.mjs`.
-
-## Real captures (v0.0.72)
-
-The minimalist cards above are the gallery. The running app was also captured
-in every theme, one clean-terminal screenshot per theme:
-`screenshots/themes/<id>.png` (18 files, captured by `npm run shots:themes`).
-They are the evidence, not the gallery.

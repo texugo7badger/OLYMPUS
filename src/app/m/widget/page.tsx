@@ -352,9 +352,20 @@ export default function LiveWidgetPage() {
           <RefreshCw size={12} className={busy ? 'animate-spin' : ''} />
         </button>
         {hudMode && (
-          <button onClick={toggleCompact} aria-label="Minimize HUD" className="rounded p-1" style={dim}>
-            <Minimize2 size={12} />
-          </button>
+          <>
+            <button
+              onClick={() => { try { (window as any).olympusHud?.restore?.(); } catch { /* browser */ } }}
+              aria-label="Restore OLYMPUS"
+              data-tip="Restore the OLYMPUS window"
+              className="rounded p-1"
+              style={dim}
+            >
+              <Maximize2 size={12} />
+            </button>
+            <button onClick={toggleCompact} aria-label="Minimize HUD" className="rounded p-1" style={dim}>
+              <Minimize2 size={12} />
+            </button>
+          </>
         )}
       </header>
 

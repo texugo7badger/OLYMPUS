@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.1.5, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
+  <img src="public/badge-bar.svg" alt="OLYMPUS — v0.1.6, AGPL-3.0, downloads, forks, stars, last commit, size, contributors" width="840" />
 </p>
 
 ---
@@ -42,26 +42,21 @@ llama.cpp or any OpenAI-compatible endpoint ([LOCAL-LLM.md](LOCAL-LLM.md)).
 
 ## Screens
 
-One clean screen per surface, captured from the running **v0.1.5** app. No
-mockups. The v0.1.5 gallery is in
-[`screenshots/screens/manifest.json`](screenshots/screens/manifest.json); eight
-surfaces are shown here, including a Portuguese proof of the shell i18n.
+One clean screen, captured from the running **v0.1.6** app: the brain and the
+chat, no mockups.
 
 <div align="center">
 
-| | |
-|---|---|
-| <a href="screenshots/screens/01-pantheon-015.png"><img src="screenshots/screens/01-pantheon-015.png" width="520" alt="The Pantheon — ten gods and the Parthenon command deck" /></a><br><sub><b>The Pantheon</b> · ten gods, the 3D atlas with its full cloud and the Parthenon deck</sub> | <a href="screenshots/screens/03-god-intelligence-015.png"><img src="screenshots/screens/03-god-intelligence-015.png" width="520" alt="God Intelligence — live Callimachus and validated quick circuits" /></a><br><sub><b>God Intelligence</b> · live Callimachus: 0 fake quick circuits, 187 project, 55 technical, 1/hour budget</sub> |
-| <a href="screenshots/screens/06-cost-015.png"><img src="screenshots/screens/06-cost-015.png" width="520" alt="Cost — the real ledger with the fully loaded hourly chart" /></a><br><sub><b>Cost</b> · the real ledger, the fully loaded hourly chart and step/list/invoice separation</sub> | <a href="screenshots/screens/10-llm-strategy-015.png"><img src="screenshots/screens/10-llm-strategy-015.png" width="520" alt="LLM Strategy — the canonical GO/Zen rosters" /></a><br><sub><b>LLM Strategy</b> · canonical GO rosters: DeepSeek V4.1 Flash on Apollo, Hy3 on Atlas</sub> |
-| <a href="screenshots/screens/11-logs-015.png"><img src="screenshots/screens/11-logs-015.png" width="520" alt="Logs — the flight recorder" /></a><br><sub><b>Logs</b> · every hop, token, park and model — the walk truth, now with the shell dictionary</sub> |
-| <a href="screenshots/screens/12-god-detail-015.png"><img src="screenshots/screens/12-god-detail-015.png" width="520" alt="God detail — dispatches, demigods, skills and references" /></a><br><sub><b>God detail</b> · dispatches, demigods, skills, proven arsenal and references</sub> | <a href="screenshots/screens/13-logs-ptbr-015.png"><img src="screenshots/screens/13-logs-ptbr-015.png" width="520" alt="Logs em português — a prova da i18n do shell" /></a><br><sub><b>Português</b> · the shell follows the selected language: notify → notificar, Logs → Registros</sub> |
+<a href="screenshots/olympus.png"><img src="screenshots/olympus.png" width="100%" alt="OLYMPUS — the brain atlas and the Apollo chat" /></a>
+
+<sub><b>OLYMPUS</b> · the 3D brain on the left, the Apollo chat on the right.</sub>
 
 </div>
 
-A short guided tour lives in [screenshots/UX-TOUR.md](screenshots/UX-TOUR.md).
-Every screenshot is captured from the running app (`npm run shots`); the
+The screenshot is captured from the running app (`npm run shots`); the
 preview fixture is a tiny framing-friendly page because AIME sets
 `frame-ancestors 'none'` by design.
+
 
 ## What is OLYMPUS?
 
@@ -87,36 +82,36 @@ the limits are in [HYGIENE.md](HYGIENE.md) and
 
 ## Latest
 
-**v0.1.5 — cleanup and truth.** The repository lost its dead surfaces: the
-legacy build-talent editor, the design-studio modal, the MCP detail panel and
-the plasma orb are gone, together with the sync-map panel/left-pane union, the
-perf-route probe and the stale suite entry. The prompt-scope helper stays: the
-overlay still classifies app turns even though the panel is retired. Nine unused
-devDependencies (CodeMirror, xterm, Radix tooltip) were removed and npm pruned
-34 packages. The docs now match the code: the README go-balanced roster is
-corrected (Athena/Hermes/Dionysus/Prometheus), AGENTS.md states the v0.1.5
-truth (10 gods + 61 live demigods, 39 tools, 1,032 retrieval chunks, 609
-resonance signatures) and the strategy comments no longer claim GLM-5.3 is
-Apollo.
+**v0.1.6 — shell truth and focus.** The repository now carries **one
+screenshot**, captured from the running app: the brain and the Apollo chat. The
+gallery, the UX tour and the 97 legacy PNGs are gone. The status bar never cuts
+a word: agents, skills, instincts and confidence keep their full labels, and
+whole low-priority segments drop before a label is clipped. A single loader
+language replaces the fullscreen route loader: Cost, MCP, Craft, Atelier and
+Vault use the branded OLYMPUS mark and render only when their data is complete.
+OLYMPUS opens **without a project**; the last one is offered as “Continue
+<project>” in the project switcher. Hibernation keeps a lightweight window in
+the taskbar/alt-tab with a Restore button. Logs is six runtime tabs (Overview,
+Hops, Campaigns, Issues, Models, Economy); Boot health and the release Hygiene
+gate moved to Settings → System & release. The Vault panel now tells the truth:
+**242 active instincts, 1,041 archived, 0 quick circuits** — the old “1,041
+quick circuits” was the archive count under a false label. The brain-maturity
+strategy card and its `strategy_recommendation` hook were removed.
 
-**v0.1.4 remains the previous prerelease.** It delivered the Symphony Resonance Index
-(8,235 outcomes → 609 signatures; the honest real quick-circuit count is 0
-because hop ids and fixtures are rejected), validated **derived builds** with
-evidence-gated promotion, a depth-2 **RLM envelope** behind `OLYMPUS_RLM=1`,
-the content-addressed embedding cache and the background index job, and fixed
-the v0.1.2 brain/strategy/cost regressions. The v0.1.5 shell now follows the
-selected language (activity bar, status bar, Compact Brain, notifications,
-Logs header and right-pane tabs; seven languages), the atlas keeps its full
-cloud during drag and auto-rotates in Smooth/Balanced, and closing the window
-hibernates while minimize keeps it open. **v0.1.3 was the retrieval and
-learning foundation** (local hybrid retrieval, ECC confidence/scope, skill
-index repair), folded into v0.1.4. **v0.1.5 is the stable release; v0.1.2 is the
-previous stable.**
+**v0.1.5 was cleanup and truth.** It removed the legacy build-talent editor,
+design-studio modal, MCP detail panel and plasma orb; pruned nine unused
+devDependencies; corrected the go-balanced roster; and shipped the brain drag
+restore, the shell i18n (seven languages) and the minimize/hibernate split.
+**v0.1.4** delivered the Symphony Resonance Index (8,235 outcomes → 609
+signatures; 0 real quick circuits), validated derived builds, the depth-2 RLM
+envelope behind `OLYMPUS_RLM=1`, the embedding cache and the background index
+job. **v0.1.3** was the retrieval and learning foundation. The sequence is
+`0.1.6 > 0.1.5 > 0.1.4 > 0.1.3 > 0.1.2`.
 
 `npm run hygiene -- --battery` runs **8 gates and 66 hermetic suites** (35 are
-public in a clean clone); the v0.1.5 UI gate is
-`node scripts/verify-v015-ui.mjs`, the v0.1.4 gate remains
-`verify-v014-ui.mjs`, and the stable v0.1.2 gate is `verify-v012-ui.mjs`. The
+public in a clean clone); the v0.1.6 UI gate is
+`node scripts/verify-v016-ui.mjs`, the v0.1.5 gate remains
+`verify-v015-ui.mjs`, and the stable v0.1.2 gate is `verify-v012-ui.mjs`. The
 100-hop certification passed; the 8-hour soak is **not claimed**. The full
 history lives in [CHANGELOG.md](CHANGELOG.md).
 
@@ -149,7 +144,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**66 PASS / 0 FAIL / 0 declared skip** across 66 suites is the v0.1.5 stable
+**66 PASS / 0 FAIL / 0 declared skip** across 66 suites is the v0.1.6 stable
 gate (35 public in a clean clone; the tracked-local suites need the live
 app/vault). The previous v0.1.2 gate was 57/57.
 `npm run hygiene -- --battery` runs all eight gates. The 100-hop deterministic

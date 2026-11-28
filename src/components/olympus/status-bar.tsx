@@ -162,13 +162,18 @@ export default function StatusBar({
 	 const totalTokens = cost?.totalTokens ?? 0;
  const ActiveGodIcon = fallbackGod ? GOD_ICONS[fallbackGod] : null;
 
- // v0.0.59 — the bar carries mobile + talent now; below 1680px the brain
- // labels collapse to icons+numbers so the cost block never overlaps them.
- const compact = winWidth < 1680;
+ // v0.1.6 — never clip a word. The bar keeps the metrics the user asked
+ // for (instincts, confidence, skills, agents) and drops WHOLE low-priority
+ // segments when the window is narrow; it never hides or truncates a label.
+ const tight = winWidth < 1680;
  const hideProject = winWidth < 900;
  const iconOnly = winWidth < 700;
  const hideVersion = winWidth < 1100;
  const hideCli = winWidth < 1000;
+ const hideDiag = winWidth < 1400;
+ const hideSseText = winWidth < 1240;
+ const hideApiText = winWidth < 1180;
+ const hideBrainContext = winWidth < 980;
 
  const showCustomWindowControls = shouldShowCustomWindowControls();
 
@@ -186,7 +191,7 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.1.5'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.1.6'}
    </span>
 )}
    <button
@@ -227,7 +232,7 @@ export default function StatusBar({
 		   className="flex items-center gap-1.5 h-5 px-2 rounded-full shrink-0 bg-olympus-purple/10 text-olympus-purple ring-1 ring-olympus-purple/25 hover:bg-olympus-purple/20 transition-colors"
 		 >
 		   <StudioIcon size={11} className="text-olympus-gold" />
-		   <span className="text-[9px] font-mono font-semibold">{t('status.artStudio', language)}</span>
+		   {!tight && <span className="text-[9px] font-mono font-semibold whitespace-nowrap">{t('status.artStudio', language)}</span>}
 		   <Mic size={9} className="text-olympus-cyan" />
 		 </button>
 		 {studio && <ImmersivePanel onClose={() => setStudio(false)} />}
@@ -250,7 +255,7 @@ export default function StatusBar({
 		   className="flex items-center gap-1 h-5 px-1.5 rounded-full shrink-0 text-olympus-gold/80 ring-1 ring-olympus-gold/20 hover:bg-olympus-gold/10 hover:text-olympus-gold transition-colors"
 		 >
 		   <Gem size={10} />
-		   <span className="text-[9px] font-mono font-semibold">{t('status.talent', language)}</span>
+		   {!tight && <span className="text-[9px] font-mono font-semibold whitespace-nowrap">{t('status.talent', language)}</span>}
 		 </button>
 
 		 {/* Compact Brain button — to the RIGHT of Focus Mode. */}
@@ -269,6 +274,7 @@ export default function StatusBar({
  {/* DIAGNOSTIC (2026-10-25): one-click bundle — the user asked for "análise
      dele funcionando em live e tbm o log". Copies the last 5 min of every
      relevant source (masked) to the clipboard. */}
+ {!hideDiag && (
  <OlympusTooltip content="Copy the last 5 min diagnostic bundle (feed + bus + logs + health + lanes) to the clipboard" side="bottom" delay={150}>
    <button
      type="button"
@@ -288,6 +294,7 @@ export default function StatusBar({
      diag
    </button>
  </OlympusTooltip>
+ )}
  <div className="flex items-center gap-1 shrink-0" data-tip={workingGods.length > 0 ? workingGods.join(' · ') : (fallbackGod || 'idle')}>
  {workingGods.length > 0 ? (
  workingGods.map((g) => {
@@ -311,31 +318,36 @@ export default function StatusBar({
  </>
  )}
  <div className="w-px h-3 bg-olympus-gold/15 shrink-0" />
-	 {/* Brain metrics with icons + text labels. Text collapses in
-	 compact mode (<1200px) but icons remain for identification. */}
+	 {/* Brain metrics with icons + text labels. Labels never collapse;
+	 on a narrow window the context pair drops as a whole, while skills and
+	 agents stay readable. */}
  <div className="flex items-center gap-1.5 shrink-0" aria-label={t('status.brainMetrics', language)}>
- <span className="flex items-center gap-1 text-olympus-green" data-tip="Total instinct files in the brain">
+ {!hideBrainContext && (
+        <>
+ <span className="flex items-center gap-1 text-olympus-green" data-tip="Active instinct files (seed + empirical); the archive is shown in the Vault panel" data-status-label="instincts">
  <Lightbulb size={11} />
  <span>{health?.total_instincts ?? 0}</span>
- {!compact && <span className="text-olympus-text-dim text-[10px]">{t('status.instincts', language)}</span>}
+ <span className="text-olympus-text-dim text-[10px] whitespace-nowrap">{t('status.instincts', language)}</span>
  </span>
  <span className="text-olympus-text-dim">·</span>
- <span className="flex items-center gap-1 text-olympus-green" data-tip="Average instinct confidence (0.00 – 1.00)">
+ <span className="flex items-center gap-1 text-olympus-green" data-tip="Average active instinct confidence (0.00 – 1.00)" data-status-label="conf">
  <Gauge size={11} />
  <span>{(health?.avg_confidence ?? 0).toFixed(2)}</span>
- {!compact && <span className="text-olympus-text-dim text-[10px]">{t('status.conf', language)}</span>}
+ <span className="text-olympus-text-dim text-[10px] whitespace-nowrap">{t('status.conf', language)}</span>
  </span>
+        </>
+      )}
  <span className="text-olympus-text-dim">·</span>
- <span className="flex items-center gap-1 text-olympus-cyan" data-tip="Total installed skills">
+ <span className="flex items-center gap-1 text-olympus-cyan" data-tip="Total installed skills" data-status-label="skills">
  <Layers size={11} />
  <span>{health?.total_skills ?? 0}</span>
- {!compact && <span className="text-olympus-text-dim text-[10px]">{t('status.skills', language)}</span>}
+ <span className="text-olympus-text-dim text-[10px] whitespace-nowrap">{t('status.skills', language)}</span>
  </span>
  <span className="text-olympus-text-dim">·</span>
- <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-olympus-purple" data-tip={`${health?.total_agents ?? 0} gods + demigods`}>
+ <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-olympus-purple" data-tip={`${health?.total_agents ?? 0} gods + demigods`} data-status-label="agents">
  <Users size={11} />
  <span className="tabular-nums">{health?.total_agents ?? 0}</span>
- {!compact && <span className="text-olympus-text-dim text-[10px] whitespace-nowrap">{t('status.agents', language)}</span>}
+ <span className="text-olympus-text-dim text-[10px] whitespace-nowrap">{t('status.agents', language)}</span>
  </span>
  </div>
  </div>
@@ -371,7 +383,7 @@ export default function StatusBar({
  ? <Wifi size={12} className="text-olympus-green" />
  : <WifiOff size={12} className="text-olympus-text-dim" />}
  <span className={sseConnected ? 'text-olympus-green' : 'text-olympus-text-dim'}>
- {compact ? 'SSE' : t(sseConnected ? 'status.sseLive' : 'status.sseOffline', language)} · {eventsCount}
+ {hideSseText ? 'SSE' : t(sseConnected ? 'status.sseLive' : 'status.sseOffline', language)} · {eventsCount}
  </span>
  </div>
  <div className="w-px h-3 bg-olympus-gold/15" />
@@ -382,7 +394,7 @@ export default function StatusBar({
  >
  <Key size={11} className={apiConfigsCount > 0 ? 'text-olympus-green' : 'text-olympus-gold'} />
  <span className={cn('text-[10px]', apiConfigsCount > 0 ? 'text-olympus-green' : 'text-olympus-gold')}>
- {iconOnly ? '' : `${apiConfigsCount} ${t('status.apis', language)}`}
+ {iconOnly || hideApiText ? '' : `${apiConfigsCount} ${t('status.apis', language)}`}
  </span>
  </button>
  <ApiConfigDialog open={apiConfigOpen} onClose={() => setApiConfigOpen(false)} />

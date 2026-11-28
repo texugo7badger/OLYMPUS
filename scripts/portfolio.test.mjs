@@ -89,7 +89,8 @@ async function main() {
   const route = fs.readFileSync(path.join(OLYMPUS, 'src/app/api/olympus/portfolio/route.ts'), 'utf-8');
   const ui = fs.readFileSync(path.join(OLYMPUS, 'src/components/olympus/logs-dashboard.tsx'), 'utf-8');
   expect('the portfolio API exists', /buildPortfolio/.test(route));
-  expect('the Portfolio tab exists', /id: 'portfolio'/.test(ui) && /Portfolio/.test(ui));
+  // v0.1.6 — Portfolio is a project view, not a runtime Logs tab.
+  expect('Portfolio is not a Logs tab', !/id: 'portfolio'/.test(ui));
 
   console.log('');
   if (failures > 0) {

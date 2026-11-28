@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { strategyApiRequirement, modelClassesForStrategy, strategyEntries, GO_PLAN_LAST_VERIFIED } from '@/lib/model-strategies';
 import StrategyBuilder from './strategy-builder';
 import ResourceGovernorCard from './resource-governor-card';
+import SystemHealthCard from './system-health-card';
 import AutonomyCard from './autonomy-card';
 
 /* ------------------------------------------------------------------ */
@@ -1217,6 +1218,7 @@ export default function SettingsDialog() {
 
             <VersionChannelCard />
             <AutonomyCard />
+            <SystemHealthCard />
             <ResourceGovernorCard />
 
             {error && (

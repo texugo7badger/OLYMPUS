@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 // InstinctDetailModal lets the user click an instinct name and read its full markdown.
 // InstinctDetailModal fetches the file itself, via /api/vault/file/read?path=<vault-relative path> (not /api/olympus/fs/read).
 import InstinctDetailModal from './instinct-detail-modal';
+import OlympusLoader from './olympus-loader';
 
 /* ------------------------------------------------------------------ */
 /* Vault Summary — read-only panel. Callimachus handles curation, */
@@ -53,6 +54,8 @@ interface GraphData {
 
 interface BrainHealth {
  total_instincts: number;
+ total_archived?: number;
+ total_quick_circuits?: number;
  total_skills: number;
  total_agents: number;
  total_mcps?: number;
@@ -92,10 +95,11 @@ interface InstinctNameEntry {
  path?: string;
 }
 interface PerGodInstinctStats {
+ quickCircuits?: number;
  instinctCounts: {
  seed: number; // Mastered — immutable baselines
  empirical: number; // Learning — live, learned from real dispatches
- archived: number; // Quick Circuits — pruned/stale instincts
+ archived: number; // Archived — stale instincts kept for pattern matching
  total: number;
  };
  instinctNames?: {
@@ -140,7 +144,7 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
 	 // Store health data for accurate skill count (matches status bar).
  const [healthData, setHealthData] = useState<BrainHealth | null>(null);
 	 // Store per-god brain-stats so the Mastered/Learning/
- // Quick Circuits section shows REAL counts from instinct files on disk
+ // Archived section shows REAL counts from instinct files on disk
  // (was previously a mock filter on graph skill node IDs).
  const [brainStats, setBrainStats] = useState<Record<string, PerGodInstinctStats> | null>(null);
 
@@ -218,7 +222,7 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  // total_knowledge / total_instincts from brainHealth() in olympus.ts.
  setHealthData(brainHealthData);
 	 // Store per-god brain-stats for the real
- // Mastered/Learning/Quick Circuits breakdown.
+ // Mastered/Learning/Archived breakdown.
  setBrainStats(brainStatsData?.perGod ?? null);
 
  // Recent additions — fetch the activity feed for the last 5 instinct writes.
@@ -267,8 +271,7 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  if (loading && !summary) {
  return (
  <div className="w-full h-full flex flex-col items-center justify-center text-olympus-text-dim bg-olympus-bg gap-2">
- <Loader size={20} />
- <span className="text-[10px] font-mono">reading vault…</span>
+ <OlympusLoader size={96} label="reading vault" />
  </div>
  );
  }
@@ -301,9 +304,12 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  // As Callimachus's LINK stage detects cross-god dispatch chains with
  // ≥10 samples and ≥0.85 success rate, those chains become Quick-Circuits
  // and the count grows.
- const quickCircuitTotal = brainStats
- ? Object.values(brainStats).reduce((acc, st: any) => acc + (st?.instinctCounts?.archived ?? 0), 0)
- : 0;
+ const quickCircuitTotal = healthData?.total_quick_circuits
+ ?? (brainStats ? Object.values(brainStats).reduce((acc, st: any) => acc + (st?.quickCircuits ?? 0), 0) : 0);
+ // The archive is memory, not a quick circuit. Keep the number visible but
+ // name it honestly; 1,041 archived instincts are not 1,041 shortcuts.
+ const archivedTotal = healthData?.total_archived
+ ?? (brainStats ? Object.values(brainStats).reduce((acc, st: any) => acc + (st?.instinctCounts?.archived ?? 0), 0) : 0);
 
  // circuitHealthPct + totalDispatches — short-circuit hit rate across all
  // gods, plus the total dispatch count. Sourced from the brain-stats
@@ -393,6 +399,7 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  icon={Lightbulb}
  label="Instincts"
  value={healthData?.total_instincts ?? s.byCategory.instincts}
+ hint={archivedTotal > 0 ? `${archivedTotal.toLocaleString()} archived` : undefined}
  color="text-olympus-green bg-olympus-green/10 ring-olympus-green/20"
  />
  <CategoryCard
@@ -405,6 +412,7 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  icon={BrainCircuit}
  label="Quick-Circuits"
  value={quickCircuitTotal}
+ hint={quickCircuitTotal === 0 ? 'none validated yet' : 'cross-project proof'}
  color="text-olympus-purple bg-olympus-purple/10 ring-olympus-purple/20"
  />
  </div>
@@ -542,9 +550,9 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  </div>
  )}
 
-	 {/* Compact per-god Mastered/Learning/Quick Circuits table.
+	 {/* Compact per-god Mastered/Learning/Archived table.
  Shows ALL 9 gods at once in a single table (no clicking required).
- Columns: God | Mastered (seed) | Learning (empirical) | Quick Circuits (archived) | Total
+ Columns: God | Mastered (seed) | Learning (empirical) | Archived | Total
  Data comes from /api/olympus/brain-stats which reads the actual
  instinct files on disk (~/OLYMPUS-VAULT/05_Auto_Learning/instincts/<god>/).
  This replaces the previous expandable card UI that required clicking
@@ -562,12 +570,13 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  );
 }
 
-function CategoryCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
+function CategoryCard({ icon: Icon, label, value, color, hint }: { icon: any; label: string; value: number; color: string; hint?: string }) {
  return (
  <div className={cn('rounded-lg p-2.5 border border-olympus-gold/10 ring-1', color)}>
  <Icon size={12} className="mb-1" />
  <div className="text-base font-bold font-mono">{value}</div>
  <div className="text-[9px] text-olympus-text-dim mt-0.5">{label}</div>
+ {hint && <div className="text-[8px] text-olympus-text-dim/80 mt-0.5 font-mono">{hint}</div>}
  </div>
  );
 }
@@ -615,25 +624,15 @@ function HealthStat({
  );
 }
 
-function Loader({ size }: { size: number }) {
- return (
- <div
- className="rounded-full border-2 border-olympus-gold/30 border-t-olympus-gold animate-spin"
- style={{ width: size, height: size }}
- />
- );
-}
-
 /**
  * CompactInstinctTable: a single table showing all 9 gods and their
- * Mastered (seed) / Learning (empirical) / Quick Circuits (archived) instinct
+ * Mastered (seed) / Learning (empirical) / Archived instinct
  * counts. Replaces the previous expandable card UI.
  *
  * Design rationale: the user wanted a quick overview of the Vault Brain's
  * status — NOT a list of every skill. This table shows the LEARNING STATE
  * per god at a glance. When all numbers are 0, the brain is in cold-start.
- * As gods dispatch, the Learning column fills in. Quick Circuits grow as
- * Callimachus archives stale instincts.
+ * As gods dispatch, the Learning column fills in. Archived grows as Callimachus moves stale instincts out of the active pool.
  *
  * Data source: /api/olympus/brain-stats → reads actual .md files under
  * ~/OLYMPUS-VAULT/05_Auto_Learning/instincts/<god>/{seed,empirical,_archive}/
@@ -671,7 +670,10 @@ function CompactInstinctTable({
  acc.seed += seedForGod;
  acc.empirical += s.empirical;
  acc.archived += s.archived;
- acc.total += s.total;
+ // Active = seed + empirical. The archive is shown in its own column and
+ // must not inflate the table's total (the old bug that made 242 read as
+ // 1,283).
+ acc.total += s.seed + s.empirical;
  } else {
  // brain-stats not loaded — at least contribute the seed count so
  // the totals row matches the per-god column.
@@ -706,7 +708,7 @@ function CompactInstinctTable({
  <div className="flex items-center gap-2 mb-2.5">
  <Waypoints size={12} className="text-olympus-cyan" />
  <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">
- Mastered / Learning / Quick Circuits
+ Mastered / Learning / Archived
  </span>
  <span className="text-[9px] font-mono text-olympus-text-dim ml-auto">
 	 {/* Was `{totalSkills} mastered` referring
@@ -724,8 +726,8 @@ function CompactInstinctTable({
  <span>God</span>
  <span className="text-right text-olympus-gold">Mastered</span>
  <span className="text-right text-olympus-green">Learning</span>
- <span className="text-right text-olympus-purple">Quick Circuits</span>
- <span className="text-right">Total</span>
+ <span className="text-right text-olympus-purple">Archived</span>
+ <span className="text-right">Active</span>
  </div>
 
 	 {/* Rows — one per god.
@@ -743,7 +745,7 @@ function CompactInstinctTable({
  const seed = s?.seed ?? perGodMastered[god] ?? 0;
  const empirical = s?.empirical ?? 0;
  const archived = s?.archived ?? 0;
- const total = s?.total ?? 0;
+ const total = s ? s.seed + s.empirical : 0;
  const Icon = GOD_ICONS[god];
  const godName = god.charAt(0).toUpperCase() + god.slice(1);
  const isExpanded = expandedGod === god;
@@ -809,7 +811,7 @@ function CompactInstinctTable({
  onSelect={(entry) => entry.relPath && setSelectedInstinct({ relPath: entry.relPath, name: entry.name })}
  />
  <ExpandedTier
- label="Quick Circuits (archived)"
+ label="Archived"
  color="text-olympus-purple"
  entries={names.archived}
  onSelect={(entry) => entry.relPath && setSelectedInstinct({ relPath: entry.relPath, name: entry.name })}
@@ -832,7 +834,7 @@ function CompactInstinctTable({
 
  {/* Help text */}
  <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mt-2 pt-2 border-t border-olympus-gold/5">
- Mastered = seed instincts (immutable baselines) · Learning = empirical instincts (live, from dispatch outcomes) · Quick Circuits = archived (stale, kept for pattern matching).
+ Mastered = seed instincts (immutable baselines) · Learning = empirical instincts (live, from dispatch outcomes) · Archived = stale instincts kept for pattern matching, not validated quick circuits.
 	 {/* Hint that god rows are now clickable. */}
  <br />
  Click a god row to expand its instinct list · click an instinct name to read its document.
@@ -855,7 +857,7 @@ function CompactInstinctTable({
 /**
  * ExpandedTier sub-component.
  *
- * Renders a single tier (Mastered/Learning/Quick Circuits) inside an
+ * Renders a single tier (Mastered/Learning/Archived) inside an
  * expanded god row. Each entry is a clickable button that opens the
  * InstinctDetailModal (via the onSelect callback). Entries without a
  * `path` field are rendered as non-clickable text (defensive — the
@@ -878,7 +880,7 @@ function ExpandedTier({
 }) {
 	 // Show a placeholder for empty tiers (using the tier's
  // color) instead of hiding them entirely. The user wants to see all three
- // tiers (Mastered / Learning / Quick Circuits) even when the count is zero,
+ // tiers (Mastered / Learning / Archived) even when the count is zero,
  // so the Brain's structure is always visible.
  if (!entries || entries.length === 0) {
  return (
@@ -937,8 +939,8 @@ function ExpandedTier({
  * ~/OLYMPUS-VAULT/05_Auto_Learning/instincts/<god>/seed/)
  * - Learning = empirical instinct count (live, learned from dispatch
  * outcomes — ~/OLYMPUS-VAULT/05_Auto_Learning/instincts/<god>/empirical/)
- * - Quick Circuits = archived instinct count (pruned/stale, kept for
- * historical pattern matching — .../<god>/_archive/)
+ * - Archived = stale instinct count (kept for historical pattern matching
+ * — .../<god>/_archive/); it is NOT a validated quick circuit
  *
  * Also surfaces dispatch count, short-circuit hit rate, avg confidence,
  * and learning velocity per god — all LIVE from the brain-stats API.
@@ -983,7 +985,7 @@ function LearnedSkillsSection({
  <div className="flex items-center gap-2 mb-2.5">
  <Waypoints size={12} className="text-olympus-cyan" />
  <span className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">
- Mastered / Learning / Quick Circuits
+ Mastered / Learning / Archived
  </span>
  <span className="text-[9px] font-mono text-olympus-text-dim ml-auto">
 	 {/* Was `{totalSkills} mastered`; now shows instincts. */}
@@ -1022,7 +1024,7 @@ function LearnedSkillsSection({
  <div>
  {selectedStats ? (
  <>
- {/* Three cards: Mastered (seed), Learning (empirical), Quick Circuits (archived).
+ {/* Three cards: Mastered (seed), Learning (empirical), Archived.
  Each card now shows the actual instinct
  NAMES, not just the count. Up to 10 names are listed; if
  there are more, "and N more" is shown. */}
@@ -1042,8 +1044,8 @@ function LearnedSkillsSection({
  dotColor="bg-olympus-green"
  />
  <InstinctCard
- label="Quick Circuits"
- sublabel="archived instincts"
+ label="Archived"
+ sublabel="stale, kept for matching"
  value={selectedStats.instinctCounts.archived}
  color="text-olympus-purple"
  dotColor="bg-olympus-purple"
@@ -1061,7 +1063,7 @@ function LearnedSkillsSection({
  <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed">
  Live data from <code className="text-olympus-gold">/api/olympus/brain-stats</code> — reads
  <code className="text-olympus-cyan">~/OLYMPUS-VAULT/05_Auto_Learning/instincts/{selectedGod}/</code>
- every 30s. Mastered = seed, Learning = empirical, Quick Circuits = _archive.
+ every 30s. Mastered = seed, Learning = empirical, Archived = _archive.
  </div>
  </>
  ) : (
@@ -1077,7 +1079,7 @@ function LearnedSkillsSection({
  </div>
  ) : (
  <div className="text-[10px] font-mono text-olympus-text-dim/50 py-3 text-center">
- Click a god above to see their Mastered / Learning / Quick Circuits breakdown
+ Click a god above to see their Mastered / Learning / Archived breakdown
  from the instinct files on disk.
  </div>
  )}
@@ -1087,7 +1089,7 @@ function LearnedSkillsSection({
 
 /**
  * InstinctCard — renders the count for one tier (Mastered / Learning /
- * Quick Circuits). Minimalist: just the number + label, no name lists.
+ * Archived). Minimalist: just the number + label, no name lists.
  */
 function InstinctCard({ label, sublabel, value, color, dotColor }: {
  label: string;

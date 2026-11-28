@@ -1605,47 +1605,6 @@ export const OlympusHooksPlugin: OlympusHooksPluginFn = async ({
         });
       }
 
-      // Fire-and-forget: ask the brain-stats API for a strategy recommendation.
-      // The API returns a recommendation; if it differs from the current
-      // strategy, Apollo's prompt instructs him to mention it. The hook
-      // itself does NOT change the strategy — that's Apollo's job (with
-      // user approval).
-      const apiBase = process.env.OLYMPUS_API_BASE || "http://127.0.0.1:3000";
-      interface BriefBrainStats {
-        recommendedStrategy?: string;
-        currentStrategy?: string;
-        shortCircuitHitRate?: number;
-        avgConfidence?: number;
-      }
-      fetch(`${apiBase}/api/olympus/brain-stats?brief=true`)
-        .then(r => r.json())
-        .then((raw: unknown) => {
-          const stats = raw as BriefBrainStats;
-          if (stats && stats.recommendedStrategy && stats.currentStrategy &&
-              stats.recommendedStrategy !== stats.currentStrategy) {
-            const scRate = typeof stats.shortCircuitHitRate === "number"
-              ? (stats.shortCircuitHitRate * 100).toFixed(1) + "%"
-              : "n/a";
-            const avgConf = typeof stats.avgConfidence === "number"
-              ? stats.avgConfidence.toFixed(2)
-              : "n/a";
-            appendActivityFeed({
-              ts: new Date().toISOString(),
-              god: "apollo",
-              action: "strategy_recommendation",
-              msg: `Brain recommends switching from ${stats.currentStrategy} to ${stats.recommendedStrategy} (short-circuit hit rate: ${scRate}, avg confidence: ${avgConf})`,
-              meta: {
-                current: stats.currentStrategy,
-                recommended: stats.recommendedStrategy,
-                short_circuit_hit_rate: stats.shortCircuitHitRate,
-                avg_confidence: stats.avgConfidence,
-              },
-            });
-          }
-        })
-        .catch(() => {
-          // Non-fatal — Apollo will check brain-stats himself if needed.
-        });
     },
 
     /**

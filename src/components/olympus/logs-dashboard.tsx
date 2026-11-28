@@ -22,45 +22,17 @@ import { useLanguage, t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { LogHop, LogWalk, LogsPayload } from '@/lib/logs-index';
 
-type Tab = 'overview' | 'hops' | 'walks' | 'portfolio' | 'blocked' | 'boot' | 'plan' | 'recovery' | 'errors' | 'hygiene' | 'models' | 'economy';
+type Tab = 'overview' | 'hops' | 'walks' | 'issues' | 'models' | 'economy';
 
-interface HygienePayload {
-  version: string; generatedAt: string; ok: boolean;
-  gates: Array<{ name: string; ok: boolean; ms: number }>;
-  battery: { pass: number | null; fail: number | null; suites: number | null } | null;
-}
-
-interface PortfolioProject {
-  slug: string; generation: number; status: 'RUNNING' | 'PARKED' | 'DONE' | 'IDLE'; completed: number; total: number;
-  hopsToDonePct: number; parkedHop: string | null; profile: string | null; profileLabel: string | null;
-  profileCheck: { ok: boolean; violations: string[] } | null; liveWalk: boolean;
-  firstGreenMs: number | null; doneMs: number | null; parkRatePct: number | null; attempts: number;
-  tokensOut: number; lastActivity: string | null;
-}
-interface PortfolioPayload {
-  ok: true; generatedAt: string; projects: PortfolioProject[];
-  totals: { projects: number; running: number; parked: number; done: number; hops: number; completed: number; firstGreenMs: number | null; parkRatePct: number | null };
-}
-
-interface BootHealth {
-  app: { version: string; port: number; portAlive: boolean; health: { ok: boolean; status: number | null; ms: number; error: string | null }; mode: string };
-  boot: { at: string | null; bootId: string | null; electronPid: number | null; nextPid: number | null; nextExternal: boolean; watchdogRespawns: number; lastRespawnAt: string | null; lastWatchdogAt: string | null } | null;
-  opencode: { port: number; alive: boolean };
-  mcpGit: Array<{ pid: number; ppid: number; etimes: number }>;
-  errorLog: { bytes: number; rotated: boolean; lastErrorAt: string | null };
-}
-
+// v0.1.6 — six runtime tabs, not twelve. Boot health belongs to
+// Settings → System; Hygiene is a release gate (Settings → About), not a
+// runtime log; Portfolio lives in Projects; Plan is part of Campaigns;
+// Blocked/Recovery/Errors are the same question: what needs attention.
 const TABS: Array<{ id: Tab; labelKey: string; icon: any }> = [
   { id: 'overview', labelKey: 'logs.tab.overview', icon: Gauge },
   { id: 'hops', labelKey: 'logs.tab.hops', icon: Route },
   { id: 'walks', labelKey: 'logs.tab.walks', icon: Boxes },
-  { id: 'portfolio', labelKey: 'logs.tab.portfolio', icon: LayoutGrid },
-  { id: 'blocked', labelKey: 'logs.tab.blocked', icon: ShieldAlert },
-  { id: 'boot', labelKey: 'logs.tab.boot', icon: Server },
-  { id: 'plan', labelKey: 'logs.tab.plan', icon: ListTree },
-  { id: 'recovery', labelKey: 'logs.tab.recovery', icon: RotateCcw },
-  { id: 'errors', labelKey: 'logs.tab.errors', icon: TriangleAlert },
-  { id: 'hygiene', labelKey: 'logs.tab.hygiene', icon: ShieldCheck },
+  { id: 'issues', labelKey: 'logs.tab.issues', icon: ShieldAlert },
   { id: 'models', labelKey: 'logs.tab.models', icon: Cpu },
   { id: 'economy', labelKey: 'logs.tab.economy', icon: Coins },
 ];
@@ -151,9 +123,6 @@ export default function LogsDashboard() {
   const [query, setQuery] = useState('');
   const [selectedHop, setSelectedHop] = useState<LogHop | null>(null);
   const [selectedWalk, setSelectedWalk] = useState<LogWalk | null>(null);
-  const [bootHealth, setBootHealth] = useState<BootHealth | null>(null);
-  const [portfolio, setPortfolio] = useState<PortfolioPayload | null>(null);
-  const [hygiene, setHygiene] = useState<HygienePayload | null>(null);
   const [visible, setVisible] = useState(120);
   const [copied, setCopied] = useState(false);
 
@@ -171,44 +140,14 @@ export default function LogsDashboard() {
     }
   }, []);
 
-  const loadBoot = useCallback(async () => {
-    try {
-      const r = await fetch('/api/olympus/boot-health', { cache: 'no-store' });
-      const d = await r.json().catch(() => ({}));
-      if (r.ok && d?.ok) setBootHealth(d as BootHealth);
-    } catch { /* the Boot tab degrades to — */ }
-  }, []);
-
-  const loadPortfolio = useCallback(async () => {
-    try {
-      const r = await fetch('/api/olympus/portfolio', { cache: 'no-store' });
-      const d = await r.json().catch(() => ({}));
-      if (r.ok && d?.ok) setPortfolio(d as PortfolioPayload);
-    } catch { /* the Portfolio tab degrades to — */ }
-  }, []);
-
-  const loadHygiene = useCallback(async () => {
-    try {
-      const r = await fetch('/api/olympus/hygiene', { cache: 'no-store' });
-      const d = await r.json().catch(() => ({}));
-      if (r.ok) setHygiene(d as HygienePayload);
-    } catch { /* the Hygiene tab degrades to — */ }
-  }, []);
-
   useEffect(() => {
     void load();
-    void loadBoot();
-    void loadPortfolio();
-    void loadHygiene();
     const iv = setInterval(() => {
       if (document.visibilityState === 'hidden') return;
       void load();
-      void loadBoot();
-      void loadPortfolio();
-      void loadHygiene();
     }, 15_000);
     return () => clearInterval(iv);
-  }, [load, loadBoot, loadPortfolio, loadHygiene]);
+  }, [load]);
 
   const lanes = useMemo(() => {
     const set = new Map<string, string>();
@@ -344,7 +283,7 @@ export default function LogsDashboard() {
           {TABS.map((tabDef) => {
             const Icon = tabDef.icon;
             const active = tab === tabDef.id;
-            const count = tabDef.id === 'hops' ? hops.length : tabDef.id === 'walks' ? walks.length : tabDef.id === 'blocked' ? blocked.length : tabDef.id === 'recovery' ? recoveries.length : tabDef.id === 'errors' ? realErrors.length : null;
+            const count = tabDef.id === 'hops' ? hops.length : tabDef.id === 'walks' ? walks.length : tabDef.id === 'issues' ? blocked.length + recoveries.length + realErrors.length : null;
             return (
               <button
                 key={tabDef.id}
@@ -445,72 +384,7 @@ export default function LogsDashboard() {
           </section>
         )}
 
-        {tab === 'portfolio' && (
-          <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2 text-olympus-cyan">
-                  <LayoutGrid size={14} />
-                  <h2 className="text-[13px] font-semibold text-olympus-text">Portfolio</h2>
-                  <span className="rounded bg-olympus-cyan/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-cyan ring-1 ring-olympus-cyan/20">multi-project</span>
-                </div>
-                <p className="mt-1 max-w-[820px] text-[11px] text-olympus-text-dim">
-                  Todos os projetos em uma leitura: perfil, progresso, first-green (proxy do primeiro hop verde), conclusão, park rate e último sinal.
-                </p>
-              </div>
-              <span className="text-[10px] font-mono text-olympus-text-dim">{portfolio?.totals.projects ?? '—'} project(s)</span>
-            </div>
-            {!portfolio ? (
-              <div className="mt-4 text-[11px] font-mono text-olympus-text-dim">lendo o portfólio…</div>
-            ) : portfolio.projects.length === 0 ? (
-              <div className="mt-4 rounded-lg border border-olympus-gold/15 bg-olympus-bg/40 px-3 py-3 text-[11px] font-mono text-olympus-text-dim">Nenhum projeto com plano.</div>
-            ) : (
-              <>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-                  <Card label="projects" value={String(portfolio.totals.projects)} sub={`${portfolio.totals.running} running`} />
-                  <Card label="done" value={String(portfolio.totals.done)} sub={`${portfolio.totals.completed}/${portfolio.totals.hops} hops`} tone="text-olympus-green" />
-                  <Card label="parked" value={String(portfolio.totals.parked)} sub="needs a look" tone={portfolio.totals.parked ? 'text-olympus-red' : 'text-olympus-green'} />
-                  <Card label="first green" value={portfolio.totals.firstGreenMs != null ? fmtDuration(portfolio.totals.firstGreenMs) : '—'} sub="avg · proxy" />
-                  <Card label="park rate" value={portfolio.totals.parkRatePct != null ? `${portfolio.totals.parkRatePct}%` : '—'} sub="avg · rows" />
-                  <Card label="profiles" value={String(portfolio.projects.filter((p) => p.profile).length)} sub="selected" />
-                </div>
-                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                  {portfolio.projects.map((p) => (
-                    <div key={p.slug} className="rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 p-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-[12px] font-semibold text-olympus-text">{p.slug}</span>
-                        <StatusChip status={p.status === 'DONE' ? 'completed' : p.status === 'PARKED' ? 'parked' : p.status === 'RUNNING' ? 'running' : 'idle'} />
-                        <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">gen {p.generation ?? '—'} · {p.profileLabel ?? 'no profile'}</span>
-                      </div>
-                      <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-[20px] font-semibold tabular-nums text-olympus-text">{p.completed}/{p.total}</span>
-                        <span className="text-[9px] font-mono text-olympus-text-dim">{p.hopsToDonePct}% · {p.attempts} attempts</span>
-                      </div>
-                      <div className="mt-1 h-1 rounded-full bg-olympus-bg ring-1 ring-olympus-gold/10 overflow-hidden">
-                        <div className={cn('h-full rounded-full', p.status === 'DONE' ? 'bg-olympus-green' : p.status === 'PARKED' ? 'bg-olympus-red' : 'bg-olympus-cyan')} style={{ width: `${Math.min(100, p.hopsToDonePct)}%` }} />
-                      </div>
-                      <div className="mt-2 grid grid-cols-2 gap-1 text-[9px] font-mono text-olympus-text-dim">
-                        <span>first green: <span className="text-olympus-text">{p.firstGreenMs != null ? fmtDuration(p.firstGreenMs) : '—'}</span></span>
-                        <span>done: <span className="text-olympus-text">{p.doneMs != null ? fmtDuration(p.doneMs) : '—'}</span></span>
-                        <span>park rate: <span className={cn(p.parkRatePct ? 'text-olympus-amber-soft' : 'text-olympus-green')}>{p.parkRatePct != null ? `${p.parkRatePct}%` : '—'}</span></span>
-                        <span>tokens out: <span className="text-olympus-text">{fmtTokens(p.tokensOut)}</span></span>
-                      </div>
-                      {p.parkedHop && <div className="mt-1 text-[9px] font-mono text-olympus-red">parked: {p.parkedHop}</div>}
-                      {p.profileCheck && !p.profileCheck.ok && <div className="mt-1 text-[9px] font-mono text-olympus-red">profile check: {p.profileCheck.violations.join('; ')}</div>}
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-[9px] font-mono text-olympus-text-dim">{p.lastActivity ? fmtTime(p.lastActivity) : 'no signal'}</span>
-                        <button onClick={() => { setLane(p.slug); setTab('hops'); }} className="text-[9px] font-mono text-olympus-gold hover:underline">open hops →</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            <p className="mt-3 text-[10px] font-mono text-olympus-text-dim/80">first-green = primeiro hop verde desde createdAt do plano (proxy, não é paint do browser). done = último hop verde - createdAt.</p>
-          </section>
-        )}
-
-        {tab === 'blocked' && (
+        {tab === 'issues' && (
           <section className="mt-4 rounded-xl border border-olympus-red/20 bg-olympus-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
@@ -564,59 +438,7 @@ export default function LogsDashboard() {
           </section>
         )}
 
-        {tab === 'boot' && (
-          <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2 text-olympus-gold">
-                  <Server size={14} />
-                  <h2 className="text-[13px] font-semibold text-olympus-text">Boot Health</h2>
-                  <span className="rounded bg-olympus-gold/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-gold ring-1 ring-olympus-gold/20">one server</span>
-                </div>
-                <p className="mt-1 max-w-[780px] text-[11px] text-olympus-text-dim">
-                  A porta e o processo são a prova. O watchdog só respawna quando o socket está livre; o MCP git vive no grupo do serve.
-                </p>
-              </div>
-              <button onClick={() => void loadBoot()} className="flex items-center gap-1 rounded border border-olympus-gold/15 px-2 py-1 text-[10px] font-mono text-olympus-text-dim hover:text-olympus-gold">
-                <Activity size={10} /> probe
-              </button>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-              <Card label="app" value={bootHealth ? (bootHealth.app.health.ok ? 'GREEN' : 'DOWN') : '—'} sub={bootHealth ? `${bootHealth.app.health.ms}ms · HTTP ${bootHealth.app.health.status ?? '—'}` : 'lendo…'} tone={bootHealth?.app.health.ok ? 'text-olympus-green' : 'text-olympus-red'} />
-              <Card label="port" value={bootHealth ? String(bootHealth.app.port) : '—'} sub={bootHealth ? (bootHealth.app.portAlive ? 'TCP listening' : 'TCP closed') : ''} tone={bootHealth?.app.portAlive ? 'text-olympus-green' : 'text-olympus-red'} />
-              <Card label="next pid" value={bootHealth?.boot?.nextPid ? String(bootHealth.boot.nextPid) : (bootHealth?.boot?.nextExternal ? 'external' : '—')} sub={bootHealth?.boot ? `boot ${bootHealth.boot.bootId ?? '?'}` : ''} />
-              <Card label="watchdog" value={bootHealth?.boot ? String(bootHealth.boot.watchdogRespawns) : '—'} sub={bootHealth?.boot?.lastRespawnAt ? `last ${fmtTime(bootHealth.boot.lastRespawnAt)}` : 'no respawn'} tone={bootHealth?.boot && bootHealth.boot.watchdogRespawns > 0 ? 'text-olympus-amber-soft' : 'text-olympus-green'} />
-              <Card label="opencode" value={bootHealth ? (bootHealth.opencode.alive ? 'UP' : 'DOWN') : '—'} sub={bootHealth ? `:${bootHealth.opencode.port}` : ''} tone={bootHealth?.opencode.alive ? 'text-olympus-green' : 'text-olympus-red'} />
-              <Card label="mcp git" value={bootHealth ? String(bootHealth.mcpGit.length) : '—'} sub={bootHealth?.mcpGit.length ? 'children alive' : 'no orphans'} tone={bootHealth?.mcpGit.length ? 'text-olympus-amber-soft' : 'text-olympus-green'} />
-            </div>
-            <div className="mt-3 grid gap-3 lg:grid-cols-2">
-              <div className="rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 p-3">
-                <h3 className="text-[11px] font-semibold text-olympus-text">Process truth</h3>
-                <div className="mt-2 space-y-1 text-[10px] font-mono text-olympus-text-dim">
-                  <div>app version: <span className="text-olympus-text">{bootHealth?.app.version ?? '—'}</span> · mode: {bootHealth?.app.mode ?? '—'}</div>
-                  <div>electron pid: <span className="text-olympus-text">{bootHealth?.boot?.electronPid ?? '—'}</span> · next pid: <span className="text-olympus-text">{bootHealth?.boot?.nextPid ?? (bootHealth?.boot?.nextExternal ? 'external' : '—')}</span></div>
-                  <div>last watchdog: {bootHealth?.boot?.lastWatchdogAt ? fmtTime(bootHealth.boot.lastWatchdogAt) : '—'} · last respawn: {bootHealth?.boot?.lastRespawnAt ? fmtTime(bootHealth.boot.lastRespawnAt) : 'none'}</div>
-                  <div>error log: {bootHealth ? `${(bootHealth.errorLog.bytes / 1024).toFixed(1)} KB` : '—'} · rotated: {bootHealth?.errorLog.rotated ? 'yes' : 'no'} · last: {bootHealth?.errorLog.lastErrorAt ? fmtTime(bootHealth.errorLog.lastErrorAt) : 'none'}</div>
-                </div>
-              </div>
-              <div className="rounded-lg border border-olympus-gold/10 bg-olympus-bg/40 p-3">
-                <h3 className="text-[11px] font-semibold text-olympus-text">MCP git children</h3>
-                {bootHealth?.mcpGit.length ? (
-                  <div className="mt-2 space-y-1">
-                    {bootHealth.mcpGit.slice(0, 8).map((p) => (
-                      <div key={p.pid} className="flex items-center gap-2 text-[10px] font-mono text-olympus-amber-soft">
-                        <span>pid {p.pid}</span><span className="text-olympus-text-dim">ppid {p.ppid}</span><span className="text-olympus-text-dim">{fmtDuration(p.etimes * 1000)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : <div className="mt-2 text-[10px] font-mono text-olympus-green">none — the serve owns no orphan child.</div>}
-                <p className="mt-2 text-[10px] font-mono text-olympus-text-dim">O reaper limpa `uvx mcp-server-git` órfão (ppid 1) acima de 30 min.</p>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {tab === 'plan' && (
+        {tab === 'walks' && (
           <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
@@ -689,7 +511,7 @@ export default function LogsDashboard() {
           </section>
         )}
 
-        {tab === 'recovery' && (
+        {tab === 'issues' && (
           <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
@@ -727,7 +549,7 @@ export default function LogsDashboard() {
           </section>
         )}
 
-        {tab === 'errors' && (
+        {tab === 'issues' && (
           <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
@@ -763,48 +585,6 @@ export default function LogsDashboard() {
                   </div>
                 ))}
               </div>
-            )}
-          </section>
-        )}
-
-        {tab === 'hygiene' && (
-          <section className="mt-4 rounded-xl border border-olympus-gold/15 bg-olympus-card p-4">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2 text-olympus-green">
-                  <ShieldCheck size={14} />
-                  <h2 className="text-[13px] font-semibold text-olympus-text">Hygiene</h2>
-                  <span className="rounded bg-olympus-green/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-olympus-green ring-1 ring-olympus-green/20">zero errors</span>
-                </div>
-                <p className="mt-1 max-w-[820px] text-[11px] text-olympus-text-dim">
-                  O gate de release: tsc, lint, docs, privacy, suite manifest e audit-high. HYGIENE.md declara os limites; o battery hermetic é separado.
-                </p>
-              </div>
-              <span className="text-[10px] font-mono text-olympus-text-dim">{hygiene ? `v${hygiene.version} · ${fmtTime(hygiene.generatedAt)}` : 'sem relatório'}</span>
-            </div>
-            {!hygiene ? (
-              <div className="mt-4 rounded-lg border border-olympus-amber-soft/20 bg-olympus-amber-soft/5 px-3 py-3 text-[11px] font-mono text-olympus-amber-soft">
-                Nenhum relatório ainda. Rode <code>npm run hygiene</code> e recarregue.
-              </div>
-            ) : (
-              <>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <Card label="gate" value={hygiene.ok ? 'GREEN' : 'RED'} sub={`${hygiene.gates.filter((g) => g.ok).length}/${hygiene.gates.length} checks`} tone={hygiene.ok ? 'text-olympus-green' : 'text-olympus-red'} />
-                  <Card label="battery" value={hygiene.battery?.pass != null ? `${hygiene.battery.pass}/${hygiene.battery.suites}` : '—'} sub={hygiene.battery ? 'hermetic' : 'add --battery'} tone={hygiene.battery?.pass != null ? 'text-olympus-green' : 'text-olympus-text-dim'} />
-                  <Card label="errors" value={hygiene.ok ? '0' : String(hygiene.gates.filter((g) => !g.ok).length)} sub="deterministic gates" tone={hygiene.ok ? 'text-olympus-green' : 'text-olympus-red'} />
-                  <Card label="version" value={hygiene.version} sub="release branch" />
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {hygiene.gates.map((g) => (
-                    <div key={g.name} className={cn('flex items-center gap-2 rounded-lg border px-3 py-2', g.ok ? 'border-olympus-green/20 bg-olympus-green/5' : 'border-olympus-red/20 bg-olympus-red/5')}>
-                      {g.ok ? <CircleCheck size={12} className="text-olympus-green" /> : <CircleAlert size={12} className="text-olympus-red" />}
-                      <span className="font-mono text-[11px] text-olympus-text">{g.name}</span>
-                      <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">{Math.round(g.ms / 1000)}s</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-3 text-[10px] font-mono text-olympus-text-dim/80">HYGIENE.md: 23 moderate transitive advisories, 132 local suites and the unclaimed drills are declared limits, not hidden errors.</p>
-              </>
             )}
           </section>
         )}

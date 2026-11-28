@@ -111,7 +111,10 @@ setInterval(()=>{},1000);`;
     expect('the warm-serve kill signals the group', /killProcessGroup\(serverChild/.test(sess) || /killProcessGroup\(pid/.test(sess));
     expect('the serve reaps orphan MCP children', /reapOrphanProcesses\('uvx mcp-server-git'/.test(sess));
     expect('the boot-health API reads the record + probes', /boot-health\.json/.test(route) && /isPortListening/.test(route));
-    expect('the Logs workspace has the Boot tab', /id: 'boot'/.test(ui) && /Boot Health/.test(ui));
+    // v0.1.6 — Boot health moved from Logs to Settings → System & release.
+    const settings = fs.readFileSync(path.join(OLYMPUS, 'src/components/olympus/settings-dialog.tsx'), 'utf-8');
+    const systemCard = fs.readFileSync(path.join(OLYMPUS, 'src/components/olympus/system-health-card.tsx'), 'utf-8');
+    expect('Boot health lives in Settings, not Logs', /SystemHealthCard/.test(settings) && /boot-health/.test(systemCard) && !/id: 'boot'/.test(ui));
   }
 
   console.log('');

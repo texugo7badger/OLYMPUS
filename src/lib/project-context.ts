@@ -53,6 +53,9 @@ export const VAULT = getVaultRoot();
 export const PROJECTS_DIR = path.join(VAULT, '02_Projects');
 const OLYMPUS_HOME = process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus');
 export const ACTIVE_FILE = path.join(OLYMPUS_HOME, 'active-project.json');
+/** v0.1.6 — the last project is a SUGGESTION for the clean boot screen,
+ *  never an auto-open. It survives opening OLYMPUS with no active project. */
+export const LAST_FILE = path.join(OLYMPUS_HOME, 'last-project.json');
 export const WORKSPACES_DIR = path.join(OLYMPUS_HOME, 'workspaces');
 
 /** Slugify a project name for use as a folder name. */
@@ -582,6 +585,19 @@ export function deleteProject(slug: string): void {
 }
 
 /** Read the active project slug from the persisted state file. */
+export function getLastProjectSlug(): string | null {
+  try {
+    if (!fs.existsSync(LAST_FILE)) return null;
+    const data = JSON.parse(fs.readFileSync(LAST_FILE, 'utf-8'));
+    return typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : null;
+  } catch { return null; }
+}
+
+export function getLastProject(): ProjectNote | null {
+  const slug = getLastProjectSlug();
+  return slug ? getProject(slug) : null;
+}
+
 export function getActiveProjectSlug(): string | null {
   try {
     if (!fs.existsSync(ACTIVE_FILE)) return null;
@@ -600,9 +616,25 @@ export function getActiveProject(): ProjectNote | null {
 /** Set the active project (or clear it with null). */
 export function setActiveProject(slug: string | null): void {
   ensureDirs();
+  if (!slug) {
+    // Clean boot: preserve the pointer we are clearing as the last-project
+    // suggestion, so "Continue <project>" survives the next restart.
+    const previous = getActiveProjectSlug();
+    if (previous) {
+      try {
+        fs.writeFileSync(LAST_FILE, JSON.stringify({ slug: previous, ts: new Date().toISOString() }, null, 2), 'utf-8');
+      } catch { /* best-effort */ }
+    }
+  }
   const data: ActiveProjectFile = { slug, ts: new Date().toISOString() };
   fs.writeFileSync(ACTIVE_FILE, JSON.stringify(data, null, 2), 'utf-8');
   if (slug) {
+    // v0.1.6 — remember the last project as a suggestion, separate from the
+    // active pointer. Clearing the active project (clean boot) must not erase
+    // the "Continue <project>" affordance.
+    try {
+      fs.writeFileSync(LAST_FILE, JSON.stringify({ slug, ts: data.ts }, null, 2), 'utf-8');
+    } catch { /* best-effort */ }
     // Bump last_active on the project note
     try { updateProject(slug, {}); } catch {}
   }

@@ -683,8 +683,8 @@ export default function CraftAppsPanel({ initialApp, initialTab }: { initialApp?
         ) : view.kind === 'grid' ? (
           <div className="absolute inset-0 overflow-y-auto custom-scroll p-3">
             {loading && apps.length === 0 && (
-              <div className="text-center py-10 text-olympus-text-dim text-xs font-mono">
-                <RefreshCw size={14} className="animate-spin inline mr-2" />probing the apps…
+              <div className="py-6">
+                <OlympusLoader size={72} label="probing the apps" />
               </div>
             )}
             {/* The STUDIO card first — the AI crafting engine (their hosted

@@ -8,6 +8,7 @@
 
 'use client';
 
+import OlympusLoader from './olympus-loader';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Palette, Search, Sparkles, Upload, Image as ImageIcon, Tag, X, Loader2, PenTool, ExternalLink, Box, Wand2, ShieldCheck, RefreshCw } from 'lucide-react';
 import Forge2D from './forge-2d';
@@ -306,7 +307,7 @@ export default function AtelierPanel() {
       </div>
 
       {/* The gallery */}
-      {loading && <div className="text-center py-10 text-olympus-text-dim text-xs font-mono">loading the vault…</div>}
+      {loading && <div className="py-6"><OlympusLoader size={72} label="loading the vault" /></div>}
       {!loading && assets.length === 0 && (
         <div className="text-center py-12">
           <ImageIcon size={22} className="mx-auto mb-2 text-olympus-gold/40" />

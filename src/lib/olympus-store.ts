@@ -266,6 +266,9 @@ interface OlympusStore {
 
   /* ─── Project context ──────────────────────────────────────────── */
   activeProject: ProjectNote | null;
+  /** v0.1.6 — the last project, shown as "Continue <slug>" on a clean boot. */
+  lastProject: ProjectNote | null;
+  projectsBootstrapped: boolean;
   setActiveProject: (p: ProjectNote | null) => void;
   /** Phase 2 (P4.D): set active project by slug. */
   setActiveProjectBySlug: (slug: string | null) => Promise<void>;
@@ -442,8 +445,10 @@ export const useOlympus = create<OlympusStore>((set, get) => ({
 
   /* ─── Project context ──────────────────────────────────────────── */
   activeProject: null,
+  lastProject: null,
+  projectsBootstrapped: false,
   setActiveProject: (p) => {
-    set({ activeProject: p });
+    set({ activeProject: p, ...(p ? { lastProject: p } : {}) });
     fetch('/api/olympus/projects/active', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -460,12 +465,17 @@ export const useOlympus = create<OlympusStore>((set, get) => ({
   setAvailableProjects: (p) => set({ availableProjects: p }),
   refreshProjects: async () => {
     try {
-      const r = await fetch('/api/olympus/projects');
+      // v0.1.6 — the FIRST read is the clean boot: the server clears the
+      // active pointer and returns the last project as a suggestion. Later
+      // reads never overwrite the user's explicit selection.
+      const boot = !get().projectsBootstrapped;
+      const r = await fetch(`/api/olympus/projects${boot ? '?boot=1' : ''}`);
       const d = await r.json();
       const projects: ProjectNote[] = Array.isArray(d.projects) ? d.projects : [];
-      set({ availableProjects: projects });
-      if (d.active) { set({ activeProject: d.active }); }
-      else if (d.active === null && get().activeProject) { set({ activeProject: null }); }
+      set({ availableProjects: projects, projectsBootstrapped: true });
+      if (boot) {
+        set({ activeProject: null, lastProject: d.lastProject ?? null });
+      }
     } catch {}
   },
   projectFilterMode: 'cross-stack',

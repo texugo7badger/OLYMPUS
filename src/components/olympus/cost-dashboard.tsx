@@ -13,6 +13,7 @@ import { Activity, BarChart3, DollarSign, Zap, Server, CheckCircle2, ChevronRigh
 import { cn } from '@/lib/utils';
 import { demigodShortDescription } from '@/lib/demigod-short-desc';
 import DemigodPromptModal from './demigod-prompt-modal';
+import OlympusLoader from './olympus-loader';
 
 interface GodCost {
  god: string;
@@ -283,43 +284,17 @@ export default function CostDashboard({ active = true }: { active?: boolean }) {
  }, [active, costWindow, retryTick]);
 
  if (!data) {
- // v0.1.3 — a pane opens with its own skeleton, never a full-surface loader.
- // The old 96px loader read as "the whole app is stuck"; the cost pane now
- // paints its real frame immediately and fills the cards when the ledger
- // arrives (opacity-only animation, 60 FPS safe).
+ // v0.1.6 — one loader language: the branded OLYMPUS mark, not a second
+ // skeleton/spinner vocabulary. The frame paints immediately; the ledger
+ // fills only when the whole payload is ready.
  return (
  <div className="h-full overflow-y-auto custom-scroll bg-olympus-bg p-4" data-testid="cost-loading">
   <div className="flex items-center gap-2 mb-4">
    <DollarSign size={16} className="text-olympus-gold" />
    <h2 className="text-sm font-semibold text-olympus-gold">Cost</h2>
-   <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">reading the ledger…</span>
   </div>
-  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-   {[0, 1, 2, 3].map((i) => (
-    <div key={i} className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-3">
-     <div className="h-2 w-16 rounded bg-olympus-text-dim/10 animate-pulse" />
-     <div className="mt-2 h-5 w-24 rounded bg-olympus-text-dim/10 animate-pulse" />
-     <div className="mt-1 h-2 w-20 rounded bg-olympus-text-dim/10 animate-pulse" />
-    </div>
-   ))}
-  </div>
-  <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-3 mb-3">
-   <div className="h-2 w-28 rounded bg-olympus-text-dim/10 animate-pulse" />
-   <div className="mt-3 h-24 rounded bg-olympus-text-dim/5 animate-pulse" />
-  </div>
-  <div className="grid grid-cols-3 gap-2 mb-3">
-   {[0, 1, 2].map((i) => (
-    <div key={i} className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-2">
-     <div className="h-2 w-14 rounded bg-olympus-text-dim/10 animate-pulse" />
-     <div className="mt-2 h-4 w-20 rounded bg-olympus-text-dim/10 animate-pulse" />
-    </div>
-   ))}
-  </div>
-  <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-3">
-   <div className="h-2 w-24 rounded bg-olympus-text-dim/10 animate-pulse" />
-   <div className="mt-3 space-y-2">
-    {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-6 rounded bg-olympus-text-dim/5 animate-pulse" />)}
-   </div>
+  <div className="py-8">
+   <OlympusLoader size={96} label="reading the ledger" />
   </div>
  </div>
  );

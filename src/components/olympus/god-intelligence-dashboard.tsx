@@ -94,9 +94,6 @@ interface BrainStats {
   parkedReason: string | null;
   lastHop: { hop: string; status: string; ts: string; tokensIn: number | null; tokensOut: number | null } | null;
  } | null;
- currentStrategy: string;
- recommendedStrategy: string;
- strategyReasoning: string;
  perGod: Record<string, GodStats>;
 }
 
@@ -261,8 +258,7 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  );
  }
 
- const { aggregate, sparkline, currentStrategy, recommendedStrategy, strategyReasoning, perGod, campaign } = stats;
- const strategyDiffers = recommendedStrategy !== currentStrategy;
+ const { aggregate, sparkline, perGod, campaign } = stats;
 
  // Find the max sparkline hitRate for scaling
  const maxSparkHitRate = Math.max(0.1, ...sparkline.map(s => s.hitRate));
@@ -623,32 +619,6 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  </div>
  )}
 
- {/* Strategy recommendation */}
- <div
- className={cn(
- 'rounded-lg border p-3 mb-4',
- strategyDiffers
- ? 'border-olympus-amber-soft/40 bg-olympus-amber-soft/5'
- : 'border-olympus-gold/10 bg-olympus-card'
- )}
- >
- <div className="flex items-center justify-between mb-1.5">
- <span className="text-[11px] font-semibold text-olympus-text">Strategy Recommendation</span>
- <div className="flex items-center gap-1.5">
- <span className="text-[10px] text-olympus-text-dim font-mono uppercase">{currentStrategy}</span>
- {strategyDiffers && (
- <>
- <ArrowRight />
- <span className="text-[10px] text-olympus-amber-soft font-mono uppercase font-bold">
- {recommendedStrategy}
- </span>
- </>
- )}
- </div>
- </div>
- <p className="text-[10px] text-olympus-text-dim leading-relaxed">{strategyReasoning}</p>
- </div>
-
  {/* Per-god breakdown */}
  <div className="rounded-lg border border-olympus-gold/10 bg-olympus-card p-3">
  <div className="flex items-center gap-2 mb-2.5">
@@ -667,14 +637,6 @@ export default function GodIntelligenceDashboard({ health }: { health?: any }) {
  </div>
  </div>
  </div>
- );
-}
-
-function ArrowRight() {
- return (
- <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-olympus-amber-soft">
- <path d="M2 5 L8 5 M5 2 L8 5 L5 8" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
- </svg>
  );
 }
 

@@ -250,7 +250,7 @@ export default function CompactBrainButton() {
  disabled={compactState === 'cooldown' || compactState === 'in-progress' || midTaskBlocked || undoInProgress}
  aria-label={t('status.compact', language)}
  className={cn(
- 'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all',
+ 'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all whitespace-nowrap shrink-0',
  compactState === 'idle' && !midTaskBlocked && 'bg-olympus-gold/15 text-olympus-gold hover:bg-olympus-gold/25 ring-1 ring-olympus-gold/30',
  compactState === 'idle' && midTaskBlocked && 'bg-olympus-card text-olympus-text-dim cursor-not-allowed ring-1 ring-olympus-red/20',
  compactState === 'cooldown' && 'bg-olympus-card text-olympus-text-dim cursor-not-allowed ring-1 ring-olympus-gold/10',

@@ -11,4 +11,6 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('olympusHud', {
   setCompact: (compact: boolean) => ipcRenderer.send('olympus:hud-compact', compact === true),
+  /** v0.1.6 — wake the full window from the hibernation HUD. */
+  restore: () => ipcRenderer.send('olympus:restore-from-hud'),
 });

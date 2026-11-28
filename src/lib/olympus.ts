@@ -731,6 +731,8 @@ export function brainHealth() {
   const graph = buildGraph();
   const instinctsDir = path.join(VAULT, '05_Auto_Learning', 'instincts');
   let instinctCount = 0;
+  let archivedCount = 0;
+  let quickCircuitCount = 0;
   let avgConfidence = 0;
   let scopeBreakdown = { global: 0, stack: 0, project: 0 };
   // Per-god seed-instinct counts. Used to compute `mastered_skills`
@@ -755,10 +757,19 @@ export function brainHealth() {
             tierFiles = fs.readdirSync(tierPath).filter(f => f.endsWith('.md'));
           } catch { continue; }
           for (const f of tierFiles) {
+            // v0.1.6 — the status bar and the Vault Summary show ACTIVE
+            // instincts (seed + empirical). The archive is memory, not a
+            // live instinct: counting it here made a 242-instinct brain read
+            // as 1,283 and hid the real quick-circuit count.
+            if (tier === '_archive') {
+              archivedCount++;
+              continue;
+            }
             instinctCount++;
             if (tier === 'seed') seedForThisGod++;
             const fm = parseFrontmatter(path.join(tierPath, f));
             if (fm.confidence) confs.push(parseFloat(fm.confidence) || 0);
+            if (fm.quick_circuit === true || fm.quick_circuit === 'true') quickCircuitCount++;
             const scope = (typeof fm.scope === 'string' && ['global', 'stack', 'project'].includes(fm.scope))
               ? fm.scope as 'global' | 'stack' | 'project'
               : 'global';
@@ -836,6 +847,8 @@ export function brainHealth() {
 
   return {
     total_instincts: instinctCount,
+    total_archived: archivedCount,
+    total_quick_circuits: quickCircuitCount,
     avg_confidence: Math.round(avgConfidence * 100) / 100,
     orphans: 0,
     contradictions: 0,

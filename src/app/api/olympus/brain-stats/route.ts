@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { GOD_IDS, DEFAULT_LLM_STRATEGY, type LLMStrategy } from '@/lib/model-strategies';
+import { GOD_IDS } from '@/lib/model-strategies';
 import { getVaultRoot } from '@/lib/vault-root';
 import { withTtl } from '@/lib/ttl-cache';
 
@@ -22,8 +22,9 @@ export const dynamic = 'force-dynamic';
  *   - ~/OLYMPUS-VAULT/06_Activity_Feed/live.jsonl (dispatch + dispatch_outcome events)
  *   - ~/OLYMPUS-VAULT/05_Auto_Learning/instincts/<god>/{seed,empirical,_archive}/*.md
  *
- * Plus a top-level `recommendedStrategy` field that Apollo checks on
- * session.created to suggest a strategy change based on brain maturity.
+ * v0.1.6 — the brain-maturity strategy recommendation was removed. It
+ * compared a structurally-zero short-circuit rate with an average confidence
+ * and defaulted to "go-balanced"; that is not evidence about the brain.
  *
  * Query params:
  *   ?brief=true  — only return top-level metrics (no per-god breakdown).
@@ -53,7 +54,6 @@ const OLYMPUS_HOME = path.join(os.homedir(), '.olympus');
  * vault root from an '/OLYMPUS-VAULT' marker.
  */
 const toRelPath = (abs: string): string => path.relative(VAULT, abs).split(path.sep).join('/');
-const PROVIDERS_FILE = path.join(OLYMPUS_HOME, 'llm-providers.json');
 
 interface DispatchEvent {
   ts: string;
@@ -81,6 +81,8 @@ interface InstinctMeta {
   failures?: number;
   source?: 'seed' | 'empirical';
   immutable?: boolean;
+  /** v0.1.6 — the honest quick-circuit flag from the instinct frontmatter. */
+  quickCircuit?: boolean;
   last_used?: string;
   trigger?: string;
   // The instinct's display name. Falls back to the
@@ -194,6 +196,7 @@ function loadInstinctsForGod(godId: string): { seed: InstinctMeta[]; empirical: 
             failures: typeof fm.failures === 'number' ? fm.failures : undefined,
             source: fm.source,
             immutable: fm.immutable,
+            quickCircuit: fm.quick_circuit === true || fm.quick_circuit === 'true',
             last_used: fm.last_used,
             trigger: fm.trigger,
             // Populate `name` from frontmatter, falling back
@@ -215,43 +218,6 @@ function loadInstinctsForGod(godId: string): { seed: InstinctMeta[]; empirical: 
     }
   }
   return result;
-}
-
-function getCurrentStrategy(): LLMStrategy {
-  try {
-    if (fs.existsSync(PROVIDERS_FILE)) {
-      const cfg = JSON.parse(fs.readFileSync(PROVIDERS_FILE, 'utf-8'));
-      if (typeof cfg.strategy === 'string') return cfg.strategy as LLMStrategy;
-    }
-  } catch {
-    // ignore
-  }
-  return DEFAULT_LLM_STRATEGY;
-}
-
-/**
- * Recommend a strategy based on brain maturity.
- *
- * - Short-circuit hit rate > 70% AND avg confidence > 0.8 -> go-budget
- *   (the gods are smart enough to use cheaper models).
- * - Short-circuit hit rate < 30% AND avg confidence < 0.5 -> go-max-quality
- *   (the gods are still learning, use the best models).
- * - Otherwise -> go-balanced (the default).
- *
- * The recommendation is non-blocking — Apollo mentions it in natural language
- * and the user decides. The brain never silently changes its own strategy.
- */
-function recommendStrategy(
-  shortCircuitHitRate: number,
-  avgConfidence: number,
-): LLMStrategy {
-  if (shortCircuitHitRate > 0.70 && avgConfidence > 0.80) {
-    return 'go-budget';
-  }
-  if (shortCircuitHitRate < 0.30 && avgConfidence < 0.50) {
-    return 'go-max-quality';
-  }
-  return 'go-balanced';
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────
@@ -417,6 +383,9 @@ async function computeBrainStats(brief: boolean) {
         archived: instincts.archived.length,
         total: instincts.seed.length + instincts.empirical.length + instincts.archived.length,
       },
+      // v0.1.6 — quick circuits are only the instincts whose frontmatter
+      // says quick_circuit:true. The archive is NOT a quick circuit.
+      quickCircuits: [...instincts.seed, ...instincts.empirical].filter(i => i.quickCircuit === true).length,
       // Instinct names per tier (capped at 10 each).
       // The Vault Summary panel renders these so the user sees WHAT the god
       // is developing, not just how many.
@@ -487,9 +456,6 @@ async function computeBrainStats(brief: boolean) {
     ? allEmpiricalConfidences.reduce((s, c) => s + c, 0) / allEmpiricalConfidences.length
     : 0;
 
-  const currentStrategy = getCurrentStrategy();
-  const recommended = recommendStrategy(aggregateShortCircuitHitRate, aggregateAvgConfidence);
-
   // Sparkline data: short-circuit hit rate over the last 14 days (daily buckets)
   const sparkline: { date: string; hitRate: number; dispatches: number }[] = [];
   for (let i = 13; i >= 0; i--) {
@@ -509,19 +475,6 @@ async function computeBrainStats(brief: boolean) {
     });
   }
 
-  const strategyReasoning = (() => {
-    if (recommended === currentStrategy) {
-      return `Current strategy ${currentStrategy} is appropriate for the brain's current maturity (short-circuit hit rate: ${(aggregateShortCircuitHitRate * 100).toFixed(1)}%, avg confidence: ${aggregateAvgConfidence.toFixed(2)}).`;
-    }
-    if (recommended === 'go-budget') {
-      return `Brain is mature (short-circuit hit rate ${(aggregateShortCircuitHitRate * 100).toFixed(1)}% > 70%, avg confidence ${aggregateAvgConfidence.toFixed(2)} > 0.80). The gods are smart enough to use cheaper models — suggest switching from ${currentStrategy} to go-budget to maximize the $10/mo GO plan.`;
-    }
-    if (recommended === 'go-max-quality') {
-      return `Brain is still learning (short-circuit hit rate ${(aggregateShortCircuitHitRate * 100).toFixed(1)}% < 30%, avg confidence ${aggregateAvgConfidence.toFixed(2)} < 0.50). Suggest switching from ${currentStrategy} to go-max-quality so the gods have the best models while they build up their instincts.`;
-    }
-    return `Brain is at intermediate maturity (short-circuit hit rate ${(aggregateShortCircuitHitRate * 100).toFixed(1)}%, avg confidence ${aggregateAvgConfidence.toFixed(2)}). Suggest switching from ${currentStrategy} to go-balanced.`;
-  })();
-
   if (brief) {
     return {
       generated_at: new Date().toISOString(),
@@ -529,9 +482,6 @@ async function computeBrainStats(brief: boolean) {
       shortCircuitHitRate: Math.round(aggregateShortCircuitHitRate * 1000) / 1000,
       avgConfidence: Math.round(aggregateAvgConfidence * 1000) / 1000,
       totalDispatches,
-      currentStrategy,
-      recommendedStrategy: recommended,
-      strategyReasoning,
     };
   }
 
@@ -564,9 +514,6 @@ async function computeBrainStats(brief: boolean) {
         tokensOut: laneTruth.rows[laneTruth.rows.length - 1].tokensOut,
       } : null,
     } : null,
-    currentStrategy,
-    recommendedStrategy: recommended,
-    strategyReasoning,
     perGod,
   };
 }

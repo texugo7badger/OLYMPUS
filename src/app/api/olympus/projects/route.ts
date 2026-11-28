@@ -3,14 +3,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { listProjects, createProject, deleteProject, getProject, getActiveProject, getActiveProjectSlug } from '@/lib/project-context';
+import { listProjects, createProject, deleteProject, getProject, getActiveProject, getActiveProjectSlug, getLastProjectSlug, setActiveProject } from '@/lib/project-context';
 import { detectProjectStacks, projectSummary, readProjectPackage } from '@/lib/project-summary';
 import { buildProjectBrief } from '@/lib/project-brief';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const boot = req.nextUrl.searchParams.get('boot') === '1';
   try {
     // v0.0.38 — the folder is the identity. The note's creation prompt is NOT
     // a description; each project gets its detected stacks and a real summary.
@@ -28,6 +29,15 @@ export async function GET() {
     });
     const activeSlug = getActiveProjectSlug();
     const active = activeSlug ? projects.find((p) => p.slug === activeSlug) ?? getActiveProject() : null;
+    if (boot) {
+      // v0.1.6 — OLYMPUS opens clean. The persisted project becomes a
+      // suggestion, and the server-side active pointer is cleared so no
+      // campaign/terminal context starts on the old project.
+      const lastSlug = getLastProjectSlug() ?? activeSlug;
+      const lastProject = lastSlug ? projects.find((p) => p.slug === lastSlug) ?? getProject(lastSlug) : null;
+      setActiveProject(null);
+      return NextResponse.json({ projects, active: null, lastProject });
+    }
     return NextResponse.json({ projects, active });
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }); }
 }

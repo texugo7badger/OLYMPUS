@@ -2,6 +2,46 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.6] — 2026-11-27
+
+### Shell truth and focus
+
+- **One screen.** The repository keeps a single screenshot, captured from the
+  running app: the brain atlas and the Apollo chat. The gallery, the UX tour,
+  the old capture script and the 97 legacy PNGs (~20 MB) are gone. `npm run
+  shots` regenerates the one image.
+- **Status bar never cuts a word.** Agents, skills, instincts and confidence
+  keep their full labels; when the window is narrow, whole low-priority
+  segments (diag, SSE/API text, art/talent labels) drop first. Portuguese no
+  longer clips `agentes`/`skills`; `skills` is the product term in every
+  language.
+- **One loader language.** `src/app/loading.tsx` (a fullscreen route loader)
+  is removed. Cost, MCP, Craft, Atelier and Vault use the branded
+  `OlympusLoader` and render only when their data is complete; no bare spinner
+  is a panel's loading state.
+- **Clean boot.** OLYMPUS no longer auto-opens the last project. The boot read
+  clears the server-side active pointer and returns the last project as a
+  suggestion; the project switcher shows “Continue <project>”. A project is
+  active only after the user selects it.
+- **Alt+tab / taskbar.** Hibernation still destroys the heavy renderer, but it
+  now leaves a lightweight OLYMPUS window in the taskbar/alt-tab (the HUD) with
+  a Restore button that recreates the full window and resumes the campaign.
+- **Logs: six runtime tabs.** Overview, Hops, Campaigns (walks + plan), Issues
+  (blocked + recovery + errors), Models, Economy. Boot health and the release
+  Hygiene gate moved to Settings → System & release; Portfolio stays in
+  Projects. The stale “132 local suites” footnote is gone.
+- **Brain truth.** `brainHealth()` counts active instincts (seed + empirical)
+  separately from `_archive` and exposes `total_quick_circuits`. The Vault panel
+  shows **242 active / 1,041 archived / 0 quick circuits**; the table's
+  “Archived” column is no longer mislabeled “Quick Circuits”. The status bar
+  reads the active count. The “brain maturity” card and the
+  `strategy_recommendation` hook are removed: the old rule compared a
+  structurally-zero short-circuit rate with an average confidence and defaulted
+  to go-balanced.
+- **Version truth.** `VERSION`, `package.json`, the status-bar fallback and the
+  patch notes move to 0.1.6. v0.1.5 remains the previous stable until this
+  release's battery is green.
+
 ## [v0.1.5] — 2026-11-27
 
 ### Cleanup and truth (stable release)

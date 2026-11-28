@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-27",
-  "current": "0.1.5",
+  "current": "0.1.6",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.2",
@@ -11,6 +11,21 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.2 passed the full gate on 2026-11-26 (the first run hit a transient v2-session-list 503; the clean retry passed all checks)."
   },
   "releases": [
+    {
+      "version": "0.1.6",
+      "date": "2026-11-27",
+      "title": "Shell truth and focus",
+      "highlights": [
+        "One repository screen, captured from the running app: the brain and the Apollo chat. The gallery, the UX tour and the 97 legacy PNGs (about 20 MB) are gone.",
+        "Status bar never cuts a word: agents, skills, instincts and confidence keep their full labels; whole low-priority segments drop before a label is clipped. Portuguese proof at 1600px.",
+        "One loader language: the fullscreen route loader is gone; Cost, MCP, Craft, Vault and the other panes use the branded OLYMPUS mark and only render when their data is complete.",
+        "OLYMPUS opens clean: no project is auto-selected. The last project is offered as \u201cContinue <project>\u201d in the project switcher; the server-side active pointer is cleared on boot.",
+        "Hibernate keeps a lightweight OLYMPUS window in the taskbar/alt-tab with a Restore button; it still destroys the heavy renderer.",
+        "Logs is six runtime tabs: Overview, Hops, Campaigns, Issues, Models, Economy. Boot health and the release Hygiene gate moved to Settings \u2192 System & release.",
+        "Brain truth: active instincts (seed + empirical) are counted separately from the archive. The Vault panel shows 242 active and 1,041 archived, not \u201c1,041 quick circuits\u201d; the honest quick-circuit count is 0. The \u201cbrain maturity\u201d strategy recommendation was removed.",
+        "Gates: 8/8 hygiene, 66/66 suites, the v0.1.6 UI gate, build:app."
+      ]
+    },
     {
       "version": "0.1.5",
       "date": "2026-11-27",
