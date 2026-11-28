@@ -168,13 +168,13 @@ function parseFrontmatter(content: string): { frontmatter: Record<string, unknow
   return { frontmatter, body };
 }
 
-function loadInstincts(scope: "god" | "sub-agent", agentName: string): Instinct[] {
+function loadInstincts(scope: "god" | "sub-agent", agentName: string, project?: string | null): Instinct[] {
   const agentDir =
     scope === "god"
       ? join(INSTINCTS_ROOT, agentName)
       : join(INSTINCTS_ROOT, "sub-agents", agentName);
-  if (!existsSync(agentDir)) return [];
   const instincts: Instinct[] = [];
+  if (existsSync(agentDir)) {
   for (const kind of ["seed", "empirical"] as const) {
     const kindDir = join(agentDir, kind);
     if (!existsSync(kindDir)) continue;
@@ -233,6 +233,46 @@ function loadInstincts(scope: "god" | "sub-agent", agentName: string): Instinct[
           source_path: filePath,
         });
       } catch { /* skip unreadable */ }
+    }
+  }
+  }
+  // v0.1.7 — project memory is a separate lane, visible only in that project.
+  // It is a prior/hint, never a global shortcut (quick_circuit stays false).
+  if (scope === "god" && project) {
+    const projectDir = join(INSTINCTS_ROOT, "..", "project-instincts", String(project), agentName);
+    if (existsSync(projectDir)) {
+      for (const file of readdirSync(projectDir)) {
+        if (!file.endsWith(".md")) continue;
+        const filePath = join(projectDir, file);
+        try {
+          const content = readFileSync(filePath, "utf8");
+          const { frontmatter, body } = parseFrontmatter(content);
+          const rawConfidence = Number(frontmatter.confidence ?? 0.7);
+          const samples = Number(frontmatter.samples ?? 0);
+          const visibility = "project" as const;
+          instincts.push({
+            id: String(frontmatter.id ?? file.replace(/\.md$/, "")),
+            agent: String(frontmatter.agent ?? agentName),
+            scope,
+            visibility,
+            projects: Array.isArray(frontmatter.projects) ? frontmatter.projects as string[] : [String(project)],
+            stacks: Array.isArray(frontmatter.stacks) ? frontmatter.stacks as string[] : [],
+            quickCircuit: false,
+            samples: Number.isFinite(samples) ? samples : 0,
+            successes: Number(frontmatter.successes ?? 0),
+            failures: Number(frontmatter.failures ?? 0),
+            tags: (Array.isArray(frontmatter.tags) && (frontmatter.tags as string[]).length > 0)
+              ? frontmatter.tags as string[]
+              : extractTags(`${String(frontmatter.trigger ?? '')} ${String(frontmatter.id ?? file.replace(/\.md$/, ''))}`),
+            confidence: rawConfidence,
+            dispatch_count: Number(frontmatter.dispatch_count ?? 0),
+            last_invoked_at: typeof frontmatter.last_invoked_at === "string" ? frontmatter.last_invoked_at : null,
+            type: "empirical",
+            body,
+            source_path: filePath,
+          });
+        } catch { /* one bad project file never breaks the gate */ }
+      }
     }
   }
   return instincts;
@@ -309,7 +349,7 @@ export function queryInstincts(
   const ctx = context
     ? { slug: context.project ?? null, stacks: context.stacks ?? [] }
     : activeContext();
-  const instincts = loadInstincts(scope, agentName).filter((i) => visibleInContext(i, ctx));
+  const instincts = loadInstincts(scope, agentName, ctx.slug).filter((i) => visibleInContext(i, ctx));
   // The hop prompt marks its task explicitly; a chat has no marker, so take
   // the tail (the user's ask) rather than the strategy/arsenal preamble.
   const marker = /\[OLYMPUS-TASK\]([\s\S]*?)\[\/OLYMPUS-TASK\]/i.exec(query);

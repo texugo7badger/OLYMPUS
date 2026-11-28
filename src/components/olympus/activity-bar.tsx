@@ -126,10 +126,10 @@ export default function ActivityBar() {
       {/* MCP Configuration — above Settings. Opens the MCP config panel
           where users can enable/disable individual MCPs. MCPs requiring
           an API key appear locked if no key is registered. */}
-      <ActBtn icon={Plug} label="MCP Configuration" active={leftPane === 'mcp-config'} onClick={() => setLeftPane('mcp-config')} />
+      <ActBtn icon={Plug} label={t('nav.mcp', language)} active={leftPane === 'mcp-config'} onClick={() => setLeftPane('mcp-config')} />
 
       {/* Settings (gear) — opens SettingsDialog. No tooltip per user request. */}
-      <ActBtn icon={Settings} label="Settings" onClick={() => setSettingsOpen(true)} noTooltip />
+      <ActBtn icon={Settings} label={t('nav.settings', language)} onClick={() => setSettingsOpen(true)} noTooltip />
     </div>
   );
 }

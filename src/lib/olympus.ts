@@ -733,6 +733,7 @@ export function brainHealth() {
   let instinctCount = 0;
   let archivedCount = 0;
   let quickCircuitCount = 0;
+  let projectMemoryCount = 0;
   let avgConfidence = 0;
   let scopeBreakdown = { global: 0, stack: 0, project: 0 };
   // Per-god seed-instinct counts. Used to compute `mastered_skills`
@@ -845,10 +846,25 @@ export function brainHealth() {
   }
   const masteredSkillsTotal = uniqueMasteredSkills.size;
 
+  // v0.1.7 — project memory is a separate lane. It never inflates the global
+  // brain count, but the Vault panel can say how much scoped memory exists.
+  try {
+    const projectRoot = path.join(VAULT, '05_Auto_Learning', 'project-instincts');
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (e.isFile() && e.name.endsWith('.md')) projectMemoryCount++;
+      }
+    };
+    if (fs.existsSync(projectRoot)) walk(projectRoot);
+  } catch { /* best-effort */ }
+
   return {
     total_instincts: instinctCount,
     total_archived: archivedCount,
     total_quick_circuits: quickCircuitCount,
+    total_project_memory: projectMemoryCount,
     avg_confidence: Math.round(avgConfidence * 100) / 100,
     orphans: 0,
     contradictions: 0,

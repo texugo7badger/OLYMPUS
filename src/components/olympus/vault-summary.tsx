@@ -56,6 +56,7 @@ interface BrainHealth {
  total_instincts: number;
  total_archived?: number;
  total_quick_circuits?: number;
+ total_project_memory?: number;
  total_skills: number;
  total_agents: number;
  total_mcps?: number;
@@ -310,6 +311,7 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  // name it honestly; 1,041 archived instincts are not 1,041 shortcuts.
  const archivedTotal = healthData?.total_archived
  ?? (brainStats ? Object.values(brainStats).reduce((acc, st: any) => acc + (st?.instinctCounts?.archived ?? 0), 0) : 0);
+ const projectMemoryTotal = healthData?.total_project_memory ?? 0;
 
  // circuitHealthPct + totalDispatches — short-circuit hit rate across all
  // gods, plus the total dispatch count. Sourced from the brain-stats
@@ -399,7 +401,10 @@ export default function VaultSummary({ active = true }: { active?: boolean }) {
  icon={Lightbulb}
  label="Instincts"
  value={healthData?.total_instincts ?? s.byCategory.instincts}
- hint={archivedTotal > 0 ? `${archivedTotal.toLocaleString()} archived` : undefined}
+ hint={[
+   projectMemoryTotal > 0 ? `${projectMemoryTotal.toLocaleString()} project` : '',
+   archivedTotal > 0 ? `${archivedTotal.toLocaleString()} archived` : '',
+ ].filter(Boolean).join(' · ') || undefined}
  color="text-olympus-green bg-olympus-green/10 ring-olympus-green/20"
  />
  <CategoryCard

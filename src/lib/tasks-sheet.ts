@@ -450,6 +450,14 @@ export function buildTasksSheet(opts: {
   const feedPath = opts.feedPath ?? path.join(vaultRoot, '06_Activity_Feed', 'live.jsonl');
   const now = opts.now ?? Date.now();
 
+  // v0.1.7 — a clean boot with no active project must not inherit the most
+  // recently updated campaign from the vault. The Parthenon starts empty.
+  const activeSlug = (() => {
+    try {
+      const raw = JSON.parse(fs.readFileSync(path.join(process.env.OLYMPUS_HOME || path.join(os.homedir(), '.olympus'), 'active-project.json'), 'utf-8'));
+      return typeof raw?.slug === 'string' && raw.slug ? raw.slug : null;
+    } catch { return null; }
+  })();
   const active = findActiveLane(projectsDir, opts.lane);
   const empty: TasksSheet = {
     lane: '', project: '', updatedAt: '',
@@ -464,6 +472,7 @@ export function buildTasksSheet(opts: {
     },
     atlasPatrol: undefined,
   };
+  if (!opts.lane && !activeSlug) return empty;
   if (!active) return empty;
   const lane = active.lane;
 

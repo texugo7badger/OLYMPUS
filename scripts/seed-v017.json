@@ -1,0 +1,262 @@
+{
+  "apollo": [
+    {
+      "id": "research-before-plan",
+      "trigger": "Apollo is planning an unfamiliar domain, a current API, or a version-sensitive decision",
+      "action": "Search first (websearch/webfetch/context7), cite the source and date in the plan, and only then commit the DAG.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "verify-evidence-before-done",
+      "trigger": "Apollo is about to accept a hop or a project as done",
+      "action": "Require the named artifact plus a deterministic check. A narrative completion claim is not evidence.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "keep-hops-small",
+      "trigger": "Apollo is composing or splitting a hop",
+      "action": "Keep a hop to five artifacts or fewer and a prompt under 6k tokens; split before dispatch instead of recovering after a park.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": []
+    }
+  ],
+  "atlas": [
+    {
+      "id": "research-before-dispatch",
+      "trigger": "Atlas is dispatching a specialist into an unfamiliar stack or API",
+      "action": "Equip the research/websearch hint and require the specialist to name the source before execution. Do not dispatch from memory.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "never-claim-unprobed",
+      "trigger": "Atlas is about to report a process, port, server, or UI as live",
+      "action": "Quote a probe (pid/port/HTTP/latency) or say 'unverified — no probe evidence'. Captured output only proves a start.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "budget-the-wave",
+      "trigger": "Atlas is scheduling a parallel wave",
+      "action": "Use 2–5 independent demigods, reserve budget for verification, and never send the same artifact to two writers.",
+      "confidence": 0.9,
+      "scope": "global",
+      "stacks": []
+    }
+  ],
+  "artemis": [
+    {
+      "id": "check-current-cves",
+      "trigger": "A security review touches a dependency, image, or version",
+      "action": "Search current advisories (NVD/OSV/GHSA) and cite the ID. Never answer a CVE question from memory.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "secrets-never-in-prompts",
+      "trigger": "A task, log, or artifact contains a key, token, or password",
+      "action": "Redact before dispatch and never echo the secret in tool output, prompts, or reports.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "threat-model-first",
+      "trigger": "A security review starts",
+      "action": "Name assets, entry points, trust boundaries, and the attacker goal before proposing controls.",
+      "confidence": 0.9,
+      "scope": "global",
+      "stacks": []
+    }
+  ],
+  "athena": [
+    {
+      "id": "research-current-web-platform",
+      "trigger": "A frontend task depends on a browser API, framework version, or design-system behavior",
+      "action": "Search the current documentation and cite the version/date before writing the component.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": ["frontend"]
+    },
+    {
+      "id": "verify-visual-before-claim",
+      "trigger": "A UI or animation is reported as done",
+      "action": "Open the real page, run the visual/DOM check, and attach screenshot or DOM evidence. A code read is not a render proof.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": ["frontend"]
+    },
+    {
+      "id": "a11y-evidence",
+      "trigger": "A UI ships interactive controls",
+      "action": "Prove keyboard order, focus visibility, labels, and contrast; a checklist claim without evidence is not accessibility.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": ["frontend"]
+    }
+  ],
+  "dionysus": [
+    {
+      "id": "reproduce-before-fix",
+      "trigger": "A bug or regression is reported",
+      "action": "Write the failing test or a minimal reproduction first; fix until it is green, then keep the regression test.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "measure-not-guess",
+      "trigger": "A performance, quality, or cost claim is made",
+      "action": "Measure p50/p95 and the sample size; report the method. Never invent a number.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "test-the-boundary",
+      "trigger": "A parser, route, state machine, or schema changes",
+      "action": "Add empty, overflow, invalid, duplicate, and concurrent cases — the happy path alone is not a test.",
+      "confidence": 0.9,
+      "scope": "global",
+      "stacks": []
+    }
+  ],
+  "hephaestus": [
+    {
+      "id": "resolve-package-exports",
+      "trigger": "Writing package.json or a named import from a dependency",
+      "action": "Resolve the live package version and export surface (npm view / context7) before writing; never guess a semver range or export name.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "research-library-version",
+      "trigger": "Using a library API in code",
+      "action": "Fetch the exact-version docs with context7 or websearch; do not code an API from memory.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "minimal-diff",
+      "trigger": "Editing existing code",
+      "action": "Make the smallest diff that satisfies the contract; no drive-by refactors, renames, or formatting churn.",
+      "confidence": 0.9,
+      "scope": "global",
+      "stacks": []
+    }
+  ],
+  "hermes": [
+    {
+      "id": "research-current-api",
+      "trigger": "Integrating an external API, webhook, or provider",
+      "action": "Fetch the current docs and auth model, cite the version/date, and name the failure modes before wiring.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "probe-before-integrate",
+      "trigger": "Claiming an integration works",
+      "action": "Run a real request or handshake and record the status, latency, and response shape.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "document-auth-flow",
+      "trigger": "An integration needs credentials or scopes",
+      "action": "Document the auth flow, required scopes, and rotation path; never store a secret in code or a prompt.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": []
+    }
+  ],
+  "persephone": [
+    {
+      "id": "measure-query-plan",
+      "trigger": "Changing a query, index, or schema",
+      "action": "Run EXPLAIN ANALYZE before and after and record the plan and latency.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "backup-before-migration",
+      "trigger": "A migration is proposed",
+      "action": "Take a backup/snapshot and write a reversible down path before applying the migration.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "index-for-the-query",
+      "trigger": "Adding an index",
+      "action": "Match the real predicate and order, then verify the plan uses it; do not index by intuition.",
+      "confidence": 0.9,
+      "scope": "global",
+      "stacks": []
+    }
+  ],
+  "prometheus": [
+    {
+      "id": "probe-before-deploy",
+      "trigger": "Deploying, restarting, or reporting a service as healthy",
+      "action": "Probe the target and quote the status. Never narrate a live process from captured logs.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "pin-versions",
+      "trigger": "Adding a CI action, base image, or infrastructure dependency",
+      "action": "Pin the exact version/digest; floating tags are not reproducible.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "rollback-drill",
+      "trigger": "A release is prepared",
+      "action": "State the rollback command and exercise it in the dry run before the deploy.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": []
+    }
+  ],
+  "callimachus": [
+    {
+      "id": "evidence-before-archive",
+      "trigger": "Archiving or deduping an instinct",
+      "action": "Require samples, projects, and outcome evidence; archive with a manifest, never delete on suspicion.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "never-delete-only-archive",
+      "trigger": "Running vault maintenance or a recycle",
+      "action": "Move to the archive with a sha256 manifest. Destructive delete is a separate, explicit user action.",
+      "confidence": 1.0,
+      "scope": "global",
+      "stacks": []
+    },
+    {
+      "id": "measure-brain-health",
+      "trigger": "Compacting or recycling the brain",
+      "action": "Record active/project/archived/quick counts and retrieval P@5/MRR before and after; the benchmark is the claim.",
+      "confidence": 0.95,
+      "scope": "global",
+      "stacks": []
+    }
+  ]
+}

@@ -28,6 +28,7 @@ import { strategyApiRequirement, modelClassesForStrategy, strategyEntries, GO_PL
 import StrategyBuilder from './strategy-builder';
 import ResourceGovernorCard from './resource-governor-card';
 import SystemHealthCard from './system-health-card';
+import BrainHealthCard from './brain-health-card';
 import AutonomyCard from './autonomy-card';
 
 /* ------------------------------------------------------------------ */
@@ -1219,6 +1220,7 @@ export default function SettingsDialog() {
             <VersionChannelCard />
             <AutonomyCard />
             <SystemHealthCard />
+            <BrainHealthCard />
             <ResourceGovernorCard />
 
             {error && (

@@ -52,11 +52,11 @@ async function main() {
   expect('C2: 25/25 confidence is below 0.85', c25.confidence < 0.85, JSON.stringify(c25));
   expect('C3: cap is 0.95', conf.computeInstinctConfidence({ successes: 1000, failures: 0 }).confidence <= 0.95);
 
-  const dir = path.join(VAULT, '05_Auto_Learning', 'instincts', 'athena', 'empirical');
+  const dir = path.join(VAULT, '05_Auto_Learning', 'project-instincts', 'aime', 'athena');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'aime-card.md'), note({
     god: '"athena"', confidence: 0.95, samples: 40, successes: 40, failures: 0,
-    scope: 'project', projects: '["aime"]', stacks: '["nextjs"]', quick_circuit: 'true',
+    scope: 'project', projects: '["aime"]', stacks: '["nextjs"]', quick_circuit: 'false',
     trigger: '"card clip fill in aime"', action: '"write evidence/clips/card.md"', source: 'empirical',
   }));
 
@@ -68,22 +68,22 @@ async function main() {
   const other = gate.queryInstincts('god', 'athena', 'card clip fill', 3, { project: 'other', stacks: ['nextjs'] });
   const inside = gate.queryInstincts('god', 'athena', 'card clip fill', 3, { project: 'aime', stacks: ['nextjs'] });
   expect('G1: gate hides the project instinct outside its project', other.matching_instinct === null, JSON.stringify(other));
-  expect('G2: gate short-circuits a proven project quick circuit inside its project', inside.short_circuit === true, JSON.stringify({ confidence: inside.confidence, visibility: inside.visibility }));
+  expect('G2: project memory is visible inside its project but never short-circuits', inside.matching_instinct !== null && inside.visibility === 'project' && inside.short_circuit === false, JSON.stringify({ confidence: inside.confidence, visibility: inside.visibility, short: inside.short_circuit }));
 
   const feedDir = path.join(VAULT, '06_Activity_Feed');
   fs.mkdirSync(feedDir, { recursive: true });
-  fs.writeFileSync(path.join(feedDir, 'live.jsonl'), JSON.stringify({ ts: new Date().toISOString(), god: 'athena', action: 'dispatch_outcome', instinct_id: 'aime-card', outcome: 'success' }) + '\n');
+  fs.writeFileSync(path.join(feedDir, 'live.jsonl'), JSON.stringify({ ts: new Date().toISOString(), god: 'athena', action: 'dispatch_outcome', instinct_id: 'aime-card', project: 'aime', outcome: 'success' }) + '\n');
   const recal = await import(OLYMPUS + '/src/lib/learning/recalibrate.ts');
   const rec = recal.recalibrateFromOutcomes();
   const updated = fs.readFileSync(path.join(dir, 'aime-card.md'), 'utf-8');
   expect('L1: dispatch outcome recalibrates successes', rec.updated === 1 && /^successes: 41$/m.test(updated), JSON.stringify({ rec, updated: updated.slice(0, 240) }));
 
-  let verifications = 0;
-  for (let i = 0; i < 9; i++) {
+  let shortCircuits = 0;
+  for (let i = 0; i < 10; i++) {
     const r = gate.queryInstincts('god', 'athena', 'card clip fill', 3, { project: 'aime', stacks: ['nextjs'] });
-    if (r.verification_sample) verifications++;
+    if (r.short_circuit) shortCircuits++;
   }
-  expect('G3: exactly 1-in-10 is forced to deliberate', verifications === 1, String(verifications));
+  expect('G3: project memory never short-circuits (no quick circuit)', shortCircuits === 0, String(shortCircuits));
 
   console.log(`\nlearning-core: ${failures === 0 ? 'PASS' : `${failures} FAIL`}`);
   process.exit(failures === 0 ? 0 : 1);

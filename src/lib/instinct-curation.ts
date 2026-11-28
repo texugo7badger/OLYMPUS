@@ -27,6 +27,8 @@ export interface CurationResult {
   promoted: number;
   candidates: number;
   quickCircuits: number;
+  /** v0.1.7 — project-scoped hints, never global shortcuts. */
+  projectHints: number;
   changed: number;
 }
 
@@ -48,7 +50,7 @@ function setField(text: string, key: string, value: string): string {
 export function curateInstincts(opts: { apply?: boolean } = {}): CurationResult {
   const apply = opts.apply === true;
   const root = path.join(getVaultRoot(), '05_Auto_Learning', 'instincts');
-  const result: CurationResult = { scanned: 0, archived: 0, projectScoped: 0, demoted: 0, promoted: 0, candidates: 0, quickCircuits: 0, changed: 0 };
+  const result: CurationResult = { scanned: 0, archived: 0, projectScoped: 0, demoted: 0, promoted: 0, candidates: 0, quickCircuits: 0, projectHints: 0, changed: 0 };
   let gods: fs.Dirent[] = [];
   try { gods = fs.readdirSync(root, { withFileTypes: true }); } catch { return result; }
   for (const god of gods) {
@@ -99,8 +101,10 @@ export function curateInstincts(opts: { apply?: boolean } = {}): CurationResult 
       const proven = counts.samples >= 20 && counts.successRate >= 0.9 && confidence >= 0.82 && distinctProjects >= 2;
       // A project-scoped quick circuit is a hint, not a short-circuit. It
       // needs 5+ samples, 80%+ success and the ECC confidence floor.
-      const projectQuick = projectSpecific && counts.samples >= 5 && counts.successRate >= 0.8 && confidence >= 0.72;
-      const shouldQuick = proven || projectQuick;
+      // v0.1.7 — a project-scoped pattern is a HINT, never a quick circuit.
+      // Only cross-project proof (proven) earns `quick_circuit: true`.
+      const projectHint = projectSpecific && counts.samples >= 5 && counts.successRate >= 0.8 && confidence >= 0.72;
+      const shouldQuick = proven;
       const candidate = !projectSpecific && !proven && distinctProjects >= 2 && counts.samples >= 3 && confidence >= 0.5;
       if (projectSpecific && (field(text, 'scope') !== 'project' || field(text, 'kind') !== 'project')) {
         text = setField(text, 'scope', 'project');
@@ -108,6 +112,13 @@ export function curateInstincts(opts: { apply?: boolean } = {}): CurationResult 
         result.projectScoped++;
         result.changed++;
         if (apply) fs.writeFileSync(abs, text);
+      }
+      if (projectHint) {
+        result.projectHints++;
+        if (field(text, 'project_hint') !== 'true') {
+          text = setField(text, 'project_hint', 'true');
+          result.changed++;
+        }
       }
       if (quick && !shouldQuick) {
         result.demoted++;

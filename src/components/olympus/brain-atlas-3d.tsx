@@ -168,7 +168,9 @@ export default function BrainAtlas3D() {
   const [enabledLobes, setEnabledLobes] = useState<LobeVisibility>(allLobesEnabled());
   const [highlightLobe, setHighlightLobe] = useState<LobeName | null>(null);
   const [hoveredLobe, setHoveredLobe] = useState<LobeName | null>(null);
-  const [perfPreset, setPerfPreset] = useState<PerformancePreset>(() => (typeof document !== 'undefined' && document.documentElement.dataset.performance === 'low') ? 'batterySaver' : 'smooth');
+  // v0.1.7 — every session starts in Smooth: the full cloud is the product.
+ // Battery saver remains available in the selector for a mid-session choice.
+ const [perfPreset, setPerfPreset] = useState<PerformancePreset>('smooth');
   // v0.1.3 — NO silent lean mode. v0.1.2 auto-dropped haze/cloud/signals
   // when a frame sample was slow, which erased the brain's outline on a
   // machine that could still render it. The user's preset is the only

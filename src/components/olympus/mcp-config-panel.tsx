@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import ApiConfigDialog from './api-config-dialog';
 import { useOlympus } from '@/lib/olympus-store';
+import { useLanguage, t } from '@/lib/i18n';
 import type { MarketMcp } from '@/lib/mcp-market';
 
 /* ------------------------------------------------------------------ */
@@ -90,6 +91,7 @@ const NEEDS = new Set<HealthStatus>(['needs-auth', 'needs-service', 'needs-binar
 const isUnavailable = (s: HealthStatus) => NEEDS.has(s) || s === 'optional-unavailable';
 
 export default function MCPConfigPanel() {
+  const language = useLanguage();
   const activeProject = useOlympus((s) => s.activeProject);
   const [marketOpen, setMarketOpen] = useState(false);
   const [marketQuery, setMarketQuery] = useState('');
@@ -305,7 +307,7 @@ export default function MCPConfigPanel() {
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-olympus-gold/10 bg-olympus-panel">
         <Plug size={14} className="text-olympus-gold shrink-0" />
-        <span className="text-[11px] font-mono font-semibold text-olympus-gold">MCP Configuration</span>
+        <span className="text-[11px] font-mono font-semibold text-olympus-gold">{t('nav.mcp', language)}</span>
         <span className="text-[9px] font-mono text-olympus-text-dim ml-auto">
           {aliveCount} alive
           {lockedCount > 0 && <span className="text-olympus-amber-soft ml-1">· {lockedCount} locked</span>}
@@ -348,9 +350,11 @@ export default function MCPConfigPanel() {
         )}
 
         {/* Help text */}
-        <div className="text-[9px] font-mono text-olympus-text-dim leading-relaxed mb-1 px-1">
-          Enable or disable individual MCP servers. The enabled set is what OpenCode reads from
-          <code className="text-olympus-gold/80"> opencode.json</code>; a new session picks it up.
+        <div className="rounded-md border border-olympus-cyan/20 bg-olympus-cyan/5 px-2 py-1.5 mb-1 text-[9px] font-mono text-olympus-text-dim leading-relaxed">
+          <b className="text-olympus-cyan">Terminal lane.</b> These toggles configure the interactive Apollo
+          session only. Campaign hops <b className="text-olympus-text">auto-equip</b> the curated baseline plus
+          the hop’s declared MCPs from its run manifest; this list does not change a hop. The catalog below is
+          for install, health and diagnostics.
         </div>
 
         {/* v0.0.53 — the MCP market: a verified free-first seed + the live

@@ -13,6 +13,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Brain, FilePen, Coins, Clock, ChevronDown, ChevronRight, Wrench, RotateCcw, Sparkles, ShieldCheck } from 'lucide-react';
 import { GOD_ICONS } from '@/lib/olympus-store';
 import OlympusLoader from './olympus-loader';
@@ -154,9 +155,9 @@ export default function TaskSheetModal({ hopId, lane, onClose }: { hopId: string
 
   const Icon = task ? GOD_ICONS[task.god] : undefined;
 
-  return (
+  const content = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px] p-6"
+      className="fixed inset-0 z-[400] flex items-center justify-center bg-black/70 backdrop-blur-md p-6"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -462,4 +463,6 @@ export default function TaskSheetModal({ hopId, lane, onClose }: { hopId: string
       </div>
     </div>
   );
+  if (typeof document === "undefined") return null;
+  return createPortal(content, document.body);
 }

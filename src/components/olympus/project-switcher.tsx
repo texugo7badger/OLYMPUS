@@ -88,7 +88,7 @@ export default function ProjectSwitcher() {
   // v0.0.38 — the FOLDER is the name. A project called “AIME” in the note is
   // `aime` here, exactly like its directory; no mixed-case aliases.
   const displayName = (p: ProjectNote | null | undefined): string => {
-    if (!p) return 'No Project';
+    if (!p) return t('project.noProject', language);
     return String(p.slug || p.name || '').trim().toLowerCase();
   };
 
@@ -104,7 +104,7 @@ export default function ProjectSwitcher() {
             if (r) setMenuPos({ top: r.bottom + 4, left: Math.max(8, Math.min(r.left, window.innerWidth - 400)) });
           }
         }}
-        aria-label="Switch project"
+        aria-label={t('project.switch', language)}
         aria-expanded={dropdownOpen}
         className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-olympus-gold/10 transition-colors group"
       >
@@ -133,11 +133,11 @@ export default function ProjectSwitcher() {
                 onClick={() => { setActiveProject(lastProject); setDropdownOpen(false); }}
                 className="w-full text-left px-3 py-2 transition-colors border-b border-olympus-gold/10 bg-olympus-gold/5 hover:bg-olympus-gold/10"
               >
-                <div className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">Continue</div>
+                <div className="text-[10px] font-mono text-olympus-text-dim uppercase tracking-wide">{t('project.continue', language)}</div>
                 <div className="flex items-center gap-1.5 mt-0.5 text-[11px] font-mono text-olympus-gold">
                   <Folder size={11} />
                   <span className="truncate">{displayName(lastProject)}</span>
-                  <span className="ml-auto text-[9px] text-olympus-text-dim">last project</span>
+                  <span className="ml-auto text-[9px] text-olympus-text-dim">{t('project.lastProject', language)}</span>
                 </div>
               </button>
             )}

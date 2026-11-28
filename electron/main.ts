@@ -32,7 +32,7 @@
  */
 
 import { app, BrowserWindow, ipcMain, shell, session, dialog, clipboard, nativeImage, Tray, Menu, powerMonitor, Notification, screen } from 'electron';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
 import { existsSync, statSync, readFileSync, writeFileSync, mkdirSync, appendFileSync, unlinkSync, cpSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import * as nodeOs from 'node:os';
@@ -618,6 +618,35 @@ function ensureLinuxDesktopEntry(): void {
   } catch (err) {
     // Non-fatal — the app still works, just with a generic taskbar icon.
     console.warn('[olympus:electron] could not write .desktop entry:', err);
+  }
+}
+
+/**
+ * v0.1.7 — OLYMPUS in the GNOME dock, not only in the window list.
+ *
+ * The .desktop entry already sets StartupWMClass=olympus and the launcher
+ * passes --class=olympus. GNOME only shows an app in the dash when it is a
+ * favourite, so append the entry once (never reorder the user's existing
+ * favourites). Non-GNOME desktops are left untouched.
+ */
+function ensureLinuxDockFavorite(): void {
+  if (process.platform !== 'linux') return;
+  const desktop = process.env.XDG_CURRENT_DESKTOP || '';
+  if (!/gnome|unity|budgie|pantheon/i.test(desktop)) return;
+  const id = 'olympus.desktop';
+  try {
+    const raw = execFileSync('gsettings', ['get', 'org.gnome.shell', 'favorite-apps'], {
+      encoding: 'utf-8', timeout: 3000,
+    }).trim();
+    const existing = [...raw.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    if (existing.includes(id)) return;
+    const next = [...existing, id];
+    const value = `[${next.map((x) => `'${x.replace(/'/g, "\'")}'`).join(', ')}]`;
+    execFileSync('gsettings', ['set', 'org.gnome.shell', 'favorite-apps', value], { timeout: 3000 });
+    console.log('[olympus:electron] added OLYMPUS to the GNOME dock favourites');
+  } catch (err: any) {
+    // A missing gsettings (KDE, WSL, headless) is not an app failure.
+    console.warn('[olympus:electron] could not pin OLYMPUS in the dock:', err?.message || err);
   }
 }
 
@@ -2357,6 +2386,7 @@ if (!gotLock) {
     // Register a Linux .desktop entry so the taskbar shows the OLYMPUS
     // logo instead of the generic gear icon (Ubuntu/GNOME Wayland).
     ensureLinuxDesktopEntry();
+    ensureLinuxDockFavorite();
 
     createWindow();
 

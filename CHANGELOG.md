@@ -2,6 +2,42 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.7] — 2026-11-28
+
+### Base brain, clean boot and shell i18n
+
+- **AIME audit and reset.** 187 AIME instincts moved to
+  `05_Auto_Learning/project-instincts/aime/` (visible only in AIME);
+  1,157 stale/synthetic archived files were deleted after the audit (full backup
+  kept outside the vault); 3 retired seeds were removed. The active base is
+  **79 seeds + 51 knowledge notes**. Active context fell from ~89.9k to ~15.1k
+  tokens (-83%); retrieval P@5 stayed 73% / 73%, MRR 0.733 (15-query local set).
+- **Strict quick circuits.** Only cross-project proof (>=20 samples, >=90%
+  success, confidence >=0.82, 2+ projects) sets `quick_circuit: true`. Project
+  patterns are `project_hint` and never short-circuit. The census reports 0.
+- **Brain health.** Settings → Brain health explains Compact vs Recycle, shows
+  active/project/archived/quick counts, previews the Vault Policy and requires
+  confirmation for a live recycle. `npm run brain:bench` snapshots the pools,
+  context weight and retrieval metrics; `BRAIN-HEALTH.md` carries the model and
+  the v0.1.7 measurement.
+- **Clean boot.** No project is auto-selected; the last project is a
+  “Continue” suggestion. The Parthenon no longer inherits the newest campaign
+  when no project is active (tasks sheet returns empty). The brain always starts
+  in Smooth.
+- **Status bar.** Cost numbers removed (icon only) to free space; full labels
+  for instincts/confidence/skills/agents at 1920/1600/1280. The same labels stay
+  readable in Portuguese.
+- **Parthenon + menus i18n.** Parthenon command deck, state pills, menu names
+  (MCP Configuration, Settings), project switcher and brain-health/system
+  headings translated in English, Português, Español, Français, Deutsch, 日本語
+  and 中文.
+- **Modal layering.** The task sheet is portaled to `document.body`, uses
+  `z-[400]` and a strong backdrop blur; the resize grip, brain controls and
+  status bar can no longer sit above the modal.
+- **Dock presence.** Linux (GNOME) appends `olympus.desktop` to the dock
+  favourites once, without reordering existing favourites.
+- **Version truth.** VERSION/package/status fallback/patch notes at 0.1.7.
+
 ## [v0.1.6] — 2026-11-27
 
 ### Shell truth and focus

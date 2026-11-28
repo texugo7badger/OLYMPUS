@@ -106,10 +106,15 @@ callimachus.lock
 # ─── Setup & internal docs (maintainer-only — not for public commit) ──
 BUILD-AND-PUBLISH.md
 WORKLOG.md
+docs-internal/
+*.internal.md
+MAINTAINER-NOTES.md
 
 # ─── IDE extensions (committed as of v0.0.1) ───────────────────────────
 
 # ─── Temporary & cache ──────────────────────────────────────────────────
+__pycache__/
+*.pyc
 tmp/
 .cache/
 *.tmp

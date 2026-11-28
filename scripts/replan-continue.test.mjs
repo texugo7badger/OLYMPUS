@@ -60,7 +60,7 @@ async function main() {
   expect('R4: Continue enqueues Apollo before any walk starts', /buildReplanRequest\(slug, laneRoot\)/.test(warden) && /enqueuePrompt\(slug, replan\.prompt/.test(warden) && warden.indexOf('buildReplanRequest(slug, laneRoot)') < warden.indexOf('writeOptIn(slug, true)'), 'replan is after the walk');
   expect('R5: the replan decision is returned to the UI', /replan: true/.test(warden), 'no replan flag');
   const parthenon = src('src/components/olympus/parthenon-command.tsx');
-  expect('R6: Continue focuses the terminal when replanning', /d\?\.replan/.test(parthenon) && /olympus:focus-terminal/.test(parthenon) && /Ask Apollo to replan/.test(parthenon), 'UI does not focus Apollo');
+  expect('R6: Continue focuses the terminal when replanning', /d\?\.replan/.test(parthenon) && /olympus:focus-terminal/.test(parthenon) && /parthenon\.askReplan/.test(parthenon), 'UI does not focus Apollo');
 
   const hibernate = src('src/app/api/olympus/chat/hibernate/route.ts');
   expect('H1: a live campaign keeps its OpenCode/MCP server through hibernate', /campaignLive/.test(hibernate) && /keepChat/.test(hibernate) && /if \(!keepChat\) cleanupServer\(\)/.test(hibernate), 'hibernate still kills the live campaign server');

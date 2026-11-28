@@ -5,20 +5,19 @@
 
 > AGPL-3.0-or-later · GO-primary · Apollo-primary · OpenCode-based · 10 gods · 61 demigods · Symphony protocol · Standalone Electron desktop app
 >
-> **v0.1.6 truth notes.** 10 gods + **61 live demigods = 71 agents** (the
+> **v0.1.7 truth notes.** 10 gods + **61 live demigods = 71 agents** (the
 > v0.0.88 census cut archived 61 never-dispatched demigods with a one-command
 > restore; the historical 122/132 roster is below, labelled). The committed MCP
 > default is the curated six (**39 tools measured 2026-11-01**); a campaign's
 > `hop.mcp` plus the baseline filter the lane config
 > (`src/lib/mcp-run-manifest.ts`), so a walk does not spawn the 16-server
-> fleet. Retrieval is local: FTS5 + 768d `nomic-embed-text:v1.5` + RRF,
-> **1,032 documents** (1,832 chunks), P@5 **100% vs 73%** FTS-only. The Vault
-> now separates **242 active instincts** (52 seed + 190 empirical) from
-> **1,041 archived**; the old “1,041 quick circuits” was the archive count under
-> a false label. The honest quick-circuit count is **0** until cross-project
-> proof. Symphony's
-> Resonance Index aggregates **8,235 outcomes → 609 signatures**; the honest
-> real quick-circuit count is **0** (hop ids and fixtures are rejected). The
+> fleet. Retrieval is local: FTS5 + 768d `nomic-embed-text:v1.5` + RRF.
+> The Vault now carries **79 base seed instincts**, **187 AIME project-memory
+> instincts** (visible only in that project) and **51 knowledge notes**; the
+> stale archive was audited and removed, and the honest quick-circuit count is
+> **0** until cross-project proof. Symphony's
+> Resonance Index aggregates **8,235 outcomes → 609 signatures** (hop ids and
+> fixtures are rejected). The
 > deterministic gates are **8/8 hygiene, 66/66 suites**. The context indicator
 > reads the OpenCode v2 SQLite tables and shows "—" when it cannot verify —
 > never a fake 0%. Cost is **step cost / list value / invoice unknown**, never

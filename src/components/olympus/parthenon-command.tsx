@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { useOlympus } from '@/lib/olympus-store';
 import { cn } from '@/lib/utils';
+import { useLanguage, t } from '@/lib/i18n';
 
 type Health = {
   verdict: string; line: string; reasons: string[]; generation: number;
@@ -66,6 +67,7 @@ function eta(ms: number | null): string {
 }
 
 export default function ParthenonCommand({ health, patrol, projectSlug, onChat, onChanged }: Props) {
+  const language = useLanguage();
   const setNewProjectDialogOpen = useOlympus((s) => s.setNewProjectDialogOpen);
   const [warden, setWarden] = useState<Warden | null>(null);
   const [decision, setDecision] = useState<Decision | null>(null);
@@ -192,19 +194,22 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
   const lane = warden?.lanes.find((l) => l.slug === projectSlug) ?? null;
   const verdict = health?.verdict ?? 'PAUSED';
   const live = (health?.running ?? 0) > 0;
-  const atlasState = verdict === 'NEEDS-YOU' ? 'needs you'
+  const atlasStateKey = verdict === 'NEEDS-YOU' ? 'needsYou'
     : verdict === 'BLOCKED' ? 'recovering'
       : verdict === 'DEGRADED' ? 'patrolling'
-        : verdict === 'DONE' ? 'all clear'
+        : verdict === 'DONE' ? 'allClear'
           : verdict === 'PAUSED' ? 'paused'
             : live ? 'patrolling' : 'ready';
+  const apolloStateKey = verdict === 'DONE' ? 'ready' : verdict === 'PAUSED' ? 'idle' : 'planning';
+  const verdictKey = verdict === 'DONE' ? 'done' : verdict === 'PAUSED' ? 'paused'
+    : verdict === 'NEEDS-YOU' ? 'needsYou' : verdict === 'BLOCKED' ? 'blocked'
+      : verdict === 'DEGRADED' ? 'degraded' : 'healthy';
   const atlasTone = verdict === 'NEEDS-YOU' || verdict === 'BLOCKED' ? 'red'
     : verdict === 'DEGRADED' ? 'gold'
       : 'green';
-  const apolloState = verdict === 'DONE' ? 'ready' : verdict === 'PAUSED' ? 'idle' : 'planning';
 
   return (
-    <section className="px-2 pt-2 pb-1.5 border-b border-olympus-gold/10" aria-label="Atlas and Apollo command deck">
+    <section className="px-2 pt-2 pb-1.5 border-b border-olympus-gold/10" aria-label={t('parthenon.aria', language)}>
       {/* The living-machine backdrop: Nakkas animated SVG, static in stable motion. */}
       <div className="relative overflow-hidden rounded-xl border border-olympus-gold/20 bg-[#080B12]">
         <img src="/diagrams/parthenon-nakkas.svg" alt="" aria-hidden className="nakkas-full pointer-events-none absolute inset-0 h-full w-full object-cover opacity-45" />
@@ -213,12 +218,12 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
         <div className="relative px-2.5 py-2">
           <div className="flex items-center gap-1.5">
             <Orbit size={11} className="text-olympus-gold" />
-            <span className="text-[8px] font-mono uppercase tracking-[0.22em] text-olympus-gold">Atlas · always on</span>
+            <span className="text-[8px] font-mono uppercase tracking-[0.22em] text-olympus-gold">{t('parthenon.atlasAlways', language)}</span>
             <span className="ml-auto rounded border border-olympus-cyan/30 bg-olympus-cyan/10 px-1 py-0.5 text-[7px] font-mono text-olympus-cyan" data-tip="Atlas's lane is pinned to Hy3; a free/nemotron failover is refused.">HY3</span>
           </div>
-          <p className="mt-0.5 text-[10px] font-semibold text-olympus-text">The pantheon is watching.</p>
+          <p className="mt-0.5 text-[10px] font-semibold text-olympus-text">{t('parthenon.watching', language)}</p>
           <p className="text-[8px] font-mono text-olympus-text-dim truncate" data-tip={health?.line ?? undefined}>
-            {health?.line ?? 'No active campaign — Atlas is ready.'}
+            {health?.line ?? t('parthenon.noCampaign', language)}
           </p>
         </div>
       </div>
@@ -227,7 +232,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
       {decision && (
         <div role="alert" className="mt-1.5 rounded-lg border border-olympus-red/40 bg-olympus-red/10 p-2">
           <div className="flex items-center gap-1 text-[8px] font-mono uppercase tracking-wide text-olympus-red">
-            <ShieldAlert size={10} /> Needs your call
+            <ShieldAlert size={10} /> {t('parthenon.needsCall', language)}
           </div>
           <p className="mt-1 text-[9px] leading-relaxed text-olympus-text">{decision.message}</p>
           <div className="mt-1.5 flex flex-wrap gap-1">
@@ -236,21 +241,21 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
               onClick={() => void post('continue')}
               className="inline-flex min-h-[26px] items-center gap-1 rounded-md border border-olympus-green/40 bg-olympus-green/15 px-2 text-[8px] font-semibold text-olympus-green hover:bg-olympus-green/25 disabled:opacity-40"
             >
-              <CirclePlay size={10} /> {busy === 'continue' ? 'opening Apollo…' : decision.reason === 'loop-blocked' ? 'Ask Apollo to replan' : `Continue ${decision.slug}`}
+              <CirclePlay size={10} /> {busy === 'continue' ? t('parthenon.openingApollo', language) : decision.reason === 'loop-blocked' ? t('parthenon.askReplan', language) : t('parthenon.continueProject', language, { slug: decision.slug })}
             </button>
             <button
               type="button" disabled={!!busy}
               onClick={() => void post('new-project')}
               className="inline-flex min-h-[26px] items-center gap-1 rounded-md border border-olympus-gold/30 px-2 text-[8px] text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
             >
-              <Plus size={10} /> Start another project
+              <Plus size={10} /> {t('parthenon.startAnother', language)}
             </button>
             <button
               type="button" disabled={!!busy}
               onClick={() => void post('dismiss')}
               className="inline-flex min-h-[26px] items-center gap-1 rounded-md px-2 text-[8px] text-olympus-text-dim hover:text-olympus-text disabled:opacity-40"
             >
-              <X size={9} /> Not now
+              <X size={9} /> {t('parthenon.notNow', language)}
             </button>
           </div>
         </div>
@@ -261,24 +266,24 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
         <div className="flex items-center gap-1.5">
           <Sun size={12} className="text-olympus-gold" />
           <span className="text-[10px] font-semibold text-olympus-gold">Apollo</span>
-          <span className="text-[7px] font-mono uppercase tracking-wide text-olympus-text-dim">plans · talks</span>
-          <span className="ml-auto rounded bg-olympus-gold/10 px-1 py-0.5 text-[7px] font-mono text-olympus-gold">{apolloState}</span>
+          <span className="text-[7px] font-mono uppercase tracking-wide text-olympus-text-dim">{t('parthenon.apolloRole', language)}</span>
+          <span className="ml-auto rounded bg-olympus-gold/10 px-1 py-0.5 text-[7px] font-mono text-olympus-gold">{t('parthenon.state.' + apolloStateKey, language)}</span>
         </div>
         <p className="mt-0.5 text-[8px] text-olympus-text-dim truncate">
-          {projectSlug ? `Project ${projectSlug} · the campaign is ${verdict.toLowerCase()}.` : 'Start a project; Apollo plans the DAG.'}
+          {projectSlug ? t('parthenon.projectCampaign', language, { slug: projectSlug, verdict: t('parthenon.verdict.' + verdictKey, language) }) : t('parthenon.startProject', language)}
         </p>
         <div className="mt-1 flex flex-wrap gap-1">
           <button
             type="button" onClick={() => onChat('apollo')}
             className="inline-flex min-h-[26px] flex-1 items-center justify-center gap-1 rounded-md border border-olympus-gold/40 bg-olympus-gold/15 px-2 text-[8px] font-semibold text-olympus-gold hover:bg-olympus-gold/25"
           >
-            <MessageSquare size={10} /> Ask Apollo
+            <MessageSquare size={10} /> {t('parthenon.askApollo', language)}
           </button>
           <button
             type="button" onClick={() => { setNewProjectDialogOpen(true); }}
             className="inline-flex min-h-[26px] items-center justify-center gap-1 rounded-md border border-olympus-gold/25 px-2 text-[8px] text-olympus-text-dim hover:bg-olympus-gold/10 hover:text-olympus-gold"
           >
-            <Plus size={10} /> New project
+            <Plus size={10} /> {t('parthenon.newProject', language)}
           </button>
         </div>
       </div>
@@ -288,7 +293,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
         <div className="flex items-center gap-1.5">
           <Orbit size={12} className="text-olympus-cyan" />
           <span className="text-[10px] font-semibold text-olympus-cyan">Atlas</span>
-          <span className="text-[7px] font-mono uppercase tracking-wide text-olympus-text-dim">walks · recovers</span>
+          <span className="text-[7px] font-mono uppercase tracking-wide text-olympus-text-dim">{t('parthenon.atlasRole', language)}</span>
           <span
             className={cn(
               'ml-auto rounded px-1 py-0.5 text-[7px] font-mono',
@@ -297,12 +302,12 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
                   : 'bg-olympus-green/15 text-olympus-green',
             )}
           >
-            {atlasState}
+            {t('parthenon.state.' + atlasStateKey, language)}
           </span>
         </div>
         <p className="mt-0.5 text-[8px] text-olympus-text-dim truncate" data-tip={lane?.lastAction ? `warden: ${lane.lastAction}` : (patrol?.summary ?? health?.reasons?.join('\n'))}>
-          {patrol ? `${patrol.parked} parked · ${patrol.stuck} stuck${patrol.verdict ? ` · ${patrol.verdict}` : ''}` : (health?.parked ? `parked at ${health.parked.hopId}` : 'no parks — the walk is clean.')}
-          {health?.etaMs ? ` · ${eta(health.etaMs)} left` : ''}
+          {patrol ? `${t('parthenon.parkedStuck', language, { parked: patrol.parked, stuck: patrol.stuck })}${patrol.verdict ? ` · ${patrol.verdict}` : ''}` : (health?.parked ? t('parthenon.parkedAt', language, { hop: health.parked.hopId }) : t('parthenon.noParks', language))}
+          {health?.etaMs ? ` · ${t('parthenon.etaLeft', language, { eta: eta(health.etaMs) })}` : ''}
         </p>
         <div className="mt-1 flex flex-wrap gap-1">
           {live ? (
@@ -310,7 +315,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
               type="button" disabled={!!busy} onClick={() => void pause()}
               className="inline-flex min-h-[26px] flex-1 items-center justify-center gap-1 rounded-md border border-olympus-gold/35 px-2 text-[8px] font-semibold text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
             >
-              <CirclePause size={10} /> {busy === 'pause' ? 'pausing…' : 'Pause'}
+              <CirclePause size={10} /> {busy === 'pause' ? t('parthenon.pausing', language) : t('parthenon.pause', language)}
             </button>
           ) : (
             <button
@@ -318,7 +323,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
               onClick={() => void post('continue')}
               className="inline-flex min-h-[26px] flex-1 items-center justify-center gap-1 rounded-md border border-olympus-green/40 bg-olympus-green/15 px-2 text-[8px] font-semibold text-olympus-green hover:bg-olympus-green/25 disabled:opacity-40"
             >
-              <CirclePlay size={10} /> {busy === 'continue' ? 'resuming…' : 'Resume'}
+              <CirclePlay size={10} /> {busy === 'continue' ? t('parthenon.resuming', language) : t('parthenon.resume', language)}
             </button>
           )}
           {health?.nextPlan && (
@@ -327,7 +332,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
               className="inline-flex min-h-[26px] items-center justify-center gap-1 rounded-md border border-olympus-gold/30 px-2 text-[8px] text-olympus-gold hover:bg-olympus-gold/10 disabled:opacity-40"
               data-tip={`Staged next generation: +${health.nextPlan.added} / -${health.nextPlan.removed} / ~${health.nextPlan.changed}`}
             >
-              <Zap size={10} /> {busy === 'apply' ? 'applying…' : `+${health.nextPlan.added}`}
+              <Zap size={10} /> {busy === 'apply' ? t('parthenon.applying', language) : `+${health.nextPlan.added}`}
             </button>
           )}
           <button
@@ -335,7 +340,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
             className="inline-flex min-h-[26px] items-center justify-center gap-1 rounded-md px-2 text-[8px] text-olympus-text-dim hover:text-olympus-cyan"
             data-tip="The deterministic Atlas finding: cause, lane, verdict and the evidence paths."
           >
-            <FileSearch size={10} /> Evidence
+            <FileSearch size={10} /> {t('parthenon.evidence', language)}
           </button>
         </div>
       </div>
@@ -344,14 +349,14 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
           the app cgroup, with a hard stop and a morning report. */}
       <div className="mt-1.5 flex items-center gap-1.5 rounded-lg border border-olympus-purple/25 bg-olympus-purple/5 px-2 py-1.5">
         <Moon size={11} className="shrink-0 text-olympus-purple" />
-        <span className="shrink-0 text-[8px] font-mono uppercase tracking-wide text-olympus-purple">night shift</span>
+        <span className="shrink-0 text-[8px] font-mono uppercase tracking-wide text-olympus-purple">{t('parthenon.nightShift', language)}</span>
         <span
           className="min-w-0 flex-1 truncate text-[8px] font-mono text-olympus-text-dim"
           data-tip={night?.alive
             ? `running since ${night.state?.startedAt ? new Date(night.state.startedAt).toLocaleString() : '—'} — report: ${night.state?.reportPath || night.reportPath || 'pending'}`
             : night?.state
               ? `last run: ${night.state.status || 'finished'}${night.state.reportPath ? ` — ${night.state.reportPath}` : ''}`
-              : 'idle — start an 8h headless run; the app can close once the unit is up.'}
+              : t('parthenon.nightIdle', language)}
         >
           {night?.alive
             ? `${night.state?.completed ?? 0}/${night.state?.total ?? '—'} hops · ${night.state?.status || 'running'}`
@@ -366,7 +371,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
             disabled={nightBusy}
             className="shrink-0 rounded border border-olympus-red/30 px-1.5 py-0.5 text-[8px] font-mono text-olympus-red hover:bg-olympus-red/10 disabled:opacity-40"
           >
-            {nightBusy ? 'stopping…' : 'stop'}
+            {nightBusy ? t('parthenon.nightStop', language) : t('parthenon.nightStop', language)}
           </button>
         ) : (
           <button
@@ -376,7 +381,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
             className="shrink-0 rounded border border-olympus-purple/30 bg-olympus-purple/10 px-1.5 py-0.5 text-[8px] font-mono text-olympus-purple hover:bg-olympus-purple/20 disabled:opacity-40"
             data-tip="Launch an 8h headless run via systemd-run; the app can close after the unit starts."
           >
-            {nightBusy ? 'starting…' : '8h'}
+            {nightBusy ? t('parthenon.nightStarting', language) : '8h'}
           </button>
         )}
       </div>
@@ -386,10 +391,10 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
           <div className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-xl border border-olympus-cyan/30 bg-olympus-panel p-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2">
               <FileSearch size={13} className="text-olympus-cyan" />
-              <span className="text-[11px] font-semibold text-olympus-text">Atlas evidence</span>
-              <button onClick={() => setEvidence(false)} className="ml-auto p-1 text-olympus-text-dim" aria-label="Close evidence"><X size={13} /></button>
+              <span className="text-[11px] font-semibold text-olympus-text">{t('parthenon.evidenceTitle', language)}</span>
+              <button onClick={() => setEvidence(false)} className="ml-auto p-1 text-olympus-text-dim" aria-label={t('window.close', language)}><X size={13} /></button>
             </div>
-            <p className="mt-2 text-[10px] leading-relaxed text-olympus-text-dim">{patrol?.summary ?? 'No patrol finding on disk.'}</p>
+            <p className="mt-2 text-[10px] leading-relaxed text-olympus-text-dim">{patrol?.summary ?? t('parthenon.noPatrol', language)}</p>
             {health && (
               <ul className="mt-2 space-y-1">
                 {health.reasons.map((r, i) => (
@@ -404,7 +409,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
               type="button" onClick={() => { onChat('atlas'); setEvidence(false); }}
               className="mt-2 inline-flex min-h-[30px] w-full items-center justify-center gap-1 rounded-md border border-olympus-cyan/30 bg-olympus-cyan/10 text-[9px] text-olympus-cyan"
             >
-              <ArrowRight size={10} /> Ask Atlas about this evidence
+              <ArrowRight size={10} /> {t('parthenon.askAtlas', language)}
             </button>
           </div>
         </div>

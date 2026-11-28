@@ -98,9 +98,9 @@ const wardenRoute = src('src/app/api/olympus/atlas/warden/route.ts');
 const dashboardSrc = src('src/components/olympus/cost-dashboard.tsx');
 const forecast = src('src/components/olympus/go-forecast-chart.tsx');
 expect('P-25: the Parthenon renders the Atlas/Apollo command deck with HY3 + real quick actions',
-  /<ParthenonCommand/.test(panel) && /Atlas · always on/.test(command) && /HY3/.test(command)
-    && /Continue /.test(command) && /Start another project/.test(command) && /Ask Apollo/.test(command)
-    && /Ask Atlas/.test(command) && /Pause/.test(command) && /Resume/.test(command) && /Evidence/.test(command),
+  /<ParthenonCommand/.test(panel) && /parthenon\.atlasAlways/.test(command) && /HY3/.test(command)
+    && /parthenon\.continueProject/.test(command) && /parthenon\.startAnother/.test(command) && /parthenon\.askApollo/.test(command)
+    && /parthenon\.askAtlas/.test(command) && /parthenon\.pause/.test(command) && /parthenon\.resume/.test(command) && /parthenon\.evidence/.test(command),
   'the two gods are still status lines, not controls');
 expect('P-26: the phone mounts the same Parthenon deck and opens it from the header',
   /MobileParthenon/.test(mobile) && /parthenonOpen/.test(mobile) && /Parthenon — Atlas and Apollo/.test(mobile),

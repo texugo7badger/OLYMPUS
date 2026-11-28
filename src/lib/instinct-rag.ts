@@ -151,12 +151,12 @@ export function instinctPriorContext(
     quick: boolean;
   }> = [];
 
-  for (const pool of ['seed', 'empirical']) {
-    const dir = join(vaultRoot, '05_Auto_Learning', 'instincts', godId, pool);
-    if (!existsSync(dir)) continue;
+  const scanPool = (dir: string) => {
+    if (!existsSync(dir)) return;
     for (const f of readdirSync(dir)) {
       if (!f.endsWith('.md')) continue;
-      const inst = parseInstinctFile(join(dir, f));
+      const file = join(dir, f);
+      const inst = parseInstinctFile(file);
       if (!inst || !inst.action) continue;
       if (inst.confidence < thresholdFor(inst.scope)) continue;
       const visibility = filterInstinct({
@@ -167,7 +167,7 @@ export function instinctPriorContext(
         stacks: inst.stacks,
         projects: inst.projects,
         samples: inst.samples,
-        path: join(dir, f),
+        path: file,
       }, activeProject);
       if (!visibility.visible) continue;
       const triggerTokens = tokenize(inst.trigger);
@@ -185,6 +185,15 @@ export function instinctPriorContext(
         });
       }
     }
+  };
+
+  for (const pool of ['seed', 'empirical']) {
+    scanPool(join(vaultRoot, '05_Auto_Learning', 'instincts', godId, pool));
+  }
+  // v0.1.7 — AIME (and any future project) memory lives in its OWN lane,
+  // never in the global brain. It is visible only when that project is active.
+  if (activeProject?.slug) {
+    scanPool(join(vaultRoot, '05_Auto_Learning', 'project-instincts', activeProject.slug, godId));
   }
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => (b.overlap - a.overlap) || (b.confidence - a.confidence));

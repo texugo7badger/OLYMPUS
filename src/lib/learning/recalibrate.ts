@@ -35,15 +35,26 @@ function setField(text: string, key: string, value: string): string {
   return text.replace('\n---\n', `\n${key}: ${value}\n---\n`);
 }
 
-function findInstinct(god: string, id: string): string | null {
-  const dir = path.join(getVaultRoot(), '05_Auto_Learning', 'instincts', god, 'empirical');
-  const direct = path.join(dir, `${id}.md`);
-  if (fs.existsSync(direct)) return direct;
-  try {
-    for (const f of fs.readdirSync(dir)) {
-      if (f.endsWith('.md') && f.replace(/\.md$/, '') === id) return path.join(dir, f);
-    }
-  } catch { /* no pool */ }
+function findInstinct(god: string, id: string, project?: string | null): string | null {
+  const roots = [path.join(getVaultRoot(), '05_Auto_Learning', 'instincts', god, 'empirical')];
+  // v0.1.7 — project memory is a live lane; an outcome can recalibrate it.
+  if (project) roots.push(path.join(getVaultRoot(), '05_Auto_Learning', 'project-instincts', project, god));
+  else {
+    try {
+      for (const p of fs.readdirSync(path.join(getVaultRoot(), '05_Auto_Learning', 'project-instincts'))) {
+        roots.push(path.join(getVaultRoot(), '05_Auto_Learning', 'project-instincts', p, god));
+      }
+    } catch { /* no project lane */ }
+  }
+  for (const dir of roots) {
+    const direct = path.join(dir, `${id}.md`);
+    if (fs.existsSync(direct)) return direct;
+    try {
+      for (const f of fs.readdirSync(dir)) {
+        if (f.endsWith('.md') && f.replace(/\.md$/, '') === id) return path.join(dir, f);
+      }
+    } catch { /* no pool */ }
+  }
   return null;
 }
 
@@ -76,7 +87,7 @@ export function recalibrateFromOutcomes(opts: { maxEvents?: number } = {}): Reca
     const instinctId = String(ev.instinct_id || ev.instinctId || '').trim();
     const god = String(ev.god || ev.parent_god || '').trim().toLowerCase();
     if (!instinctId || !god) { skipped++; continue; }
-    const file = findInstinct(god, instinctId);
+    const file = findInstinct(god, instinctId, String(ev.project || '').trim() || null);
     if (!file) { skipped++; continue; }
     try {
       let text = fs.readFileSync(file, 'utf-8');

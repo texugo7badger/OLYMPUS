@@ -15,7 +15,7 @@
 | **Live drill** | 100 hops, hibernation, soak, a real campaign | local, against the running app |
 | **Campaign** | real gods, real artifacts, p50/p90, parks | AIME lane |
 
-## The public core (v0.1.6)
+## The public core (v0.1.7)
 
 Thirty-five hermetic suites are published — no vault, no credentials — and a
 clean clone runs them:
@@ -33,7 +33,7 @@ terminal-paste · theme-gallery · v099-preview-mobile
 
 `.github/workflows/core.yml` runs `tsc` + lint + the 35 public suites. The
 full battery is **66/66** (31 tracked-local suites need the live app/vault).
-The live UI gate for this release is `node scripts/verify-v016-ui.mjs` (shell, labels at 1600/1280, clean boot, six Logs tabs, no fullscreen loader). The `campaign-smoke` suite is the acceptance: 10 hops, one tool-budget park,
+The live UI gate for this release is `node scripts/verify-v017-ui.mjs` (shell, labels at 1600/1280, clean boot, six Logs tabs, no fullscreen loader). The `campaign-smoke` suite is the acceptance: 10 hops, one tool-budget park,
 Atlas recovery, resumed walk **10/10 with no human**.
 
 `npm run suites:manifest` (v0.0.89, #330) is the checked-in map: every one of

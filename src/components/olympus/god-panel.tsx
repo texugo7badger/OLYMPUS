@@ -22,7 +22,7 @@ import { useDocVisible } from '@/lib/use-doc-visible';
 import { useEffect, useMemo, useState } from 'react';
 import TaskSheetModal, { type TaskRecord } from './task-sheet-modal';
 import ParthenonCommand from './parthenon-command';
-import { useLanguage, godName, getLanguage } from '@/lib/i18n';
+import { useLanguage, t, godName, getLanguage } from '@/lib/i18n';
 import type { DemigodLive } from '@/lib/tasks-sheet';
 
 /** Coarse status bucket. Finer wire phases collapse into these. */
@@ -205,7 +205,7 @@ export default function GodPanel({ states, focusedGod, onFocus, children, onColl
             className="h-4 w-4 shrink-0 opacity-90"
           />
           <span className="shrink-0">Parthenon</span>
-          <span className="normal-case tracking-normal whitespace-nowrap shrink-0">{active} active / {ordered.length}</span>
+          <span className="normal-case tracking-normal whitespace-nowrap shrink-0">{t('parthenon.activeOf', language, { active, total: ordered.length })}</span>
           {campaignHealth && (
             <span
               className={cn(

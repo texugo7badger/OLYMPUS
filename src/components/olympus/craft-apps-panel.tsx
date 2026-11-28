@@ -94,9 +94,15 @@ interface UiRef {
   probe: { ok: boolean; frameable: boolean; inconclusive?: boolean; httpStatus: number | null };
 }
 
+/** v0.1.8 — the default shelf is the development-adjacent five. The other
+ * ArtCraft apps stay installable under Extras; OLYMPUS is a coding workspace,
+ * not a media suite. */
+const CORE_CRAFT = new Set(['figcraft', 'vectorcraft', 'photocraft', 'cadcraft', 'pdfcraft']);
+
 export default function CraftAppsPanel({ initialApp, initialTab }: { initialApp?: string | null; initialTab?: PaneTab }) {
   const language = useLanguage();
   const [apps, setApps] = useState<CraftApp[]>([]);
+  const [shelf, setShelf] = useState<'core' | 'all'>('core');
   const [studio, setStudio] = useState<CraftApp | null>(null);
   const [probes, setProbes] = useState<Record<string, Probe>>({});
   const [vendor, setVendor] = useState<Record<string, VendorStatus>>({});
@@ -458,12 +464,12 @@ export default function CraftAppsPanel({ initialApp, initialTab }: { initialApp?
       {/* Header */}
       <div className="h-9 shrink-0 flex items-center gap-2 px-3 border-b border-olympus-gold/10 bg-olympus-panel">
         {tab === 'references' ? <Lightbulb size={13} className="text-olympus-gold" /> : <Boxes size={13} className="text-olympus-gold" />}
-        <span className="text-[11px] font-mono font-semibold text-olympus-gold">{tab === 'references' ? 'References' : 'Craft'}</span>
+        <span className="text-[11px] font-mono font-semibold text-olympus-gold">{t(tab === 'references' ? 'nav.references' : 'nav.craft', language)}</span>
         {/* W-J: the tab bar — hidden when the pane is dedicated to one surface. */}
         {!initialTab && (
         <div className="flex items-center gap-0.5">
-          <button onClick={() => { setTab('apps'); setRefView(null); }} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'apps' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><LayoutGrid size={10} /> apps</button>
-          <button onClick={() => setTab('references')} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'references' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><Lightbulb size={10} /> references</button>
+          <button onClick={() => { setTab('apps'); setRefView(null); }} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'apps' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><LayoutGrid size={10} /> {t('nav.craft', language)}</button>
+          <button onClick={() => setTab('references')} className={cn('flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono uppercase', tab === 'references' ? 'bg-olympus-gold/15 text-olympus-gold ring-1 ring-olympus-gold/30' : 'text-olympus-text-dim hover:text-olympus-gold')}><Lightbulb size={10} /> {t('nav.references', language)}</button>
         </div>
         )}
         <div className="ml-auto flex items-center gap-1.5">
@@ -475,6 +481,12 @@ export default function CraftAppsPanel({ initialApp, initialTab }: { initialApp?
           <button onClick={() => load(true)} aria-label="Refresh" className="text-olympus-text-dim hover:text-olympus-gold transition-colors p-1">
             <RefreshCw size={11} className={loading ? 'animate-spin' : ''} />
           </button>
+          {tab === 'apps' && (
+            <div className="flex items-center gap-0.5 rounded border border-olympus-gold/15 p-0.5">
+              <button onClick={() => setShelf('core')} className={cn('px-1.5 py-0.5 rounded text-[8px] font-mono uppercase', shelf === 'core' ? 'bg-olympus-gold/15 text-olympus-gold' : 'text-olympus-text-dim')}>core</button>
+              <button onClick={() => setShelf('all')} className={cn('px-1.5 py-0.5 rounded text-[8px] font-mono uppercase', shelf === 'all' ? 'bg-olympus-gold/15 text-olympus-gold' : 'text-olympus-text-dim')}>extras</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -704,9 +716,14 @@ export default function CraftAppsPanel({ initialApp, initialTab }: { initialApp?
                 <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-olympus-green/15 text-olympus-green ring-1 ring-olympus-green/25 shrink-0">live</span>
               </button>
             )}
-            {/* The 13 apps grid — the vendored truth per card */}
+            {shelf === 'core' && (
+              <div className="mb-2 text-[8.5px] font-mono text-olympus-text-dim">
+                core shelf · {apps.filter((a) => CORE_CRAFT.has(a.id)).length} dev-adjacent tools · switch to extras for the full catalog
+              </div>
+            )}
+            {/* The apps grid — the vendored truth per card */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-              {apps.map((a) => {
+              {apps.filter((a) => shelf === 'all' || CORE_CRAFT.has(a.id)).map((a) => {
                 const v = vendor[a.id];
                 const job = jobFor(a.id);
                 return (

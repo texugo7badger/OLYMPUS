@@ -30,9 +30,7 @@ import ImmersivePanel from './immersive-panel';
 import { useTheme } from '@/lib/theme-store';
 import { useLanguage, t } from '@/lib/i18n';
 
-interface ProviderInfo {
- name: string; isFree: boolean; displayName: string; capsDisplay: string;
-}
+
 
 /* ------------------------------------------------------------------ */
 /* StatusBar (top bar, 28px). */
@@ -60,16 +58,10 @@ function shouldShowCustomWindowControls(): boolean {
  return true;
 }
 
-/** v0.0.29 — a real but sub-cent figure must not read as $0.00. */
-function fmtUsd(n: number): string {
-  if (!Number.isFinite(n) || n <= 0) return '$0.00';
-  return n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
-}
+
 
 export default function StatusBar({
   health }: { health: any }) {
-  // #231 — the status bar is always mounted; never poll in a hidden tab.
-  const docVisible = useDocVisible();
  const activeGod = useOlympus(s => s.activeGod);
   const [theme] = useTheme();
   const language = useLanguage();
@@ -90,11 +82,6 @@ export default function StatusBar({
  const setLeftPane = useOlympus(s => s.setLeftPane);
  const focusMode = useOlympus(s => s.focusMode);
  const toggleFocusMode = useOlympus(s => s.toggleFocusMode);
- // #179: the split cost pair — Real (provider-reported, honestly $0.00 on
- // free lanes) + Estimated (heuristic per-tool figure). Never a mixed total.
- const [cost, setCost] = useState<{
-	 realUsd: number; estimatedUsd: number; totalTokens: number; provider: ProviderInfo;
- } | null>(null);
  const [apiConfigOpen, setApiConfigOpen] = useState(false);
  const [apiConfigsCount, setApiConfigsCount] = useState(0);
  const [winWidth, setWinWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1920);
@@ -136,41 +123,19 @@ export default function StatusBar({
  }).catch(() => {});
  }, [apiConfigOpen]);
 
- useEffect(() => {
-	 if (!docVisible) return;
-	// Use cache: 'no-store' so cost reflects the latest events.
-	 const load = () => fetch('/api/olympus/costs', { cache: 'no-store' }).then(r => r.json()).then(d => {
-	 // #179: prefer the real provider-reported token aggregate; the mixed
-	 // input+output totals are only the pre-split fallback.
-	 const realTok = d.realTokens ? (d.realTokens.input ?? 0) + (d.realTokens.output ?? 0) : null;
-	 setCost({
-		 realUsd: d.totalSpendRealUsd ?? d.totalSpend ?? 0,
-		 estimatedUsd: d.totalSpendEstimatedUsd ?? 0,
-		 totalTokens: realTok ?? (d.totalInput ?? 0) + (d.totalOutput ?? 0),
-		 provider: d.provider,
-	 });
-	 }).catch(() => {});
- load();
- const iv = setInterval(load, 10000);
- return () => clearInterval(iv);
- }, [docVisible]);
 
-	 const prov = cost?.provider;
-	 const isFree = prov?.isFree ?? false;
-	 const realUsd = cost?.realUsd ?? 0;
-	 const estimatedUsd = cost?.estimatedUsd ?? 0;
-	 const totalTokens = cost?.totalTokens ?? 0;
+
  const ActiveGodIcon = fallbackGod ? GOD_ICONS[fallbackGod] : null;
 
  // v0.1.6 — never clip a word. The bar keeps the metrics the user asked
  // for (instincts, confidence, skills, agents) and drops WHOLE low-priority
  // segments when the window is narrow; it never hides or truncates a label.
- const tight = winWidth < 1680;
+ const tight = winWidth < 2000;
  const hideProject = winWidth < 900;
  const iconOnly = winWidth < 700;
  const hideVersion = winWidth < 1100;
  const hideCli = winWidth < 1000;
- const hideDiag = winWidth < 1400;
+ const hideDiag = winWidth < 2000;
  const hideSseText = winWidth < 1240;
  const hideApiText = winWidth < 1180;
  const hideBrainContext = winWidth < 980;
@@ -191,7 +156,7 @@ export default function StatusBar({
  <span>OLYMPUS</span>
               {!hideVersion && (
    <span className="text-olympus-text-dim font-normal" data-tip="OLYMPUS version">
-     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.1.6'}
+     v{(typeof window !== 'undefined' && (window as any).__OLYMPUS_VERSION__) || '0.1.7'}
    </span>
 )}
    <button
@@ -356,26 +321,11 @@ export default function StatusBar({
  <div className="flex min-w-0 shrink-0 items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
  <button
  onClick={() => setLeftPane('cost')}
- className="flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-olympus-gold/10 transition-colors"
+ aria-label={t('nav.cost', language)}
+ data-tip={t('nav.cost', language)}
+ className="flex items-center justify-center w-6 h-5 rounded text-olympus-gold/80 hover:text-olympus-gold hover:bg-olympus-gold/10 transition-colors"
  >
-	 <DollarSign size={11} className={isFree ? 'text-olympus-green' : 'text-olympus-gold'} />
-	 <span className={cn('font-semibold', isFree ? 'text-olympus-green' : 'text-olympus-gold')}>
-	 {isFree
-	   ? `${(totalTokens >= 1000 ? (totalTokens / 1000).toFixed(1) + 'k' : String(totalTokens))} tok`
-	   : fmtUsd(realUsd)}
-	 </span>
-	 <span
-	   className="text-olympus-text-dim text-[10px] hidden min-[1680px]:inline"
-	   data-tip={
-	     `Invoice: not exposed by the provider (GO subscription). ` +
-	     `Step cost ${fmtUsd(realUsd)} (OpenCode's per-step model-price field) · ` +
-	     `heuristic list value ${fmtUsd(estimatedUsd)}. Neither is a charge.`
-	   }
-	 >
-	 {isFree && realUsd === 0
-	   ? '(free)'
-	   : `· ${prov?.name ?? '-'} · step ${fmtUsd(realUsd)} · list ${fmtUsd(estimatedUsd)}`}
-	 </span>
+ <DollarSign size={11} />
  </button>
  <div className="w-px h-3 bg-olympus-gold/15" />
  <div className="flex items-center gap-1.5">

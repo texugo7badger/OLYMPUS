@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react';
 import { Activity, CircleCheck, CircleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage, t } from '@/lib/i18n';
 
 interface BootHealth {
   app?: { health?: { ok?: boolean; status?: number | null; ms?: number | null }; port?: number };
@@ -28,6 +29,7 @@ interface Hygiene {
 }
 
 export default function SystemHealthCard() {
+  const language = useLanguage();
   const [boot, setBoot] = useState<BootHealth | null>(null);
   const [hygiene, setHygiene] = useState<Hygiene | null>(null);
 
@@ -54,7 +56,7 @@ export default function SystemHealthCard() {
     <section>
       <div className="flex items-center gap-1.5 mb-2">
         <Activity size={11} className="text-olympus-gold" />
-        <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">System &amp; release</h3>
+        <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">{t('settings.systemRelease', language)}</h3>
         <span className="ml-auto text-[9px] font-mono text-olympus-text-dim">not a runtime log</span>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">

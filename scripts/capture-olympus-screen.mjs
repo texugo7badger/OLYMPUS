@@ -25,9 +25,11 @@ const CHROME = process.env.CHROME_BIN || path.join(os.homedir(), '.cache/ms-play
 const APP_URL = process.env.OLYMPUS_URL || 'http://127.0.0.1:3737/';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), 'olympus-shot-profile-'));
 const chrome = spawn(CHROME, [
   '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
-  `--remote-debugging-port=${PORT}`, '--window-size=1600,1000', 'about:blank',
+  `--user-data-dir=${PROFILE}`, '--window-size=1920,1080',
+  `--remote-debugging-port=${PORT}`, 'about:blank',
 ], { stdio: 'ignore', detached: true });
 
 let wsUrl = null;
@@ -39,7 +41,8 @@ for (let i = 0; i < 40; i++) {
   } catch { /* not up yet */ }
   await sleep(250);
 }
-if (!wsUrl) { try { process.kill(-chrome.pid, 'SIGKILL'); } catch {} throw new Error('CDP page never appeared'); }
+if (!wsUrl) { try { process.kill(-chrome.pid, 'SIGKILL'); } catch {}
+try { fs.rmSync(PROFILE, { recursive: true, force: true }); } catch {} throw new Error('CDP page never appeared'); }
 
 const ws = new WebSocket(wsUrl);
 let id = 0;
@@ -62,6 +65,7 @@ await new Promise((res, rej) => { ws.once('open', res); ws.once('error', rej); }
 
 await send('Page.enable');
 await send('Runtime.enable');
+await send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
 await send('Network.enable');
 try {
   const token = fs.readFileSync(path.join(os.homedir(), '.olympus/session-token'), 'utf-8').trim();
@@ -101,3 +105,4 @@ fs.writeFileSync(OUT, Buffer.from(shot.data, 'base64'));
 console.log(`shot ${path.relative(ROOT, OUT)}`);
 
 try { process.kill(-chrome.pid, 'SIGKILL'); } catch {}
+try { fs.rmSync(PROFILE, { recursive: true, force: true }); } catch {}

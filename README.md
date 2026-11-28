@@ -42,8 +42,8 @@ llama.cpp or any OpenAI-compatible endpoint ([LOCAL-LLM.md](LOCAL-LLM.md)).
 
 ## Screens
 
-One clean screen, captured from the running **v0.1.6** app: the brain and the
-chat, no mockups.
+One clean screen from the running OLYMPUS app: the brain and the chat, no
+mockups.
 
 <div align="center">
 
@@ -52,10 +52,6 @@ chat, no mockups.
 <sub><b>OLYMPUS</b> · the 3D brain on the left, the Apollo chat on the right.</sub>
 
 </div>
-
-The screenshot is captured from the running app (`npm run shots`); the
-preview fixture is a tiny framing-friendly page because AIME sets
-`frame-ancestors 'none'` by design.
 
 
 ## What is OLYMPUS?
@@ -70,48 +66,34 @@ erase the work.
 The brain learns from completed hops: empirical instincts grow samples and
 confidence, and the gate short-circuits only when both specific tags match.
 
-**v0.1.3 development — local retrieval.** The foundation branch adds one
-local hybrid index: FTS5/BM25 + **768d `nomic-embed-text:v1.5`** + Reciprocal
-Rank Fusion, with project/stack scoping and Context7 answers cached as cited
-knowledge. On this host: 644 documents / 1,032 chunks / 14.3 MB; hybrid
-P@5 **100% vs 73% FTS-only**, MRR **0.933 vs 0.733**, hybrid p95 **235–286 ms**.
-The contract, commands and limits are in [RETRIEVAL.md](RETRIEVAL.md).
-Every claim in this README carries a test, a probe or a measured artifact;
-the limits are in [HYGIENE.md](HYGIENE.md) and
-[KNOWN-ISSUES.md](KNOWN-ISSUES.md).
-
 ## Latest
 
-**v0.1.6 — shell truth and focus.** The repository now carries **one
-screenshot**, captured from the running app: the brain and the Apollo chat. The
-gallery, the UX tour and the 97 legacy PNGs are gone. The status bar never cuts
-a word: agents, skills, instincts and confidence keep their full labels, and
-whole low-priority segments drop before a label is clipped. A single loader
-language replaces the fullscreen route loader: Cost, MCP, Craft, Atelier and
-Vault use the branded OLYMPUS mark and render only when their data is complete.
-OLYMPUS opens **without a project**; the last one is offered as “Continue
-<project>” in the project switcher. Hibernation keeps a lightweight window in
-the taskbar/alt-tab with a Restore button. Logs is six runtime tabs (Overview,
-Hops, Campaigns, Issues, Models, Economy); Boot health and the release Hygiene
-gate moved to Settings → System & release. The Vault panel now tells the truth:
-**242 active instincts, 1,041 archived, 0 quick circuits** — the old “1,041
-quick circuits” was the archive count under a false label. The brain-maturity
-strategy card and its `strategy_recommendation` hook were removed.
+**v0.1.7 — base brain, clean boot and shell i18n.** The AIME audit moved 187
+project instincts into a scoped project-memory lane, deleted 1,157 stale or
+synthetic archived files, and kept **79 base seeds + 51 knowledge notes**. The
+active instinct context fell from ~89.9k to ~15.1k tokens (-83%) with retrieval
+P@5 unchanged at 73% (15-query local set). Quick circuits are strictly
+cross-project: project patterns are hints, never shortcuts; the honest count is
+**0**. A new Settings → Brain health card explains Compact vs Recycle, previews
+the Vault Policy and requires confirmation for a live recycle;
+`npm run brain:bench` records the before/after evidence. OLYMPUS opens clean —
+no project, no inherited Parthenon campaign, brain starting in **Smooth**.
+Hibernate keeps a lightweight taskbar window and the GNOME dock gets the
+OLYMPUS launcher. The cost numbers left the status bar; agents, skills,
+instincts and confidence keep full labels at 1920/1600/1280. Parthenon and menu
+names follow all **7 languages**, and the task sheet now portals above the
+resize grip with a strong blur.
 
-**v0.1.5 was cleanup and truth.** It removed the legacy build-talent editor,
-design-studio modal, MCP detail panel and plasma orb; pruned nine unused
-devDependencies; corrected the go-balanced roster; and shipped the brain drag
-restore, the shell i18n (seven languages) and the minimize/hibernate split.
-**v0.1.4** delivered the Symphony Resonance Index (8,235 outcomes → 609
-signatures; 0 real quick circuits), validated derived builds, the depth-2 RLM
-envelope behind `OLYMPUS_RLM=1`, the embedding cache and the background index
-job. **v0.1.3** was the retrieval and learning foundation. The sequence is
-`0.1.6 > 0.1.5 > 0.1.4 > 0.1.3 > 0.1.2`.
+**v0.1.6 was shell truth and focus** (one screenshot, one loader language,
+clean boot, six Logs tabs, removed brain maturity). **v0.1.5** delivered the
+cleanup, shell i18n and the brain/window fixes. **v0.1.4** delivered resonance,
+derived builds and the bounded RLM envelope. The sequence is
+`0.1.7 > 0.1.6 > 0.1.5 > 0.1.4 > 0.1.3 > 0.1.2`.
 
 `npm run hygiene -- --battery` runs **8 gates and 66 hermetic suites** (35 are
-public in a clean clone); the v0.1.6 UI gate is
-`node scripts/verify-v016-ui.mjs`, the v0.1.5 gate remains
-`verify-v015-ui.mjs`, and the stable v0.1.2 gate is `verify-v012-ui.mjs`. The
+public in a clean clone); the v0.1.7 UI gate is
+`node scripts/verify-v017-ui.mjs`, the v0.1.6 gate remains
+`verify-v016-ui.mjs`, and the stable v0.1.2 gate is `verify-v012-ui.mjs`. The
 100-hop certification passed; the 8-hour soak is **not claimed**. The full
 history lives in [CHANGELOG.md](CHANGELOG.md).
 
@@ -144,7 +126,7 @@ measured, not guessed. Read [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md).
 
 ![Evidence](public/diagrams/testing.svg)
 
-**66 PASS / 0 FAIL / 0 declared skip** across 66 suites is the v0.1.6 stable
+**66 PASS / 0 FAIL / 0 declared skip** across 66 suites is the v0.1.7 stable
 gate (35 public in a clean clone; the tracked-local suites need the live
 app/vault). The previous v0.1.2 gate was 57/57.
 `npm run hygiene -- --battery` runs all eight gates. The 100-hop deterministic
@@ -363,6 +345,7 @@ bash scripts/install/uninstall.sh
 | [EDITORS.md](EDITORS.md) | Supported external editors (Zed, VSCode, VSCodium, Cursor), per-OS install commands, Terminal Bridge protocol |
 | [MODEL-STRATEGIES.md](MODEL-STRATEGIES.md) | LLM strategy reference — GO plan strategies, Zen (private models), Local (your hardware), the Strategy Builder, demigod inheritance, switching strategies |
 | [BENCHMARKS.md](BENCHMARKS.md) | Eval harness (CI golden tasks) + always-on opt-in benchmark recording (real-world metrics), vault pruning policy |
+| [BRAIN-HEALTH.md](BRAIN-HEALTH.md) | The four brain pools, what Compact Brain vs the recycler does, the health score and the before/after benchmark |
 | [VOICE.md](VOICE.md) | The voice ladder (Chatterbox / Kokoro / edge-tts), licenses, per-god profiles and setup |
 | [TOKEN-ECONOMY.md](TOKEN-ECONOMY.md) | Token cost flow — how OLYMPUS achieves quality at low cost |
 | [HYGIENE.md](HYGIENE.md) · [KNOWN-ISSUES.md](KNOWN-ISSUES.md) | The zero-error gate of record and every declared limit / post-0.1.0 backlog |

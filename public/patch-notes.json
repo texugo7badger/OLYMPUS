@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-27",
-  "current": "0.1.6",
+  "updatedAt": "2026-11-28",
+  "current": "0.1.7",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.2",
@@ -11,6 +11,19 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.2 passed the full gate on 2026-11-26 (the first run hit a transient v2-session-list 503; the clean retry passed all checks)."
   },
   "releases": [
+    {
+      "version": "0.1.7",
+      "date": "2026-11-28",
+      "title": "Base brain, clean boot and shell i18n",
+      "highlights": [
+        "The AIME audit moved 187 project instincts into a scoped project-memory lane, deleted 1,157 stale/synthetic archived files, and kept 79 base seeds + 51 knowledge notes. Active context fell from ~89.9k to ~15.1k tokens (-83%) with retrieval P@5 unchanged at 73%.",
+        "Quick circuits are strict: only cross-project proof (>=20 samples, >=90% success, confidence >=0.82, 2+ projects). Project patterns are hints, never shortcuts. The honest count is 0.",
+        "A new Settings \u2192 Brain health card explains Compact vs Recycle, shows active/project/archived/quick counts, previews the Vault Policy and requires confirmation for a live recycle. `npm run brain:bench` records the before/after evidence.",
+        "OLYMPUS opens clean: no project, no inherited Parthenon campaign, brain starts Smooth. Hibernate keeps a lightweight taskbar window; the GNOME dock gets the OLYMPUS launcher.",
+        "Status bar: cost numbers removed to free space; agents/skills/instincts/confidence keep full labels at 1920/1600/1280. Parthenon and menu names are translated in all 7 languages.",
+        "Task sheet opens in a body portal with a strong blur so the resize grip, brain controls and status bar can never sit above the modal."
+      ]
+    },
     {
       "version": "0.1.6",
       "date": "2026-11-27",

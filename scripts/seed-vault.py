@@ -86,6 +86,7 @@ for god in GODS:
 
 # v3.0 VaultBrain additions: cross-god patterns, per-god episode logs, per-god metrics.
 VAULT_DIRS.extend([
+    "05_Auto_Learning/project-instincts",
     "05_Auto_Learning/patterns",
     "05_Auto_Learning/patterns/_archive",
 ])
@@ -131,14 +132,6 @@ SEED_INSTINCTS = {
             "id": "never-use-caveman",
             "trigger": "Apollo is generating output",
             "action": "NEVER use caveman. Output is human-facing (specs, ADRs, plans). Full natural language required.",
-            "confidence": 1.0,
-            "scope": "global",
-            "stacks": [],
-        },
-        {
-            "id": "glm-5.2-reserved",
-            "trigger": "Apollo is selecting a model",
-            "action": "GLM-5.2 is reserved for Apollo alone. Never assign it to other gods. Protect the 4,300 req/month GO cap.",
             "confidence": 1.0,
             "scope": "global",
             "stacks": [],
@@ -227,14 +220,6 @@ SEED_INSTINCTS = {
             "scope": "global",
             "stacks": [],
         },
-        {
-            "id": "prefer-opendesign-for-design-systems",
-            "trigger": "When a UI/design task needs a design-system reference",
-            "action": "Query OpenDesign MCP (od_list_projects then od_get_project) for the specific design system that matches the task context. Do not load all systems -- query on-demand.",
-            "confidence": 0.95,
-            "scope": "global",
-            "stacks": ["frontend"],
-        },
     ],
     "dionysus": [
         {
@@ -284,14 +269,6 @@ SEED_INSTINCTS = {
             "trigger": "Hephaestus is about to write production code",
             "action": "NEVER write production code without a plan from Apollo first.",
             "confidence": 1.0,
-            "scope": "global",
-            "stacks": [],
-        },
-        {
-            "id": "use-serena-for-edits",
-            "trigger": "Hephaestus is editing code on a large codebase",
-            "action": "Use serena MCP for semantic code edits (edit by symbol, not by line). Reduces edit errors.",
-            "confidence": 0.9,
             "scope": "global",
             "stacks": [],
         },
@@ -510,6 +487,18 @@ SEED_INSTINCTS = {
 
 
 
+# --- v0.1.7: research + evidence seeds (fresh installs) -------------------
+# The base 52 seeds shipped before v0.1.7. These complement them with the
+# research/websearch discipline every specialty needs; the migration script
+# adds them to an existing vault too.
+V017_SEEDS_FILE = Path(__file__).with_name("seed-v017.json")
+if V017_SEEDS_FILE.exists():
+    import json as _json
+    _v017 = _json.loads(V017_SEEDS_FILE.read_text(encoding="utf-8"))
+    for _god, _items in _v017.items():
+        SEED_INSTINCTS.setdefault(_god, []).extend(_items)
+
+
 def write_instinct_file(god: str, instinct):
     """Write a seed instinct file."""
     inst_path = VAULT_ROOT / "05_Auto_Learning" / "instincts" / god / "seed" / f"{instinct['id']}.md"
@@ -620,7 +609,20 @@ KNOWLEDGE_FILES = {
         "webhooks.md": {"stacks": [], "title": "Webhook Patterns (Universal)",
                         "content": "# Webhook Patterns\n\n## Inbound (Receiving)\n- Validate signatures (HMAC)\n- Use idempotency to handle duplicates\n- Respond quickly (200 OK), process async\n\n## Outbound (Sending)\n- Use signed payloads\n- Implement retry with backoff\n- Provide a webhook management UI\n\n## Security\n- Use HTTPS only\n- Rotate signing secrets\n- Log all webhook events"},
     },
+    "planning": {
+        "research-and-sourcing.md": {"stacks": [], "title": "Research and Sourcing (Universal)",
+            "content": "# Research and Sourcing\n\n## When to search\n- Version-sensitive APIs, security advisories, provider limits, and anything the note cannot prove from its own date.\n- If `last_verified` is older than 90 days, search before acting.\n\n## How to search\n- Prefer primary docs (vendor/standard) over blog summaries; use context7 for library APIs and websearch for current facts.\n- Record the source URL and the date in the task artifact.\n- Never paste a secret, token, or private URL into a search query.\n\n## Evidence bar\n- A claim without a source or a live probe is a hypothesis, not a fact.\n- One source is a hint; two independent sources are evidence.\n"},
+    },
 }
+
+
+# --- v0.1.7: gap-filling knowledge (fresh installs + the reset seeder) ---
+V017_KNOWLEDGE_FILE = Path(__file__).with_name("knowledge-v017.json")
+if V017_KNOWLEDGE_FILE.exists():
+    import json as _json
+    _v017k = _json.loads(V017_KNOWLEDGE_FILE.read_text(encoding="utf-8"))
+    for _cat, _files in _v017k.items():
+        KNOWLEDGE_FILES.setdefault(_cat, {}).update(_files)
 
 
 def write_knowledge_file(category: str, filename: str, data):
@@ -631,11 +633,17 @@ def write_knowledge_file(category: str, filename: str, data):
         return knowledge_path  # Idempotent
 
     stacks_str = ", ".join(data["stacks"]) if data["stacks"] else ""
+    sources = data.get("sources") or []
+    sources_block = ""
+    if sources:
+        sources_block = "sources:\n" + "\n".join(f"  - {s}" for s in sources) + "\n"
     content = f"""---
 title: {data["title"]}
 category: {category}
 stacks: [{stacks_str}]
-last_updated: {NOW}
+{sources_block}last_updated: {NOW}
+last_verified: {NOW}
+source: seed
 ---
 
 {data["content"]}

@@ -22,6 +22,8 @@ interface KnowledgeNote {
   stacks: string[];
   excerpt: string;
   body: string;
+  /** v0.1.7 — freshness field; stale notes tell the god to search first. */
+  lastVerified?: string;
 }
 
 const CATEGORY_GOD: Record<string, string> = {
@@ -87,6 +89,7 @@ function loadNotes(): KnowledgeNote[] {
           stacks,
           excerpt: first.slice(0, 180),
           body: body.slice(0, 2_000),
+          lastVerified: fm.last_verified || fm.last_updated,
         });
       } catch { /* unreadable note */ }
     }
@@ -112,6 +115,8 @@ export interface KnowledgeSelection {
   relPath: string;
   score: number;
   excerpt: string;
+  /** v0.1.7 — older than 90 days; the prompt tells the god to search. */
+  stale: boolean;
 }
 
 export function selectKnowledgeForTask(opts: {
@@ -148,7 +153,17 @@ export function selectKnowledgeForTask(opts: {
     .filter((n) => n.score > 0)
     .sort((a, b) => b.score - a.score || a.relPath.localeCompare(b.relPath))
     .slice(0, Math.max(1, Math.min(opts.limit ?? 3, 5)))
-    .map((n) => ({ title: n.title, relPath: n.relPath, score: n.score, excerpt: n.excerpt }));
+    .map((n) => ({
+      title: n.title,
+      relPath: n.relPath,
+      score: n.score,
+      excerpt: n.excerpt,
+      stale: (() => {
+        if (!n.lastVerified) return true;
+        const t = Date.parse(n.lastVerified);
+        return !Number.isFinite(t) || Date.now() - t > 90 * 86_400_000;
+      })(),
+    }));
 }
 
 /**
@@ -164,7 +179,7 @@ export function composeKnowledgeBlock(opts: {
   if (picks.length === 0) return '';
   const lines = [
     '[OLYMPUS-KNOWLEDGE] The vault has references for this domain. Use them; do not invent a conflicting rule:',
-    ...picks.map((p) => `- ${p.title} (04_Knowledge/references/${p.relPath})${p.excerpt ? ` — ${p.excerpt}` : ''}`),
+    ...picks.map((p) => `- ${p.title} (04_Knowledge/references/${p.relPath})${p.stale ? ' [stale — search and verify before use]' : ''}${p.excerpt ? ` — ${p.excerpt}` : ''}`),
   ];
   const block = lines.join('\n');
   return block.length > 700 ? `${block.slice(0, 700)}…` : block;

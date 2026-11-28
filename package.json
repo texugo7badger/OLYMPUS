@@ -1,6 +1,6 @@
 {
   "name": "olympus",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Olympus \u2014 a multi-agent AI workspace built on OpenCode. 10 gods, cascading token compression, self-curating brain. Packaged as a standalone Electron desktop app.",
   "author": "OLYMPUS Contributors",
   "homepage": "https://github.com/texugo7badger/OLYMPUS",
@@ -118,7 +118,13 @@
     "resonance:index": "tsx scripts/resonance-index.mjs",
     "instincts:audit": "tsx scripts/instinct-audit.mjs",
     "instincts:quarantine": "tsx scripts/instinct-quarantine.mjs",
-    "instincts:restore": "tsx scripts/instinct-restore.mjs"
+    "instincts:restore": "tsx scripts/instinct-restore.mjs",
+    "brain:bench": "tsx scripts/brain-bench.mjs",
+    "instincts:reset:dry": "node scripts/instinct-reset-v017.mjs",
+    "instincts:reset": "node scripts/instinct-reset-v017.mjs --apply",
+    "knowledge:verify": "node scripts/knowledge-verify-v017.mjs",
+    "retrieval:prune": "tsx scripts/retrieval-prune.mjs",
+    "bench:report": "node scripts/bench-aime-report.mjs"
   },
   "dependencies": {
     "@alloc/quick-lru": "^5.2.0",
