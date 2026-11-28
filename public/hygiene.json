@@ -1,22 +1,22 @@
 {
-  "version": "0.1.8",
-  "generatedAt": "2026-11-28T02:26:17.251Z",
+  "version": "0.1.9",
+  "generatedAt": "2026-11-28T02:33:56.449Z",
   "ok": true,
   "gates": [
     {
       "name": "typescript",
       "ok": true,
-      "ms": 7399
+      "ms": 8522
     },
     {
       "name": "lint",
       "ok": true,
-      "ms": 72456
+      "ms": 73576
     },
     {
       "name": "docs",
       "ok": true,
-      "ms": 264
+      "ms": 254
     },
     {
       "name": "strategy-sync",
@@ -31,17 +31,17 @@
     {
       "name": "suite-manifest",
       "ok": true,
-      "ms": 65
+      "ms": 68
     },
     {
       "name": "audit-high",
       "ok": true,
-      "ms": 5031
+      "ms": 5699
     },
     {
       "name": "battery",
       "ok": true,
-      "ms": 113922
+      "ms": 113983
     }
   ],
   "battery": {

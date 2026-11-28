@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-28",
-  "current": "0.1.8",
+  "current": "0.1.9",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.2",
@@ -11,6 +11,19 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.2 passed the full gate on 2026-11-26 (the first run hit a transient v2-session-list 503; the clean retry passed all checks)."
   },
   "releases": [
+    {
+      "version": "0.1.9",
+      "date": "2026-11-28",
+      "title": "Final polish and truth",
+      "highlights": [
+        "Final repository state: one clean 1920x1080 screenshot from a fresh user window (no project, Smooth brain), no gallery/tour, and only main/dev branches.",
+        "MCP terminal profiles, Craft core shelf/Extras, and the Godot/Blender Engine bridge from v0.1.8; the known-broken tamp/serena defaults stay gone.",
+        "Base brain: 79 seed instincts + 51 knowledge notes + 187 AIME project-memory instincts; 0 archived, 0 quick circuits. The archive was audited and removed; the full pre-reset backup stays outside the vault.",
+        "Brain health/Compact vs Recycle explanation and `npm run brain:bench`; `npm run bench:report` saves durable AIME run reports.",
+        "Clean boot, empty Parthenon, Smooth startup, cost-free status bar, seven-language Parthenon/menu i18n, body-portal modals with blur, and GNOME dock launcher.",
+        "Gates: 8/8 hygiene, 66/66 suites, v0.1.9 UI gate, build:app."
+      ]
+    },
     {
       "version": "0.1.8",
       "date": "2026-11-28",

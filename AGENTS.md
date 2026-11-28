@@ -5,7 +5,7 @@
 
 > AGPL-3.0-or-later · GO-primary · Apollo-primary · OpenCode-based · 10 gods · 61 demigods · Symphony protocol · Standalone Electron desktop app
 >
-> **v0.1.7 truth notes.** 10 gods + **61 live demigods = 71 agents** (the
+> **v0.1.9 truth notes.** 10 gods + **61 live demigods = 71 agents** (the
 > v0.0.88 census cut archived 61 never-dispatched demigods with a one-command
 > restore; the historical 122/132 roster is below, labelled). The committed MCP
 > default is the curated six (**39 tools measured 2026-11-01**); a campaign's

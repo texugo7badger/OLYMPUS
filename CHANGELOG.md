@@ -2,6 +2,27 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.9] — 2026-11-28
+
+### Final polish and truth
+
+- **Repository surface.** One clean 1920×1080 screenshot from a fresh user
+  window (no project, Smooth brain); gallery/tour and legacy captures are gone.
+  Only `main` and `dev` remain.
+- **Consolidated base.** 79 seed instincts + 51 knowledge notes + 187 AIME
+  project-memory instincts; 0 archived, 0 quick circuits. The archive was
+  audited and removed; the pre-reset full tree stays outside the vault.
+- **MCP/Craft.** Terminal profiles (Minimal/Research/Design), the five-tool Craft
+  core shelf + Extras, and the Godot/Blender Engine bridge; `tamp`/`serena`
+  defaults remain removed.
+- **Evidence.** `npm run brain:bench` (before/after) and
+  `npm run bench:report` (durable AIME run) are the measurement path; the
+  Settings Brain health card explains Compact vs Recycle with a confirm gate.
+- **Shell.** Clean boot/empty Parthenon, Smooth startup, cost-free status bar,
+  seven-language Parthenon/menu i18n, body-portal modals with blur, GNOME dock
+  launcher.
+- **Gates.** 8/8 hygiene, 66/66 suites, v0.1.9 UI gate, build:app.
+
 ## [v0.1.8] — 2026-11-28
 
 ### MCP profiles and Craft focus

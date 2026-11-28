@@ -68,36 +68,22 @@ confidence, and the gate short-circuits only when both specific tags match.
 
 ## Latest
 
-**v0.1.8 — MCP profiles and Craft focus.** MCP Configuration now states the real contract: its toggles are the interactive Apollo terminal, while campaign hops auto-equip from the run manifest. Minimal, Research and Design terminal profiles add the right tools without a 23-toggle hunt; `tamp`/`serena` are removed and `opendesign` stays optional. Craft opens on a five-tool dev shelf (FigCraft, VectorCraft, PhotoCraft, CADCraft, PdfCraft) with the rest under Extras; the native row is the Godot/Blender Engine bridge. `npm run bench:report` saves a durable AIME run report. The v0.1.7 base brain (79 seeds, 51 knowledge notes, 187 project memories) and the clean boot, Smooth startup, cost-free status bar and seven-language Parthenon remain.
+**v0.1.9 — final polish and truth.** OLYMPUS opens clean: no project, an empty
+Parthenon and the brain in **Smooth**. The base brain is intentional — 79 seed
+instincts, 51 knowledge notes and 187 AIME project-memory instincts, with zero
+archived files and zero unearned quick circuits. MCP Configuration explains the
+terminal-vs-campaign contract and offers Minimal/Research/Design profiles;
+Craft opens on a five-tool development shelf (FigCraft, VectorCraft, PhotoCraft,
+CADCraft, PdfCraft) with the rest under Extras, and the Godot/Blender Engine
+bridge keeps the agent in the engine and the human in the app. The status bar
+keeps full labels without cost numbers, the Parthenon and menus follow all seven
+languages, modals portal above the resize grip with blur, and the GNOME dock
+gets the OLYMPUS launcher. The repository carries one clean 1920×1080
+screenshot, captured from a fresh user window.
 
-**v0.1.7 was the base brain release.** The AIME audit moved 187
-project instincts into a scoped project-memory lane, deleted 1,157 stale or
-synthetic archived files, and kept **79 base seeds + 51 knowledge notes**. The
-active instinct context fell from ~89.9k to ~15.1k tokens (-83%) with retrieval
-P@5 unchanged at 73% (15-query local set). Quick circuits are strictly
-cross-project: project patterns are hints, never shortcuts; the honest count is
-**0**. A new Settings → Brain health card explains Compact vs Recycle, previews
-the Vault Policy and requires confirmation for a live recycle;
-`npm run brain:bench` records the before/after evidence. OLYMPUS opens clean —
-no project, no inherited Parthenon campaign, brain starting in **Smooth**.
-Hibernate keeps a lightweight taskbar window and the GNOME dock gets the
-OLYMPUS launcher. The cost numbers left the status bar; agents, skills,
-instincts and confidence keep full labels at 1920/1600/1280. Parthenon and menu
-names follow all **7 languages**, and the task sheet now portals above the
-resize grip with a strong blur.
-
-**v0.1.6 was shell truth and focus** (one screenshot, one loader language,
-clean boot, six Logs tabs, removed brain maturity). **v0.1.5** delivered the
-cleanup, shell i18n and the brain/window fixes. **v0.1.4** delivered resonance,
-derived builds and the bounded RLM envelope. The sequence is
-`0.1.7 > 0.1.6 > 0.1.5 > 0.1.4 > 0.1.3 > 0.1.2`.
-
-`npm run hygiene -- --battery` runs **8 gates and 66 hermetic suites** (35 are
-public in a clean clone); the v0.1.7 UI gate is
-`node scripts/verify-v018-ui.mjs`, the v0.1.7 gate remains
-`verify-v016-ui.mjs`, and the stable v0.1.2 gate is `verify-v012-ui.mjs`. The
-100-hop certification passed; the 8-hour soak is **not claimed**. The full
-history lives in [CHANGELOG.md](CHANGELOG.md).
+Measurement is a command, not a claim: `npm run brain:bench` records the
+before/after brain state and `npm run bench:report` saves a durable AIME run.
+The full history lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Architecture at a glance
 
