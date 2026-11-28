@@ -68,7 +68,9 @@ confidence, and the gate short-circuits only when both specific tags match.
 
 ## Latest
 
-**v0.1.9 — final polish and truth.** OLYMPUS opens clean: no project, an empty
+**v0.1.10 — modal and i18n patch.** The Atlas evidence modal now portals to the body with the same high z-index and strong blur as the task sheet, so the resize grip, brain controls and status bar can never sit above it. Settings headings follow all seven languages. Everything from v0.1.9 remains: the clean 1920×1080 screenshot, the 79-seed/51-knowledge/187-project-memory base, MCP profiles + Craft focus, clean boot/Smooth and the cost-free status bar.
+
+**v0.1.9 was final polish and truth.** OLYMPUS opens clean: no project, an empty
 Parthenon and the brain in **Smooth**. The base brain is intentional — 79 seed
 instincts, 51 knowledge notes and 187 AIME project-memory instincts, with zero
 archived files and zero unearned quick circuits. MCP Configuration explains the

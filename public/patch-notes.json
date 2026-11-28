@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-28",
-  "current": "0.1.9",
+  "current": "0.1.10",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.2",
@@ -11,6 +11,16 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.2 passed the full gate on 2026-11-26 (the first run hit a transient v2-session-list 503; the clean retry passed all checks)."
   },
   "releases": [
+    {
+      "version": "0.1.10",
+      "date": "2026-11-28",
+      "title": "Modal and i18n patch",
+      "highlights": [
+        "The Atlas evidence modal now portals to document.body with the same z-400 + strong blur as the task sheet; the resize grip, brain controls and status bar can never sit above it.",
+        "Settings headings (Per-God Model Class, Benchmark Recording, resource governor) follow the selected language in all seven languages.",
+        "Everything from v0.1.9 remains: clean 1920x1080 screenshot, base brain (79 seeds/51 knowledge/187 project memories/0 quick circuits), MCP profiles + Craft focus, clean boot/Smooth, cost-free status bar and GNOME dock launcher."
+      ]
+    },
     {
       "version": "0.1.9",
       "date": "2026-11-28",

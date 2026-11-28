@@ -2,6 +2,17 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.10] — 2026-11-28
+
+### Modal and i18n patch
+
+- The Atlas evidence modal portals to `document.body` at `z-[400]` with a
+  strong backdrop blur, matching the task sheet; the resize grip, brain
+  controls and status bar can never sit above it.
+- Settings headings (Per-God Model Class, Benchmark Recording, resource
+  governor) follow all seven languages.
+- Everything from v0.1.9 remains unchanged.
+
 ## [v0.1.9] — 2026-11-28
 
 ### Final polish and truth

@@ -15,6 +15,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowRight, Check, CirclePause, CirclePlay, FileSearch, MessageSquare,
   Moon, Orbit, Plus, ShieldAlert, Sun, X, Zap,
@@ -386,8 +387,8 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
         )}
       </div>
 
-      {evidence && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4" onClick={() => setEvidence(false)}>
+      {evidence && typeof document !== 'undefined' && createPortal((
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/75 backdrop-blur-md p-4" onClick={() => setEvidence(false)}>
           <div className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-xl border border-olympus-cyan/30 bg-olympus-panel p-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2">
               <FileSearch size={13} className="text-olympus-cyan" />
@@ -413,7 +414,7 @@ export default function ParthenonCommand({ health, patrol, projectSlug, onChat, 
             </button>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       <style>{`
         .nakkas-stable { display: none; }
