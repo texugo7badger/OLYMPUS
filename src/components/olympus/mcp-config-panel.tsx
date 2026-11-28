@@ -89,6 +89,11 @@ interface HealthSummary {
 
 const NEEDS = new Set<HealthStatus>(['needs-auth', 'needs-service', 'needs-binary', 'needs-app']);
 const isUnavailable = (s: HealthStatus) => NEEDS.has(s) || s === 'optional-unavailable';
+const TERMINAL_PROFILES: Array<{ id: string; label: string; note: string; servers: string[] }> = [
+  { id: 'minimal', label: 'Minimal', note: 'files, memory, sequential thinking', servers: ['filesystem', 'memory', 'sequential-thinking'] },
+  { id: 'research', label: 'Research', note: 'minimal + current docs and browser probes', servers: ['filesystem', 'memory', 'sequential-thinking', 'context7', 'chrome-devtools'] },
+  { id: 'design', label: 'Design', note: 'research + Figma, Playwright, Nakkas and the design catalog', servers: ['filesystem', 'memory', 'sequential-thinking', 'context7', 'chrome-devtools', 'playwright', 'figma', 'nakkas', 'opendesign', 'olympus-craft'] },
+];
 
 export default function MCPConfigPanel() {
   const language = useLanguage();
@@ -106,6 +111,7 @@ export default function MCPConfigPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [profileBusy, setProfileBusy] = useState<string | null>(null);
   const [probing, setProbing] = useState(false);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [restartHint, setRestartHint] = useState(false);
@@ -181,6 +187,31 @@ export default function MCPConfigPanel() {
       .catch(() => {})
       .finally(() => load());
   }, []);
+
+  const applyProfile = async (profile: typeof TERMINAL_PROFILES[number]) => {
+    setProfileBusy(profile.id);
+    setError(null);
+    try {
+      for (const name of profile.servers) {
+        const server = servers.find((x) => x.name === name);
+        if (!server || server.enabled) continue;
+        const st = statusOf(server);
+        if (st === 'dead' || isUnavailable(st) || st === 'needs-auth') continue;
+        await fetch('/api/olympus/mcp/state', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, enabled: true }),
+        });
+      }
+      await load();
+      loadHealth(true);
+      setRestartHint(true);
+      setSyncNote(`Terminal profile “${profile.label}” applied. A new Apollo session picks it up; campaign hops ignore it.`);
+    } catch (e: any) {
+      setError(e.message || 'profile apply failed');
+    } finally {
+      setProfileBusy(null);
+    }
+  };
 
   const toggleMcp = async (name: string) => {
     const server = servers.find((s) => s.name === name);
@@ -355,6 +386,31 @@ export default function MCPConfigPanel() {
           session only. Campaign hops <b className="text-olympus-text">auto-equip</b> the curated baseline plus
           the hop’s declared MCPs from its run manifest; this list does not change a hop. The catalog below is
           for install, health and diagnostics.
+        </div>
+
+        {/* v0.1.8 — terminal profiles: the interactive lane has a small,
+            intentional set. Campaign hops are still automatic. */}
+        <div className="rounded-md border border-olympus-gold/15 bg-olympus-card/40 p-2">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Plug size={10} className="text-olympus-gold" />
+            <span className="text-[9px] font-mono font-semibold uppercase tracking-wide text-olympus-text">Terminal profiles</span>
+            <span className="ml-auto text-[8px] font-mono text-olympus-text-dim">adds, never disables</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {TERMINAL_PROFILES.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                disabled={profileBusy != null}
+                onClick={() => void applyProfile(p)}
+                data-tip={p.note}
+                className="rounded border border-olympus-gold/15 px-1.5 py-1 text-left hover:bg-olympus-gold/10 disabled:opacity-50"
+              >
+                <span className="block text-[9px] font-mono text-olympus-gold">{profileBusy === p.id ? '…' : p.label}</span>
+                <span className="block text-[7.5px] font-mono text-olympus-text-dim truncate">{p.note}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* v0.0.53 — the MCP market: a verified free-first seed + the live

@@ -492,7 +492,7 @@ export default function CraftAppsPanel({ initialApp, initialTab }: { initialApp?
 
       {tab === 'apps' && nativeTools.length > 0 && (
         <div className="shrink-0 flex items-center gap-1.5 overflow-x-auto border-b border-olympus-gold/10 bg-olympus-panel/50 px-3 py-1 text-[8px] font-mono">
-          <span className="shrink-0 uppercase tracking-wide text-olympus-text-dim">native</span>
+          <span className="shrink-0 uppercase tracking-wide text-olympus-text-dim" data-tip="MCP drives the app; the app is for live human preview. Godot and Blender are the engine bridge.">engine bridge</span>
           {nativeTools.map((tool) => (
             <button
               key={tool.id}

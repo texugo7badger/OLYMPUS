@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-28",
-  "current": "0.1.7",
+  "current": "0.1.8",
   "opencode": {
     "package": "@opencode/cli",
     "tested": "2.4.2",
@@ -11,6 +11,17 @@
     "note": "OpenCode v2 never auto-updates under OLYMPUS. The vendored CLI is updated only after the isolated conformance gate approves the exact version; 2.4.2 passed the full gate on 2026-11-26 (the first run hit a transient v2-session-list 503; the clean retry passed all checks)."
   },
   "releases": [
+    {
+      "version": "0.1.8",
+      "date": "2026-11-28",
+      "title": "MCP profiles and Craft focus",
+      "highlights": [
+        "MCP Configuration now says the real contract: the toggles are the interactive Apollo terminal; campaign hops auto-equip from the run manifest. Three terminal profiles (Minimal, Research, Design) add the right tools without a 23-toggle hunt.",
+        "The known-broken tamp and serena servers are removed from the default registry; opendesign stays optional/off until configured.",
+        "Craft opens on a core shelf of five dev-adjacent tools (FigCraft, VectorCraft, PhotoCraft, CADCraft, PdfCraft); Extras holds the rest. The native row is now labelled Engine bridge (Godot/Blender: MCP drives, the app is for live preview).",
+        "`npm run bench:report` saves an AIME lane run under 07_Reviews/benchmarks/runs/<slug>-<date>/ with completion, parks by cause, null-token share, p50/p90, tokens and per-god/lane breakdown."
+      ]
+    },
     {
       "version": "0.1.7",
       "date": "2026-11-28",

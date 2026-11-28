@@ -2,6 +2,24 @@
 
 All notable changes to OLYMPUS are documented in this file.
 
+## [v0.1.8] — 2026-11-28
+
+### MCP profiles and Craft focus
+
+- **MCP terminal profiles.** The panel explains that its toggles are the
+  interactive Apollo terminal; hops auto-equip from the run manifest. Minimal,
+  Research and Design profiles add the intended tools without a 23-toggle hunt.
+- **Broken defaults removed.** `tamp` and `serena` are gone from the default
+  registry; `opendesign` stays optional/off until configured.
+- **Craft focus.** The default shelf is the five dev-adjacent tools (FigCraft,
+  VectorCraft, PhotoCraft, CADCraft, PdfCraft); the rest live under Extras. The
+  native row is labelled Engine bridge: MCP drives Godot/Blender, the app is for
+  live human preview.
+- **Benchmark run record.** `npm run bench:report` writes
+  `07_Reviews/benchmarks/runs/<slug>-<date>/` with completion, park causes,
+  null-token share, p50/p90, tokens and per-god/lane breakdown.
+- **Version truth.** VERSION/package/status fallback/patch notes at 0.1.8.
+
 ## [v0.1.7] — 2026-11-28
 
 ### Base brain, clean boot and shell i18n

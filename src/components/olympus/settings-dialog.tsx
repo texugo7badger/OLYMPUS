@@ -1086,7 +1086,7 @@ export default function SettingsDialog() {
 	            )}
 	            <section>
 	              <div className="flex items-center gap-2 mb-2">
-	                <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">Per-God Model Class</h3>
+	                <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide">{t('settings.perGodModel', language)}</h3>
 	                <button
 	                  onClick={resetToDefaults}
 	                  disabled={clearingOverrides}
@@ -1146,7 +1146,7 @@ export default function SettingsDialog() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-[11px] font-semibold text-olympus-text uppercase tracking-wide flex items-center gap-1.5">
                   <BarChart3 size={11} className="text-olympus-gold" />
-                  Benchmark Recording
+                  {t('settings.benchmarkRecording', language)}
                 </h3>
                 <div className="flex items-center gap-2">
                   <button

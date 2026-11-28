@@ -14,6 +14,7 @@ import { Activity, Loader2, Recycle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useDocVisible } from '@/lib/use-doc-visible';
+import { useLanguage, t } from '@/lib/i18n';
 
 interface Snapshot {
   totalMb: number;
@@ -28,6 +29,7 @@ interface Snapshot {
 }
 
 export default function ResourceGovernorCard() {
+  const language = useLanguage();
   const docVisible = useDocVisible();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [busy, setBusy] = useState(false);

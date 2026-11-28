@@ -68,7 +68,9 @@ confidence, and the gate short-circuits only when both specific tags match.
 
 ## Latest
 
-**v0.1.7 — base brain, clean boot and shell i18n.** The AIME audit moved 187
+**v0.1.8 — MCP profiles and Craft focus.** MCP Configuration now states the real contract: its toggles are the interactive Apollo terminal, while campaign hops auto-equip from the run manifest. Minimal, Research and Design terminal profiles add the right tools without a 23-toggle hunt; `tamp`/`serena` are removed and `opendesign` stays optional. Craft opens on a five-tool dev shelf (FigCraft, VectorCraft, PhotoCraft, CADCraft, PdfCraft) with the rest under Extras; the native row is the Godot/Blender Engine bridge. `npm run bench:report` saves a durable AIME run report. The v0.1.7 base brain (79 seeds, 51 knowledge notes, 187 project memories) and the clean boot, Smooth startup, cost-free status bar and seven-language Parthenon remain.
+
+**v0.1.7 was the base brain release.** The AIME audit moved 187
 project instincts into a scoped project-memory lane, deleted 1,157 stale or
 synthetic archived files, and kept **79 base seeds + 51 knowledge notes**. The
 active instinct context fell from ~89.9k to ~15.1k tokens (-83%) with retrieval
@@ -92,7 +94,7 @@ derived builds and the bounded RLM envelope. The sequence is
 
 `npm run hygiene -- --battery` runs **8 gates and 66 hermetic suites** (35 are
 public in a clean clone); the v0.1.7 UI gate is
-`node scripts/verify-v017-ui.mjs`, the v0.1.6 gate remains
+`node scripts/verify-v018-ui.mjs`, the v0.1.7 gate remains
 `verify-v016-ui.mjs`, and the stable v0.1.2 gate is `verify-v012-ui.mjs`. The
 100-hop certification passed; the 8-hour soak is **not claimed**. The full
 history lives in [CHANGELOG.md](CHANGELOG.md).
